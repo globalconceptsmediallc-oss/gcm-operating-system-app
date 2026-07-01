@@ -3,65 +3,244 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GCM OS | Business Intelligence Brief Generator</title>
 
-  <title>GCM OS | Dashboard</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f3f6fb;
+      color: #0f172a;
+      line-height: 1.6;
+    }
 
-  <meta
-    name="description"
-    content="The home dashboard and application launcher for the Global Concepts Media Operating System."
-  />
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
 
-  <link rel="stylesheet" href="styles.css" />
+    header {
+      background: #0f172a;
+      color: white;
+      padding: 36px;
+      border-radius: 18px;
+      margin-bottom: 28px;
+    }
+
+    header p {
+      color: #cbd5e1;
+      max-width: 760px;
+    }
+
+    .badge {
+      color: #93c5fd;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      font-size: 0.8rem;
+    }
+
+    h1 {
+      font-size: 2.8rem;
+      line-height: 1;
+      margin: 10px 0 16px;
+    }
+
+    section {
+      background: white;
+      border: 1px solid #dbe3ef;
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 24px;
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      margin-top: 18px;
+    }
+
+    input,
+    textarea {
+      width: 100%;
+      margin-top: 8px;
+      padding: 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font: inherit;
+      box-sizing: border-box;
+    }
+
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    button {
+      margin-top: 22px;
+      background: #2563eb;
+      color: white;
+      border: 0;
+      padding: 14px 20px;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    #output {
+      width: 100%;
+      min-height: 420px;
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 18px;
+      border-radius: 12px;
+      border: 0;
+      font-family: Consolas, Monaco, monospace;
+      box-sizing: border-box;
+    }
+  </style>
 </head>
-<script src="app.js"></script>
+
 <body>
   <main>
     <header>
-      <p>Global Concepts Media OS</p>
-      <h1>Application Dashboard</h1>
+      <div class="badge">Global Concepts Media OS</div>
+      <h1>Business Intelligence Brief Generator</h1>
       <p>
-        Launch applications that execute Global Concepts Media standards and generate repository-ready Markdown records.
+        Complete this form to generate a standardized Markdown Business Intelligence Brief.
+        This is the first working test of the GCM Operating System.
       </p>
     </header>
 
     <section>
-      <h2>Active Application</h2>
+      <h2>Business Information</h2>
 
-      <article>
-        <p>Status: Ready to Build</p>
-        <h3>Business Intelligence Brief Generator</h3>
-        <p>
-          Execute the Business Intelligence Brief Standard through a guided workflow that produces a clean Markdown record for repository use.
-        </p>
-        <a class="button" href="#">Open Application</a>
-      </article>
+      <form id="briefForm">
+        <label>
+          Company Name
+          <input id="companyName" type="text" required />
+        </label>
+
+        <label>
+          Website
+          <input id="website" type="url" required />
+        </label>
+
+        <label>
+          Industry
+          <input id="industry" type="text" required />
+        </label>
+
+        <label>
+          Location
+          <input id="location" type="text" />
+        </label>
+
+        <label>
+          Business Summary
+          <textarea id="businessSummary" required></textarea>
+        </label>
+
+        <label>
+          Growth Opportunities
+          <textarea id="growthOpportunities"></textarea>
+        </label>
+
+        <label>
+          Problems or Gaps
+          <textarea id="problems"></textarea>
+        </label>
+
+        <label>
+          Recommended Next Action
+          <textarea id="nextAction"></textarea>
+        </label>
+
+        <button type="submit">Generate Markdown</button>
+      </form>
     </section>
 
     <section>
-      <h2>Operating Principle</h2>
-
-      <p>
-        Repositories define how the business operates. Applications execute those standards. Markdown records prove the work was completed.
-      </p>
-    </section>
-
-    <section>
-      <h2>Future Applications</h2>
-
-      <ul>
-        <li>Client Acquisition</li>
-        <li>CRM</li>
-        <li>Discovery Meetings</li>
-        <li>Recommendations</li>
-        <li>Proposal Builder</li>
-        <li>Client Onboarding</li>
-        <li>Business Growth</li>
-        <li>Reporting</li>
-        <li>Metrics</li>
-        <li>Knowledge Base</li>
-        <li>GitHub Integration</li>
-      </ul>
+      <h2>Generated Markdown Record</h2>
+      <textarea id="output" readonly></textarea>
+      <button type="button" id="copyButton">Copy Markdown</button>
     </section>
   </main>
+
+  <script>
+    const form = document.getElementById("briefForm");
+    const output = document.getElementById("output");
+    const copyButton = document.getElementById("copyButton");
+
+    form.addEventListener("submit", function(event) {
+      event.preventDefault();
+
+      const companyName = document.getElementById("companyName").value.trim();
+      const website = document.getElementById("website").value.trim();
+      const industry = document.getElementById("industry").value.trim();
+      const location = document.getElementById("location").value.trim();
+      const businessSummary = document.getElementById("businessSummary").value.trim();
+      const growthOpportunities = document.getElementById("growthOpportunities").value.trim();
+      const problems = document.getElementById("problems").value.trim();
+      const nextAction = document.getElementById("nextAction").value.trim();
+
+      const markdown = `# Business Intelligence Brief
+
+**Company:** ${companyName}  
+**Website:** ${website}  
+**Industry:** ${industry}  
+**Location:** ${location || "Not provided"}  
+
+---
+
+## Business Summary
+
+${businessSummary || "Not provided"}
+
+---
+
+## Growth Opportunities
+
+${growthOpportunities || "Not provided"}
+
+---
+
+## Problems or Gaps
+
+${problems || "Not provided"}
+
+---
+
+## Recommended Next Action
+
+${nextAction || "Not provided"}
+
+---
+
+## Record Information
+
+**Generated By:** GCM OS Business Intelligence Brief Generator  
+**Status:** Draft  
+**Output Format:** Markdown  
+`;
+
+      output.value = markdown;
+    });
+
+    copyButton.addEventListener("click", function() {
+      if (!output.value.trim()) {
+        alert("Generate the Markdown first.");
+        return;
+      }
+
+      navigator.clipboard.writeText(output.value);
+      alert("Markdown copied.");
+    });
+  </script>
 </body>
 </html>
