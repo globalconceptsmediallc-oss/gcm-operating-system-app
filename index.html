@@ -3,244 +3,464 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GCM OS | Business Intelligence Brief Generator</title>
+  <title>GCM OS App | Business Intelligence Brief Generator</title>
 
   <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --panel-soft: #1f2937;
+      --text: #f9fafb;
+      --muted: #cbd5e1;
+      --line: #334155;
+      --accent: #38bdf8;
+      --accent-dark: #0284c7;
+      --success: #22c55e;
+      --warning: #facc15;
+      --danger: #ef4444;
+      --white: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
       font-family: Arial, Helvetica, sans-serif;
-      background: #f3f6fb;
-      color: #0f172a;
+      background: var(--bg);
+      color: var(--text);
       line-height: 1.6;
     }
 
-    main {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 40px 20px;
+    header {
+      padding: 48px 20px 28px;
+      text-align: center;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, #111827 0%, #0f172a 100%);
     }
 
-    header {
-      background: #0f172a;
-      color: white;
-      padding: 36px;
-      border-radius: 18px;
-      margin-bottom: 28px;
+    header h1 {
+      margin: 0 0 12px;
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      line-height: 1.1;
     }
 
     header p {
-      color: #cbd5e1;
-      max-width: 760px;
+      max-width: 860px;
+      margin: 0 auto;
+      color: var(--muted);
+      font-size: 1.05rem;
     }
 
-    .badge {
-      color: #93c5fd;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      font-size: 0.8rem;
-    }
-
-    h1 {
-      font-size: 2.8rem;
-      line-height: 1;
-      margin: 10px 0 16px;
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 20px 60px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
     }
 
     section {
-      background: white;
-      border: 1px solid #dbe3ef;
-      border-radius: 16px;
-      padding: 28px;
-      margin-bottom: 24px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 24px;
+    }
+
+    h2 {
+      margin-top: 0;
+      margin-bottom: 8px;
+      font-size: 1.5rem;
+    }
+
+    .section-note {
+      color: var(--muted);
+      margin-top: 0;
+      margin-bottom: 22px;
+      font-size: 0.95rem;
+    }
+
+    .field-group {
+      margin-bottom: 18px;
     }
 
     label {
       display: block;
       font-weight: 700;
-      margin-top: 18px;
+      margin-bottom: 7px;
     }
 
     input,
-    textarea {
+    textarea,
+    select {
       width: 100%;
-      margin-top: 8px;
-      padding: 12px;
-      border: 1px solid #cbd5e1;
-      border-radius: 8px;
-      font: inherit;
-      box-sizing: border-box;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: var(--panel-soft);
+      color: var(--text);
+      font-size: 1rem;
+      font-family: inherit;
     }
 
     textarea {
-      min-height: 120px;
+      min-height: 90px;
       resize: vertical;
     }
 
+    input:focus,
+    textarea:focus,
+    select:focus {
+      outline: 2px solid var(--accent);
+      border-color: var(--accent);
+    }
+
+    .button-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 24px;
+    }
+
     button {
-      margin-top: 22px;
-      background: #2563eb;
-      color: white;
-      border: 0;
-      padding: 14px 20px;
-      border-radius: 8px;
+      border: none;
+      border-radius: 999px;
+      padding: 12px 18px;
       font-weight: 700;
+      font-size: 0.95rem;
       cursor: pointer;
+      color: var(--white);
+      background: var(--accent-dark);
     }
 
     button:hover {
-      background: #1d4ed8;
+      background: var(--accent);
+      color: #082f49;
     }
 
-    #output {
-      width: 100%;
-      min-height: 420px;
-      background: #0f172a;
-      color: #e2e8f0;
+    .secondary-button {
+      background: #334155;
+    }
+
+    .secondary-button:hover {
+      background: #475569;
+      color: var(--white);
+    }
+
+    .danger-button {
+      background: #991b1b;
+    }
+
+    .danger-button:hover {
+      background: var(--danger);
+      color: var(--white);
+    }
+
+    pre {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      background: #020617;
+      border: 1px solid var(--line);
+      border-radius: 14px;
       padding: 18px;
-      border-radius: 12px;
-      border: 0;
-      font-family: Consolas, Monaco, monospace;
-      box-sizing: border-box;
+      min-height: 520px;
+      color: #e5e7eb;
+      font-size: 0.92rem;
+      overflow: auto;
+    }
+
+    .status {
+      margin-top: 14px;
+      color: var(--success);
+      font-weight: 700;
+      min-height: 24px;
+    }
+
+    .app-note {
+      grid-column: 1 / -1;
+      background: #020617;
+      border: 1px dashed var(--line);
+      color: var(--muted);
+      border-radius: 14px;
+      padding: 18px;
+      font-size: 0.95rem;
+    }
+
+    @media (max-width: 900px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+
+      pre {
+        min-height: 360px;
+      }
     }
   </style>
 </head>
 
 <body>
-  <main>
-    <header>
-      <div class="badge">Global Concepts Media OS</div>
-      <h1>Business Intelligence Brief Generator</h1>
-      <p>
-        Complete this form to generate a standardized Markdown Business Intelligence Brief.
-        This is the first working test of the GCM Operating System.
-      </p>
-    </header>
+  <header>
+    <h1>GCM OS App</h1>
+    <p>
+      Business Intelligence Brief Generator for Global Concepts Media. Enter prospect or client research once, generate a standardized Markdown record, then copy it into the correct repository.
+    </p>
+  </header>
 
+  <main>
     <section>
-      <h2>Business Information</h2>
+      <h2>Business Intelligence Brief</h2>
+      <p class="section-note">
+        Complete the fields below. The app will generate a structured Markdown record for repository use.
+      </p>
 
       <form id="briefForm">
-        <label>
-          Company Name
-          <input id="companyName" type="text" required />
-        </label>
+        <div class="field-group">
+          <label for="businessName">Business Name</label>
+          <input id="businessName" type="text" placeholder="Example: Southeast Safes" />
+        </div>
 
-        <label>
-          Website
-          <input id="website" type="url" required />
-        </label>
+        <div class="field-group">
+          <label for="website">Website</label>
+          <input id="website" type="text" placeholder="https://example.com" />
+        </div>
 
-        <label>
-          Industry
-          <input id="industry" type="text" required />
-        </label>
+        <div class="field-group">
+          <label for="industry">Industry / Category</label>
+          <input id="industry" type="text" placeholder="Safe dealer, locksmith, home services, retail, etc." />
+        </div>
 
-        <label>
-          Location
-          <input id="location" type="text" />
-        </label>
+        <div class="field-group">
+          <label for="location">Primary Market / Service Area</label>
+          <input id="location" type="text" placeholder="Melbourne FL, Orlando FL, Brevard County, etc." />
+        </div>
 
-        <label>
-          Business Summary
-          <textarea id="businessSummary" required></textarea>
-        </label>
+        <div class="field-group">
+          <label for="businessModel">Business Model</label>
+          <textarea id="businessModel" placeholder="How does this business make money? What do they sell? Who do they serve?"></textarea>
+        </div>
 
-        <label>
-          Growth Opportunities
-          <textarea id="growthOpportunities"></textarea>
-        </label>
+        <div class="field-group">
+          <label for="idealCustomer">Ideal Customer</label>
+          <textarea id="idealCustomer" placeholder="Describe the customer this business most needs to reach."></textarea>
+        </div>
 
-        <label>
-          Problems or Gaps
-          <textarea id="problems"></textarea>
-        </label>
+        <div class="field-group">
+          <label for="currentPosition">Current Market Position</label>
+          <textarea id="currentPosition" placeholder="What does the business appear to be known for? Where are they strong or weak?"></textarea>
+        </div>
 
-        <label>
-          Recommended Next Action
-          <textarea id="nextAction"></textarea>
-        </label>
+        <div class="field-group">
+          <label for="growthProblem">Primary Growth Problem</label>
+          <textarea id="growthProblem" placeholder="What is likely holding the business back from more leads, sales, trust, or visibility?"></textarea>
+        </div>
 
-        <button type="submit">Generate Markdown</button>
+        <div class="field-group">
+          <label for="opportunities">Growth Opportunities</label>
+          <textarea id="opportunities" placeholder="List the most obvious opportunities: SEO, Google Ads, content, tracking, CRO, local visibility, etc."></textarea>
+        </div>
+
+        <div class="field-group">
+          <label for="evidence">Evidence / Observations</label>
+          <textarea id="evidence" placeholder="What did you see that supports the opportunity? Website issue, search result, weak page, missing tracking, competitor gap, etc."></textarea>
+        </div>
+
+        <div class="field-group">
+          <label for="recommendation">Recommended Next Action</label>
+          <textarea id="recommendation" placeholder="What should GCM recommend first?"></textarea>
+        </div>
+
+        <div class="field-group">
+          <label for="priority">Priority Level</label>
+          <select id="priority">
+            <option value="">Select priority</option>
+            <option value="High">High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label for="status">Record Status</label>
+          <select id="status">
+            <option value="Draft">Draft</option>
+            <option value="Ready for Review">Ready for Review</option>
+            <option value="Approved">Approved</option>
+            <option value="Archived">Archived</option>
+          </select>
+        </div>
+
+        <div class="button-row">
+          <button type="button" onclick="generateMarkdown()">Generate Markdown</button>
+          <button type="button" class="secondary-button" onclick="copyMarkdown()">Copy Markdown</button>
+          <button type="button" class="danger-button" onclick="clearForm()">Clear Form</button>
+        </div>
+
+        <div id="statusMessage" class="status"></div>
       </form>
     </section>
 
     <section>
-      <h2>Generated Markdown Record</h2>
-      <textarea id="output" readonly></textarea>
-      <button type="button" id="copyButton">Copy Markdown</button>
+      <h2>Generated Markdown</h2>
+      <p class="section-note">
+        Copy this output into the appropriate repository document or record file.
+      </p>
+
+      <pre id="markdownOutput">Your generated Markdown will appear here.</pre>
     </section>
+
+    <div class="app-note">
+      Version 1 rule: this app stays inside <strong>index.html</strong> until the workflow proves it needs additional files. No empty folders. No placeholder files. No backend.
+    </div>
   </main>
 
   <script>
-    const form = document.getElementById("briefForm");
-    const output = document.getElementById("output");
-    const copyButton = document.getElementById("copyButton");
+    function getValue(id) {
+      return document.getElementById(id).value.trim() || "Not documented yet.";
+    }
 
-    form.addEventListener("submit", function(event) {
-      event.preventDefault();
+    function getTodayDate() {
+      const today = new Date();
+      return today.toISOString().split("T")[0];
+    }
 
-      const companyName = document.getElementById("companyName").value.trim();
-      const website = document.getElementById("website").value.trim();
-      const industry = document.getElementById("industry").value.trim();
-      const location = document.getElementById("location").value.trim();
-      const businessSummary = document.getElementById("businessSummary").value.trim();
-      const growthOpportunities = document.getElementById("growthOpportunities").value.trim();
-      const problems = document.getElementById("problems").value.trim();
-      const nextAction = document.getElementById("nextAction").value.trim();
+    function generateMarkdown() {
+      const businessName = getValue("businessName");
+      const website = getValue("website");
+      const industry = getValue("industry");
+      const location = getValue("location");
+      const businessModel = getValue("businessModel");
+      const idealCustomer = getValue("idealCustomer");
+      const currentPosition = getValue("currentPosition");
+      const growthProblem = getValue("growthProblem");
+      const opportunities = getValue("opportunities");
+      const evidence = getValue("evidence");
+      const recommendation = getValue("recommendation");
+      const priority = getValue("priority");
+      const status = getValue("status");
+      const date = getTodayDate();
 
       const markdown = `# Business Intelligence Brief
 
-**Company:** ${companyName}  
-**Website:** ${website}  
-**Industry:** ${industry}  
-**Location:** ${location || "Not provided"}  
+Version: 1.0  
+Status: ${status}  
+Created: ${date}  
+Priority: ${priority}  
 
 ---
 
-## Business Summary
+## Business Identity
 
-${businessSummary || "Not provided"}
+**Business Name:** ${businessName}
+
+**Website:** ${website}
+
+**Industry / Category:** ${industry}
+
+**Primary Market / Service Area:** ${location}
+
+---
+
+## Business Model
+
+${businessModel}
+
+---
+
+## Ideal Customer
+
+${idealCustomer}
+
+---
+
+## Current Market Position
+
+${currentPosition}
+
+---
+
+## Primary Growth Problem
+
+${growthProblem}
 
 ---
 
 ## Growth Opportunities
 
-${growthOpportunities || "Not provided"}
+${opportunities}
 
 ---
 
-## Problems or Gaps
+## Evidence / Observations
 
-${problems || "Not provided"}
+${evidence}
 
 ---
 
 ## Recommended Next Action
 
-${nextAction || "Not provided"}
+${recommendation}
 
 ---
 
-## Record Information
+## GCM Evaluation
 
-**Generated By:** GCM OS Business Intelligence Brief Generator  
-**Status:** Draft  
-**Output Format:** Markdown  
+This business should be evaluated as a business growth opportunity, not simply as a lead.
+
+The brief should answer:
+
+1. What does this business sell?
+2. Who does this business serve?
+3. Where is the business currently losing visibility, trust, leads, or sales?
+4. What opportunity can GCM identify?
+5. What first action would create measurable business growth?
+
+---
+
+## Repository Use
+
+This record can support:
+
+- Prospect research
+- Client acquisition
+- Discovery call preparation
+- Growth recommendation planning
+- Proposal development
+- Client onboarding
+- Ongoing account strategy
+
+---
+
+## Next Review
+
+Review this brief before making any recommendation, outreach message, proposal, or campaign decision.
 `;
 
-      output.value = markdown;
-    });
+      document.getElementById("markdownOutput").textContent = markdown;
+      document.getElementById("statusMessage").textContent = "Markdown generated.";
+    }
 
-    copyButton.addEventListener("click", function() {
-      if (!output.value.trim()) {
-        alert("Generate the Markdown first.");
+    function copyMarkdown() {
+      const markdown = document.getElementById("markdownOutput").textContent;
+
+      if (!markdown || markdown === "Your generated Markdown will appear here.") {
+        document.getElementById("statusMessage").textContent = "Generate Markdown before copying.";
         return;
       }
 
-      navigator.clipboard.writeText(output.value);
-      alert("Markdown copied.");
-    });
+      navigator.clipboard.writeText(markdown).then(function () {
+        document.getElementById("statusMessage").textContent = "Markdown copied.";
+      }).catch(function () {
+        document.getElementById("statusMessage").textContent = "Copy failed. Select the Markdown manually.";
+      });
+    }
+
+    function clearForm() {
+      document.getElementById("briefForm").reset();
+      document.getElementById("markdownOutput").textContent = "Your generated Markdown will appear here.";
+      document.getElementById("statusMessage").textContent = "Form cleared.";
+    }
   </script>
 </body>
 </html>
