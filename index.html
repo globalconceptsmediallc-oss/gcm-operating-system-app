@@ -3,203 +3,477 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GCM OS | AI Business Intelligence Engine</title>
-  <link rel="stylesheet" href="gcm-os.css">
+  <title>GCM OS | Prospect Intelligence Dashboard</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --card: #1f2937;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --border: #334155;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    header {
+      padding: 32px 20px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(135deg, #020617, #1e293b);
+    }
+
+    header h1 {
+      margin: 0 0 10px;
+      font-size: 32px;
+    }
+
+    header p {
+      margin: 0;
+      color: var(--muted);
+      max-width: 900px;
+    }
+
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 28px 20px 60px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 22px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 22px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+
+    .card h2 {
+      margin-top: 0;
+      font-size: 22px;
+    }
+
+    label {
+      display: block;
+      margin: 14px 0 6px;
+      color: var(--muted);
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #020617;
+      color: var(--text);
+      padding: 12px;
+      font-size: 15px;
+    }
+
+    textarea {
+      min-height: 260px;
+      resize: vertical;
+      white-space: pre-wrap;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-top: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      background: var(--accent);
+      color: #020617;
+    }
+
+    button.secondary {
+      background: #334155;
+      color: var(--text);
+    }
+
+    button.success {
+      background: var(--success);
+      color: #052e16;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .full {
+      grid-column: 1 / -1;
+    }
+
+    .output {
+      background: #020617;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+      white-space: pre-wrap;
+      min-height: 160px;
+      color: #e2e8f0;
+    }
+
+    .status {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: bold;
+      margin-bottom: 12px;
+    }
+
+    .ready {
+      background: rgba(34,197,94,0.15);
+      color: #86efac;
+    }
+
+    .not-ready {
+      background: rgba(245,158,11,0.15);
+      color: #fcd34d;
+    }
+
+    .note {
+      color: var(--muted);
+      font-size: 14px;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 800px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      header h1 {
+        font-size: 26px;
+      }
+    }
+  </style>
 </head>
-
 <body>
-  <header class="app-header">
-    <div>
-      <p class="eyebrow">Global Concepts Media</p>
-      <h1>AI Business Intelligence Engine</h1>
-    </div>
-    <button id="resetBtn">New Analysis</button>
-  </header>
 
-  <main class="app-shell">
-    <section id="dashboardView" class="view active-view">
-      <div class="hero-card">
-        <p class="eyebrow">Business Intelligence Intake</p>
-        <h2>Enter a business website. Generate first-contact intelligence.</h2>
-        <p>
-          GCM OS analyzes the business, qualifies the prospect, identifies opportunities,
-          and drafts the first email and call script.
-        </p>
+<header>
+  <h1>GCM OS Prospect Intelligence Dashboard</h1>
+  <p>
+    Version 2 Foundation. Enter a business website, generate a standardized ChatGPT research prompt,
+    paste the analysis back into GCM OS, and create the first-contact outreach package.
+  </p>
+</header>
 
-        <div class="url-entry">
-          <input id="websiteInput" type="url" placeholder="https://example.com" />
-          <button id="analyzeBtn">Analyze Business</button>
-        </div>
+<main>
+
+  <section class="grid">
+
+    <div class="card">
+      <h2>Step 1: Prospect Input</h2>
+
+      <label for="websiteUrl">Business Website URL *</label>
+      <input id="websiteUrl" placeholder="https://examplebusiness.com" />
+
+      <label for="businessName">Business Name</label>
+      <input id="businessName" placeholder="Optional" />
+
+      <label for="location">Location / Market</label>
+      <input id="location" placeholder="Optional" />
+
+      <label for="industry">Industry</label>
+      <input id="industry" placeholder="Optional" />
+
+      <div class="actions">
+        <button onclick="generatePrompt()">Generate BI Prompt</button>
+        <button class="secondary" onclick="clearAll()">Clear</button>
       </div>
 
-      <div id="resultsView" class="hidden"></div>
-    </section>
-  </main>
+      <p class="note">
+        The dashboard does not perform the AI research yet. It creates the operating-standard prompt for ChatGPT.
+      </p>
+    </div>
 
-  <script>
-    const websiteInput = document.getElementById("websiteInput");
-    const analyzeBtn = document.getElementById("analyzeBtn");
-    const resetBtn = document.getElementById("resetBtn");
-    const resultsView = document.getElementById("resultsView");
+    <div class="card">
+      <h2>Step 2: Business Intelligence Prompt</h2>
+      <textarea id="generatedPrompt" placeholder="Generated prompt will appear here..."></textarea>
 
-    function getDomain(url) {
-      try {
-        return new URL(url).hostname.replace("www.", "");
-      } catch {
-        return "";
-      }
+      <div class="actions">
+        <button onclick="copyPrompt()">Copy Prompt</button>
+      </div>
+
+      <p class="note">
+        Paste this into ChatGPT. Then paste ChatGPT’s structured response into Step 3.
+      </p>
+    </div>
+
+    <div class="card full">
+      <h2>Step 3: Paste ChatGPT Business Intelligence Report</h2>
+      <textarea id="aiReport" placeholder="Paste ChatGPT's completed Business Intelligence Report here..."></textarea>
+
+      <div class="actions">
+        <button class="success" onclick="generateOutreachPackage()">Generate Outreach Package</button>
+      </div>
+    </div>
+
+    <div class="card full">
+      <h2>Step 4: GCM OS First Contact Package</h2>
+      <div id="readinessStatus"></div>
+      <div id="outreachPackage" class="output">Your first-contact package will appear here...</div>
+
+      <div class="actions">
+        <button onclick="copyOutreach()">Copy Outreach Package</button>
+      </div>
+    </div>
+
+  </section>
+
+</main>
+
+<script>
+  function generatePrompt() {
+    const website = document.getElementById("websiteUrl").value.trim();
+    const businessName = document.getElementById("businessName").value.trim();
+    const location = document.getElementById("location").value.trim();
+    const industry = document.getElementById("industry").value.trim();
+
+    if (!website) {
+      alert("Enter a business website URL first.");
+      return;
     }
 
-    function formatBusinessName(domain) {
-      return domain
-        .split(".")[0]
-        .replace(/-/g, " ")
-        .replace(/\b\w/g, char => char.toUpperCase());
+    const prompt = `You are acting as a Business Intelligence Analyst for Global Concepts Media.
+
+Your objective is NOT to perform a full business audit.
+
+Your objective is to determine whether enough publicly observable information exists to confidently begin a personalized first outreach.
+
+Research only information that can be reasonably observed from public sources.
+
+Never invent information.
+Never speculate.
+If something cannot be verified, clearly state Unknown.
+
+Analyze this business:
+
+Website: ${website}
+Business Name: ${businessName || "Unknown"}
+Location / Market: ${location || "Unknown"}
+Industry: ${industry || "Unknown"}
+
+Produce the report using this exact structure:
+
+1. Business Summary
+Provide a concise overview of the business.
+
+2. Observable Products and Services
+List the observable products and services.
+
+3. Target Customer
+Describe who appears to purchase from this business.
+
+4. Geographic Market
+Identify service areas and locations.
+
+5. Trust Signals
+Identify reviews, testimonials, certifications, years in business, awards, guarantees, partnerships, brands carried, case studies, or other credibility indicators.
+
+6. Website Observations
+Evaluate:
+- Professional appearance
+- Messaging clarity
+- Calls to action
+- Navigation
+- Mobile experience
+- Content quality
+- SEO observations
+- Conversion opportunities
+
+7. Observable Growth Opportunities
+Identify only opportunities supported by observable evidence.
+Do not speculate.
+
+8. Missing Information
+List important information that could not be determined.
+
+9. Prospect Qualification Score
+Provide a score from 0 to 100.
+Explain the reasoning.
+
+10. Outreach Readiness
+Answer only one of the following:
+YES — enough information exists for first outreach.
+NO — additional research is recommended.
+Explain why.
+
+11. Personalized Outreach Insights
+Provide:
+- Three personalized observations
+- Three conversation starters
+- Three relevant compliments
+- Three discovery questions
+
+12. Draft a First Contact Email
+Write a professional, personalized, consultative first-contact email.
+Do not hard sell.
+Demonstrate familiarity with the business.
+Invite a brief conversation.
+
+13. Draft a Discovery Call Script
+Include:
+- Opening
+- Reason for calling
+- Observations
+- Discovery questions
+- Transition
+- Closing
+
+14. Human Verification Checklist
+Identify every statement that should be confirmed by a salesperson before making recommendations.
+
+Final Decision:
+At the end, answer this question clearly:
+
+Do we have enough accurate, observable information to confidently call or email this prospect?
+
+Answer YES or NO and explain briefly.`;
+
+    document.getElementById("generatedPrompt").value = prompt;
+  }
+
+  function copyPrompt() {
+    const prompt = document.getElementById("generatedPrompt").value;
+    if (!prompt) {
+      alert("Generate a prompt first.");
+      return;
     }
 
-    function inferIndustry(domain) {
-      const d = domain.toLowerCase();
+    navigator.clipboard.writeText(prompt);
+    alert("Prompt copied.");
+  }
 
-      if (d.includes("roof")) return "Roofing / Home Services";
-      if (d.includes("safe")) return "Safe Sales / Security";
-      if (d.includes("lock")) return "Locksmith / Security";
-      if (d.includes("hvac")) return "HVAC / Home Services";
-      if (d.includes("plumb")) return "Plumbing / Home Services";
-      if (d.includes("law")) return "Legal Services";
-      if (d.includes("dental")) return "Dental / Healthcare";
-      if (d.includes("auto")) return "Automotive Services";
+  function generateOutreachPackage() {
+    const website = document.getElementById("websiteUrl").value.trim();
+    const businessName = document.getElementById("businessName").value.trim() || "Unknown Business";
+    const aiReport = document.getElementById("aiReport").value.trim();
 
-      return "Local Business / Service Provider";
+    if (!aiReport) {
+      alert("Paste the ChatGPT Business Intelligence Report first.");
+      return;
     }
 
-    function generateAnalysis(url) {
-      const domain = getDomain(url);
-      const businessName = formatBusinessName(domain);
-      const industry = inferIndustry(domain);
+    const reportLower = aiReport.toLowerCase();
+    const isReady =
+      reportLower.includes("outreach readiness") &&
+      reportLower.includes("yes");
 
-      return {
-        businessName,
-        website: url,
-        industry,
-        qualificationScore: 88,
-        readiness: "Ready for First Contact",
-        missingInfo: [
-          "Decision maker name",
-          "Current marketing budget",
-          "Lead volume",
-          "Close rate",
-          "Primary growth priority"
-        ],
-        opportunities: [
-          "Improve local search visibility",
-          "Create stronger service-area content",
-          "Add more proof-of-work and case studies",
-          "Strengthen conversion paths for high-intent visitors",
-          "Build educational content that supports buyer decisions"
-        ],
-        email: `Subject: A few growth opportunities I noticed on ${businessName}'s website
+    const status = document.getElementById("readinessStatus");
 
-Hi,
-
-I spent a little time reviewing ${businessName}'s website and wanted to reach out because we help businesses improve visibility, lead generation, and customer acquisition.
-
-You already appear to have a strong foundation, especially around your service positioning and online presence. While reviewing the site, I noticed a few areas that may create opportunities for more qualified leads, including local search visibility, stronger service-area content, and additional trust-building assets such as case studies or educational resources.
-
-I was not reaching out to sell you anything today. I wanted to see if you would be open to a short conversation where I could share what I noticed and see whether any of it lines up with your current growth goals.
-
-Best,
-Andy Belcher
-Global Concepts Media`,
-        callScript: `Hi, this is Andy with Global Concepts Media.
-
-I was reviewing ${businessName}'s website because we work with businesses that depend on local search, lead generation, and trust-based customer acquisition.
-
-I noticed you appear to have a solid foundation, but I also saw a few opportunities that may help improve visibility and generate more qualified inquiries.
-
-I am not calling to sell you anything today. I wanted to see if you would be open to a short conversation where I could share what I found and learn whether growth, visibility, or lead quality is something you are currently focused on.`
-      };
+    if (isReady) {
+      status.innerHTML = '<span class="status ready">Likely Ready for First Outreach</span>';
+    } else {
+      status.innerHTML = '<span class="status not-ready">Review Missing Information Before Outreach</span>';
     }
 
-    function renderAnalysis(data) {
-      resultsView.classList.remove("hidden");
+    const packageText = `# GCM OS First Contact Package
 
-      resultsView.innerHTML = `
-        <section class="workspace-header">
-          <div>
-            <p class="eyebrow">Analysis Complete</p>
-            <h2>${data.businessName}</h2>
-            <p>${data.website}</p>
-          </div>
-          <span class="status-badge">${data.readiness}</span>
-        </section>
+## Prospect
+Business Name: ${businessName}
+Website: ${website || "Unknown"}
 
-        <div class="workspace-grid">
-          <article class="card">
-            <h3>Business Record</h3>
-            <p><strong>Business:</strong> ${data.businessName}</p>
-            <p><strong>Website:</strong> ${data.website}</p>
-            <p><strong>Industry:</strong> ${data.industry}</p>
-            <p><strong>Status:</strong> Draft Prospect Record</p>
-          </article>
+---
 
-          <article class="card">
-            <h3>Qualification</h3>
-            <p><strong>Score:</strong> ${data.qualificationScore}%</p>
-            <p><strong>Status:</strong> ${data.readiness}</p>
-            <p>This prospect has enough observable information to begin first-contact outreach.</p>
-          </article>
+## Business Intelligence Summary
 
-          <article class="card">
-            <h3>Needs Verification</h3>
-            <ul>
-              ${data.missingInfo.map(item => `<li>${item}</li>`).join("")}
-            </ul>
-          </article>
-        </div>
+${aiReport}
 
-        <article class="card">
-          <h3>Growth Opportunities</h3>
-          <ul>
-            ${data.opportunities.map(item => `<li>${item}</li>`).join("")}
-          </ul>
-        </article>
+---
 
-        <article class="card markdown-card">
-          <h3>First Contact Email</h3>
-          <pre id="emailOutput">${data.email}</pre>
-          <button onclick="copyText('emailOutput')">Copy Email</button>
-        </article>
+## Salesperson Review Standard
 
-        <article class="card markdown-card">
-          <h3>Call Script</h3>
-          <pre id="callOutput">${data.callScript}</pre>
-          <button onclick="copyText('callOutput')">Copy Call Script</button>
-        </article>
-      `;
+Before making first contact, verify:
+
+1. The business website loads correctly.
+2. The business name appears accurate.
+3. The primary products or services are clear.
+4. The geographic market is clear.
+5. The outreach email does not make unsupported claims.
+6. The call script is conversational and not aggressive.
+7. Any missing information is noted before outreach.
+8. The salesperson can explain why they are contacting this business.
+
+---
+
+## First Contact Decision
+
+Ask one question:
+
+Do I have enough accurate, observable information to confidently call or email this prospect?
+
+If YES:
+Proceed with first outreach.
+
+If NO:
+Complete additional research before contact.
+
+---
+
+## Next Workflow Step
+
+Move this prospect into the Client Acquisition System:
+
+1. Business Record
+2. Prospect Qualification
+3. First Outreach
+4. Follow-Up
+5. Discovery Call
+6. Recommendation
+7. Proposal
+8. Client Onboarding`;
+
+    document.getElementById("outreachPackage").textContent = packageText;
+  }
+
+  function copyOutreach() {
+    const packageText = document.getElementById("outreachPackage").textContent;
+    if (!packageText || packageText.includes("will appear here")) {
+      alert("Generate the outreach package first.");
+      return;
     }
 
-    function copyText(id) {
-      const text = document.getElementById(id).textContent;
-      navigator.clipboard.writeText(text);
-    }
+    navigator.clipboard.writeText(packageText);
+    alert("Outreach package copied.");
+  }
 
-    analyzeBtn.addEventListener("click", () => {
-      const url = websiteInput.value.trim();
+  function clearAll() {
+    document.getElementById("websiteUrl").value = "";
+    document.getElementById("businessName").value = "";
+    document.getElementById("location").value = "";
+    document.getElementById("industry").value = "";
+    document.getElementById("generatedPrompt").value = "";
+    document.getElementById("aiReport").value = "";
+    document.getElementById("readinessStatus").innerHTML = "";
+    document.getElementById("outreachPackage").textContent = "Your first-contact package will appear here...";
+  }
+</script>
 
-      if (!url) {
-        alert("Enter a business website URL.");
-        return;
-      }
-
-      const analysis = generateAnalysis(url);
-      renderAnalysis(analysis);
-    });
-
-    resetBtn.addEventListener("click", () => {
-      websiteInput.value = "";
-      resultsView.innerHTML = "";
-      resultsView.classList.add("hidden");
-    });
-  </script>
 </body>
 </html>
