@@ -3,109 +3,308 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GCM OS | Version 2 Dashboard</title>
+  <title>GCM OS | Dashboard</title>
   <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
   <header class="app-header">
     <div>
       <p class="eyebrow">Global Concepts Media</p>
       <h1>Operating System</h1>
     </div>
-    <span class="version-badge">Version 2 Foundation</span>
+    <button id="newBusinessBtn">+ New Business</button>
   </header>
 
-  <main class="dashboard">
-    <section class="hero-card">
-      <div>
-        <p class="eyebrow">Business Workspace</p>
-        <h2>Start with a business. Build the record. Generate the work.</h2>
+  <main class="app-shell">
+    <section id="dashboardView" class="view active-view">
+      <div class="hero-card">
+        <p class="eyebrow">Version 2 Foundation</p>
+        <h2>Business Database</h2>
         <p>
-          Every workflow begins with a Business Record that becomes the source of truth
-          for intelligence, recommendations, and repository records.
+          Every workflow begins with a Business Record. Add a business, review the
+          facts, then open the Business Workspace to generate repository records.
         </p>
+
+        <div class="url-entry">
+          <input id="quickWebsiteUrl" type="url" placeholder="https://example.com" />
+          <button id="quickAnalyzeBtn">Analyze Business</button>
+        </div>
       </div>
 
-      <form id="businessForm" class="business-form">
-        <label for="websiteUrl">Website URL</label>
-        <input
-          id="websiteUrl"
-          type="url"
-          placeholder="https://example.com"
-          required
-        />
-        <button type="submit">Analyze Business</button>
-      </form>
-    </section>
-
-    <section class="grid">
-      <article class="card">
-        <h3>Workflow</h3>
-        <ol class="workflow-list">
-          <li class="active">Dashboard</li>
-          <li>New Business</li>
-          <li>Website URL</li>
-          <li>Analyze Business</li>
-          <li>Business Workspace</li>
-          <li>Generate Repository Records</li>
-        </ol>
-      </article>
-
-      <article class="card">
-        <h3>Recent Businesses</h3>
-        <div id="recentBusinesses" class="empty-state">
-          No businesses created yet.
+      <section class="section-header">
+        <div>
+          <p class="eyebrow">Source of Truth</p>
+          <h2>Businesses</h2>
         </div>
-      </article>
+      </section>
 
-      <article class="card">
-        <h3>Repository Records</h3>
-        <ul class="record-list">
-          <li>Business Record</li>
-          <li>Business Intelligence Brief</li>
-          <li>Website Review</li>
-          <li>Opportunity Report</li>
-        </ul>
-      </article>
+      <div id="businessList" class="business-grid">
+        <div class="empty-state">
+          No businesses created yet. Start by entering a website URL.
+        </div>
+      </div>
     </section>
 
-    <section id="workspace" class="workspace hidden">
+    <section id="workspaceView" class="view">
+      <button id="backToDashboard" class="text-button">← Back to Dashboard</button>
+
       <div class="workspace-header">
         <div>
           <p class="eyebrow">Business Workspace</p>
-          <h2 id="workspaceTitle">New Business</h2>
+          <h2 id="workspaceName">Business Name</h2>
+          <p id="workspaceUrl">Website URL</p>
         </div>
-        <span class="status-badge">Draft Record</span>
+        <span class="status-badge">Draft Business Record</span>
       </div>
 
       <div class="workspace-grid">
         <article class="card">
           <h3>Business Record</h3>
-          <p><strong>Website:</strong> <span id="recordWebsite"></span></p>
+          <p><strong>Business:</strong> <span id="recordName"></span></p>
+          <p><strong>Website:</strong> <span id="recordUrl"></span></p>
           <p><strong>Status:</strong> Draft</p>
           <p><strong>Source:</strong> User-entered website URL</p>
         </article>
 
         <article class="card">
-          <h3>Next Required Step</h3>
+          <h3>Business Intelligence</h3>
           <p>
-            Review the website manually, confirm observable facts, then refine the
-            Business Record before generating repository records.
+            Review the website manually and confirm observable facts before generating
+            repository records.
           </p>
-          <button id="generateMarkdown" class="secondary-button">
-            Generate Business Record Markdown
-          </button>
+          <ul>
+            <li>Website purpose</li>
+            <li>Products and services</li>
+            <li>Location and market</li>
+            <li>Visible growth gaps</li>
+          </ul>
+        </article>
+
+        <article class="card">
+          <h3>Repository Records</h3>
+          <button id="generateRecordBtn">Generate Business Record Markdown</button>
         </article>
       </div>
 
       <article class="card markdown-card">
         <h3>Generated Markdown</h3>
-        <pre id="markdownOutput">No record generated yet.</pre>
-        <button id="copyMarkdown" class="secondary-button">Copy Markdown</button>
+        <pre id="markdownOutput">No repository record generated yet.</pre>
+        <button id="copyMarkdownBtn" class="secondary-button">Copy Markdown</button>
       </article>
     </section>
   </main>
 
-  <script src="app.js"></script>
+  <dialog id="businessDialog">
+    <form method="dialog" class="dialog-card">
+      <h2>New Business</h2>
+
+      <label for="businessName">Business Name</label>
+      <input id="businessName" type="text" placeholder="Example Business" />
+
+      <label for="businessWebsite">Website URL</label>
+      <input id="businessWebsite" type="url" placeholder="https://example.com" />
+
+      <div class="dialog-actions">
+        <button id="cancelDialog" type="button" class="secondary-button">Cancel</button>
+        <button id="saveBusinessBtn" type="button">Save Business</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script>
+    const businesses = [];
+    let activeBusiness = null;
+
+    const dashboardView = document.getElementById("dashboardView");
+    const workspaceView = document.getElementById("workspaceView");
+    const businessList = document.getElementById("businessList");
+    const businessDialog = document.getElementById("businessDialog");
+
+    const newBusinessBtn = document.getElementById("newBusinessBtn");
+    const quickAnalyzeBtn = document.getElementById("quickAnalyzeBtn");
+    const quickWebsiteUrl = document.getElementById("quickWebsiteUrl");
+
+    const businessName = document.getElementById("businessName");
+    const businessWebsite = document.getElementById("businessWebsite");
+    const saveBusinessBtn = document.getElementById("saveBusinessBtn");
+    const cancelDialog = document.getElementById("cancelDialog");
+
+    const backToDashboard = document.getElementById("backToDashboard");
+    const generateRecordBtn = document.getElementById("generateRecordBtn");
+    const copyMarkdownBtn = document.getElementById("copyMarkdownBtn");
+    const markdownOutput = document.getElementById("markdownOutput");
+
+    function cleanUrl(url) {
+      return url.trim();
+    }
+
+    function nameFromUrl(url) {
+      try {
+        const domain = new URL(url).hostname.replace("www.", "");
+        return domain.split(".")[0].replace(/-/g, " ");
+      } catch {
+        return "New Business";
+      }
+    }
+
+    function createBusiness(name, website) {
+      const cleanWebsite = cleanUrl(website);
+
+      if (!cleanWebsite) {
+        alert("Please enter a website URL.");
+        return;
+      }
+
+      const business = {
+        id: Date.now(),
+        name: name.trim() || nameFromUrl(cleanWebsite),
+        website: cleanWebsite,
+        status: "Draft",
+        source: "User-entered website URL"
+      };
+
+      businesses.push(business);
+      renderBusinesses();
+      openWorkspace(business);
+    }
+
+    function renderBusinesses() {
+      businessList.innerHTML = "";
+
+      if (businesses.length === 0) {
+        businessList.innerHTML = `
+          <div class="empty-state">
+            No businesses created yet. Start by entering a website URL.
+          </div>
+        `;
+        return;
+      }
+
+      businesses.forEach((business) => {
+        const card = document.createElement("button");
+        card.className = "business-card";
+        card.innerHTML = `
+          <span class="business-name">${business.name}</span>
+          <span class="business-url">${business.website}</span>
+          <span class="business-status">${business.status}</span>
+        `;
+
+        card.addEventListener("click", () => openWorkspace(business));
+        businessList.appendChild(card);
+      });
+    }
+
+    function openWorkspace(business) {
+      activeBusiness = business;
+
+      document.getElementById("workspaceName").textContent = business.name;
+      document.getElementById("workspaceUrl").textContent = business.website;
+      document.getElementById("recordName").textContent = business.name;
+      document.getElementById("recordUrl").textContent = business.website;
+
+      markdownOutput.textContent = "No repository record generated yet.";
+
+      dashboardView.classList.remove("active-view");
+      workspaceView.classList.add("active-view");
+    }
+
+    function openDashboard() {
+      workspaceView.classList.remove("active-view");
+      dashboardView.classList.add("active-view");
+    }
+
+    function generateMarkdown() {
+      if (!activeBusiness) return;
+
+      const markdown = `# Business Record
+
+Version: 1.0  
+Status: Draft  
+Source: GCM OS Business Workspace  
+
+---
+
+## Business Identity
+
+Business Name: ${activeBusiness.name}
+
+Website: ${activeBusiness.website}
+
+Record Status: Draft
+
+---
+
+## Source of Truth
+
+This Business Record is the starting point for all downstream intelligence, workflows, recommendations, and repository records.
+
+---
+
+## Observable Facts
+
+- Website URL was entered by the user.
+- Business information still requires human review.
+- AI analysis has not yet been connected.
+- This record should not be treated as final until verified.
+
+---
+
+## Required Review
+
+Before generating additional records, verify:
+
+- Business name
+- Website purpose
+- Products and services
+- Location or service area
+- Primary customer
+- Visible growth opportunities
+- Website issues or gaps
+
+---
+
+## Related Records
+
+- Business Intelligence Brief
+- Website Review
+- Opportunity Report
+- Workflow Record
+`;
+
+      markdownOutput.textContent = markdown;
+    }
+
+    newBusinessBtn.addEventListener("click", () => {
+      businessName.value = "";
+      businessWebsite.value = "";
+      businessDialog.showModal();
+    });
+
+    quickAnalyzeBtn.addEventListener("click", () => {
+      createBusiness("", quickWebsiteUrl.value);
+      quickWebsiteUrl.value = "";
+    });
+
+    saveBusinessBtn.addEventListener("click", () => {
+      createBusiness(businessName.value, businessWebsite.value);
+      businessDialog.close();
+    });
+
+    cancelDialog.addEventListener("click", () => {
+      businessDialog.close();
+    });
+
+    backToDashboard.addEventListener("click", openDashboard);
+    generateRecordBtn.addEventListener("click", generateMarkdown);
+
+    copyMarkdownBtn.addEventListener("click", async () => {
+      await navigator.clipboard.writeText(markdownOutput.textContent);
+      copyMarkdownBtn.textContent = "Copied";
+      setTimeout(() => {
+        copyMarkdownBtn.textContent = "Copy Markdown";
+      }, 1200);
+    });
+  </script>
 </body>
 </html>
