@@ -5,7 +5,7 @@
    Purpose: Front-end dashboard logic
    ========================================================= */
 
-const workerEndpoint = "./worker.js";
+const workerEndpoint = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
 
 const form = document.getElementById("researchForm");
 const websiteInput = document.getElementById("websiteUrl");
@@ -143,7 +143,10 @@ async function generateBusinessIntelligence(websiteUrl) {
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({ websiteUrl })
+    body: JSON.stringify({
+  website: websiteUrl,
+  workflow: "business-intelligence"
+})
   });
 
   if (!response.ok) {
