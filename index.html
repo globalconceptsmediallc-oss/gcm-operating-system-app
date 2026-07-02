@@ -3,19 +3,26 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GCM OS | Prospect Intelligence Dashboard</title>
+  <title>GCM OS | Prospect Intelligence</title>
+
   <style>
     :root {
-      --bg: #0f172a;
-      --panel: #111827;
-      --card: #1f2937;
-      --text: #f8fafc;
-      --muted: #94a3b8;
-      --accent: #38bdf8;
-      --success: #22c55e;
+      --bg: #f4f7fb;
+      --dark: #101828;
+      --nav: #0f172a;
+      --panel: #ffffff;
+      --muted: #667085;
+      --text: #1d2939;
+      --border: #d0d5dd;
+      --accent: #2563eb;
+      --accent-dark: #1d4ed8;
+      --success: #16a34a;
       --warning: #f59e0b;
-      --danger: #ef4444;
-      --border: #334155;
+      --danger: #dc2626;
+      --soft-blue: #eff6ff;
+      --soft-green: #ecfdf3;
+      --soft-yellow: #fffbeb;
+      --shadow: 0 12px 30px rgba(16, 24, 40, 0.08);
     }
 
     * {
@@ -24,97 +31,215 @@
 
     body {
       margin: 0;
-      font-family: Arial, sans-serif;
+      font-family: Arial, Helvetica, sans-serif;
       background: var(--bg);
       color: var(--text);
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      min-height: 100vh;
+    }
+
+    aside {
+      background: var(--nav);
+      color: #fff;
+      padding: 24px 18px;
+    }
+
+    .brand {
+      margin-bottom: 32px;
+    }
+
+    .brand small {
+      display: block;
+      color: #94a3b8;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      font-size: 11px;
+      text-transform: uppercase;
+    }
+
+    .brand strong {
+      display: block;
+      font-size: 22px;
+      margin-top: 4px;
+    }
+
+    nav a {
+      display: block;
+      color: #cbd5e1;
+      text-decoration: none;
+      padding: 12px 14px;
+      border-radius: 10px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      cursor: pointer;
+    }
+
+    nav a.active,
+    nav a:hover {
+      background: #1e293b;
+      color: #fff;
+    }
+
+    .sidebar-note {
+      border-top: 1px solid #334155;
+      margin-top: 28px;
+      padding-top: 18px;
+      color: #94a3b8;
+      font-size: 13px;
       line-height: 1.5;
     }
 
-    header {
-      padding: 32px 20px;
-      border-bottom: 1px solid var(--border);
-      background: linear-gradient(135deg, #020617, #1e293b);
-    }
-
-    header h1 {
-      margin: 0 0 10px;
-      font-size: 32px;
-    }
-
-    header p {
-      margin: 0;
-      color: var(--muted);
-      max-width: 900px;
-    }
-
     main {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 28px 20px 60px;
+      padding: 0;
+    }
+
+    .topbar {
+      height: 72px;
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      padding: 0 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .topbar h1 {
+      margin: 0;
+      font-size: 22px;
+    }
+
+    .topbar span {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .workspace {
+      padding: 28px;
+      max-width: 1400px;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #0f172a, #1e40af);
+      color: #fff;
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: var(--shadow);
+      margin-bottom: 24px;
+    }
+
+    .hero small {
+      color: #bfdbfe;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 12px;
+    }
+
+    .hero h2 {
+      font-size: 34px;
+      max-width: 850px;
+      margin: 10px 0;
+    }
+
+    .hero p {
+      color: #dbeafe;
+      max-width: 820px;
+      margin-bottom: 0;
     }
 
     .grid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 22px;
+      gap: 18px;
+    }
+
+    .grid-2 {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .grid-3 {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .grid-main {
+      grid-template-columns: 2fr 1fr;
+      align-items: start;
     }
 
     .card {
       background: var(--panel);
       border: 1px solid var(--border);
-      border-radius: 16px;
+      border-radius: 18px;
       padding: 22px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      box-shadow: var(--shadow);
     }
 
-    .card h2 {
+    .card h3 {
       margin-top: 0;
-      font-size: 22px;
+      font-size: 18px;
+    }
+
+    .metric {
+      font-size: 34px;
+      font-weight: 800;
+      color: var(--dark);
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font-size: 14px;
+      margin-top: 4px;
     }
 
     label {
       display: block;
-      margin: 14px 0 6px;
-      color: var(--muted);
-      font-weight: bold;
+      font-weight: 800;
       font-size: 14px;
+      margin: 16px 0 6px;
     }
 
-    input, textarea, select {
+    input,
+    textarea,
+    select {
       width: 100%;
+      padding: 13px;
       border: 1px solid var(--border);
-      border-radius: 10px;
-      background: #020617;
-      color: var(--text);
-      padding: 12px;
+      border-radius: 12px;
       font-size: 15px;
+      background: #fff;
+      color: var(--text);
     }
 
     textarea {
-      min-height: 260px;
+      min-height: 250px;
       resize: vertical;
       white-space: pre-wrap;
     }
 
     button {
-      border: none;
-      border-radius: 10px;
-      padding: 12px 16px;
-      margin-top: 14px;
-      font-weight: bold;
-      cursor: pointer;
+      border: 0;
+      border-radius: 12px;
+      padding: 13px 18px;
       background: var(--accent);
-      color: #020617;
+      color: #fff;
+      font-weight: 800;
+      cursor: pointer;
+      margin-top: 14px;
+    }
+
+    button:hover {
+      background: var(--accent-dark);
     }
 
     button.secondary {
-      background: #334155;
-      color: var(--text);
+      background: #475467;
     }
 
     button.success {
       background: var(--success);
-      color: #052e16;
     }
 
     .actions {
@@ -123,148 +248,338 @@
       gap: 10px;
     }
 
-    .full {
-      grid-column: 1 / -1;
-    }
-
     .output {
-      background: #020617;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 18px;
-      white-space: pre-wrap;
-      min-height: 160px;
+      background: #0f172a;
       color: #e2e8f0;
+      border-radius: 14px;
+      padding: 18px;
+      min-height: 180px;
+      white-space: pre-wrap;
+      font-size: 14px;
+      line-height: 1.6;
+      overflow-x: auto;
     }
 
-    .status {
+    .status-pill {
       display: inline-block;
-      padding: 6px 10px;
+      padding: 7px 11px;
       border-radius: 999px;
       font-size: 13px;
-      font-weight: bold;
-      margin-bottom: 12px;
+      font-weight: 800;
     }
 
     .ready {
-      background: rgba(34,197,94,0.15);
-      color: #86efac;
+      background: var(--soft-green);
+      color: var(--success);
     }
 
-    .not-ready {
-      background: rgba(245,158,11,0.15);
-      color: #fcd34d;
+    .pending {
+      background: var(--soft-yellow);
+      color: #b45309;
     }
 
-    .note {
+    .module {
+      display: none;
+    }
+
+    .module.active {
+      display: block;
+    }
+
+    .list {
+      margin: 0;
+      padding-left: 20px;
       color: var(--muted);
-      font-size: 14px;
-      margin-top: 10px;
     }
 
-    @media (max-width: 800px) {
-      .grid {
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 20px 0;
+    }
+
+    .footer-note {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 14px;
+    }
+
+    @media (max-width: 900px) {
+      .app {
         grid-template-columns: 1fr;
       }
 
-      header h1 {
+      aside {
+        position: relative;
+      }
+
+      .grid-2,
+      .grid-3,
+      .grid-main {
+        grid-template-columns: 1fr;
+      }
+
+      .hero h2 {
         font-size: 26px;
       }
     }
   </style>
 </head>
+
 <body>
+  <div class="app">
 
-<header>
-  <h1>GCM OS Prospect Intelligence Dashboard</h1>
-  <p>
-    Version 2 Foundation. Enter a business website, generate a standardized ChatGPT research prompt,
-    paste the analysis back into GCM OS, and create the first-contact outreach package.
-  </p>
-</header>
-
-<main>
-
-  <section class="grid">
-
-    <div class="card">
-      <h2>Step 1: Prospect Input</h2>
-
-      <label for="websiteUrl">Business Website URL *</label>
-      <input id="websiteUrl" placeholder="https://examplebusiness.com" />
-
-      <label for="businessName">Business Name</label>
-      <input id="businessName" placeholder="Optional" />
-
-      <label for="location">Location / Market</label>
-      <input id="location" placeholder="Optional" />
-
-      <label for="industry">Industry</label>
-      <input id="industry" placeholder="Optional" />
-
-      <div class="actions">
-        <button onclick="generatePrompt()">Generate BI Prompt</button>
-        <button class="secondary" onclick="clearAll()">Clear</button>
+    <aside>
+      <div class="brand">
+        <small>Global Concepts Media</small>
+        <strong>GCM OS</strong>
       </div>
 
-      <p class="note">
-        The dashboard does not perform the AI research yet. It creates the operating-standard prompt for ChatGPT.
-      </p>
-    </div>
+      <nav>
+        <a class="active" onclick="showModule('dashboard', this)">Dashboard</a>
+        <a onclick="showModule('prospect', this)">New Prospect</a>
+        <a onclick="showModule('intelligence', this)">Business Intelligence</a>
+        <a onclick="showModule('outreach', this)">Outreach Package</a>
+        <a onclick="showModule('record', this)">Business Record</a>
+        <a onclick="showModule('workflow', this)">Client Acquisition</a>
+      </nav>
 
-    <div class="card">
-      <h2>Step 2: Business Intelligence Prompt</h2>
-      <textarea id="generatedPrompt" placeholder="Generated prompt will appear here..."></textarea>
+      <div class="sidebar-note">
+        Repositories remain the operating system and source of truth. This dashboard executes the standards.
+      </div>
+    </aside>
 
-      <div class="actions">
-        <button onclick="copyPrompt()">Copy Prompt</button>
+    <main>
+      <div class="topbar">
+        <div>
+          <h1>Prospect Intelligence Workspace</h1>
+          <span>Research → Qualification → First Contact</span>
+        </div>
+        <span class="status-pill ready">Version 2 Foundation</span>
       </div>
 
-      <p class="note">
-        Paste this into ChatGPT. Then paste ChatGPT’s structured response into Step 3.
-      </p>
-    </div>
+      <div class="workspace">
 
-    <div class="card full">
-      <h2>Step 3: Paste ChatGPT Business Intelligence Report</h2>
-      <textarea id="aiReport" placeholder="Paste ChatGPT's completed Business Intelligence Report here..."></textarea>
+        <section id="dashboard" class="module active">
+          <div class="hero">
+            <small>GCM Operating System</small>
+            <h2>Accelerate prospect qualification and prepare for intelligent first outreach.</h2>
+            <p>
+              Enter a business website, generate a standardized ChatGPT research prompt,
+              paste the analysis back into GCM OS, and create a first-contact package.
+            </p>
+          </div>
 
-      <div class="actions">
-        <button class="success" onclick="generateOutreachPackage()">Generate Outreach Package</button>
+          <div class="grid grid-3">
+            <div class="card">
+              <div class="metric">1</div>
+              <div class="metric-label">Website required to begin</div>
+            </div>
+            <div class="card">
+              <div class="metric">5 min</div>
+              <div class="metric-label">Target review time before first contact</div>
+            </div>
+            <div class="card">
+              <div class="metric">YES / NO</div>
+              <div class="metric-label">Outreach readiness decision</div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top:18px;">
+            <h3>Operating Principle</h3>
+            <p>
+              The purpose of this tool is not to replace a full business audit.
+              The purpose is to decide whether enough observable information exists
+              to confidently call or email a prospect.
+            </p>
+            <button onclick="showModuleById('prospect')">Start New Prospect</button>
+          </div>
+        </section>
+
+        <section id="prospect" class="module">
+          <div class="hero">
+            <small>New Prospect</small>
+            <h2>Enter the business website and generate the research prompt.</h2>
+          </div>
+
+          <div class="grid grid-main">
+            <div class="card">
+              <h3>Prospect Intake</h3>
+
+              <label for="websiteUrl">Business Website URL *</label>
+              <input id="websiteUrl" placeholder="https://examplebusiness.com" />
+
+              <label for="businessName">Business Name</label>
+              <input id="businessName" placeholder="Optional" />
+
+              <label for="location">Location / Market</label>
+              <input id="location" placeholder="Optional" />
+
+              <label for="industry">Industry</label>
+              <input id="industry" placeholder="Optional" />
+
+              <label for="source">Referral Source / Campaign</label>
+              <input id="source" placeholder="Optional" />
+
+              <div class="actions">
+                <button onclick="generatePrompt()">Generate Business Intelligence Prompt</button>
+                <button class="secondary" onclick="clearAll()">Clear</button>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3>Prospect Standard</h3>
+              <ul class="list">
+                <li>Use observable information only.</li>
+                <li>Do not invent details.</li>
+                <li>Identify missing information.</li>
+                <li>Score qualification clearly.</li>
+                <li>Decide if first contact is ready.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section id="intelligence" class="module">
+          <div class="hero">
+            <small>Business Intelligence</small>
+            <h2>Copy the prompt, run it in ChatGPT, and paste the completed report back here.</h2>
+          </div>
+
+          <div class="grid grid-2">
+            <div class="card">
+              <h3>Generated ChatGPT Prompt</h3>
+              <textarea id="generatedPrompt" placeholder="Your standardized prompt will appear here..."></textarea>
+              <div class="actions">
+                <button onclick="copyPrompt()">Copy Prompt</button>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3>Paste ChatGPT Report</h3>
+              <textarea id="aiReport" placeholder="Paste ChatGPT's Business Intelligence Report here..."></textarea>
+              <div class="actions">
+                <button class="success" onclick="generateOutreachPackage()">Generate Outreach Package</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="outreach" class="module">
+          <div class="hero">
+            <small>First Contact</small>
+            <h2>Review the qualification decision, email, call script, and missing information.</h2>
+          </div>
+
+          <div class="grid grid-main">
+            <div class="card">
+              <h3>Outreach Package</h3>
+              <div id="outreachPackage" class="output">Your first-contact package will appear here...</div>
+              <button onclick="copyOutreach()">Copy Outreach Package</button>
+            </div>
+
+            <div class="card">
+              <h3>Qualification</h3>
+              <div id="readinessStatus">
+                <span class="status-pill pending">Pending Analysis</span>
+              </div>
+
+              <div class="divider"></div>
+
+              <h3>Human Review</h3>
+              <ul class="list">
+                <li>Verify the website loads.</li>
+                <li>Check the business name.</li>
+                <li>Confirm products and services.</li>
+                <li>Review unsupported claims.</li>
+                <li>Make sure the email is not generic.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section id="record" class="module">
+          <div class="hero">
+            <small>Business Record</small>
+            <h2>Generate a standardized Markdown business record for the repository or CRM.</h2>
+          </div>
+
+          <div class="card">
+            <h3>Business Record Markdown</h3>
+            <div id="businessRecord" class="output">Generate an outreach package first. The business record will appear here.</div>
+            <button onclick="copyBusinessRecord()">Copy Business Record</button>
+          </div>
+        </section>
+
+        <section id="workflow" class="module">
+          <div class="hero">
+            <small>Client Acquisition System</small>
+            <h2>The next step after qualification is structured first outreach.</h2>
+          </div>
+
+          <div class="grid grid-3">
+            <div class="card">
+              <h3>1. Qualified Prospect</h3>
+              <p>Business intelligence supports a confident first contact decision.</p>
+            </div>
+            <div class="card">
+              <h3>2. First Outreach</h3>
+              <p>Email and call script are personalized using observable evidence.</p>
+            </div>
+            <div class="card">
+              <h3>3. Discovery</h3>
+              <p>If interest exists, move into the discovery call standard.</p>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top:18px;">
+            <h3>Operating Sequence</h3>
+            <div class="output">Prospect → Research → Qualification → Outreach → Follow-Up → Discovery → Recommendation → Proposal → Client</div>
+          </div>
+        </section>
+
       </div>
-    </div>
+    </main>
+  </div>
 
-    <div class="card full">
-      <h2>Step 4: GCM OS First Contact Package</h2>
-      <div id="readinessStatus"></div>
-      <div id="outreachPackage" class="output">Your first-contact package will appear here...</div>
+  <script>
+    function showModule(id, el) {
+      document.querySelectorAll(".module").forEach(module => module.classList.remove("active"));
+      document.getElementById(id).classList.add("active");
 
-      <div class="actions">
-        <button onclick="copyOutreach()">Copy Outreach Package</button>
-      </div>
-    </div>
-
-  </section>
-
-</main>
-
-<script>
-  function generatePrompt() {
-    const website = document.getElementById("websiteUrl").value.trim();
-    const businessName = document.getElementById("businessName").value.trim();
-    const location = document.getElementById("location").value.trim();
-    const industry = document.getElementById("industry").value.trim();
-
-    if (!website) {
-      alert("Enter a business website URL first.");
-      return;
+      document.querySelectorAll("nav a").forEach(link => link.classList.remove("active"));
+      el.classList.add("active");
     }
 
-    const prompt = `You are acting as a Business Intelligence Analyst for Global Concepts Media.
+    function showModuleById(id) {
+      document.querySelectorAll(".module").forEach(module => module.classList.remove("active"));
+      document.getElementById(id).classList.add("active");
+
+      document.querySelectorAll("nav a").forEach(link => {
+        link.classList.remove("active");
+        if (link.textContent.toLowerCase().includes(id.replace("-", " "))) {
+          link.classList.add("active");
+        }
+      });
+    }
+
+    function generatePrompt() {
+      const website = document.getElementById("websiteUrl").value.trim();
+      const businessName = document.getElementById("businessName").value.trim();
+      const location = document.getElementById("location").value.trim();
+      const industry = document.getElementById("industry").value.trim();
+      const source = document.getElementById("source").value.trim();
+
+      if (!website) {
+        alert("Enter a business website URL first.");
+        return;
+      }
+
+      const prompt = `You are acting as a Business Intelligence Analyst for Global Concepts Media.
 
 Your objective is NOT to perform a full business audit.
 
-Your objective is to determine whether enough publicly observable information exists to confidently begin a personalized first outreach.
+Your objective is to determine whether enough publicly observable information exists to confidently begin personalized first outreach.
 
 Research only information that can be reasonably observed from public sources.
 
@@ -278,6 +593,7 @@ Website: ${website}
 Business Name: ${businessName || "Unknown"}
 Location / Market: ${location || "Unknown"}
 Industry: ${industry || "Unknown"}
+Referral Source / Campaign: ${source || "Unknown"}
 
 Produce the report using this exact structure:
 
@@ -356,52 +672,54 @@ Do we have enough accurate, observable information to confidently call or email 
 
 Answer YES or NO and explain briefly.`;
 
-    document.getElementById("generatedPrompt").value = prompt;
-  }
-
-  function copyPrompt() {
-    const prompt = document.getElementById("generatedPrompt").value;
-    if (!prompt) {
-      alert("Generate a prompt first.");
-      return;
+      document.getElementById("generatedPrompt").value = prompt;
+      showModuleById("intelligence");
     }
 
-    navigator.clipboard.writeText(prompt);
-    alert("Prompt copied.");
-  }
+    function copyPrompt() {
+      const prompt = document.getElementById("generatedPrompt").value;
 
-  function generateOutreachPackage() {
-    const website = document.getElementById("websiteUrl").value.trim();
-    const businessName = document.getElementById("businessName").value.trim() || "Unknown Business";
-    const aiReport = document.getElementById("aiReport").value.trim();
+      if (!prompt) {
+        alert("Generate a prompt first.");
+        return;
+      }
 
-    if (!aiReport) {
-      alert("Paste the ChatGPT Business Intelligence Report first.");
-      return;
+      navigator.clipboard.writeText(prompt);
+      alert("Prompt copied.");
     }
 
-    const reportLower = aiReport.toLowerCase();
-    const isReady =
-      reportLower.includes("outreach readiness") &&
-      reportLower.includes("yes");
+    function generateOutreachPackage() {
+      const website = document.getElementById("websiteUrl").value.trim();
+      const businessName = document.getElementById("businessName").value.trim() || "Unknown Business";
+      const location = document.getElementById("location").value.trim() || "Unknown";
+      const industry = document.getElementById("industry").value.trim() || "Unknown";
+      const source = document.getElementById("source").value.trim() || "Unknown";
+      const aiReport = document.getElementById("aiReport").value.trim();
 
-    const status = document.getElementById("readinessStatus");
+      if (!aiReport) {
+        alert("Paste the ChatGPT Business Intelligence Report first.");
+        return;
+      }
 
-    if (isReady) {
-      status.innerHTML = '<span class="status ready">Likely Ready for First Outreach</span>';
-    } else {
-      status.innerHTML = '<span class="status not-ready">Review Missing Information Before Outreach</span>';
-    }
+      const lower = aiReport.toLowerCase();
+      const ready = lower.includes("yes") && lower.includes("first outreach");
 
-    const packageText = `# GCM OS First Contact Package
+      document.getElementById("readinessStatus").innerHTML = ready
+        ? '<span class="status-pill ready">Ready for First Contact</span>'
+        : '<span class="status-pill pending">Needs Human Verification</span>';
+
+      const outreachText = `# GCM OS First Contact Package
 
 ## Prospect
 Business Name: ${businessName}
 Website: ${website || "Unknown"}
+Location / Market: ${location}
+Industry: ${industry}
+Referral Source / Campaign: ${source}
 
 ---
 
-## Business Intelligence Summary
+## Business Intelligence Report
 
 ${aiReport}
 
@@ -411,20 +729,18 @@ ${aiReport}
 
 Before making first contact, verify:
 
-1. The business website loads correctly.
+1. The website loads correctly.
 2. The business name appears accurate.
 3. The primary products or services are clear.
 4. The geographic market is clear.
 5. The outreach email does not make unsupported claims.
-6. The call script is conversational and not aggressive.
-7. Any missing information is noted before outreach.
-8. The salesperson can explain why they are contacting this business.
+6. The call script sounds conversational.
+7. Any missing information is noted.
+8. The salesperson can explain why this business is being contacted.
 
 ---
 
 ## First Contact Decision
-
-Ask one question:
 
 Do I have enough accurate, observable information to confidently call or email this prospect?
 
@@ -432,48 +748,81 @@ If YES:
 Proceed with first outreach.
 
 If NO:
-Complete additional research before contact.
+Complete additional research before contact.`;
+
+      const recordText = `# Business Intelligence Record
+
+## Business
+${businessName}
+
+## Website
+${website || "Unknown"}
+
+## Location / Market
+${location}
+
+## Industry
+${industry}
+
+## Referral Source / Campaign
+${source}
+
+## Status
+Draft Prospect Record
+
+---
+
+## Business Intelligence Report
+
+${aiReport}
 
 ---
 
 ## Next Workflow Step
+Client Acquisition System → First Outreach`;
 
-Move this prospect into the Client Acquisition System:
+      document.getElementById("outreachPackage").textContent = outreachText;
+      document.getElementById("businessRecord").textContent = recordText;
 
-1. Business Record
-2. Prospect Qualification
-3. First Outreach
-4. Follow-Up
-5. Discovery Call
-6. Recommendation
-7. Proposal
-8. Client Onboarding`;
-
-    document.getElementById("outreachPackage").textContent = packageText;
-  }
-
-  function copyOutreach() {
-    const packageText = document.getElementById("outreachPackage").textContent;
-    if (!packageText || packageText.includes("will appear here")) {
-      alert("Generate the outreach package first.");
-      return;
+      showModuleById("outreach");
     }
 
-    navigator.clipboard.writeText(packageText);
-    alert("Outreach package copied.");
-  }
+    function copyOutreach() {
+      const text = document.getElementById("outreachPackage").textContent;
 
-  function clearAll() {
-    document.getElementById("websiteUrl").value = "";
-    document.getElementById("businessName").value = "";
-    document.getElementById("location").value = "";
-    document.getElementById("industry").value = "";
-    document.getElementById("generatedPrompt").value = "";
-    document.getElementById("aiReport").value = "";
-    document.getElementById("readinessStatus").innerHTML = "";
-    document.getElementById("outreachPackage").textContent = "Your first-contact package will appear here...";
-  }
-</script>
+      if (!text || text.includes("will appear here")) {
+        alert("Generate the outreach package first.");
+        return;
+      }
 
+      navigator.clipboard.writeText(text);
+      alert("Outreach package copied.");
+    }
+
+    function copyBusinessRecord() {
+      const text = document.getElementById("businessRecord").textContent;
+
+      if (!text || text.includes("will appear here")) {
+        alert("Generate the business record first.");
+        return;
+      }
+
+      navigator.clipboard.writeText(text);
+      alert("Business record copied.");
+    }
+
+    function clearAll() {
+      document.getElementById("websiteUrl").value = "";
+      document.getElementById("businessName").value = "";
+      document.getElementById("location").value = "";
+      document.getElementById("industry").value = "";
+      document.getElementById("source").value = "";
+      document.getElementById("generatedPrompt").value = "";
+      document.getElementById("aiReport").value = "";
+      document.getElementById("outreachPackage").textContent = "Your first-contact package will appear here...";
+      document.getElementById("businessRecord").textContent = "Generate an outreach package first. The business record will appear here.";
+      document.getElementById("readinessStatus").innerHTML = '<span class="status-pill pending">Pending Analysis</span>';
+    }
+  </script>
 </body>
 </html>
