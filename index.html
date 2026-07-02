@@ -3,819 +3,212 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GCM OS | New Opportunity</title>
+  <title>GCM OS | Business Intelligence Dashboard</title>
 
-  <style>
-    :root {
-      --bg: #f5f7fb;
-      --ink: #101828;
-      --muted: #667085;
-      --card: #ffffff;
-      --line: #d0d5dd;
-      --nav: #0f172a;
-      --blue: #2563eb;
-      --green: #16a34a;
-      --yellow: #f59e0b;
-      --red: #dc2626;
-      --shadow: 0 14px 35px rgba(16, 24, 40, 0.08);
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      font-family: Arial, Helvetica, sans-serif;
-      background: var(--bg);
-      color: var(--ink);
-    }
-
-    .app {
-      min-height: 100vh;
-      display: grid;
-      grid-template-columns: 260px 1fr;
-    }
-
-    aside {
-      background: var(--nav);
-      color: white;
-      padding: 24px 18px;
-    }
-
-    .brand small {
-      display: block;
-      color: #94a3b8;
-      text-transform: uppercase;
-      letter-spacing: .08em;
-      font-weight: 800;
-      font-size: 11px;
-    }
-
-    .brand strong {
-      display: block;
-      font-size: 24px;
-      margin-top: 5px;
-    }
-
-    nav {
-      margin-top: 34px;
-    }
-
-    nav a {
-      display: block;
-      padding: 13px 14px;
-      border-radius: 12px;
-      color: #cbd5e1;
-      text-decoration: none;
-      font-weight: 800;
-      cursor: pointer;
-      margin-bottom: 6px;
-    }
-
-    nav a.active,
-    nav a:hover {
-      background: #1e293b;
-      color: white;
-    }
-
-    .note {
-      margin-top: 30px;
-      padding-top: 18px;
-      border-top: 1px solid #334155;
-      color: #94a3b8;
-      font-size: 13px;
-      line-height: 1.5;
-    }
-
-    .topbar {
-      background: white;
-      border-bottom: 1px solid var(--line);
-      height: 74px;
-      padding: 0 30px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .topbar h1 {
-      margin: 0;
-      font-size: 22px;
-    }
-
-    .topbar span {
-      color: var(--muted);
-      font-size: 14px;
-    }
-
-    .workspace {
-      padding: 32px;
-      max-width: 1400px;
-    }
-
-    .hero {
-      background: linear-gradient(135deg, #0f172a, #1d4ed8);
-      color: white;
-      border-radius: 24px;
-      padding: 34px;
-      box-shadow: var(--shadow);
-      margin-bottom: 22px;
-    }
-
-    .hero small {
-      color: #bfdbfe;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: .08em;
-      font-size: 12px;
-    }
-
-    .hero h2 {
-      font-size: 38px;
-      margin: 12px 0;
-      max-width: 850px;
-    }
-
-    .hero p {
-      color: #dbeafe;
-      max-width: 760px;
-      margin: 0;
-    }
-
-    .grid {
-      display: grid;
-      gap: 18px;
-    }
-
-    .grid-2 { grid-template-columns: 1fr 1fr; }
-    .grid-3 { grid-template-columns: repeat(3, 1fr); }
-    .grid-main { grid-template-columns: 2fr 1fr; }
-
-    .card {
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: 20px;
-      padding: 24px;
-      box-shadow: var(--shadow);
-    }
-
-    .card h3 {
-      margin-top: 0;
-      font-size: 19px;
-    }
-
-    label {
-      display: block;
-      font-weight: 800;
-      font-size: 14px;
-      margin: 16px 0 6px;
-    }
-
-    input,
-    textarea {
-      width: 100%;
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 14px;
-      font-size: 15px;
-      background: white;
-      color: var(--ink);
-    }
-
-    textarea {
-      min-height: 230px;
-      resize: vertical;
-      white-space: pre-wrap;
-    }
-
-    button {
-      border: 0;
-      border-radius: 14px;
-      padding: 13px 18px;
-      margin-top: 14px;
-      background: var(--blue);
-      color: white;
-      font-weight: 800;
-      cursor: pointer;
-    }
-
-    button.secondary { background: #475467; }
-    button.success { background: var(--green); }
-    button.warning { background: var(--yellow); color: #111827; }
-
-    .actions {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .score {
-      font-size: 54px;
-      font-weight: 900;
-      color: var(--ink);
-      line-height: 1;
-    }
-
-    .pill {
-      display: inline-block;
-      padding: 8px 12px;
-      border-radius: 999px;
-      font-weight: 900;
-      font-size: 13px;
-    }
-
-    .ready {
-      background: #dcfce7;
-      color: var(--green);
-    }
-
-    .pending {
-      background: #fef3c7;
-      color: #b45309;
-    }
-
-    .muted {
-      color: var(--muted);
-      font-size: 14px;
-    }
-
-    .output {
-      background: #0f172a;
-      color: #e2e8f0;
-      border-radius: 16px;
-      padding: 18px;
-      white-space: pre-wrap;
-      line-height: 1.6;
-      font-size: 14px;
-      min-height: 160px;
-      overflow-x: auto;
-    }
-
-    .clean-output {
-      background: #f8fafc;
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 18px;
-      white-space: pre-wrap;
-      line-height: 1.6;
-      font-size: 15px;
-      min-height: 120px;
-    }
-
-    details {
-      margin-top: 18px;
-      background: white;
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 18px;
-      box-shadow: var(--shadow);
-    }
-
-    summary {
-      font-weight: 900;
-      cursor: pointer;
-    }
-
-    .module { display: none; }
-    .module.active { display: block; }
-
-    .checklist {
-      padding-left: 20px;
-      color: var(--muted);
-      line-height: 1.7;
-    }
-
-    .divider {
-      height: 1px;
-      background: var(--line);
-      margin: 18px 0;
-    }
-
-    @media (max-width: 900px) {
-      .app { grid-template-columns: 1fr; }
-      .grid-2,
-      .grid-3,
-      .grid-main { grid-template-columns: 1fr; }
-      .hero h2 { font-size: 28px; }
-    }
-  </style>
+  <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
-  <div class="app">
+  <div class="app-shell">
 
-    <aside>
+    <aside class="sidebar">
       <div class="brand">
-        <small>Global Concepts Media</small>
-        <strong>GCM OS</strong>
+        <div class="brand-mark">GCM</div>
+        <div>
+          <h1>GCM OS</h1>
+          <p>Version 2 Foundation</p>
+        </div>
       </div>
 
-      <nav>
-        <a class="active" onclick="showModule('dashboard', this)">Dashboard</a>
-        <a onclick="showModule('opportunity', this)">+ New Opportunity</a>
-        <a onclick="showModule('research', this)">Research Step</a>
-        <a onclick="showModule('readiness', this)">Sales Readiness</a>
-        <a onclick="showModule('assets', this)">Outreach Assets</a>
-        <a onclick="showModule('record', this)">Business Record</a>
+      <nav class="nav">
+        <a href="#dashboard" class="active">Dashboard</a>
+        <a href="#new-opportunity">New Opportunity</a>
+        <a href="#readiness">Sales Readiness</a>
+        <a href="#report">Business Brief</a>
+        <a href="#outreach">Outreach Assets</a>
+        <a href="#record">Business Record</a>
       </nav>
-
-      <div class="note">
-        GCM OS executes the standards. ChatGPT performs the research. The salesperson reviews the decision and takes action.
-      </div>
     </aside>
 
-    <main>
-      <div class="topbar">
+    <main class="main">
+
+      <section id="dashboard" class="hero">
         <div>
-          <h1>Sales Readiness Dashboard</h1>
-          <span>New Opportunity → Research → Decision → First Contact</span>
+          <p class="eyebrow">Global Concepts Media</p>
+          <h2>Business Intelligence Dashboard</h2>
+          <p>
+            Enter a prospect website. The system researches the business,
+            determines sales readiness, and prepares first-contact assets.
+          </p>
         </div>
-        <span class="pill ready">Version 2 Foundation</span>
-      </div>
 
-      <div class="workspace">
+        <div class="status-card">
+          <span class="status-label">Current Status</span>
+          <strong id="statusText">Awaiting New Opportunity</strong>
+        </div>
+      </section>
 
-        <section id="dashboard" class="module active">
-          <div class="hero">
-            <small>GCM Operating System</small>
-            <h2>Turn a website into a first-contact decision.</h2>
-            <p>
-              The goal is not a full audit. The goal is to know whether you can confidently call or email a prospect in less than five minutes.
-            </p>
+      <section id="new-opportunity" class="card">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Step 1</p>
+            <h3>New Opportunity</h3>
+          </div>
+          <span class="pill">Website Required</span>
+        </div>
+
+        <div class="form-grid">
+          <div class="field full">
+            <label for="websiteInput">Website URL *</label>
+            <input id="websiteInput" type="url" placeholder="https://example.com" />
           </div>
 
-          <div class="grid grid-3">
-            <div class="card">
-              <h3>Start</h3>
-              <div class="score">1</div>
-              <p class="muted">Website needed to begin.</p>
-            </div>
-
-            <div class="card">
-              <h3>Decision</h3>
-              <div class="score">YES / NO</div>
-              <p class="muted">Ready for first contact?</p>
-            </div>
-
-            <div class="card">
-              <h3>Output</h3>
-              <div class="score">5 min</div>
-              <p class="muted">Review target before outreach.</p>
-            </div>
+          <div class="field">
+            <label for="businessInput">Business Name Optional</label>
+            <input id="businessInput" type="text" placeholder="Leave blank if unknown" />
           </div>
 
-          <div class="card" style="margin-top:18px;">
-            <h3>Operating Standard</h3>
-            <p>
-              A prospect is ready only when enough accurate, publicly observable information exists to support a confident, personalized first conversation.
-            </p>
-            <button onclick="showModuleById('opportunity')">Start New Opportunity</button>
-          </div>
-        </section>
-
-        <section id="opportunity" class="module">
-          <div class="hero">
-            <small>New Opportunity</small>
-            <h2>Research a new prospect.</h2>
-            <p>Enter the website. Everything else is optional.</p>
+          <div class="field">
+            <label for="referralInput">Referral Source Optional</label>
+            <input id="referralInput" type="text" placeholder="Google, list, referral, campaign..." />
           </div>
 
-          <div class="grid grid-main">
-            <div class="card">
-              <h3>Prospect Intake</h3>
-
-              <label for="websiteUrl">Business Website URL *</label>
-              <input id="websiteUrl" placeholder="https://examplebusiness.com" />
-
-              <label for="businessName">Business Name</label>
-              <input id="businessName" placeholder="Optional" />
-
-              <label for="location">Location / Market</label>
-              <input id="location" placeholder="Optional" />
-
-              <label for="industry">Industry</label>
-              <input id="industry" placeholder="Optional" />
-
-              <div class="actions">
-                <button onclick="generatePrompt()">Analyze Business</button>
-                <button class="secondary" onclick="clearAll()">Clear</button>
-              </div>
-            </div>
-
-            <div class="card">
-              <h3>What Happens Next</h3>
-              <ol class="checklist">
-                <li>GCM OS generates the research prompt.</li>
-                <li>You run the prompt in ChatGPT.</li>
-                <li>You paste the response back into GCM OS.</li>
-                <li>GCM OS creates the sales readiness dashboard.</li>
-              </ol>
-            </div>
+          <div class="field">
+            <label for="campaignInput">Campaign Optional</label>
+            <input id="campaignInput" type="text" placeholder="Outbound, local prospecting..." />
           </div>
-        </section>
+        </div>
 
-        <section id="research" class="module">
-          <div class="hero">
-            <small>Research Step</small>
-            <h2>Run the research prompt in ChatGPT.</h2>
-            <p>This step is temporary for Version 2. Later, this can become automated.</p>
-          </div>
+        <button id="researchButton" class="primary-button">
+          Analyze Prospect
+        </button>
 
-          <div class="grid grid-2">
-            <div class="card">
-              <h3>Step 1: Copy Prompt</h3>
-              <textarea id="generatedPrompt" placeholder="Prompt will appear here..."></textarea>
-              <button onclick="copyPrompt()">Copy Prompt</button>
-            </div>
+        <p class="helper-text">
+          The Business Intelligence prompt is stored inside the application.
+          Salespeople do not need to copy or edit prompts.
+        </p>
+      </section>
 
-            <div class="card">
-              <h3>Step 2: Paste ChatGPT Report</h3>
-              <textarea id="aiReport" placeholder="Paste the completed ChatGPT report here..."></textarea>
-              <button class="success" onclick="generateDashboard()">Create Sales Readiness Dashboard</button>
-            </div>
-          </div>
-        </section>
+      <section id="readiness" class="dashboard-grid">
 
-        <section id="readiness" class="module">
-          <div class="hero">
-            <small>Sales Readiness</small>
-            <h2 id="readyTitle">No opportunity analyzed yet.</h2>
-            <p id="readySubtitle">Create a new opportunity first.</p>
-          </div>
-
-          <div class="grid grid-3">
-            <div class="card">
-              <h3>Qualification Score</h3>
-              <div id="scoreBox" class="score">--</div>
-              <p class="muted">Out of 100</p>
-            </div>
-
-            <div class="card">
-              <h3>First Contact Decision</h3>
-              <div id="decisionBox"><span class="pill pending">Pending</span></div>
-              <p id="decisionReason" class="muted">No decision yet.</p>
-            </div>
-
-            <div class="card">
-              <h3>Next Action</h3>
-              <div id="nextAction" class="clean-output">Analyze a prospect first.</div>
-            </div>
-          </div>
-
-          <div class="grid grid-2" style="margin-top:18px;">
-            <div class="card">
+        <div class="card">
+          <div class="section-header">
+            <div>
+              <p class="eyebrow">Step 2</p>
               <h3>Business Snapshot</h3>
-              <div id="snapshotBox" class="clean-output">Pending.</div>
-            </div>
-
-            <div class="card">
-              <h3>Why This Prospect Qualified</h3>
-              <div id="qualifiedBox" class="clean-output">Pending.</div>
             </div>
           </div>
 
-          <div class="grid grid-2" style="margin-top:18px;">
-            <div class="card">
-              <h3>Growth Opportunities</h3>
-              <div id="opportunitiesBox" class="clean-output">Pending.</div>
+          <div class="snapshot-list">
+            <div>
+              <span>Business Name</span>
+              <strong id="businessName">Unknown</strong>
             </div>
-
-            <div class="card">
-              <h3>Missing Information</h3>
-              <div id="missingBox" class="clean-output">Pending.</div>
+            <div>
+              <span>Industry</span>
+              <strong id="industry">Unknown</strong>
             </div>
-          </div>
-
-          <details>
-            <summary>View Full Research Report</summary>
-            <div id="fullReportBox" class="output" style="margin-top:14px;">No report yet.</div>
-          </details>
-        </section>
-
-        <section id="assets" class="module">
-          <div class="hero">
-            <small>Outreach Assets</small>
-            <h2>Email and call script ready for review.</h2>
-            <p>Copy only what you need for first contact.</p>
-          </div>
-
-          <div class="grid grid-2">
-            <div class="card">
-              <h3>First Contact Email</h3>
-              <div id="emailBox" class="output">No email generated yet.</div>
-              <button onclick="copyById('emailBox', 'Email copied.')">Copy Email</button>
+            <div>
+              <span>Market</span>
+              <strong id="market">Unknown</strong>
             </div>
-
-            <div class="card">
-              <h3>Discovery Call Script</h3>
-              <div id="scriptBox" class="output">No call script generated yet.</div>
-              <button onclick="copyById('scriptBox', 'Call script copied.')">Copy Script</button>
+            <div>
+              <span>Website</span>
+              <strong id="websiteDisplay">Unknown</strong>
             </div>
           </div>
-        </section>
+        </div>
 
-        <section id="record" class="module">
-          <div class="hero">
-            <small>Business Record</small>
-            <h2>Repository-ready prospect record.</h2>
-            <p>This keeps the operating system connected to the source of truth.</p>
+        <div class="card score-card">
+          <p class="eyebrow">Sales Readiness</p>
+          <div id="scoreDisplay" class="score">--</div>
+          <p id="decisionDisplay" class="decision">Awaiting Research</p>
+        </div>
+
+      </section>
+
+      <section class="card">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Workflow</p>
+            <h3>Research Progress</h3>
           </div>
+        </div>
 
-          <div class="card">
-            <h3>Business Record Markdown</h3>
-            <div id="recordBox" class="output">No record generated yet.</div>
-            <button onclick="copyById('recordBox', 'Business record copied.')">Copy Business Record</button>
+        <div class="progress-list">
+          <div id="stepInput" class="progress-step active">1. Website entered</div>
+          <div id="stepResearch" class="progress-step">2. Research business</div>
+          <div id="stepAnalyze" class="progress-step">3. Analyze sales readiness</div>
+          <div id="stepOutreach" class="progress-step">4. Generate outreach assets</div>
+          <div id="stepReady" class="progress-step">5. Ready for first contact</div>
+        </div>
+      </section>
+
+      <section id="report" class="card">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Step 3</p>
+            <h3>Business Intelligence Brief</h3>
           </div>
-        </section>
+        </div>
 
-      </div>
+        <div id="reportOutput" class="output-box">
+          Business Intelligence results will appear here.
+        </div>
+      </section>
+
+      <section id="outreach" class="card">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Step 4</p>
+            <h3>Outreach Assets</h3>
+          </div>
+        </div>
+
+        <div class="tabs">
+          <button class="tab active" data-tab="email">First Email</button>
+          <button class="tab" data-tab="questions">Discovery Questions</button>
+          <button class="tab" data-tab="script">Call Script</button>
+        </div>
+
+        <div id="emailOutput" class="output-box">
+          First-contact email will appear here.
+        </div>
+
+        <div id="questionsOutput" class="output-box hidden">
+          Discovery questions will appear here.
+        </div>
+
+        <div id="scriptOutput" class="output-box hidden">
+          Call script will appear here.
+        </div>
+      </section>
+
+      <section id="record" class="card">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Step 5</p>
+            <h3>Business Record</h3>
+          </div>
+        </div>
+
+        <div id="recordOutput" class="output-box">
+          Markdown business record will appear here.
+        </div>
+
+        <div class="button-row">
+          <button id="copyRecordButton" class="secondary-button">Copy Record</button>
+          <button id="downloadRecordButton" class="secondary-button">Download Markdown</button>
+        </div>
+      </section>
+
     </main>
   </div>
 
-  <script>
-    function showModule(id, el) {
-      document.querySelectorAll(".module").forEach(m => m.classList.remove("active"));
-      document.getElementById(id).classList.add("active");
-
-      document.querySelectorAll("nav a").forEach(a => a.classList.remove("active"));
-      if (el) el.classList.add("active");
-    }
-
-    function showModuleById(id) {
-      document.querySelectorAll(".module").forEach(m => m.classList.remove("active"));
-      document.getElementById(id).classList.add("active");
-
-      document.querySelectorAll("nav a").forEach(a => {
-        a.classList.remove("active");
-        if (a.textContent.toLowerCase().includes(id.replace("-", " "))) {
-          a.classList.add("active");
-        }
-      });
-    }
-
-    function generatePrompt() {
-      const website = getValue("websiteUrl");
-
-      if (!website) {
-        alert("Enter a business website URL first.");
-        return;
-      }
-
-      const businessName = getValue("businessName") || "Unknown";
-      const location = getValue("location") || "Unknown";
-      const industry = getValue("industry") || "Unknown";
-
-      const prompt = `You are acting as a Business Intelligence Analyst for Global Concepts Media.
-
-Your objective is NOT to perform a full business audit.
-
-Your objective is to determine whether enough publicly observable information exists to confidently begin personalized first outreach.
-
-Research only information that can be reasonably observed from public sources.
-
-Never invent information.
-Never speculate.
-If something cannot be verified, clearly state Unknown.
-
-Analyze this business:
-
-Website: ${website}
-Business Name: ${businessName}
-Location / Market: ${location}
-Industry: ${industry}
-
-Produce the report using this exact structure:
-
-1. Business Summary
-Provide a concise overview of the business.
-
-2. Observable Products and Services
-List the observable products and services.
-
-3. Target Customer
-Describe who appears to purchase from this business.
-
-4. Geographic Market
-Identify service areas and locations.
-
-5. Trust Signals
-Identify reviews, testimonials, certifications, years in business, awards, guarantees, partnerships, brands carried, case studies, or other credibility indicators.
-
-6. Website Observations
-Evaluate:
-- Professional appearance
-- Messaging clarity
-- Calls to action
-- Navigation
-- Mobile experience
-- Content quality
-- SEO observations
-- Conversion opportunities
-
-7. Observable Growth Opportunities
-Identify only opportunities supported by observable evidence.
-Do not speculate.
-
-8. Missing Information
-List important information that could not be determined.
-
-9. Prospect Qualification Score
-Provide a score from 0 to 100.
-Explain the reasoning.
-
-10. Outreach Readiness
-Answer only one of the following:
-YES — enough information exists for first outreach.
-NO — additional research is recommended.
-Explain why.
-
-11. Personalized Outreach Insights
-Provide:
-- Three personalized observations
-- Three conversation starters
-- Three relevant compliments
-- Three discovery questions
-
-12. Draft First Contact Email
-Write a professional, personalized, consultative first-contact email.
-Do not hard sell.
-Demonstrate familiarity with the business.
-Invite a brief conversation.
-
-13. Discovery Call Script
-Include:
-- Opening
-- Reason for calling
-- Observations
-- Discovery questions
-- Transition
-- Closing
-
-14. Human Verification Checklist
-Identify every statement that should be confirmed by a salesperson before making recommendations.
-
-Final Decision
-Answer this clearly:
-
-Do we have enough accurate, observable information to confidently call or email this prospect?
-
-Answer YES or NO and explain briefly.`;
-
-      document.getElementById("generatedPrompt").value = prompt;
-      showModuleById("research");
-    }
-
-    function generateDashboard() {
-      const report = getValue("aiReport");
-
-      if (!report) {
-        alert("Paste the ChatGPT report first.");
-        return;
-      }
-
-      const website = getValue("websiteUrl") || "Unknown";
-      const businessName = extractLine(report, "Business Name") || getValue("businessName") || "Unknown Business";
-      const market = extractLine(report, "Market") || getValue("location") || "Unknown";
-      const industry = extractLine(report, "Industry") || getValue("industry") || "Unknown";
-      const score = extractScore(report);
-      const ready = report.toLowerCase().includes("yes") && report.toLowerCase().includes("first outreach");
-
-      document.getElementById("readyTitle").textContent = businessName;
-      document.getElementById("readySubtitle").textContent = `${industry} · ${market}`;
-      document.getElementById("scoreBox").textContent = score || "--";
-
-      document.getElementById("decisionBox").innerHTML = ready
-        ? '<span class="pill ready">Ready for First Contact</span>'
-        : '<span class="pill pending">Needs Human Review</span>';
-
-      document.getElementById("decisionReason").textContent = ready
-        ? "Enough observable information appears to exist for a personalized first outreach."
-        : "Review missing information before outreach.";
-
-      document.getElementById("nextAction").textContent = ready
-        ? "Review the email and call script, verify key claims, then begin first outreach."
-        : "Review the missing information and complete additional research before contact.";
-
-      document.getElementById("snapshotBox").textContent =
-`Business: ${businessName}
-Website: ${website}
-Industry: ${industry}
-Market: ${market}`;
-
-      document.getElementById("qualifiedBox").textContent = cleanSection(report, "5. Trust Signals", "6. Website Observations") || "Review full report.";
-      document.getElementById("opportunitiesBox").textContent = cleanSection(report, "7. Observable Growth Opportunities", "8. Missing Information") || "Review full report.";
-      document.getElementById("missingBox").textContent = cleanSection(report, "8. Missing Information", "9. Prospect Qualification Score") || "Review full report.";
-      document.getElementById("emailBox").textContent = cleanSection(report, "12. Draft First Contact Email", "13. Discovery Call Script") || "Email section not found.";
-      document.getElementById("scriptBox").textContent = cleanSection(report, "13. Discovery Call Script", "14. Human Verification Checklist") || "Call script section not found.";
-      document.getElementById("fullReportBox").textContent = report;
-
-      document.getElementById("recordBox").textContent =
-`# Business Intelligence Record
-
-## Business
-${businessName}
-
-## Website
-${website}
-
-## Industry
-${industry}
-
-## Market
-${market}
-
-## Qualification Score
-${score || "Unknown"}
-
-## Outreach Readiness
-${ready ? "Ready for First Contact" : "Needs Human Review"}
-
----
-
-## Business Snapshot
-${document.getElementById("snapshotBox").textContent}
-
----
-
-## Growth Opportunities
-${document.getElementById("opportunitiesBox").textContent}
-
----
-
-## Missing Information
-${document.getElementById("missingBox").textContent}
-
----
-
-## Full Business Intelligence Report
-${report}`;
-
-      showModuleById("readiness");
-    }
-
-    function cleanSection(text, start, end) {
-      const startIndex = text.indexOf(start);
-      if (startIndex === -1) return "";
-
-      const contentStart = startIndex + start.length;
-      const endIndex = text.indexOf(end, contentStart);
-
-      return text
-        .slice(contentStart, endIndex === -1 ? text.length : endIndex)
-        .replace(/^[:\s-]+/, "")
-        .trim();
-    }
-
-    function extractLine(text, label) {
-      const regex = new RegExp(label + "\\s*:\\s*(.*)", "i");
-      const match = text.match(regex);
-      return match ? match[1].trim() : "";
-    }
-
-    function extractScore(text) {
-      const match = text.match(/(\d{1,3})\s*\/\s*100/);
-      return match ? match[1] : "";
-    }
-
-    function copyPrompt() {
-      copyById("generatedPrompt", "Prompt copied.");
-    }
-
-    function copyById(id, message) {
-      const el = document.getElementById(id);
-      const text = el.value || el.textContent;
-
-      if (!text || text.includes("No ") || text.includes("Prompt will")) {
-        alert("Nothing to copy yet.");
-        return;
-      }
-
-      navigator.clipboard.writeText(text);
-      alert(message);
-    }
-
-    function getValue(id) {
-      return document.getElementById(id).value.trim();
-    }
-
-    function clearAll() {
-      ["websiteUrl", "businessName", "location", "industry", "generatedPrompt", "aiReport"].forEach(id => {
-        document.getElementById(id).value = "";
-      });
-
-      document.getElementById("readyTitle").textContent = "No opportunity analyzed yet.";
-      document.getElementById("readySubtitle").textContent = "Create a new opportunity first.";
-      document.getElementById("scoreBox").textContent = "--";
-      document.getElementById("decisionBox").innerHTML = '<span class="pill pending">Pending</span>';
-      document.getElementById("decisionReason").textContent = "No decision yet.";
-      document.getElementById("nextAction").textContent = "Analyze a prospect first.";
-      document.getElementById("snapshotBox").textContent = "Pending.";
-      document.getElementById("qualifiedBox").textContent = "Pending.";
-      document.getElementById("opportunitiesBox").textContent = "Pending.";
-      document.getElementById("missingBox").textContent = "Pending.";
-      document.getElementById("emailBox").textContent = "No email generated yet.";
-      document.getElementById("scriptBox").textContent = "No call script generated yet.";
-      document.getElementById("recordBox").textContent = "No record generated yet.";
-      document.getElementById("fullReportBox").textContent = "No report yet.";
-    }
-  </script>
+  <script src="config.js"></script>
+  <script src="prompts.js"></script>
+  <script src="parser.js"></script>
+  <script src="ui.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
