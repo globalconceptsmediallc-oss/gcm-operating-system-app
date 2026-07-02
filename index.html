@@ -3,212 +3,121 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GCM OS | Business Intelligence Dashboard</title>
+
+  <title>GCM OS | Prospect Intelligence Dashboard</title>
 
   <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
-  <div class="app-shell">
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">Global Concepts Media</p>
+      <h1>Prospect Intelligence Dashboard</h1>
+      <p>
+        Enter a business website. The system runs the fixed GCM Business Intelligence prompt,
+        fills the dashboard, and prepares first-contact assets.
+      </p>
+    </div>
+  </header>
 
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-mark">GCM</div>
+  <main class="app">
+
+    <section class="card">
+      <div class="section-header">
         <div>
-          <h1>GCM OS</h1>
-          <p>Version 2 Foundation</p>
+          <p class="eyebrow">Step 1</p>
+          <h2>Analyze Prospect</h2>
         </div>
+        <span id="statusBadge" class="badge">Ready</span>
       </div>
 
-      <nav class="nav">
-        <a href="#dashboard" class="active">Dashboard</a>
-        <a href="#new-opportunity">New Opportunity</a>
-        <a href="#readiness">Sales Readiness</a>
-        <a href="#report">Business Brief</a>
-        <a href="#outreach">Outreach Assets</a>
-        <a href="#record">Business Record</a>
-      </nav>
-    </aside>
+      <label for="websiteInput">Website URL *</label>
+      <input id="websiteInput" type="url" placeholder="https://example.com" />
 
-    <main class="main">
+      <button id="analyzeButton" class="primary-button">
+        Analyze Prospect
+      </button>
 
-      <section id="dashboard" class="hero">
-        <div>
-          <p class="eyebrow">Global Concepts Media</p>
-          <h2>Business Intelligence Dashboard</h2>
-          <p>
-            Enter a prospect website. The system researches the business,
-            determines sales readiness, and prepares first-contact assets.
-          </p>
-        </div>
+      <p class="helper">
+        The AI prompt is built into the system. Only the website changes.
+      </p>
+    </section>
 
-        <div class="status-card">
-          <span class="status-label">Current Status</span>
-          <strong id="statusText">Awaiting New Opportunity</strong>
-        </div>
-      </section>
-
-      <section id="new-opportunity" class="card">
-        <div class="section-header">
-          <div>
-            <p class="eyebrow">Step 1</p>
-            <h3>New Opportunity</h3>
-          </div>
-          <span class="pill">Website Required</span>
-        </div>
-
-        <div class="form-grid">
-          <div class="field full">
-            <label for="websiteInput">Website URL *</label>
-            <input id="websiteInput" type="url" placeholder="https://example.com" />
-          </div>
-
-          <div class="field">
-            <label for="businessInput">Business Name Optional</label>
-            <input id="businessInput" type="text" placeholder="Leave blank if unknown" />
-          </div>
-
-          <div class="field">
-            <label for="referralInput">Referral Source Optional</label>
-            <input id="referralInput" type="text" placeholder="Google, list, referral, campaign..." />
-          </div>
-
-          <div class="field">
-            <label for="campaignInput">Campaign Optional</label>
-            <input id="campaignInput" type="text" placeholder="Outbound, local prospecting..." />
-          </div>
-        </div>
-
-        <button id="researchButton" class="primary-button">
-          Analyze Prospect
-        </button>
-
-        <p class="helper-text">
-          The Business Intelligence prompt is stored inside the application.
-          Salespeople do not need to copy or edit prompts.
-        </p>
-      </section>
-
-      <section id="readiness" class="dashboard-grid">
-
-        <div class="card">
-          <div class="section-header">
-            <div>
-              <p class="eyebrow">Step 2</p>
-              <h3>Business Snapshot</h3>
-            </div>
-          </div>
-
-          <div class="snapshot-list">
-            <div>
-              <span>Business Name</span>
-              <strong id="businessName">Unknown</strong>
-            </div>
-            <div>
-              <span>Industry</span>
-              <strong id="industry">Unknown</strong>
-            </div>
-            <div>
-              <span>Market</span>
-              <strong id="market">Unknown</strong>
-            </div>
-            <div>
-              <span>Website</span>
-              <strong id="websiteDisplay">Unknown</strong>
-            </div>
-          </div>
-        </div>
-
-        <div class="card score-card">
-          <p class="eyebrow">Sales Readiness</p>
-          <div id="scoreDisplay" class="score">--</div>
-          <p id="decisionDisplay" class="decision">Awaiting Research</p>
-        </div>
-
-      </section>
+    <section class="dashboard-grid">
 
       <section class="card">
-        <div class="section-header">
-          <div>
-            <p class="eyebrow">Workflow</p>
-            <h3>Research Progress</h3>
-          </div>
-        </div>
+        <p class="eyebrow">Business Snapshot</p>
+        <h2 id="businessName">Unknown Business</h2>
 
-        <div class="progress-list">
-          <div id="stepInput" class="progress-step active">1. Website entered</div>
-          <div id="stepResearch" class="progress-step">2. Research business</div>
-          <div id="stepAnalyze" class="progress-step">3. Analyze sales readiness</div>
-          <div id="stepOutreach" class="progress-step">4. Generate outreach assets</div>
-          <div id="stepReady" class="progress-step">5. Ready for first contact</div>
+        <div class="snapshot">
+          <div>
+            <span>Industry</span>
+            <strong id="industry">Unknown</strong>
+          </div>
+
+          <div>
+            <span>Market</span>
+            <strong id="market">Unknown</strong>
+          </div>
+
+          <div>
+            <span>Website</span>
+            <strong id="websiteDisplay">Unknown</strong>
+          </div>
         </div>
       </section>
 
-      <section id="report" class="card">
-        <div class="section-header">
-          <div>
-            <p class="eyebrow">Step 3</p>
-            <h3>Business Intelligence Brief</h3>
-          </div>
-        </div>
-
-        <div id="reportOutput" class="output-box">
-          Business Intelligence results will appear here.
-        </div>
+      <section class="card score-card">
+        <p class="eyebrow">Qualification</p>
+        <div id="score">--</div>
+        <strong id="decision">Awaiting Analysis</strong>
       </section>
 
-      <section id="outreach" class="card">
-        <div class="section-header">
-          <div>
-            <p class="eyebrow">Step 4</p>
-            <h3>Outreach Assets</h3>
-          </div>
-        </div>
+    </section>
 
-        <div class="tabs">
-          <button class="tab active" data-tab="email">First Email</button>
-          <button class="tab" data-tab="questions">Discovery Questions</button>
-          <button class="tab" data-tab="script">Call Script</button>
-        </div>
+    <section class="card">
+      <div class="tabs">
+        <button class="tab active" data-tab="brief">Business Brief</button>
+        <button class="tab" data-tab="email">Email</button>
+        <button class="tab" data-tab="script">Call Script</button>
+        <button class="tab" data-tab="checklist">Verification Checklist</button>
+        <button class="tab" data-tab="record">Business Record</button>
+      </div>
 
-        <div id="emailOutput" class="output-box">
-          First-contact email will appear here.
-        </div>
+      <div id="briefPanel" class="panel active-panel">
+        <h2>Business Intelligence Brief</h2>
+        <pre id="briefOutput">Results will appear here.</pre>
+      </div>
 
-        <div id="questionsOutput" class="output-box hidden">
-          Discovery questions will appear here.
-        </div>
+      <div id="emailPanel" class="panel">
+        <h2>First Contact Email</h2>
+        <pre id="emailOutput">Email will appear here if the prospect is favorable.</pre>
+      </div>
 
-        <div id="scriptOutput" class="output-box hidden">
-          Call script will appear here.
-        </div>
-      </section>
+      <div id="scriptPanel" class="panel">
+        <h2>Discovery Call Script</h2>
+        <pre id="scriptOutput">Call script will appear here if the prospect is favorable.</pre>
+      </div>
 
-      <section id="record" class="card">
-        <div class="section-header">
-          <div>
-            <p class="eyebrow">Step 5</p>
-            <h3>Business Record</h3>
-          </div>
-        </div>
+      <div id="checklistPanel" class="panel">
+        <h2>Human Verification Checklist</h2>
+        <pre id="checklistOutput">Checklist will appear here.</pre>
+      </div>
 
-        <div id="recordOutput" class="output-box">
-          Markdown business record will appear here.
-        </div>
+      <div id="recordPanel" class="panel">
+        <h2>Business Record</h2>
+        <pre id="recordOutput">Markdown business record will appear here.</pre>
+      </div>
 
-        <div class="button-row">
-          <button id="copyRecordButton" class="secondary-button">Copy Record</button>
-          <button id="downloadRecordButton" class="secondary-button">Download Markdown</button>
-        </div>
-      </section>
+      <div class="button-row">
+        <button id="copyCurrentButton" class="secondary-button">Copy Current Tab</button>
+        <button id="copyRecordButton" class="secondary-button">Copy Business Record</button>
+      </div>
+    </section>
 
-    </main>
-  </div>
+  </main>
 
-  <script src="config.js"></script>
-  <script src="prompts.js"></script>
-  <script src="parser.js"></script>
-  <script src="ui.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
