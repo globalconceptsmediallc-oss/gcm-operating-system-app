@@ -173,7 +173,7 @@ form.addEventListener("submit", async event => {
 
   try {
     const data = await generateBusinessIntelligence(websiteUrl);
-    renderDashboard(data);
+    renderDashboard(data.record || data);
     activateTab("brief");
     setStatus("Business Intelligence package generated.");
   } catch (error) {
