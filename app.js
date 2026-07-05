@@ -1,8 +1,8 @@
 /* =========================================================
    Global Concepts Media Operating System
-   Version 2 Foundation
+   Version 3A Foundation
    File: app.js
-   Purpose: Front-end dashboard logic
+   Purpose: Display the Worker report-first response
    ========================================================= */
 
 const workerEndpoint = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
@@ -13,47 +13,31 @@ const submitButton = document.getElementById("generateBtn");
 
 const statusBar = document.getElementById("statusBar");
 const errorBox = document.getElementById("errorBox");
-
 const dashboard = document.getElementById("dashboard");
+
 const tabs = document.querySelectorAll(".tab-button");
 const panels = document.querySelectorAll(".tab-panel");
 
-const fields = {
-  businessName: "businessName",
-  website: "businessWebsite",
-  summary: "businessSummary",
-  services: "productsServices",
-  customer: "targetCustomer",
-  market: "geographicMarket",
-  trust: "trustSignals",
-  websiteObservations: "websiteObservations",
-  opportunities: "growthOpportunities",
-  missingInfo: "missingInformation",
-  score: "qualificationScore",
-  readiness: "outreachReadiness",
-  insights: "personalizedInsights",
-  email: "firstContactEmail",
-  script: "discoveryCallScript",
-  checklist: "verificationChecklist",
-  record: "businessRecord"
-};
-
 function setStatus(message) {
+  if (!statusBar) return;
   statusBar.textContent = message;
   statusBar.classList.add("active");
 }
 
 function clearStatus() {
+  if (!statusBar) return;
   statusBar.textContent = "";
   statusBar.classList.remove("active");
 }
 
 function showError(message) {
+  if (!errorBox) return;
   errorBox.textContent = message;
   errorBox.classList.add("active");
 }
 
 function clearError() {
+  if (!errorBox) return;
   errorBox.textContent = "";
   errorBox.classList.remove("active");
 }
@@ -62,63 +46,6 @@ function setText(id, value) {
   const element = document.getElementById(id);
   if (!element) return;
   element.textContent = value || "Unknown";
-}
-
-function formatList(value) {
-  if (!value) return "Unknown";
-
-  if (Array.isArray(value)) {
-    if (!value.length) return "Unknown";
-    return value.map(item => `• ${item}`).join("\n");
-  }
-
-  return value;
-}
-
-function normalizeResponse(data) {
-  return {
-    businessName: data.businessName || data.business_name || "Unknown",
-    website: data.website || data.websiteUrl || websiteInput.value,
-    summary: data.businessSummary || data.business_summary || data.summary || "Unknown",
-    services: data.productsServices || data.products_and_services || data.services || "Unknown",
-    customer: data.targetCustomer || data.target_customer || "Unknown",
-    market: data.geographicMarket || data.geographic_market || "Unknown",
-    trust: data.trustSignals || data.trust_signals || "Unknown",
-    websiteObservations: data.websiteObservations || data.website_observations || "Unknown",
-    opportunities: data.growthOpportunities || data.growth_opportunities || "Unknown",
-    missingInfo: data.missingInformation || data.missing_information || "Unknown",
-    score: data.qualificationScore || data.qualification_score || "Unknown",
-    readiness: data.outreachReadiness || data.outreach_readiness || "Unknown",
-    insights: data.personalizedOutreachInsights || data.personalized_insights || data.insights || "Unknown",
-    email: data.firstContactEmail || data.first_contact_email || "Unknown",
-    script: data.discoveryCallScript || data.discovery_call_script || "Unknown",
-    checklist: data.humanVerificationChecklist || data.verification_checklist || "Unknown",
-    record: data.businessRecord || data.business_record || "Unknown"
-  };
-}
-
-function renderDashboard(rawData) {
-  const data = normalizeResponse(rawData);
-
-  setText(fields.businessName, data.businessName);
-  setText(fields.website, data.website);
-  setText(fields.summary, data.summary);
-  setText(fields.services, formatList(data.services));
-  setText(fields.customer, data.customer);
-  setText(fields.market, data.market);
-  setText(fields.trust, formatList(data.trust));
-  setText(fields.websiteObservations, formatList(data.websiteObservations));
-  setText(fields.opportunities, formatList(data.opportunities));
-  setText(fields.missingInfo, formatList(data.missingInfo));
-  setText(fields.score, data.score);
-  setText(fields.readiness, data.readiness);
-  setText(fields.insights, formatList(data.insights));
-  setText(fields.email, data.email);
-  setText(fields.script, data.script);
-  setText(fields.checklist, formatList(data.checklist));
-  setText(fields.record, data.record);
-
-  dashboard.classList.remove("hidden");
 }
 
 function activateTab(tabName) {
@@ -144,16 +71,46 @@ async function generateBusinessIntelligence(websiteUrl) {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-  website: websiteUrl,
-  workflow: "business-intelligence"
-})
+      website: websiteUrl
+    })
   });
 
+  const data = await response.json();
+
   if (!response.ok) {
-    throw new Error("The Business Intelligence request failed.");
+    throw new Error(data.message || "The Business Intelligence request failed.");
   }
 
-  return response.json();
+  return data;
+}
+
+function renderReport(data) {
+  const website = data.website || websiteInput.value.trim();
+  const report = data.report || "No report returned.";
+
+  setText("businessName", "Client Pre-Research Report");
+  setText("businessWebsite", website);
+
+  setText("qualificationScore", "Report");
+  setText("outreachReadiness", "Review Report");
+  setText("targetCustomer", "See report");
+  setText("geographicMarket", "See report");
+
+  setText("businessSummary", report);
+  setText("productsServices", report);
+  setText("trustSignals", report);
+  setText("websiteObservations", report);
+  setText("growthOpportunities", report);
+  setText("missingInformation", report);
+  setText("personalizedInsights", report);
+  setText("firstContactEmail", "Not included in Version 3A.");
+  setText("discoveryCallScript", "Not included in Version 3A.");
+  setText("verificationChecklist", report);
+  setText("businessRecord", report);
+
+  if (dashboard) {
+    dashboard.classList.remove("hidden");
+  }
 }
 
 form.addEventListener("submit", async event => {
@@ -167,18 +124,18 @@ form.addEventListener("submit", async event => {
   }
 
   clearError();
-  setStatus("Researching the business and generating the first contact package...");
+  setStatus("Generating client pre-research report...");
   submitButton.disabled = true;
   submitButton.textContent = "Generating...";
 
   try {
     const data = await generateBusinessIntelligence(websiteUrl);
-    renderDashboard(data.record || data);
+    renderReport(data);
     activateTab("brief");
-    setStatus("Business Intelligence package generated.");
+    setStatus("Client pre-research report generated.");
   } catch (error) {
     console.error(error);
-    showError("Something went wrong. Check the Worker connection and AI provider settings.");
+    showError(error.message || "Something went wrong.");
     clearStatus();
   } finally {
     submitButton.disabled = false;
