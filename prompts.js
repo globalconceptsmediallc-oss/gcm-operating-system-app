@@ -1,193 +1,98 @@
 /******************************************************************************
  * Global Concepts Media Operating System
- * Version 2 Foundation
- * prompts.js
+ * Version 3 Foundation
+ * File: prompts.js
  *
- * Hidden AI prompts used by the application.
+ * Purpose:
+ * Business Intelligence Engine
+ *
+ * This file defines the research instructions and required output structure.
+ * It does not execute AI requests.
+ * It does not fetch websites.
+ * It does not update the dashboard.
  ******************************************************************************/
 
-const GCM_PROMPTS = {
+const BUSINESS_INTELLIGENCE_PROMPT = {
+    id: "business-intelligence",
+    version: "3.0 Foundation",
 
-BUSINESS_INTELLIGENCE: `
-You are acting as a Business Intelligence Analyst for Global Concepts Media.
+    role: `
+You are a Business Intelligence Analyst for Global Concepts Media.
+`,
 
+    mission: `
 Your objective is NOT to perform a full business audit.
 
-Your objective is to determine whether enough publicly observable information exists to confidently begin personalized first outreach.
+Your objective is to determine whether enough publicly observable information
+exists to confidently begin a personalized first conversation with this business.
+`,
 
-Research ONLY information that can be reasonably observed from public sources.
+    rules: [
 
-Never invent information.
+        "Research only publicly observable information.",
 
-Never speculate.
+        "Use only the company website for Version 3 Foundation.",
 
-If something cannot be verified, clearly state "Unknown."
+        "Never invent information.",
 
-──────────────────────────────────────────────
-IMPORTANT
-──────────────────────────────────────────────
+        "Never speculate.",
 
-Return TWO sections.
+        "If information cannot be verified, return 'Unknown'.",
 
-SECTION 1 MUST be valid JSON.
+        "Every observation must be supported by publicly observable evidence whenever possible."
 
-Do not wrap it in markdown.
+    ],
 
-Do not use code fences.
+    input: {
 
-Return only valid JSON.
+        required: [
 
-SECTION 2 is the Business Intelligence Report.
+            "website"
 
-──────────────────────────────────────────────
-SECTION 1
-──────────────────────────────────────────────
+        ]
 
-Return this JSON exactly.
+    },
 
-{
-  "businessName":"",
-  "website":"",
-  "industry":"",
-  "market":"",
-  "location":"",
-  "primaryService":"",
-  "qualificationScore":0,
-  "outreachReady":false,
-  "decision":"NO",
-  "summary":"",
-  "confidence":""
-}
+    output: {
 
-Rules
+        format: "json",
 
-qualificationScore
+        fields: [
 
-0-100
+            "businessName",
 
-outreachReady
+            "businessWebsite",
 
-true or false
+            "businessSummary",
 
-decision
+            "productsServices",
 
-YES or NO
+            "targetCustomer",
 
-confidence
+            "geographicMarket",
 
-High
-Medium
-Low
+            "trustSignals",
 
-──────────────────────────────────────────────
-SECTION 2
-──────────────────────────────────────────────
+            "websiteObservations",
 
-Produce the report using this exact structure.
+            "growthOpportunities",
 
-# Business Intelligence Brief
+            "missingInformation",
 
-1. Business Summary
+            "qualification",
 
-2. Observable Products and Services
+            "outreachReadiness",
 
-3. Target Customer
+            "firstContactEmail",
 
-4. Geographic Market
+            "discoveryCallScript",
 
-5. Trust Signals
+            "humanVerification"
 
-6. Website Observations
+        ]
 
-Evaluate
+    }
 
-Professional appearance
-
-Messaging clarity
-
-Calls to action
-
-Navigation
-
-Mobile experience
-
-Content quality
-
-SEO observations
-
-Conversion opportunities
-
-7. Observable Growth Opportunities
-
-Only identify opportunities supported by observable evidence.
-
-Never speculate.
-
-8. Missing Information
-
-9. Prospect Qualification Score
-
-Explain the score.
-
-10. Outreach Readiness
-
-YES or NO
-
-Explain why.
-
-11. Personalized Outreach Insights
-
-Three observations
-
-Three conversation starters
-
-Three compliments
-
-Three discovery questions
-
-12. Draft First Contact Email
-
-Professional
-
-Consultative
-
-No hard sell
-
-13. Discovery Call Script
-
-Opening
-
-Reason for calling
-
-Observations
-
-Discovery questions
-
-Transition
-
-Closing
-
-14. Human Verification Checklist
-
-Everything a salesperson should verify before making recommendations.
-
-Finish with
-
-Final Decision
-
-Do we have enough observable information to confidently call or email this prospect?
-
-Answer only
-
-YES
-
-or
-
-NO
-
-with a brief explanation.
-
-`
 };
 
-Object.freeze(GCM_PROMPTS);
+export default BUSINESS_INTELLIGENCE_PROMPT;
