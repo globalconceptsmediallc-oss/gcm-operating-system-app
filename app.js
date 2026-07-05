@@ -1,10 +1,12 @@
 /* =========================================================
    GCM OS Version 4
    File: app.js
-   Purpose: Send website to Worker and display Markdown report
+   Purpose: Display report or debug response
+   Build: V4.0.0 Debug 002
    ========================================================= */
 
-const WORKER_URL = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+const WORKER_URL =
+  "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
 
 const form = document.getElementById("researchForm");
 const websiteInput = document.getElementById("websiteUrl");
@@ -13,18 +15,18 @@ const statusBar = document.getElementById("statusBar");
 const reportOutput = document.getElementById("reportOutput");
 const workerVersion = document.getElementById("workerVersion");
 
-form.addEventListener("submit", async function (event) {
+form.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   const website = websiteInput.value.trim();
 
   if (!website) {
-    setStatus("Please enter a website URL.");
+    setStatus("Please enter a website.");
     return;
   }
 
-  setStatus("Generating report...");
   generateBtn.disabled = true;
+  setStatus("Generating report...");
   reportOutput.textContent = "";
   workerVersion.textContent = "";
 
@@ -41,8 +43,24 @@ form.addEventListener("submit", async function (event) {
 
     const data = await response.json();
 
+    workerVersion.textContent =
+      data.version || "Worker version not supplied";
+
+    /* ---------- DEBUG MODE ---------- */
+
+    if (data.status === "debug") {
+      setStatus("Debug response received.");
+
+      reportOutput.textContent = JSON.stringify(data, null, 2);
+
+      generateBtn.disabled = false;
+      return;
+    }
+
+    /* ---------- NORMAL MODE ---------- */
+
     if (!response.ok) {
-      throw new Error(data.message || data.error || "Worker request failed.");
+      throw new Error(data.message || "Worker request failed.");
     }
 
     if (!data.report) {
@@ -51,15 +69,14 @@ form.addEventListener("submit", async function (event) {
 
     reportOutput.textContent = data.report;
 
-    workerVersion.textContent = data.version
-      ? `Worker Version: ${data.version}`
-      : "Worker Version: Not returned";
-
     setStatus("Complete.");
-
   } catch (error) {
-    setStatus("Error.");
-    reportOutput.textContent = `Something went wrong:\n\n${error.message}`;
+    setStatus("Error");
+
+    reportOutput.textContent =
+`Something went wrong:
+
+${error.message}`;
   }
 
   generateBtn.disabled = false;
