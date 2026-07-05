@@ -3,181 +3,49 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GCM OS | Business Intelligence</title>
+
+  <title>GCM OS Version 4 | Client Pre-Research Report</title>
+
   <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
-  <div class="app-shell">
-    <header class="header">
-      <div class="container header-inner">
-        <div class="brand">
-          <div class="brand-mark">G</div>
-          Global Concepts Media OS
+  <main class="app-shell">
+    <section class="hero">
+      <p class="eyebrow">Global Concepts Media OS</p>
+      <h1>Client Pre-Research Report</h1>
+      <p class="intro">
+        Enter a business website and generate a practical pre-outreach research report.
+      </p>
+    </section>
+
+    <section class="panel">
+      <form id="researchForm">
+        <label for="websiteUrl">Business Website</label>
+
+        <div class="input-row">
+          <input
+            id="websiteUrl"
+            type="url"
+            placeholder="https://example.com"
+            required
+          />
+
+          <button id="generateBtn" type="submit">
+            Generate Report
+          </button>
         </div>
+      </form>
 
-        <h1>One-Click Business Intelligence</h1>
-        <p>
-          Enter a business website and generate the first-contact intelligence package:
-          qualification, opportunities, email, call script, verification checklist, and business record.
-        </p>
-      </div>
-    </header>
+      <div id="statusBar" class="status">Ready.</div>
+      <div id="workerVersion" class="worker-version"></div>
+    </section>
 
-    <main class="main">
-      <div class="container">
-        <section class="card input-card">
-          <form id="researchForm">
-            <label for="websiteUrl">Business Website URL</label>
-
-            <div class="input-grid">
-              <input
-                id="websiteUrl"
-                type="url"
-                placeholder="https://example.com"
-                required
-              />
-
-              <button id="generateBtn" type="submit">
-                Generate Business Intelligence
-              </button>
-            </div>
-
-            <p class="helper-text">
-              Only the website URL is required. The hidden Business Intelligence prompt runs through the Worker.
-            </p>
-
-            <div id="statusBar" class="status-bar"></div>
-            <div id="errorBox" class="error-box"></div>
-          </form>
-        </section>
-
-        <section id="dashboard" class="hidden">
-          <section class="card input-card snapshot">
-            <div class="snapshot-header">
-              <div class="snapshot-title">
-                <h2 id="businessName">Unknown</h2>
-                <p id="businessWebsite">Unknown</p>
-              </div>
-
-              <div class="score-badge">
-                <strong id="qualificationScore">--</strong>
-                <span>Qualification Score</span>
-              </div>
-            </div>
-
-            <div class="snapshot-grid">
-              <div class="metric">
-                <span>Outreach Readiness</span>
-                <strong id="outreachReadiness">Unknown</strong>
-              </div>
-
-              <div class="metric">
-                <span>Target Customer</span>
-                <strong id="targetCustomer">Unknown</strong>
-              </div>
-
-              <div class="metric">
-                <span>Market</span>
-                <strong id="geographicMarket">Unknown</strong>
-              </div>
-
-              <div class="metric">
-                <span>Website</span>
-                <strong>Public Source</strong>
-              </div>
-            </div>
-          </section>
-
-          <section class="card dashboard-card">
-            <nav class="tabs">
-              <button class="tab-button active" data-tab="brief" type="button">Brief</button>
-              <button class="tab-button" data-tab="website" type="button">Website</button>
-              <button class="tab-button" data-tab="opportunities" type="button">Opportunities</button>
-              <button class="tab-button" data-tab="outreach" type="button">Outreach</button>
-              <button class="tab-button" data-tab="verification" type="button">Verification</button>
-              <button class="tab-button" data-tab="record" type="button">Record</button>
-            </nav>
-
-            <section id="brief" class="tab-panel active">
-              <div class="section">
-                <h2>Business Summary</h2>
-                <div id="businessSummary" class="content-box">Unknown</div>
-              </div>
-
-              <div class="section">
-                <h3>Products & Services</h3>
-                <div id="productsServices" class="content-box">Unknown</div>
-              </div>
-
-              <div class="section">
-                <h3>Trust Signals</h3>
-                <div id="trustSignals" class="content-box">Unknown</div>
-              </div>
-            </section>
-
-            <section id="website" class="tab-panel">
-              <div class="section">
-                <h2>Website Observations</h2>
-                <div id="websiteObservations" class="content-box">Unknown</div>
-              </div>
-
-              <div class="section">
-                <h3>Missing Information</h3>
-                <div id="missingInformation" class="content-box">Unknown</div>
-              </div>
-            </section>
-
-            <section id="opportunities" class="tab-panel">
-              <div class="section">
-                <h2>Observable Growth Opportunities</h2>
-                <div id="growthOpportunities" class="content-box">Unknown</div>
-              </div>
-
-              <div class="section">
-                <h3>Personalized Outreach Insights</h3>
-                <div id="personalizedInsights" class="content-box">Unknown</div>
-              </div>
-            </section>
-
-            <section id="outreach" class="tab-panel">
-              <div class="outreach-grid">
-                <div class="section">
-                  <h2>First Contact Email</h2>
-                  <div id="firstContactEmail" class="content-box email-box">Unknown</div>
-                </div>
-
-                <div class="section">
-                  <h2>Discovery Call Script</h2>
-                  <div id="discoveryCallScript" class="content-box script-box">Unknown</div>
-                </div>
-              </div>
-            </section>
-
-            <section id="verification" class="tab-panel">
-              <div class="section">
-                <h2>Human Verification Checklist</h2>
-                <div id="verificationChecklist" class="content-box">Unknown</div>
-              </div>
-            </section>
-
-            <section id="record" class="tab-panel">
-              <div class="section">
-                <h2>Business Record</h2>
-                <div id="businessRecord" class="content-box record-box">Unknown</div>
-              </div>
-            </section>
-          </section>
-        </section>
-      </div>
-    </main>
-
-    <footer class="footer">
-      <div class="container">
-        Global Concepts Media Operating System · Version 2 Foundation
-      </div>
-    </footer>
-  </div>
+    <section class="report-section">
+      <h2>Report Output</h2>
+      <pre id="reportOutput" class="report-output"></pre>
+    </section>
+  </main>
 
   <script src="app.js"></script>
 </body>
