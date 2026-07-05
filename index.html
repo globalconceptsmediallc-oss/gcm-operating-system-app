@@ -3,23 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <title>GCM OS Version 4 | Client Pre-Research Report</title>
-
+  <title>GCM OS Version 4 | Client Pre-Research</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
   <main class="app-shell">
-    <section class="hero">
-      <p class="eyebrow">Global Concepts Media OS</p>
-      <h1>Client Pre-Research Report</h1>
-      <p class="intro">
-        Enter a business website and generate a practical pre-outreach research report.
-      </p>
-    </section>
 
-    <section class="panel">
+    <header class="hero">
+      <p class="eyebrow">Global Concepts Media OS</p>
+      <h1>Client Pre-Research Intelligence</h1>
+      <p class="hero-copy">
+        Enter one business website and generate a practical sales-preparation report.
+      </p>
+    </header>
+
+    <section class="control-card">
       <form id="researchForm">
         <label for="websiteUrl">Business Website</label>
 
@@ -27,24 +26,82 @@
           <input
             id="websiteUrl"
             type="url"
-            placeholder="https://example.com"
+            placeholder="https://www.example.com"
             required
           />
-
-          <button id="generateBtn" type="submit">
-            Generate Report
-          </button>
+          <button id="generateBtn" type="submit">Generate Report</button>
         </div>
       </form>
 
-      <div id="statusBar" class="status">Ready.</div>
-      <div id="workerVersion" class="worker-version"></div>
+      <div id="statusBar" class="status-bar">
+        <strong>Ready.</strong>
+        <span>Worker standing by.</span>
+      </div>
     </section>
 
-    <section class="report-section">
-      <h2>Report Output</h2>
-      <pre id="reportOutput" class="report-output"></pre>
+    <section class="snapshot-grid">
+      <article class="snapshot-card">
+        <span class="card-label">Company</span>
+        <strong id="snapshotCompany">Pending report</strong>
+      </article>
+
+      <article class="snapshot-card">
+        <span class="card-label">Industry</span>
+        <strong id="snapshotIndustry">Unknown</strong>
+      </article>
+
+      <article class="snapshot-card">
+        <span class="card-label">Market</span>
+        <strong id="snapshotMarket">Unknown</strong>
+      </article>
+
+      <article class="snapshot-card">
+        <span class="card-label">Readiness</span>
+        <strong id="snapshotReadiness">Pending</strong>
+      </article>
     </section>
+
+    <section class="dashboard-card">
+      <div class="dashboard-header">
+        <div>
+          <p class="eyebrow">Research Output</p>
+          <h2>Client Pre-Research Report</h2>
+        </div>
+      </div>
+
+      <nav class="report-tabs" aria-label="Report sections">
+        <button type="button" class="tab-button active">Overview</button>
+        <button type="button" class="tab-button">Services</button>
+        <button type="button" class="tab-button">Trust</button>
+        <button type="button" class="tab-button">Growth</button>
+        <button type="button" class="tab-button">Outreach</button>
+      </nav>
+
+      <div id="reportOutput" class="report-output">
+        <div class="empty-state">
+          Generate a report to populate the dashboard.
+        </div>
+      </div>
+    </section>
+
+    <section class="developer-card">
+      <h2>Developer Status</h2>
+      <div class="developer-grid">
+        <div>
+          <span>Dashboard</span>
+          <strong>Version 4.2</strong>
+        </div>
+        <div>
+          <span>Worker</span>
+          <strong id="workerVersion">Waiting</strong>
+        </div>
+        <div>
+          <span>Pipeline</span>
+          <strong>Website → AI → Report</strong>
+        </div>
+      </div>
+    </section>
+
   </main>
 
   <script src="app.js"></script>
