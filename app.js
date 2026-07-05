@@ -1,8 +1,8 @@
 /* =========================================================
    Global Concepts Media Operating System
-   Version 4.1.1
+   Version 5.1.0
    File: app.js
-   Purpose: Generate and render Client Pre-Research Report
+   Purpose: Generate and render Client Intelligence dashboard
    ========================================================= */
 
 const workerEndpoint = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
@@ -12,6 +12,12 @@ const websiteInput = document.getElementById("websiteUrl");
 const generateBtn = document.getElementById("generateBtn");
 const statusBar = document.getElementById("statusBar");
 const reportOutput = document.getElementById("reportOutput");
+
+const snapshotCompany = document.getElementById("snapshotCompany");
+const snapshotIndustry = document.getElementById("snapshotIndustry");
+const snapshotMarket = document.getElementById("snapshotMarket");
+const snapshotReadiness = document.getElementById("snapshotReadiness");
+const workerVersion = document.getElementById("workerVersion");
 
 form.addEventListener("submit", async function (event) {
   event.preventDefault();
@@ -24,8 +30,8 @@ form.addEventListener("submit", async function (event) {
     return;
   }
 
-  setStatus("Working...", "Generating client pre-research report.");
-  reportOutput.innerHTML = `<div class="report-loading">Researching website and building report...</div>`;
+  setStatus("Working...", "Researching website and building intelligence record.");
+  reportOutput.innerHTML = `<div class="report-loading">Generating client intelligence...</div>`;
   generateBtn.disabled = true;
 
   try {
@@ -43,7 +49,9 @@ form.addEventListener("submit", async function (event) {
       throw new Error(data.message || data.error || "Worker request failed.");
     }
 
-    setStatus("Complete.", data.version || "4.1.1");
+    setStatus("Complete.", data.version || "5.1.0");
+    populateSnapshot(data.businessRecord);
+    updateDeveloperStatus(data);
     reportOutput.innerHTML = renderMarkdown(data.report);
 
   } catch (error) {
@@ -58,6 +66,36 @@ form.addEventListener("submit", async function (event) {
     generateBtn.disabled = false;
   }
 });
+
+function populateSnapshot(businessRecord) {
+  const business = businessRecord?.business || {};
+  const sales = businessRecord?.salesIntelligence || {};
+
+  if (snapshotCompany) {
+    snapshotCompany.textContent = business.name || "Unknown";
+  }
+
+  if (snapshotIndustry) {
+    snapshotIndustry.textContent = business.industry || "Unknown";
+  }
+
+  if (snapshotMarket) {
+    snapshotMarket.textContent =
+      business.market ||
+      businessRecord?.websiteIntelligence?.geographicMarket ||
+      "Unknown";
+  }
+
+  if (snapshotReadiness) {
+    snapshotReadiness.textContent = sales.readinessScore || "Pending";
+  }
+}
+
+function updateDeveloperStatus(data) {
+  if (workerVersion) {
+    workerVersion.textContent = data.version || "Unknown";
+  }
+}
 
 function setStatus(title, message) {
   if (!statusBar) return;
@@ -100,6 +138,7 @@ function renderMarkdown(markdown) {
         output += "<ul>";
         inList = true;
       }
+
       output += `<li>${trimmed.substring(2)}</li>`;
       continue;
     }
