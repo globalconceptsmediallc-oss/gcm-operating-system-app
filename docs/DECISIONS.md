@@ -1,6 +1,6 @@
 # GCM OS DECISIONS
 
-**Document Version:** 1.0
+**Document Version:** 1.1
 
 **Status:** Active
 
@@ -36,7 +36,7 @@ No downstream component may maintain its own independent version of business inf
 
 ## Reason
 
-A single source of truth prevents conflicting information between workers, dashboards, reports, and future modules.
+A single source of truth prevents conflicting information between evidence sources, capability engines, dashboards, reports, and future modules.
 
 ---
 
@@ -44,7 +44,7 @@ A single source of truth prevents conflicting information between workers, dashb
 
 ## Title
 
-Workers Have a Single Responsibility.
+Evidence Collection Has a Single Responsibility.
 
 ## Status
 
@@ -52,15 +52,15 @@ LOCKED
 
 ## Decision
 
-Every worker performs one clearly defined responsibility.
+Every evidence collector performs one clearly defined responsibility.
 
-Workers collect evidence.
+Evidence collectors collect observable evidence.
 
-Workers do not perform unrelated responsibilities.
+Evidence collectors do not perform unrelated responsibilities.
 
 ## Reason
 
-Single-responsibility workers are easier to maintain, replace, expand, and test.
+Single-responsibility evidence collection is easier to maintain, replace, expand, and test.
 
 ---
 
@@ -68,7 +68,7 @@ Single-responsibility workers are easier to maintain, replace, expand, and test.
 
 ## Title
 
-Workers Never Become the Source of Truth.
+Evidence Collectors Never Become the Source of Truth.
 
 ## Status
 
@@ -76,13 +76,13 @@ LOCKED
 
 ## Decision
 
-Workers return standardized evidence.
+Evidence collectors return standardized evidence.
 
 Only the Business Record Builder creates or updates the Business Record.
 
 ## Reason
 
-Separating evidence collection from data ownership prevents inconsistencies as additional workers are introduced.
+Separating evidence collection from data ownership prevents inconsistencies as additional sources and capabilities are introduced.
 
 ---
 
@@ -122,7 +122,7 @@ LOCKED
 
 Consulting Intelligence is always derived from the Business Record.
 
-It never bypasses the Business Record to consume worker output directly.
+It never bypasses the Business Record to consume raw evidence directly.
 
 ## Reason
 
@@ -177,6 +177,7 @@ Development proceeds one file at a time.
 
 Every change should include:
 
+- Review the current production file first
 - Complete fresh-install replacement
 - Deployment
 - Testing
@@ -208,6 +209,7 @@ Development begins by reading:
 3. docs/PROJECT_STATUS.md
 4. docs/ARCHITECTURE.md
 5. docs/DECISIONS.md
+6. docs/CAPABILITIES.md
 
 Documentation takes precedence over previous conversations or AI memory.
 
@@ -261,6 +263,129 @@ This defines the long-term direction of the platform and differentiates it from 
 
 ---
 
+# Decision 011
+
+## Title
+
+Intelligence is Organized by Capability, Not by Source.
+
+## Status
+
+LOCKED
+
+## Decision
+
+GCM OS organizes intelligence around stable capabilities rather than individual public data sources.
+
+Examples:
+
+- Contact Enrichment is a capability.
+- Sunbiz is a possible evidence source.
+- Google Business Profile is a possible evidence source.
+- LinkedIn is a possible evidence source.
+
+## Reason
+
+Sources may change over time, but capabilities should remain stable.
+
+This allows GCM OS to expand without redesigning the Business Record every time a new evidence source is added.
+
+---
+
+# Decision 012
+
+## Title
+
+Evidence Sources Feed Capability Engines.
+
+## Status
+
+LOCKED
+
+## Decision
+
+The standard intelligence flow is:
+
+Evidence Sources
+
+↓
+
+Capability Engines
+
+↓
+
+Business Record
+
+↓
+
+Consulting Intelligence
+
+↓
+
+Client Delivery
+
+Evidence sources collect facts.
+
+Capability Engines organize facts into standardized intelligence.
+
+The Business Record stores the final structured record.
+
+## Reason
+
+This separates raw evidence collection from intelligence organization and keeps the architecture modular.
+
+---
+
+# Decision 013
+
+## Title
+
+Fresh Installs Are Required for Documents and Code.
+
+## Status
+
+LOCKED
+
+## Decision
+
+All code and documentation changes are delivered as complete fresh-install replacements.
+
+Before creating a replacement, the current production file must be reviewed.
+
+Changes should be intentional and minimal, but the delivered file must be complete.
+
+## Reason
+
+The installer should not be responsible for assembling edits in the correct location.
+
+Complete replacements reduce missed steps, misplaced edits, and accidental drift.
+
+---
+
+# Decision 014
+
+## Title
+
+Architecture Evolves Through Intentional Revisions.
+
+## Status
+
+LOCKED
+
+## Decision
+
+Foundational architecture documents should evolve through intentional versioned revisions.
+
+Minor architectural evolution should use minor versions such as 1.0 to 1.1.
+
+Major architectural redesigns should use major versions such as 1.0 to 2.0.
+
+## Reason
+
+This protects stable architecture while allowing the system to mature over time.
+
+---
+
 # Decision Review
 
 Before changing any LOCKED decision:
@@ -269,6 +394,7 @@ Before changing any LOCKED decision:
 - Evaluate architectural impact.
 - Update ARCHITECTURE.md if required.
 - Update PRODUCT_BLUEPRINT.md if product philosophy changes.
+- Update CAPABILITIES.md if capability structure changes.
 - Record the revised decision in this document.
 
 Architectural decisions should change infrequently and intentionally.
