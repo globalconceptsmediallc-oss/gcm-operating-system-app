@@ -1,333 +1,198 @@
 # GCM OS ARCHITECTURE
 
-**Document Version:** 1.1
+**Document Version:** 1.2
 
 **Status:** Active
 
-**Purpose**
+**Last Updated:** 2026-07-06
 
-This document defines the technical architecture of the Global Concepts Media Operating System (GCM OS).
+------------------------------------------------------------------------
 
-It describes how the system is organized, how information flows through the platform, and the responsibilities of each major component.
+# Purpose
 
-Unlike the Product Blueprint, this document focuses on implementation architecture rather than product vision.
+This document defines the production architecture of the Global Concepts
+Media Operating System (GCM OS).
 
-If this document conflicts with implementation, the architecture should be intentionally reviewed before changing either.
+It describes how evidence is collected, organized into consulting
+capabilities, merged into the Business Record, and transformed into
+consulting intelligence.
 
----
+The Business Record is the single source of truth for the platform.
 
-# System Overview
+------------------------------------------------------------------------
 
-GCM OS is an AI-powered Consulting Operating System.
+# Core Architecture
 
-The platform transforms publicly observable business information into structured consulting intelligence.
+    Evidence Sources
+            ↓
+    Capability Engines
+            ↓
+    Business Record Builder
+            ↓
+    Business Record
+            ↓
+    Consulting Intelligence
+            ↓
+    Dashboard
+            ↓
+    Future Client Deliverables
 
-The architecture follows a layered design to ensure every component has a single responsibility.
+Every layer has a single responsibility.
 
-```
-Public Business Information
-            │
-            ▼
-Evidence Sources
-            │
-            ▼
-Capability Engines
-            │
-            ▼
-Business Record
-            │
-            ▼
-Consulting Intelligence
-            │
-            ▼
-Client Delivery
-```
-
-The architecture intentionally separates **where evidence comes from** from **how intelligence is organized**.
-
-Evidence may come from many different public sources, but it is organized into standardized consulting capabilities before becoming part of the Business Record.
-
----
+------------------------------------------------------------------------
 
 # Architectural Principles
 
-The architecture follows these principles:
+-   Single Responsibility
+-   Business Record First
+-   Capability-Based Architecture
+-   Observable Evidence
+-   Evidence Before Assumptions
+-   Backwards Compatibility
+-   Modular Growth
+-   One Capability = One Consulting Question
 
-- Single Responsibility
-- Standardized Data
-- Business Record First
-- Observable Evidence
-- Capability-Based Intelligence
-- Modular Evidence Collection
-- Backwards Compatibility
-- Evidence Before Assumptions
+------------------------------------------------------------------------
 
-Every component must have one clearly defined responsibility.
+# Consulting Question Principle
 
----
+Every capability exists to answer exactly one consulting question.
 
-# Layer 1 — Evidence Sources
+  -----------------------------------------------------------------------
+  Capability                Consulting Question
+  ------------------------- ---------------------------------------------
+  Website Intelligence      What does this business communicate about
+                            itself?
 
-## Purpose
+  Contact Enrichment        Who can we contact and how?
 
-Collect publicly observable business information.
+  Public Presence           Where does this business have an official
+  Intelligence              public presence?
+  -----------------------------------------------------------------------
 
-Evidence Sources never make consulting decisions.
+Future capabilities should begin by defining the consulting question
+before implementation.
 
-Evidence Sources never become the system of record.
+------------------------------------------------------------------------
 
-Their responsibility is only to collect observable evidence.
+# Layer 1 --- Evidence Sources
 
-Current evidence source:
+Purpose:
 
-- Business Website
+Collect publicly observable information.
 
-Future evidence sources include:
+Current production source:
 
-- Florida Business Registry
-- Google Business Profile
-- Review Platforms
-- Social Platforms
-- Public Search Results
-- SEO Sources
-- AI Visibility Sources
+-   Business Website
 
-Evidence should always remain traceable to its source.
+Future evidence sources:
 
----
+-   Florida Business Registry
+-   Google Business Profile
+-   Review Platforms
+-   Public Search
+-   Social Platforms
+-   SEO Sources
+-   AI Visibility Sources
 
-# Layer 2 — Capability Engines
+Evidence sources never make consulting recommendations.
 
-## Purpose
+------------------------------------------------------------------------
 
-Capability Engines organize evidence into consulting capabilities.
+# Layer 2 --- Capability Engines
 
-This layer separates **what the system knows** from **where the information was found**.
+Purpose:
 
-Multiple evidence sources may contribute to a single capability.
+Transform observable evidence into standardized consulting capabilities.
 
-Example:
+Current capabilities:
 
-```
+-   Website Intelligence (Complete)
+-   Contact Enrichment (Complete)
+-   Public Presence Intelligence (Current Sprint)
+
+Planned capabilities:
+
+-   Reputation Intelligence
+-   SEO Intelligence
+-   Advertising Intelligence
+-   Competitive Intelligence
+-   AI Visibility Intelligence
+
+Capabilities are independent modules.
+
+They:
+
+-   receive evidence
+-   normalize evidence
+-   produce standardized output
+-   contribute to the Business Record
+-   never overwrite other capabilities
+
+------------------------------------------------------------------------
+
+# Layer 3 --- Business Record
+
+The Business Record is the permanent consulting record.
+
+It is the only source consumed by downstream systems.
+
+Current sections include:
+
+-   Business
+-   Website Intelligence
+-   Contact Enrichment
+-   Consulting Intelligence
+
+Planned additions include:
+
+-   Public Presence
+-   Reputation
+-   SEO
+-   Advertising
+-   Competitive Intelligence
+
+Only the Business Record Builder may modify the Business Record.
+
+------------------------------------------------------------------------
+
+# Layer 4 --- Consulting Intelligence
+
+Consulting Intelligence converts evidence into consulting
+recommendations.
+
+Every recommendation must:
+
+-   reference observable evidence
+-   explain why it matters
+-   recommend measurable improvement
+-   support consulting conversations
+
+------------------------------------------------------------------------
+
+# Layer 5 --- Dashboard
+
+The Dashboard presents standardized Business Record information.
+
+It never owns data.
+
+It never bypasses the Business Record.
+
+Dashboard Version: 5.4.1
+
+------------------------------------------------------------------------
+
+# Current Evidence Flow
+
 Business Website
-Florida Registry
-LinkedIn
-Google Business Profile
-        │
-        ▼
+
+↓
+
+Website Intelligence
+
+↓
+
 Contact Enrichment
-```
-
-Capabilities remain stable even when evidence sources evolve.
-
-This allows GCM OS to expand without redesigning the Business Record every time a new public information source is introduced.
-
-Current capabilities are documented in:
-
-**docs/CAPABILITIES.md**
-
-Current capabilities include:
-
-- Website Intelligence
-- Contact Enrichment (planned)
-- Reputation Intelligence (planned)
-- SEO Intelligence (planned)
-- Social Intelligence (planned)
-- Advertising Intelligence (planned)
-- Competitive Intelligence (planned)
-
-Capability Engines normalize evidence before it reaches the Business Record.
-
----
-
-# Layer 3 — Business Record
-
-## Purpose
-
-Normalize and standardize information from every capability.
-
-The Business Record is the only permanent consulting record.
-
-It is the single source of truth.
-
-Every downstream module depends on the Business Record.
-
-Capabilities never overwrite each other.
-
-Instead, they contribute standardized evidence that is merged into the Business Record.
-
----
-
-# Business Record Builder
-
-The Business Record Builder is responsible for:
-
-- validating capability output
-- merging evidence
-- resolving conflicts
-- maintaining schema consistency
-- preserving historical compatibility
-- producing the final Business Record
-
-Only the Business Record Builder may update the Business Record.
-
----
-
-# Business Record Schema
-
-Current major sections include:
-
-- Business
-- Website Intelligence
-- Sales Intelligence
-- Consulting Intelligence
-
-Future schema additions include:
-
-- Contact Enrichment
-- Reputation Intelligence
-- SEO Intelligence
-- Social Intelligence
-- Advertising Intelligence
-- Competitive Intelligence
-- Historical Measurements
-- Client History
-
-The schema should remain backwards compatible whenever possible.
-
----
-
-# Layer 4 — Consulting Intelligence
-
-## Purpose
-
-Transform observable evidence into consulting recommendations.
-
-Consulting Intelligence never invents information.
-
-Every recommendation must be supported by observable evidence contained within the Business Record.
-
-Current responsibilities include:
-
-- Executive Summary
-- Opportunity Identification
-- Recommended GCM Services
-- Success Metrics
-- Outreach Recommendations
-- Consulting Confidence
-
-Future responsibilities include:
-
-- Rule-Based Opportunity Prioritization
-- Opportunity Scoring
-- Discovery Question Generation
-- Measurement Framework
-- Opportunity Roadmaps
-- Recommendation Engine
-
-Consulting Intelligence should always answer five questions:
-
-1. What did we observe?
-2. Why does it matter?
-3. What should GCM recommend?
-4. Which GCM service addresses the opportunity?
-5. How will success be measured?
-
----
-
-# Layer 5 — Client Delivery
-
-## Purpose
-
-Transform Consulting Intelligence into client-facing deliverables.
-
-Future modules include:
-
-- Growth Review
-- Proposal Engine
-- Implementation Plans
-- Monthly Reviews
-- Client Dashboard
-- Historical Progress Tracking
-
-Client Delivery never bypasses the Business Record.
-
----
-
-# Dashboard
-
-The dashboard is a presentation layer.
-
-Its responsibilities include:
-
-- Accept a business website URL.
-- Display Business Record information.
-- Display Consulting Intelligence.
-- Present consulting information in an organized workflow.
-- Prepare consultants for productive client conversations.
-
-The dashboard is never the source of truth.
-
-The dashboard does not own business information.
-
-It simply presents standardized intelligence produced by the Business Record.
-
----
-
-# Evidence Orchestrator (Future)
-
-Future versions of GCM OS will introduce an Evidence Orchestrator.
-
-Responsibilities include:
-
-- Execute evidence collectors.
-- Coordinate evidence collection.
-- Manage failures.
-- Route evidence into Capability Engines.
-- Submit standardized capability output to the Business Record Builder.
-- Preserve evidence traceability.
-
-Evidence collectors remain independent.
-
-Capability Engines remain independent.
-
-The Business Record remains the single source of truth.
-
----
-
-# Evidence Flow
-
-Future execution flow:
-
-```
-
-Business Website
-
-Florida Business Registry
-
-Google Business Profile
-
-Review Platforms
-
-Social Platforms
-
-Public Search
-
-SEO Sources
-
-AI Visibility Sources
-
-↓
-
-Evidence Sources
-
-↓
-
-Capability Engines
-
-↓
-
-Business Record Builder
 
 ↓
 
@@ -341,211 +206,53 @@ Consulting Intelligence
 
 Dashboard
 
-↓
+------------------------------------------------------------------------
 
-Growth Review
+# Current Sprint
 
-↓
+Public Presence Intelligence extends the architecture by adding a new
+capability that identifies official public profile links from the
+business website.
 
-Proposal
+Version 1 will:
 
-```
+-   detect official Facebook links
+-   detect LinkedIn links
+-   detect Instagram links
+-   detect YouTube links
+-   detect X (Twitter) links
+-   record evidence
+-   record confidence
+-   preserve backwards compatibility
 
-Every new evidence source should enrich an existing capability before introducing a new capability.
+No external platform scraping occurs during Version 1.
 
----
-
-# Data Flow
-
-The platform always follows this sequence:
-
-Evidence Sources
-
-↓
-
-Capability Engines
-
-↓
-
-Business Record
-
-↓
-
-Consulting Intelligence
-
-↓
-
-Client Delivery
-
-Information should never skip layers.
-
-Evidence should always remain traceable.
-
----
-
-# Error Handling Philosophy
-
-Evidence collectors may fail independently.
-
-Failures should never corrupt the Business Record.
-
-When evidence is unavailable:
-
-- Record Unknown.
-- Preserve existing evidence.
-- Continue processing when appropriate.
-- Report confidence appropriately.
-- Preserve source traceability whenever possible.
-
-Missing evidence should never become invented evidence.
-
----
-
-# Backwards Compatibility
-
-Whenever possible:
-
-- Preserve existing Business Record schema.
-- Preserve dashboard compatibility.
-- Preserve capability interfaces.
-- Preserve evidence traceability.
-
-Breaking changes should be intentional, documented, and versioned.
-
----
-
-# Future Expansion
-
-The architecture has been intentionally designed for modular growth.
-
-Future modules may include:
-
-- CRM Integration
-- Calendar Integration
-- Email Automation
-- Proposal Generation
-- Client Portal
-- Monthly Monitoring
-- Historical Analytics
-- AI Agent Collaboration
-
-These modules should integrate through the Business Record rather than directly through evidence collectors.
-
-The Business Record remains the permanent consulting record.
-
----
+------------------------------------------------------------------------
 
 # Architecture Rules
 
-The architecture of GCM OS follows these permanent rules:
+-   Every capability answers one consulting question.
+-   Every capability contributes evidence to the Business Record.
+-   Evidence remains traceable.
+-   Unknown information remains Unknown.
+-   New evidence sources strengthen existing capabilities before
+    creating new ones.
+-   Client-facing outputs consume only the Business Record.
 
-## Responsibility
+------------------------------------------------------------------------
 
-- Every component has one clearly defined responsibility.
-- Every layer exists for a specific purpose.
-- Responsibilities should not overlap.
+# Relationship to Core Documents
 
----
+-   START_HERE.md --- startup procedure
+-   PRODUCT_BLUEPRINT.md --- product vision
+-   PROJECT_STATUS.md --- production status
+-   CAPABILITIES.md --- capability definitions
+-   DECISIONS.md --- permanent engineering decisions
 
-## Evidence
-
-- Evidence must always be publicly observable.
-- Unknown information must remain Unknown.
-- Evidence should always remain traceable to its source.
-- Evidence collectors never make consulting recommendations.
-
----
-
-## Capability Engines
-
-- Capability Engines organize intelligence, not evidence sources.
-- Multiple evidence sources may contribute to one capability.
-- New evidence sources should strengthen existing capabilities before creating new ones.
-- Capability definitions are maintained in **docs/CAPABILITIES.md**.
-
----
-
-## Business Record
-
-- The Business Record is the single source of truth.
-- Only the Business Record Builder may modify the Business Record.
-- Capabilities contribute standardized information.
-- Capabilities never overwrite one another directly.
-- The Business Record must remain backwards compatible whenever possible.
-
----
-
-## Consulting Intelligence
-
-- Consulting Intelligence interprets evidence.
-- Recommendations must always be supported by observable evidence.
-- Recommendations should produce measurable business value.
-- Consulting Intelligence should assist consultants rather than replace consultant judgment.
-
----
-
-## Client Delivery
-
-- Client-facing reports originate from the Business Record.
-- Client Delivery never bypasses the Business Record.
-- Dashboard, Growth Reviews, Proposals, and future deliverables all consume standardized Business Record data.
-
----
-
-## Evolution
-
-The architecture is designed to evolve without redesign.
-
-New functionality should generally follow this order:
-
-1. New Evidence Source
-2. Existing Capability Enhancement
-3. Business Record Update
-4. Consulting Intelligence Enhancement
-5. Client Delivery Improvement
-
-Architecture should evolve through intentional revisions rather than unnecessary redesigns.
-
----
-
-# Relationship to Other Documents
-
-The architecture works together with the other core project documents.
-
-**START_HERE.md**
-
-Defines the required startup procedure for every new development session.
-
-**GCM_OS_PRODUCT_BLUEPRINT.md**
-
-Defines the long-term product vision and consulting philosophy.
-
-**CAPABILITIES.md**
-
-Defines the consulting capabilities and the evidence each capability is responsible for organizing.
-
-**PROJECT_STATUS.md**
-
-Defines the current sprint, implementation status, locked milestones, and immediate development priorities.
-
-**DECISIONS.md**
-
-Maintains the permanent architectural and product decisions that guide future development.
-
-Together these documents form the governance system for GCM OS.
-
----
+------------------------------------------------------------------------
 
 # Long-Term Objective
 
-Build a modular Consulting Operating System that continuously transforms publicly observable evidence into structured consulting intelligence.
-
-Every capability should enrich the Business Record.
-
-Every recommendation should be evidence-based.
-
-Every report should help a consultant become significantly more prepared for a first client conversation.
-
-The architecture is intentionally designed so that new evidence sources, new capabilities, and future AI technologies can be incorporated without redesigning the core operating system.
-
-The Business Record remains the permanent consulting record and the foundation upon which every future feature of GCM OS will be built.
+Build a modular Consulting Operating System that continuously transforms
+publicly observable evidence into actionable consulting intelligence
+while preserving a single, standardized Business Record.
