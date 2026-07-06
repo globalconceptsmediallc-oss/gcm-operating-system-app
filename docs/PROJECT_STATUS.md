@@ -1,29 +1,31 @@
 # GCM OS PROJECT STATUS
 
-**Version:** 3.1
+**Version:** 3.2
 
 **Status:** Active Development
 
 **Last Updated:** 2026-07-06
 
----
+------------------------------------------------------------------------
 
 # Purpose
 
-This document represents the current operational state of the Global Concepts Media Operating System (GCM OS).
+This document represents the current operational state of the Global
+Concepts Media Operating System (GCM OS).
 
-If this document conflicts with previous conversations or AI memory, this document takes precedence.
+If this document conflicts with previous conversations or AI memory,
+this document takes precedence.
 
 Every new development session begins by reading:
 
-1. docs/START_HERE.md
-2. docs/GCM_OS_PRODUCT_BLUEPRINT.md
-3. docs/PROJECT_STATUS.md
-4. docs/ARCHITECTURE.md
-5. docs/DECISIONS.md
-6. docs/CAPABILITIES.md
+1.  docs/START_HERE.md
+2.  docs/GCM_OS_PRODUCT_BLUEPRINT.md
+3.  docs/PROJECT_STATUS.md
+4.  docs/ARCHITECTURE.md
+5.  docs/DECISIONS.md
+6.  docs/CAPABILITIES.md
 
----
+------------------------------------------------------------------------
 
 # Current Product Status
 
@@ -37,33 +39,38 @@ AI-Powered Consulting Operating System
 
 **Current Development Phase**
 
-Phase 2 — Consulting Intelligence Foundation
+Phase 2 --- Consulting Intelligence Foundation
 
 **Overall Status**
 
 Active Development
 
----
+------------------------------------------------------------------------
 
 # Current Sprint
 
 ## Sprint Name
 
-Contact Enrichment Foundation
+Public Presence Intelligence
 
 ## Sprint Objective
 
-Create the Contact Enrichment capability so GCM OS can begin identifying publicly observable contact information that improves first outreach and discovery preparation.
+Answer the consulting question:
+
+> "Where does this business have an official public presence?"
+
+Version 1 expands the Business Record by discovering official public
+profile links directly from the business website.
 
 The Business Record remains the single source of truth.
 
----
+------------------------------------------------------------------------
 
 # Current Versions
 
-Dashboard: 5.4.0
+Dashboard: 5.4.1
 
-Worker: 5.3.0
+Worker: 5.4.0
 
 Business Record Schema: Version 1
 
@@ -71,13 +78,15 @@ Blueprint: Version 2.0 (Locked)
 
 START_HERE: Version 1.0 (Locked)
 
-Architecture: Version 1.1 (Locked)
+PROJECT_STATUS: Version 3.2
 
-Decisions: Version 1.1 (Locked)
+Architecture: Version 1.2
 
-Capabilities: Version 1.0 (Locked)
+Decisions: Version 1.2
 
----
+Capabilities: Version 1.1
+
+------------------------------------------------------------------------
 
 # Current Architecture
 
@@ -87,9 +96,13 @@ Evidence Sources
 
 Capability Engines
 
+-   Website Intelligence
+-   Contact Enrichment
+-   Public Presence Intelligence (Current Sprint)
+
 ↓
 
-Business Record
+Business Record (Single Source of Truth)
 
 ↓
 
@@ -119,15 +132,15 @@ Measurement
 
 Continuous Improvement
 
----
+------------------------------------------------------------------------
 
 # Completed Milestones
 
-✅ Worker connected to Cloudflare AI
+✅ Cloudflare AI Worker connected
 
-✅ Website content extraction
+✅ Website Intelligence completed
 
-✅ Business Record architecture
+✅ Business Record architecture established
 
 ✅ Business Record validation layer
 
@@ -135,414 +148,215 @@ Continuous Improvement
 
 ✅ Multi-tab Client Intelligence Report
 
-✅ Overview Tab
-
-✅ Services Tab
-
-✅ Trust Tab
-
-✅ Growth Tab
-
-✅ Outreach Tab
-
 ✅ Executive Summary
 
 ✅ Recommended GCM Services
 
 ✅ Consulting Confidence
 
-✅ Business Record established as the single source of truth
+✅ Capability-based architecture established
 
-✅ START_HERE development guide created
+✅ Contact Enrichment Version 1 completed
 
-✅ Product Blueprint completed
+✅ Contact Enrichment integrated into the Business Record
 
-✅ Architecture Version 1.1 completed
+✅ Contact Enrichment integrated into the Dashboard
 
-✅ Decisions Version 1.1 completed
+✅ Documentation foundation established
 
-✅ Capabilities Version 1.0 completed
-
-✅ Website Intelligence capability proven
-
-✅ Consulting Intelligence Foundation proven
-
----
+------------------------------------------------------------------------
 
 # Current Known Issues
 
-• AI occasionally returns malformed JSON.
+-   AI occasionally returns malformed JSON.
+-   Automatic retry logic has not yet been implemented.
+-   Opportunity Prioritization is currently AI-generated.
+-   Readiness Score is currently AI-generated instead of rule-based.
 
-• Automatic retry logic has not yet been implemented.
-
-• Opportunity prioritization is currently AI-generated instead of rule-based.
-
-• Readiness Score is currently AI-generated instead of rule-based.
-
-• Contact Enrichment has not yet been implemented.
-
-• Owner / decision-maker identification is limited.
-
-• Email discovery is currently limited.
-
----
+------------------------------------------------------------------------
 
 # Current Focus
 
-Contact Enrichment Foundation
+Public Presence Intelligence
 
-Add publicly observable contact information to the Business Record without breaking the existing Website Intelligence workflow.
-
----
-
-# Next File
-
-worker.js
-
----
+------------------------------------------------------------------------
 
 # Immediate Objective
 
-Add the Contact Enrichment structure to the Business Record.
+Worker 5.5.0
 
-Version 1 should begin with website-based contact extraction:
+Version 1 scope:
 
-- Primary email
-- Primary phone
-- Contact page
-- About page
-- Team page
-- Owner / founder / manager references
-- Contact confidence
+-   Detect official Facebook links
+-   Detect official LinkedIn links
+-   Detect official Instagram links
+-   Detect official YouTube links
+-   Detect official X (Twitter) links
+-   Add a publicPresence object to the Business Record
+-   Record evidence sources
+-   Record confidence
+-   Preserve backwards compatibility
+-   Do not scrape external platforms
 
-No Sunbiz integration yet.
-
-Sunbiz remains a future evidence source for Contact Enrichment.
-
----
+------------------------------------------------------------------------
 
 # Locked Product Decisions
 
-The following decisions are considered locked unless intentionally revised.
+-   GCM OS is an AI-powered Consulting Operating System.
+-   The Business Record is the single source of truth.
+-   Every capability answers one consulting question.
+-   Every capability contributes observable evidence.
+-   Every recommendation must be evidence-based.
+-   Complexity is introduced only when it creates measurable consulting
+    value.
 
-• GCM OS is an AI-powered Consulting Operating System.
-
-• The $299 Growth Review is the client-facing consulting product.
-
-• The Business Record is the single source of truth.
-
-• Every recommendation must be supported by observable evidence.
-
-• Every recommendation should support measurable business improvement.
-
-• Every feature must earn its place.
-
-• Complexity is introduced only when it creates measurable value.
-
-• Intelligence is organized by capability, not by source.
-
-• Evidence Sources feed Capability Engines.
-
-• All code and documentation changes must be delivered as complete fresh-install replacements based on the current production file.
-
----
+------------------------------------------------------------------------
 
 # Engineering Rules
 
-• One file at a time.
+-   One file at a time.
+-   Complete fresh-install replacements only.
+-   Always read the current production file before modifying it.
+-   Test after every deployment.
+-   Never break a working feature.
+-   Evidence before assumptions.
+-   Lock documentation before new development.
 
-• Complete fresh-install file replacements only.
+------------------------------------------------------------------------
 
-• Always read the current version of a file before modifying it.
-
-• Test after every deployment.
-
-• Never break a working feature.
-
-• Evidence before assumptions.
-
-• Version 1 before Version 2.
-
-• Lock completed milestones before moving forward.
-
----
-
-# Current Capability Status
+# Capability Status
 
 ## Website Intelligence
 
-Status: Active
-
-Current state:
-
-✓ Business summary
-
-✓ Products and services
-
-✓ Target customer
-
-✓ Geographic market
-
-✓ Trust signals
-
-✓ Website observations
-
-✓ Growth opportunities
-
-✓ Recommended services
-
-✓ Success metrics
-
-✓ Outreach guidance
-
----
+Status: Complete
 
 ## Contact Enrichment
 
+Status: Complete
+
+Version: 1.0
+
+Evidence includes:
+
+-   Primary contact
+-   Contact role
+-   Email
+-   Phone
+-   Contact page
+-   About page
+-   Team page
+-   Contact confidence
+
+## Public Presence Intelligence
+
 Status: Current Sprint
 
-Version 1 planned evidence:
+Planned Version 1:
 
-□ Primary contact name
+-   Facebook
+-   LinkedIn
+-   Instagram
+-   YouTube
+-   X (Twitter)
+-   Evidence
+-   Confidence
 
-□ Primary contact role
-
-□ Primary email
-
-□ Primary phone
-
-□ Contact page
-
-□ About page
-
-□ Team page
-
-□ Additional contact clues
-
-□ Contact sources
-
-□ Contact confidence
-
-Future evidence sources:
-
-□ Florida Sunbiz
-
-□ Google Business Profile
-
-□ LinkedIn
-
-□ Facebook
-
-□ Other public business sources
-
----
-
-# Upcoming Sprint
-
-Contact Enrichment Implementation
-
-Planned improvements:
-
-□ Add Contact Enrichment schema to Business Record.
-
-□ Extract email addresses from website content.
-
-□ Extract phone numbers from website content.
-
-□ Identify contact page links.
-
-□ Identify About page links.
-
-□ Identify Team page links.
-
-□ Identify owner / founder / manager references.
-
-□ Display Contact Enrichment in the report.
-
----
+------------------------------------------------------------------------
 
 # Product Roadmap
 
 ## Phase 1
 
-Foundation
-
-✓ Dashboard
-
-✓ Worker
-
-✓ Business Record
-
-✓ Snapshot Cards
-
-✓ Multi-tab Report
-
----
+Foundation ✅
 
 ## Phase 2
 
-Consulting Intelligence
-
-✓ Executive Summary
-
-✓ Recommended GCM Services
-
-✓ Success Metrics
-
-✓ Consulting Confidence
-
-□ Opportunity Prioritization
-
-□ Opportunity Score
-
-□ Rule-Based Readiness Score
-
-□ Measurement Framework
-
----
+Consulting Intelligence ✅
 
 ## Phase 3
 
-Contact Intelligence
-
-□ Contact Enrichment
-
-□ Public Email Extraction
-
-□ Public Phone Extraction
-
-□ Owner / Decision-Maker Clues
-
-□ Florida Sunbiz Evidence Source
-
----
+Contact Intelligence ✅
 
 ## Phase 4
 
-External Intelligence
-
-□ Google Business Profile
-
-□ Website SEO
-
-□ Reviews
-
-□ Social Media
-
-□ Competitor Intelligence
-
-□ AI Visibility
-
----
+Public Presence Intelligence (Current Sprint)
 
 ## Phase 5
 
-Growth Review
+External Intelligence
 
-□ Client-facing Growth Review
-
-□ Action Plan
-
-□ ROI Summary
-
-□ Professional Report Export
-
----
+-   Google Business Profile
+-   Reviews
+-   SEO
+-   Competitors
+-   AI Visibility
 
 ## Phase 6
 
+Growth Review
+
+## Phase 7
+
 Client Operating System
 
-□ Client History
-
-□ Monthly Monitoring
-
-□ Business Improvement Tracking
-
-□ Historical Business Records
-
-□ Consulting Dashboard
-
----
+------------------------------------------------------------------------
 
 # Documentation Status
 
-✅ docs/START_HERE.md
+✅ START_HERE
 
-✅ docs/GCM_OS_PRODUCT_BLUEPRINT.md
+✅ PRODUCT_BLUEPRINT
 
-✅ docs/PROJECT_STATUS.md
+✅ PROJECT_STATUS 3.2
 
-✅ docs/ARCHITECTURE.md
+✅ ARCHITECTURE 1.2
 
-✅ docs/DECISIONS.md
+✅ DECISIONS 1.2
 
-✅ docs/CAPABILITIES.md
+✅ CAPABILITIES 1.1
 
----
+------------------------------------------------------------------------
 
 # Definition of Success
 
-A consultant should be able to enter one business website and become significantly more prepared for a first client conversation within two minutes.
+A consultant should be able to enter a business website and receive
+evidence-based consulting intelligence within two minutes.
 
-Every recommendation should:
+Every capability must:
 
-• Identify an observable opportunity.
+-   Answer one consulting question.
+-   Add observable evidence.
+-   Improve consulting preparation.
+-   Preserve the Business Record.
+-   Avoid assumptions.
 
-• Explain why it matters.
-
-• Recommend a measurable improvement.
-
-• Support a consulting engagement.
-
-Every enrichment capability should:
-
-• Add observable evidence.
-
-• Improve preparation for outreach or discovery.
-
-• Preserve the Business Record as the single source of truth.
-
-• Avoid inventing or assuming missing information.
-
----
+------------------------------------------------------------------------
 
 # Standard Development Startup
 
-Every new development thread should begin with:
+1.  Read START_HERE.md
+2.  Read PRODUCT_BLUEPRINT.md
+3.  Read PROJECT_STATUS.md
+4.  Read ARCHITECTURE.md
+5.  Read DECISIONS.md
+6.  Read CAPABILITIES.md
+7.  Continue the current sprint.
+8.  Follow Engineering Rules.
+9.  One file at a time.
+10. Test after deployment.
+11. Lock completed milestones.
 
-1. Read docs/START_HERE.md
-
-2. Read docs/GCM_OS_PRODUCT_BLUEPRINT.md
-
-3. Read docs/PROJECT_STATUS.md
-
-4. Read docs/ARCHITECTURE.md
-
-5. Read docs/DECISIONS.md
-
-6. Read docs/CAPABILITIES.md
-
-7. Continue the current sprint.
-
-8. Follow the Engineering Rules.
-
-9. Complete one file at a time.
-
-10. Test after every deployment.
-
-11. Lock completed milestones before moving forward.
-
----
+------------------------------------------------------------------------
 
 # Next Development Target
 
-Build Contact Enrichment Version 1 inside worker.js.
+Build Worker 5.5.0 --- Public Presence Intelligence.
 
-The first implementation should use website-based public evidence only.
+Discover official public profile links from the business website.
 
-Once website-based Contact Enrichment is proven, future versions may add Florida Sunbiz and other public evidence sources.
+Do not scrape external platforms.
 
-The long-term objective remains unchanged:
+Preserve existing Website Intelligence and Contact Enrichment behavior.
 
-Build the Consulting Operating System that powers every client relationship inside Global Concepts Media.
+Continue building the Consulting Operating System one capability at a
+time.
