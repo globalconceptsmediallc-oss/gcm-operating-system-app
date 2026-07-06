@@ -1,8 +1,10 @@
 # GCM OS PROJECT STATUS
 
-**Version:** 2.0
+**Version:** 3.0
+
 **Status:** Active Development
-**Last Updated:** 2026-07-05
+
+**Last Updated:** 2026-07-06
 
 ---
 
@@ -10,27 +12,32 @@
 
 This document represents the current operational state of the Global Concepts Media Operating System (GCM OS).
 
-If this document conflicts with previous conversations or memory, this document takes precedence.
+If this document conflicts with previous conversations or AI memory, this document takes precedence.
 
 Every new development session begins by reading:
 
-1. docs/GCM_OS_PRODUCT_BLUEPRINT.md
-2. docs/PROJECT_STATUS.md
+1. docs/START_HERE.md
+2. docs/GCM_OS_PRODUCT_BLUEPRINT.md
+3. docs/PROJECT_STATUS.md
 
 ---
 
 # Current Product Status
 
 **Product Name**
+
 Global Concepts Media Operating System (GCM OS)
 
 **Product Type**
-Consulting Operating System
+
+AI-Powered Consulting Operating System
 
 **Current Development Phase**
+
 Phase 2 — Consulting Intelligence Foundation
 
 **Overall Status**
+
 Active Development
 
 ---
@@ -39,25 +46,27 @@ Active Development
 
 ## Sprint Name
 
-Worker Reliability Sprint
+Consulting Intelligence Foundation
 
 ## Sprint Objective
 
-Produce a complete, reliable Business Record from a single business website.
+Transform publicly observable business information into actionable consulting intelligence that prepares a consultant for a productive first client conversation.
 
-The Worker should consistently generate structured consulting intelligence suitable for a first sales conversation.
+The Business Record remains the single source of truth.
 
 ---
 
 # Current Versions
 
-Dashboard: 4.2
+Dashboard: 5.4.0
 
-Worker: 5.0.1
+Worker: 5.2.0
 
 Business Record Schema: Version 1
 
-Blueprint: Version 2.0
+Blueprint: Version 2.0 (Locked)
+
+START_HERE: Version 1.0 (Locked)
 
 ---
 
@@ -111,6 +120,8 @@ Continuous Improvement
 
 ✅ Business Record architecture
 
+✅ Business Record validation layer
+
 ✅ Dashboard Snapshot Cards
 
 ✅ Multi-tab Client Intelligence Report
@@ -125,7 +136,15 @@ Continuous Improvement
 
 ✅ Outreach Tab
 
+✅ Executive Summary
+
+✅ Recommended GCM Services
+
+✅ Consulting Confidence
+
 ✅ Business Record established as the single source of truth
+
+✅ START_HERE development guide created
 
 ✅ Product Blueprint completed
 
@@ -133,37 +152,33 @@ Continuous Improvement
 
 # Current Known Issues
 
-• AI occasionally returns weaker first-pass responses.
+• AI occasionally returns malformed JSON.
 
 • Automatic retry logic has not yet been implemented.
 
-• Readiness Score is currently AI-generated instead of rule-based.
+• Opportunity prioritization is currently AI-generated instead of rule-based.
 
-• Executive Summary has not yet been added.
+• Dashboard presentation should continue evolving toward a consultant-first workflow.
 
 ---
 
-# Current File
+# Current Focus
 
-worker.js
+Documentation Foundation
+
+Lock project documentation before expanding architecture and adding additional workers.
 
 ---
 
 # Next File
 
-worker.js
+docs/ARCHITECTURE.md
 
 ---
 
 # Immediate Objective
 
-Increase Worker reliability.
-
-Before returning a Business Record, verify that critical business information has been successfully extracted.
-
-Future sprint:
-
-Automatic retry logic if required fields are missing.
+Document the long-term technical architecture before introducing additional intelligence workers.
 
 ---
 
@@ -171,7 +186,7 @@ Automatic retry logic if required fields are missing.
 
 The following decisions are considered locked unless intentionally revised.
 
-• GCM OS is an internal Consulting Operating System.
+• GCM OS is an AI-powered Consulting Operating System.
 
 • The $299 Growth Review is the client-facing consulting product.
 
@@ -193,6 +208,8 @@ The following decisions are considered locked unless intentionally revised.
 
 • Complete fresh-install file replacements only.
 
+• Always read the current version of a file before modifying it.
+
 • Test after every deployment.
 
 • Never break a working feature.
@@ -207,19 +224,19 @@ The following decisions are considered locked unless intentionally revised.
 
 # Upcoming Sprint
 
-Consulting Intelligence Engine
+Consultant Experience
 
 Planned improvements:
 
-□ Executive Summary
+□ Opportunity-first dashboard
 
-□ Opportunity Engine
+□ Executive dashboard redesign
 
-□ Rule-based Opportunity Score
+□ Conversation guide
 
-□ Measurement Framework
+□ Supporting evidence layout
 
-□ Automatic Retry Logic
+□ Growth Review preparation
 
 ---
 
@@ -245,7 +262,7 @@ Foundation
 
 Consulting Intelligence
 
-□ Executive Summary
+✓ Executive Summary
 
 □ Opportunity Prioritization
 
@@ -277,13 +294,13 @@ External Intelligence
 
 □ Google Business Profile
 
+□ Website SEO
+
 □ Reviews
 
 □ Social Media
 
 □ Competitor Intelligence
-
-□ SEO Intelligence
 
 □ AI Visibility
 
@@ -305,9 +322,23 @@ Client Operating System
 
 ---
 
+# Documentation Status
+
+✅ docs/START_HERE.md
+
+✅ docs/GCM_OS_PRODUCT_BLUEPRINT.md
+
+✅ docs/PROJECT_STATUS.md
+
+⬜ docs/ARCHITECTURE.md
+
+⬜ docs/DECISIONS.md
+
+---
+
 # Definition of Success
 
-A salesperson should be able to enter one business website and become significantly more prepared for a first conversation within two minutes.
+A consultant should be able to enter one business website and become significantly more prepared for a first client conversation within two minutes.
 
 Every recommendation should:
 
@@ -325,9 +356,9 @@ Every recommendation should:
 
 Every new development thread should begin with:
 
-1. Read docs/GCM_OS_PRODUCT_BLUEPRINT.md
+1. Read docs/START_HERE.md
 
-2. Read docs/PROJECT_STATUS.md
+2. Follow the startup sequence.
 
 3. Continue the current sprint.
 
@@ -343,8 +374,10 @@ Every new development thread should begin with:
 
 # Next Development Target
 
-Complete the Worker Reliability Sprint.
+Complete the Consulting Intelligence Foundation.
 
-Once the Worker consistently produces reliable Business Records, begin the Consulting Intelligence Sprint by transforming observations into measurable consulting recommendations.
+Once Consulting Intelligence consistently produces actionable recommendations, begin the Consultant Experience Sprint.
 
-The long-term objective is to build GCM OS into the Consulting Operating System that powers every client relationship inside Global Concepts Media.
+The long-term objective remains unchanged:
+
+Build the Consulting Operating System that powers every client relationship inside Global Concepts Media.
