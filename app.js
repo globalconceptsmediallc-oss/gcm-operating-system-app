@@ -1,8 +1,8 @@
 /* =========================================================
    Global Concepts Media Operating System
-   Version 5.3.0
+   Version 5.3.1
    File: app.js
-   Purpose: Dashboard controller with functional Business Record tabs
+   Purpose: Functional Client Intelligence tabs from Business Record
    ========================================================= */
 
 const workerEndpoint = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
@@ -36,7 +36,7 @@ form.addEventListener("submit", async function (event) {
     return;
   }
 
-  setStatus("Working...", "Researching website and building intelligence record.");
+  setStatus("Working...", "Researching website and building client intelligence.");
   reportOutput.innerHTML = `<div class="report-loading">Generating client intelligence...</div>`;
   generateBtn.disabled = true;
 
@@ -58,7 +58,7 @@ form.addEventListener("submit", async function (event) {
     currentBusinessRecord = data.businessRecord || null;
     currentReport = data.report || "";
 
-    setStatus("Complete.", data.version || "5.3.0");
+    setStatus("Complete.", data.version || "5.3.1");
     populateSnapshot(currentBusinessRecord);
     updateDeveloperStatus(data);
 
@@ -97,32 +97,16 @@ function renderActiveTab() {
     return;
   }
 
-  if (activeTab === "overview") {
-    reportOutput.innerHTML = renderOverview(currentBusinessRecord);
-    return;
-  }
+  const renderers = {
+    overview: renderOverview,
+    services: renderServices,
+    trust: renderTrust,
+    growth: renderGrowth,
+    outreach: renderOutreach
+  };
 
-  if (activeTab === "services") {
-    reportOutput.innerHTML = renderServices(currentBusinessRecord);
-    return;
-  }
-
-  if (activeTab === "trust") {
-    reportOutput.innerHTML = renderTrust(currentBusinessRecord);
-    return;
-  }
-
-  if (activeTab === "growth") {
-    reportOutput.innerHTML = renderGrowth(currentBusinessRecord);
-    return;
-  }
-
-  if (activeTab === "outreach") {
-    reportOutput.innerHTML = renderOutreach(currentBusinessRecord);
-    return;
-  }
-
-  reportOutput.innerHTML = renderMarkdown(currentReport);
+  const renderer = renderers[activeTab] || renderOverview;
+  reportOutput.innerHTML = renderer(currentBusinessRecord);
 }
 
 function renderOverview(record) {
@@ -134,20 +118,11 @@ function renderOverview(record) {
     <article class="rendered-report">
       <h1>Overview</h1>
 
-      <h2>Business Summary</h2>
-      <p>${escapeHtml(business.summary || "Unknown")}</p>
-
-      <h2>Target Customer</h2>
-      <p>${escapeHtml(website.targetCustomer || "Unknown")}</p>
-
-      <h2>Geographic Market</h2>
-      <p>${escapeHtml(website.geographicMarket || business.market || "Unknown")}</p>
-
-      <h2>Outreach Readiness</h2>
-      <p>${escapeHtml(sales.outreachReadiness || "Unknown")}</p>
-
-      <h2>Readiness Score</h2>
-      <p><strong>${escapeHtml(sales.readinessScore || "Pending")}</strong></p>
+      ${section("Business Summary", business.summary)}
+      ${section("Target Customer", website.targetCustomer)}
+      ${section("Geographic Market", website.geographicMarket || business.market)}
+      ${section("Outreach Readiness", sales.outreachReadiness)}
+      ${section("Readiness Score", sales.readinessScore)}
     </article>
   `;
 }
@@ -159,11 +134,9 @@ function renderServices(record) {
     <article class="rendered-report">
       <h1>Services</h1>
 
-      <h2>Products and Services</h2>
-      ${renderList(website.productsAndServices)}
-
-      <h2>Observable Capabilities</h2>
-      <p>${escapeHtml(website.targetCustomer || "Unknown")}</p>
+      ${listSection("Products and Services", website.productsAndServices)}
+      ${section("Target Customer Fit", website.targetCustomer)}
+      ${section("Geographic Service Area", website.geographicMarket)}
     </article>
   `;
 }
@@ -175,11 +148,8 @@ function renderTrust(record) {
     <article class="rendered-report">
       <h1>Trust</h1>
 
-      <h2>Trust Signals</h2>
-      ${renderList(website.trustSignals)}
-
-      <h2>Missing Trust Information</h2>
-      ${renderList(website.missingInformation)}
+      ${listSection("Trust Signals", website.trustSignals)}
+      ${listSection("Missing Trust Information", website.missingInformation)}
     </article>
   `;
 }
@@ -191,14 +161,9 @@ function renderGrowth(record) {
     <article class="rendered-report">
       <h1>Growth</h1>
 
-      <h2>Growth Opportunities</h2>
-      ${renderList(website.growthOpportunities)}
-
-      <h2>Website Observations</h2>
-      ${renderList(website.websiteObservations)}
-
-      <h2>Missing Information</h2>
-      ${renderList(website.missingInformation)}
+      ${listSection("Growth Opportunities", website.growthOpportunities)}
+      ${listSection("Website Observations", website.websiteObservations)}
+      ${listSection("Missing Information", website.missingInformation)}
     </article>
   `;
 }
@@ -210,15 +175,24 @@ function renderOutreach(record) {
     <article class="rendered-report">
       <h1>Outreach</h1>
 
-      <h2>Recommended Opening</h2>
-      <p>${escapeHtml(sales.recommendedOpening || "Unknown")}</p>
-
-      <h2>First Contact Notes</h2>
-      ${renderList(sales.firstContactNotes)}
-
-      <h2>Why They Might Hire GCM</h2>
-      ${renderList(sales.whyTheyMightHireGCM)}
+      ${section("Recommended Opening", sales.recommendedOpening)}
+      ${listSection("First Contact Notes", sales.firstContactNotes)}
+      ${listSection("Why They Might Hire GCM", sales.whyTheyMightHireGCM)}
     </article>
+  `;
+}
+
+function section(title, value) {
+  return `
+    <h2>${escapeHtml(title)}</h2>
+    <p>${escapeHtml(value || "Unknown")}</p>
+  `;
+}
+
+function listSection(title, items) {
+  return `
+    <h2>${escapeHtml(title)}</h2>
+    ${renderList(items)}
   `;
 }
 
@@ -227,13 +201,8 @@ function populateSnapshot(businessRecord) {
   const website = businessRecord?.websiteIntelligence || {};
   const sales = businessRecord?.salesIntelligence || {};
 
-  if (snapshotCompany) {
-    snapshotCompany.textContent = business.name || "Unknown";
-  }
-
-  if (snapshotIndustry) {
-    snapshotIndustry.textContent = business.industry || "Unknown";
-  }
+  if (snapshotCompany) snapshotCompany.textContent = business.name || "Unknown";
+  if (snapshotIndustry) snapshotIndustry.textContent = business.industry || "Unknown";
 
   if (snapshotMarket) {
     snapshotMarket.textContent =
@@ -256,12 +225,7 @@ function updateDeveloperStatus(data) {
 function setActiveTabButton(tabName) {
   tabButtons.forEach(function (button) {
     const buttonTab = normalizeTabName(button.textContent);
-
-    if (buttonTab === tabName) {
-      button.classList.add("active");
-    } else {
-      button.classList.remove("active");
-    }
+    button.classList.toggle("active", buttonTab === tabName);
   });
 }
 
@@ -288,71 +252,9 @@ function renderList(items) {
 
   return `
     <ul>
-      ${items.map(function (item) {
-        return `<li>${escapeHtml(item)}</li>`;
-      }).join("")}
+      ${items.map(item => `<li>${escapeHtml(item)}</li>`).join("")}
     </ul>
   `;
-}
-
-function renderMarkdown(markdown) {
-  if (!markdown) return "";
-
-  let html = escapeHtml(markdown);
-
-  html = html
-    .replace(/^# (.*$)/gim, "<h1>$1</h1>")
-    .replace(/^## (.*$)/gim, "<h2>$1</h2>")
-    .replace(/^### (.*$)/gim, "<h3>$1</h3>")
-    .replace(/\*\*(.*?)\*\*/gim, "<strong>$1</strong>")
-    .replace(/\*(.*?)\*/gim, "<em>$1</em>");
-
-  const lines = html.split("\n");
-  let output = "";
-  let inList = false;
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-
-    if (!trimmed) {
-      if (inList) {
-        output += "</ul>";
-        inList = false;
-      }
-      continue;
-    }
-
-    if (trimmed.startsWith("- ")) {
-      if (!inList) {
-        output += "<ul>";
-        inList = true;
-      }
-
-      output += `<li>${trimmed.substring(2)}</li>`;
-      continue;
-    }
-
-    if (inList) {
-      output += "</ul>";
-      inList = false;
-    }
-
-    if (
-      trimmed.startsWith("<h1>") ||
-      trimmed.startsWith("<h2>") ||
-      trimmed.startsWith("<h3>")
-    ) {
-      output += trimmed;
-    } else {
-      output += `<p>${trimmed}</p>`;
-    }
-  }
-
-  if (inList) {
-    output += "</ul>";
-  }
-
-  return `<article class="rendered-report">${output}</article>`;
 }
 
 function escapeHtml(value) {
