@@ -1,8 +1,8 @@
 /* =========================================================
    Global Concepts Media Operating System
-   Version 5.4.0
+   Version 5.4.1
    File: app.js
-   Purpose: Display Business Record + Consulting Intelligence
+   Purpose: Display Business Record + Contact Enrichment + Consulting Intelligence
    ========================================================= */
 
 const workerEndpoint = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
@@ -119,6 +119,7 @@ function renderOverview(record) {
     <article class="rendered-report">
       <h1>Overview</h1>
 
+      ${renderContactBrief(record)}
       ${section("Executive Summary", consulting.executiveSummary)}
       ${section("Business Summary", business.summary)}
       ${section("Target Customer", website.targetCustomer)}
@@ -184,11 +185,34 @@ function renderOutreach(record) {
     <article class="rendered-report">
       <h1>Outreach</h1>
 
+      ${renderContactBrief(record)}
       ${section("Recommended Opening", sales.recommendedOpening)}
       ${listSection("First Contact Notes", sales.firstContactNotes)}
       ${listSection("Why They Might Hire GCM", sales.whyTheyMightHireGCM)}
       ${listSection("Recommended GCM Services", consulting.recommendedServices)}
     </article>
+  `;
+}
+
+function renderContactBrief(record) {
+  const contact = record.contactEnrichment || {};
+
+  return `
+    <section class="consultant-contact-brief">
+      <h2>Contact Enrichment</h2>
+
+      <p><strong>Primary Contact:</strong> ${escapeHtml(contact.primaryContactName || "Unknown")}</p>
+      <p><strong>Role / Clue:</strong> ${escapeHtml(contact.primaryContactRole || "Unknown")}</p>
+      <p><strong>Email:</strong> ${renderLinkOrText(contact.primaryEmail, "email")}</p>
+      <p><strong>Phone:</strong> ${renderLinkOrText(contact.primaryPhone, "phone")}</p>
+      <p><strong>Contact Page:</strong> ${renderLinkOrText(contact.contactPage, "url")}</p>
+      <p><strong>About Page:</strong> ${renderLinkOrText(contact.aboutPage, "url")}</p>
+      <p><strong>Team Page:</strong> ${renderLinkOrText(contact.teamPage, "url")}</p>
+      <p><strong>Contact Confidence:</strong> ${escapeHtml(contact.confidence || "Unknown")}</p>
+
+      ${listSection("Contact Evidence Sources", contact.sources)}
+      ${listSection("Additional Contact Clues", formatAdditionalContacts(contact.additionalContacts))}
+    </section>
   `;
 }
 
@@ -266,9 +290,58 @@ function renderList(items) {
 
   return `
     <ul>
-      ${items.map(item => `<li>${escapeHtml(item)}</li>`).join("")}
+      ${items.map(item => `<li>${escapeHtml(formatListItem(item))}</li>`).join("")}
     </ul>
   `;
+}
+
+function formatAdditionalContacts(items) {
+  if (!Array.isArray(items) || items.length === 0) return [];
+
+  return items.map(function (item) {
+    if (!item || typeof item !== "object") return String(item);
+
+    const name = item.name || "Unknown";
+    const role = item.role || "Unknown";
+    const email = item.email || "Unknown";
+    const phone = item.phone || "Unknown";
+    const source = item.source || "Unknown";
+
+    return `${name} | ${role} | ${email} | ${phone} | Source: ${source}`;
+  });
+}
+
+function formatListItem(item) {
+  if (item === null || item === undefined) return "Unknown";
+
+  if (typeof item === "object") {
+    return JSON.stringify(item);
+  }
+
+  return String(item);
+}
+
+function renderLinkOrText(value, type) {
+  if (!value || value === "Unknown") return "Unknown";
+
+  const clean = String(value).trim();
+
+  if (type === "email" && clean.includes("@")) {
+    return `<a href="mailto:${escapeHtml(clean)}">${escapeHtml(clean)}</a>`;
+  }
+
+  if (type === "phone") {
+    const phoneDigits = clean.replace(/\D/g, "");
+    if (phoneDigits.length >= 10) {
+      return `<a href="tel:${escapeHtml(phoneDigits)}">${escapeHtml(clean)}</a>`;
+    }
+  }
+
+  if (type === "url" && clean.startsWith("http")) {
+    return `<a href="${escapeHtml(clean)}" target="_blank" rel="noopener noreferrer">${escapeHtml(clean)}</a>`;
+  }
+
+  return escapeHtml(clean);
 }
 
 function escapeHtml(value) {
