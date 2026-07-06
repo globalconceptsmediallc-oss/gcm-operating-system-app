@@ -1,8 +1,8 @@
 /* =========================================================
    Global Concepts Media Operating System
-   Version 5.3.1
+   Version 5.4.0
    File: app.js
-   Purpose: Functional Client Intelligence tabs from Business Record
+   Purpose: Display Business Record + Consulting Intelligence
    ========================================================= */
 
 const workerEndpoint = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
@@ -36,8 +36,8 @@ form.addEventListener("submit", async function (event) {
     return;
   }
 
-  setStatus("Working...", "Researching website and building client intelligence.");
-  reportOutput.innerHTML = `<div class="report-loading">Generating client intelligence...</div>`;
+  setStatus("Working...", "Researching website and building consulting intelligence.");
+  reportOutput.innerHTML = `<div class="report-loading">Generating consulting intelligence...</div>`;
   generateBtn.disabled = true;
 
   try {
@@ -58,7 +58,7 @@ form.addEventListener("submit", async function (event) {
     currentBusinessRecord = data.businessRecord || null;
     currentReport = data.report || "";
 
-    setStatus("Complete.", data.version || "5.3.1");
+    setStatus("Complete.", data.version || "Unknown");
     populateSnapshot(currentBusinessRecord);
     updateDeveloperStatus(data);
 
@@ -113,22 +113,26 @@ function renderOverview(record) {
   const business = record.business || {};
   const website = record.websiteIntelligence || {};
   const sales = record.salesIntelligence || {};
+  const consulting = record.consultingIntelligence || {};
 
   return `
     <article class="rendered-report">
       <h1>Overview</h1>
 
+      ${section("Executive Summary", consulting.executiveSummary)}
       ${section("Business Summary", business.summary)}
       ${section("Target Customer", website.targetCustomer)}
       ${section("Geographic Market", website.geographicMarket || business.market)}
       ${section("Outreach Readiness", sales.outreachReadiness)}
       ${section("Readiness Score", sales.readinessScore)}
+      ${section("Consulting Confidence", consulting.confidence)}
     </article>
   `;
 }
 
 function renderServices(record) {
   const website = record.websiteIntelligence || {};
+  const consulting = record.consultingIntelligence || {};
 
   return `
     <article class="rendered-report">
@@ -137,6 +141,7 @@ function renderServices(record) {
       ${listSection("Products and Services", website.productsAndServices)}
       ${section("Target Customer Fit", website.targetCustomer)}
       ${section("Geographic Service Area", website.geographicMarket)}
+      ${listSection("Recommended GCM Services", consulting.recommendedServices)}
     </article>
   `;
 }
@@ -156,12 +161,15 @@ function renderTrust(record) {
 
 function renderGrowth(record) {
   const website = record.websiteIntelligence || {};
+  const consulting = record.consultingIntelligence || {};
 
   return `
     <article class="rendered-report">
       <h1>Growth</h1>
 
+      ${listSection("Top Consulting Opportunities", consulting.topOpportunities)}
       ${listSection("Growth Opportunities", website.growthOpportunities)}
+      ${listSection("Success Metrics", consulting.successMetrics)}
       ${listSection("Website Observations", website.websiteObservations)}
       ${listSection("Missing Information", website.missingInformation)}
     </article>
@@ -170,6 +178,7 @@ function renderGrowth(record) {
 
 function renderOutreach(record) {
   const sales = record.salesIntelligence || {};
+  const consulting = record.consultingIntelligence || {};
 
   return `
     <article class="rendered-report">
@@ -178,6 +187,7 @@ function renderOutreach(record) {
       ${section("Recommended Opening", sales.recommendedOpening)}
       ${listSection("First Contact Notes", sales.firstContactNotes)}
       ${listSection("Why They Might Hire GCM", sales.whyTheyMightHireGCM)}
+      ${listSection("Recommended GCM Services", consulting.recommendedServices)}
     </article>
   `;
 }
@@ -200,6 +210,7 @@ function populateSnapshot(businessRecord) {
   const business = businessRecord?.business || {};
   const website = businessRecord?.websiteIntelligence || {};
   const sales = businessRecord?.salesIntelligence || {};
+  const consulting = businessRecord?.consultingIntelligence || {};
 
   if (snapshotCompany) snapshotCompany.textContent = business.name || "Unknown";
   if (snapshotIndustry) snapshotIndustry.textContent = business.industry || "Unknown";
@@ -212,7 +223,10 @@ function populateSnapshot(businessRecord) {
   }
 
   if (snapshotReadiness) {
-    snapshotReadiness.textContent = sales.readinessScore || "Pending";
+    snapshotReadiness.textContent =
+      sales.readinessScore ||
+      consulting.confidence ||
+      "Pending";
   }
 }
 
