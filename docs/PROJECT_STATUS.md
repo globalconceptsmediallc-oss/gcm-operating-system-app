@@ -1,6 +1,6 @@
 # GCM OS PROJECT STATUS
 
-**Version:** 3.0
+**Version:** 3.1
 
 **Status:** Active Development
 
@@ -19,6 +19,9 @@ Every new development session begins by reading:
 1. docs/START_HERE.md
 2. docs/GCM_OS_PRODUCT_BLUEPRINT.md
 3. docs/PROJECT_STATUS.md
+4. docs/ARCHITECTURE.md
+5. docs/DECISIONS.md
+6. docs/CAPABILITIES.md
 
 ---
 
@@ -46,11 +49,11 @@ Active Development
 
 ## Sprint Name
 
-Consulting Intelligence Foundation
+Contact Enrichment Foundation
 
 ## Sprint Objective
 
-Transform publicly observable business information into actionable consulting intelligence that prepares a consultant for a productive first client conversation.
+Create the Contact Enrichment capability so GCM OS can begin identifying publicly observable contact information that improves first outreach and discovery preparation.
 
 The Business Record remains the single source of truth.
 
@@ -60,7 +63,7 @@ The Business Record remains the single source of truth.
 
 Dashboard: 5.4.0
 
-Worker: 5.2.0
+Worker: 5.3.0
 
 Business Record Schema: Version 1
 
@@ -68,15 +71,21 @@ Blueprint: Version 2.0 (Locked)
 
 START_HERE: Version 1.0 (Locked)
 
+Architecture: Version 1.1 (Locked)
+
+Decisions: Version 1.1 (Locked)
+
+Capabilities: Version 1.0 (Locked)
+
 ---
 
 # Current Architecture
 
-Business Website
+Evidence Sources
 
 ↓
 
-Website Intelligence
+Capability Engines
 
 ↓
 
@@ -148,6 +157,16 @@ Continuous Improvement
 
 ✅ Product Blueprint completed
 
+✅ Architecture Version 1.1 completed
+
+✅ Decisions Version 1.1 completed
+
+✅ Capabilities Version 1.0 completed
+
+✅ Website Intelligence capability proven
+
+✅ Consulting Intelligence Foundation proven
+
 ---
 
 # Current Known Issues
@@ -158,27 +177,47 @@ Continuous Improvement
 
 • Opportunity prioritization is currently AI-generated instead of rule-based.
 
-• Dashboard presentation should continue evolving toward a consultant-first workflow.
+• Readiness Score is currently AI-generated instead of rule-based.
+
+• Contact Enrichment has not yet been implemented.
+
+• Owner / decision-maker identification is limited.
+
+• Email discovery is currently limited.
 
 ---
 
 # Current Focus
 
-Documentation Foundation
+Contact Enrichment Foundation
 
-Lock project documentation before expanding architecture and adding additional workers.
+Add publicly observable contact information to the Business Record without breaking the existing Website Intelligence workflow.
 
 ---
 
 # Next File
 
-docs/ARCHITECTURE.md
+worker.js
 
 ---
 
 # Immediate Objective
 
-Document the long-term technical architecture before introducing additional intelligence workers.
+Add the Contact Enrichment structure to the Business Record.
+
+Version 1 should begin with website-based contact extraction:
+
+- Primary email
+- Primary phone
+- Contact page
+- About page
+- Team page
+- Owner / founder / manager references
+- Contact confidence
+
+No Sunbiz integration yet.
+
+Sunbiz remains a future evidence source for Contact Enrichment.
 
 ---
 
@@ -199,6 +238,12 @@ The following decisions are considered locked unless intentionally revised.
 • Every feature must earn its place.
 
 • Complexity is introduced only when it creates measurable value.
+
+• Intelligence is organized by capability, not by source.
+
+• Evidence Sources feed Capability Engines.
+
+• All code and documentation changes must be delivered as complete fresh-install replacements based on the current production file.
 
 ---
 
@@ -222,21 +267,97 @@ The following decisions are considered locked unless intentionally revised.
 
 ---
 
+# Current Capability Status
+
+## Website Intelligence
+
+Status: Active
+
+Current state:
+
+✓ Business summary
+
+✓ Products and services
+
+✓ Target customer
+
+✓ Geographic market
+
+✓ Trust signals
+
+✓ Website observations
+
+✓ Growth opportunities
+
+✓ Recommended services
+
+✓ Success metrics
+
+✓ Outreach guidance
+
+---
+
+## Contact Enrichment
+
+Status: Current Sprint
+
+Version 1 planned evidence:
+
+□ Primary contact name
+
+□ Primary contact role
+
+□ Primary email
+
+□ Primary phone
+
+□ Contact page
+
+□ About page
+
+□ Team page
+
+□ Additional contact clues
+
+□ Contact sources
+
+□ Contact confidence
+
+Future evidence sources:
+
+□ Florida Sunbiz
+
+□ Google Business Profile
+
+□ LinkedIn
+
+□ Facebook
+
+□ Other public business sources
+
+---
+
 # Upcoming Sprint
 
-Consultant Experience
+Contact Enrichment Implementation
 
 Planned improvements:
 
-□ Opportunity-first dashboard
+□ Add Contact Enrichment schema to Business Record.
 
-□ Executive dashboard redesign
+□ Extract email addresses from website content.
 
-□ Conversation guide
+□ Extract phone numbers from website content.
 
-□ Supporting evidence layout
+□ Identify contact page links.
 
-□ Growth Review preparation
+□ Identify About page links.
+
+□ Identify Team page links.
+
+□ Identify owner / founder / manager references.
+
+□ Display Contact Enrichment in the report.
 
 ---
 
@@ -264,11 +385,17 @@ Consulting Intelligence
 
 ✓ Executive Summary
 
+✓ Recommended GCM Services
+
+✓ Success Metrics
+
+✓ Consulting Confidence
+
 □ Opportunity Prioritization
 
 □ Opportunity Score
 
-□ Consulting Recommendations
+□ Rule-Based Readiness Score
 
 □ Measurement Framework
 
@@ -276,15 +403,17 @@ Consulting Intelligence
 
 ## Phase 3
 
-Growth Review
+Contact Intelligence
 
-□ Client-facing Growth Review
+□ Contact Enrichment
 
-□ Action Plan
+□ Public Email Extraction
 
-□ ROI Summary
+□ Public Phone Extraction
 
-□ Professional Report Export
+□ Owner / Decision-Maker Clues
+
+□ Florida Sunbiz Evidence Source
 
 ---
 
@@ -308,6 +437,20 @@ External Intelligence
 
 ## Phase 5
 
+Growth Review
+
+□ Client-facing Growth Review
+
+□ Action Plan
+
+□ ROI Summary
+
+□ Professional Report Export
+
+---
+
+## Phase 6
+
 Client Operating System
 
 □ Client History
@@ -330,9 +473,11 @@ Client Operating System
 
 ✅ docs/PROJECT_STATUS.md
 
-⬜ docs/ARCHITECTURE.md
+✅ docs/ARCHITECTURE.md
 
-⬜ docs/DECISIONS.md
+✅ docs/DECISIONS.md
+
+✅ docs/CAPABILITIES.md
 
 ---
 
@@ -350,6 +495,16 @@ Every recommendation should:
 
 • Support a consulting engagement.
 
+Every enrichment capability should:
+
+• Add observable evidence.
+
+• Improve preparation for outreach or discovery.
+
+• Preserve the Business Record as the single source of truth.
+
+• Avoid inventing or assuming missing information.
+
 ---
 
 # Standard Development Startup
@@ -358,25 +513,35 @@ Every new development thread should begin with:
 
 1. Read docs/START_HERE.md
 
-2. Follow the startup sequence.
+2. Read docs/GCM_OS_PRODUCT_BLUEPRINT.md
 
-3. Continue the current sprint.
+3. Read docs/PROJECT_STATUS.md
 
-4. Follow the Engineering Rules.
+4. Read docs/ARCHITECTURE.md
 
-5. Complete one file at a time.
+5. Read docs/DECISIONS.md
 
-6. Test after every deployment.
+6. Read docs/CAPABILITIES.md
 
-7. Lock completed milestones before moving forward.
+7. Continue the current sprint.
+
+8. Follow the Engineering Rules.
+
+9. Complete one file at a time.
+
+10. Test after every deployment.
+
+11. Lock completed milestones before moving forward.
 
 ---
 
 # Next Development Target
 
-Complete the Consulting Intelligence Foundation.
+Build Contact Enrichment Version 1 inside worker.js.
 
-Once Consulting Intelligence consistently produces actionable recommendations, begin the Consultant Experience Sprint.
+The first implementation should use website-based public evidence only.
+
+Once website-based Contact Enrichment is proven, future versions may add Florida Sunbiz and other public evidence sources.
 
 The long-term objective remains unchanged:
 
