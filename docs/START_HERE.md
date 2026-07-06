@@ -4,7 +4,8 @@
 
 **Status:** Locked
 
-**Purpose:**
+**Purpose**
+
 This document is the required starting point for every new development session of the Global Concepts Media Operating System (GCM OS).
 
 Its purpose is to ensure every engineering session begins with the same understanding of the product, architecture, current sprint, and engineering standards.
@@ -15,7 +16,7 @@ If this document conflicts with previous conversations or AI memory, this docume
 
 # Project
 
-Global Concepts Media Operating System (GCM OS)
+**Global Concepts Media Operating System (GCM OS)**
 
 ---
 
@@ -25,19 +26,14 @@ GCM OS is an AI-powered Consulting Operating System.
 
 Its purpose is to transform publicly observable business information into consulting intelligence that helps Global Concepts Media:
 
-• Understand businesses before making recommendations.
+- Understand businesses before making recommendations.
+- Identify measurable opportunities.
+- Support better consulting conversations.
+- Produce Growth Reviews.
+- Generate evidence-based proposals.
+- Measure business improvement over time.
 
-• Identify measurable opportunities.
-
-• Support better consulting conversations.
-
-• Produce Growth Reviews.
-
-• Generate evidence-based proposals.
-
-• Measure business improvement over time.
-
-The objective is NOT to replace consulting.
+The objective is **not** to replace consulting.
 
 The objective is to make consultants significantly more prepared before every client conversation.
 
@@ -47,15 +43,11 @@ The objective is to make consultants significantly more prepared before every cl
 
 Before making recommendations or writing code, always read these documents in the following order:
 
-1. docs/START_HERE.md
-
-2. docs/GCM_OS_PRODUCT_BLUEPRINT.md
-
-3. docs/PROJECT_STATUS.md
-
-4. docs/ARCHITECTURE.md (when available)
-
-5. docs/DECISIONS.md (when available)
+1. `docs/START_HERE.md`
+2. `docs/GCM_OS_PRODUCT_BLUEPRINT.md`
+3. `docs/PROJECT_STATUS.md`
+4. `docs/ARCHITECTURE.md` *(when available)*
+5. `docs/DECISIONS.md` *(when available)*
 
 These documents define the current state of the product.
 
@@ -71,6 +63,10 @@ Every worker contributes observable evidence.
 
 Only the Business Record Builder may create or update the Business Record.
 
+Workers contribute evidence.
+
+The Business Record Builder standardizes and merges that evidence into a single Business Record.
+
 Consulting Intelligence is generated from the Business Record.
 
 The dashboard displays Consulting Intelligence.
@@ -85,27 +81,19 @@ Everything supports the consulting lifecycle.
 
 # The GCM Consulting Method
 
+```
 DISCOVER
-
-↓
-
+      ↓
 UNDERSTAND
-
-↓
-
+      ↓
 PRIORITIZE
-
-↓
-
+      ↓
 IMPLEMENT
-
-↓
-
+      ↓
 MEASURE
-
-↓
-
+      ↓
 IMPROVE
+```
 
 Every feature inside GCM OS must support one or more stages of this process.
 
@@ -113,27 +101,19 @@ Every feature inside GCM OS must support one or more stages of this process.
 
 # Engineering Rules
 
-One file at a time.
-
-Complete fresh-install file replacements only.
-
-Deploy.
-
-Test.
-
-Verify.
-
-Lock.
-
-Move forward.
-
-Never break a working feature.
-
-Evidence before assumptions.
-
-Version 1 before Version 2.
-
-Do not introduce new features before the current sprint objective has been completed.
+- One file at a time.
+- Complete fresh-install file replacements only.
+- Always read the current version of a file before modifying it.
+- Preserve existing working functionality unless the current sprint explicitly requires a change.
+- Deploy.
+- Test.
+- Verify.
+- Lock.
+- Move forward.
+- Never break a working feature.
+- Evidence before assumptions.
+- Version 1 before Version 2.
+- Do not introduce new features before the current sprint objective has been completed.
 
 ---
 
@@ -149,6 +129,21 @@ Workers return structured information.
 
 Workers never become the source of truth.
 
+Current implementation uses a single Worker.
+
+Future versions will consist of specialized workers coordinated by a Worker Orchestrator.
+
+Planned workers include:
+
+- Website Intelligence Worker
+- Website SEO Worker
+- Google Business Profile Worker
+- Social Intelligence Worker
+- Reviews & Reputation Worker
+- AI Visibility Worker
+
+Every worker must return standardized information that can be merged into the Business Record.
+
 ---
 
 # Business Record Philosophy
@@ -159,37 +154,33 @@ Every future module depends on it.
 
 The Business Record must remain standardized regardless of how many workers exist.
 
+Every downstream feature—including Consulting Intelligence, Growth Reviews, Proposals, and Client Management—depends on the integrity of the Business Record.
+
 ---
 
 # Consulting Philosophy
 
-GCM OS does not replace professional consulting tools.
+GCM OS does **not** replace professional consulting tools.
 
-Instead it identifies opportunities that should be investigated further.
+Instead, it identifies opportunities that should be investigated further.
 
 Examples include:
 
-• Semrush
+- Semrush
+- Ahrefs
+- Google Search Console
+- Google Analytics
+- Google Business Profile
+- Social platforms
+- Client CMS platforms
 
-• Ahrefs
+**GCM OS answers:**
 
-• Google Search Console
+> What should we investigate next?
 
-• Google Analytics
+**Specialist tools answer:**
 
-• Google Business Profile
-
-• Social platforms
-
-• Client CMS platforms
-
-GCM OS answers:
-
-"What should we investigate next?"
-
-Specialist tools answer:
-
-"How should we fix it?"
+> How should we fix it?
 
 Implementation occurs inside the client's platform.
 
@@ -197,23 +188,15 @@ Implementation occurs inside the client's platform.
 
 # Current Development Workflow
 
-Read project documents.
-
-Understand the current sprint.
-
-Recommend only the highest-value next file.
-
-Complete one file.
-
-Deploy.
-
-Test.
-
-Verify.
-
-Lock.
-
-Repeat.
+1. Read project documents.
+2. Understand the current sprint.
+3. Recommend only the highest-value next file.
+4. Complete one file.
+5. Deploy.
+6. Test.
+7. Verify.
+8. Lock.
+9. Repeat.
 
 ---
 
@@ -227,11 +210,13 @@ Protect completed work.
 
 Preserve backwards compatibility whenever possible.
 
-Recommend improvements only when supported by evidence.
+Recommend improvements only when supported by observable evidence.
 
 Do not introduce unnecessary complexity.
 
 Keep the product aligned with the Product Blueprint.
+
+Do not skip steps simply because they appear obvious.
 
 ---
 
@@ -239,9 +224,9 @@ Keep the product aligned with the Product Blueprint.
 
 Every future development thread should begin with:
 
-Read docs/START_HERE.md first.
-
-Then continue the current sprint.
+> Read `docs/START_HERE.md` first.
+>
+> Then continue the current sprint.
 
 Do not skip the startup sequence.
 
