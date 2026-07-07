@@ -1,8 +1,8 @@
 /* =========================================================
    Global Concepts Media Operating System
-   Version 5.4.1
+   Version 5.5.0
    File: app.js
-   Purpose: Display Business Record + Contact Enrichment + Consulting Intelligence
+   Purpose: Display Business Record + Contact Enrichment + Public Presence + Consulting Intelligence
    ========================================================= */
 
 const workerEndpoint = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
@@ -102,7 +102,8 @@ function renderActiveTab() {
     services: renderServices,
     trust: renderTrust,
     growth: renderGrowth,
-    outreach: renderOutreach
+    outreach: renderOutreach,
+    "public-presence": renderPublicPresence
   };
 
   const renderer = renderers[activeTab] || renderOverview;
@@ -194,6 +195,32 @@ function renderOutreach(record) {
   `;
 }
 
+function renderPublicPresence(record) {
+  const presence = record.publicPresence || {};
+
+  return `
+    <article class="rendered-report">
+      <h1>Public Presence</h1>
+
+      <section class="consultant-contact-brief">
+        <h2>Official Public Profiles</h2>
+        <p><strong>Overall Confidence:</strong> ${escapeHtml(presence.confidence || "Unknown")}</p>
+
+        ${renderPublicPresencePlatform("Facebook", presence.facebook)}
+        ${renderPublicPresencePlatform("LinkedIn", presence.linkedin)}
+        ${renderPublicPresencePlatform("Instagram", presence.instagram)}
+        ${renderPublicPresencePlatform("YouTube", presence.youtube)}
+        ${renderPublicPresencePlatform("X / Twitter", presence.x)}
+        ${renderPublicPresencePlatform("Threads", presence.threads)}
+        ${renderPublicPresencePlatform("TikTok", presence.tiktok)}
+        ${renderPublicPresencePlatform("Pinterest", presence.pinterest)}
+
+        ${listSection("Public Presence Evidence Sources", presence.sources)}
+      </section>
+    </article>
+  `;
+}
+
 function renderContactBrief(record) {
   const contact = record.contactEnrichment || {};
 
@@ -214,6 +241,40 @@ function renderContactBrief(record) {
       ${listSection("Additional Contact Clues", formatAdditionalContacts(contact.additionalContacts))}
     </section>
   `;
+}
+
+function renderPublicPresencePlatform(label, item) {
+  const platform = item || {};
+  const found = Boolean(platform.found);
+  const status = found ? "Found" : "Not Found";
+  const url = platform.url || "Unknown";
+  const confidence = platform.confidence || "Unknown";
+  const evidence = Array.isArray(platform.evidence) ? platform.evidence : [];
+
+  return `
+    <div class="public-presence-item">
+      <h2>${escapeHtml(label)}</h2>
+      <p><strong>Status:</strong> ${escapeHtml(status)}</p>
+      <p><strong>URL:</strong> ${renderLinkOrText(url, "url")}</p>
+      <p><strong>Confidence:</strong> ${escapeHtml(confidence)}</p>
+      ${evidence.length > 0 ? listSection("Evidence", formatPublicPresenceEvidence(evidence)) : ""}
+    </div>
+  `;
+}
+
+function formatPublicPresenceEvidence(items) {
+  if (!Array.isArray(items) || items.length === 0) return [];
+
+  return items.map(function (item) {
+    if (!item || typeof item !== "object") return String(item);
+
+    const page = item.page || "Unknown";
+    const anchor = item.anchor || "Unknown";
+    const method = item.method || "Unknown";
+    const url = item.url || "Unknown";
+
+    return `${method} | Anchor: ${anchor} | URL: ${url} | Page: ${page}`;
+  });
 }
 
 function section(title, value) {
