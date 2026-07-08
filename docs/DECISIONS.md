@@ -1,5 +1,3 @@
----
-
 # Decision 015
 
 ## Title
