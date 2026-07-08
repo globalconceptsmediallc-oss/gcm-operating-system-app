@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Your Business Snapshot™</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<main class="snapshot-page">
+
+    <section class="snapshot-hero">
+
+        <div class="snapshot-container">
+
+            <p class="eyebrow">
+                GLOBAL CONCEPTS MEDIA
+            </p>
+
+            <h1>
+                Your Business Snapshot™
+            </h1>
+
+            <p class="hero-text">
+                Based on publicly observable business information, here is your
+                initial Business Snapshot.
+            </p>
+
+            <div class="dashboard-card">
+
+                <div class="snapshot-grid">
+
+                    <div class="snapshot-card">
+                        <span class="card-label">Business</span>
+                        <strong id="businessName">
+                            Loading...
+                        </strong>
+                    </div>
+
+                    <div class="snapshot-card">
+                        <span class="card-label">Industry</span>
+                        <strong id="industry">
+                            Loading...
+                        </strong>
+                    </div>
+
+                    <div class="snapshot-card">
+                        <span class="card-label">Market</span>
+                        <strong id="market">
+                            Loading...
+                        </strong>
+                    </div>
+
+                    <div class="snapshot-card">
+                        <span class="card-label">Growth Readiness</span>
+                        <strong id="snapshotReadiness">
+                            --
+                        </strong>
+                    </div>
+
+                </div>
+
+                <div class="report-output">
+
+                    <h2>Business Summary</h2>
+
+                    <p id="summary">
+                        Your Business Snapshot will appear here after the Worker
+                        is connected.
+                    </p>
+
+                    <h2>Strongest Area</h2>
+
+                    <p id="strength">
+                        To be generated.
+                    </p>
+
+                    <h2>Largest Opportunity</h2>
+
+                    <p id="opportunity">
+                        To be generated.
+                    </p>
+
+                    <h2>Highest Priority Recommendation</h2>
+
+                    <p id="recommendation">
+                        To be generated.
+                    </p>
+
+                </div>
+
+                <div class="control-card">
+
+                    <h2>
+                        Ready to Go Further?
+                    </h2>
+
+                    <p>
+                        Your free Snapshot identifies opportunities.
+                        Our 90-Day Growth Review shows exactly how to
+                        improve them.
+                    </p>
+
+                    <button onclick="window.location.href='https://globalconceptsmedia.com/contact.html'">
+                        Schedule My Growth Review
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+</main>
+
+<script>
+
+const request =
+    JSON.parse(
+        sessionStorage.getItem("gcmBusinessSnapshotRequest")
+        || "{}"
+    );
+
+document.getElementById("businessName").textContent =
+    request.website || "Business Website";
+
+document.getElementById("industry").textContent =
+    "Pending Worker";
+
+document.getElementById("market").textContent =
+    "Pending Worker";
+
+document.getElementById("snapshotReadiness").textContent =
+    "--";
+
+</script>
+
+</body>
+</html>
