@@ -1,101 +1,355 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+# BUSINESS SNAPSHOT SPECIFICATION
 
-  <title>Business Snapshot™ | Global Concepts Media</title>
+**Version:** 1.0
 
-  <meta
-    name="description"
-    content="Generate a free Business Snapshot from publicly observable business information."
-  />
+**Status:** Active Development
 
-  <link rel="stylesheet" href="styles.css" />
-</head>
+**Current Sprint:** Business Snapshot MVP
 
-<body>
-  <main class="snapshot-page">
-    <section class="snapshot-hero">
-      <div class="snapshot-container">
-        <p class="eyebrow">Global Concepts Media</p>
+---
 
-        <h1>Get Your Free Business Snapshot™</h1>
+# Purpose
 
-        <p class="hero-text">
-          Find out what may be preventing your business from growing faster using
-          publicly observable business information.
-        </p>
+The Business Snapshot™ is the entry point into the Global Concepts Media Consulting Operating System.
 
-        <form id="businessSnapshotForm" class="snapshot-form">
-          <label for="businessWebsite">Business Website</label>
+Its purpose is to provide every prospective client with an evidence-based assessment of their current business growth readiness using only publicly observable information.
 
-          <input
-            type="url"
-            id="businessWebsite"
-            name="businessWebsite"
-            placeholder="https://example.com"
-            required
-          />
+The Business Snapshot is not a consulting engagement.
 
-          <label for="businessEmail">Email Address <span>Optional</span></label>
+It is not a marketing audit.
 
-          <input
-            type="email"
-            id="businessEmail"
-            name="businessEmail"
-            placeholder="you@example.com"
-          />
+It is a business growth assessment designed to identify the largest observable opportunities before making recommendations.
 
-          <button type="submit">
-            Generate My Free Snapshot™
-          </button>
+The Snapshot introduces prospects to the Global Concepts Media consulting methodology while providing genuine business value.
 
-          <p id="snapshotError" class="snapshot-error" hidden></p>
-        </form>
+Every recommendation produced by the Snapshot should naturally lead toward the complete 90-Day Growth Review.
 
-        <p class="snapshot-note">
-          No sales call required. No manual audit required. Your Snapshot is built
-          from observable business evidence.
-        </p>
-      </div>
-    </section>
-  </main>
+---
 
-  <script>
-    const form = document.getElementById("businessSnapshotForm");
-    const websiteInput = document.getElementById("businessWebsite");
-    const emailInput = document.getElementById("businessEmail");
-    const errorBox = document.getElementById("snapshotError");
+# Product Position
 
-    form.addEventListener("submit", function (event) {
-      event.preventDefault();
+The Business Snapshot is the free product.
 
-      const website = websiteInput.value.trim();
-      const email = emailInput.value.trim();
+The 90-Day Growth Review is the paid consulting product.
 
-      errorBox.hidden = true;
-      errorBox.textContent = "";
+The Growth Partnership is the implementation product.
 
-      if (!website) {
-        errorBox.textContent = "Please enter a business website.";
-        errorBox.hidden = false;
-        return;
-      }
+Together they create the client journey.
 
-      const snapshotRequest = {
-        website,
-        email,
-        startedAt: new Date().toISOString()
-      };
+Business Snapshot™
 
-      sessionStorage.setItem(
-        "gcmBusinessSnapshotRequest",
-        JSON.stringify(snapshotRequest)
-      );
+↓
 
-      window.location.href = "processing.html";
-    });
-  </script>
-</body>
-</html>
+90-Day Growth Review™
+
+↓
+
+Growth Partnership™
+
+---
+
+# Primary Objective
+
+Answer one question.
+
+> **"What is currently preventing this business from growing faster?"**
+
+The Snapshot should identify observable strengths, observable weaknesses, and the highest-impact next improvement.
+
+---
+
+# User Journey
+
+Homepage
+
+↓
+
+Business Snapshot
+
+↓
+
+Processing
+
+↓
+
+Business Snapshot Results
+
+↓
+
+Upgrade to 90-Day Growth Review
+
+↓
+
+Consulting Engagement
+
+---
+
+# Screen One
+
+## Business Snapshot
+
+Purpose
+
+Collect the minimum amount of information necessary to begin analysis.
+
+Required
+
+• Business Website
+
+Optional
+
+• Email Address
+
+Button
+
+Generate My Free Snapshot™
+
+No additional information should be required.
+
+The Business Record should determine everything possible automatically.
+
+---
+
+# Screen Two
+
+## Processing
+
+Purpose
+
+Demonstrate that meaningful business analysis is occurring.
+
+Processing should visibly complete each capability.
+
+Example
+
+✓ Website Intelligence
+
+✓ Contact Enrichment
+
+✓ Public Presence Intelligence
+
+✓ Business Record Construction
+
+✓ Growth Analysis
+
+✓ Snapshot Generation
+
+The user should understand that the Snapshot is being built rather than instantly generated.
+
+---
+
+# Screen Three
+
+## Business Snapshot Results
+
+Purpose
+
+Provide immediate value.
+
+Every Snapshot contains:
+
+Business Name
+
+Industry
+
+Market
+
+Growth Readiness Score
+
+Five Growth Scores
+
+Strongest Area
+
+Largest Opportunity
+
+Highest Priority Recommendation
+
+Upgrade Path
+
+---
+
+# Growth Readiness Score
+
+The overall score summarizes observable business readiness.
+
+Range
+
+0–100
+
+The score is calculated from the Five Business Questions.
+
+---
+
+# Five Growth Scores
+
+Every business is evaluated using the Global Concepts Media Growth Framework.
+
+Question One
+
+Why should someone choose you?
+
+Question Two
+
+Why should they choose you now?
+
+Question Three
+
+Why should they trust you?
+
+Question Four
+
+What happens next?
+
+Question Five
+
+How will success be measured?
+
+Each category receives:
+
+• Score
+
+• Observable evidence
+
+• Opportunity summary
+
+---
+
+# Recommendation Framework
+
+Every recommendation must answer:
+
+What did we observe?
+
+Why does it matter?
+
+What should be done?
+
+What business value could improvement create?
+
+How will success be measured?
+
+Recommendations must be supported by observable evidence.
+
+Unknown information remains Unknown.
+
+---
+
+# Upgrade Path
+
+The Snapshot intentionally limits detail.
+
+The purpose is to identify opportunities.
+
+The 90-Day Growth Review explains exactly how to improve them.
+
+The upgrade should clearly communicate the additional value.
+
+Includes:
+
+• Complete Business Record
+
+• Evidence Library
+
+• Detailed Recommendations
+
+• Priority Matrix
+
+• 90-Day Action Plan
+
+• Executive Summary
+
+• Consulting Review
+
+---
+
+# Relationship to GCM OS
+
+The Business Snapshot is generated directly from the Business Record.
+
+No separate research process exists.
+
+The Business Record remains the single source of truth.
+
+Every capability contributes observable evidence.
+
+The Snapshot is simply a curated presentation of that evidence.
+
+---
+
+# Success Metrics
+
+A successful Business Snapshot:
+
+• Requires only a website URL
+
+• Produces useful business intelligence
+
+• Demonstrates consulting expertise
+
+• Builds trust
+
+• Naturally leads to the Growth Review
+
+• Requires minimal manual intervention
+
+---
+
+# Future Expansion
+
+Future capabilities should improve the Snapshot rather than replace it.
+
+Examples include:
+
+Google Presence Intelligence
+
+SEO Intelligence
+
+Advertising Intelligence
+
+Conversion Intelligence
+
+Reputation Intelligence
+
+Measurement Intelligence
+
+Competitive Intelligence
+
+Every future capability should strengthen one or more of the Five Business Questions.
+
+---
+
+# Architecture
+
+Website
+
+↓
+
+Worker Capabilities
+
+↓
+
+Business Record
+
+↓
+
+Growth Analysis
+
+↓
+
+Business Snapshot™
+
+↓
+
+90-Day Growth Review™
+
+↓
+
+Growth Partnership™
+
+---
+
+# Permanent Operating Standard
+
+The Business Snapshot exists to demonstrate consulting value through observable evidence before requesting a consulting engagement.
+
+Every improvement to the Snapshot must make the recommendations more accurate, more actionable, and more valuable to prospective clients while preserving the Business Record as the single source of truth.
