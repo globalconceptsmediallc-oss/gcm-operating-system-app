@@ -1,8 +1,8 @@
 /* =========================================================
    Global Concepts Media Operating System
-   Version 5.2.0
+   Version 5.5.1
    File: style.css
-   Purpose: Modern dashboard styling for Client Intelligence
+   Purpose: Dashboard + Business Snapshot styling
    ========================================================= */
 
 :root {
@@ -314,6 +314,90 @@ button:disabled {
   font-size: 16px;
 }
 
+/* =========================================================
+   Business Snapshot Entry Page
+   ========================================================= */
+
+.snapshot-page {
+  min-height: 100vh;
+  padding: 56px 0 80px;
+  background:
+    radial-gradient(circle at top left, rgba(7, 95, 170, 0.14), transparent 34%),
+    linear-gradient(180deg, #f7fbff 0%, var(--bg) 100%);
+}
+
+.snapshot-container {
+  width: min(980px, calc(100% - 40px));
+  margin: 0 auto;
+}
+
+.snapshot-hero {
+  padding: 58px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  box-shadow: var(--shadow);
+}
+
+.snapshot-hero h1 {
+  max-width: 780px;
+  margin-bottom: 16px;
+  font-size: clamp(38px, 6vw, 68px);
+  line-height: 0.98;
+  letter-spacing: -0.06em;
+}
+
+.hero-text {
+  max-width: 720px;
+  margin-bottom: 30px;
+  color: var(--muted);
+  font-size: 20px;
+}
+
+.snapshot-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 12px;
+  align-items: end;
+  margin-top: 18px;
+  padding: 22px;
+  background: #fbfdff;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+}
+
+.snapshot-form label {
+  margin-bottom: 0;
+}
+
+.snapshot-form label span {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.snapshot-form input {
+  min-height: 52px;
+}
+
+.snapshot-form button {
+  min-height: 52px;
+  white-space: nowrap;
+}
+
+.snapshot-error {
+  grid-column: 1 / -1;
+  margin: 4px 0 0;
+  color: #b42318;
+  font-weight: 800;
+}
+
+.snapshot-note {
+  max-width: 760px;
+  margin: 22px 0 0;
+  color: var(--muted);
+  font-size: 15px;
+}
+
 @media (max-width: 900px) {
   .snapshot-grid,
   .developer-grid {
@@ -327,12 +411,33 @@ button:disabled {
   button {
     min-height: 48px;
   }
+
+  .snapshot-hero {
+    padding: 36px;
+  }
+
+  .snapshot-form {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 560px) {
-  .app-shell {
+  .app-shell,
+  .snapshot-container {
     width: min(100% - 24px, 1180px);
+  }
+
+  .app-shell {
     padding-top: 28px;
+  }
+
+  .snapshot-page {
+    padding: 24px 0 48px;
+  }
+
+  .snapshot-hero {
+    padding: 26px;
+    border-radius: 20px;
   }
 
   .snapshot-grid,
