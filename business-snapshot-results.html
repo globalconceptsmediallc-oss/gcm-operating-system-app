@@ -1,145 +1,158 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <title>Your Business Snapshot™</title>
+  <title>Your Business Snapshot™</title>
 
-    <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
-
-<main class="snapshot-page">
-
+  <main class="snapshot-page">
     <section class="snapshot-hero">
+      <div class="snapshot-container">
+        <p class="eyebrow">GLOBAL CONCEPTS MEDIA</p>
 
-        <div class="snapshot-container">
+        <h1>Your Business Snapshot™</h1>
 
-            <p class="eyebrow">
-                GLOBAL CONCEPTS MEDIA
-            </p>
+        <p class="hero-text">
+          Based on publicly observable business information, here is your
+          initial Business Snapshot.
+        </p>
 
-            <h1>
-                Your Business Snapshot™
-            </h1>
-
-            <p class="hero-text">
-                Based on publicly observable business information, here is your
-                initial Business Snapshot.
-            </p>
-
-            <div class="dashboard-card">
-
-                <div class="snapshot-grid">
-
-                    <div class="snapshot-card">
-                        <span class="card-label">Business</span>
-                        <strong id="businessName">
-                            Loading...
-                        </strong>
-                    </div>
-
-                    <div class="snapshot-card">
-                        <span class="card-label">Industry</span>
-                        <strong id="industry">
-                            Loading...
-                        </strong>
-                    </div>
-
-                    <div class="snapshot-card">
-                        <span class="card-label">Market</span>
-                        <strong id="market">
-                            Loading...
-                        </strong>
-                    </div>
-
-                    <div class="snapshot-card">
-                        <span class="card-label">Growth Readiness</span>
-                        <strong id="snapshotReadiness">
-                            --
-                        </strong>
-                    </div>
-
-                </div>
-
-                <div class="report-output">
-
-                    <h2>Business Summary</h2>
-
-                    <p id="summary">
-                        Your Business Snapshot will appear here after the Worker
-                        is connected.
-                    </p>
-
-                    <h2>Strongest Area</h2>
-
-                    <p id="strength">
-                        To be generated.
-                    </p>
-
-                    <h2>Largest Opportunity</h2>
-
-                    <p id="opportunity">
-                        To be generated.
-                    </p>
-
-                    <h2>Highest Priority Recommendation</h2>
-
-                    <p id="recommendation">
-                        To be generated.
-                    </p>
-
-                </div>
-
-                <div class="control-card">
-
-                    <h2>
-                        Ready to Go Further?
-                    </h2>
-
-                    <p>
-                        Your free Snapshot identifies opportunities.
-                        Our 90-Day Growth Review shows exactly how to
-                        improve them.
-                    </p>
-
-                    <button onclick="window.location.href='https://globalconceptsmedia.com/contact.html'">
-                        Schedule My Growth Review
-                    </button>
-
-                </div>
-
+        <div class="dashboard-card">
+          <div class="snapshot-grid">
+            <div class="snapshot-card">
+              <span class="card-label">Business</span>
+              <strong id="businessName">Loading...</strong>
             </div>
 
+            <div class="snapshot-card">
+              <span class="card-label">Industry</span>
+              <strong id="industry">Loading...</strong>
+            </div>
+
+            <div class="snapshot-card">
+              <span class="card-label">Market</span>
+              <strong id="market">Loading...</strong>
+            </div>
+
+            <div class="snapshot-card">
+              <span class="card-label">Growth Readiness</span>
+              <strong id="snapshotReadiness">--</strong>
+            </div>
+          </div>
+
+          <div class="report-output">
+            <h2>Business Summary</h2>
+            <p id="summary">Loading...</p>
+
+            <h2>Strongest Area</h2>
+            <p id="strength">Loading...</p>
+
+            <h2>Largest Opportunity</h2>
+            <p id="opportunity">Loading...</p>
+
+            <h2>Highest Priority Recommendation</h2>
+            <p id="recommendation">Loading...</p>
+
+            <h2>Success Metrics</h2>
+            <ul id="successMetrics"></ul>
+          </div>
+
+          <div class="control-card">
+            <h2>Ready to Go Further?</h2>
+
+            <p>
+              Your free Snapshot identifies opportunities. Our 90-Day Growth
+              Review shows exactly how to improve them.
+            </p>
+
+            <button onclick="window.location.href='https://globalconceptsmedia.com/contact.html'">
+              Schedule My Growth Review
+            </button>
+          </div>
         </div>
-
+      </div>
     </section>
+  </main>
 
-</main>
+  <script>
+    function valueOrUnknown(value) {
+      if (!value || value === "Unknown") return "Unknown";
+      return value;
+    }
 
-<script>
+    function firstMeaningful(items) {
+      if (!Array.isArray(items)) return "Unknown";
 
-const request =
-    JSON.parse(
-        sessionStorage.getItem("gcmBusinessSnapshotRequest")
-        || "{}"
-    );
+      const found = items.find(function (item) {
+        return item && item !== "Unknown";
+      });
 
-document.getElementById("businessName").textContent =
-    request.website || "Business Website";
+      return found || "Unknown";
+    }
 
-document.getElementById("industry").textContent =
-    "Pending Worker";
+    function listItems(elementId, items) {
+      const list = document.getElementById(elementId);
+      list.innerHTML = "";
 
-document.getElementById("market").textContent =
-    "Pending Worker";
+      if (!Array.isArray(items) || items.length === 0) {
+        const li = document.createElement("li");
+        li.textContent = "Unknown";
+        list.appendChild(li);
+        return;
+      }
 
-document.getElementById("snapshotReadiness").textContent =
-    "--";
+      items.forEach(function (item) {
+        const li = document.createElement("li");
+        li.textContent = item;
+        list.appendChild(li);
+      });
+    }
 
-</script>
+    const savedResult = sessionStorage.getItem("gcmBusinessSnapshotResult");
 
+    if (!savedResult) {
+      document.getElementById("summary").textContent =
+        "No Snapshot result was found. Please return to the Business Snapshot page and try again.";
+    } else {
+      const workerResponse = JSON.parse(savedResult);
+      const record = workerResponse.businessRecord || {};
+
+      const business = record.business || {};
+      const website = record.websiteIntelligence || {};
+      const sales = record.salesIntelligence || {};
+      const consulting = record.consultingIntelligence || {};
+
+      document.getElementById("businessName").textContent =
+        valueOrUnknown(business.name);
+
+      document.getElementById("industry").textContent =
+        valueOrUnknown(business.industry);
+
+      document.getElementById("market").textContent =
+        valueOrUnknown(website.geographicMarket || business.market);
+
+      document.getElementById("snapshotReadiness").textContent =
+        valueOrUnknown(sales.readinessScore);
+
+      document.getElementById("summary").textContent =
+        valueOrUnknown(business.summary || consulting.executiveSummary);
+
+      document.getElementById("strength").textContent =
+        firstMeaningful(website.trustSignals);
+
+      document.getElementById("opportunity").textContent =
+        firstMeaningful(consulting.topOpportunities || website.growthOpportunities);
+
+      document.getElementById("recommendation").textContent =
+        firstMeaningful(consulting.recommendedServices);
+
+      listItems("successMetrics", consulting.successMetrics);
+    }
+  </script>
 </body>
 </html>
