@@ -1,6 +1,6 @@
 # GCM OS — START HERE
 
-**Version:** 2.0
+**Version:** 2.1
 
 **Status:** Active Development
 
@@ -14,7 +14,9 @@ This document is the authoritative starting point for every development session.
 
 Read the referenced project documents before making recommendations or code changes.
 
-If any previous conversation or AI memory conflicts with these documents, these documents take precedence.
+The project documents are the authoritative source of truth.
+
+If previous conversations, AI memory, or assumptions conflict with these documents, these documents take precedence.
 
 Do not redesign completed architecture.
 
@@ -29,9 +31,13 @@ Complete one file at a time.
 Provide complete fresh-install file replacements only.
 
 Deploy.
+
 Test.
+
 Verify.
+
 Lock.
+
 Repeat.
 
 ---
@@ -41,10 +47,18 @@ Repeat.
 Read in this order:
 
 1. docs/GCM_OS_PRODUCT_BLUEPRINT.md
+
 2. docs/PROJECT_STATUS.md
+
 3. docs/ARCHITECTURE.md
+
 4. docs/DECISIONS.md
+
 5. docs/CAPABILITIES.md
+
+6. docs/GROWTH_REVIEW_FRAMEWORK.md
+
+7. docs/CUSTOMER_JOURNEY.md
 
 ---
 
@@ -64,7 +78,7 @@ Read in this order:
 
 Dashboard **5.5.0**
 
-Worker **5.6.0**
+Worker **5.6.3**
 
 ---
 
@@ -72,37 +86,49 @@ Worker **5.6.0**
 
 The complete Business Snapshot workflow is operational.
 
+```
 Homepage
 
 ↓
 
-business-snapshot.html
+Business Snapshot
 
 ↓
 
-processing.html
+Processing
 
 ↓
 
-business-snapshot-results.html
+Business Record
 
 ↓
 
-90-Day Growth Review CTA
+Business Snapshot Results
 
-The Worker successfully generates a live Business Record and the Results page displays live consulting intelligence.
+↓
+
+90-Day Growth Review
+```
+
+The Worker successfully generates a Business Record.
+
+The Business Snapshot workflow is stable.
+
+Current work is focused on improving consulting quality rather than application architecture.
 
 ---
 
 # Current Objective
 
-Stabilize the Business Snapshot.
+Improve consulting intelligence.
 
-Improve consulting quality.
+Transform observable evidence into Growth Leak Intelligence.
 
-Produce deterministic output.
+Produce deterministic consulting recommendations.
 
 Preserve the Business Record as the single source of truth.
+
+Demonstrate the value of the 90-Day Growth Review.
 
 ---
 
@@ -122,15 +148,17 @@ business-snapshot-results.html
 
 ✅ Business Record Architecture Locked
 
-✅ Consulting Intelligence Locked
+✅ Consulting Intelligence Architecture Locked
 
 ✅ Growth Review Framework Locked
 
 ✅ Business Snapshot Specification Locked
 
+✅ Customer Journey Locked
+
 ✅ Business Snapshot Workflow Operational
 
-🚧 Worker Output Stabilization In Progress
+🚧 Growth Leak Intelligence In Progress
 
 ---
 
@@ -150,6 +178,8 @@ business-snapshot-results.html
 
 • Preserve backwards compatibility.
 
+• Improve consulting quality before adding new capabilities.
+
 ---
 
 # Success Criteria
@@ -158,13 +188,33 @@ The Business Snapshot should:
 
 • Require only a website URL.
 
-• Produce consistent consulting intelligence.
+• Produce deterministic Business Records.
 
-• Generate repeatable Business Snapshots.
+• Identify evidence-based Growth Leaks.
 
 • Demonstrate consulting expertise.
 
+• Create confidence in the consulting methodology.
+
 • Naturally lead into the 90-Day Growth Review.
+
+---
+
+# Product Philosophy
+
+Technology collects evidence.
+
+The Business Record organizes truth.
+
+Growth Leak Intelligence explains business impact.
+
+Consulting creates understanding.
+
+Implementation creates measurable business growth.
+
+Technology supports the consulting methodology.
+
+Consulting remains the product.
 
 ---
 
