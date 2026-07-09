@@ -1,130 +1,173 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <title>Building Your Business Snapshot™</title>
+  <title>Building Your Business Snapshot™</title>
 
-    <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
-
-<main class="snapshot-page">
-
+  <main class="snapshot-page">
     <section class="snapshot-hero">
+      <div class="snapshot-container">
+        <p class="eyebrow">GLOBAL CONCEPTS MEDIA</p>
 
-        <div class="snapshot-container">
+        <h1>Building Your Business Snapshot™</h1>
 
-            <p class="eyebrow">
-                GLOBAL CONCEPTS MEDIA
-            </p>
+        <p class="hero-text">
+          Please wait while we analyze publicly observable business information
+          and construct your Business Record.
+        </p>
 
-            <h1>
-                Building Your Business Snapshot™
-            </h1>
+        <div class="processing-card">
+          <div class="processing-step" id="step1">
+            <span class="status pending">○</span>
+            <span>Website Intelligence</span>
+          </div>
 
-            <p class="hero-text">
-                Please wait while we analyze publicly observable business
-                information and construct your Business Record.
-            </p>
+          <div class="processing-step" id="step2">
+            <span class="status pending">○</span>
+            <span>Contact Enrichment</span>
+          </div>
 
-            <div class="processing-card">
+          <div class="processing-step" id="step3">
+            <span class="status pending">○</span>
+            <span>Public Presence Intelligence</span>
+          </div>
 
-                <div class="processing-step" id="step1">
-                    <span class="status pending">○</span>
-                    <span>Website Intelligence</span>
-                </div>
+          <div class="processing-step" id="step4">
+            <span class="status pending">○</span>
+            <span>Business Record Construction</span>
+          </div>
 
-                <div class="processing-step" id="step2">
-                    <span class="status pending">○</span>
-                    <span>Contact Enrichment</span>
-                </div>
+          <div class="processing-step" id="step5">
+            <span class="status pending">○</span>
+            <span>Growth Analysis</span>
+          </div>
 
-                <div class="processing-step" id="step3">
-                    <span class="status pending">○</span>
-                    <span>Public Presence Intelligence</span>
-                </div>
-
-                <div class="processing-step" id="step4">
-                    <span class="status pending">○</span>
-                    <span>Business Record Construction</span>
-                </div>
-
-                <div class="processing-step" id="step5">
-                    <span class="status pending">○</span>
-                    <span>Growth Analysis</span>
-                </div>
-
-                <div class="processing-step" id="step6">
-                    <span class="status pending">○</span>
-                    <span>Generating Business Snapshot™</span>
-                </div>
-
-            </div>
-
+          <div class="processing-step" id="step6">
+            <span class="status pending">○</span>
+            <span>Generating Business Snapshot™</span>
+          </div>
         </div>
 
+        <p id="processingMessage" class="snapshot-note">
+          Starting analysis...
+        </p>
+      </div>
     </section>
+  </main>
 
-</main>
+  <script>
+    const workerEndpoint =
+      "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
 
-<script>
+    const steps = [
+      "step1",
+      "step2",
+      "step3",
+      "step4",
+      "step5",
+      "step6"
+    ];
 
-const steps = [
-    "step1",
-    "step2",
-    "step3",
-    "step4",
-    "step5",
-    "step6"
-];
+    const messages = [
+      "Reading the business website...",
+      "Looking for observable contact signals...",
+      "Reviewing public presence signals...",
+      "Building the Business Record...",
+      "Evaluating growth readiness...",
+      "Preparing your Snapshot..."
+    ];
 
-let current = 0;
+    const processingMessage = document.getElementById("processingMessage");
 
-function runStep(){
-
-    if(current > 0){
-        const previous =
-            document.querySelector(
-                "#" + steps[current-1] + " .status"
-            );
-
-        previous.textContent = "✓";
-        previous.className = "status complete";
+    function completeStep(index) {
+      const step = document.querySelector("#" + steps[index] + " .status");
+      step.textContent = "✓";
+      step.className = "status complete";
     }
 
-    if(current < steps.length){
+    function activateStep(index) {
+      const step = document.querySelector("#" + steps[index] + " .status");
+      step.textContent = "●";
+      step.className = "status active";
 
-        const active =
-            document.querySelector(
-                "#" + steps[current] + " .status"
-            );
-
-        active.textContent = "●";
-        active.className = "status active";
-
-        current++;
-
-        setTimeout(runStep,900);
-
-    }else{
-
-        setTimeout(function(){
-
-            window.location =
-                "business-snapshot-results.html";
-
-        },900);
-
+      processingMessage.textContent = messages[index];
     }
 
-}
+    async function runProcessing() {
+      const request = JSON.parse(
+        sessionStorage.getItem("gcmBusinessSnapshotRequest") || "{}"
+      );
 
-setTimeout(runStep,600);
+      if (!request.website) {
+        processingMessage.textContent =
+          "No website was found. Please start again from the Business Snapshot page.";
 
-</script>
+        setTimeout(function () {
+          window.location.href = "business-snapshot.html";
+        }, 1800);
 
+        return;
+      }
+
+      try {
+        activateStep(0);
+
+        const workerPromise = fetch(workerEndpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            websiteUrl: request.website,
+            website: request.website,
+            email: request.email || "",
+            source: "business-snapshot"
+          })
+        });
+
+        for (let i = 0; i < steps.length; i++) {
+          activateStep(i);
+          await new Promise(resolve => setTimeout(resolve, 850));
+          completeStep(i);
+        }
+
+        processingMessage.textContent =
+          "Finalizing your Business Snapshot...";
+
+        const response = await workerPromise;
+
+        if (!response.ok) {
+          throw new Error("Worker returned " + response.status);
+        }
+
+        const businessRecord = await response.json();
+
+        sessionStorage.setItem(
+          "gcmBusinessSnapshotResult",
+          JSON.stringify(businessRecord)
+        );
+
+        window.location.href = "business-snapshot-results.html";
+      } catch (error) {
+        console.error(error);
+
+        processingMessage.textContent =
+          "We could not complete the Snapshot. Please check the website URL and try again.";
+
+        sessionStorage.setItem(
+          "gcmBusinessSnapshotError",
+          error.message || "Unknown processing error"
+        );
+      }
+    }
+
+    runProcessing();
+  </script>
 </body>
 </html>
