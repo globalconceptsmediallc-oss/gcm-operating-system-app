@@ -23,7 +23,9 @@
         </p>
 
         <div class="dashboard-card">
+
           <div class="snapshot-grid">
+
             <div class="snapshot-card">
               <span class="card-label">Business</span>
               <strong id="businessName">Loading...</strong>
@@ -41,142 +43,143 @@
 
             <div class="snapshot-card">
               <span class="card-label">Growth Readiness</span>
-              <strong id="snapshotReadiness">--</strong>
+              <strong id="snapshotReadiness">Loading...</strong>
             </div>
+
           </div>
 
           <div class="report-output">
+
             <h2>Business Summary</h2>
-            <p id="summary">Loading...</p>
+            <p id="summary"></p>
 
             <h2>Strongest Area</h2>
-            <p id="strength">Loading...</p>
+            <p id="strength"></p>
 
             <h2>Largest Opportunity</h2>
-            <p id="opportunity">Loading...</p>
+            <p id="opportunity"></p>
 
             <h2>Highest Priority Recommendation</h2>
-            <p id="recommendation">Loading...</p>
+            <p id="recommendation"></p>
 
             <h2>Success Metrics</h2>
             <ul id="successMetrics"></ul>
+
           </div>
 
           <div class="control-card">
+
             <h2>Ready to Go Further?</h2>
 
             <p>
-              Your free Snapshot identifies opportunities. Our 90-Day Growth
-              Review shows exactly how to improve them.
+              Your free Snapshot identifies opportunities.
+              Our 90-Day Growth Review shows exactly how to improve them.
             </p>
 
             <button onclick="window.location.href='https://globalconceptsmedia.com/contact.html'">
               Schedule My Growth Review
             </button>
+
           </div>
+
         </div>
+
       </div>
     </section>
   </main>
 
-  <script>
-    function textFromValue(value) {
-      if (!value || value === "Unknown") return "Unknown";
+<script>
 
-      if (typeof value === "string") return value;
+function value(v){
 
-      if (typeof value === "number") return String(value);
-
-      if (Array.isArray(value)) {
-        return textFromValue(value[0]);
-      }
-
-      if (typeof value === "object") {
-        return (
-          value.title ||
-          value.name ||
-          value.recommendation ||
-          value.opportunity ||
-          value.summary ||
-          value.description ||
-          value.service ||
-          value.metric ||
-          value.value ||
-          JSON.stringify(value)
-        );
-      }
-
-      return String(value);
+    if(v===undefined || v===null || v===""){
+        return "Unknown";
     }
 
-    function firstMeaningful(items) {
-      if (!Array.isArray(items)) return textFromValue(items);
+    return v;
 
-      const found = items.find(function (item) {
-        return item && item !== "Unknown";
-      });
+}
 
-      return textFromValue(found);
+function first(list){
+
+    if(!Array.isArray(list) || list.length===0){
+        return "Unknown";
     }
 
-    function listItems(elementId, items) {
-      const list = document.getElementById(elementId);
-      list.innerHTML = "";
+    return value(list[0]);
 
-      if (!Array.isArray(items) || items.length === 0) {
-        const li = document.createElement("li");
-        li.textContent = "Unknown";
+}
+
+function buildMetrics(record){
+
+    const metrics=[];
+
+    if(record.qualificationScore){
+        metrics.push("Qualification Score: " + record.qualificationScore + "/10");
+    }
+
+    if(record.outreachReadiness){
+        metrics.push("Outreach Readiness: " + record.outreachReadiness);
+    }
+
+    if(Array.isArray(record.humanVerificationChecklist)){
+        metrics.push(...record.humanVerificationChecklist);
+    }
+
+    return metrics;
+
+}
+
+const saved=sessionStorage.getItem("gcmBusinessSnapshotBusinessRecord")
+          || sessionStorage.getItem("gcmBusinessSnapshotResult");
+
+if(!saved){
+
+    document.getElementById("summary").textContent =
+        "No Business Snapshot was found. Please return and generate a new Snapshot.";
+
+}
+else{
+
+    const record=JSON.parse(saved);
+
+    document.getElementById("businessName").textContent =
+        value(record.businessName);
+
+    document.getElementById("industry").textContent =
+        value(record.industry);
+
+    document.getElementById("market").textContent =
+        value(record.geographicMarket);
+
+    document.getElementById("snapshotReadiness").textContent =
+        value(record.outreachReadiness);
+
+    document.getElementById("summary").textContent =
+        value(record.businessSummary);
+
+    document.getElementById("strength").textContent =
+        first(record.trustSignals);
+
+    document.getElementById("opportunity").textContent =
+        first(record.growthOpportunities);
+
+    document.getElementById("recommendation").textContent =
+        first(record.personalizedOutreachInsights);
+
+    const list=document.getElementById("successMetrics");
+
+    buildMetrics(record).forEach(function(metric){
+
+        const li=document.createElement("li");
+        li.textContent=metric;
         list.appendChild(li);
-        return;
-      }
 
-      items.forEach(function (item) {
-        const li = document.createElement("li");
-        li.textContent = textFromValue(item);
-        list.appendChild(li);
-      });
-    }
+    });
 
-    const savedResult = sessionStorage.getItem("gcmBusinessSnapshotResult");
+}
 
-    if (!savedResult) {
-      document.getElementById("summary").textContent =
-        "No Snapshot result was found. Please return to the Business Snapshot page and try again.";
-    } else {
-      const workerResponse = JSON.parse(savedResult);
-      const record = workerResponse.businessRecord || {};
+</script>
 
-      const business = record.business || {};
-      const website = record.websiteIntelligence || {};
-      const sales = record.salesIntelligence || {};
-      const consulting = record.consultingIntelligence || {};
-
-      document.getElementById("businessName").textContent =
-        textFromValue(business.name);
-
-      document.getElementById("industry").textContent =
-        textFromValue(business.industry);
-
-      document.getElementById("market").textContent =
-        textFromValue(website.geographicMarket || business.market);
-
-      document.getElementById("snapshotReadiness").textContent =
-        textFromValue(sales.readinessScore);
-
-      document.getElementById("summary").textContent =
-        textFromValue(business.summary || consulting.executiveSummary);
-
-      document.getElementById("strength").textContent =
-        firstMeaningful(website.trustSignals);
-
-      document.getElementById("opportunity").textContent =
-        firstMeaningful(consulting.topOpportunities || website.growthOpportunities);
-
-      document.getElementById("recommendation").textContent =
-        firstMeaningful(consulting.recommendedServices);
-
-      listItems("successMetrics", consulting.successMetrics);
-    }
-  </script>
 </body>
 </html>
