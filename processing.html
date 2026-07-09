@@ -65,14 +65,7 @@
     const workerEndpoint =
       "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
 
-    const steps = [
-      "step1",
-      "step2",
-      "step3",
-      "step4",
-      "step5",
-      "step6"
-    ];
+    const steps = ["step1", "step2", "step3", "step4", "step5", "step6"];
 
     const messages = [
       "Reading the business website...",
@@ -95,8 +88,49 @@
       const step = document.querySelector("#" + steps[index] + " .status");
       step.textContent = "●";
       step.className = "status active";
-
       processingMessage.textContent = messages[index];
+    }
+
+    function clean(value) {
+      if (value === null || value === undefined || value === "") {
+        return "Not clearly stated on the website.";
+      }
+
+      return String(value).trim();
+    }
+
+    function firstItem(items) {
+      if (!Array.isArray(items) || items.length === 0) {
+        return "Not clearly stated on the website.";
+      }
+
+      return clean(items[0]);
+    }
+
+    function makeSnapshotFromBusinessRecord(record) {
+      return {
+        businessName: clean(record.businessName),
+        website: clean(record.website),
+        industry: clean(record.industry),
+        market: clean(record.geographicMarket),
+        growthReadiness: clean(record.outreachReadiness),
+        businessSummary: clean(record.businessSummary),
+        strongestArea: firstItem(record.trustSignals),
+        largestOpportunity: firstItem(record.growthOpportunities),
+        highestPriorityRecommendation: firstItem(record.growthOpportunities),
+        successMetrics:
+          "A 90-Day Growth Review should verify lead sources, conversion gaps, local visibility, trust signals, and measurable growth opportunities.",
+        qualificationScore: clean(record.qualificationScore),
+        fullBusinessRecord: record
+      };
+    }
+
+    async function animateSteps() {
+      for (let i = 0; i < steps.length; i++) {
+        activateStep(i);
+        await new Promise(resolve => setTimeout(resolve, 850));
+        completeStep(i);
+      }
     }
 
     async function runProcessing() {
@@ -116,7 +150,9 @@
       }
 
       try {
-        activateStep(0);
+        sessionStorage.removeItem("gcmBusinessSnapshotError");
+        sessionStorage.removeItem("gcmBusinessSnapshotResult");
+        sessionStorage.removeItem("gcmBusinessSnapshotBusinessRecord");
 
         const workerPromise = fetch(workerEndpoint, {
           method: "POST",
@@ -131,39 +167,42 @@
           })
         });
 
-        for (let i = 0; i < steps.length; i++) {
-          activateStep(i);
-          await new Promise(resolve => setTimeout(resolve, 850));
-          completeStep(i);
-        }
+        await animateSteps();
 
         processingMessage.textContent =
           "Finalizing your Business Snapshot...";
 
         const response = await workerPromise;
+        const responseText = await response.text();
 
         if (!response.ok) {
-          throw new Error("Worker returned " + response.status);
+          throw new Error(responseText || "Worker returned " + response.status);
         }
 
-        const businessRecord = await response.json();
+        const businessRecord = JSON.parse(responseText);
+        const snapshotResult = makeSnapshotFromBusinessRecord(businessRecord);
+
+        sessionStorage.setItem(
+          "gcmBusinessSnapshotBusinessRecord",
+          JSON.stringify(businessRecord)
+        );
 
         sessionStorage.setItem(
           "gcmBusinessSnapshotResult",
-          JSON.stringify(businessRecord)
+          JSON.stringify(snapshotResult)
         );
 
         window.location.href = "business-snapshot-results.html";
       } catch (error) {
         console.error(error);
 
-        processingMessage.textContent =
-          "We could not complete the Snapshot. Please check the website URL and try again.";
-
         sessionStorage.setItem(
           "gcmBusinessSnapshotError",
           error.message || "Unknown processing error"
         );
+
+        processingMessage.textContent =
+          "We could not complete the Snapshot. Please check the website URL and try again.";
       }
     }
 
