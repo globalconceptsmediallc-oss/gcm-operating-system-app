@@ -12,13 +12,23 @@
 
 This document defines the complete customer journey for the Global Concepts Media Consulting Operating System (GCM OS).
 
-Every page, workflow, report, and consulting engagement must support this journey.
+Every page, workflow, report, consulting engagement, and future capability must support this journey.
 
 The purpose of GCM OS is not to generate reports.
 
 The purpose of GCM OS is to identify measurable business growth opportunities, explain their business impact, prioritize the highest-value actions, and guide implementation.
 
-The customer journey connects the website, Business Snapshot, Business Record, Growth Review, consulting services, and long-term client relationship into one continuous system.
+The customer journey connects the website, Business Snapshot, Business Record, Growth Leak Intelligence, Growth Review, consulting services, and long-term client relationship into one continuous consulting methodology.
+
+---
+
+# Global Concepts Media Mission
+
+Global Concepts Media exists to help businesses discover, prioritize, and solve measurable business growth problems through evidence-based consulting.
+
+Technology exists to scale the consulting methodology.
+
+Consulting remains the product.
 
 ---
 
@@ -36,45 +46,65 @@ Every stage should create measurable value.
 
 ---
 
-# Customer Journey
+# Complete Customer Journey
 
 ```
 Website Visitor
-        ↓
+
+↓
+
 Business Snapshot
-        ↓
+
+↓
+
+Business Record
+
+↓
+
+Growth Leak Intelligence
+
+↓
+
 Business Snapshot Results
-        ↓
+
+↓
+
 90-Day Growth Review
-        ↓
+
+↓
+
 Implementation Planning
-        ↓
+
+↓
+
 Growth Partnership
-        ↓
+
+↓
+
 Continuous Improvement
 ```
 
-Every stage has a single responsibility.
+Every stage has one responsibility.
 
 ---
 
 # Stage 1
 
-## Website Visitor
+# Website Visitor
 
-### Objective
+## Objective
 
 Create curiosity.
 
-### Customer Question
+## Customer Question
 
 "What opportunities might I be missing?"
 
-### Business Goal
+## Business Goal
 
 Generate a Business Snapshot.
 
-### Primary CTA
+## Primary Call To Action
 
 **Get My Free Business Snapshot**
 
@@ -84,19 +114,19 @@ Generate a Business Snapshot.
 
 # Business Snapshot
 
-### Objective
+## Objective
 
 Demonstrate consulting expertise using publicly observable evidence.
 
-### Input
+## Input
 
 Business Website
 
-### Time
+## Completion Time
 
-Approximately 2–3 minutes.
+Approximately two to three minutes.
 
-### Public Evidence Collected
+## Public Evidence Collected
 
 Website
 
@@ -110,7 +140,24 @@ Public Presence
 
 Growth Readiness
 
-### Important Rule
+## Business Snapshot Philosophy
+
+The Business Snapshot is **not** a consulting engagement.
+
+It is an evidence-based demonstration of the Global Concepts Media consulting methodology.
+
+Its purpose is to:
+
+- Identify observable opportunities.
+- Demonstrate consulting expertise.
+- Build confidence in the methodology.
+- Naturally lead into the 90-Day Growth Review.
+
+The Business Snapshot should leave the customer wanting deeper answers.
+
+It should never attempt to replace the 90-Day Growth Review.
+
+## Important Rule
 
 The Snapshot is based only on publicly observable evidence.
 
@@ -120,21 +167,103 @@ No speculation.
 
 ---
 
+# Stage 2.5
+
+# Business Record
+
+## Objective
+
+Transform publicly observable evidence into a standardized Business Record.
+
+The Business Record is the single source of truth for every consulting deliverable.
+
+Every recommendation...
+
+Every Growth Leak...
+
+Every Business Snapshot...
+
+Every 90-Day Growth Review...
+
+Every implementation roadmap...
+
+Every future AI capability...
+
+...must originate from the Business Record.
+
+The Business Record is never manually edited.
+
+It evolves only through additional evidence.
+
+---
+
 # Stage 3
+
+# Growth Leak Intelligence
+
+## Objective
+
+Transform evidence into consulting intelligence.
+
+Growth Leak Intelligence bridges the gap between raw evidence and business recommendations.
+
+It answers one question:
+
+**"What is preventing this business from growing faster?"**
+
+Growth Leak Intelligence identifies:
+
+Traffic Leaks
+
+Visibility Leaks
+
+Trust Leaks
+
+Conversion Leaks
+
+Sales Leaks
+
+Follow-Up Leaks
+
+Retention Leaks
+
+Operational Leaks
+
+Measurement Leaks
+
+Opportunity Leaks
+
+Every Growth Leak must include:
+
+Observable Evidence
+
+Business Impact
+
+Priority
+
+Estimated Difficulty
+
+Expected Business Outcome
+
+Recommended Next Action
+
+---
+
+# Stage 4
 
 # Business Snapshot Results
 
-### Objective
+## Objective
 
-Reveal opportunities.
+Reveal meaningful opportunities.
 
 Not solve every problem.
 
-### Customer Should Think
+## Customer Should Think
 
 "I didn't realize these issues existed."
 
-### Deliverables
+## Deliverables
 
 Business Summary
 
@@ -152,9 +281,9 @@ Growth Readiness
 
 Initial Success Metrics
 
-### Important Rule
+## Important Rule
 
-Recommendations must come from observable evidence.
+Recommendations must originate from observable evidence.
 
 Never generic marketing advice.
 
@@ -162,33 +291,37 @@ Never generic marketing advice.
 
 # Transition
 
-The Snapshot answers:
+The Business Snapshot answers:
 
 "What did we find?"
 
-The Growth Review answers:
+The 90-Day Growth Review answers:
 
-"Why does it matter?"
+Why does it matter?
+
+What is it costing?
+
+What should be fixed first?
+
+How should it be implemented?
 
 ---
 
-# Stage 4
+# Stage 5
 
 # 90-Day Growth Review
 
-### Price
+## Price
 
 $299
 
-### Objective
+## Objective
 
 Transform evidence into consulting intelligence.
 
-This is the primary consulting deliverable.
+This is the primary paid consulting deliverable.
 
----
-
-# Deliverables
+## Deliverables
 
 Executive Growth Assessment
 
@@ -200,9 +333,9 @@ Business Impact Assessment
 
 Competitive Position Review
 
-Trust Analysis
+Customer Journey Review
 
-Customer Journey Analysis
+Trust Analysis
 
 Lead Generation Review
 
@@ -230,19 +363,17 @@ Success Measurements
 
 Every recommendation must answer:
 
-• What evidence supports this?
+- What evidence supports this?
+- Why does it matter?
+- What business outcome could improve?
+- What should be implemented?
+- How will success be measured?
 
-• Why does it matter?
-
-• What business outcome could improve?
-
-• What should be implemented?
-
-• How will success be measured?
+Opinion never comes before evidence.
 
 ---
 
-# Stage 5
+# Stage 6
 
 # Implementation Planning
 
@@ -252,129 +383,45 @@ The client chooses how improvements are executed.
 
 Internal Team
 
-Client implements the roadmap.
+The client implements the roadmap.
 
 ## Option 2
 
 Guided Consulting
 
-Global Concepts Media provides coaching and accountability.
+Global Concepts Media provides coaching, accountability, and strategic guidance.
 
 ## Option 3
 
 Growth Partnership
 
-Global Concepts Media implements the roadmap.
+Global Concepts Media implements the roadmap with the client.
 
 ---
 
-# Stage 6
+# Stage 7
 
 # Growth Partnership
 
-### Objective
+## Objective
 
-Create continuous measurable improvement.
+Create continuous measurable business growth.
 
-The roadmap becomes an operating system for business growth.
+The roadmap becomes a living business improvement system.
 
 Recurring activities include:
 
 Monthly Reviews
 
-Growth Tracking
+Performance Tracking
+
+Growth Opportunity Discovery
 
 Implementation Support
 
-Performance Reporting
+Growth Reporting
 
 Continuous Improvement
-
----
-
-# Growth Leak Intelligence
-
-Growth Leak Intelligence is the bridge between the Business Record and Consulting Intelligence.
-
-```
-Evidence
-
-↓
-
-Business Record
-
-↓
-
-Growth Leak Detection
-
-↓
-
-Business Impact Analysis
-
-↓
-
-Priority Ranking
-
-↓
-
-Recommendation
-
-↓
-
-Implementation
-
-↓
-
-Measurement
-```
-
-Every Growth Leak should include:
-
-Observable Evidence
-
-Business Impact
-
-Priority
-
-Estimated Difficulty
-
-Expected Business Outcome
-
-Recommended Next Action
-
----
-
-# Growth Leak Categories
-
-Traffic Leak
-
-Visibility Leak
-
-Trust Leak
-
-Conversion Leak
-
-Sales Leak
-
-Follow-Up Leak
-
-Retention Leak
-
-Operational Leak
-
-Opportunity Leak
-
-Measurement Leak
-
----
-
-# Success Definition
-
-The Business Snapshot creates curiosity.
-
-The Growth Review creates clarity.
-
-Implementation creates measurable business growth.
 
 ---
 
@@ -397,7 +444,7 @@ Growth Leak Intelligence
 
 ↓
 
-Consulting Intelligence
+Business Snapshot Results
 
 ↓
 
@@ -416,11 +463,31 @@ Growth Partnership
 Continuous Improvement
 ```
 
-The Business Snapshot is the beginning of the consulting relationship.
+The Business Snapshot begins the consulting relationship.
 
 The 90-Day Growth Review is the first paid consulting engagement.
 
-The Growth Partnership is the long-term implementation relationship.
+The Growth Partnership creates long-term measurable business growth.
+
+---
+
+# Success Definition
+
+The Website creates curiosity.
+
+The Business Snapshot creates confidence.
+
+The Business Record creates truth.
+
+Growth Leak Intelligence creates understanding.
+
+The Business Snapshot Results create momentum.
+
+The 90-Day Growth Review creates clarity.
+
+Implementation creates measurable business growth.
+
+Continuous Improvement creates long-term client success.
 
 ---
 
@@ -462,4 +529,12 @@ People do not hire consultants because they receive information.
 
 People hire consultants because they understand the business impact of that information and have confidence in what to do next.
 
-This principle guides every recommendation produced by GCM OS.
+Technology delivers information.
+
+Consulting creates understanding.
+
+Understanding creates action.
+
+Action creates measurable business growth.
+
+That is the purpose of GCM OS.
