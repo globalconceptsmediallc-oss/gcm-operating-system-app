@@ -80,19 +80,43 @@
   </main>
 
   <script>
-    function valueOrUnknown(value) {
+    function textFromValue(value) {
       if (!value || value === "Unknown") return "Unknown";
-      return value;
+
+      if (typeof value === "string") return value;
+
+      if (typeof value === "number") return String(value);
+
+      if (Array.isArray(value)) {
+        return textFromValue(value[0]);
+      }
+
+      if (typeof value === "object") {
+        return (
+          value.title ||
+          value.name ||
+          value.recommendation ||
+          value.opportunity ||
+          value.summary ||
+          value.description ||
+          value.service ||
+          value.metric ||
+          value.value ||
+          JSON.stringify(value)
+        );
+      }
+
+      return String(value);
     }
 
     function firstMeaningful(items) {
-      if (!Array.isArray(items)) return "Unknown";
+      if (!Array.isArray(items)) return textFromValue(items);
 
       const found = items.find(function (item) {
         return item && item !== "Unknown";
       });
 
-      return found || "Unknown";
+      return textFromValue(found);
     }
 
     function listItems(elementId, items) {
@@ -108,7 +132,7 @@
 
       items.forEach(function (item) {
         const li = document.createElement("li");
-        li.textContent = item;
+        li.textContent = textFromValue(item);
         list.appendChild(li);
       });
     }
@@ -128,19 +152,19 @@
       const consulting = record.consultingIntelligence || {};
 
       document.getElementById("businessName").textContent =
-        valueOrUnknown(business.name);
+        textFromValue(business.name);
 
       document.getElementById("industry").textContent =
-        valueOrUnknown(business.industry);
+        textFromValue(business.industry);
 
       document.getElementById("market").textContent =
-        valueOrUnknown(website.geographicMarket || business.market);
+        textFromValue(website.geographicMarket || business.market);
 
       document.getElementById("snapshotReadiness").textContent =
-        valueOrUnknown(sales.readinessScore);
+        textFromValue(sales.readinessScore);
 
       document.getElementById("summary").textContent =
-        valueOrUnknown(business.summary || consulting.executiveSummary);
+        textFromValue(business.summary || consulting.executiveSummary);
 
       document.getElementById("strength").textContent =
         firstMeaningful(website.trustSignals);
