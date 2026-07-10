@@ -114,7 +114,7 @@
   </main>
 
   <script>
-    const growthReviewUrl =
+    const growthReviewBaseUrl =
       "https://globalconceptsmedia.com/growth-review.html";
 
     const snapshotDashboard = document.getElementById("snapshotDashboard");
@@ -124,6 +124,10 @@
     const returnButton = document.getElementById("returnButton");
 
     const fallbackText = "Not clearly stated on the website.";
+
+    let activeRecord = null;
+    let activeSnapshot = null;
+    let activeRequest = null;
 
     function clean(value, fallback = fallbackText) {
       if (value === undefined || value === null) {
@@ -166,13 +170,21 @@
         "gcmBusinessSnapshotResult"
       );
 
+      const snapshotRequest = readStoredJson(
+        "gcmBusinessSnapshotRequest"
+      );
+
       if (!businessRecord && !snapshotResult) {
         return null;
       }
 
       return {
-        record: businessRecord || snapshotResult.fullBusinessRecord || snapshotResult,
-        snapshot: snapshotResult || {}
+        record:
+          businessRecord ||
+          snapshotResult.fullBusinessRecord ||
+          snapshotResult,
+        snapshot: snapshotResult || {},
+        request: snapshotRequest || {}
       };
     }
 
@@ -270,13 +282,32 @@
       buildMetrics(record, snapshot);
     }
 
+    function buildGrowthReviewUrl() {
+      const website = clean(
+        (activeRequest && activeRequest.website) ||
+          (activeSnapshot && activeSnapshot.website) ||
+          (activeRecord && activeRecord.website),
+        ""
+      );
+
+      if (!website) {
+        return growthReviewBaseUrl;
+      }
+
+      const params = new URLSearchParams({
+        website: website
+      });
+
+      return growthReviewBaseUrl + "?" + params.toString();
+    }
+
     function showMissingSnapshot() {
       snapshotDashboard.hidden = true;
       missingSnapshot.hidden = false;
     }
 
     growthReviewButton.addEventListener("click", function () {
-      window.location.href = growthReviewUrl;
+      window.location.href = buildGrowthReviewUrl();
     });
 
     startOverButton.addEventListener("click", function () {
@@ -297,7 +328,11 @@
     if (!savedData) {
       showMissingSnapshot();
     } else {
-      renderSnapshot(savedData.record, savedData.snapshot);
+      activeRecord = savedData.record;
+      activeSnapshot = savedData.snapshot;
+      activeRequest = savedData.request;
+
+      renderSnapshot(activeRecord, activeSnapshot);
     }
   </script>
 </body>
