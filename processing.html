@@ -4,7 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <title>Building Your Business Snapshot™</title>
+  <title>Building Your Business Snapshot™ | Global Concepts Media</title>
+
+  <meta
+    name="description"
+    content="Your Business Snapshot is being built from publicly observable business information."
+  />
 
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -13,50 +18,46 @@
   <main class="snapshot-page">
     <section class="snapshot-hero">
       <div class="snapshot-container">
-        <p class="eyebrow">GLOBAL CONCEPTS MEDIA</p>
+        <p class="eyebrow">Global Concepts Media</p>
 
         <h1>Building Your Business Snapshot™</h1>
 
         <p class="hero-text">
-          Please wait while we analyze publicly observable business information
-          and construct your Business Record.
+          Please wait while GCM OS reviews your website, builds the Business Record,
+          and prepares your Snapshot.
         </p>
 
-        <div class="processing-card">
+        <div class="processing-card" aria-live="polite">
           <div class="processing-step" id="step1">
-            <span class="status pending">○</span>
+            <span class="status pending" aria-hidden="true">○</span>
             <span>Website Intelligence</span>
           </div>
 
           <div class="processing-step" id="step2">
-            <span class="status pending">○</span>
-            <span>Contact Enrichment</span>
-          </div>
-
-          <div class="processing-step" id="step3">
-            <span class="status pending">○</span>
-            <span>Public Presence Intelligence</span>
-          </div>
-
-          <div class="processing-step" id="step4">
-            <span class="status pending">○</span>
+            <span class="status pending" aria-hidden="true">○</span>
             <span>Business Record Construction</span>
           </div>
 
-          <div class="processing-step" id="step5">
-            <span class="status pending">○</span>
-            <span>Growth Analysis</span>
+          <div class="processing-step" id="step3">
+            <span class="status pending" aria-hidden="true">○</span>
+            <span>Business Snapshot Generation</span>
           </div>
 
-          <div class="processing-step" id="step6">
-            <span class="status pending">○</span>
-            <span>Generating Business Snapshot™</span>
+          <div class="processing-step" id="step4">
+            <span class="status pending" aria-hidden="true">○</span>
+            <span>Preparing Your Results</span>
           </div>
         </div>
 
         <p id="processingMessage" class="snapshot-note">
           Starting analysis...
         </p>
+
+        <div id="processingErrorActions" hidden>
+          <a class="snapshot-button" href="business-snapshot.html">
+            Try Again
+          </a>
+        </div>
       </div>
     </section>
   </main>
@@ -65,87 +66,188 @@
     const workerEndpoint =
       "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
 
-    const steps = ["step1", "step2", "step3", "step4", "step5", "step6"];
+    const stepIds = ["step1", "step2", "step3", "step4"];
 
-    const messages = [
+    const stepMessages = [
       "Reading the business website...",
-      "Looking for observable contact signals...",
-      "Reviewing public presence signals...",
       "Building the Business Record...",
-      "Evaluating growth readiness...",
-      "Preparing your Snapshot..."
+      "Generating your Business Snapshot...",
+      "Preparing your results..."
     ];
 
     const processingMessage = document.getElementById("processingMessage");
+    const errorActions = document.getElementById("processingErrorActions");
 
-    function completeStep(index) {
-      const step = document.querySelector("#" + steps[index] + " .status");
-      step.textContent = "✓";
-      step.className = "status complete";
+    function wait(milliseconds) {
+      return new Promise(function (resolve) {
+        window.setTimeout(resolve, milliseconds);
+      });
+    }
+
+    function getStatusElement(index) {
+      return document.querySelector(
+        "#" + stepIds[index] + " .status"
+      );
     }
 
     function activateStep(index) {
-      const step = document.querySelector("#" + steps[index] + " .status");
-      step.textContent = "●";
-      step.className = "status active";
-      processingMessage.textContent = messages[index];
-    }
+      const status = getStatusElement(index);
 
-    function clean(value) {
-      if (value === null || value === undefined || value === "") {
-        return "Not clearly stated on the website.";
+      if (!status) {
+        return;
       }
 
-      return String(value).trim();
+      status.textContent = "●";
+      status.className = "status active";
+      processingMessage.textContent = stepMessages[index];
     }
 
-    function firstItem(items) {
+    function completeStep(index) {
+      const status = getStatusElement(index);
+
+      if (!status) {
+        return;
+      }
+
+      status.textContent = "✓";
+      status.className = "status complete";
+    }
+
+    function failActiveStep() {
+      const activeStatus = document.querySelector(".status.active");
+
+      if (!activeStatus) {
+        return;
+      }
+
+      activeStatus.textContent = "!";
+      activeStatus.className = "status error";
+    }
+
+    function clean(value, fallback) {
+      if (value === null || value === undefined) {
+        return fallback;
+      }
+
+      const cleanedValue = String(value).trim();
+      return cleanedValue || fallback;
+    }
+
+    function firstItem(items, fallback) {
       if (!Array.isArray(items) || items.length === 0) {
-        return "Not clearly stated on the website.";
+        return fallback;
       }
 
-      return clean(items[0]);
+      return clean(items[0], fallback);
     }
 
-    function makeSnapshotFromBusinessRecord(record) {
+    function normalizeWorkerResponse(payload) {
+      if (!payload || typeof payload !== "object") {
+        throw new Error("The Worker returned an invalid response.");
+      }
+
+      if (
+        payload.businessRecord &&
+        typeof payload.businessRecord === "object" &&
+        !Array.isArray(payload.businessRecord)
+      ) {
+        return {
+          businessRecord: payload.businessRecord,
+          snapshot:
+            payload.snapshot &&
+            typeof payload.snapshot === "object" &&
+            !Array.isArray(payload.snapshot)
+              ? payload.snapshot
+              : null
+        };
+      }
+
       return {
-        businessName: clean(record.businessName),
-        website: clean(record.website),
-        industry: clean(record.industry),
-        market: clean(record.geographicMarket),
-        growthReadiness: clean(record.outreachReadiness),
-        businessSummary: clean(record.businessSummary),
-        strongestArea: firstItem(record.trustSignals),
-        largestOpportunity: firstItem(record.growthOpportunities),
-        highestPriorityRecommendation: firstItem(record.growthOpportunities),
+        businessRecord: payload,
+        snapshot: null
+      };
+    }
+
+    function buildSnapshotFromBusinessRecord(record) {
+      const fallback = "Not clearly stated on the website.";
+
+      return {
+        businessName: clean(record.businessName, fallback),
+        website: clean(record.website, fallback),
+        industry: clean(record.industry, fallback),
+        market: clean(record.geographicMarket, fallback),
+        growthReadiness: clean(
+          record.outreachReadiness || record.growthReadiness,
+          fallback
+        ),
+        businessSummary: clean(record.businessSummary, fallback),
+        strongestArea: firstItem(record.trustSignals, fallback),
+        largestOpportunity: firstItem(record.growthOpportunities, fallback),
+        highestPriorityRecommendation: firstItem(
+          record.growthOpportunities,
+          fallback
+        ),
         successMetrics:
           "A 90-Day Growth Review should verify lead sources, conversion gaps, local visibility, trust signals, and measurable growth opportunities.",
-        qualificationScore: clean(record.qualificationScore),
+        qualificationScore: clean(record.qualificationScore, fallback),
         fullBusinessRecord: record
       };
     }
 
-    async function animateSteps() {
-      for (let i = 0; i < steps.length; i++) {
-        activateStep(i);
-        await new Promise(resolve => setTimeout(resolve, 850));
-        completeStep(i);
+    async function fetchWithTimeout(url, options, timeoutMilliseconds) {
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(function () {
+        controller.abort();
+      }, timeoutMilliseconds);
+
+      try {
+        return await fetch(url, {
+          ...options,
+          signal: controller.signal
+        });
+      } finally {
+        window.clearTimeout(timeoutId);
       }
     }
 
+    async function runStepAnimation(workerPromise) {
+      activateStep(0);
+      await wait(900);
+      completeStep(0);
+
+      activateStep(1);
+      await wait(900);
+      completeStep(1);
+
+      activateStep(2);
+
+      const response = await workerPromise;
+
+      completeStep(2);
+      activateStep(3);
+      await wait(650);
+      completeStep(3);
+
+      return response;
+    }
+
     async function runProcessing() {
-      const request = JSON.parse(
-        sessionStorage.getItem("gcmBusinessSnapshotRequest") || "{}"
-      );
+      let request;
+
+      try {
+        request = JSON.parse(
+          sessionStorage.getItem("gcmBusinessSnapshotRequest") || "{}"
+        );
+      } catch (error) {
+        request = {};
+      }
 
       if (!request.website) {
         processingMessage.textContent =
-          "No website was found. Please start again from the Business Snapshot page.";
+          "No website was found. Returning to the Business Snapshot form...";
 
-        setTimeout(function () {
-          window.location.href = "business-snapshot.html";
-        }, 1800);
-
+        await wait(1600);
+        window.location.href = "business-snapshot.html";
         return;
       }
 
@@ -154,33 +256,47 @@
         sessionStorage.removeItem("gcmBusinessSnapshotResult");
         sessionStorage.removeItem("gcmBusinessSnapshotBusinessRecord");
 
-        const workerPromise = fetch(workerEndpoint, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
+        const workerPromise = fetchWithTimeout(
+          workerEndpoint,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              websiteUrl: request.website,
+              website: request.website,
+              businessName: request.businessName || "",
+              email: request.email || "",
+              requestId: request.requestId || "",
+              source: "business-snapshot"
+            })
           },
-          body: JSON.stringify({
-            websiteUrl: request.website,
-            website: request.website,
-            email: request.email || "",
-            source: "business-snapshot"
-          })
-        });
+          90000
+        );
 
-        await animateSteps();
-
-        processingMessage.textContent =
-          "Finalizing your Business Snapshot...";
-
-        const response = await workerPromise;
+        const response = await runStepAnimation(workerPromise);
         const responseText = await response.text();
 
         if (!response.ok) {
-          throw new Error(responseText || "Worker returned " + response.status);
+          throw new Error(
+            responseText || "The Worker returned status " + response.status + "."
+          );
         }
 
-        const businessRecord = JSON.parse(responseText);
-        const snapshotResult = makeSnapshotFromBusinessRecord(businessRecord);
+        let payload;
+
+        try {
+          payload = JSON.parse(responseText);
+        } catch (error) {
+          throw new Error("The Worker returned a response that was not valid JSON.");
+        }
+
+        const normalizedResponse = normalizeWorkerResponse(payload);
+        const businessRecord = normalizedResponse.businessRecord;
+        const snapshotResult =
+          normalizedResponse.snapshot ||
+          buildSnapshotFromBusinessRecord(businessRecord);
 
         sessionStorage.setItem(
           "gcmBusinessSnapshotBusinessRecord",
@@ -192,17 +308,30 @@
           JSON.stringify(snapshotResult)
         );
 
+        processingMessage.textContent = "Your Business Snapshot is ready.";
+
+        await wait(450);
         window.location.href = "business-snapshot-results.html";
       } catch (error) {
-        console.error(error);
+        console.error("Business Snapshot processing failed:", error);
+
+        failActiveStep();
+
+        const errorMessage =
+          error && error.name === "AbortError"
+            ? "The analysis took too long to complete. Please try again."
+            : clean(
+                error && error.message,
+                "We could not complete the Snapshot. Please try again."
+              );
 
         sessionStorage.setItem(
           "gcmBusinessSnapshotError",
-          error.message || "Unknown processing error"
+          errorMessage
         );
 
-        processingMessage.textContent =
-          "We could not complete the Snapshot. Please check the website URL and try again.";
+        processingMessage.textContent = errorMessage;
+        errorActions.hidden = false;
       }
     }
 
