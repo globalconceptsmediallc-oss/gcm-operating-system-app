@@ -27,16 +27,37 @@
           publicly observable business information.
         </p>
 
-        <form id="businessSnapshotForm" class="snapshot-form">
+        <form id="businessSnapshotForm" class="snapshot-form" novalidate>
           <div class="form-group">
             <label for="businessWebsite">Business Website</label>
 
             <input
-              type="url"
+              type="text"
               id="businessWebsite"
               name="businessWebsite"
-              placeholder="https://example.com"
+              inputmode="url"
+              autocomplete="url"
+              placeholder="example.com"
               required
+              aria-describedby="websiteHelp"
+            />
+
+            <p id="websiteHelp" class="form-help">
+              Enter the main website for the business you want reviewed.
+            </p>
+          </div>
+
+          <div class="form-group">
+            <label for="businessName">
+              Business Name <span>Optional</span>
+            </label>
+
+            <input
+              type="text"
+              id="businessName"
+              name="businessName"
+              autocomplete="organization"
+              placeholder="Example Business"
             />
           </div>
 
@@ -49,15 +70,26 @@
               type="email"
               id="businessEmail"
               name="businessEmail"
+              autocomplete="email"
               placeholder="you@example.com"
             />
           </div>
 
-          <button type="submit" class="snapshot-button">
+          <button
+            type="submit"
+            id="snapshotSubmitButton"
+            class="snapshot-button"
+          >
             Generate My Free Snapshot™
           </button>
 
-          <p id="snapshotError" class="snapshot-error" hidden></p>
+          <p
+            id="snapshotError"
+            class="snapshot-error"
+            role="alert"
+            aria-live="polite"
+            hidden
+          ></p>
         </form>
 
         <p class="snapshot-note">
@@ -71,36 +103,94 @@
   <script>
     const form = document.getElementById("businessSnapshotForm");
     const websiteInput = document.getElementById("businessWebsite");
+    const businessNameInput = document.getElementById("businessName");
     const emailInput = document.getElementById("businessEmail");
+    const submitButton = document.getElementById("snapshotSubmitButton");
     const errorBox = document.getElementById("snapshotError");
+
+    function showError(message) {
+      errorBox.textContent = message;
+      errorBox.hidden = false;
+      submitButton.disabled = false;
+      submitButton.textContent = "Generate My Free Snapshot™";
+    }
+
+    function normalizeWebsite(value) {
+      const trimmedValue = value.trim();
+
+      if (!trimmedValue) {
+        return "";
+      }
+
+      const websiteWithProtocol = /^https?:\/\//i.test(trimmedValue)
+        ? trimmedValue
+        : `https://${trimmedValue}`;
+
+      try {
+        const parsedUrl = new URL(websiteWithProtocol);
+
+        if (!parsedUrl.hostname || !parsedUrl.hostname.includes(".")) {
+          return "";
+        }
+
+        parsedUrl.hash = "";
+        return parsedUrl.toString();
+      } catch (error) {
+        return "";
+      }
+    }
 
     form.addEventListener("submit", function (event) {
       event.preventDefault();
 
-      const website = websiteInput.value.trim();
-      const email = emailInput.value.trim();
-
       errorBox.hidden = true;
       errorBox.textContent = "";
 
+      const website = normalizeWebsite(websiteInput.value);
+      const businessName = businessNameInput.value.trim();
+      const email = emailInput.value.trim();
+
       if (!website) {
-        errorBox.textContent = "Please enter a business website.";
-        errorBox.hidden = false;
+        showError("Please enter a valid business website.");
+        websiteInput.focus();
         return;
       }
 
+      if (email && !emailInput.checkValidity()) {
+        showError("Please enter a valid email address or leave the field blank.");
+        emailInput.focus();
+        return;
+      }
+
+      submitButton.disabled = true;
+      submitButton.textContent = "Preparing Your Snapshot…";
+
       const snapshotRequest = {
+        requestId:
+          typeof crypto !== "undefined" && crypto.randomUUID
+            ? crypto.randomUUID()
+            : `snapshot-${Date.now()}`,
         website,
+        businessName,
         email,
         startedAt: new Date().toISOString()
       };
 
-      sessionStorage.setItem(
-        "gcmBusinessSnapshotRequest",
-        JSON.stringify(snapshotRequest)
-      );
+      try {
+        sessionStorage.setItem(
+          "gcmBusinessSnapshotRequest",
+          JSON.stringify(snapshotRequest)
+        );
 
-      window.location.href = "processing.html";
+        sessionStorage.removeItem("gcmBusinessSnapshotResult");
+        sessionStorage.removeItem("gcmBusinessSnapshotError");
+
+        window.location.href = "processing.html";
+      } catch (error) {
+        showError(
+          "We could not start your Snapshot. Please refresh the page and try again."
+        );
+      }
     });
   </script>
 </body>
