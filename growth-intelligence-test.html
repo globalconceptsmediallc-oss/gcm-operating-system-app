@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+
+  <title>GCM Growth Intelligence Engine Test</title>
+
+  <style>
+    body {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      font-family: Arial, sans-serif;
+      line-height: 1.5;
+      background: #f5f7fa;
+      color: #172033;
+    }
+
+    h1 {
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      margin-top: 0;
+      color: #586174;
+    }
+
+    .status {
+      margin: 24px 0;
+      padding: 18px;
+      border-radius: 8px;
+      font-weight: 700;
+    }
+
+    .status.waiting {
+      background: #fff4cc;
+      color: #665000;
+    }
+
+    .status.passed {
+      background: #dff5e5;
+      color: #145c2c;
+    }
+
+    .status.failed {
+      background: #fde4e4;
+      color: #8c1d1d;
+    }
+
+    button {
+      padding: 12px 20px;
+      border: 0;
+      border-radius: 6px;
+      background: #172033;
+      color: #ffffff;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    pre {
+      margin-top: 24px;
+      padding: 24px;
+      overflow: auto;
+      border-radius: 8px;
+      background: #111827;
+      color: #e5e7eb;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Growth Intelligence Engine Test</h1>
+
+  <p class="subtitle">
+    This page tests growth-intelligence-engine.js without changing
+    any production workflow.
+  </p>
+
+  <div id="status" class="status waiting">
+    Ready to test.
+  </div>
+
+  <button id="runTest" type="button">
+    Run Growth Intelligence Test
+  </button>
+
+  <pre id="output">No test has been run.</pre>
+
+  <script src="growth-intelligence-engine.js"></script>
+
+  <script>
+    "use strict";
+
+    const testBusinessRecord = {
+      businessName: "J&J Roofing Solutions",
+      website: "https://jjroofingsolutions.com",
+      industry: "Roofing Contractor",
+
+      businessSummary:
+        "A local roofing contractor serving residential property owners.",
+
+      productsAndServices: [
+        "Roof replacement",
+        "Roof repair",
+        "Storm damage inspections"
+      ],
+
+      targetCustomer:
+        "Homeowners who need roof repair or replacement services.",
+
+      geographicMarket:
+        "Local residential roofing market.",
+
+      trustSignals: [
+        "Licensed roofing contractor"
+      ],
+
+      websiteObservations: [
+        "Customer reviews are not prominently displayed.",
+        "The estimate call to action could be clearer.",
+        "Contact information is available."
+      ],
+
+      growthOpportunities: [
+        "Place stronger customer proof near the primary call to action.",
+        "Create a clearer request-an-estimate path.",
+        "Establish conversion tracking."
+      ],
+
+      missingInformation: [
+        "The number and quality of customer reviews require verification.",
+        "Current website conversion performance is unknown."
+      ],
+
+      contactEnrichment: {
+        primaryPhone: "321-555-0100",
+        contactPage: "https://jjroofingsolutions.com/contact"
+      },
+
+      publicPresence: {
+        facebook: true
+      },
+
+      successMetrics: []
+    };
+
+    const statusElement = document.getElementById("status");
+    const outputElement = document.getElementById("output");
+    const runButton = document.getElementById("runTest");
+
+    runButton.addEventListener("click", runTest);
+
+    function runTest() {
+      try {
+        if (!window.GCMGrowthIntelligence) {
+          throw new Error(
+            "Growth Intelligence Engine did not load."
+          );
+        }
+
+        const result =
+          window.GCMGrowthIntelligence.generateGrowthIntelligence(
+            testBusinessRecord
+          );
+
+        const testResults = validateResult(result);
+
+        statusElement.className = "status passed";
+        statusElement.textContent =
+          "PASS — Growth Intelligence Engine returned a valid result.";
+
+        outputElement.textContent = JSON.stringify(
+          {
+            testResults,
+            growthIntelligence: result
+          },
+          null,
+          2
+        );
+      } catch (error) {
+        statusElement.className = "status failed";
+        statusElement.textContent =
+          "FAIL — " + error.message;
+
+        outputElement.textContent =
+          error.stack || error.message;
+      }
+    }
+
+    function validateResult(result) {
+      const checks = {
+        engineLoaded:
+          result &&
+          result.engine &&
+          result.engine.name ===
+            "GCM Growth Intelligence Engine",
+
+        correctVersion:
+          result.engine.version === "1.0.0",
+
+        usedBusinessRecordOnly:
+          result.engine.source === "Business Record" &&
+          result.engine.additionalResearchPerformed === false,
+
+        executiveSummaryCreated:
+          Boolean(result.executiveSummary),
+
+        businessHealthCreated:
+          typeof result.businessHealth.score === "number",
+
+        growthLeaksCreated:
+          Array.isArray(result.topGrowthLeaks) &&
+          result.topGrowthLeaks.length > 0,
+
+        priorityMatrixCreated:
+          Array.isArray(result.priorityMatrix) &&
+          result.priorityMatrix.length > 0,
+
+        thirtyDayPlanCreated:
+          Array.isArray(result.roadmap.days1To30),
+
+        sixtyDayPlanCreated:
+          Array.isArray(result.roadmap.days31To60),
+
+        ninetyDayPlanCreated:
+          Array.isArray(result.roadmap.days61To90),
+
+        expectedImpactCreated:
+          Boolean(result.expectedBusinessImpact),
+
+        implementationOptionsCreated:
+          Array.isArray(result.implementationOptions) &&
+          result.implementationOptions.length === 4
+      };
+
+      const failedChecks = Object.entries(checks)
+        .filter(function (entry) {
+          return entry[1] !== true;
+        })
+        .map(function (entry) {
+          return entry[0];
+        });
+
+      if (failedChecks.length > 0) {
+        throw new Error(
+          "Validation failed: " + failedChecks.join(", ")
+        );
+      }
+
+      return checks;
+    }
+  </script>
+</body>
+</html>
