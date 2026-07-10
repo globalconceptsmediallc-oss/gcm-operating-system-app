@@ -4,7 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <title>Your Business Snapshot™</title>
+  <title>Your Business Snapshot™ | Global Concepts Media</title>
+
+  <meta
+    name="description"
+    content="Review your free Business Snapshot and see the highest-priority opportunity identified from publicly observable business information."
+  />
 
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -13,7 +18,7 @@
   <main class="snapshot-page">
     <section class="snapshot-hero">
       <div class="snapshot-container">
-        <p class="eyebrow">GLOBAL CONCEPTS MEDIA</p>
+        <p class="eyebrow">Global Concepts Media</p>
 
         <h1>Your Business Snapshot™</h1>
 
@@ -22,10 +27,8 @@
           initial Business Snapshot.
         </p>
 
-        <div class="dashboard-card">
-
+        <div id="snapshotDashboard" class="dashboard-card">
           <div class="snapshot-grid">
-
             <div class="snapshot-card">
               <span class="card-label">Business</span>
               <strong id="businessName">Loading...</strong>
@@ -45,11 +48,9 @@
               <span class="card-label">Growth Readiness</span>
               <strong id="snapshotReadiness">Loading...</strong>
             </div>
-
           </div>
 
           <div class="report-output">
-
             <h2>Business Summary</h2>
             <p id="summary"></p>
 
@@ -59,127 +60,245 @@
             <h2>Largest Opportunity</h2>
             <p id="opportunity"></p>
 
-            <h2>Highest Priority Recommendation</h2>
+            <h2>Highest-Priority Recommendation</h2>
             <p id="recommendation"></p>
 
-            <h2>Success Metrics</h2>
+            <h2>What the Full Review Should Measure</h2>
             <ul id="successMetrics"></ul>
-
           </div>
 
           <div class="control-card">
-
-            <h2>Ready to Go Further?</h2>
+            <h2>Ready for the Complete Plan?</h2>
 
             <p>
-              Your free Snapshot identifies opportunities.
-              Our 90-Day Growth Review shows exactly how to improve them.
+              Your free Snapshot identifies the first visible opportunity.
+              The 90-Day Growth Review turns that observation into a prioritized,
+              consultant-reviewed growth roadmap with measurable next steps.
             </p>
 
-            <button onclick="window.location.href='https://globalconceptsmedia.com/contact.html'">
-              Schedule My Growth Review
+            <button
+              type="button"
+              id="growthReviewButton"
+              class="snapshot-button"
+            >
+              Get My 90-Day Growth Review — $299
             </button>
 
+            <button
+              type="button"
+              id="startOverButton"
+              class="snapshot-button"
+            >
+              Start Over
+            </button>
           </div>
-
         </div>
 
+        <div id="missingSnapshot" class="control-card" hidden>
+          <h2>No Snapshot Was Found</h2>
+
+          <p>
+            Please return to the Business Snapshot form and generate a new report.
+          </p>
+
+          <button
+            type="button"
+            id="returnButton"
+            class="snapshot-button"
+          >
+            Return to Business Snapshot
+          </button>
+        </div>
       </div>
     </section>
   </main>
 
-<script>
+  <script>
+    const growthReviewUrl =
+      "https://globalconceptsmedia.com/growth-review.html";
 
-function value(v){
+    const snapshotDashboard = document.getElementById("snapshotDashboard");
+    const missingSnapshot = document.getElementById("missingSnapshot");
+    const growthReviewButton = document.getElementById("growthReviewButton");
+    const startOverButton = document.getElementById("startOverButton");
+    const returnButton = document.getElementById("returnButton");
 
-    if(v===undefined || v===null || v===""){
-        return "Unknown";
+    const fallbackText = "Not clearly stated on the website.";
+
+    function clean(value, fallback = fallbackText) {
+      if (value === undefined || value === null) {
+        return fallback;
+      }
+
+      const cleanedValue = String(value).trim();
+      return cleanedValue || fallback;
     }
 
-    return v;
+    function firstItem(items, fallback = fallbackText) {
+      if (!Array.isArray(items) || items.length === 0) {
+        return fallback;
+      }
 
-}
-
-function first(list){
-
-    if(!Array.isArray(list) || list.length===0){
-        return "Unknown";
+      return clean(items[0], fallback);
     }
 
-    return value(list[0]);
+    function readStoredJson(key) {
+      const savedValue = sessionStorage.getItem(key);
 
-}
+      if (!savedValue) {
+        return null;
+      }
 
-function buildMetrics(record){
-
-    const metrics=[];
-
-    if(record.qualificationScore){
-        metrics.push("Qualification Score: " + record.qualificationScore + "/10");
+      try {
+        return JSON.parse(savedValue);
+      } catch (error) {
+        console.error("Could not parse stored Snapshot data:", error);
+        return null;
+      }
     }
 
-    if(record.outreachReadiness){
-        metrics.push("Outreach Readiness: " + record.outreachReadiness);
+    function getSnapshotData() {
+      const businessRecord = readStoredJson(
+        "gcmBusinessSnapshotBusinessRecord"
+      );
+
+      const snapshotResult = readStoredJson(
+        "gcmBusinessSnapshotResult"
+      );
+
+      if (!businessRecord && !snapshotResult) {
+        return null;
+      }
+
+      return {
+        record: businessRecord || snapshotResult.fullBusinessRecord || snapshotResult,
+        snapshot: snapshotResult || {}
+      };
     }
 
-    if(Array.isArray(record.humanVerificationChecklist)){
-        metrics.push(...record.humanVerificationChecklist);
+    function addMetric(list, text) {
+      const cleanedText = clean(text, "");
+
+      if (!cleanedText) {
+        return;
+      }
+
+      const listItem = document.createElement("li");
+      listItem.textContent = cleanedText;
+      list.appendChild(listItem);
     }
 
-    return metrics;
+    function buildMetrics(record, snapshot) {
+      const list = document.getElementById("successMetrics");
+      list.innerHTML = "";
 
-}
+      if (record.qualificationScore) {
+        addMetric(
+          list,
+          "Qualification Score: " + clean(record.qualificationScore)
+        );
+      }
 
-const saved=sessionStorage.getItem("gcmBusinessSnapshotBusinessRecord")
-          || sessionStorage.getItem("gcmBusinessSnapshotResult");
+      if (record.outreachReadiness || snapshot.growthReadiness) {
+        addMetric(
+          list,
+          "Growth Readiness: " +
+            clean(record.outreachReadiness || snapshot.growthReadiness)
+        );
+      }
 
-if(!saved){
+      if (Array.isArray(record.humanVerificationChecklist)) {
+        record.humanVerificationChecklist
+          .slice(0, 3)
+          .forEach(function (item) {
+            addMetric(list, item);
+          });
+      }
 
-    document.getElementById("summary").textContent =
-        "No Business Snapshot was found. Please return and generate a new Snapshot.";
+      if (list.children.length === 0) {
+        addMetric(
+          list,
+          clean(
+            snapshot.successMetrics,
+            "Lead sources, conversion gaps, local visibility, trust signals, and measurable growth opportunities."
+          )
+        );
+      }
+    }
 
-}
-else{
+    function renderSnapshot(record, snapshot) {
+      document.getElementById("businessName").textContent = clean(
+        snapshot.businessName || record.businessName
+      );
 
-    const record=JSON.parse(saved);
+      document.getElementById("industry").textContent = clean(
+        snapshot.industry || record.industry
+      );
 
-    document.getElementById("businessName").textContent =
-        value(record.businessName);
+      document.getElementById("market").textContent = clean(
+        snapshot.market || record.geographicMarket
+      );
 
-    document.getElementById("industry").textContent =
-        value(record.industry);
+      document.getElementById("snapshotReadiness").textContent = clean(
+        snapshot.growthReadiness ||
+          record.growthReadiness ||
+          record.outreachReadiness
+      );
 
-    document.getElementById("market").textContent =
-        value(record.geographicMarket);
+      document.getElementById("summary").textContent = clean(
+        snapshot.businessSummary || record.businessSummary
+      );
 
-    document.getElementById("snapshotReadiness").textContent =
-        value(record.outreachReadiness);
+      document.getElementById("strength").textContent = clean(
+        snapshot.strongestArea,
+        firstItem(record.trustSignals)
+      );
 
-    document.getElementById("summary").textContent =
-        value(record.businessSummary);
+      document.getElementById("opportunity").textContent = clean(
+        snapshot.largestOpportunity,
+        firstItem(record.growthOpportunities)
+      );
 
-    document.getElementById("strength").textContent =
-        first(record.trustSignals);
+      document.getElementById("recommendation").textContent = clean(
+        snapshot.highestPriorityRecommendation,
+        firstItem(
+          record.personalizedOutreachInsights,
+          firstItem(record.growthOpportunities)
+        )
+      );
 
-    document.getElementById("opportunity").textContent =
-        first(record.growthOpportunities);
+      buildMetrics(record, snapshot);
+    }
 
-    document.getElementById("recommendation").textContent =
-        first(record.personalizedOutreachInsights);
+    function showMissingSnapshot() {
+      snapshotDashboard.hidden = true;
+      missingSnapshot.hidden = false;
+    }
 
-    const list=document.getElementById("successMetrics");
-
-    buildMetrics(record).forEach(function(metric){
-
-        const li=document.createElement("li");
-        li.textContent=metric;
-        list.appendChild(li);
-
+    growthReviewButton.addEventListener("click", function () {
+      window.location.href = growthReviewUrl;
     });
 
-}
+    startOverButton.addEventListener("click", function () {
+      sessionStorage.removeItem("gcmBusinessSnapshotRequest");
+      sessionStorage.removeItem("gcmBusinessSnapshotBusinessRecord");
+      sessionStorage.removeItem("gcmBusinessSnapshotResult");
+      sessionStorage.removeItem("gcmBusinessSnapshotError");
 
-</script>
+      window.location.href = "business-snapshot.html";
+    });
 
+    returnButton.addEventListener("click", function () {
+      window.location.href = "business-snapshot.html";
+    });
+
+    const savedData = getSnapshotData();
+
+    if (!savedData) {
+      showMissingSnapshot();
+    } else {
+      renderSnapshot(savedData.record, savedData.snapshot);
+    }
+  </script>
 </body>
 </html>
