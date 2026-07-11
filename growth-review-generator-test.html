@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+
+  <title>GCM Growth Review Generator Test</title>
+
+  <style>
+    body {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      font-family: Arial, sans-serif;
+      line-height: 1.5;
+      background: #f5f7fa;
+      color: #172033;
+    }
+
+    h1 {
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      margin-top: 0;
+      color: #586174;
+    }
+
+    .status {
+      margin: 24px 0;
+      padding: 18px;
+      border-radius: 8px;
+      font-weight: 700;
+    }
+
+    .status.waiting {
+      background: #fff4cc;
+      color: #665000;
+    }
+
+    .status.passed {
+      background: #dff5e5;
+      color: #145c2c;
+    }
+
+    .status.failed {
+      background: #fde4e4;
+      color: #8c1d1d;
+    }
+
+    button {
+      padding: 12px 20px;
+      border: 0;
+      border-radius: 6px;
+      background: #172033;
+      color: #ffffff;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    pre {
+      margin-top: 24px;
+      padding: 24px;
+      overflow: auto;
+      border-radius: 8px;
+      background: #111827;
+      color: #e5e7eb;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Growth Review Generator Test</h1>
+
+  <p class="subtitle">
+    This page tests the complete Business Record to Growth Review
+    pipeline without changing any production workflow.
+  </p>
+
+  <div id="status" class="status waiting">
+    Ready to test.
+  </div>
+
+  <button id="runTest" type="button">
+    Run Growth Review Generator Test
+  </button>
+
+  <pre id="output">No test has been run.</pre>
+
+  <script src="growth-intelligence-engine.js"></script>
+  <script src="consulting-knowledge.js"></script>
+  <script src="growth-review-generator.js"></script>
+
+  <script>
+    "use strict";
+
+    const testBusinessRecord = {
+      businessName: "J&J Roofing Solutions",
+      website: "https://jjroofingsolutions.com",
+      industry: "Roofing Contractor",
+
+      businessSummary:
+        "A local roofing contractor serving residential property owners.",
+
+      productsAndServices: [
+        "Roof replacement",
+        "Roof repair",
+        "Storm damage inspections"
+      ],
+
+      targetCustomer:
+        "Homeowners who need roof repair or replacement services.",
+
+      geographicMarket:
+        "Local residential roofing market.",
+
+      trustSignals: [
+        "Licensed roofing contractor"
+      ],
+
+      websiteObservations: [
+        "Customer reviews are not prominently displayed.",
+        "The estimate call to action could be clearer.",
+        "Contact information is available."
+      ],
+
+      growthOpportunities: [
+        "Place stronger customer proof near the primary call to action.",
+        "Create a clearer request-an-estimate path.",
+        "Establish conversion tracking."
+      ],
+
+      missingInformation: [
+        "The number and quality of customer reviews require verification.",
+        "Current website conversion performance is unknown."
+      ],
+
+      contactEnrichment: {
+        primaryPhone: "321-555-0100",
+        contactPage: "https://jjroofingsolutions.com/contact"
+      },
+
+      publicPresence: {
+        facebook: true
+      },
+
+      successMetrics: []
+    };
+
+    const statusElement = document.getElementById("status");
+    const outputElement = document.getElementById("output");
+    const runButton = document.getElementById("runTest");
+
+    runButton.addEventListener("click", runTest);
+
+    function runTest() {
+      try {
+        confirmEnginesLoaded();
+
+        const growthIntelligence =
+          window.GCMGrowthIntelligence.generateGrowthIntelligence(
+            testBusinessRecord
+          );
+
+        const consultingKnowledge =
+          window.GCMConsultingKnowledge
+            .generateConsultingRecommendations(
+              growthIntelligence
+            );
+
+        const growthReview =
+          window.GCMGrowthReviewGenerator.generateGrowthReview(
+            testBusinessRecord,
+            growthIntelligence,
+            consultingKnowledge
+          );
+
+        const testResults = validateResult(growthReview);
+
+        statusElement.className = "status passed";
+        statusElement.textContent =
+          "PASS — Growth Review Generator returned a valid 90-Day Growth Review.";
+
+        outputElement.textContent = JSON.stringify(
+          {
+            testResults,
+            growthReview
+          },
+          null,
+          2
+        );
+      } catch (error) {
+        statusElement.className = "status failed";
+        statusElement.textContent =
+          "FAIL — " + error.message;
+
+        outputElement.textContent =
+          error.stack || error.message;
+      }
+    }
+
+    function confirmEnginesLoaded() {
+      if (!window.GCMGrowthIntelligence) {
+        throw new Error(
+          "Growth Intelligence Engine did not load."
+        );
+      }
+
+      if (!window.GCMConsultingKnowledge) {
+        throw new Error(
+          "Consulting Knowledge Engine did not load."
+        );
+      }
+
+      if (!window.GCMGrowthReviewGenerator) {
+        throw new Error(
+          "Growth Review Generator did not load."
+        );
+      }
+    }
+
+    function validateResult(result) {
+      const thirtyDayActions =
+        result.actionPlan &&
+        result.actionPlan.days1To30 &&
+        Array.isArray(
+          result.actionPlan.days1To30.actions
+        )
+          ? result.actionPlan.days1To30.actions
+          : [];
+
+      const allActionCount =
+        getActionCount(result.actionPlan, "days1To30") +
+        getActionCount(result.actionPlan, "days31To60") +
+        getActionCount(result.actionPlan, "days61To90");
+
+      const checks = {
+        generatorLoaded:
+          result &&
+          result.generator &&
+          result.generator.name ===
+            "GCM Growth Review Generator",
+
+        correctGeneratorVersion:
+          result.generator.version === "1.0.0",
+
+        correctReviewVersion:
+          result.review.version === "1.0.0",
+
+        correctReviewType:
+          result.review.type === "90-Day Growth Review",
+
+        usedApprovedInputsOnly:
+          Array.isArray(result.generator.sourceInputs) &&
+          result.generator.sourceInputs.includes(
+            "Business Record"
+          ) &&
+          result.generator.sourceInputs.includes(
+            "Growth Intelligence"
+          ) &&
+          result.generator.sourceInputs.includes(
+            "Consulting Knowledge"
+          ) &&
+          result.generator.additionalResearchPerformed === false &&
+          result.generator.aiUsed === false,
+
+        businessOverviewCreated:
+          result.businessOverview &&
+          result.businessOverview.businessName ===
+            "J&J Roofing Solutions",
+
+        executiveSummaryCreated:
+          Boolean(
+            result.executiveSummary &&
+            result.executiveSummary.consultantNarrative
+          ),
+
+        businessHealthCreated:
+          result.businessHealth &&
+          typeof result.businessHealth.score === "number",
+
+        growthLeaksCreated:
+          Array.isArray(result.topGrowthLeaks) &&
+          result.topGrowthLeaks.length > 0,
+
+        priorityMatrixCreated:
+          Array.isArray(result.priorityMatrix) &&
+          result.priorityMatrix.length > 0,
+
+        thirtyDayPlanCreated:
+          thirtyDayActions.length > 0,
+
+        fullActionPlanCreated:
+          allActionCount > 0,
+
+        expectedImpactCreated:
+          Boolean(result.expectedBusinessImpact),
+
+        implementationOptionsCreated:
+          Array.isArray(result.implementationOptions) &&
+          result.implementationOptions.length > 0,
+
+        consultantNotesCreated:
+          Boolean(result.consultantNotes),
+
+        appendicesCreated:
+          Boolean(result.appendices),
+
+        qualityControlsPassed:
+          result.qualityControls &&
+          result.qualityControls.passed === true &&
+          result.qualityControls.readyForPresentationLayer === true
+      };
+
+      const failedChecks = Object.entries(checks)
+        .filter(function (entry) {
+          return entry[1] !== true;
+        })
+        .map(function (entry) {
+          return entry[0];
+        });
+
+      if (failedChecks.length > 0) {
+        throw new Error(
+          "Validation failed: " + failedChecks.join(", ")
+        );
+      }
+
+      return checks;
+    }
+
+    function getActionCount(actionPlan, phaseName) {
+      if (
+        !actionPlan ||
+        !actionPlan[phaseName] ||
+        !Array.isArray(actionPlan[phaseName].actions)
+      ) {
+        return 0;
+      }
+
+      return actionPlan[phaseName].actions.length;
+    }
+  </script>
+</body>
+</html>
