@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+
+  <title>GCM Growth Review Presentation Test</title>
+
+  <style>
+    body {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      font-family: Arial, sans-serif;
+      line-height: 1.5;
+      background: #f5f7fa;
+      color: #172033;
+    }
+
+    h1 {
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      margin-top: 0;
+      color: #586174;
+    }
+
+    .status {
+      margin: 24px 0;
+      padding: 18px;
+      border-radius: 8px;
+      font-weight: 700;
+    }
+
+    .status.waiting {
+      background: #fff4cc;
+      color: #665000;
+    }
+
+    .status.passed {
+      background: #dff5e5;
+      color: #145c2c;
+    }
+
+    .status.failed {
+      background: #fde4e4;
+      color: #8c1d1d;
+    }
+
+    button {
+      padding: 12px 20px;
+      border: 0;
+      border-radius: 6px;
+      background: #172033;
+      color: #ffffff;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    button:disabled {
+      cursor: wait;
+      opacity: 0.65;
+    }
+
+    pre {
+      margin-top: 24px;
+      padding: 24px;
+      overflow: auto;
+      border-radius: 8px;
+      background: #111827;
+      color: #e5e7eb;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Growth Review Presentation Test</h1>
+
+  <p class="subtitle">
+    This page tests the complete Business Record to Presentation Model
+    pipeline without changing any production workflow.
+  </p>
+
+  <div id="status" class="status waiting">
+    Ready to test.
+  </div>
+
+  <button id="runTest" type="button">
+    Run Growth Review Presentation Test
+  </button>
+
+  <pre id="output">No test has been run.</pre>
+
+  <script src="growth-intelligence-engine.js"></script>
+  <script src="consulting-knowledge.js"></script>
+  <script src="growth-review-generator.js"></script>
+  <script src="growth-review-presentation.js"></script>
+
+  <script>
+    "use strict";
+
+    const testBusinessRecord = {
+      businessName: "J&J Roofing Solutions",
+      website: "https://jjroofingsolutions.com",
+      industry: "Roofing Contractor",
+
+      businessSummary:
+        "A local roofing contractor serving residential property owners.",
+
+      productsAndServices: [
+        "Roof replacement",
+        "Roof repair",
+        "Storm damage inspections"
+      ],
+
+      targetCustomer:
+        "Homeowners who need roof repair or replacement services.",
+
+      geographicMarket:
+        "Local residential roofing market.",
+
+      trustSignals: [
+        "Licensed roofing contractor"
+      ],
+
+      websiteObservations: [
+        "Customer reviews are not prominently displayed.",
+        "The estimate call to action could be clearer.",
+        "Contact information is available."
+      ],
+
+      growthOpportunities: [
+        "Place stronger customer proof near the primary call to action.",
+        "Create a clearer request-an-estimate path.",
+        "Establish conversion tracking."
+      ],
+
+      missingInformation: [
+        "The number and quality of customer reviews require verification.",
+        "Current website conversion performance is unknown."
+      ],
+
+      contactEnrichment: {
+        primaryPhone: "321-555-0100",
+        contactPage: "https://jjroofingsolutions.com/contact"
+      },
+
+      publicPresence: {
+        facebook: true
+      },
+
+      successMetrics: []
+    };
+
+    const statusElement = document.getElementById("status");
+    const outputElement = document.getElementById("output");
+    const runButton = document.getElementById("runTest");
+
+    runButton.addEventListener("click", runTest);
+
+    function runTest() {
+      runButton.disabled = true;
+      statusElement.className = "status waiting";
+      statusElement.textContent = "Running test...";
+      outputElement.textContent =
+        "Generating Growth Review Presentation Model...";
+
+      try {
+        confirmEnginesLoaded();
+
+        const growthIntelligence =
+          window.GCMGrowthIntelligence.generateGrowthIntelligence(
+            testBusinessRecord
+          );
+
+        const consultingKnowledge =
+          window.GCMConsultingKnowledge
+            .generateConsultingRecommendations(
+              growthIntelligence
+            );
+
+        const growthReview =
+          window.GCMGrowthReviewGenerator.generateGrowthReview(
+            testBusinessRecord,
+            growthIntelligence,
+            consultingKnowledge
+          );
+
+        const presentationModel =
+          window.GCMGrowthReviewPresentation
+            .generatePresentationModel(
+              growthReview
+            );
+
+        const validation =
+          validateResult(presentationModel);
+
+        outputElement.textContent = JSON.stringify(
+          {
+            testResults: validation.checks,
+            failedChecks: validation.failedChecks,
+            presentationQualityControls:
+              presentationModel.qualityControls || null,
+            presentationModel
+          },
+          null,
+          2
+        );
+
+        if (validation.failedChecks.length > 0) {
+          statusElement.className = "status failed";
+          statusElement.textContent =
+            "FAIL — Validation failed: " +
+            validation.failedChecks.join(", ");
+          return;
+        }
+
+        statusElement.className = "status passed";
+        statusElement.textContent =
+          "PASS — Growth Review Presentation returned a valid presentation model.";
+      } catch (error) {
+        statusElement.className = "status failed";
+        statusElement.textContent =
+          "FAIL — " + error.message;
+
+        outputElement.textContent = JSON.stringify(
+          {
+            error: error.message,
+            stack: error.stack || ""
+          },
+          null,
+          2
+        );
+      } finally {
+        runButton.disabled = false;
+      }
+    }
+
+    function confirmEnginesLoaded() {
+      if (!window.GCMGrowthIntelligence) {
+        throw new Error(
+          "Growth Intelligence Engine did not load."
+        );
+      }
+
+      if (!window.GCMConsultingKnowledge) {
+        throw new Error(
+          "Consulting Knowledge Engine did not load."
+        );
+      }
+
+      if (!window.GCMGrowthReviewGenerator) {
+        throw new Error(
+          "Growth Review Generator did not load."
+        );
+      }
+
+      if (!window.GCMGrowthReviewPresentation) {
+        throw new Error(
+          "Growth Review Presentation did not load."
+        );
+      }
+    }
+
+    function validateResult(result) {
+      const checks = {
+        presentationEngineLoaded:
+          Boolean(
+            result &&
+            result.engine &&
+            result.engine.name ===
+              "GCM Growth Review Presentation"
+          ),
+
+        correctPresentationVersion:
+          Boolean(
+            result &&
+            result.engine &&
+            result.engine.version === "1.0.0"
+          ),
+
+        usedGrowthReviewOnly:
+          Boolean(
+            result &&
+            result.engine &&
+            result.engine.source ===
+              "Growth Review Object" &&
+            result.engine.additionalResearchPerformed === false &&
+            result.engine.aiUsed === false
+          ),
+
+        documentMetadataCreated:
+          Boolean(
+            result &&
+            result.document &&
+            result.document.type ===
+              "90-Day Growth Review"
+          ),
+
+        coverCreated:
+          Boolean(
+            result &&
+            result.cover &&
+            result.cover.businessName ===
+              "J&J Roofing Solutions"
+          ),
+
+        executiveBriefCreated:
+          Boolean(
+            result &&
+            result.executiveBrief &&
+            result.executiveBrief.summary
+          ),
+
+        businessSnapshotCreated:
+          Boolean(
+            result &&
+            result.businessSnapshot &&
+            result.businessSnapshot.businessName ===
+              "J&J Roofing Solutions"
+          ),
+
+        healthScorecardCreated:
+          Boolean(
+            result &&
+            result.healthScorecard &&
+            typeof result.healthScorecard.score ===
+              "number" &&
+            Array.isArray(
+              result.healthScorecard.categories
+            )
+          ),
+
+        keyFindingsCreated:
+          Boolean(
+            result &&
+            result.keyFindings &&
+            Array.isArray(result.keyFindings.items) &&
+            result.keyFindings.items.length > 0
+          ),
+
+        priorityMatrixCreated:
+          Boolean(
+            result &&
+            result.priorityMatrix &&
+            Array.isArray(result.priorityMatrix.items) &&
+            result.priorityMatrix.items.length > 0
+          ),
+
+        roadmapCreated:
+          Boolean(
+            result &&
+            result.roadmap &&
+            Array.isArray(result.roadmap.phases) &&
+            result.roadmap.phases.length === 3
+          ),
+
+        expectedImpactCreated:
+          Boolean(
+            result &&
+            result.expectedImpact &&
+            result.expectedImpact.nearTerm
+          ),
+
+        implementationOptionsCreated:
+          Boolean(
+            result &&
+            result.implementationOptions &&
+            Array.isArray(
+              result.implementationOptions.items
+            ) &&
+            result.implementationOptions.items.length > 0
+          ),
+
+        consultantNotesCreated:
+          Boolean(
+            result &&
+            result.consultantNotes
+          ),
+
+        appendicesCreated:
+          Boolean(
+            result &&
+            result.appendices
+          ),
+
+        navigationCreated:
+          Boolean(
+            result &&
+            Array.isArray(result.navigation) &&
+            result.navigation.length > 0
+          ),
+
+        qualityControlObjectCreated:
+          Boolean(
+            result &&
+            result.qualityControls &&
+            result.qualityControls.checks
+          ),
+
+        qualityControlsPassed:
+          Boolean(
+            result &&
+            result.qualityControls &&
+            result.qualityControls.passed === true
+          ),
+
+        readyForHtmlRenderer:
+          Boolean(
+            result &&
+            result.qualityControls &&
+            result.qualityControls.readyForHtmlRenderer ===
+              true
+          ),
+
+        readyForPdfRenderer:
+          Boolean(
+            result &&
+            result.qualityControls &&
+            result.qualityControls.readyForPdfRenderer ===
+              true
+          )
+      };
+
+      const failedChecks = Object.entries(checks)
+        .filter(function (entry) {
+          return entry[1] !== true;
+        })
+        .map(function (entry) {
+          return entry[0];
+        });
+
+      return {
+        checks,
+        failedChecks
+      };
+    }
+  </script>
+</body>
+</html>
