@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: growth-review-generator.js
-   Version: 1.0.0
+   Version: 1.0.1
    Sprint: Growth Review Generator v1
 
    Purpose:
@@ -31,7 +31,7 @@
   "use strict";
 
   const GENERATOR_NAME = "GCM Growth Review Generator";
-  const GENERATOR_VERSION = "1.0.0";
+  const GENERATOR_VERSION = "1.0.1";
   const REVIEW_VERSION = "1.0.0";
   const REVIEW_TYPE = "90-Day Growth Review";
 
@@ -787,9 +787,16 @@
       aiUsed: false
     };
 
-    const passed = Object.values(checks).every(function (value) {
-      return value === true;
-    });
+    const passed =
+      checks.businessIdentityPresent === true &&
+      checks.businessHealthPresent === true &&
+      checks.growthLeaksPresent === true &&
+      checks.consultingRecommendationsPresent === true &&
+      checks.actionPlanPresent === true &&
+      checks.verificationPresent === true &&
+      checks.usedApprovedInputsOnly === true &&
+      checks.additionalResearchPerformed === false &&
+      checks.aiUsed === false;
 
     return {
       passed,
