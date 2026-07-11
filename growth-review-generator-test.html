@@ -332,10 +332,14 @@
         });
 
       if (failedChecks.length > 0) {
-        throw new Error(
-          "Validation failed: " + failedChecks.join(", ")
-        );
-      }
+        console.log(result.qualityControls);
+
+throw new Error(
+  "Validation failed: " +
+  failedChecks.join(", ") +
+  "\n\n" +
+  JSON.stringify(result.qualityControls, null, 2)
+);
 
       return checks;
     }
