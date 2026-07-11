@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+  <title>J&J Roofing Solutions — 90-Day Growth Review</title>
+
+  <style>
+    :root {
+      color-scheme: light;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      padding: 32px 18px 60px;
+      background: #eef2f6;
+      color: #172033;
+      font-family: Arial, sans-serif;
+    }
+
+    .preview-shell {
+      max-width: 1180px;
+      margin: 0 auto;
+    }
+
+    .preview-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+      padding: 14px 16px;
+      border: 1px solid #d8e0e8;
+      border-radius: 14px;
+      background: #ffffff;
+      box-shadow: 0 10px 30px rgba(23, 32, 51, 0.06);
+    }
+
+    .preview-toolbar strong {
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    .preview-toolbar span {
+      color: #627084;
+      font-size: 0.9rem;
+    }
+
+    .preview-toolbar button {
+      padding: 11px 16px;
+      border: 0;
+      border-radius: 8px;
+      background: #172033;
+      color: #ffffff;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    #reportRoot:empty::before {
+      content: "Generating Growth Review preview...";
+      display: block;
+      padding: 40px;
+      border-radius: 18px;
+      background: #ffffff;
+      color: #627084;
+      text-align: center;
+    }
+
+    .error-box {
+      padding: 18px;
+      border-radius: 12px;
+      background: #fde4e4;
+      color: #8c1d1d;
+      font-weight: 700;
+    }
+
+    @media (max-width: 700px) {
+      body {
+        padding: 16px 10px 40px;
+      }
+
+      .preview-toolbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+
+    @media print {
+      body {
+        padding: 0;
+        background: #ffffff;
+      }
+
+      .preview-toolbar {
+        display: none;
+      }
+
+      .preview-shell {
+        max-width: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="preview-shell">
+    <div class="preview-toolbar">
+      <div>
+        <strong>Growth Review Preview</strong>
+        <span>
+          Real-world browser preview using the complete tested GCM OS pipeline.
+        </span>
+      </div>
+
+      <button id="printButton" type="button">
+        Print / Save as PDF
+      </button>
+    </div>
+
+    <div id="reportRoot"></div>
+  </main>
+
+  <script src="growth-intelligence-engine.js"></script>
+  <script src="consulting-knowledge.js"></script>
+  <script src="growth-review-generator.js"></script>
+  <script src="growth-review-presentation.js"></script>
+  <script src="growth-review-renderer.js"></script>
+
+  <script>
+    "use strict";
+
+    const previewBusinessRecord = {
+      businessName: "J&J Roofing Solutions",
+      website: "https://jjroofingsolutions.com",
+      industry: "Roofing Contractor",
+
+      businessSummary:
+        "A local roofing contractor serving residential property owners.",
+
+      productsAndServices: [
+        "Roof replacement",
+        "Roof repair",
+        "Storm damage inspections"
+      ],
+
+      targetCustomer:
+        "Homeowners who need roof repair or replacement services.",
+
+      geographicMarket:
+        "Local residential roofing market.",
+
+      trustSignals: [
+        "Licensed roofing contractor"
+      ],
+
+      websiteObservations: [
+        "Customer reviews are not prominently displayed.",
+        "The estimate call to action could be clearer.",
+        "Contact information is available."
+      ],
+
+      growthOpportunities: [
+        "Place stronger customer proof near the primary call to action.",
+        "Create a clearer request-an-estimate path.",
+        "Establish conversion tracking."
+      ],
+
+      missingInformation: [
+        "The number and quality of customer reviews require verification.",
+        "Current website conversion performance is unknown."
+      ],
+
+      contactEnrichment: {
+        primaryPhone: "321-555-0100",
+        contactPage: "https://jjroofingsolutions.com/contact"
+      },
+
+      publicPresence: {
+        facebook: true
+      },
+
+      successMetrics: []
+    };
+
+    document
+      .getElementById("printButton")
+      .addEventListener("click", function () {
+        window.print();
+      });
+
+    renderPreview();
+
+    function renderPreview() {
+      const root = document.getElementById("reportRoot");
+
+      try {
+        confirmPipelineLoaded();
+
+        const growthIntelligence =
+          window.GCMGrowthIntelligence.generateGrowthIntelligence(
+            previewBusinessRecord
+          );
+
+        const consultingKnowledge =
+          window.GCMConsultingKnowledge
+            .generateConsultingRecommendations(
+              growthIntelligence
+            );
+
+        const growthReview =
+          window.GCMGrowthReviewGenerator.generateGrowthReview(
+            previewBusinessRecord,
+            growthIntelligence,
+            consultingKnowledge
+          );
+
+        const presentationModel =
+          window.GCMGrowthReviewPresentation
+            .generatePresentationModel(
+              growthReview
+            );
+
+        window.GCMGrowthReviewRenderer.renderGrowthReview(
+          root,
+          presentationModel
+        );
+      } catch (error) {
+        root.innerHTML =
+          '<div class="error-box">' +
+          escapeHtml(error.message) +
+          "</div>";
+      }
+    }
+
+    function confirmPipelineLoaded() {
+      const required = [
+        "GCMGrowthIntelligence",
+        "GCMConsultingKnowledge",
+        "GCMGrowthReviewGenerator",
+        "GCMGrowthReviewPresentation",
+        "GCMGrowthReviewRenderer"
+      ];
+
+      const missing = required.filter(function (name) {
+        return !window[name];
+      });
+
+      if (missing.length > 0) {
+        throw new Error(
+          "The following pipeline files did not load: " +
+          missing.join(", ")
+        );
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>
