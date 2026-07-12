@@ -1,8 +1,8 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: growth-intelligence-engine.js
-   Version: 1.0.0
-   Sprint: Growth Intelligence Engine v1
+   Version: 1.1.0
+   Sprint: Business Classification Engine v1
 
    Purpose:
    Transform a completed Business Record into structured,
@@ -27,7 +27,7 @@
   "use strict";
 
   const ENGINE_NAME = "GCM Growth Intelligence Engine";
-  const ENGINE_VERSION = "1.0.0";
+  const ENGINE_VERSION = "1.1.0";
 
   const PRIORITY_WEIGHTS = {
     Critical: 4,
@@ -50,7 +50,8 @@
     validateBusinessRecord(businessRecord);
 
     const record = normalizeBusinessRecord(businessRecord);
-    const growthLeaks = identifyGrowthLeaks(record);
+    const businessClassification = classifyBusiness(record);
+    const growthLeaks = identifyGrowthLeaks(record, businessClassification);
     const businessHealth = calculateBusinessHealth(record, growthLeaks);
     const priorityMatrix = buildPriorityMatrix(growthLeaks);
 
@@ -74,7 +75,8 @@
     const executiveSummary = buildExecutiveSummary(
       record,
       businessHealth,
-      growthLeaks
+      growthLeaks,
+      businessClassification
     );
 
     return {
@@ -83,6 +85,7 @@
         version: ENGINE_VERSION,
         generatedAt: new Date().toISOString(),
         source: "Business Record",
+        classificationApplied: true,
         additionalResearchPerformed: false
       },
 
@@ -94,6 +97,8 @@
       },
 
       executiveSummary,
+
+      businessClassification,
 
       businessHealth,
 
@@ -241,10 +246,704 @@
   }
 
   /* =========================================================
+     Business Classification Engine
+
+     Deterministically classifies the observable business before
+     Growth Leaks and recommendations are selected.
+     ========================================================= */
+
+  function classifyBusiness(record) {
+    const signals = buildClassificationSignals(record);
+
+    const businessProfile = classifyBusinessProfile(record, signals);
+    const businessMaturity = classifyBusinessMaturity(record, signals);
+    const digitalMaturity = classifyDigitalMaturity(record, signals);
+    const trustMaturity = classifyTrustMaturity(record, signals);
+    const customerJourneyMaturity = classifyCustomerJourney(record, signals);
+    const marketingSophistication = classifyMarketingSophistication(
+      record,
+      signals
+    );
+    const growthStage = classifyGrowthStage({
+      record,
+      signals,
+      businessProfile,
+      businessMaturity,
+      digitalMaturity,
+      trustMaturity,
+      customerJourneyMaturity,
+      marketingSophistication
+    });
+
+    const consultingContext = buildConsultingContext({
+      record,
+      signals,
+      businessProfile,
+      businessMaturity,
+      digitalMaturity,
+      trustMaturity,
+      customerJourneyMaturity,
+      marketingSophistication,
+      growthStage
+    });
+
+    return {
+      businessProfile,
+      businessMaturity,
+      digitalMaturity,
+      trustMaturity,
+      customerJourneyMaturity,
+      marketingSophistication,
+      growthStage,
+      consultingContext
+    };
+  }
+
+  function buildClassificationSignals(record) {
+    const evidenceText = [
+      record.businessSummary,
+      record.targetCustomer,
+      record.geographicMarket,
+      record.productsAndServices.join(" "),
+      record.trustSignals.join(" "),
+      record.websiteObservations.join(" "),
+      record.growthOpportunities.join(" "),
+      record.missingInformation.join(" "),
+      safeStringify(record.contactEnrichment),
+      safeStringify(record.publicPresence)
+    ]
+      .map(clean)
+      .join(" ")
+      .toLowerCase();
+
+    const platformCount = countConfirmedPublicPlatforms(
+      record.publicPresence
+    );
+    const contactChannelCount = countContactChannels(
+      record.contactEnrichment
+    );
+    const locationCount = inferLocationCount(evidenceText);
+    const reviewVolume = inferReviewVolume(evidenceText);
+
+    return {
+      evidenceText,
+      evidenceItemCount:
+        record.productsAndServices.length +
+        record.trustSignals.length +
+        record.websiteObservations.length +
+        record.growthOpportunities.length,
+      serviceCount: record.productsAndServices.length,
+      trustCount: record.trustSignals.length,
+      platformCount,
+      contactChannelCount,
+      locationCount,
+      reviewVolume,
+      hasLeadership: includesAny(evidenceText, [
+        "leadership",
+        "owner",
+        "founder",
+        "management team",
+        "our team"
+      ]),
+      hasCaseStudies: includesAny(evidenceText, [
+        "case study",
+        "case studies",
+        "project gallery",
+        "portfolio",
+        "before and after"
+      ]),
+      hasCredentials: includesAny(evidenceText, [
+        "licensed",
+        "certified",
+        "accredited",
+        "award",
+        "warranty",
+        "guarantee"
+      ]),
+      hasScheduling: includesAny(evidenceText, [
+        "schedule",
+        "book online",
+        "appointment",
+        "request an estimate",
+        "get a quote"
+      ]),
+      hasFinancing: evidenceText.includes("financing"),
+      hasLocationPages: includesAny(evidenceText, [
+        "location pages",
+        "locations page",
+        "service area pages",
+        "multiple locations"
+      ]),
+      hasAnalyticsLanguage: includesAny(evidenceText, [
+        "analytics",
+        "tracking",
+        "attribution",
+        "conversion tracking",
+        "campaign landing page",
+        "reporting dashboard"
+      ]),
+      hasNationalLanguage: includesAny(evidenceText, [
+        "nationwide",
+        "nationally",
+        "across the united states",
+        "all 50 states"
+      ]),
+      hasRegionalLanguage: includesAny(evidenceText, [
+        "regional",
+        "multi-state",
+        "multiple markets",
+        "across florida",
+        "throughout the region"
+      ]),
+      hasEcommerceLanguage: includesAny(evidenceText, [
+        "shopping cart",
+        "add to cart",
+        "shop online",
+        "shipping",
+        "product catalog",
+        "checkout"
+      ]),
+      hasFranchiseLanguage: includesAny(evidenceText, [
+        "franchise",
+        "franchise opportunity",
+        "independently owned and operated"
+      ]),
+      hasProfessionalServicesLanguage: includesAny(evidenceText, [
+        "consultation",
+        "advisor",
+        "attorney",
+        "accounting",
+        "consulting",
+        "professional services",
+        "strategy firm"
+      ])
+    };
+  }
+
+  function classifyBusinessProfile(record, signals) {
+    let classification = "Local Business";
+    const evidence = [];
+    const verificationRequired = [];
+
+    if (signals.hasEcommerceLanguage) {
+      classification = "Ecommerce Business";
+      evidence.push("The Business Record contains observable ecommerce purchase or fulfillment language.");
+    } else if (signals.hasFranchiseLanguage) {
+      classification = "Franchise or Distributed Network";
+      evidence.push("The Business Record contains franchise or distributed-operator language.");
+    } else if (signals.hasNationalLanguage) {
+      classification = "National Brand";
+      evidence.push("The Business Record indicates nationwide service or national market coverage.");
+    } else if (
+      signals.locationCount >= 8 ||
+      (signals.hasRegionalLanguage && signals.locationCount >= 3)
+    ) {
+      classification = "Regional Brand";
+      evidence.push(
+        `The Business Record indicates a regional footprint with approximately ${signals.locationCount} observable locations or markets.`
+      );
+    } else if (signals.locationCount >= 2 || signals.hasLocationPages) {
+      classification = "Multi-Location Local Business";
+      evidence.push("The Business Record indicates multiple locations, offices, or local market pages.");
+    } else if (signals.hasProfessionalServicesLanguage) {
+      classification = "Professional Services Firm";
+      evidence.push("The observable offer is expertise-led and consultation-oriented.");
+    } else {
+      evidence.push(
+        isMeaningful(record.geographicMarket)
+          ? `The observable market is ${record.geographicMarket}.`
+          : "The available evidence supports a local operating profile, but the exact footprint requires verification."
+      );
+    }
+
+    if (!isMeaningful(record.geographicMarket)) {
+      verificationRequired.push("Verify the primary service area and complete operating footprint.");
+    }
+
+    return classificationResult(
+      classification,
+      evidence,
+      verificationRequired,
+      evidence.length >= 2 || signals.locationCount >= 2 ? "High" : "Moderate"
+    );
+  }
+
+  function classifyBusinessMaturity(record, signals) {
+    let score = 0;
+    const evidence = [];
+    const verificationRequired = [
+      "Verify business age, employee count, revenue, lead volume, and operational capacity."
+    ];
+
+    if (signals.serviceCount >= 5) score += 2;
+    else if (signals.serviceCount >= 2) score += 1;
+
+    if (signals.trustCount >= 5) score += 3;
+    else if (signals.trustCount >= 3) score += 2;
+    else if (signals.trustCount >= 1) score += 1;
+
+    if (signals.reviewVolume >= 500) score += 3;
+    else if (signals.reviewVolume >= 100) score += 2;
+    else if (signals.reviewVolume >= 20) score += 1;
+
+    if (signals.platformCount >= 4) score += 2;
+    else if (signals.platformCount >= 2) score += 1;
+
+    if (signals.locationCount >= 8) score += 3;
+    else if (signals.locationCount >= 2) score += 2;
+
+    if (signals.hasLeadership) score += 1;
+    if (signals.hasCaseStudies) score += 1;
+    if (signals.hasCredentials) score += 1;
+    if (signals.evidenceItemCount >= 15) score += 2;
+    else if (signals.evidenceItemCount >= 8) score += 1;
+
+    let classification = "Startup";
+    if (score >= 15) classification = "Market Leader";
+    else if (score >= 12) classification = "Mature";
+    else if (score >= 9) classification = "Established";
+    else if (score >= 6) classification = "Growing";
+    else if (score >= 3) classification = "Emerging";
+
+    evidence.push(`${signals.serviceCount} service evidence item(s) were recorded.`);
+    evidence.push(`${signals.trustCount} trust signal(s) were recorded.`);
+    evidence.push(`${signals.platformCount} public platform(s) were confirmed.`);
+    if (signals.locationCount > 1) {
+      evidence.push(`${signals.locationCount} locations or markets were inferred from observable evidence.`);
+    }
+    if (signals.reviewVolume > 0) {
+      evidence.push(`Observable review language indicates at least ${signals.reviewVolume} reviews.`);
+    }
+
+    return classificationResult(
+      classification,
+      evidence,
+      verificationRequired,
+      signals.evidenceItemCount >= 8 ? "High" : signals.evidenceItemCount >= 3 ? "Moderate" : "Low"
+    );
+  }
+
+  function classifyDigitalMaturity(record, signals) {
+    let score = 0;
+    const evidence = [];
+    const verificationRequired = [];
+
+    if (isMeaningful(record.businessSummary)) score += 1;
+    if (signals.serviceCount >= 3) score += 2;
+    else if (signals.serviceCount >= 1) score += 1;
+    if (signals.contactChannelCount >= 2) score += 2;
+    else if (signals.contactChannelCount === 1) score += 1;
+    if (signals.platformCount >= 3) score += 2;
+    else if (signals.platformCount >= 1) score += 1;
+    if (signals.hasLocationPages) score += 2;
+    if (signals.hasScheduling) score += 1;
+    if (signals.hasFinancing) score += 1;
+    if (signals.hasCaseStudies) score += 1;
+
+    let classification = "Basic";
+    if (score >= 10) classification = "Advanced";
+    else if (score >= 6) classification = "Strong";
+    else if (score >= 3) classification = "Developing";
+
+    evidence.push(`${signals.serviceCount} service item(s) support the visible content depth.`);
+    evidence.push(`${signals.contactChannelCount} verified contact path(s) support the digital customer experience.`);
+    evidence.push(`${signals.platformCount} public platform(s) support the wider digital presence.`);
+    if (!signals.hasAnalyticsLanguage) {
+      verificationRequired.push("Verify analytics, conversion tracking, technical SEO, and campaign infrastructure.");
+    }
+
+    return classificationResult(
+      classification,
+      evidence,
+      verificationRequired,
+      signals.evidenceItemCount >= 6 ? "Moderate" : "Low"
+    );
+  }
+
+  function classifyTrustMaturity(record, signals) {
+    let classification = "Weak";
+    const evidence = [];
+    const verificationRequired = [];
+
+    const trustScore =
+      signals.trustCount +
+      (signals.hasCredentials ? 2 : 0) +
+      (signals.hasCaseStudies ? 2 : 0) +
+      (signals.hasLeadership ? 1 : 0) +
+      (signals.reviewVolume >= 100 ? 3 : signals.reviewVolume >= 20 ? 1 : 0);
+
+    if (trustScore >= 10) classification = "Exceptional";
+    else if (trustScore >= 6) classification = "Strong";
+    else if (trustScore >= 2) classification = "Developing";
+
+    evidence.push(`${signals.trustCount} explicit trust signal(s) were captured in the Business Record.`);
+    if (signals.hasCredentials) evidence.push("Credentials, certification, warranty, guarantee, or award language is visible.");
+    if (signals.hasCaseStudies) evidence.push("Case studies, project evidence, or portfolio proof is visible.");
+    if (signals.reviewVolume > 0) evidence.push(`Observable review evidence indicates at least ${signals.reviewVolume} reviews.`);
+
+    if (signals.reviewVolume === 0) {
+      verificationRequired.push("Verify review count, rating, testimonial quality, and third-party reputation evidence.");
+    }
+
+    return classificationResult(
+      classification,
+      evidence,
+      verificationRequired,
+      signals.trustCount >= 3 || signals.reviewVolume > 0 ? "High" : "Moderate"
+    );
+  }
+
+  function classifyCustomerJourney(record, signals) {
+    let score = 0;
+    const evidence = [];
+    const verificationRequired = [];
+
+    score += signals.contactChannelCount;
+    if (signals.hasScheduling) score += 2;
+    if (signals.hasFinancing) score += 1;
+    if (record.growthOpportunities.length > 0) score += 1;
+    if (signals.hasCaseStudies || signals.trustCount >= 3) score += 1;
+
+    let classification = "Fragmented";
+    if (score >= 7) classification = "Optimized";
+    else if (score >= 4) classification = "Strong";
+    else if (score >= 2) classification = "Developing";
+
+    evidence.push(`${signals.contactChannelCount} verified customer contact path(s) were found.`);
+    if (signals.hasScheduling) evidence.push("Scheduling, quote, estimate, or appointment language supports a defined next step.");
+    if (signals.hasFinancing) evidence.push("Financing support is observable in the customer journey.");
+
+    verificationRequired.push("Verify mobile usability, form completion, lead routing, response time, and actual conversion performance.");
+
+    return classificationResult(
+      classification,
+      evidence,
+      verificationRequired,
+      signals.contactChannelCount >= 1 ? "Moderate" : "Low"
+    );
+  }
+
+  function classifyMarketingSophistication(record, signals) {
+    let classification = "Basic";
+    const evidence = [];
+    const verificationRequired = [];
+
+    let score = signals.platformCount;
+    if (signals.hasLocationPages) score += 2;
+    if (signals.hasCaseStudies) score += 1;
+    if (signals.hasAnalyticsLanguage) score += 3;
+    if (record.successMetrics.length > 0) score += 2;
+
+    if (score >= 9) classification = "Data-Driven";
+    else if (score >= 6) classification = "Integrated";
+    else if (score >= 2) classification = "Active";
+
+    evidence.push(`${signals.platformCount} public marketing platform(s) were confirmed.`);
+    if (signals.hasLocationPages) evidence.push("Location or market segmentation is observable.");
+    if (signals.hasAnalyticsLanguage) evidence.push("Analytics, attribution, tracking, or reporting language is observable.");
+
+    if (classification !== "Data-Driven") {
+      verificationRequired.push("Verify campaign activity, marketing budget, attribution, lead-source reporting, and optimization process.");
+    } else {
+      verificationRequired.push("Confirm that visible analytics language reflects active internal reporting and optimization.");
+    }
+
+    return classificationResult(
+      classification,
+      evidence,
+      verificationRequired,
+      signals.platformCount >= 2 ? "Moderate" : "Low"
+    );
+  }
+
+  function classifyGrowthStage(context) {
+    const clarityScore = scoreClarity(context.record);
+    const visibilityScore = scoreVisibility(context.record);
+    const conversionScore = scoreConversion(context.record);
+    let classification = "Foundation";
+    const evidence = [];
+    const verificationRequired = [];
+
+    if (
+      context.businessMaturity.classification === "Mature" ||
+      context.businessMaturity.classification === "Market Leader"
+    ) {
+      classification = context.signals.locationCount >= 2
+        ? "Measurement and Optimization"
+        : "Competitive Advantage";
+    } else if (context.digitalMaturity.classification === "Basic") {
+      classification = "Foundation";
+    } else if (clarityScore < 60) {
+      classification = "Offer Clarity";
+    } else if (context.trustMaturity.classification === "Weak") {
+      classification = "Trust Building";
+    } else if (visibilityScore < 55) {
+      classification = "Visibility";
+    } else if (
+      context.customerJourneyMaturity.classification === "Fragmented" ||
+      conversionScore < 55
+    ) {
+      classification = "Conversion Optimization";
+    } else if (
+      context.businessProfile.classification === "Regional Brand" ||
+      context.businessProfile.classification === "Multi-Location Local Business"
+    ) {
+      classification = "Market Expansion";
+    } else {
+      classification = "Lead Generation";
+    }
+
+    evidence.push(`Business maturity is classified as ${context.businessMaturity.classification}.`);
+    evidence.push(`Digital maturity is classified as ${context.digitalMaturity.classification}.`);
+    evidence.push(`Trust maturity is classified as ${context.trustMaturity.classification}.`);
+    evidence.push(`Customer journey maturity is classified as ${context.customerJourneyMaturity.classification}.`);
+    verificationRequired.push("Confirm current lead volume, conversion rate, close rate, average customer value, and capacity before finalizing the growth stage.");
+
+    return classificationResult(
+      classification,
+      evidence,
+      verificationRequired,
+      "Moderate"
+    );
+  }
+
+  function buildConsultingContext(context) {
+    const maturity = context.businessMaturity.classification;
+    const profile = context.businessProfile.classification;
+    let appropriateRecommendationLevel = "Foundational";
+
+    if (maturity === "Market Leader") {
+      appropriateRecommendationLevel = "Market Leadership";
+    } else if (
+      maturity === "Mature" ||
+      profile === "Regional Brand" ||
+      profile === "National Brand" ||
+      profile === "Enterprise Organization"
+    ) {
+      appropriateRecommendationLevel = "Optimization";
+    } else if (
+      maturity === "Growing" ||
+      maturity === "Established"
+    ) {
+      appropriateRecommendationLevel = "Growth";
+    } else if (!context.record.businessSummary) {
+      appropriateRecommendationLevel = "Requires Verification";
+    }
+
+    const primaryConsultingFocus = getPrimaryConsultingFocus(context).slice(0, 5);
+    const avoidGenericRecommendations = getAvoidGenericRecommendations(context);
+
+    return {
+      summary:
+        `Based on publicly observable evidence, ${context.record.businessName} appears to be a ` +
+        `${maturity.toLowerCase()} ${profile.toLowerCase()} with ` +
+        `${context.digitalMaturity.classification.toLowerCase()} digital maturity, ` +
+        `${context.trustMaturity.classification.toLowerCase()} trust maturity, and a ` +
+        `${context.customerJourneyMaturity.classification.toLowerCase()} customer journey. ` +
+        `The most relevant growth stage is ${context.growthStage.classification}.`,
+      appropriateRecommendationLevel,
+      primaryConsultingFocus,
+      avoidGenericRecommendations
+    };
+  }
+
+  function getPrimaryConsultingFocus(context) {
+    const stage = context.growthStage.classification;
+    const mapping = {
+      Foundation: ["Business identity", "Offer clarity", "Contact experience", "Foundational trust", "Basic measurement"],
+      Visibility: ["Local visibility", "Search presence", "Market relevance", "Public profile consistency", "Visibility measurement"],
+      "Offer Clarity": ["Homepage messaging", "Service clarity", "Customer fit", "Differentiation", "Next-step clarity"],
+      "Trust Building": ["Review strength", "Credentials", "Project proof", "Company transparency", "Proof near conversion points"],
+      "Lead Generation": ["Qualified demand", "Search growth", "Campaign segmentation", "Lead-source expansion", "Lead quality measurement"],
+      "Conversion Optimization": ["Conversion performance", "Contact friction", "Calls to action", "Lead follow-up", "Conversion measurement"],
+      Scaling: ["Repeatable campaigns", "Lead routing", "Market segmentation", "Capacity alignment", "Performance reporting"],
+      "Market Expansion": ["Location-level visibility", "Market-specific messaging", "Local proof", "Lead routing", "Market-level measurement"],
+      "Competitive Advantage": ["Competitive differentiation", "Authority", "Customer experience", "Brand leadership", "Strategic measurement"],
+      "Measurement and Optimization": ["Lead attribution", "Conversion performance", "Location-level performance", "Competitive differentiation", "Revenue measurement"]
+    };
+
+    return mapping[stage] || ["Evidence verification", "Growth prioritization", "Conversion", "Measurement"];
+  }
+
+  function getAvoidGenericRecommendations(context) {
+    const avoid = [];
+    const maturity = context.businessMaturity.classification;
+    const trust = context.trustMaturity.classification;
+    const digital = context.digitalMaturity.classification;
+
+    if (trust === "Strong" || trust === "Exceptional") {
+      avoid.push("Do not default to basic review-generation advice because the business already shows meaningful trust strength.");
+    }
+    if (digital === "Strong" || digital === "Advanced") {
+      avoid.push("Do not default to foundational website-content advice without a specific observable deficiency.");
+    }
+    if (maturity === "Mature" || maturity === "Market Leader") {
+      avoid.push("Do not recommend more marketing activity before evaluating conversion, attribution, and market-level performance.");
+    }
+    if (context.signals.locationCount >= 2) {
+      avoid.push("Do not treat broad service-area clarification as the primary constraint without evaluating the existing location architecture.");
+    }
+    if (context.marketingSophistication.classification === "Basic") {
+      avoid.push("Do not recommend advanced attribution before the business has a functioning acquisition and measurement foundation.");
+    }
+
+    return avoid;
+  }
+
+  function classificationResult(
+    classification,
+    evidence,
+    verificationRequired,
+    confidence
+  ) {
+    return {
+      classification,
+      confidence: confidence || inferConfidence(evidence),
+      evidence: unique(evidence),
+      verificationRequired: unique(verificationRequired)
+    };
+  }
+
+  function inferConfidence(evidence) {
+    if (evidence.length >= 3) return "High";
+    if (evidence.length >= 1) return "Moderate";
+    return "Low";
+  }
+
+  function applyClassificationRules(leaks, classification) {
+    const context = classification.consultingContext;
+    const maturity = classification.businessMaturity.classification;
+    const trust = classification.trustMaturity.classification;
+    const digital = classification.digitalMaturity.classification;
+    const stage = classification.growthStage.classification;
+
+    return leaks
+      .filter(function (leak) {
+        const text = `${leak.category} ${leak.finding} ${leak.recommendedAction}`.toLowerCase();
+
+        if (
+          (trust === "Strong" || trust === "Exceptional") &&
+          leak.id === "trust-proof-gap"
+        ) {
+          return false;
+        }
+
+        if (
+          (trust === "Strong" || trust === "Exceptional") &&
+          includesAny(text, ["collect more reviews", "basic review collection", "build foundational reviews"])
+        ) {
+          return false;
+        }
+
+        if (
+          (digital === "Strong" || digital === "Advanced") &&
+          includesAny(text, ["build a basic website", "create foundational website content", "new website"])
+        ) {
+          return false;
+        }
+
+        if (
+          classification.businessProfile.classification !== "Local Business" &&
+          includesAny(text, ["clarify the primary service area", "single service area"])
+        ) {
+          return false;
+        }
+
+        return true;
+      })
+      .map(function (leak) {
+        let adjustedPriority = leak.priority;
+        let maturityFit = "Appropriate";
+
+        if (
+          (maturity === "Mature" || maturity === "Market Leader") &&
+          includesAny(leak.category.toLowerCase(), ["measurement", "conversion", "visibility"])
+        ) {
+          adjustedPriority = raisePriority(adjustedPriority);
+        }
+
+        if (
+          stage === "Foundation" &&
+          includesAny(leak.category.toLowerCase(), ["clarity", "trust", "conversion", "information"])
+        ) {
+          adjustedPriority = raisePriority(adjustedPriority);
+        }
+
+        if (
+          context.avoidGenericRecommendations.some(function (rule) {
+            return normalizeForComparison(rule).includes(
+              normalizeForComparison(leak.finding).slice(0, 40)
+            );
+          })
+        ) {
+          maturityFit = "Requires Verification";
+        }
+
+        return Object.assign({}, leak, {
+          priority: adjustedPriority,
+          maturityFit,
+          recommendationLevel: context.appropriateRecommendationLevel,
+          growthStage: stage
+        });
+      });
+  }
+
+  function raisePriority(priority) {
+    if (priority === "Low") return "Medium";
+    if (priority === "Medium") return "High";
+    return priority;
+  }
+
+  function countContactChannels(contact) {
+    if (!isObject(contact)) return 0;
+
+    let count = 0;
+    if (clean(contact.primaryPhone || contact.phone || contact.businessPhone)) count += 1;
+    if (clean(contact.primaryEmail || contact.email || contact.businessEmail)) count += 1;
+    if (clean(contact.contactPage)) count += 1;
+    if (clean(contact.bookingUrl || contact.scheduleUrl)) count += 1;
+    return count;
+  }
+
+  function inferLocationCount(text) {
+    const explicitMatches = text.match(/\b(\d{1,3})\s+(?:locations|offices|branches|markets)\b/g) || [];
+    const numbers = explicitMatches
+      .map(function (match) {
+        const numberMatch = match.match(/\d{1,3}/);
+        return numberMatch ? Number(numberMatch[0]) : 0;
+      })
+      .filter(Boolean);
+
+    if (numbers.length > 0) return Math.max.apply(null, numbers);
+    if (includesAny(text, ["multiple locations", "several locations", "location network"])) return 2;
+    return 1;
+  }
+
+  function inferReviewVolume(text) {
+    const matches = text.match(/\b([\d,]{1,9})\+?\s+(?:google\s+)?reviews?\b/g) || [];
+    const numbers = matches
+      .map(function (match) {
+        const numberMatch = match.match(/[\d,]+/);
+        return numberMatch ? Number(numberMatch[0].replace(/,/g, "")) : 0;
+      })
+      .filter(Boolean);
+
+    return numbers.length > 0 ? Math.max.apply(null, numbers) : 0;
+  }
+
+  function safeStringify(value) {
+    try {
+      return JSON.stringify(value || {});
+    } catch (error) {
+      return "";
+    }
+  }
+
+  /* =========================================================
      Growth Leak Identification
      ========================================================= */
 
-  function identifyGrowthLeaks(record) {
+  function identifyGrowthLeaks(record, businessClassification) {
     const leaks = [];
 
     record.growthLeaks.forEach(function (leak, index) {
@@ -283,7 +982,11 @@
     addWebsiteObservationLeaks(record, leaks);
     addOpportunityLeaks(record, leaks);
 
-    const uniqueLeaks = deduplicateGrowthLeaks(leaks)
+    const classificationAdjustedLeaks = businessClassification
+      ? applyClassificationRules(leaks, businessClassification)
+      : leaks;
+
+    const uniqueLeaks = deduplicateGrowthLeaks(classificationAdjustedLeaks)
       .filter(hasUsableEvidence)
       .map(scoreGrowthLeak)
       .sort(sortByPriorityScore);
@@ -831,12 +1534,17 @@
      Executive Summary
      ========================================================= */
 
-  function buildExecutiveSummary(record, businessHealth, growthLeaks) {
+  function buildExecutiveSummary(record, businessHealth, growthLeaks, businessClassification) {
     const topLeak = growthLeaks[0];
+
+    const classificationSummary = businessClassification
+      ? businessClassification.consultingContext.summary
+      : "The observable business classification requires verification.";
 
     const currentPosition =
       `${record.businessName} received a Business Health Score of ` +
-      `${businessHealth.score}/100, rated ${businessHealth.rating}.`;
+      `${businessHealth.score}/100, rated ${businessHealth.rating}. ` +
+      classificationSummary;
 
     const primaryFinding = topLeak
       ? `The highest-priority growth leak is a ${topLeak.category.toLowerCase()}: ${topLeak.finding}`
@@ -1520,6 +2228,7 @@
     generateGrowthIntelligence,
     validateBusinessRecord,
     normalizeBusinessRecord,
+    classifyBusiness,
     identifyGrowthLeaks,
     calculateBusinessHealth,
     buildPriorityMatrix
