@@ -2,103 +2,770 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
 
   <title>Your Business Snapshot™ | Global Concepts Media</title>
 
   <meta
     name="description"
-    content="Review your free Business Snapshot and see the highest-priority opportunity identified from publicly observable business information."
+    content="Review your Business Snapshot, identify your strongest business asset and biggest visible growth leak, and explore the complete 90-Day Growth Review."
   />
 
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=20260712-2" />
+
+  <style>
+    .snapshot-results {
+      --result-ink: #172033;
+      --result-muted: #5f6b7a;
+      --result-line: #dce4ee;
+      --result-soft: #f5f8fc;
+      --result-panel: #ffffff;
+      --result-accent: #1269b0;
+      --result-accent-dark: #0b4c82;
+      --result-green: #13813c;
+      --result-green-soft: #eaf7ee;
+      --result-yellow: #9a6500;
+      --result-yellow-soft: #fff5dc;
+      --result-gray: #697386;
+      --result-gray-soft: #edf1f5;
+      color: var(--result-ink);
+    }
+
+    .snapshot-results * {
+      box-sizing: border-box;
+    }
+
+    .snapshot-results .results-shell {
+      display: grid;
+      gap: 22px;
+    }
+
+    .snapshot-results .results-panel {
+      padding: 30px;
+      border: 1px solid var(--result-line);
+      border-radius: 20px;
+      background: var(--result-panel);
+      box-shadow: 0 16px 40px rgba(23, 32, 51, 0.07);
+    }
+
+    .snapshot-results .results-panel--hero {
+      background:
+        radial-gradient(
+          circle at top right,
+          rgba(18, 105, 176, 0.12),
+          transparent 42%
+        ),
+        #ffffff;
+    }
+
+    .snapshot-results .results-kicker {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--result-accent);
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+    }
+
+    .snapshot-results .results-panel h2 {
+      margin: 0 0 12px;
+      font-size: clamp(1.45rem, 3vw, 2rem);
+      line-height: 1.2;
+    }
+
+    .snapshot-results .results-panel h3 {
+      margin: 0 0 8px;
+      font-size: 1.1rem;
+      line-height: 1.3;
+    }
+
+    .snapshot-results .results-panel p {
+      margin: 0;
+      color: var(--result-muted);
+      line-height: 1.7;
+    }
+
+    .snapshot-results .snapshot-grid {
+      margin-bottom: 22px;
+    }
+
+    .snapshot-results .snapshot-card {
+      min-height: 122px;
+    }
+
+    .snapshot-results .readiness-value {
+      color: var(--result-green);
+    }
+
+    .snapshot-results .executive-dashboard {
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      gap: 28px;
+      align-items: center;
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid var(--result-line);
+    }
+
+    .snapshot-results .score-circle {
+      display: grid;
+      place-items: center;
+      width: 160px;
+      height: 160px;
+      border: 12px solid var(--result-accent);
+      border-radius: 50%;
+      background: #f0f7fd;
+      text-align: center;
+    }
+
+    .snapshot-results .score-circle strong {
+      display: block;
+      font-size: 2.65rem;
+      line-height: 1;
+    }
+
+    .snapshot-results .score-circle span {
+      display: block;
+      margin-top: 6px;
+      color: var(--result-muted);
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .snapshot-results .dashboard-summary {
+      display: grid;
+      gap: 14px;
+    }
+
+    .snapshot-results .dashboard-row {
+      padding: 15px 17px;
+      border: 1px solid var(--result-line);
+      border-radius: 14px;
+      background: var(--result-soft);
+    }
+
+    .snapshot-results .dashboard-row span {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--result-muted);
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+
+    .snapshot-results .dashboard-row strong {
+      display: block;
+      line-height: 1.45;
+    }
+
+    .snapshot-results .executive-brief {
+      max-width: 900px;
+      font-size: 1.03rem;
+    }
+
+    .snapshot-results .question-list {
+      display: grid;
+      gap: 12px;
+      margin-top: 22px;
+    }
+
+    .snapshot-results .question-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 20px;
+      align-items: center;
+      padding: 18px;
+      border: 1px solid var(--result-line);
+      border-radius: 14px;
+      background: var(--result-soft);
+    }
+
+    .snapshot-results .question-number {
+      display: block;
+      margin-bottom: 3px;
+      color: var(--result-accent);
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+
+    .snapshot-results .question-row strong {
+      display: block;
+      line-height: 1.4;
+    }
+
+    .snapshot-results .status-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 132px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-align: center;
+    }
+
+    .snapshot-results .status-badge--strong {
+      color: var(--result-green);
+      background: var(--result-green-soft);
+    }
+
+    .snapshot-results .status-badge--review {
+      color: var(--result-yellow);
+      background: var(--result-yellow-soft);
+    }
+
+    .snapshot-results .status-badge--full {
+      color: var(--result-gray);
+      background: var(--result-gray-soft);
+    }
+
+    .snapshot-results .insight-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .snapshot-results .insight-card {
+      padding: 22px;
+      border: 1px solid var(--result-line);
+      border-radius: 16px;
+      background: var(--result-soft);
+    }
+
+    .snapshot-results .insight-card--asset {
+      border-top: 5px solid var(--result-green);
+    }
+
+    .snapshot-results .insight-card--leak {
+      border-top: 5px solid var(--result-yellow);
+    }
+
+    .snapshot-results .insight-card--action {
+      border-top: 5px solid var(--result-accent);
+    }
+
+    .snapshot-results .investigation-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 22px;
+    }
+
+    .snapshot-results .investigation-card {
+      padding: 20px;
+      border: 1px solid var(--result-line);
+      border-radius: 15px;
+      background: var(--result-soft);
+    }
+
+    .snapshot-results .investigation-card ul {
+      margin: 10px 0 0;
+      padding-left: 20px;
+      color: var(--result-muted);
+    }
+
+    .snapshot-results .investigation-card li {
+      margin-bottom: 6px;
+    }
+
+    .snapshot-results .verification-list {
+      margin: 18px 0 0;
+      padding-left: 21px;
+      color: var(--result-muted);
+    }
+
+    .snapshot-results .verification-list li {
+      margin-bottom: 7px;
+    }
+
+    .snapshot-results .results-cta {
+      color: #ffffff;
+      background:
+        linear-gradient(
+          135deg,
+          var(--result-accent-dark),
+          var(--result-accent)
+        );
+    }
+
+    .snapshot-results .results-cta h2,
+    .snapshot-results .results-cta p {
+      color: #ffffff;
+    }
+
+    .snapshot-results .results-cta p {
+      max-width: 850px;
+      opacity: 0.9;
+    }
+
+    .snapshot-results .cta-actions {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .snapshot-results .snapshot-button--primary,
+    .snapshot-results .snapshot-button--secondary {
+      width: 100%;
+      min-height: 52px;
+      cursor: pointer;
+    }
+
+    .snapshot-results .snapshot-button--secondary {
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.42);
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .snapshot-results .evidence-note {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
+      font-size: 0.83rem;
+      opacity: 0.8;
+    }
+
+    @media (max-width: 850px) {
+      .snapshot-results .executive-dashboard,
+      .snapshot-results .insight-grid,
+      .snapshot-results .investigation-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .snapshot-results .score-circle {
+        width: 140px;
+        height: 140px;
+      }
+
+      .snapshot-results .cta-actions {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .snapshot-results .results-panel {
+        padding: 22px;
+        border-radius: 16px;
+      }
+
+      .snapshot-results .question-row {
+        grid-template-columns: 1fr;
+      }
+
+      .snapshot-results .status-badge {
+        justify-self: start;
+      }
+    }
+  </style>
 </head>
 
 <body>
-  <main class="snapshot-page">
+  <main class="snapshot-page snapshot-results">
     <section class="snapshot-hero">
       <div class="snapshot-container">
-        <p class="eyebrow">Global Concepts Media</p>
+
+        <p class="eyebrow">
+          Global Concepts Media
+        </p>
 
         <h1>Your Business Snapshot™</h1>
 
         <p class="hero-text">
           Based on publicly observable business information, here is your
-          initial Business Snapshot.
+          initial evidence-based view of what may be supporting growth,
+          where growth may be leaking, and what should be reviewed first.
         </p>
 
-        <div id="snapshotDashboard" class="dashboard-card">
-          <div class="snapshot-grid">
-            <div class="snapshot-card">
-              <span class="card-label">Business</span>
-              <strong id="businessName">Loading...</strong>
+        <div id="snapshotDashboard" class="results-shell">
+
+          <!-- ===============================================
+               EXECUTIVE DASHBOARD
+               =============================================== -->
+
+          <section class="results-panel results-panel--hero">
+            <span class="results-kicker">
+              Executive Dashboard
+            </span>
+
+            <h2>Your business at a glance</h2>
+
+            <div class="snapshot-grid">
+              <div class="snapshot-card">
+                <span class="card-label">Business</span>
+                <strong id="businessName">Loading...</strong>
+              </div>
+
+              <div class="snapshot-card">
+                <span class="card-label">Industry</span>
+                <strong id="industry">Loading...</strong>
+              </div>
+
+              <div class="snapshot-card">
+                <span class="card-label">Market</span>
+                <strong id="market">Loading...</strong>
+              </div>
+
+              <div class="snapshot-card">
+                <span class="card-label">Growth Readiness</span>
+                <strong
+                  id="snapshotReadiness"
+                  class="readiness-value"
+                >
+                  Loading...
+                </strong>
+              </div>
             </div>
 
-            <div class="snapshot-card">
-              <span class="card-label">Industry</span>
-              <strong id="industry">Loading...</strong>
+            <div class="executive-dashboard">
+              <div class="score-circle">
+                <div>
+                  <strong id="qualificationScore">—</strong>
+                  <span>Readiness Indicator</span>
+                </div>
+              </div>
+
+              <div class="dashboard-summary">
+                <div class="dashboard-row">
+                  <span>Strongest Business Asset</span>
+                  <strong id="dashboardStrength">
+                    Reviewing visible strengths...
+                  </strong>
+                </div>
+
+                <div class="dashboard-row">
+                  <span>Biggest Growth Leak</span>
+                  <strong id="dashboardOpportunity">
+                    Reviewing visible opportunities...
+                  </strong>
+                </div>
+
+                <div class="dashboard-row">
+                  <span>Recommended First Action</span>
+                  <strong id="dashboardRecommendation">
+                    Preparing your first recommendation...
+                  </strong>
+                </div>
+              </div>
             </div>
+          </section>
 
-            <div class="snapshot-card">
-              <span class="card-label">Market</span>
-              <strong id="market">Loading...</strong>
-            </div>
 
-            <div class="snapshot-card">
-              <span class="card-label">Growth Readiness</span>
-              <strong id="snapshotReadiness">Loading...</strong>
-            </div>
-          </div>
+          <!-- ===============================================
+               EXECUTIVE BRIEF
+               =============================================== -->
 
-          <div class="report-output">
-            <h2>Business Summary</h2>
-            <p id="summary"></p>
+          <section class="results-panel">
+            <span class="results-kicker">
+              Executive Brief
+            </span>
 
-            <h2>Strongest Area</h2>
-            <p id="strength"></p>
+            <h2>What the observable evidence indicates</h2>
 
-            <h2>Largest Opportunity</h2>
-            <p id="opportunity"></p>
+            <p
+              id="summary"
+              class="executive-brief"
+            ></p>
+          </section>
 
-            <h2>Highest-Priority Recommendation</h2>
-            <p id="recommendation"></p>
 
-            <h2>What the Full Review Should Measure</h2>
-            <ul id="successMetrics"></ul>
-          </div>
+          <!-- ===============================================
+               FIVE BUSINESS GROWTH QUESTIONS
+               =============================================== -->
 
-          <div class="control-card">
-            <h2>Ready for the Complete Plan?</h2>
+          <section class="results-panel">
+            <span class="results-kicker">
+              The Five Business Growth Questions™
+            </span>
+
+            <h2>How effectively does your business support growth?</h2>
 
             <p>
-              Your free Snapshot identifies the first visible opportunity.
-              The 90-Day Growth Review turns that observation into a prioritized,
-              consultant-reviewed growth roadmap with measurable next steps.
+              This initial Snapshot uses publicly observable website
+              evidence. Areas requiring analytics, search-platform data,
+              customer information, or internal performance records are
+              identified for deeper review.
             </p>
 
-            <button
-              type="button"
-              id="growthReviewButton"
-              class="snapshot-button"
-            >
-              Get My 90-Day Growth Review — $299
-            </button>
+            <div class="question-list">
+              <div class="question-row">
+                <div>
+                  <span class="question-number">Question 1</span>
+                  <strong>Can customers find your business?</strong>
+                </div>
 
-            <button
-              type="button"
-              id="startOverButton"
-              class="snapshot-button"
-            >
-              Start Over
-            </button>
-          </div>
+                <span
+                  id="visibilityStatus"
+                  class="status-badge status-badge--review"
+                >
+                  Needs Review
+                </span>
+              </div>
+
+              <div class="question-row">
+                <div>
+                  <span class="question-number">Question 2</span>
+                  <strong>Do they understand what you offer?</strong>
+                </div>
+
+                <span
+                  id="clarityStatus"
+                  class="status-badge status-badge--review"
+                >
+                  Needs Review
+                </span>
+              </div>
+
+              <div class="question-row">
+                <div>
+                  <span class="question-number">Question 3</span>
+                  <strong>Do they trust your business?</strong>
+                </div>
+
+                <span
+                  id="trustStatus"
+                  class="status-badge status-badge--review"
+                >
+                  Needs Review
+                </span>
+              </div>
+
+              <div class="question-row">
+                <div>
+                  <span class="question-number">Question 4</span>
+                  <strong>Can they easily become customers?</strong>
+                </div>
+
+                <span
+                  id="conversionStatus"
+                  class="status-badge status-badge--review"
+                >
+                  Needs Review
+                </span>
+              </div>
+
+              <div class="question-row">
+                <div>
+                  <span class="question-number">Question 5</span>
+                  <strong>Can you prove what creates growth?</strong>
+                </div>
+
+                <span
+                  id="measurementStatus"
+                  class="status-badge status-badge--full"
+                >
+                  Full Review Required
+                </span>
+              </div>
+            </div>
+          </section>
+
+
+          <!-- ===============================================
+               PRIMARY CONSULTING INSIGHTS
+               =============================================== -->
+
+          <section class="results-panel">
+            <span class="results-kicker">
+              Initial Consulting Priorities
+            </span>
+
+            <h2>What should receive attention first?</h2>
+
+            <div class="insight-grid">
+              <article class="insight-card insight-card--asset">
+                <span class="results-kicker">
+                  Strongest Business Asset
+                </span>
+
+                <h3 id="strength">
+                  Reviewing visible strengths...
+                </h3>
+
+                <p>
+                  This is the most visible existing asset that may already
+                  support customer confidence or business growth.
+                </p>
+              </article>
+
+              <article class="insight-card insight-card--leak">
+                <span class="results-kicker">
+                  Biggest Growth Leak
+                </span>
+
+                <h3 id="opportunity">
+                  Reviewing visible opportunities...
+                </h3>
+
+                <p>
+                  This is the highest-value visible gap identified from
+                  the information available during the initial Snapshot.
+                </p>
+              </article>
+
+              <article class="insight-card insight-card--action">
+                <span class="results-kicker">
+                  First Recommendation
+                </span>
+
+                <h3 id="recommendation">
+                  Preparing your first recommendation...
+                </h3>
+
+                <p>
+                  This is the first action that should be verified and
+                  considered before adding more disconnected marketing
+                  activity.
+                </p>
+              </article>
+            </div>
+          </section>
+
+
+          <!-- ===============================================
+               FULL REVIEW INVESTIGATION
+               =============================================== -->
+
+          <section class="results-panel">
+            <span class="results-kicker">
+              What Comes Next
+            </span>
+
+            <h2>
+              What we’ll investigate during your
+              90-Day Growth Review™
+            </h2>
+
+            <p>
+              The free Snapshot identifies the first visible opportunities.
+              The complete review verifies the evidence, investigates the
+              full customer journey, prioritizes recommendations by business
+              impact, and defines how progress should be measured.
+            </p>
+
+            <div class="investigation-grid">
+              <article class="investigation-card">
+                <h3>Visibility</h3>
+
+                <ul>
+                  <li>Search and local visibility</li>
+                  <li>Google Business Profile completeness</li>
+                  <li>Primary service area clarity</li>
+                  <li>Website and local-market relevance</li>
+                </ul>
+              </article>
+
+              <article class="investigation-card">
+                <h3>Offer Clarity</h3>
+
+                <ul>
+                  <li>Primary services and customer needs</li>
+                  <li>Market positioning and differentiation</li>
+                  <li>Homepage and service-page messaging</li>
+                  <li>Reasons customers should choose the business</li>
+                </ul>
+              </article>
+
+              <article class="investigation-card">
+                <h3>Customer Trust</h3>
+
+                <ul>
+                  <li>Reviews and reputation signals</li>
+                  <li>Project evidence and social proof</li>
+                  <li>Credentials, guarantees, and authority</li>
+                  <li>Competitive trust gaps</li>
+                </ul>
+              </article>
+
+              <article class="investigation-card">
+                <h3>Conversion and Measurement</h3>
+
+                <ul>
+                  <li>Calls to action and contact experience</li>
+                  <li>Lead and conversion tracking</li>
+                  <li>Customer journey friction</li>
+                  <li>Success metrics and revenue impact</li>
+                </ul>
+              </article>
+            </div>
+
+            <ul
+              id="successMetrics"
+              class="verification-list"
+            ></ul>
+          </section>
+
+
+          <!-- ===============================================
+               GROWTH REVIEW CTA
+               =============================================== -->
+
+          <section class="results-panel results-cta">
+            <span class="results-kicker">
+              Complete the Investigation
+            </span>
+
+            <h2>Ready to find every major growth leak?</h2>
+
+            <p>
+              Your free Business Snapshot identified the first visible
+              opportunity. The complete 90-Day Growth Review™ investigates
+              the evidence in greater depth, explains the likely business
+              impact, prioritizes what should happen first, and provides a
+              consultant-reviewed roadmap with measurable next steps.
+            </p>
+
+            <div class="cta-actions">
+              <button
+                type="button"
+                id="growthReviewButton"
+                class="snapshot-button snapshot-button--primary"
+              >
+                Get My 90-Day Growth Review — $299
+              </button>
+
+              <button
+                type="button"
+                id="startOverButton"
+                class="snapshot-button snapshot-button--secondary"
+              >
+                Start Over
+              </button>
+            </div>
+
+            <p class="evidence-note">
+              Evidence before assumptions. The complete review verifies
+              important findings before recommending major business
+              investments.
+            </p>
+          </section>
+
         </div>
 
-        <div id="missingSnapshot" class="control-card" hidden>
+
+        <!-- ===============================================
+             MISSING SNAPSHOT STATE
+             =============================================== -->
+
+        <div
+          id="missingSnapshot"
+          class="control-card"
+          hidden
+        >
           <h2>No Snapshot Was Found</h2>
 
           <p>
-            Please return to the Business Snapshot form and generate a new report.
+            Please return to the Business Snapshot form and generate a new
+            report.
           </p>
 
           <button
@@ -109,6 +776,7 @@
             Return to Business Snapshot
           </button>
         </div>
+
       </div>
     </section>
   </main>
@@ -117,37 +785,83 @@
     const growthReviewBaseUrl =
       "https://globalconceptsmedia.com/growth-review.html";
 
-    const snapshotDashboard = document.getElementById("snapshotDashboard");
-    const missingSnapshot = document.getElementById("missingSnapshot");
-    const growthReviewButton = document.getElementById("growthReviewButton");
-    const startOverButton = document.getElementById("startOverButton");
-    const returnButton = document.getElementById("returnButton");
+    const snapshotDashboard =
+      document.getElementById("snapshotDashboard");
 
-    const fallbackText = "Not clearly stated on the website.";
+    const missingSnapshot =
+      document.getElementById("missingSnapshot");
+
+    const growthReviewButton =
+      document.getElementById("growthReviewButton");
+
+    const startOverButton =
+      document.getElementById("startOverButton");
+
+    const returnButton =
+      document.getElementById("returnButton");
+
+    const fallbackText =
+      "Not clearly stated on the website.";
 
     let activeRecord = null;
     let activeSnapshot = null;
     let activeRequest = null;
 
-    function clean(value, fallback = fallbackText) {
-      if (value === undefined || value === null) {
+    function clean(
+      value,
+      fallback = fallbackText
+    ) {
+      if (
+        value === undefined ||
+        value === null
+      ) {
         return fallback;
       }
 
-      const cleanedValue = String(value).trim();
+      const cleanedValue =
+        String(value).trim();
+
       return cleanedValue || fallback;
     }
 
-    function firstItem(items, fallback = fallbackText) {
-      if (!Array.isArray(items) || items.length === 0) {
+    function firstItem(
+      items,
+      fallback = fallbackText
+    ) {
+      if (
+        !Array.isArray(items) ||
+        items.length === 0
+      ) {
         return fallback;
       }
 
       return clean(items[0], fallback);
     }
 
+    function hasUsefulValue(value) {
+      const normalized =
+        clean(value, "").toLowerCase();
+
+      return Boolean(
+        normalized &&
+        normalized !== fallbackText.toLowerCase() &&
+        normalized !== "needs verification" &&
+        normalized !== "unknown"
+      );
+    }
+
+    function hasUsefulItems(items) {
+      return Boolean(
+        Array.isArray(items) &&
+        items.some(function (item) {
+          return hasUsefulValue(item);
+        })
+      );
+    }
+
     function readStoredJson(key) {
-      const savedValue = sessionStorage.getItem(key);
+      const savedValue =
+        sessionStorage.getItem(key);
 
       if (!savedValue) {
         return null;
@@ -156,7 +870,11 @@
       try {
         return JSON.parse(savedValue);
       } catch (error) {
-        console.error("Could not parse stored Snapshot data:", error);
+        console.error(
+          "Could not parse stored Snapshot data:",
+          error
+        );
+
         return null;
       }
     }
@@ -174,7 +892,10 @@
         "gcmBusinessSnapshotRequest"
       );
 
-      if (!businessRecord && !snapshotResult) {
+      if (
+        !businessRecord &&
+        !snapshotResult
+      ) {
         return null;
       }
 
@@ -183,43 +904,67 @@
           businessRecord ||
           snapshotResult.fullBusinessRecord ||
           snapshotResult,
-        snapshot: snapshotResult || {},
-        request: snapshotRequest || {}
+
+        snapshot:
+          snapshotResult || {},
+
+        request:
+          snapshotRequest || {}
       };
     }
 
     function addMetric(list, text) {
-      const cleanedText = clean(text, "");
+      const cleanedText =
+        clean(text, "");
 
       if (!cleanedText) {
         return;
       }
 
-      const listItem = document.createElement("li");
-      listItem.textContent = cleanedText;
+      const listItem =
+        document.createElement("li");
+
+      listItem.textContent =
+        cleanedText;
+
       list.appendChild(listItem);
     }
 
     function buildMetrics(record, snapshot) {
-      const list = document.getElementById("successMetrics");
+      const list =
+        document.getElementById(
+          "successMetrics"
+        );
+
       list.innerHTML = "";
 
       if (record.qualificationScore) {
         addMetric(
           list,
-          "Qualification Score: " + clean(record.qualificationScore)
+          "Current qualification indicator: " +
+            clean(record.qualificationScore)
         );
       }
 
-      if (record.outreachReadiness || snapshot.growthReadiness) {
+      if (
+        record.outreachReadiness ||
+        snapshot.growthReadiness
+      ) {
         addMetric(
           list,
-          "Growth Readiness: " +
-            clean(record.outreachReadiness || snapshot.growthReadiness)
+          "Current Growth Readiness: " +
+            clean(
+              record.outreachReadiness ||
+              snapshot.growthReadiness
+            )
         );
       }
 
-      if (Array.isArray(record.humanVerificationChecklist)) {
+      if (
+        Array.isArray(
+          record.humanVerificationChecklist
+        )
+      ) {
         record.humanVerificationChecklist
           .slice(0, 3)
           .forEach(function (item) {
@@ -232,61 +977,260 @@
           list,
           clean(
             snapshot.successMetrics,
-            "Lead sources, conversion gaps, local visibility, trust signals, and measurable growth opportunities."
+            "Verify lead sources, conversion gaps, local visibility, trust signals, and measurable growth opportunities."
           )
         );
       }
     }
 
-    function renderSnapshot(record, snapshot) {
-      document.getElementById("businessName").textContent = clean(
-        snapshot.businessName || record.businessName
+    function normalizeScore(value) {
+      const numericValue =
+        Number(value);
+
+      if (!Number.isFinite(numericValue)) {
+        return "—";
+      }
+
+      if (numericValue <= 10) {
+        return Math.max(
+          0,
+          Math.min(10, numericValue)
+        ) + "/10";
+      }
+
+      return Math.max(
+        0,
+        Math.min(100, numericValue)
+      ) + "/100";
+    }
+
+    function setStatus(
+      elementId,
+      label,
+      type
+    ) {
+      const element =
+        document.getElementById(elementId);
+
+      if (!element) {
+        return;
+      }
+
+      element.textContent = label;
+
+      element.className =
+        "status-badge status-badge--" + type;
+    }
+
+    function renderQuestionStatuses(
+      record,
+      snapshot
+    ) {
+      const market =
+        snapshot.market ||
+        record.geographicMarket;
+
+      const hasMarket =
+        hasUsefulValue(market);
+
+      const hasOfferClarity =
+        hasUsefulValue(
+          snapshot.businessSummary ||
+          record.businessSummary
+        ) ||
+        hasUsefulItems(
+          record.productsAndServices
+        );
+
+      const hasTrust =
+        hasUsefulValue(
+          snapshot.strongestArea
+        ) ||
+        hasUsefulItems(
+          record.trustSignals
+        );
+
+      const hasConversionEvidence =
+        hasUsefulItems(
+          record.websiteObservations
+        ) &&
+        hasUsefulItems(
+          record.personalizedOutreachInsights
+        );
+
+      setStatus(
+        "visibilityStatus",
+        hasMarket
+          ? "Visible Foundation"
+          : "Needs Review",
+        hasMarket
+          ? "strong"
+          : "review"
       );
 
-      document.getElementById("industry").textContent = clean(
-        snapshot.industry || record.industry
+      setStatus(
+        "clarityStatus",
+        hasOfferClarity
+          ? "Clear Foundation"
+          : "Needs Review",
+        hasOfferClarity
+          ? "strong"
+          : "review"
       );
 
-      document.getElementById("market").textContent = clean(
-        snapshot.market || record.geographicMarket
+      setStatus(
+        "trustStatus",
+        hasTrust
+          ? "Visible Strength"
+          : "Needs Review",
+        hasTrust
+          ? "strong"
+          : "review"
       );
 
-      document.getElementById("snapshotReadiness").textContent = clean(
+      setStatus(
+        "conversionStatus",
+        hasConversionEvidence
+          ? "Visible Foundation"
+          : "Needs Review",
+        hasConversionEvidence
+          ? "strong"
+          : "review"
+      );
+
+      setStatus(
+        "measurementStatus",
+        "Full Review Required",
+        "full"
+      );
+    }
+
+    function renderSnapshot(
+      record,
+      snapshot
+    ) {
+      const businessName = clean(
+        snapshot.businessName ||
+        record.businessName
+      );
+
+      const industry = clean(
+        snapshot.industry ||
+        record.industry
+      );
+
+      const market = clean(
+        snapshot.market ||
+        record.geographicMarket
+      );
+
+      const readiness = clean(
         snapshot.growthReadiness ||
-          record.growthReadiness ||
-          record.outreachReadiness
+        record.growthReadiness ||
+        record.outreachReadiness
       );
 
-      document.getElementById("summary").textContent = clean(
-        snapshot.businessSummary || record.businessSummary
+      const summary = clean(
+        snapshot.businessSummary ||
+        record.businessSummary
       );
 
-      document.getElementById("strength").textContent = clean(
+      const strength = clean(
         snapshot.strongestArea,
         firstItem(record.trustSignals)
       );
 
-      document.getElementById("opportunity").textContent = clean(
+      const opportunity = clean(
         snapshot.largestOpportunity,
         firstItem(record.growthOpportunities)
       );
 
-      document.getElementById("recommendation").textContent = clean(
+      const recommendation = clean(
         snapshot.highestPriorityRecommendation,
         firstItem(
           record.personalizedOutreachInsights,
-          firstItem(record.growthOpportunities)
+          firstItem(
+            record.growthOpportunities
+          )
         )
       );
 
-      buildMetrics(record, snapshot);
+      document.getElementById(
+        "businessName"
+      ).textContent = businessName;
+
+      document.getElementById(
+        "industry"
+      ).textContent = industry;
+
+      document.getElementById(
+        "market"
+      ).textContent = market;
+
+      document.getElementById(
+        "snapshotReadiness"
+      ).textContent = readiness;
+
+      document.getElementById(
+        "qualificationScore"
+      ).textContent = normalizeScore(
+        snapshot.qualificationScore ||
+        record.qualificationScore
+      );
+
+      document.getElementById(
+        "summary"
+      ).textContent = summary;
+
+      document.getElementById(
+        "strength"
+      ).textContent = strength;
+
+      document.getElementById(
+        "opportunity"
+      ).textContent = opportunity;
+
+      document.getElementById(
+        "recommendation"
+      ).textContent = recommendation;
+
+      document.getElementById(
+        "dashboardStrength"
+      ).textContent = strength;
+
+      document.getElementById(
+        "dashboardOpportunity"
+      ).textContent = opportunity;
+
+      document.getElementById(
+        "dashboardRecommendation"
+      ).textContent = recommendation;
+
+      renderQuestionStatuses(
+        record,
+        snapshot
+      );
+
+      buildMetrics(
+        record,
+        snapshot
+      );
     }
 
     function buildGrowthReviewUrl() {
       const website = clean(
-        (activeRequest && activeRequest.website) ||
-          (activeSnapshot && activeSnapshot.website) ||
-          (activeRecord && activeRecord.website),
+        (
+          activeRequest &&
+          activeRequest.website
+        ) ||
+        (
+          activeSnapshot &&
+          activeSnapshot.website
+        ) ||
+        (
+          activeRecord &&
+          activeRecord.website
+        ),
         ""
       );
 
@@ -294,11 +1238,16 @@
         return growthReviewBaseUrl;
       }
 
-      const params = new URLSearchParams({
-        website: website
-      });
+      const params =
+        new URLSearchParams({
+          website: website
+        });
 
-      return growthReviewBaseUrl + "?" + params.toString();
+      return (
+        growthReviewBaseUrl +
+        "?" +
+        params.toString()
+      );
     }
 
     function showMissingSnapshot() {
@@ -306,33 +1255,65 @@
       missingSnapshot.hidden = false;
     }
 
-    growthReviewButton.addEventListener("click", function () {
-      window.location.href = buildGrowthReviewUrl();
-    });
+    growthReviewButton.addEventListener(
+      "click",
+      function () {
+        window.location.href =
+          buildGrowthReviewUrl();
+      }
+    );
 
-    startOverButton.addEventListener("click", function () {
-      sessionStorage.removeItem("gcmBusinessSnapshotRequest");
-      sessionStorage.removeItem("gcmBusinessSnapshotBusinessRecord");
-      sessionStorage.removeItem("gcmBusinessSnapshotResult");
-      sessionStorage.removeItem("gcmBusinessSnapshotError");
+    startOverButton.addEventListener(
+      "click",
+      function () {
+        sessionStorage.removeItem(
+          "gcmBusinessSnapshotRequest"
+        );
 
-      window.location.href = "business-snapshot.html";
-    });
+        sessionStorage.removeItem(
+          "gcmBusinessSnapshotBusinessRecord"
+        );
 
-    returnButton.addEventListener("click", function () {
-      window.location.href = "business-snapshot.html";
-    });
+        sessionStorage.removeItem(
+          "gcmBusinessSnapshotResult"
+        );
 
-    const savedData = getSnapshotData();
+        sessionStorage.removeItem(
+          "gcmBusinessSnapshotError"
+        );
+
+        window.location.href =
+          "business-snapshot.html";
+      }
+    );
+
+    returnButton.addEventListener(
+      "click",
+      function () {
+        window.location.href =
+          "business-snapshot.html";
+      }
+    );
+
+    const savedData =
+      getSnapshotData();
 
     if (!savedData) {
       showMissingSnapshot();
     } else {
-      activeRecord = savedData.record;
-      activeSnapshot = savedData.snapshot;
-      activeRequest = savedData.request;
+      activeRecord =
+        savedData.record;
 
-      renderSnapshot(activeRecord, activeSnapshot);
+      activeSnapshot =
+        savedData.snapshot;
+
+      activeRequest =
+        savedData.request;
+
+      renderSnapshot(
+        activeRecord,
+        activeSnapshot
+      );
     }
   </script>
 </body>
