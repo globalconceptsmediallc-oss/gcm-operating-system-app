@@ -1,0 +1,1679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+
+  <meta
+    name="robots"
+    content="noindex, nofollow, noarchive"
+  />
+
+  <title>Client Pre-Research | GCM Operations Center</title>
+
+  <style>
+    :root {
+      --navy: #071b33;
+      --navy-light: #0e2c4e;
+      --blue: #1187d9;
+      --blue-dark: #0870b8;
+      --green: #20a66a;
+      --orange: #e8922d;
+      --red: #cf4f4f;
+      --white: #ffffff;
+      --page: #f3f6f9;
+      --card: #ffffff;
+      --text: #172638;
+      --muted: #657386;
+      --border: #dce4ec;
+      --shadow: 0 16px 40px rgba(7, 27, 51, 0.1);
+      --radius: 16px;
+      --max-width: 1180px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family:
+        Inter,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+      color: var(--text);
+      background: var(--page);
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .site-header {
+      background: var(--navy);
+      color: var(--white);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .header-inner {
+      width: min(calc(100% - 32px), var(--max-width));
+      min-height: 76px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+      text-decoration: none;
+    }
+
+    .brand-name {
+      font-size: 1.02rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .brand-subtitle {
+      margin-top: 3px;
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 0.77rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .header-label {
+      color: rgba(255, 255, 255, 0.76);
+      font-size: 0.9rem;
+      text-align: right;
+    }
+
+    .page-shell {
+      width: min(calc(100% - 32px), var(--max-width));
+      margin: 0 auto;
+      padding: 52px 0 72px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
+      gap: 28px;
+      align-items: stretch;
+      margin-bottom: 32px;
+    }
+
+    .hero-main,
+    .hero-side {
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .hero-main {
+      padding: 42px;
+      color: var(--white);
+      background:
+        radial-gradient(
+          circle at top right,
+          rgba(17, 135, 217, 0.35),
+          transparent 42%
+        ),
+        linear-gradient(135deg, var(--navy), var(--navy-light));
+      box-shadow: var(--shadow);
+    }
+
+    .eyebrow {
+      margin: 0 0 14px;
+      color: #62bff7;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      max-width: 760px;
+      font-size: clamp(2.2rem, 5vw, 4rem);
+      line-height: 1.02;
+      letter-spacing: -0.045em;
+    }
+
+    .hero-description {
+      max-width: 720px;
+      margin: 22px 0 0;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 1.08rem;
+      line-height: 1.7;
+    }
+
+    .hero-side {
+      padding: 30px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-side h2 {
+      margin: 0 0 18px;
+      font-size: 1.15rem;
+    }
+
+    .workflow-list {
+      display: grid;
+      gap: 14px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .workflow-item {
+      display: grid;
+      grid-template-columns: 34px 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .workflow-number {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      color: var(--blue);
+      background: #e9f5fd;
+      font-weight: 800;
+    }
+
+    .workflow-copy strong {
+      display: block;
+      margin-bottom: 2px;
+      font-size: 0.96rem;
+    }
+
+    .workflow-copy span {
+      color: var(--muted);
+      font-size: 0.87rem;
+      line-height: 1.45;
+    }
+
+    .panel {
+      margin-top: 28px;
+      padding: 34px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      align-items: flex-start;
+      margin-bottom: 26px;
+    }
+
+    .panel-header h2 {
+      margin: 0;
+      font-size: 1.55rem;
+      letter-spacing: -0.02em;
+    }
+
+    .panel-header p {
+      max-width: 620px;
+      margin: 8px 0 0;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .privacy-badge {
+      flex: 0 0 auto;
+      padding: 8px 12px;
+      border-radius: 999px;
+      color: #1e704f;
+      background: #eaf8f1;
+      font-size: 0.8rem;
+      font-weight: 800;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 20px;
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+    }
+
+    .field-full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      font-size: 0.89rem;
+      font-weight: 750;
+    }
+
+    .required {
+      color: var(--red);
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      border: 1px solid #cdd8e3;
+      border-radius: 11px;
+      color: var(--text);
+      background: var(--white);
+      outline: none;
+      transition:
+        border-color 150ms ease,
+        box-shadow 150ms ease;
+    }
+
+    input,
+    select {
+      min-height: 52px;
+      padding: 0 15px;
+    }
+
+    textarea {
+      min-height: 104px;
+      padding: 14px 15px;
+      resize: vertical;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 4px rgba(17, 135, 217, 0.12);
+    }
+
+    .field-note {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.79rem;
+      line-height: 1.45;
+    }
+
+    .form-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 14px;
+      margin-top: 26px;
+    }
+
+    .button {
+      min-height: 52px;
+      padding: 0 22px;
+      border: 0;
+      border-radius: 11px;
+      font-weight: 800;
+      transition:
+        transform 150ms ease,
+        opacity 150ms ease,
+        background 150ms ease;
+    }
+
+    .button:hover {
+      transform: translateY(-1px);
+    }
+
+    .button:disabled {
+      cursor: not-allowed;
+      opacity: 0.58;
+      transform: none;
+    }
+
+    .button-primary {
+      color: var(--white);
+      background: var(--blue);
+    }
+
+    .button-primary:hover {
+      background: var(--blue-dark);
+    }
+
+    .button-secondary {
+      color: var(--navy);
+      border: 1px solid var(--border);
+      background: var(--white);
+    }
+
+    .status-message {
+      margin: 16px 0 0;
+      padding: 14px 16px;
+      border-radius: 10px;
+      line-height: 1.55;
+    }
+
+    .status-message[hidden] {
+      display: none;
+    }
+
+    .status-working {
+      color: #155b8d;
+      background: #e9f5fd;
+      border: 1px solid #b9def6;
+    }
+
+    .status-error {
+      color: #8b2d2d;
+      background: #fff0f0;
+      border: 1px solid #f2c4c4;
+    }
+
+    .status-success {
+      color: #1e704f;
+      background: #eaf8f1;
+      border: 1px solid #bce6d1;
+    }
+
+    .loading-bar {
+      height: 7px;
+      margin-top: 16px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #dde8f1;
+    }
+
+    .loading-bar[hidden] {
+      display: none;
+    }
+
+    .loading-bar::after {
+      content: "";
+      display: block;
+      width: 38%;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--blue);
+      animation: loading 1.2s infinite ease-in-out;
+    }
+
+    @keyframes loading {
+      from {
+        transform: translateX(-110%);
+      }
+
+      to {
+        transform: translateX(300%);
+      }
+    }
+
+    .results {
+      display: grid;
+      gap: 24px;
+      margin-top: 28px;
+    }
+
+    .results[hidden] {
+      display: none;
+    }
+
+    .result-summary {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(150px, 0.3fr));
+      gap: 18px;
+    }
+
+    .summary-card,
+    .result-card {
+      padding: 26px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--card);
+      box-shadow: 0 8px 24px rgba(7, 27, 51, 0.06);
+    }
+
+    .summary-card h2,
+    .result-card h3 {
+      margin: 0;
+    }
+
+    .business-name {
+      margin-top: 8px;
+      font-size: 1.75rem;
+      letter-spacing: -0.03em;
+    }
+
+    .business-meta {
+      margin: 8px 0 0;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+    }
+
+    .metric-value {
+      margin-top: 8px;
+      font-size: 1.55rem;
+      font-weight: 850;
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 20px;
+    }
+
+    .result-card h3 {
+      font-size: 1.1rem;
+      letter-spacing: -0.01em;
+    }
+
+    .result-card p {
+      margin: 14px 0 0;
+      color: #34475c;
+      line-height: 1.7;
+    }
+
+    .result-card ul {
+      margin: 15px 0 0;
+      padding-left: 20px;
+      color: #34475c;
+    }
+
+    .result-card li {
+      margin: 8px 0;
+      line-height: 1.55;
+    }
+
+    .result-full {
+      grid-column: 1 / -1;
+    }
+
+    .script-block {
+      margin-top: 16px;
+      padding: 18px;
+      border-left: 4px solid var(--blue);
+      border-radius: 8px;
+      background: #f4f9fd;
+      white-space: pre-wrap;
+      line-height: 1.7;
+    }
+
+    .email-block {
+      margin-top: 16px;
+      padding: 18px;
+      border-radius: 10px;
+      background: #f6f8fa;
+    }
+
+    .email-subject {
+      margin-bottom: 14px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+      font-weight: 800;
+    }
+
+    .email-body {
+      white-space: pre-wrap;
+      line-height: 1.7;
+    }
+
+    .result-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .raw-details {
+      margin-top: 10px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .raw-details summary {
+      padding: 14px 16px;
+      cursor: pointer;
+      font-weight: 750;
+      background: #f6f8fa;
+    }
+
+    .raw-json {
+      max-height: 500px;
+      margin: 0;
+      padding: 18px;
+      overflow: auto;
+      color: #d7e7f7;
+      background: #0b1e32;
+      font-family:
+        "SFMono-Regular",
+        Consolas,
+        monospace;
+      font-size: 0.8rem;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    footer {
+      padding: 26px 16px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 0.82rem;
+    }
+
+    @media (max-width: 900px) {
+      .hero,
+      .result-summary {
+        grid-template-columns: 1fr;
+      }
+
+      .result-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .result-full {
+        grid-column: auto;
+      }
+    }
+
+    @media (max-width: 680px) {
+      .header-inner {
+        align-items: flex-start;
+        flex-direction: column;
+        justify-content: center;
+        padding: 18px 0;
+      }
+
+      .header-label {
+        text-align: left;
+      }
+
+      .page-shell {
+        padding-top: 28px;
+      }
+
+      .hero-main,
+      .hero-side,
+      .panel {
+        padding: 24px;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .field-full {
+        grid-column: auto;
+      }
+
+      .panel-header {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="index.html">
+        <span class="brand-name">Global Concepts Media</span>
+        <span class="brand-subtitle">GCM Operations Center</span>
+      </a>
+
+      <div class="header-label">
+        Internal Consultant Tool
+      </div>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <section class="hero">
+      <div class="hero-main">
+        <p class="eyebrow">Client Acquisition Workflow</p>
+
+        <h1>Client Pre-Research</h1>
+
+        <p class="hero-description">
+          Enter a prospective client's website to create the intelligence
+          needed for a more informed, relevant and lower-pressure first
+          conversation.
+        </p>
+      </div>
+
+      <aside class="hero-side">
+        <h2>What this produces</h2>
+
+        <ol class="workflow-list">
+          <li class="workflow-item">
+            <span class="workflow-number">1</span>
+
+            <div class="workflow-copy">
+              <strong>Business understanding</strong>
+              <span>
+                Services, customers, market and observable credibility.
+              </span>
+            </div>
+          </li>
+
+          <li class="workflow-item">
+            <span class="workflow-number">2</span>
+
+            <div class="workflow-copy">
+              <strong>Conversation opportunities</strong>
+              <span>
+                Evidence-based observations and questions without unsupported
+                assumptions.
+              </span>
+            </div>
+          </li>
+
+          <li class="workflow-item">
+            <span class="workflow-number">3</span>
+
+            <div class="workflow-copy">
+              <strong>First-contact preparation</strong>
+              <span>
+                Outreach language, discovery questions and verification needs.
+              </span>
+            </div>
+          </li>
+        </ol>
+      </aside>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h2>Start New Prospect Research</h2>
+
+          <p>
+            A website URL is the only required field. The additional fields
+            help preserve useful prospect context.
+          </p>
+        </div>
+
+        <span class="privacy-badge">Internal Use Only</span>
+      </div>
+
+      <form id="preResearchForm" novalidate>
+        <div class="form-grid">
+          <div class="field field-full">
+            <label for="websiteUrl">
+              Business Website
+              <span class="required">*</span>
+            </label>
+
+            <input
+              id="websiteUrl"
+              name="websiteUrl"
+              type="url"
+              inputmode="url"
+              autocomplete="url"
+              placeholder="https://examplebusiness.com"
+              required
+            />
+
+            <p class="field-note">
+              Enter the business's primary public website.
+            </p>
+          </div>
+
+          <div class="field">
+            <label for="businessName">Business Name</label>
+
+            <input
+              id="businessName"
+              name="businessName"
+              type="text"
+              autocomplete="organization"
+              placeholder="Optional"
+            />
+          </div>
+
+          <div class="field">
+            <label for="prospectSource">Prospect Source</label>
+
+            <select id="prospectSource" name="prospectSource">
+              <option value="">Select a source</option>
+              <option value="Google Search">Google Search</option>
+              <option value="Google Maps">Google Maps</option>
+              <option value="Referral">Referral</option>
+              <option value="Networking">Networking</option>
+              <option value="Chamber or Directory">
+                Chamber or Directory
+              </option>
+              <option value="Existing Relationship">
+                Existing Relationship
+              </option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="contactName">Known Contact</label>
+
+            <input
+              id="contactName"
+              name="contactName"
+              type="text"
+              autocomplete="name"
+              placeholder="Owner or contact name"
+            />
+          </div>
+
+          <div class="field">
+            <label for="location">Market or Location</label>
+
+            <input
+              id="location"
+              name="location"
+              type="text"
+              autocomplete="address-level2"
+              placeholder="City, county or service area"
+            />
+          </div>
+
+          <div class="field field-full">
+            <label for="researchNotes">Initial Notes</label>
+
+            <textarea
+              id="researchNotes"
+              name="researchNotes"
+              placeholder="How you found the business, what caught your attention, or anything you already know."
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button
+            id="runResearchButton"
+            class="button button-primary"
+            type="submit"
+          >
+            Run Client Pre-Research
+          </button>
+
+          <button
+            id="clearButton"
+            class="button button-secondary"
+            type="button"
+          >
+            Clear
+          </button>
+        </div>
+
+        <div
+          id="statusMessage"
+          class="status-message"
+          role="status"
+          aria-live="polite"
+          hidden
+        ></div>
+
+        <div
+          id="loadingBar"
+          class="loading-bar"
+          aria-hidden="true"
+          hidden
+        ></div>
+      </form>
+    </section>
+
+    <section id="resultsSection" class="results" hidden>
+      <div class="result-summary">
+        <article class="summary-card">
+          <span class="metric-label">Prospect</span>
+
+          <h2 id="resultBusinessName" class="business-name">
+            Business
+          </h2>
+
+          <p id="resultBusinessMeta" class="business-meta"></p>
+        </article>
+
+        <article class="summary-card">
+          <span class="metric-label">Qualification</span>
+
+          <div id="resultQualificationScore" class="metric-value">
+            —
+          </div>
+        </article>
+
+        <article class="summary-card">
+          <span class="metric-label">Outreach Readiness</span>
+
+          <div id="resultOutreachReadiness" class="metric-value">
+            —
+          </div>
+        </article>
+      </div>
+
+      <div class="result-grid">
+        <article class="result-card result-full">
+          <h3>Business Summary</h3>
+          <p id="resultBusinessSummary"></p>
+        </article>
+
+        <article class="result-card">
+          <h3>Products and Services</h3>
+          <ul id="resultProducts"></ul>
+        </article>
+
+        <article class="result-card">
+          <h3>Target Customer and Market</h3>
+          <p id="resultTargetCustomer"></p>
+          <p id="resultMarket"></p>
+        </article>
+
+        <article class="result-card">
+          <h3>Observable Trust Signals</h3>
+          <ul id="resultTrustSignals"></ul>
+        </article>
+
+        <article class="result-card">
+          <h3>Website Observations</h3>
+          <ul id="resultWebsiteObservations"></ul>
+        </article>
+
+        <article class="result-card">
+          <h3>Possible Conversation Opportunities</h3>
+          <ul id="resultGrowthOpportunities"></ul>
+        </article>
+
+        <article class="result-card">
+          <h3>Verification Required</h3>
+          <ul id="resultMissingInformation"></ul>
+        </article>
+
+        <article class="result-card result-full">
+          <h3>Personalized Outreach Insights</h3>
+          <ul id="resultOutreachInsights"></ul>
+        </article>
+
+        <article class="result-card result-full">
+          <h3>First Contact Email</h3>
+
+          <div class="email-block">
+            <div id="resultEmailSubject" class="email-subject"></div>
+            <div id="resultEmailBody" class="email-body"></div>
+          </div>
+        </article>
+
+        <article class="result-card result-full">
+          <h3>Pre-Call Opening</h3>
+
+          <div id="resultCallOpening" class="script-block"></div>
+        </article>
+
+        <article class="result-card">
+          <h3>Discovery Questions</h3>
+          <ul id="resultDiscoveryQuestions"></ul>
+        </article>
+
+        <article class="result-card">
+          <h3>Positioning and Next Step</h3>
+          <p id="resultPositioning"></p>
+          <p id="resultNextStep"></p>
+        </article>
+
+        <article class="result-card result-full">
+          <h3>Human Verification Checklist</h3>
+          <ul id="resultVerificationChecklist"></ul>
+        </article>
+
+        <article class="result-card result-full">
+          <h3>Research Actions</h3>
+
+          <div class="result-actions">
+            <button
+              id="copyReportButton"
+              class="button button-primary"
+              type="button"
+            >
+              Copy Pre-Call Brief
+            </button>
+
+            <button
+              id="downloadReportButton"
+              class="button button-secondary"
+              type="button"
+            >
+              Download Brief
+            </button>
+
+            <button
+              id="researchAnotherButton"
+              class="button button-secondary"
+              type="button"
+            >
+              Research Another Prospect
+            </button>
+          </div>
+
+          <details class="raw-details">
+            <summary>View complete Worker response</summary>
+            <pre id="rawJson" class="raw-json"></pre>
+          </details>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    Global Concepts Media · GCM Operations Center · Internal Consultant Use
+  </footer>
+
+  <script>
+    "use strict";
+
+    const WORKER_ENDPOINT =
+      "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+
+    const form = document.getElementById("preResearchForm");
+    const websiteUrlInput = document.getElementById("websiteUrl");
+    const businessNameInput = document.getElementById("businessName");
+    const prospectSourceInput = document.getElementById("prospectSource");
+    const contactNameInput = document.getElementById("contactName");
+    const locationInput = document.getElementById("location");
+    const researchNotesInput = document.getElementById("researchNotes");
+
+    const runResearchButton =
+      document.getElementById("runResearchButton");
+
+    const clearButton =
+      document.getElementById("clearButton");
+
+    const statusMessage =
+      document.getElementById("statusMessage");
+
+    const loadingBar =
+      document.getElementById("loadingBar");
+
+    const resultsSection =
+      document.getElementById("resultsSection");
+
+    const copyReportButton =
+      document.getElementById("copyReportButton");
+
+    const downloadReportButton =
+      document.getElementById("downloadReportButton");
+
+    const researchAnotherButton =
+      document.getElementById("researchAnotherButton");
+
+    let latestResult = null;
+    let latestProspectContext = null;
+
+    function normalizeUrl(value) {
+      const trimmedValue = String(value || "").trim();
+
+      if (!trimmedValue) {
+        return "";
+      }
+
+      if (
+        trimmedValue.startsWith("http://") ||
+        trimmedValue.startsWith("https://")
+      ) {
+        return trimmedValue;
+      }
+
+      return `https://${trimmedValue}`;
+    }
+
+    function showStatus(message, type) {
+      statusMessage.textContent = message;
+      statusMessage.className = `status-message status-${type}`;
+      statusMessage.hidden = false;
+    }
+
+    function hideStatus() {
+      statusMessage.hidden = true;
+      statusMessage.textContent = "";
+      statusMessage.className = "status-message";
+    }
+
+    function setLoading(isLoading) {
+      runResearchButton.disabled = isLoading;
+      clearButton.disabled = isLoading;
+      loadingBar.hidden = !isLoading;
+
+      runResearchButton.textContent = isLoading
+        ? "Researching Business..."
+        : "Run Client Pre-Research";
+    }
+
+    function safeText(value, fallback = "Not established from public evidence.") {
+      if (
+        value === null ||
+        value === undefined ||
+        String(value).trim() === ""
+      ) {
+        return fallback;
+      }
+
+      return String(value).trim();
+    }
+
+    function safeArray(value) {
+      if (Array.isArray(value)) {
+        return value
+          .map((item) => String(item || "").trim())
+          .filter(Boolean);
+      }
+
+      if (typeof value === "string" && value.trim()) {
+        return [value.trim()];
+      }
+
+      return [];
+    }
+
+    function setText(id, value, fallback) {
+      document.getElementById(id).textContent =
+        safeText(value, fallback);
+    }
+
+    function renderList(id, items, emptyMessage) {
+      const list = document.getElementById(id);
+      const normalizedItems = safeArray(items);
+
+      list.innerHTML = "";
+
+      if (normalizedItems.length === 0) {
+        const item = document.createElement("li");
+        item.textContent = emptyMessage;
+        list.appendChild(item);
+        return;
+      }
+
+      normalizedItems.forEach((value) => {
+        const item = document.createElement("li");
+        item.textContent = value;
+        list.appendChild(item);
+      });
+    }
+
+    function getNestedValue(object, path, fallback = "") {
+      return path
+        .split(".")
+        .reduce((value, key) => {
+          if (
+            value &&
+            typeof value === "object" &&
+            Object.prototype.hasOwnProperty.call(value, key)
+          ) {
+            return value[key];
+          }
+
+          return undefined;
+        }, object) ?? fallback;
+    }
+
+    function renderResults(result, prospectContext) {
+      const businessName =
+        result.businessName ||
+        prospectContext.businessName ||
+        "Prospective Business";
+
+      const industry =
+        result.industry ||
+        "Industry requires verification";
+
+      const market =
+        result.geographicMarket ||
+        prospectContext.location ||
+        "Market requires verification";
+
+      setText("resultBusinessName", businessName);
+      setText(
+        "resultBusinessMeta",
+        `${industry} · ${market}`
+      );
+
+      setText(
+        "resultQualificationScore",
+        result.qualificationScore
+          ? `${result.qualificationScore}/10`
+          : "—",
+        "—"
+      );
+
+      setText(
+        "resultOutreachReadiness",
+        result.outreachReadiness,
+        "Needs Verification"
+      );
+
+      setText(
+        "resultBusinessSummary",
+        result.businessSummary
+      );
+
+      renderList(
+        "resultProducts",
+        result.productsAndServices,
+        "Products and services require verification."
+      );
+
+      setText(
+        "resultTargetCustomer",
+        result.targetCustomer,
+        "Target customer requires verification."
+      );
+
+      setText(
+        "resultMarket",
+        result.geographicMarket,
+        "Geographic market requires verification."
+      );
+
+      renderList(
+        "resultTrustSignals",
+        result.trustSignals,
+        "No verified public trust signals were returned."
+      );
+
+      renderList(
+        "resultWebsiteObservations",
+        result.websiteObservations,
+        "No website observations were returned."
+      );
+
+      renderList(
+        "resultGrowthOpportunities",
+        result.growthOpportunities,
+        "No evidence-based conversation opportunities were returned."
+      );
+
+      renderList(
+        "resultMissingInformation",
+        result.missingInformation,
+        "No additional verification requirements were returned."
+      );
+
+      renderList(
+        "resultOutreachInsights",
+        result.personalizedOutreachInsights,
+        "No personalized outreach insights were returned."
+      );
+
+      setText(
+        "resultEmailSubject",
+        getNestedValue(result, "firstContactEmail.subject"),
+        "Subject requires consultant review."
+      );
+
+      setText(
+        "resultEmailBody",
+        getNestedValue(result, "firstContactEmail.body"),
+        "Email body requires consultant review."
+      );
+
+      setText(
+        "resultCallOpening",
+        getNestedValue(result, "discoveryCallScript.opening"),
+        "Call opening requires consultant review."
+      );
+
+      renderList(
+        "resultDiscoveryQuestions",
+        getNestedValue(
+          result,
+          "discoveryCallScript.questions",
+          []
+        ),
+        "Discovery questions require consultant review."
+      );
+
+      setText(
+        "resultPositioning",
+        getNestedValue(
+          result,
+          "discoveryCallScript.positioningStatement"
+        ),
+        "Positioning statement requires consultant review."
+      );
+
+      setText(
+        "resultNextStep",
+        getNestedValue(
+          result,
+          "discoveryCallScript.nextStep"
+        ),
+        "Next step requires consultant review."
+      );
+
+      renderList(
+        "resultVerificationChecklist",
+        result.humanVerificationChecklist,
+        "No human verification checklist was returned."
+      );
+
+      document.getElementById("rawJson").textContent =
+        JSON.stringify(result, null, 2);
+
+      resultsSection.hidden = false;
+
+      resultsSection.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+    }
+
+    function buildPlainTextBrief() {
+      if (!latestResult || !latestProspectContext) {
+        return "";
+      }
+
+      const result = latestResult;
+      const context = latestProspectContext;
+
+      const lines = [
+        "GCM CLIENT PRE-CALL INTELLIGENCE",
+        "",
+        `Business: ${safeText(
+          result.businessName || context.businessName,
+          "Prospective Business"
+        )}`,
+        `Website: ${context.websiteUrl}`,
+        `Industry: ${safeText(
+          result.industry,
+          "Requires verification"
+        )}`,
+        `Market: ${safeText(
+          result.geographicMarket || context.location,
+          "Requires verification"
+        )}`,
+        `Qualification Score: ${safeText(
+          result.qualificationScore,
+          "Not established"
+        )}`,
+        `Outreach Readiness: ${safeText(
+          result.outreachReadiness,
+          "Needs Verification"
+        )}`,
+        "",
+        "BUSINESS SUMMARY",
+        safeText(result.businessSummary),
+        "",
+        "PRODUCTS AND SERVICES",
+        ...safeArray(result.productsAndServices).map(
+          (item) => `- ${item}`
+        ),
+        "",
+        "TRUST SIGNALS",
+        ...safeArray(result.trustSignals).map(
+          (item) => `- ${item}`
+        ),
+        "",
+        "WEBSITE OBSERVATIONS",
+        ...safeArray(result.websiteObservations).map(
+          (item) => `- ${item}`
+        ),
+        "",
+        "POSSIBLE CONVERSATION OPPORTUNITIES",
+        ...safeArray(result.growthOpportunities).map(
+          (item) => `- ${item}`
+        ),
+        "",
+        "VERIFICATION REQUIRED",
+        ...safeArray(result.missingInformation).map(
+          (item) => `- ${item}`
+        ),
+        "",
+        "PERSONALIZED OUTREACH INSIGHTS",
+        ...safeArray(result.personalizedOutreachInsights).map(
+          (item) => `- ${item}`
+        ),
+        "",
+        "FIRST CONTACT EMAIL",
+        `Subject: ${safeText(
+          getNestedValue(result, "firstContactEmail.subject"),
+          "Requires consultant review"
+        )}`,
+        "",
+        safeText(
+          getNestedValue(result, "firstContactEmail.body"),
+          "Requires consultant review"
+        ),
+        "",
+        "PRE-CALL OPENING",
+        safeText(
+          getNestedValue(result, "discoveryCallScript.opening"),
+          "Requires consultant review"
+        ),
+        "",
+        "DISCOVERY QUESTIONS",
+        ...safeArray(
+          getNestedValue(
+            result,
+            "discoveryCallScript.questions",
+            []
+          )
+        ).map((item) => `- ${item}`),
+        "",
+        "POSITIONING",
+        safeText(
+          getNestedValue(
+            result,
+            "discoveryCallScript.positioningStatement"
+          ),
+          "Requires consultant review"
+        ),
+        "",
+        "NEXT STEP",
+        safeText(
+          getNestedValue(result, "discoveryCallScript.nextStep"),
+          "Requires consultant review"
+        ),
+        "",
+        "HUMAN VERIFICATION CHECKLIST",
+        ...safeArray(result.humanVerificationChecklist).map(
+          (item) => `- ${item}`
+        )
+      ];
+
+      if (context.prospectSource) {
+        lines.splice(
+          4,
+          0,
+          `Prospect Source: ${context.prospectSource}`
+        );
+      }
+
+      if (context.contactName) {
+        lines.splice(
+          5,
+          0,
+          `Known Contact: ${context.contactName}`
+        );
+      }
+
+      if (context.researchNotes) {
+        lines.push(
+          "",
+          "INITIAL CONSULTANT NOTES",
+          context.researchNotes
+        );
+      }
+
+      return lines.join("\n");
+    }
+
+    async function runResearch(payload) {
+      const response = await fetch(WORKER_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const responseText = await response.text();
+
+      let responseData;
+
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (error) {
+        throw new Error(
+          `The Worker returned an unreadable response. HTTP ${response.status}.`
+        );
+      }
+
+      if (!response.ok) {
+        const errorMessage =
+          responseData.error ||
+          responseData.message ||
+          `The Worker returned HTTP ${response.status}.`;
+
+        throw new Error(errorMessage);
+      }
+
+      if (
+        responseData &&
+        typeof responseData === "object" &&
+        responseData.businessRecordData &&
+        typeof responseData.businessRecordData === "object"
+      ) {
+        return {
+          ...responseData.businessRecordData,
+          businessRecord:
+            responseData.businessRecord ||
+            responseData.businessRecordData.businessRecord
+        };
+      }
+
+      return responseData;
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      hideStatus();
+      resultsSection.hidden = true;
+      latestResult = null;
+
+      const websiteUrl = normalizeUrl(websiteUrlInput.value);
+
+      if (!websiteUrl) {
+        showStatus(
+          "Enter the prospective client's website URL.",
+          "error"
+        );
+
+        websiteUrlInput.focus();
+        return;
+      }
+
+      try {
+        new URL(websiteUrl);
+      } catch (error) {
+        showStatus(
+          "Enter a complete and valid website URL.",
+          "error"
+        );
+
+        websiteUrlInput.focus();
+        return;
+      }
+
+      websiteUrlInput.value = websiteUrl;
+
+      const prospectContext = {
+        websiteUrl,
+        businessName: businessNameInput.value.trim(),
+        prospectSource: prospectSourceInput.value,
+        contactName: contactNameInput.value.trim(),
+        location: locationInput.value.trim(),
+        researchNotes: researchNotesInput.value.trim()
+      };
+
+      latestProspectContext = prospectContext;
+
+      const workerPayload = {
+        websiteUrl,
+        businessName: prospectContext.businessName,
+        email: "",
+        requestType: "client-pre-research",
+        prospectContext: {
+          source: prospectContext.prospectSource,
+          contactName: prospectContext.contactName,
+          location: prospectContext.location,
+          notes: prospectContext.researchNotes
+        }
+      };
+
+      setLoading(true);
+
+      showStatus(
+        "Collecting public website evidence and preparing pre-call intelligence. This may take up to a minute.",
+        "working"
+      );
+
+      try {
+        const result = await runResearch(workerPayload);
+
+        if (!result || typeof result !== "object") {
+          throw new Error(
+            "The Worker did not return a valid Business Record."
+          );
+        }
+
+        latestResult = result;
+
+        renderResults(result, prospectContext);
+
+        showStatus(
+          "Client pre-research completed. Review every observation before using it in outreach.",
+          "success"
+        );
+      } catch (error) {
+        console.error("Client pre-research failed:", error);
+
+        showStatus(
+          error instanceof Error
+            ? error.message
+            : "Client pre-research could not be completed.",
+          "error"
+        );
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    clearButton.addEventListener("click", () => {
+      form.reset();
+      hideStatus();
+      resultsSection.hidden = true;
+      latestResult = null;
+      latestProspectContext = null;
+      websiteUrlInput.focus();
+    });
+
+    researchAnotherButton.addEventListener("click", () => {
+      form.reset();
+      hideStatus();
+      resultsSection.hidden = true;
+      latestResult = null;
+      latestProspectContext = null;
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+      });
+
+      setTimeout(() => {
+        websiteUrlInput.focus();
+      }, 350);
+    });
+
+    copyReportButton.addEventListener("click", async () => {
+      const report = buildPlainTextBrief();
+
+      if (!report) {
+        showStatus(
+          "There is no completed pre-call brief to copy.",
+          "error"
+        );
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(report);
+
+        showStatus(
+          "The pre-call intelligence brief was copied.",
+          "success"
+        );
+      } catch (error) {
+        showStatus(
+          "The browser could not copy the report automatically.",
+          "error"
+        );
+      }
+    });
+
+    downloadReportButton.addEventListener("click", () => {
+      const report = buildPlainTextBrief();
+
+      if (!report) {
+        showStatus(
+          "There is no completed pre-call brief to download.",
+          "error"
+        );
+        return;
+      }
+
+      const businessName =
+        latestResult?.businessName ||
+        latestProspectContext?.businessName ||
+        "prospect";
+
+      const safeFileName = businessName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+
+      const blob = new Blob([report], {
+        type: "text/plain;charset=utf-8"
+      });
+
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = downloadUrl;
+      link.download =
+        `${safeFileName || "prospect"}-pre-call-intelligence.txt`;
+
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      URL.revokeObjectURL(downloadUrl);
+
+      showStatus(
+        "The pre-call intelligence brief was downloaded.",
+        "success"
+      );
+    });
+
+    websiteUrlInput.focus();
+  </script>
+</body>
+</html>
