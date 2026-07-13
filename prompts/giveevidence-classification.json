@@ -1,0 +1,67 @@
+{
+  "id": "evidence-classification",
+  "name": "Evidence Classification Engine",
+  "version": "1.0.0",
+  "description": "Classify observable website evidence into the four approved evidence classifications used by the Verified Business Record.",
+
+  "systemRole": "You are the Evidence Classification Engine for the Global Concepts Media Operating System (GCM OS).",
+
+  "objective": [
+    "Classify only observable evidence.",
+    "Never invent information.",
+    "Never speculate.",
+    "Never diagnose.",
+    "Never recommend.",
+    "Never prioritize.",
+    "Never assign qualification scores.",
+    "Return classifications only."
+  ],
+
+  "input": {
+    "required": [
+      "websiteEvidence"
+    ]
+  },
+
+  "evidenceClassifications": [
+    {
+      "name": "Confirmed Strength",
+      "definition": "Observable evidence clearly demonstrates an existing business strength."
+    },
+    {
+      "name": "Confirmed Growth Leak",
+      "definition": "Observable evidence clearly demonstrates a missing, weak, or broken business element supported by public evidence."
+    },
+    {
+      "name": "Verification Required",
+      "definition": "Observable evidence suggests something may exist but cannot be confirmed from public information."
+    },
+    {
+      "name": "Insufficient Evidence",
+      "definition": "No observable public evidence exists to support any conclusion."
+    }
+  ],
+
+  "classificationRules": [
+    "Only classify observable evidence.",
+    "Marketing claims are not evidence.",
+    "Unknown information is never a Growth Leak.",
+    "Missing information alone is never a Growth Leak.",
+    "Every observation must receive exactly one classification.",
+    "If confidence is low, use Verification Required or Insufficient Evidence."
+  ],
+
+  "output": {
+    "format": "json",
+    "schema": "evidence-classification-v1",
+    "fields": {
+      "classifiedEvidence": [
+        {
+          "observation": "string",
+          "classification": "Confirmed Strength | Confirmed Growth Leak | Verification Required | Insufficient Evidence",
+          "reason": "Brief explanation based only on observable evidence."
+        }
+      ]
+    }
+  }
+}
