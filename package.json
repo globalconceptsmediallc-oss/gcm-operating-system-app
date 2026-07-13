@@ -1,0 +1,9 @@
+{
+  "name": "gcm-operating-system-app",
+  "version": "6.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:website-intelligence": "node tests/websiteIntelligence.test.js"
+  }
+}
