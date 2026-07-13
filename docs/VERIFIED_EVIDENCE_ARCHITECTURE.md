@@ -1,400 +1,238 @@
-# VERIFIED EVIDENCE ARCHITECTURE
+# GCM OS ARCHITECTURE
 
-**Document Version:** 1.0
+**Document Version:** 2.0
 
 **Status:** LOCKED
 
 **Last Updated:** 2026-07-12
 
----
+------------------------------------------------------------------------
 
 # Purpose
 
-This document defines how evidence is collected, verified, classified, and used throughout the Global Concepts Media Operating System (GCM OS).
+This document defines the production architecture of the Global Concepts Media Operating System (GCM OS).
 
-The purpose of this architecture is to ensure that every consulting recommendation is supported by observable evidence rather than assumptions.
+It describes how evidence is collected, verified, organized into consulting capabilities, transformed into a Verified Business Record, converted into consulting intelligence, and ultimately delivered through the client-facing **90-Day Growth Review™**.
 
-This architecture extends the Business Record by introducing a Verified Business Record that becomes the single source of truth for all consulting intelligence.
+The **Verified Business Record** is the single source of truth for all consulting intelligence.
 
----
+Detailed evidence collection and verification rules are defined in:
 
-# Core Principle
+**docs/VERIFIED_EVIDENCE_ARCHITECTURE.md**
 
-## Evidence Before Assumptions
+------------------------------------------------------------------------
 
-GCM OS shall never present assumptions as verified facts.
+# Core Architecture
 
-Every recommendation must be traceable to one or more verified evidence sources or clearly identified as requiring verification.
+```
+Public Evidence
+Client Evidence
+Connected Evidence
+        ↓
+Evidence Collection Engines
+        ↓
+Evidence Packages
+        ↓
+Verified Business Record
+        ↓
+Evidence Classification
+        ↓
+Growth Intelligence
+        ↓
+Consulting Knowledge
+        ↓
+90-Day Growth Review
+        ↓
+Implementation Options
+        ↓
+Measurement
+        ↓
+Continuous Improvement
+```
 
-Unknown information is never treated as evidence.
+Every layer has one clearly defined responsibility.
 
-Missing information is never automatically classified as a Growth Leak.
+------------------------------------------------------------------------
 
----
+# Architectural Principles
 
-# Evidence Hierarchy
+- Evidence Before Assumptions
+- Verified Business Record First
+- Single Responsibility
+- Capability-Based Architecture
+- Observable Evidence
+- Traceable Recommendations
+- Modular Growth
+- One Capability = One Consulting Question
+- Every Recommendation Requires Evidence
+- Unknown Information Never Equals Failure
 
-## Tier 1 — Public Evidence
+------------------------------------------------------------------------
 
-Collected without client permission.
+# Consulting Question Principle
 
-Examples
+Every capability exists to answer exactly one consulting question.
+
+| Capability | Consulting Question |
+|------------|---------------------|
+| Website Intelligence | What does the business communicate publicly? |
+| SEMrush Intelligence | How visible is the business in search? |
+| Google Business Profile Intelligence | How does the business appear in Google Maps and local search? |
+| PageSpeed Intelligence | How well does the website perform technically? |
+| Contact Enrichment | Who should be contacted and how? |
+| Public Presence Intelligence | Where does the business maintain an official presence? |
+| Business Value Intelligence | What measurable business impact could improvements create? |
+
+Future capabilities begin by defining the consulting question before implementation.
+
+------------------------------------------------------------------------
+
+# Layer 1 — Evidence Collection
+
+Purpose
+
+Collect verified evidence.
+
+Evidence may originate from:
+
+## Public Evidence
 
 - Business Website
 - SEMrush
 - Ahrefs
 - Google Business Profile
-- Google PageSpeed Insights
-- Public Social Media
+- Google PageSpeed
+- Public Social Platforms
 - Reviews
-- Public Business Records
 - Local Listings
-- Public Trust Signals
+- Public Business Records
 
-Status
+## Client Evidence
 
-Verified
-
----
-
-## Tier 2 — Client Evidence
-
-Provided directly by the client.
-
-Examples
-
-- Average Project Value
-- Monthly Leads
-- Close Rate
-- Staff Size
+- Business Questionnaire
+- Business Metrics
+- Goals
 - Capacity
-- Marketing Budget
-- Business Goals
-- Internal Processes
-- Customer Lifetime Value
+- Revenue Inputs
 
-Status
-
-Client Verified
-
----
-
-## Tier 3 — Connected Evidence
-
-Requires account access.
-
-Examples
+## Connected Evidence
 
 - Google Analytics
-- Google Search Console
+- Search Console
 - Google Ads
 - Meta Ads
 - CRM
 - Call Tracking
-- Marketing Automation
-- Internal Dashboards
 
-Status
+Evidence Collection never creates consulting recommendations.
 
-Connected Verified
+------------------------------------------------------------------------
 
----
+# Layer 2 — Evidence Collection Engines
 
-# Evidence Packages
+Purpose
 
-Every intelligence engine produces a standardized Evidence Package.
+Transform evidence into standardized Evidence Packages.
 
-Example
+Each engine
 
-Website Intelligence
+- collects evidence
+- validates evidence
+- normalizes evidence
+- records confidence
+- records source
+- never creates recommendations
 
-↓
+------------------------------------------------------------------------
 
-Evidence Package
+# Layer 3 — Verified Business Record
 
-{
-    source
-    status
-    collectedAt
-    findings
-    metrics
-    confidence
-}
+The Verified Business Record is the permanent consulting record.
 
-Every engine follows the same structure.
+It combines every verified Evidence Package into one standardized structure.
 
-Examples
+Every downstream engine consumes only the Verified Business Record.
 
-- Website Intelligence
-- SEMrush Intelligence
-- Google Business Profile Intelligence
-- PageSpeed Intelligence
-- Public Presence Intelligence
-- Client Verification
-- Connected Accounts
+------------------------------------------------------------------------
 
----
+# Layer 4 — Evidence Classification
 
-# Verified Business Record
+Purpose
 
-The Verified Business Record becomes the single source of truth.
+Determine whether each observation represents
 
-Architecture
+- Confirmed Strength
+- Confirmed Growth Leak
+- Verification Required
+- Insufficient Evidence
 
-Evidence Packages
+Only Confirmed Growth Leaks become consulting priorities.
 
-↓
+------------------------------------------------------------------------
 
-Verified Business Record
+# Layer 5 — Growth Intelligence
 
-↓
+Growth Intelligence prioritizes verified business constraints.
 
-Evidence Classification
+It never treats
 
-↓
+- missing information
+- assumptions
+- unknown values
 
-Growth Intelligence
+as Growth Leaks.
 
-↓
+------------------------------------------------------------------------
 
-Consulting Knowledge
+# Layer 6 — Consulting Knowledge
 
-↓
+Consulting Knowledge transforms verified Growth Intelligence into
 
-Growth Review
+- recommendations
+- implementation priorities
+- business impact
+- measurable success metrics
 
-No consulting engine should read directly from raw evidence.
+------------------------------------------------------------------------
 
-Every consulting decision must originate from the Verified Business Record.
+# Layer 7 — 90-Day Growth Review™
 
----
-
-# Evidence Classification
-
-Every observation must be classified before recommendations are created.
-
-Allowed classifications
-
-• Confirmed Strength
-
-• Confirmed Growth Leak
-
-• Verification Required
-
-• Insufficient Evidence
-
-No additional classifications are permitted.
-
----
-
-# Growth Intelligence Rules
-
-Growth Intelligence may only create Growth Leaks from:
-
-✓ Confirmed Growth Leaks
-
-Growth Intelligence may never create Growth Leaks from:
-
-✗ Missing Information
-
-✗ Unknown Values
-
-✗ Incomplete Data
-
-✗ Assumptions
-
----
-
-# Verification Required
-
-Verification Required identifies information that cannot be confirmed using public evidence.
-
-Verification Required is not a consulting recommendation.
-
-Verification Required identifies additional evidence needed before conclusions can be made.
-
-Examples
-
-- Search Console Performance
-- Google Analytics
-- Conversion Rate
-- Cost Per Lead
-- Monthly Revenue
-- Close Rate
-
----
-
-# Consulting Knowledge Rules
-
-Consulting Knowledge creates recommendations only for:
-
-Confirmed Growth Leaks
-
-Verification Required items receive:
-
-Verification Tasks
-
-not implementation recommendations.
-
----
-
-# Business Snapshot Rules
-
-The free Business Snapshot may include
-
-✓ Confirmed Strengths
-
-✓ Observable Opportunities
-
-✓ Verification Required
-
-The Snapshot may not claim
-
-- revenue loss
-- conversion problems
-- SEO problems
-- trust problems
-- growth limitations
-
-unless supported by verified evidence.
-
----
-
-# Verified Business Growth Assessment™
-
-The paid consulting product begins with evidence verification.
-
-Evidence sources may include
-
-- Website Intelligence
-- SEMrush
-- Google Business Profile
-- PageSpeed
-- Public Presence
-- Client Questionnaire
-
-The completed Verified Business Record becomes the foundation for the final deliverable.
-
----
-
-# 90-Day Growth Review™
-
-The Growth Review is generated exclusively from the Verified Business Record.
+The Growth Review is the primary client deliverable.
 
 Every recommendation must include
 
-• Evidence Source
+- Evidence Source
+- Evidence Classification
+- Business Impact
+- Success Metric
+- Verification Status
 
-• Evidence Classification
+------------------------------------------------------------------------
 
-• Business Impact
+# Architecture Rules
 
-• Success Metric
+- Evidence is collected before intelligence.
+- Intelligence is created before recommendations.
+- Recommendations require evidence.
+- Unknown information remains unknown.
+- Evidence remains traceable.
+- Every capability answers one consulting question.
+- Every capability strengthens the Verified Business Record.
+- Client-facing outputs consume only the Verified Business Record.
 
-• Verification Status
+------------------------------------------------------------------------
 
----
+# Relationship to Core Documents
 
-# Engine Architecture
+- START_HERE.md
+- GCM_OS_PRODUCT_BLUEPRINT.md
+- PROJECT_STATUS.md
+- CAPABILITIES.md
+- DECISIONS.md
+- VERIFIED_EVIDENCE_ARCHITECTURE.md
 
-Website Intelligence
+------------------------------------------------------------------------
 
-↓
+# Long-Term Objective
 
-Business Classification
-
-↓
-
-SEMrush Intelligence
-
-↓
-
-Google Business Profile Intelligence
-
-↓
-
-PageSpeed Intelligence
-
-↓
-
-Public Presence Intelligence
-
-↓
-
-Client Verification
-
-↓
-
-Verified Business Record
-
-↓
-
-Evidence Classification
-
-↓
-
-Growth Intelligence
-
-↓
-
-Consulting Knowledge
-
-↓
-
-90-Day Growth Review Generator
-
-↓
-
-Presentation Engine
-
-↓
-
-Browser / PDF Output
-
----
-
-# Architectural Principles
-
-• Evidence Before Assumptions
-
-• Single Source of Truth
-
-• One Engine = One Responsibility
-
-• Evidence is Collected Before Intelligence
-
-• Intelligence is Created Before Recommendations
-
-• Recommendations Require Evidence
-
-• Unknown Information Is Never Treated As Failure
-
-• Every Recommendation Must Be Traceable
-
-• Every Recommendation Must Produce a Measurable Business Outcome
-
----
-
-# Product Positioning
-
-Product Purchased
-
-Verified Business Growth Assessment™
-
-Deliverable Produced
-
-90-Day Growth Review™
-
-The assessment gathers and verifies evidence.
-
-The Growth Review transforms verified evidence into prioritized consulting recommendations and a measurable 90-day roadmap.
-
----
-
-# Status
-
-LOCKED
-
-Future engines shall conform to this architecture.
-
-Any modification requires an architecture decision.
+Build a modular Consulting Operating System that transforms verified evidence into trusted consulting intelligence, produces an evidence-based 90-Day Growth Review™, and supports every stage of the Global Concepts Media consulting lifecycle.
