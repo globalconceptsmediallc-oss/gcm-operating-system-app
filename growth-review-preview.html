@@ -6,7 +6,8 @@
     name="viewport"
     content="width=device-width, initial-scale=1.0"
   />
-  <title>J&J Roofing Solutions — 90-Day Growth Review</title>
+
+  <title>Cenvar Roofing — 90-Day Growth Review</title>
 
   <style>
     :root {
@@ -53,6 +54,12 @@
       font-size: 0.9rem;
     }
 
+    .preview-toolbar-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
     .preview-toolbar button {
       padding: 11px 16px;
       border: 0;
@@ -63,8 +70,29 @@
       cursor: pointer;
     }
 
+    .preview-toolbar button.secondary {
+      border: 1px solid #c9d3df;
+      background: #ffffff;
+      color: #172033;
+    }
+
+    .test-notice {
+      margin-bottom: 18px;
+      padding: 14px 16px;
+      border: 1px solid #b8d9ce;
+      border-radius: 14px;
+      background: #f1faf7;
+      color: #24594c;
+      line-height: 1.5;
+    }
+
+    .test-notice strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
     #reportRoot:empty::before {
-      content: "Generating Growth Review preview...";
+      content: "Generating Cenvar Roofing Growth Review...";
       display: block;
       padding: 40px;
       border-radius: 18px;
@@ -98,7 +126,8 @@
         background: #ffffff;
       }
 
-      .preview-toolbar {
+      .preview-toolbar,
+      .test-notice {
         display: none;
       }
 
@@ -113,15 +142,32 @@
   <main class="preview-shell">
     <div class="preview-toolbar">
       <div>
-        <strong>Growth Review Preview</strong>
+        <strong>Cenvar Roofing Client-Test Review</strong>
         <span>
-          Real-world browser preview using the complete tested GCM OS pipeline.
+          Real public-business evidence running through the complete GCM OS pipeline.
         </span>
       </div>
 
-      <button id="printButton" type="button">
-        Print / Save as PDF
-      </button>
+      <div class="preview-toolbar-actions">
+        <button
+          id="reloadButton"
+          class="secondary"
+          type="button"
+        >
+          Regenerate Review
+        </button>
+
+        <button id="printButton" type="button">
+          Print / Save as PDF
+        </button>
+      </div>
+    </div>
+
+    <div class="test-notice">
+      <strong>Client-test model</strong>
+      This report uses publicly observable information about Cenvar Roofing.
+      Internal performance, financial, analytics, advertising, and sales-process
+      information remains marked for verification.
     </div>
 
     <div id="reportRoot"></div>
@@ -136,57 +182,147 @@
   <script>
     "use strict";
 
+    /*
+      First real-client test fixture.
+
+      This record contains only publicly observable information.
+      Unknown internal information is intentionally listed under
+      missingInformation rather than being assumed.
+    */
+
     const previewBusinessRecord = {
-      businessName: "J&J Roofing Solutions",
-      website: "https://jjroofingsolutions.com",
-      industry: "Roofing Contractor",
+      businessName: "Cenvar Roofing",
+      website: "https://www.cenvarroofing.com/",
+      industry: "Roofing and Exterior Services",
 
       businessSummary:
-        "A local roofing contractor serving residential property owners.",
+        "Cenvar Roofing is an established regional roofing company serving multiple markets across Virginia, West Virginia, Tennessee, Maryland, and Pennsylvania. Its public website presents residential roofing, roof repair, specialty roofing, gutters, financing, warranties, location-specific service pages, customer reviews, and free-estimate conversion paths.",
 
       productsAndServices: [
-        "Roof replacement",
+        "Residential roof replacement",
         "Roof repair",
-        "Storm damage inspections"
+        "Shingle roofing",
+        "Metal roofing",
+        "Synthetic slate and specialty roofing",
+        "Gutter installation",
+        "Commercial roofing",
+        "Solar services through the associated Cenvar Solar business",
+        "Roof financing",
+        "Free roofing estimates"
       ],
 
       targetCustomer:
-        "Homeowners who need roof repair or replacement services.",
+        "Homeowners, property owners, and selected commercial customers seeking roof replacement, roof repair, exterior services, financing, warranties, and professionally managed installation.",
 
       geographicMarket:
-        "Local residential roofing market.",
+        "Regional multi-location service footprint across Virginia, West Virginia, Tennessee, Maryland, and Pennsylvania.",
 
       trustSignals: [
-        "Licensed roofing contractor"
+        "Dedicated roofing review content with customer testimonials",
+        "Location-specific customer reviews",
+        "BBB Accredited Business with an A+ rating",
+        "Published licensing and insurance language",
+        "Owens Corning Platinum Preferred contractor positioning",
+        "10-year workmanship and 50-year shingle warranty language",
+        "No-money-down-until-satisfied positioning",
+        "Project examples and recent roofing job content",
+        "Location-specific team and leadership information",
+        "Established multi-location service presence"
       ],
 
       websiteObservations: [
-        "Customer reviews are not prominently displayed.",
-        "The estimate call to action could be clearer.",
-        "Contact information is available."
+        "The website contains a structured multi-location architecture.",
+        "Location pages provide localized services, contact information, proof, and calls to action.",
+        "Customer reviews and project proof are prominently incorporated throughout the site.",
+        "Financing information is available.",
+        "Free estimate calls to action are visible.",
+        "The website communicates warranties, licensing, insurance, and contractor credentials.",
+        "The public website appears substantially more mature than a typical emerging local contractor.",
+        "The number of locations and breadth of market coverage make market-level performance and attribution more relevant than foundational service-area clarification.",
+        "Public evidence alone does not confirm location-level conversion performance.",
+        "Public evidence alone does not confirm lead attribution, marketing efficiency, close rate, customer acquisition cost, or revenue contribution."
       ],
 
       growthOpportunities: [
-        "Place stronger customer proof near the primary call to action.",
-        "Create a clearer request-an-estimate path.",
-        "Establish conversion tracking."
+        "Verify location-level organic visibility and compare performance across markets.",
+        "Measure conversion rates by location, service, landing page, and traffic source.",
+        "Confirm whether calls, forms, estimates, and booked opportunities are attributed to the correct market and campaign.",
+        "Identify underperforming location pages and high-value service gaps.",
+        "Evaluate whether strong review and trust assets are consistently connected to conversion performance.",
+        "Establish executive reporting that connects visibility, qualified leads, booked opportunities, close rate, and revenue contribution.",
+        "Evaluate competitive differentiation in mature and expansion markets.",
+        "Review lead routing and follow-up consistency across locations."
       ],
 
       missingInformation: [
-        "The number and quality of customer reviews require verification.",
-        "Current website conversion performance is unknown."
+        "Current organic search visibility by location requires verification.",
+        "Google Business Profile completeness and activity by location require verification.",
+        "Current website traffic by market requires verification.",
+        "Calls, forms, estimates, and booked opportunities by source require verification.",
+        "Location-level conversion rates require verification.",
+        "Lead quality by source and market requires verification.",
+        "Close rate requires verification.",
+        "Average residential and commercial project value requires verification.",
+        "Customer acquisition cost requires verification.",
+        "Advertising spend and performance require verification.",
+        "Lead routing and follow-up standards require verification.",
+        "Operational capacity by market requires verification.",
+        "Revenue contribution by channel and location requires verification."
       ],
 
       contactEnrichment: {
-        primaryPhone: "321-555-0100",
-        contactPage: "https://jjroofingsolutions.com/contact"
+        primaryEmail: "contact@cenvarroofing.com",
+        primaryPhone: "(434) 439-4308",
+        contactPage: "https://www.cenvarroofing.com/contact",
+        estimatePage: "https://www.cenvarroofing.com/free-roofing-estimate",
+        locationsPage: "https://www.cenvarroofing.com/locations",
+        financingPage: "https://www.cenvarroofing.com/roof-financing",
+        reviewsPage: "https://www.cenvarroofing.com/roofing-reviews"
       },
 
       publicPresence: {
-        facebook: true
+        website: {
+          present: true,
+          url: "https://www.cenvarroofing.com/"
+        },
+        locations: {
+          present: true,
+          url: "https://www.cenvarroofing.com/locations"
+        },
+        reviews: {
+          present: true,
+          url: "https://www.cenvarroofing.com/roofing-reviews"
+        },
+        bbb: {
+          present: true,
+          url: "https://www.bbb.org/us/va/lynchburg/profile/roofing-contractors/cenvar-roofing-and-solar-0613-90005763"
+        },
+        socialProfiles: {
+          present: false,
+          status: "Requires verification"
+        },
+        googleBusinessProfiles: {
+          present: false,
+          status: "Requires verification by location"
+        }
       },
 
-      successMetrics: []
+      successMetrics: [
+        "Organic visibility by location and primary roofing service",
+        "Google Business Profile discovery and customer actions by location",
+        "Qualified phone calls by source and market",
+        "Qualified form submissions by source and market",
+        "Estimate requests by location and service",
+        "Booked opportunities",
+        "Website conversion rate",
+        "Landing-page conversion rate",
+        "Lead quality",
+        "Lead-to-estimate rate",
+        "Estimate-to-sale close rate",
+        "Average project value",
+        "Customer acquisition cost",
+        "Revenue contribution by source and location"
+      ]
     };
 
     document
@@ -195,10 +331,17 @@
         window.print();
       });
 
+    document
+      .getElementById("reloadButton")
+      .addEventListener("click", function () {
+        renderPreview();
+      });
+
     renderPreview();
 
     function renderPreview() {
       const root = document.getElementById("reportRoot");
+      root.innerHTML = "";
 
       try {
         confirmPipelineLoaded();
@@ -231,10 +374,19 @@
           root,
           presentationModel
         );
+
+        document.title =
+          previewBusinessRecord.businessName +
+          " — 90-Day Growth Review";
       } catch (error) {
+        console.error(error);
+
         root.innerHTML =
           '<div class="error-box">' +
+          "<div>Growth Review generation failed.</div>" +
+          "<div style=\"margin-top:8px;font-weight:400;\">" +
           escapeHtml(error.message) +
+          "</div>" +
           "</div>";
       }
     }
