@@ -1,6 +1,6 @@
 # GCM OS ENGINEERING GOVERNANCE
 
-**Document Version:** 1.0
+**Document Version:** 1.1
 
 **Status:** Active
 
@@ -68,7 +68,7 @@ Avoid overlapping responsibilities.
 
 ---
 
-## 4. Build One Thing At A Time
+## 4. Build One Thing at a Time
 
 Only one production task is active at any time.
 
@@ -78,178 +78,15 @@ A task is completed before the next begins.
 
 ## 5. Test Before Continuing
 
-Every production change is:
+Every production change follows this sequence:
 
+```text
 Build
-
-↓
-
+  ↓
 Deploy
-
-↓
-
+  ↓
 Test
-
-↓
-
+  ↓
 Verify
-
-↓
-
+  ↓
 Lock
-
-Only after verification may the next task begin.
-
----
-
-## 6. Protect Production
-
-Working production features are never rewritten without a documented engineering reason.
-
-Backward compatibility is maintained whenever practical.
-
----
-
-## 7. Documentation Is Engineering
-
-Documentation is part of the product.
-
-A decision is not complete until its required documentation has been updated or formally scheduled.
-
----
-
-# Decision Lifecycle
-
-Every significant engineering decision follows the same lifecycle.
-
-```
-Idea
-    ↓
-Discussion
-    ↓
-Decision
-    ↓
-Classification
-    ↓
-Documentation Tasks
-    ↓
-Engineering Tasks
-    ↓
-Verification
-    ↓
-LOCKED
-```
-
-No step may be skipped.
-
----
-
-# Decision Classification
-
-Every decision receives exactly one classification.
-
-- Current Sprint
-- Current Phase
-- Architecture
-- Future Phase
-- Product Backlog
-- Rejected
-
-Only one classification is permitted.
-
----
-
-# Decision Closeout
-
-Every significant discussion ends with a Decision Closeout.
-
-Decision Closeout includes:
-
-- Decision ID
-- Title
-- Classification
-- Required Documentation
-- Required Engineering Changes
-- Current Sprint Impact
-- Status
-
-No decision is considered complete until Decision Closeout exists.
-
----
-
-# LOCKED Definition
-
-LOCKED has a specific engineering meaning.
-
-A decision is LOCKED only when:
-
-- Classification assigned
-- Engineering impact identified
-- Documentation requirements identified
-- Documentation completed or scheduled
-- Current sprint impact confirmed
-- Decision verified
-
-Agreement alone does not mean LOCKED.
-
----
-
-# Current Sprint Protection
-
-Future ideas never interrupt the current sprint.
-
-Future work is documented.
-
-Current work is completed.
-
-Only after the current sprint is complete may future work begin.
-
----
-
-# Documentation Standards
-
-Every permanent document must have:
-
-- Purpose
-- Status
-- Version
-- Authority
-- Last Updated
-
-Every document must have one clearly defined responsibility.
-
-Avoid duplicate documentation.
-
----
-
-# Engineering Continuity
-
-Every new engineering session begins by reading:
-
-1. 00_START_HERE.md
-2. 01_ENGINEERING_GOVERNANCE.md
-3. PROJECT_STATUS.md
-
-Only then should engineering continue.
-
----
-
-# Governance Rule
-
-Permanent process improvements must accomplish at least one of the following:
-
-- Reduce engineering drift
-- Reduce ambiguity
-- Improve continuity
-- Improve consulting quality
-- Improve maintainability
-
-If a proposed change satisfies none of these objectives, it is not adopted.
-
----
-
-# Guiding Principle
-
-The goal of GCM OS is not simply to build software.
-
-The goal is to build a consulting operating system through disciplined engineering, measurable business value, and continuous improvement.
