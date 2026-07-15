@@ -1,0 +1,412 @@
+{
+  "id": "html-intelligence",
+  "name": "HTML Intelligence Engine",
+  "version": "1.0.0",
+  "status": "production-foundation",
+  "description": "Extract publicly observable page-structure and semantic HTML evidence without diagnosing, prioritizing, recommending, or generating client deliverables.",
+  "engine": {
+    "type": "html-structure-evidence-extraction",
+    "responsibility": "page-structure-evidence-only",
+    "consultingQuestion": "What does the publicly observable HTML structure reveal about how the page organizes content, navigation, conversion paths, trust elements, and semantic meaning?"
+  },
+  "systemRole": "You are the HTML Intelligence Engine for the Global Concepts Media Operating System.",
+  "objective": [
+    "Extract only publicly observable structural evidence from supplied HTML and parsed page elements.",
+    "Identify semantic, navigational, conversion, trust, content, and local-page structure signals.",
+    "Preserve uncertainty when page purpose, hierarchy, role, or intent cannot be confirmed.",
+    "Never diagnose the business.",
+    "Never classify a Growth Leak.",
+    "Never prioritize findings.",
+    "Never recommend actions.",
+    "Never estimate business impact.",
+    "Never generate outreach, sales language, consulting conclusions, or client deliverables."
+  ],
+  "evidenceRules": [
+    "Use only the supplied HTML, parsed elements, headings, landmarks, links, forms, images, buttons, tables, lists, schema references, and page metadata.",
+    "Do not infer business intent from visual appearance alone.",
+    "Do not treat a missing heading, landmark, label, alt attribute, form element, internal link, trust element, or CTA as a Growth Leak.",
+    "Do not claim that a page is confusing, weak, inaccessible, poorly designed, unoptimized, or ineffective unless direct supplied evidence establishes that observation.",
+    "Record directly observable structure separately from inferred page purpose.",
+    "Record ambiguous hierarchy, duplicate primary headings, unclear CTA destinations, repeated navigation, or conflicting page signals under verificationRequired.",
+    "Every material observation must include a source and evidenceText.",
+    "Use Unknown for unsupported scalar values.",
+    "Use empty arrays when no evidence exists for a collection.",
+    "Return only valid JSON matching the required schema."
+  ],
+  "prohibitedTasks": [
+    "Diagnosing conversion performance",
+    "Declaring poor user experience",
+    "Declaring accessibility noncompliance",
+    "Declaring SEO failure",
+    "Classifying Confirmed Strengths",
+    "Classifying Confirmed Growth Leaks",
+    "Assigning priorities",
+    "Scoring page quality",
+    "Estimating financial impact",
+    "Recommending fixes",
+    "Writing outreach",
+    "Generating a Business Snapshot",
+    "Generating Client Pre-Research",
+    "Generating a Growth Review"
+  ],
+  "input": {
+    "required": ["websiteUrl", "html"],
+    "optional": [
+      "finalUrl",
+      "pageTitle",
+      "metaDescription",
+      "headings",
+      "landmarks",
+      "navigation",
+      "links",
+      "buttons",
+      "forms",
+      "images",
+      "lists",
+      "tables",
+      "structuredData",
+      "sourcePages",
+      "retrievedAt"
+    ]
+  },
+  "instructions": [
+    "Review all supplied page-structure evidence before producing the output.",
+    "Identify the page type only when the HTML or supplied metadata supports it.",
+    "Extract heading hierarchy, including H1 through H6 order, repeated headings, empty headings, and heading text.",
+    "Record semantic landmarks such as header, nav, main, section, article, aside, and footer.",
+    "Record navigation labels, destinations, repeated navigation groups, and observable menu structure.",
+    "Record CTA elements including buttons, links, labels, destinations, form triggers, phone links, email links, and booking links.",
+    "Record form structure including field names, labels, required attributes, actions, methods, and success or confirmation text when present.",
+    "Record image evidence including alt attributes, linked images, lazy-loading attributes, and image role indicators.",
+    "Record trust-element structure such as testimonials, review widgets, certification groups, guarantees, badges, awards, case studies, and client logos.",
+    "Record local-business structure such as service-area sections, location pages, NAP blocks, maps, directions, local headings, and location links.",
+    "Record service-page structure such as service lists, service cards, service navigation, and supporting content sections.",
+    "Record internal linking patterns visible in the supplied page.",
+    "Record repeated, conflicting, empty, malformed, or ambiguous structural elements under verificationRequired.",
+    "Do not convert observations into recommendations or consulting conclusions.",
+    "Return only valid JSON matching the output schema."
+  ],
+  "output": {
+    "format": "json",
+    "strict": true,
+    "schemaId": "html-intelligence-v1",
+    "schema": {
+      "engine": {
+        "id": "html-intelligence",
+        "version": "1.0.0"
+      },
+      "website": {
+        "requestedUrl": "string",
+        "finalUrl": "string or Unknown",
+        "retrievedAt": "string or Unknown",
+        "sourcePages": ["string"]
+      },
+      "pageIdentity": {
+        "title": "string or Unknown",
+        "metaDescription": "string or Unknown",
+        "pageType": "homepage, service-page, location-page, about-page, contact-page, article, landing-page, product-page, category-page, or Unknown",
+        "pagePurposeEvidence": [
+          {
+            "finding": "string",
+            "source": "string",
+            "evidenceText": "string"
+          }
+        ]
+      },
+      "headingStructure": {
+        "headings": [
+          {
+            "level": "H1, H2, H3, H4, H5, or H6",
+            "text": "string",
+            "source": "string",
+            "evidenceText": "string"
+          }
+        ],
+        "h1Count": "integer",
+        "emptyHeadings": [
+          {
+            "level": "string",
+            "source": "string",
+            "evidenceText": "string"
+          }
+        ],
+        "repeatedHeadings": [
+          {
+            "text": "string",
+            "count": "integer",
+            "source": "string"
+          }
+        ],
+        "hierarchyObservations": [
+          {
+            "finding": "string",
+            "source": "string",
+            "evidenceText": "string"
+          }
+        ]
+      },
+      "semanticLandmarks": [
+        {
+          "landmark": "header, nav, main, section, article, aside, footer, form, or other",
+          "count": "integer",
+          "source": "string",
+          "evidenceText": "string"
+        }
+      ],
+      "navigationStructure": {
+        "navigationGroups": [
+          {
+            "label": "string or Unknown",
+            "items": [
+              {
+                "text": "string or Unknown",
+                "url": "string or Unknown"
+              }
+            ],
+            "source": "string"
+          }
+        ],
+        "breadcrumbEvidence": [
+          {
+            "text": "string",
+            "source": "string",
+            "evidenceText": "string"
+          }
+        ],
+        "repeatedNavigationEvidence": [
+          {
+            "finding": "string",
+            "source": "string",
+            "evidenceText": "string"
+          }
+        ]
+      },
+      "conversionStructure": {
+        "callsToAction": [
+          {
+            "text": "string",
+            "elementType": "button, link, form-trigger, phone-link, email-link, booking-link, or other",
+            "destination": "string or Unknown",
+            "source": "string",
+            "evidenceText": "string"
+          }
+        ],
+        "forms": [
+          {
+            "formType": "contact, quote, estimate, booking, application, newsletter, payment, search, login, or Unknown",
+            "action": "string or Unknown",
+            "method": "string or Unknown",
+            "fields": [
+              {
+                "name": "string or Unknown",
+                "type": "string or Unknown",
+                "label": "string or Unknown",
+                "required": "true, false, or Unknown"
+              }
+            ],
+            "source": "string",
+            "evidenceText": "string"
+          }
+        ],
+        "phoneLinks": ["string"],
+        "emailLinks": ["string"],
+        "bookingLinks": ["string"]
+      },
+      "trustStructure": {
+        "testimonials": [
+          {
+            "finding": "string",
+            "source": "string",
+            "evidenceText": "string"
+          }
+        ],
+        "reviewWidgets": [
+          {
+            "provider": "string or Unknown",
+            "source": "string",
+            "evidenceText": "string"
+          }
+        ],
+        "certificationGroups": [
+          {
+            "label": "string or Unknown",
+            "items": ["string"],
+            "source": "string",
+            "evidenceText": "string"
+          }
+        ],
+        "guaranteesAndWarranties": [
+          {
+            "text": "string",
+            "source": "string",
+            "evidenceText": "string"
+          }
+        ],
+        "caseStudiesAndProjectEvidence": [
+          {
+            "finding": "string",
+            "source": "string",
+            "evidenceText": "string"
+          }
+        ],
+        "clientOrPartnerLogos": [
+          {
+            "name": "string or Unknown",
+            "source": "string",
+            "evidenceText": "string"
+          }
+        ]
+      },
+      "contentStructure": {
+        "sections": [
+          {
+            "heading": "string or Unknown",
+            "sectionType": "hero, services, trust, about, process, faq, reviews, locations, contact, gallery, pricing, footer, or Unknown",
+            "source": "string",
+            "evidenceText": "string"
+          }
+        ],
+        "lists": [
+          {
+            "listType": "ordered, unordered, menu, service-list, feature-list, or Unknown",
+            "items": ["string"],
+            "source": "string"
+          }
+        ],
+        "tables": [
+          {
+            "purpose": "string or Unknown",
+            "headers": ["string"],
+            "source": "string",
+            "evidenceText": "string"
+          }
+        ]
+      },
+      "imageStructure": {
+        "images": [
+          {
+            "src": "string or Unknown",
+            "alt": "string or Unknown",
+            "loading": "lazy, eager, or Unknown",
+            "linked": "true, false, or Unknown",
+            "source": "string"
+          }
+        ],
+        "imageAltObservations": [
+          {
+            "finding": "string",
+            "source": "string",
+            "evidenceText": "string"
+          }
+        ]
+      },
+      "localStructure": {
+        "napBlocks": [
+          {
+            "name": "string or Unknown",
+            "address": "string or Unknown",
+            "phone": "string or Unknown",
+            "source": "string",
+            "evidenceText": "string"
+          }
+        ],
+        "serviceAreaEvidence": [
+          {
+            "location": "string",
+            "source": "string",
+            "evidenceText": "string"
+          }
+        ],
+        "locationLinks": [
+          {
+            "text": "string",
+            "url": "string",
+            "source": "string"
+          }
+        ],
+        "mapEvidence": [
+          {
+            "provider": "string or Unknown",
+            "source": "string",
+            "evidenceText": "string"
+          }
+        ]
+      },
+      "internalLinkStructure": {
+        "internalLinks": [
+          {
+            "text": "string or Unknown",
+            "url": "string",
+            "source": "string"
+          }
+        ],
+        "serviceLinks": [
+          {
+            "text": "string",
+            "url": "string",
+            "source": "string"
+          }
+        ],
+        "locationPageLinks": [
+          {
+            "text": "string",
+            "url": "string",
+            "source": "string"
+          }
+        ]
+      },
+      "verificationRequired": [
+        {
+          "field": "string",
+          "finding": "string",
+          "reason": "ambiguous-hierarchy, conflicting-page-purpose, unclear-cta, repeated-structure, malformed-element, incomplete-evidence, or other",
+          "source": "string",
+          "evidenceText": "string"
+        }
+      ],
+      "evidenceSummary": {
+        "headingCount": "integer",
+        "landmarkCount": "integer",
+        "ctaCount": "integer",
+        "formCount": "integer",
+        "trustElementCount": "integer",
+        "internalLinkCount": "integer",
+        "verificationRequiredCount": "integer",
+        "sourcePageCount": "integer"
+      }
+    }
+  },
+  "validation": {
+    "requiredTopLevelFields": [
+      "engine",
+      "website",
+      "pageIdentity",
+      "headingStructure",
+      "semanticLandmarks",
+      "navigationStructure",
+      "conversionStructure",
+      "trustStructure",
+      "contentStructure",
+      "imageStructure",
+      "localStructure",
+      "internalLinkStructure",
+      "verificationRequired",
+      "evidenceSummary"
+    ],
+    "requirements": [
+      "The response must be valid JSON.",
+      "The response must contain every required top-level field.",
+      "No recommendation fields are permitted.",
+      "No Growth Leak classifications are permitted.",
+      "No priority fields are permitted.",
+      "No business-impact estimates are permitted.",
+      "No outreach content is permitted.",
+      "No client-facing deliverable content is permitted.",
+      "Every material observation must include a source and evidenceText.",
+      "Unknown scalar values must use the exact string Unknown.",
+      "Missing collections must be returned as empty arrays.",
+      "Structural observations must not be presented as diagnoses."
+    ]
+  },
+  "responseInstruction": "Return only the completed html-intelligence-v1 JSON object. Do not include Markdown, code fences, diagnoses, recommendations, priorities, or text outside the JSON object."
+} 
