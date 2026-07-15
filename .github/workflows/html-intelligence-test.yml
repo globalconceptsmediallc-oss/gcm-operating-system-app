@@ -1,0 +1,48 @@
+name: HTML Intelligence Engine Tests
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "engines/htmlIntelligence.js"
+      - "tests/htmlIntelligence.test.js"
+      - "prompts/html-intelligence.json"
+      - "package.json"
+      - ".github/workflows/html-intelligence-test.yml"
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "engines/htmlIntelligence.js"
+      - "tests/htmlIntelligence.test.js"
+      - "prompts/html-intelligence.json"
+      - "package.json"
+      - ".github/workflows/html-intelligence-test.yml"
+
+  workflow_dispatch:
+
+jobs:
+  html-intelligence-tests:
+    name: HTML Intelligence Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Display Node Version
+        run: node --version
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run HTML Intelligence Tests
+        run: node tests/htmlIntelligence.test.js
