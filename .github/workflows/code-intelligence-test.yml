@@ -1,0 +1,46 @@
+name: Code Intelligence Engine Tests
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "engines/codeIntelligence.js"
+      - "tests/codeIntelligence.test.js"
+      - "package.json"
+      - ".github/workflows/code-intelligence-test.yml"
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "engines/codeIntelligence.js"
+      - "tests/codeIntelligence.test.js"
+      - "package.json"
+      - ".github/workflows/code-intelligence-test.yml"
+
+  workflow_dispatch:
+
+jobs:
+  code-intelligence-tests:
+    name: Code Intelligence Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Display Node Version
+        run: node --version
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Code Intelligence Tests
+        run: npm run test:code-intelligence
