@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Prospects | GCM OS</title>
+
+  <meta
+    name="description"
+    content="Prospect Workspace for the Global Concepts Media Agency Operating System."
+  />
+
+  <style>
+    :root {
+      --gcm-navy-950: #071426;
+      --gcm-navy-900: #0b1d33;
+      --gcm-navy-800: #112a47;
+      --gcm-blue-600: #1f68d8;
+      --gcm-blue-500: #347ce8;
+      --gcm-blue-100: #eaf2ff;
+      --gcm-gold-500: #d6a94a;
+      --gcm-gold-100: #fff7df;
+
+      --surface: #ffffff;
+      --surface-soft: #f5f7fb;
+      --surface-muted: #edf1f7;
+      --border: #dbe2ec;
+
+      --text: #132238;
+      --text-muted: #637083;
+      --text-soft: #8290a3;
+
+      --success: #1f7a4f;
+      --success-soft: #e9f7f0;
+      --warning: #9a6414;
+      --warning-soft: #fff4dd;
+      --critical: #b33a3a;
+      --critical-soft: #fff0f0;
+      --info: #245fae;
+      --info-soft: #edf5ff;
+
+      --shadow-sm: 0 8px 24px rgba(7, 20, 38, 0.07);
+      --shadow-md: 0 16px 42px rgba(7, 20, 38, 0.11);
+
+      --radius-sm: 10px;
+      --radius-md: 16px;
+      --radius-lg: 22px;
+
+      --content-width: 1480px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--surface-soft);
+      color: var(--text);
+      font-family:
+        Inter,
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+      line-height: 1.5;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    button,
+    a {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .skip-link {
+      position: absolute;
+      top: -48px;
+      left: 16px;
+      z-index: 1000;
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: #ffffff;
+      color: var(--gcm-navy-950);
+      font-weight: 800;
+    }
+
+    .skip-link:focus {
+      top: 16px;
+    }
+
+    .app-shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 250px minmax(0, 1fr);
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 24px 18px;
+      background:
+        radial-gradient(circle at top right, rgba(52, 124, 232, 0.19), transparent 34%),
+        linear-gradient(180deg, var(--gcm-navy-900), var(--gcm-navy-950));
+      color: #ffffff;
+      overflow-y: auto;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 2px 8px 22px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 13px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--gcm-gold-500);
+      font-weight: 900;
+      letter-spacing: -0.04em;
+    }
+
+    .brand-copy strong,
+    .brand-copy span {
+      display: block;
+    }
+
+    .brand-copy strong {
+      font-size: 0.95rem;
+      letter-spacing: 0.01em;
+    }
+
+    .brand-copy span {
+      margin-top: 2px;
+      color: rgba(255, 255, 255, 0.58);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .nav-label {
+      margin: 24px 10px 10px;
+      color: rgba(255, 255, 255, 0.42);
+      font-size: 0.68rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+    }
+
+    .primary-nav {
+      display: grid;
+      gap: 6px;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 46px;
+      padding: 0 13px;
+      border-radius: 12px;
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 0.92rem;
+      font-weight: 700;
+      transition:
+        background 160ms ease,
+        color 160ms ease,
+        transform 160ms ease;
+    }
+
+    .nav-link:hover,
+    .nav-link:focus-visible {
+      background: rgba(255, 255, 255, 0.08);
+      color: #ffffff;
+      transform: translateX(2px);
+      outline: none;
+    }
+
+    .nav-link[aria-current="page"] {
+      background: rgba(52, 124, 232, 0.2);
+      color: #ffffff;
+      box-shadow: inset 3px 0 0 var(--gcm-gold-500);
+    }
+
+    .nav-icon {
+      width: 22px;
+      text-align: center;
+      font-size: 1rem;
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding: 18px 8px 2px;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .sidebar-status {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: rgba(255, 255, 255, 0.67);
+      font-size: 0.78rem;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #5fd397;
+      box-shadow: 0 0 0 4px rgba(95, 211, 151, 0.12);
+    }
+
+    .main {
+      min-width: 0;
+      padding: 28px 32px 48px;
+    }
+
+    .main-inner {
+      width: min(100%, var(--content-width));
+      margin: 0 auto;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    .eyebrow {
+      margin: 0 0 6px;
+      color: var(--gcm-blue-600);
+      font-size: 0.72rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+    }
+
+    .page-title {
+      margin: 0;
+      color: var(--gcm-navy-950);
+      font-size: clamp(2rem, 4vw, 3.15rem);
+      line-height: 1;
+      letter-spacing: -0.045em;
+    }
+
+    .page-subtitle {
+      margin: 10px 0 0;
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 42px;
+      padding: 0 16px;
+      border: 1px solid transparent;
+      border-radius: 11px;
+      cursor: pointer;
+      font-size: 0.86rem;
+      font-weight: 850;
+      transition:
+        transform 160ms ease,
+        box-shadow 160ms ease,
+        background 160ms ease,
+        border-color 160ms ease;
+    }
+
+    .button:hover {
+      transform: translateY(-1px);
+    }
+
+    .button:focus-visible {
+      outline: 3px solid rgba(52, 124, 232, 0.26);
+      outline-offset: 2px;
+    }
+
+    .button-primary {
+      background: var(--gcm-blue-600);
+      color: #ffffff;
+      box-shadow: 0 10px 24px rgba(31, 104, 216, 0.22);
+    }
+
+    .button-primary:hover {
+      background: #185fc8;
+    }
+
+    .button-secondary {
+      border-color: var(--border);
+      background: var(--surface);
+      color: var(--gcm-navy-900);
+    }
+
+    .button-secondary:hover {
+      border-color: #c3cfde;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .summary-card {
+      min-height: 112px;
+      padding: 18px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--surface);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .summary-label {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 0.74rem;
+      font-weight: 850;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .summary-value {
+      margin: 8px 0 0;
+      color: var(--gcm-navy-950);
+      font-size: 2rem;
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: -0.04em;
+    }
+
+    .summary-note {
+      margin: 8px 0 0;
+      color: var(--text-soft);
+      font-size: 0.78rem;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) auto auto;
+      gap: 12px;
+      padding: 16px;
+      margin-bottom: 18px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+    }
+
+    .field label {
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      font-weight: 850;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .input,
+    .select {
+      width: 100%;
+      min-height: 43px;
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      background: #ffffff;
+      color: var(--text);
+      padding: 0 13px;
+      outline: none;
+    }
+
+    .input:focus,
+    .select:focus {
+      border-color: var(--gcm-blue-500);
+      box-shadow: 0 0 0 3px rgba(52, 124, 232, 0.12);
+    }
+
+    .workspace-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.6fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 20px 22px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .panel-title {
+      margin: 0;
+      color: var(--gcm-navy-950);
+      font-size: 1rem;
+      font-weight: 900;
+      letter-spacing: -0.015em;
+    }
+
+    .panel-description {
+      margin: 5px 0 0;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+    }
+
+    .prospect-list {
+      display: grid;
+    }
+
+    .prospect-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(170px, 0.6fr) auto;
+      gap: 18px;
+      align-items: center;
+      padding: 20px 22px;
+      border-bottom: 1px solid var(--border);
+      transition: background 160ms ease;
+    }
+
+    .prospect-card:last-child {
+      border-bottom: 0;
+    }
+
+    .prospect-card:hover {
+      background: #fbfcfe;
+    }
+
+    .prospect-name {
+      margin: 0;
+      color: var(--gcm-navy-950);
+      font-size: 1.02rem;
+      font-weight: 900;
+    }
+
+    .prospect-url {
+      margin: 4px 0 0;
+      color: var(--text-soft);
+      font-size: 0.76rem;
+      word-break: break-word;
+    }
+
+    .prospect-insight {
+      margin: 10px 0 0;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+    }
+
+    .prospect-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 11px;
+    }
+
+    .tag,
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 27px;
+      padding: 0 9px;
+      border-radius: 999px;
+      font-size: 0.68rem;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .tag {
+      border: 1px solid var(--border);
+      background: var(--surface-soft);
+      color: var(--text-muted);
+    }
+
+    .status-ready {
+      background: var(--success-soft);
+      color: var(--success);
+    }
+
+    .status-research {
+      background: var(--info-soft);
+      color: var(--info);
+    }
+
+    .status-discovery {
+      background: var(--warning-soft);
+      color: var(--warning);
+    }
+
+    .status-new {
+      background: var(--surface-muted);
+      color: var(--text-muted);
+    }
+
+    .score-block {
+      min-width: 150px;
+    }
+
+    .score-label {
+      margin: 0;
+      color: var(--text-soft);
+      font-size: 0.7rem;
+      font-weight: 850;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .score-row {
+      display: flex;
+      align-items: baseline;
+      gap: 7px;
+      margin-top: 3px;
+    }
+
+    .score-value {
+      color: var(--gcm-navy-950);
+      font-size: 1.55rem;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+    }
+
+    .score-out-of {
+      color: var(--text-soft);
+      font-size: 0.74rem;
+      font-weight: 800;
+    }
+
+    .score-track {
+      height: 7px;
+      margin-top: 8px;
+      border-radius: 999px;
+      background: var(--surface-muted);
+      overflow: hidden;
+    }
+
+    .score-fill {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--gcm-blue-600), var(--gcm-gold-500));
+    }
+
+    .prospect-actions {
+      display: grid;
+      gap: 8px;
+      justify-items: stretch;
+      min-width: 148px;
+    }
+
+    .prospect-actions .button {
+      min-height: 38px;
+      padding: 0 12px;
+      font-size: 0.78rem;
+    }
+
+    .side-stack {
+      display: grid;
+      gap: 18px;
+    }
+
+    .priority-card {
+      padding: 22px;
+      background:
+        linear-gradient(135deg, rgba(31, 104, 216, 0.98), rgba(11, 29, 51, 0.99));
+      color: #ffffff;
+    }
+
+    .priority-card h2 {
+      margin: 0;
+      font-size: 1.35rem;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+    }
+
+    .priority-card p {
+      margin: 10px 0 0;
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 0.86rem;
+    }
+
+    .priority-card .button {
+      margin-top: 18px;
+      width: 100%;
+      background: var(--gcm-gold-500);
+      color: var(--gcm-navy-950);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+    }
+
+    .stage-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .stage-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 15px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stage-item:last-child {
+      border-bottom: 0;
+    }
+
+    .stage-name {
+      color: var(--text);
+      font-size: 0.8rem;
+      font-weight: 850;
+    }
+
+    .stage-count {
+      display: grid;
+      place-items: center;
+      min-width: 30px;
+      height: 30px;
+      padding: 0 8px;
+      border-radius: 999px;
+      background: var(--surface-soft);
+      color: var(--gcm-navy-950);
+      font-size: 0.75rem;
+      font-weight: 900;
+    }
+
+    .empty-state {
+      padding: 40px 22px;
+      text-align: center;
+      color: var(--text-muted);
+    }
+
+    .mobile-menu-button {
+      display: none;
+    }
+
+    @media (max-width: 1180px) {
+      .summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .workspace-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 920px) {
+      .prospect-card {
+        grid-template-columns: 1fr;
+        align-items: start;
+      }
+
+      .prospect-actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        min-width: 0;
+      }
+    }
+
+    @media (max-width: 860px) {
+      .app-shell {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: fixed;
+        inset: 0 auto 0 0;
+        z-index: 100;
+        width: 250px;
+        transform: translateX(-100%);
+        transition: transform 180ms ease;
+      }
+
+      .sidebar.is-open {
+        transform: translateX(0);
+      }
+
+      .mobile-menu-button {
+        display: inline-flex;
+      }
+
+      .main {
+        padding: 20px;
+      }
+
+      .topbar {
+        align-items: center;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .toolbar {
+        grid-template-columns: 1fr;
+      }
+
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .topbar-actions {
+        width: 100%;
+        justify-content: flex-start;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .main {
+        padding: 16px;
+      }
+
+      .summary-grid,
+      .prospect-actions {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar" aria-label="Primary navigation">
+      <a class="brand" href="today.html" aria-label="GCM OS Today">
+        <span class="brand-mark">G</span>
+
+        <span class="brand-copy">
+          <strong>Global Concepts Media</strong>
+          <span>Agency Operating System</span>
+        </span>
+      </a>
+
+      <p class="nav-label">Workspace</p>
+
+      <nav class="primary-nav">
+        <a class="nav-link" href="today.html">
+          <span class="nav-icon" aria-hidden="true">⌂</span>
+          <span>Today</span>
+        </a>
+
+        <a class="nav-link" href="prospects.html" aria-current="page">
+          <span class="nav-icon" aria-hidden="true">◎</span>
+          <span>Prospects</span>
+        </a>
+
+        <a class="nav-link" href="#">
+          <span class="nav-icon" aria-hidden="true">◫</span>
+          <span>Clients</span>
+        </a>
+
+        <a class="nav-link" href="#">
+          <span class="nav-icon" aria-hidden="true">✓</span>
+          <span>Work</span>
+        </a>
+
+        <a class="nav-link" href="#">
+          <span class="nav-icon" aria-hidden="true">↗</span>
+          <span>Proof</span>
+        </a>
+
+        <a class="nav-link" href="#">
+          <span class="nav-icon" aria-hidden="true">★</span>
+          <span>Case Studies</span>
+        </a>
+
+        <a class="nav-link" href="#">
+          <span class="nav-icon" aria-hidden="true">⚙</span>
+          <span>Settings</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-status">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span>Prospect workspace operational</span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main" id="main-content">
+      <div class="main-inner">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Acquire</p>
+            <h1 class="page-title">Prospects</h1>
+            <p class="page-subtitle">
+              Decide who to contact next, why the opportunity matters, and which workflow to launch.
+            </p>
+          </div>
+
+          <div class="topbar-actions">
+            <button
+              class="button button-secondary mobile-menu-button"
+              id="mobile-menu-button"
+              type="button"
+              aria-controls="sidebar"
+              aria-expanded="false"
+            >
+              Menu
+            </button>
+
+            <a class="button button-secondary" href="today.html">
+              Back to Today
+            </a>
+
+            <a class="button button-primary" href="client-pre-research.html">
+              Research New Prospect
+            </a>
+          </div>
+        </header>
+
+        <section class="summary-grid" aria-label="Prospect summary">
+          <article class="summary-card">
+            <p class="summary-label">Total Prospects</p>
+            <p class="summary-value" id="total-count">5</p>
+            <p class="summary-note">Businesses currently in the acquisition pipeline.</p>
+          </article>
+
+          <article class="summary-card">
+            <p class="summary-label">Ready to Contact</p>
+            <p class="summary-value" id="ready-count">2</p>
+            <p class="summary-note">Research complete with a clear outreach reason.</p>
+          </article>
+
+          <article class="summary-card">
+            <p class="summary-label">Research Needed</p>
+            <p class="summary-value" id="research-count">2</p>
+            <p class="summary-note">Businesses that need pre-research before outreach.</p>
+          </article>
+
+          <article class="summary-card">
+            <p class="summary-label">Discovery Stage</p>
+            <p class="summary-value" id="discovery-count">1</p>
+            <p class="summary-note">Prospects ready for the next consulting conversation.</p>
+          </article>
+        </section>
+
+        <section class="toolbar" aria-label="Prospect filters">
+          <div class="field">
+            <label for="prospect-search">Search Prospects</label>
+            <input
+              class="input"
+              id="prospect-search"
+              type="search"
+              placeholder="Search by business, market, or opportunity"
+            />
+          </div>
+
+          <div class="field">
+            <label for="status-filter">Status</label>
+            <select class="select" id="status-filter">
+              <option value="all">All statuses</option>
+              <option value="ready">Ready to Contact</option>
+              <option value="research">Research Needed</option>
+              <option value="discovery">Discovery</option>
+              <option value="new">New</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="sort-filter">Sort</label>
+            <select class="select" id="sort-filter">
+              <option value="score-desc">Highest opportunity</option>
+              <option value="score-asc">Lowest opportunity</option>
+              <option value="name-asc">Business name</option>
+            </select>
+          </div>
+        </section>
+
+        <section class="workspace-grid">
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">Prospect Pipeline</h2>
+                <p class="panel-description">
+                  Every prospect should have a clear status, opportunity, and next action.
+                </p>
+              </div>
+            </div>
+
+            <div class="prospect-list" id="prospect-list">
+              <article
+                class="prospect-card"
+                data-name="ABC Roofing"
+                data-status="ready"
+                data-score="94"
+                data-search="abc roofing melbourne roofing local visibility owner outreach"
+              >
+                <div>
+                  <h3 class="prospect-name">ABC Roofing</h3>
+                  <p class="prospect-url">abcroofing.example</p>
+                  <p class="prospect-insight">
+                    Strong local demand, but the public presence does not clearly establish service-area authority or a compelling reason to choose the business.
+                  </p>
+
+                  <div class="prospect-tags">
+                    <span class="status-badge status-ready">Ready to Contact</span>
+                    <span class="tag">Roofing</span>
+                    <span class="tag">Local visibility</span>
+                  </div>
+                </div>
+
+                <div class="score-block">
+                  <p class="score-label">Opportunity Score</p>
+                  <div class="score-row">
+                    <span class="score-value">94</span>
+                    <span class="score-out-of">/ 100</span>
+                  </div>
+                  <div class="score-track">
+                    <div class="score-fill" style="width: 94%;"></div>
+                  </div>
+                </div>
+
+                <div class="prospect-actions">
+                  <a class="button button-primary" href="client-pre-research.html">
+                    Open Research
+                  </a>
+                  <a class="button button-secondary" href="business-snapshot.html">
+                    Run Snapshot
+                  </a>
+                </div>
+              </article>
+
+              <article
+                class="prospect-card"
+                data-name="Superior Plumbing"
+                data-status="research"
+                data-score="87"
+                data-search="superior plumbing cocoa plumbing website trust conversion"
+              >
+                <div>
+                  <h3 class="prospect-name">Superior Plumbing</h3>
+                  <p class="prospect-url">superiorplumbing.example</p>
+                  <p class="prospect-insight">
+                    The website appears credible, but there is not enough verified information yet to lead with a specific business opportunity.
+                  </p>
+
+                  <div class="prospect-tags">
+                    <span class="status-badge status-research">Research Needed</span>
+                    <span class="tag">Plumbing</span>
+                    <span class="tag">Trust and conversion</span>
+                  </div>
+                </div>
+
+                <div class="score-block">
+                  <p class="score-label">Opportunity Score</p>
+                  <div class="score-row">
+                    <span class="score-value">87</span>
+                    <span class="score-out-of">/ 100</span>
+                  </div>
+                  <div class="score-track">
+                    <div class="score-fill" style="width: 87%;"></div>
+                  </div>
+                </div>
+
+                <div class="prospect-actions">
+                  <a class="button button-primary" href="client-pre-research.html">
+                    Research
+                  </a>
+                  <a class="button button-secondary" href="business-snapshot.html">
+                    Snapshot
+                  </a>
+                </div>
+              </article>
+
+              <article
+                class="prospect-card"
+                data-name="Coastal HVAC"
+                data-status="discovery"
+                data-score="91"
+                data-search="coastal hvac brevard discovery growth review qualified"
+              >
+                <div>
+                  <h3 class="prospect-name">Coastal HVAC</h3>
+                  <p class="prospect-url">coastalhvac.example</p>
+                  <p class="prospect-insight">
+                    Research is complete and the largest visible opportunity is improving local proof around high-value installation services.
+                  </p>
+
+                  <div class="prospect-tags">
+                    <span class="status-badge status-discovery">Discovery Stage</span>
+                    <span class="tag">HVAC</span>
+                    <span class="tag">Local proof</span>
+                  </div>
+                </div>
+
+                <div class="score-block">
+                  <p class="score-label">Opportunity Score</p>
+                  <div class="score-row">
+                    <span class="score-value">91</span>
+                    <span class="score-out-of">/ 100</span>
+                  </div>
+                  <div class="score-track">
+                    <div class="score-fill" style="width: 91%;"></div>
+                  </div>
+                </div>
+
+                <div class="prospect-actions">
+                  <a class="button button-primary" href="growth-review-preview.html">
+                    Prepare Discovery
+                  </a>
+                  <a class="button button-secondary" href="client-pre-research.html">
+                    Review Research
+                  </a>
+                </div>
+              </article>
+
+              <article
+                class="prospect-card"
+                data-name="Elite Electric"
+                data-status="ready"
+                data-score="89"
+                data-search="elite electric palm bay electrician reviews service pages outreach"
+              >
+                <div>
+                  <h3 class="prospect-name">Elite Electric</h3>
+                  <p class="prospect-url">eliteelectric.example</p>
+                  <p class="prospect-insight">
+                    Good customer reviews are visible, but service-page clarity and conversion paths appear weaker than the business's reputation.
+                  </p>
+
+                  <div class="prospect-tags">
+                    <span class="status-badge status-ready">Ready to Contact</span>
+                    <span class="tag">Electrical</span>
+                    <span class="tag">Offer clarity</span>
+                  </div>
+                </div>
+
+                <div class="score-block">
+                  <p class="score-label">Opportunity Score</p>
+                  <div class="score-row">
+                    <span class="score-value">89</span>
+                    <span class="score-out-of">/ 100</span>
+                  </div>
+                  <div class="score-track">
+                    <div class="score-fill" style="width: 89%;"></div>
+                  </div>
+                </div>
+
+                <div class="prospect-actions">
+                  <a class="button button-primary" href="client-pre-research.html">
+                    Open Research
+                  </a>
+                  <a class="button button-secondary" href="business-snapshot.html">
+                    Run Snapshot
+                  </a>
+                </div>
+              </article>
+
+              <article
+                class="prospect-card"
+                data-name="Premier Landscaping"
+                data-status="research"
+                data-score="78"
+                data-search="premier landscaping rockledge landscaping website market research"
+              >
+                <div>
+                  <h3 class="prospect-name">Premier Landscaping</h3>
+                  <p class="prospect-url">premierlandscaping.example</p>
+                  <p class="prospect-insight">
+                    The business may be a strong local fit, but the market, owner information, and highest-value service opportunity still need verification.
+                  </p>
+
+                  <div class="prospect-tags">
+                    <span class="status-badge status-research">Research Needed</span>
+                    <span class="tag">Landscaping</span>
+                    <span class="tag">Needs verification</span>
+                  </div>
+                </div>
+
+                <div class="score-block">
+                  <p class="score-label">Opportunity Score</p>
+                  <div class="score-row">
+                    <span class="score-value">78</span>
+                    <span class="score-out-of">/ 100</span>
+                  </div>
+                  <div class="score-track">
+                    <div class="score-fill" style="width: 78%;"></div>
+                  </div>
+                </div>
+
+                <div class="prospect-actions">
+                  <a class="button button-primary" href="client-pre-research.html">
+                    Research
+                  </a>
+                  <a class="button button-secondary" href="business-snapshot.html">
+                    Snapshot
+                  </a>
+                </div>
+              </article>
+            </div>
+
+            <div class="empty-state" id="empty-state" hidden>
+              No prospects match the current search and status filter.
+            </div>
+          </article>
+
+          <aside class="side-stack" aria-label="Prospect priorities">
+            <article class="priority-card">
+              <p class="eyebrow" style="color: #a8c9ff;">Highest-Priority Prospect</p>
+              <h2>ABC Roofing</h2>
+              <p>
+                Research is complete, the opportunity is specific, and the next action is a personalized first conversation.
+              </p>
+              <a class="button" href="client-pre-research.html">
+                Open Pre-Research
+              </a>
+            </article>
+
+            <article class="panel">
+              <div class="panel-header">
+                <div>
+                  <h2 class="panel-title">Pipeline Stages</h2>
+                  <p class="panel-description">Where the current prospects are in the consulting lifecycle.</p>
+                </div>
+              </div>
+
+              <ul class="stage-list">
+                <li class="stage-item">
+                  <span class="stage-name">New</span>
+                  <span class="stage-count">0</span>
+                </li>
+                <li class="stage-item">
+                  <span class="stage-name">Research Needed</span>
+                  <span class="stage-count">2</span>
+                </li>
+                <li class="stage-item">
+                  <span class="stage-name">Ready to Contact</span>
+                  <span class="stage-count">2</span>
+                </li>
+                <li class="stage-item">
+                  <span class="stage-name">Discovery</span>
+                  <span class="stage-count">1</span>
+                </li>
+                <li class="stage-item">
+                  <span class="stage-name">Growth Review</span>
+                  <span class="stage-count">0</span>
+                </li>
+              </ul>
+            </article>
+
+            <article class="panel">
+              <div class="panel-header">
+                <div>
+                  <h2 class="panel-title">Workspace Rule</h2>
+                  <p class="panel-description">Every prospect must answer three questions.</p>
+                </div>
+              </div>
+
+              <ul class="stage-list">
+                <li class="stage-item">
+                  <span class="stage-name">Why this business?</span>
+                </li>
+                <li class="stage-item">
+                  <span class="stage-name">Why call now?</span>
+                </li>
+                <li class="stage-item">
+                  <span class="stage-name">What should I say?</span>
+                </li>
+              </ul>
+            </article>
+          </aside>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const searchInput = document.getElementById("prospect-search");
+      const statusFilter = document.getElementById("status-filter");
+      const sortFilter = document.getElementById("sort-filter");
+      const prospectList = document.getElementById("prospect-list");
+      const emptyState = document.getElementById("empty-state");
+      const mobileMenuButton = document.getElementById("mobile-menu-button");
+      const sidebar = document.getElementById("sidebar");
+
+      function getCards() {
+        return [...prospectList.querySelectorAll(".prospect-card")];
+      }
+
+      function applyFiltersAndSort() {
+        const query = searchInput.value.trim().toLowerCase();
+        const status = statusFilter.value;
+        const sort = sortFilter.value;
+        const cards = getCards();
+
+        cards.sort((a, b) => {
+          if (sort === "name-asc") {
+            return a.dataset.name.localeCompare(b.dataset.name);
+          }
+
+          const scoreA = Number(a.dataset.score);
+          const scoreB = Number(b.dataset.score);
+
+          return sort === "score-asc"
+            ? scoreA - scoreB
+            : scoreB - scoreA;
+        });
+
+        cards.forEach((card) => prospectList.appendChild(card));
+
+        let visibleCount = 0;
+
+        cards.forEach((card) => {
+          const matchesSearch =
+            !query || card.dataset.search.includes(query);
+
+          const matchesStatus =
+            status === "all" || card.dataset.status === status;
+
+          const isVisible = matchesSearch && matchesStatus;
+
+          card.hidden = !isVisible;
+
+          if (isVisible) {
+            visibleCount += 1;
+          }
+        });
+
+        emptyState.hidden = visibleCount !== 0;
+      }
+
+      searchInput.addEventListener("input", applyFiltersAndSort);
+      statusFilter.addEventListener("change", applyFiltersAndSort);
+      sortFilter.addEventListener("change", applyFiltersAndSort);
+
+      mobileMenuButton.addEventListener("click", () => {
+        const isOpen = sidebar.classList.toggle("is-open");
+        mobileMenuButton.setAttribute("aria-expanded", String(isOpen));
+      });
+
+      document.addEventListener("click", (event) => {
+        const clickedInsideSidebar = sidebar.contains(event.target);
+        const clickedMenuButton = mobileMenuButton.contains(event.target);
+
+        if (
+          window.innerWidth <= 860 &&
+          sidebar.classList.contains("is-open") &&
+          !clickedInsideSidebar &&
+          !clickedMenuButton
+        ) {
+          sidebar.classList.remove("is-open");
+          mobileMenuButton.setAttribute("aria-expanded", "false");
+        }
+      });
+
+      applyFiltersAndSort();
+    })();
+  </script>
+</body>
+</html>
