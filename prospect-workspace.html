@@ -1,0 +1,1832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>ABC Roofing | Prospect Workspace | GCM OS</title>
+
+  <meta
+    name="description"
+    content="Single-prospect workspace for the Global Concepts Media Agency Operating System."
+  />
+
+  <style>
+    :root {
+      --gcm-navy-950: #071426;
+      --gcm-navy-900: #0b1d33;
+      --gcm-navy-800: #112a47;
+      --gcm-blue-600: #1f68d8;
+      --gcm-blue-500: #347ce8;
+      --gcm-blue-100: #eaf2ff;
+      --gcm-gold-500: #d6a94a;
+      --gcm-gold-100: #fff7df;
+
+      --surface: #ffffff;
+      --surface-soft: #f5f7fb;
+      --surface-muted: #edf1f7;
+      --border: #dbe2ec;
+
+      --text: #132238;
+      --text-muted: #637083;
+      --text-soft: #8290a3;
+
+      --success: #1f7a4f;
+      --success-soft: #e9f7f0;
+      --warning: #9a6414;
+      --warning-soft: #fff4dd;
+      --critical: #b33a3a;
+      --critical-soft: #fff0f0;
+      --info: #245fae;
+      --info-soft: #edf5ff;
+
+      --shadow-sm: 0 8px 24px rgba(7, 20, 38, 0.07);
+      --shadow-md: 0 16px 42px rgba(7, 20, 38, 0.11);
+
+      --radius-sm: 10px;
+      --radius-md: 16px;
+      --radius-lg: 22px;
+
+      --content-width: 1480px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--surface-soft);
+      color: var(--text);
+      font-family:
+        Inter,
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+      line-height: 1.5;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    button,
+    a {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .skip-link {
+      position: absolute;
+      top: -48px;
+      left: 16px;
+      z-index: 1000;
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: #ffffff;
+      color: var(--gcm-navy-950);
+      font-weight: 800;
+    }
+
+    .skip-link:focus {
+      top: 16px;
+    }
+
+    .app-shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 250px minmax(0, 1fr);
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 24px 18px;
+      background:
+        radial-gradient(circle at top right, rgba(52, 124, 232, 0.19), transparent 34%),
+        linear-gradient(180deg, var(--gcm-navy-900), var(--gcm-navy-950));
+      color: #ffffff;
+      overflow-y: auto;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 2px 8px 22px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 13px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--gcm-gold-500);
+      font-weight: 900;
+      letter-spacing: -0.04em;
+    }
+
+    .brand-copy strong,
+    .brand-copy span {
+      display: block;
+    }
+
+    .brand-copy strong {
+      font-size: 0.95rem;
+      letter-spacing: 0.01em;
+    }
+
+    .brand-copy span {
+      margin-top: 2px;
+      color: rgba(255, 255, 255, 0.58);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .nav-label {
+      margin: 24px 10px 10px;
+      color: rgba(255, 255, 255, 0.42);
+      font-size: 0.68rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+    }
+
+    .primary-nav {
+      display: grid;
+      gap: 6px;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 46px;
+      padding: 0 13px;
+      border-radius: 12px;
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 0.92rem;
+      font-weight: 700;
+      transition:
+        background 160ms ease,
+        color 160ms ease,
+        transform 160ms ease;
+    }
+
+    .nav-link:hover,
+    .nav-link:focus-visible {
+      background: rgba(255, 255, 255, 0.08);
+      color: #ffffff;
+      transform: translateX(2px);
+      outline: none;
+    }
+
+    .nav-link[aria-current="page"] {
+      background: rgba(52, 124, 232, 0.2);
+      color: #ffffff;
+      box-shadow: inset 3px 0 0 var(--gcm-gold-500);
+    }
+
+    .nav-icon {
+      width: 22px;
+      text-align: center;
+      font-size: 1rem;
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding: 18px 8px 2px;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .sidebar-status {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: rgba(255, 255, 255, 0.67);
+      font-size: 0.78rem;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #5fd397;
+      box-shadow: 0 0 0 4px rgba(95, 211, 151, 0.12);
+    }
+
+    .main {
+      min-width: 0;
+      padding: 28px 32px 48px;
+    }
+
+    .main-inner {
+      width: min(100%, var(--content-width));
+      margin: 0 auto;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 20px;
+    }
+
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 8px;
+      color: var(--text-soft);
+      font-size: 0.76rem;
+      font-weight: 800;
+    }
+
+    .breadcrumb a {
+      color: var(--gcm-blue-600);
+    }
+
+    .eyebrow {
+      margin: 0 0 6px;
+      color: var(--gcm-blue-600);
+      font-size: 0.72rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+    }
+
+    .page-title {
+      margin: 0;
+      color: var(--gcm-navy-950);
+      font-size: clamp(2rem, 4vw, 3.15rem);
+      line-height: 1;
+      letter-spacing: -0.045em;
+    }
+
+    .page-subtitle {
+      margin: 10px 0 0;
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 42px;
+      padding: 0 16px;
+      border: 1px solid transparent;
+      border-radius: 11px;
+      cursor: pointer;
+      font-size: 0.86rem;
+      font-weight: 850;
+      transition:
+        transform 160ms ease,
+        box-shadow 160ms ease,
+        background 160ms ease,
+        border-color 160ms ease;
+    }
+
+    .button:hover {
+      transform: translateY(-1px);
+    }
+
+    .button:focus-visible {
+      outline: 3px solid rgba(52, 124, 232, 0.26);
+      outline-offset: 2px;
+    }
+
+    .button-primary {
+      background: var(--gcm-blue-600);
+      color: #ffffff;
+      box-shadow: 0 10px 24px rgba(31, 104, 216, 0.22);
+    }
+
+    .button-primary:hover {
+      background: #185fc8;
+    }
+
+    .button-secondary {
+      border-color: var(--border);
+      background: var(--surface);
+      color: var(--gcm-navy-900);
+    }
+
+    .button-secondary:hover {
+      border-color: #c3cfde;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .button-gold {
+      background: var(--gcm-gold-500);
+      color: var(--gcm-navy-950);
+      box-shadow: 0 10px 24px rgba(214, 169, 74, 0.22);
+    }
+
+    .summary-strip {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(160px, 0.5fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .summary-card {
+      min-height: 112px;
+      padding: 18px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--surface);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .business-card {
+      background:
+        linear-gradient(135deg, rgba(31, 104, 216, 0.98), rgba(11, 29, 51, 0.99));
+      color: #ffffff;
+    }
+
+    .summary-label {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      font-weight: 850;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .business-card .summary-label {
+      color: rgba(255, 255, 255, 0.62);
+    }
+
+    .summary-value {
+      margin: 8px 0 0;
+      color: var(--gcm-navy-950);
+      font-size: 1.65rem;
+      font-weight: 900;
+      line-height: 1.05;
+      letter-spacing: -0.035em;
+    }
+
+    .business-card .summary-value {
+      color: #ffffff;
+    }
+
+    .summary-note {
+      margin: 8px 0 0;
+      color: var(--text-soft);
+      font-size: 0.78rem;
+    }
+
+    .business-card .summary-note {
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 12px;
+    }
+
+    .tag,
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 27px;
+      padding: 0 9px;
+      border-radius: 999px;
+      font-size: 0.68rem;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .tag {
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.07);
+      color: rgba(255, 255, 255, 0.76);
+    }
+
+    .status-ready {
+      background: var(--success-soft);
+      color: var(--success);
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 10px;
+      margin-bottom: 18px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--surface);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .tab-button {
+      flex: 0 0 auto;
+      min-height: 38px;
+      padding: 0 13px;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-weight: 850;
+    }
+
+    .tab-button:hover,
+    .tab-button:focus-visible {
+      background: var(--surface-soft);
+      color: var(--gcm-navy-950);
+      outline: none;
+    }
+
+    .tab-button.is-active {
+      background: var(--gcm-blue-100);
+      color: var(--gcm-blue-600);
+      border-color: #cfe0fb;
+    }
+
+    .tab-panel[hidden] {
+      display: none;
+    }
+
+    .workspace-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .stack {
+      display: grid;
+      gap: 18px;
+    }
+
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 20px 22px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .panel-title {
+      margin: 0;
+      color: var(--gcm-navy-950);
+      font-size: 1rem;
+      font-weight: 900;
+      letter-spacing: -0.015em;
+    }
+
+    .panel-description {
+      margin: 5px 0 0;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+    }
+
+    .panel-body {
+      padding: 20px 22px;
+    }
+
+    .next-action-card {
+      padding: 24px;
+      background:
+        linear-gradient(135deg, rgba(31, 104, 216, 0.98), rgba(11, 29, 51, 0.99));
+      color: #ffffff;
+    }
+
+    .next-action-card .eyebrow {
+      color: #a8c9ff;
+    }
+
+    .next-action-card h2 {
+      margin: 0;
+      font-size: clamp(1.6rem, 3vw, 2.35rem);
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+    }
+
+    .next-action-card p {
+      max-width: 760px;
+      margin: 12px 0 0;
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 0.92rem;
+    }
+
+    .action-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .action-grid .button {
+      min-height: 44px;
+    }
+
+    .action-grid .button-secondary {
+      border-color: rgba(255, 255, 255, 0.23);
+      background: rgba(255, 255, 255, 0.08);
+      color: #ffffff;
+    }
+
+    .record-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .record-item {
+      padding: 15px;
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      background: #fbfcfe;
+    }
+
+    .record-item span,
+    .record-item strong {
+      display: block;
+    }
+
+    .record-item span {
+      color: var(--text-soft);
+      font-size: 0.69rem;
+      font-weight: 850;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .record-item strong {
+      margin-top: 5px;
+      color: var(--gcm-navy-950);
+      font-size: 0.88rem;
+    }
+
+    .record-item p {
+      margin: 5px 0 0;
+      color: var(--text-muted);
+      font-size: 0.76rem;
+    }
+
+    .stage-list,
+    .history-list,
+    .check-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .stage-item,
+    .history-item {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: start;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stage-item:last-child,
+    .history-item:last-child {
+      border-bottom: 0;
+    }
+
+    .stage-marker {
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--surface-muted);
+      color: var(--text-soft);
+      font-size: 0.72rem;
+      font-weight: 900;
+    }
+
+    .stage-item.is-complete .stage-marker {
+      background: var(--success-soft);
+      color: var(--success);
+    }
+
+    .stage-item.is-current .stage-marker {
+      background: var(--gcm-blue-100);
+      color: var(--gcm-blue-600);
+      box-shadow: 0 0 0 4px rgba(52, 124, 232, 0.09);
+    }
+
+    .stage-name,
+    .history-name {
+      margin: 0;
+      color: var(--text);
+      font-size: 0.84rem;
+      font-weight: 900;
+    }
+
+    .stage-detail,
+    .history-detail {
+      margin: 4px 0 0;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+    }
+
+    .stage-state {
+      color: var(--text-soft);
+      font-size: 0.68rem;
+      font-weight: 850;
+      white-space: nowrap;
+    }
+
+    .history-date {
+      color: var(--text-soft);
+      font-size: 0.68rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .check-item {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 10px;
+      align-items: start;
+      padding: 13px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .check-item:last-child {
+      border-bottom: 0;
+    }
+
+    .check-icon {
+      width: 20px;
+      height: 20px;
+      display: grid;
+      place-items: center;
+      margin-top: 1px;
+      border-radius: 50%;
+      background: var(--success-soft);
+      color: var(--success);
+      font-size: 0.7rem;
+      font-weight: 900;
+    }
+
+    .check-copy strong,
+    .check-copy span {
+      display: block;
+    }
+
+    .check-copy strong {
+      color: var(--text);
+      font-size: 0.8rem;
+    }
+
+    .check-copy span {
+      margin-top: 3px;
+      color: var(--text-muted);
+      font-size: 0.73rem;
+    }
+
+    .score-card {
+      padding: 22px;
+    }
+
+    .score-top {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .score-value {
+      margin: 0;
+      color: var(--gcm-navy-950);
+      font-size: 3rem;
+      font-weight: 900;
+      line-height: 0.9;
+      letter-spacing: -0.055em;
+    }
+
+    .score-out-of {
+      color: var(--text-soft);
+      font-size: 0.8rem;
+      font-weight: 800;
+    }
+
+    .score-track {
+      height: 9px;
+      margin-top: 18px;
+      border-radius: 999px;
+      background: var(--surface-muted);
+      overflow: hidden;
+    }
+
+    .score-fill {
+      width: 94%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--gcm-blue-600), var(--gcm-gold-500));
+    }
+
+    .score-note {
+      margin: 12px 0 0;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+    }
+
+    .contact-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .contact-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .contact-row:last-child {
+      padding-bottom: 0;
+      border-bottom: 0;
+    }
+
+    .contact-row span {
+      color: var(--text-soft);
+      font-size: 0.73rem;
+      font-weight: 800;
+    }
+
+    .contact-row strong {
+      color: var(--text);
+      font-size: 0.78rem;
+      text-align: right;
+    }
+
+    .note-area {
+      width: 100%;
+      min-height: 150px;
+      padding: 13px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      resize: vertical;
+      color: var(--text);
+      outline: none;
+    }
+
+    .note-area:focus {
+      border-color: var(--gcm-blue-500);
+      box-shadow: 0 0 0 3px rgba(52, 124, 232, 0.12);
+    }
+
+    .note-status {
+      margin-top: 9px;
+      color: var(--text-soft);
+      font-size: 0.72rem;
+      text-align: right;
+    }
+
+    .mobile-menu-button {
+      display: none;
+    }
+
+    @media (max-width: 1180px) {
+      .summary-strip {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .workspace-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 860px) {
+      .app-shell {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: fixed;
+        inset: 0 auto 0 0;
+        z-index: 100;
+        width: 250px;
+        transform: translateX(-100%);
+        transition: transform 180ms ease;
+      }
+
+      .sidebar.is-open {
+        transform: translateX(0);
+      }
+
+      .mobile-menu-button {
+        display: inline-flex;
+      }
+
+      .main {
+        padding: 20px;
+      }
+
+      .topbar {
+        align-items: center;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .topbar-actions {
+        width: 100%;
+        justify-content: flex-start;
+      }
+
+      .summary-strip,
+      .record-grid,
+      .action-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .main {
+        padding: 16px;
+      }
+
+      .stage-item,
+      .history-item {
+        grid-template-columns: auto minmax(0, 1fr);
+      }
+
+      .stage-state,
+      .history-date {
+        grid-column: 2;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar" aria-label="Primary navigation">
+      <a class="brand" href="today.html" aria-label="GCM OS Today">
+        <span class="brand-mark">G</span>
+
+        <span class="brand-copy">
+          <strong>Global Concepts Media</strong>
+          <span>Agency Operating System</span>
+        </span>
+      </a>
+
+      <p class="nav-label">Workspace</p>
+
+      <nav class="primary-nav">
+        <a class="nav-link" href="today.html">
+          <span class="nav-icon" aria-hidden="true">⌂</span>
+          <span>Today</span>
+        </a>
+
+        <a class="nav-link" href="prospects.html" aria-current="page">
+          <span class="nav-icon" aria-hidden="true">◎</span>
+          <span>Prospects</span>
+        </a>
+
+        <a class="nav-link" href="#">
+          <span class="nav-icon" aria-hidden="true">◫</span>
+          <span>Clients</span>
+        </a>
+
+        <a class="nav-link" href="#">
+          <span class="nav-icon" aria-hidden="true">✓</span>
+          <span>Work</span>
+        </a>
+
+        <a class="nav-link" href="#">
+          <span class="nav-icon" aria-hidden="true">↗</span>
+          <span>Proof</span>
+        </a>
+
+        <a class="nav-link" href="#">
+          <span class="nav-icon" aria-hidden="true">★</span>
+          <span>Case Studies</span>
+        </a>
+
+        <a class="nav-link" href="#">
+          <span class="nav-icon" aria-hidden="true">⚙</span>
+          <span>Settings</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-status">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span>Prospect record operational</span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main" id="main-content">
+      <div class="main-inner">
+        <header class="topbar">
+          <div>
+            <div class="breadcrumb">
+              <a href="prospects.html">Prospects</a>
+              <span aria-hidden="true">/</span>
+              <span>ABC Roofing</span>
+            </div>
+
+            <p class="eyebrow">Prospect Workspace</p>
+            <h1 class="page-title">ABC Roofing</h1>
+            <p class="page-subtitle">
+              One operating record for research, outreach, discovery, Growth Review, and conversion.
+            </p>
+          </div>
+
+          <div class="topbar-actions">
+            <button
+              class="button button-secondary mobile-menu-button"
+              id="mobile-menu-button"
+              type="button"
+              aria-controls="sidebar"
+              aria-expanded="false"
+            >
+              Menu
+            </button>
+
+            <a class="button button-secondary" href="prospects.html">
+              Back to Prospects
+            </a>
+
+            <a class="button button-primary" href="client-pre-research.html">
+              Open Pre-Research
+            </a>
+          </div>
+        </header>
+
+        <section class="summary-strip" aria-label="Prospect record summary">
+          <article class="summary-card business-card">
+            <p class="summary-label">Business</p>
+            <p class="summary-value">ABC Roofing</p>
+            <p class="summary-note">
+              Melbourne, Florida · Residential Roofing
+            </p>
+
+            <div class="tag-row">
+              <span class="tag">Ready to Contact</span>
+              <span class="tag">Local visibility</span>
+              <span class="tag">Owner outreach</span>
+            </div>
+          </article>
+
+          <article class="summary-card">
+            <p class="summary-label">Opportunity Score</p>
+            <p class="summary-value">94 / 100</p>
+            <p class="summary-note">Specific opportunity and clear outreach reason.</p>
+          </article>
+
+          <article class="summary-card">
+            <p class="summary-label">Current Stage</p>
+            <p class="summary-value">Outreach</p>
+            <p class="summary-note">Research complete. Discovery is next.</p>
+          </article>
+
+          <article class="summary-card">
+            <p class="summary-label">Next Action</p>
+            <p class="summary-value">Call Owner</p>
+            <p class="summary-note">Lead with the local-authority opportunity.</p>
+          </article>
+        </section>
+
+        <nav class="tabs" aria-label="Prospect workspace sections">
+          <button class="tab-button is-active" type="button" data-tab="overview">
+            Overview
+          </button>
+          <button class="tab-button" type="button" data-tab="research">
+            Research
+          </button>
+          <button class="tab-button" type="button" data-tab="snapshot">
+            Snapshot
+          </button>
+          <button class="tab-button" type="button" data-tab="discovery">
+            Discovery
+          </button>
+          <button class="tab-button" type="button" data-tab="growth-review">
+            Growth Review
+          </button>
+          <button class="tab-button" type="button" data-tab="history">
+            History
+          </button>
+        </nav>
+
+        <section class="tab-panel" id="tab-overview">
+          <div class="workspace-grid">
+            <div class="stack">
+              <article class="next-action-card">
+                <p class="eyebrow">Highest-Value Next Action</p>
+                <h2>Call the owner with one specific reason.</h2>
+                <p>
+                  Explain that the business appears credible, but its public presence does not clearly establish service-area authority or make the strongest local proof easy to find. Use that observation to begin a business conversation—not to deliver the entire solution.
+                </p>
+
+                <div class="action-grid">
+                  <a class="button button-gold" href="client-pre-research.html">
+                    Review Pre-Research
+                  </a>
+                  <a class="button button-secondary" href="business-snapshot.html">
+                    Run Snapshot
+                  </a>
+                  <button class="button button-secondary" id="copy-opening" type="button">
+                    Copy Opening
+                  </button>
+                </div>
+              </article>
+
+              <article class="panel">
+                <div class="panel-header">
+                  <div>
+                    <h2 class="panel-title">Verified Business Record</h2>
+                    <p class="panel-description">
+                      The current observable facts that support the next conversation.
+                    </p>
+                  </div>
+
+                  <span class="status-badge status-ready">Research Complete</span>
+                </div>
+
+                <div class="panel-body">
+                  <div class="record-grid">
+                    <div class="record-item">
+                      <span>Website</span>
+                      <strong>abcroofing.example</strong>
+                      <p>Public website available for analysis.</p>
+                    </div>
+
+                    <div class="record-item">
+                      <span>Industry</span>
+                      <strong>Residential Roofing</strong>
+                      <p>Service category appears clear.</p>
+                    </div>
+
+                    <div class="record-item">
+                      <span>Primary Market</span>
+                      <strong>Melbourne, Florida</strong>
+                      <p>Market requires final verification.</p>
+                    </div>
+
+                    <div class="record-item">
+                      <span>Strongest Area</span>
+                      <strong>Public credibility</strong>
+                      <p>The business appears established and legitimate.</p>
+                    </div>
+
+                    <div class="record-item">
+                      <span>Largest Opportunity</span>
+                      <strong>Local authority</strong>
+                      <p>Service-area proof is not prominent enough.</p>
+                    </div>
+
+                    <div class="record-item">
+                      <span>Best Conversation</span>
+                      <strong>Discovery call</strong>
+                      <p>Verify priorities before recommending implementation.</p>
+                    </div>
+                  </div>
+                </div>
+              </article>
+
+              <article class="panel">
+                <div class="panel-header">
+                  <div>
+                    <h2 class="panel-title">Consulting Lifecycle</h2>
+                    <p class="panel-description">
+                      Where this business is now and what must happen next.
+                    </p>
+                  </div>
+                </div>
+
+                <ol class="stage-list">
+                  <li class="stage-item is-complete">
+                    <span class="stage-marker">✓</span>
+                    <div>
+                      <p class="stage-name">Prospect Added</p>
+                      <p class="stage-detail">Business entered the acquisition pipeline.</p>
+                    </div>
+                    <span class="stage-state">Complete</span>
+                  </li>
+
+                  <li class="stage-item is-complete">
+                    <span class="stage-marker">✓</span>
+                    <div>
+                      <p class="stage-name">Client Pre-Research</p>
+                      <p class="stage-detail">Publicly observable business evidence reviewed.</p>
+                    </div>
+                    <span class="stage-state">Complete</span>
+                  </li>
+
+                  <li class="stage-item is-current">
+                    <span class="stage-marker">3</span>
+                    <div>
+                      <p class="stage-name">Personalized Outreach</p>
+                      <p class="stage-detail">Call with a specific, verified reason.</p>
+                    </div>
+                    <span class="stage-state">Current</span>
+                  </li>
+
+                  <li class="stage-item">
+                    <span class="stage-marker">4</span>
+                    <div>
+                      <p class="stage-name">Discovery</p>
+                      <p class="stage-detail">Verify business goals, constraints, and urgency.</p>
+                    </div>
+                    <span class="stage-state">Not Started</span>
+                  </li>
+
+                  <li class="stage-item">
+                    <span class="stage-marker">5</span>
+                    <div>
+                      <p class="stage-name">90-Day Growth Review</p>
+                      <p class="stage-detail">Build the paid consulting roadmap.</p>
+                    </div>
+                    <span class="stage-state">Not Started</span>
+                  </li>
+
+                  <li class="stage-item">
+                    <span class="stage-marker">6</span>
+                    <div>
+                      <p class="stage-name">Client Conversion</p>
+                      <p class="stage-detail">Move approved priorities into implementation.</p>
+                    </div>
+                    <span class="stage-state">Not Started</span>
+                  </li>
+                </ol>
+              </article>
+            </div>
+
+            <aside class="stack" aria-label="Prospect support information">
+              <article class="panel score-card">
+                <div class="score-top">
+                  <div>
+                    <p class="summary-label">Opportunity Score</p>
+                    <p class="score-value">94</p>
+                  </div>
+
+                  <span class="score-out-of">out of 100</span>
+                </div>
+
+                <div class="score-track">
+                  <div class="score-fill"></div>
+                </div>
+
+                <p class="score-note">
+                  High score because the opportunity is observable, relevant, and easy to explain in a first conversation.
+                </p>
+              </article>
+
+              <article class="panel">
+                <div class="panel-header">
+                  <div>
+                    <h2 class="panel-title">Contact Intelligence</h2>
+                    <p class="panel-description">
+                      Verify before outreach. Never invent missing information.
+                    </p>
+                  </div>
+                </div>
+
+                <div class="panel-body">
+                  <div class="contact-list">
+                    <div class="contact-row">
+                      <span>Owner</span>
+                      <strong>Needs Verification</strong>
+                    </div>
+                    <div class="contact-row">
+                      <span>Phone</span>
+                      <strong>Needs Verification</strong>
+                    </div>
+                    <div class="contact-row">
+                      <span>Email</span>
+                      <strong>Needs Verification</strong>
+                    </div>
+                    <div class="contact-row">
+                      <span>Website</span>
+                      <strong>abcroofing.example</strong>
+                    </div>
+                    <div class="contact-row">
+                      <span>Last Contact</span>
+                      <strong>Not Contacted</strong>
+                    </div>
+                  </div>
+                </div>
+              </article>
+
+              <article class="panel">
+                <div class="panel-header">
+                  <div>
+                    <h2 class="panel-title">Outreach Readiness</h2>
+                    <p class="panel-description">The minimum required before calling.</p>
+                  </div>
+                </div>
+
+                <div class="panel-body">
+                  <ul class="check-list">
+                    <li class="check-item">
+                      <span class="check-icon">✓</span>
+                      <span class="check-copy">
+                        <strong>Business verified</strong>
+                        <span>Website and service category observed.</span>
+                      </span>
+                    </li>
+
+                    <li class="check-item">
+                      <span class="check-icon">✓</span>
+                      <span class="check-copy">
+                        <strong>Opportunity identified</strong>
+                        <span>Local-authority gap is specific enough to discuss.</span>
+                      </span>
+                    </li>
+
+                    <li class="check-item">
+                      <span class="check-icon">✓</span>
+                      <span class="check-copy">
+                        <strong>Opening prepared</strong>
+                        <span>Conversation begins with research, not a generic pitch.</span>
+                      </span>
+                    </li>
+                  </ul>
+                </div>
+              </article>
+
+              <article class="panel">
+                <div class="panel-header">
+                  <div>
+                    <h2 class="panel-title">Working Notes</h2>
+                    <p class="panel-description">
+                      Notes are saved on this device for the MVP road test.
+                    </p>
+                  </div>
+                </div>
+
+                <div class="panel-body">
+                  <textarea
+                    class="note-area"
+                    id="working-notes"
+                    placeholder="Add call preparation, owner details, objections, or follow-up notes..."
+                  ></textarea>
+                  <p class="note-status" id="note-status">No saved notes.</p>
+                </div>
+              </article>
+            </aside>
+          </div>
+        </section>
+
+        <section class="tab-panel" id="tab-research" hidden>
+          <div class="workspace-grid">
+            <article class="panel">
+              <div class="panel-header">
+                <div>
+                  <h2 class="panel-title">Client Pre-Research</h2>
+                  <p class="panel-description">
+                    Launch or review the existing intelligence workflow.
+                  </p>
+                </div>
+              </div>
+
+              <div class="panel-body">
+                <div class="record-grid">
+                  <div class="record-item">
+                    <span>Status</span>
+                    <strong>Complete</strong>
+                    <p>Enough public information exists to begin personalized outreach.</p>
+                  </div>
+
+                  <div class="record-item">
+                    <span>Research Purpose</span>
+                    <strong>Prepare the first conversation</strong>
+                    <p>Do not give away the full Growth Review.</p>
+                  </div>
+
+                  <div class="record-item">
+                    <span>Strongest Evidence</span>
+                    <strong>Credible operating business</strong>
+                    <p>Existing trust can support a constructive conversation.</p>
+                  </div>
+
+                  <div class="record-item">
+                    <span>Missing Evidence</span>
+                    <strong>Owner and contact details</strong>
+                    <p>These must be verified before outreach.</p>
+                  </div>
+                </div>
+
+                <div class="action-grid">
+                  <a class="button button-primary" href="client-pre-research.html">
+                    Open Client Pre-Research
+                  </a>
+                  <a class="button button-secondary" href="business-snapshot.html">
+                    Run Business Snapshot
+                  </a>
+                  <button class="button button-secondary" type="button" data-tab-jump="overview">
+                    Return to Overview
+                  </button>
+                </div>
+              </div>
+            </article>
+
+            <aside class="panel">
+              <div class="panel-header">
+                <div>
+                  <h2 class="panel-title">Research Guardrails</h2>
+                  <p class="panel-description">What must remain true.</p>
+                </div>
+              </div>
+
+              <div class="panel-body">
+                <ul class="check-list">
+                  <li class="check-item">
+                    <span class="check-icon">✓</span>
+                    <span class="check-copy">
+                      <strong>Observable evidence only</strong>
+                      <span>Unknown information remains unknown.</span>
+                    </span>
+                  </li>
+                  <li class="check-item">
+                    <span class="check-icon">✓</span>
+                    <span class="check-copy">
+                      <strong>Conversation first</strong>
+                      <span>Research strengthens outreach instead of replacing discovery.</span>
+                    </span>
+                  </li>
+                  <li class="check-item">
+                    <span class="check-icon">✓</span>
+                    <span class="check-copy">
+                      <strong>Business value</strong>
+                      <span>Technical observations must connect to a business consequence.</span>
+                    </span>
+                  </li>
+                </ul>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <section class="tab-panel" id="tab-snapshot" hidden>
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">Business Snapshot</h2>
+                <p class="panel-description">
+                  The initial opportunity view used to support the next conversation.
+                </p>
+              </div>
+
+              <span class="status-badge status-ready">Ready to Run</span>
+            </div>
+
+            <div class="panel-body">
+              <div class="record-grid">
+                <div class="record-item">
+                  <span>Strongest Area</span>
+                  <strong>Public credibility</strong>
+                  <p>The business appears established and trustworthy.</p>
+                </div>
+
+                <div class="record-item">
+                  <span>Largest Opportunity</span>
+                  <strong>Service-area authority</strong>
+                  <p>Local relevance and proof need stronger presentation.</p>
+                </div>
+
+                <div class="record-item">
+                  <span>Highest-Priority Recommendation</span>
+                  <strong>Clarify the primary market</strong>
+                  <p>Support it with local proof and service-area evidence.</p>
+                </div>
+
+                <div class="record-item">
+                  <span>Recommended Next Step</span>
+                  <strong>Discovery conversation</strong>
+                  <p>Verify whether this opportunity aligns with business priorities.</p>
+                </div>
+              </div>
+
+              <div class="action-grid">
+                <a class="button button-primary" href="business-snapshot.html">
+                  Run Snapshot
+                </a>
+                <a class="button button-secondary" href="business-snapshot-results.html">
+                  View Latest Results
+                </a>
+                <button class="button button-secondary" type="button" data-tab-jump="overview">
+                  Return to Overview
+                </button>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="tab-panel" id="tab-discovery" hidden>
+          <div class="workspace-grid">
+            <article class="panel">
+              <div class="panel-header">
+                <div>
+                  <h2 class="panel-title">Discovery Preparation</h2>
+                  <p class="panel-description">
+                    Use research to ask better questions—not to assume the answers.
+                  </p>
+                </div>
+              </div>
+
+              <div class="panel-body">
+                <div class="record-grid">
+                  <div class="record-item">
+                    <span>Opening</span>
+                    <strong>Lead with the local visibility observation</strong>
+                    <p>Explain why the business stood out during market research.</p>
+                  </div>
+
+                  <div class="record-item">
+                    <span>Question 1</span>
+                    <strong>Which services create the most profitable work?</strong>
+                    <p>Verify what growth should actually prioritize.</p>
+                  </div>
+
+                  <div class="record-item">
+                    <span>Question 2</span>
+                    <strong>Which areas do you most want to serve?</strong>
+                    <p>Verify the target market before recommending local work.</p>
+                  </div>
+
+                  <div class="record-item">
+                    <span>Question 3</span>
+                    <strong>How are calls and leads measured today?</strong>
+                    <p>Establish whether results can be proven.</p>
+                  </div>
+
+                  <div class="record-item">
+                    <span>Question 4</span>
+                    <strong>What has already been tried?</strong>
+                    <p>Avoid repeating unsuccessful work or ignoring constraints.</p>
+                  </div>
+
+                  <div class="record-item">
+                    <span>Discovery Outcome</span>
+                    <strong>Determine whether the Growth Review is appropriate</strong>
+                    <p>Do not force a sale when the fit is weak.</p>
+                  </div>
+                </div>
+
+                <div class="action-grid">
+                  <button class="button button-primary" id="copy-discovery" type="button">
+                    Copy Discovery Questions
+                  </button>
+                  <a class="button button-secondary" href="growth-review-preview.html">
+                    Preview Growth Review
+                  </a>
+                  <button class="button button-secondary" type="button" data-tab-jump="overview">
+                    Return to Overview
+                  </button>
+                </div>
+              </div>
+            </article>
+
+            <aside class="panel">
+              <div class="panel-header">
+                <div>
+                  <h2 class="panel-title">Discovery Status</h2>
+                  <p class="panel-description">Current readiness.</p>
+                </div>
+              </div>
+
+              <div class="panel-body">
+                <div class="contact-list">
+                  <div class="contact-row">
+                    <span>Scheduled</span>
+                    <strong>No</strong>
+                  </div>
+                  <div class="contact-row">
+                    <span>Owner Verified</span>
+                    <strong>No</strong>
+                  </div>
+                  <div class="contact-row">
+                    <span>Opening Ready</span>
+                    <strong>Yes</strong>
+                  </div>
+                  <div class="contact-row">
+                    <span>Questions Ready</span>
+                    <strong>Yes</strong>
+                  </div>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <section class="tab-panel" id="tab-growth-review" hidden>
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">90-Day Growth Review</h2>
+                <p class="panel-description">
+                  The paid consulting deliverable begins after discovery confirms the fit.
+                </p>
+              </div>
+            </div>
+
+            <div class="panel-body">
+              <div class="record-grid">
+                <div class="record-item">
+                  <span>Status</span>
+                  <strong>Not Started</strong>
+                  <p>Discovery has not yet verified priorities and constraints.</p>
+                </div>
+
+                <div class="record-item">
+                  <span>Price</span>
+                  <strong>$299</strong>
+                  <p>Consultant-reviewed evidence and a prioritized 90-day roadmap.</p>
+                </div>
+
+                <div class="record-item">
+                  <span>Required Input</span>
+                  <strong>Discovery answers</strong>
+                  <p>Business priorities must be confirmed before final recommendations.</p>
+                </div>
+
+                <div class="record-item">
+                  <span>Expected Output</span>
+                  <strong>Implementation roadmap</strong>
+                  <p>Recommendations ranked by business impact and sequence.</p>
+                </div>
+              </div>
+
+              <div class="action-grid">
+                <a class="button button-primary" href="growth-review-preview.html">
+                  Open Growth Review Preview
+                </a>
+                <a class="button button-secondary" href="business-snapshot-results.html">
+                  Review Snapshot
+                </a>
+                <button class="button button-secondary" type="button" data-tab-jump="overview">
+                  Return to Overview
+                </button>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="tab-panel" id="tab-history" hidden>
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">Activity History</h2>
+                <p class="panel-description">
+                  A simple chronology of what happened and what should happen next.
+                </p>
+              </div>
+            </div>
+
+            <ol class="history-list">
+              <li class="history-item">
+                <span class="stage-marker">1</span>
+                <div>
+                  <p class="history-name">Prospect record created</p>
+                  <p class="history-detail">
+                    ABC Roofing was added as a road-test prospect.
+                  </p>
+                </div>
+                <span class="history-date">July 16</span>
+              </li>
+
+              <li class="history-item">
+                <span class="stage-marker">2</span>
+                <div>
+                  <p class="history-name">Client Pre-Research completed</p>
+                  <p class="history-detail">
+                    Enough observable evidence was found to prepare personalized outreach.
+                  </p>
+                </div>
+                <span class="history-date">July 16</span>
+              </li>
+
+              <li class="history-item">
+                <span class="stage-marker">3</span>
+                <div>
+                  <p class="history-name">Opportunity identified</p>
+                  <p class="history-detail">
+                    Local service-area authority was selected as the strongest conversation starter.
+                  </p>
+                </div>
+                <span class="history-date">July 16</span>
+              </li>
+
+              <li class="history-item">
+                <span class="stage-marker">4</span>
+                <div>
+                  <p class="history-name">Next action assigned</p>
+                  <p class="history-detail">
+                    Verify the owner and make a personalized first call.
+                  </p>
+                </div>
+                <span class="history-date">Next</span>
+              </li>
+            </ol>
+          </article>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const NOTES_KEY = "gcm-os-prospect-abc-roofing-notes-v1";
+      const tabButtons = [...document.querySelectorAll("[data-tab]")];
+      const tabPanels = [...document.querySelectorAll(".tab-panel")];
+      const tabJumpButtons = [...document.querySelectorAll("[data-tab-jump]")];
+      const mobileMenuButton = document.getElementById("mobile-menu-button");
+      const sidebar = document.getElementById("sidebar");
+      const notes = document.getElementById("working-notes");
+      const noteStatus = document.getElementById("note-status");
+      const copyOpeningButton = document.getElementById("copy-opening");
+      const copyDiscoveryButton = document.getElementById("copy-discovery");
+
+      const openingText =
+        "I was researching roofing companies in the Melbourne market and noticed that ABC Roofing appears credible, but the website does not make the strongest local service-area proof easy to find. I wanted to ask whether improving local visibility is something you are already working on.";
+
+      const discoveryText = [
+        "Which services create the most profitable work?",
+        "Which geographic areas do you most want to serve?",
+        "How are calls, leads, and booked jobs measured today?",
+        "What marketing or website improvements have already been tried?",
+        "What would meaningful improvement look like over the next 90 days?"
+      ].join("\n");
+
+      function activateTab(tabName) {
+        tabButtons.forEach((button) => {
+          const isActive = button.dataset.tab === tabName;
+          button.classList.toggle("is-active", isActive);
+          button.setAttribute("aria-selected", String(isActive));
+        });
+
+        tabPanels.forEach((panel) => {
+          panel.hidden = panel.id !== `tab-${tabName}`;
+        });
+
+        window.history.replaceState(null, "", `#${tabName}`);
+      }
+
+      tabButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          activateTab(button.dataset.tab);
+        });
+      });
+
+      tabJumpButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          activateTab(button.dataset.tabJump);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+      });
+
+      async function copyText(text, button, defaultLabel) {
+        try {
+          await navigator.clipboard.writeText(text);
+          button.textContent = "Copied";
+        } catch (error) {
+          const temporary = document.createElement("textarea");
+          temporary.value = text;
+          temporary.setAttribute("readonly", "");
+          temporary.style.position = "fixed";
+          temporary.style.opacity = "0";
+          document.body.appendChild(temporary);
+          temporary.select();
+          document.execCommand("copy");
+          temporary.remove();
+          button.textContent = "Copied";
+        }
+
+        window.setTimeout(() => {
+          button.textContent = defaultLabel;
+        }, 1600);
+      }
+
+      copyOpeningButton.addEventListener("click", () => {
+        copyText(openingText, copyOpeningButton, "Copy Opening");
+      });
+
+      copyDiscoveryButton.addEventListener("click", () => {
+        copyText(
+          discoveryText,
+          copyDiscoveryButton,
+          "Copy Discovery Questions"
+        );
+      });
+
+      function loadNotes() {
+        try {
+          const savedNotes = localStorage.getItem(NOTES_KEY) || "";
+          notes.value = savedNotes;
+          noteStatus.textContent = savedNotes
+            ? "Saved on this device."
+            : "No saved notes.";
+        } catch (error) {
+          noteStatus.textContent = "Notes could not be loaded.";
+        }
+      }
+
+      let saveTimer;
+
+      notes.addEventListener("input", () => {
+        noteStatus.textContent = "Saving...";
+
+        window.clearTimeout(saveTimer);
+
+        saveTimer = window.setTimeout(() => {
+          try {
+            localStorage.setItem(NOTES_KEY, notes.value);
+            noteStatus.textContent = notes.value.trim()
+              ? "Saved on this device."
+              : "No saved notes.";
+          } catch (error) {
+            noteStatus.textContent = "Notes could not be saved.";
+          }
+        }, 350);
+      });
+
+      mobileMenuButton.addEventListener("click", () => {
+        const isOpen = sidebar.classList.toggle("is-open");
+        mobileMenuButton.setAttribute("aria-expanded", String(isOpen));
+      });
+
+      document.addEventListener("click", (event) => {
+        const clickedInsideSidebar = sidebar.contains(event.target);
+        const clickedMenuButton = mobileMenuButton.contains(event.target);
+
+        if (
+          window.innerWidth <= 860 &&
+          sidebar.classList.contains("is-open") &&
+          !clickedInsideSidebar &&
+          !clickedMenuButton
+        ) {
+          sidebar.classList.remove("is-open");
+          mobileMenuButton.setAttribute("aria-expanded", "false");
+        }
+      });
+
+      const initialTab = window.location.hash.replace("#", "");
+      const validTabs = tabButtons.map((button) => button.dataset.tab);
+
+      activateTab(validTabs.includes(initialTab) ? initialTab : "overview");
+      loadNotes();
+    })();
+  </script>
+</body>
+</html>
