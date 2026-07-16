@@ -1,34 +1,140 @@
 # GCM OS — START HERE
 
-**Version:** 2.1
-
 **Status:** Active Development
 
 ---
 
-# AI Startup Instructions
+# Purpose
 
-You are continuing an existing software project.
+This document is the entry point for every new GCM OS development session.
 
-This document is the authoritative starting point for every development session.
+It establishes the required reading order, the current product vision, and the engineering rules for continuing development.
 
-Read the referenced project documents before making recommendations or code changes.
+Do not begin coding until the required documents have been reviewed.
 
-The project documents are the authoritative source of truth.
+---
 
-If previous conversations, AI memory, or assumptions conflict with these documents, these documents take precedence.
+# Required Reading Order
 
-Do not redesign completed architecture.
+Read these documents in the following order.
 
-Do not revisit locked decisions unless required.
+## 1.
 
-Continue the current sprint from the last completed production milestone.
+GCM_OS_AGENCY_OPERATING_SYSTEM_BLUEPRINT.md
 
-Recommend only the highest-value next file.
+Defines:
 
-Complete one file at a time.
+- What the product is
+- Product mission
+- Consulting workflow
+- Navigation
+- MVP scope
+- Product rules
 
-Provide complete fresh-install file replacements only.
+---
+
+## 2.
+
+GCM_OS_PRODUCT_BLUEPRINT.md
+
+Defines:
+
+- Functional requirements
+- Product capabilities
+- Long-term vision
+
+---
+
+## 3.
+
+GCM_OS_PROJECT_STATUS.md
+
+Defines:
+
+- Current development phase
+- Current sprint
+- Current production versions
+- Current objectives
+
+---
+
+## 4.
+
+GCM_OS_ARCHITECTURE.md
+
+Defines:
+
+- System architecture
+- Business Record
+- Evidence flow
+- Consulting Intelligence
+- Layer responsibilities
+
+---
+
+## 5.
+
+GCM_OS_DECISIONS.md
+
+Defines all locked product and engineering decisions.
+
+Do not redesign approved decisions.
+
+---
+
+## 6.
+
+GCM_OS_CAPABILITIES.md
+
+Defines every consulting capability supported by GCM OS.
+
+---
+
+## 7.
+
+CURRENT_SPRINT.md
+
+Defines the current sprint objective and the next production file.
+
+---
+
+# Product Philosophy
+
+GCM OS is an Agency Operating System.
+
+The consulting workflow is the product.
+
+The AI engines strengthen the workflow.
+
+The Business Record remains the single source of truth.
+
+Every recommendation must ultimately become:
+
+- A conversation
+- A task
+- A measurable improvement
+- Proof of value
+
+---
+
+# Product Mission
+
+Help Global Concepts Media consistently:
+
+- Acquire clients
+- Deliver measurable improvements
+- Prove business results
+- Grow through evidence-based consulting
+
+---
+
+# Engineering Rules
+
+One screen at a time.
+
+One responsibility per screen.
+
+Fresh-install files only.
 
 Deploy.
 
@@ -38,186 +144,79 @@ Verify.
 
 Lock.
 
-Repeat.
+Proceed.
+
+Never redesign completed architecture without verified business evidence.
+
+Every completed sprint must produce something usable with real prospects or clients.
 
 ---
 
-# Required Project Documents
+# Development Rule
 
-Read in this order:
+Before building any new feature, answer:
 
-1. docs/GCM_OS_PRODUCT_BLUEPRINT.md
+Does this feature help:
 
-2. docs/PROJECT_STATUS.md
+- Acquire clients?
+- Deliver work?
+- Prove results?
+- Grow the agency?
 
-3. docs/ARCHITECTURE.md
-
-4. docs/DECISIONS.md
-
-5. docs/CAPABILITIES.md
-
-6. docs/GROWTH_REVIEW_FRAMEWORK.md
-
-7. docs/CUSTOMER_JOURNEY.md
+If not, defer it.
 
 ---
 
-# Current Phase
+# Current Direction
 
-**Phase 3 — Productization**
+The intelligence engines are considered production infrastructure.
 
----
+Current development is focused on building the Agency Operating System that uses those engines to execute the complete consulting lifecycle.
 
-# Current Sprint
+The priority is no longer adding intelligence.
 
-**Business Snapshot MVP**
-
----
-
-# Current Production
-
-Dashboard **5.5.0**
-
-Worker **5.6.3**
-
----
-
-# Current State
-
-The complete Business Snapshot workflow is operational.
-
-```
-Homepage
-
-↓
-
-Business Snapshot
-
-↓
-
-Processing
-
-↓
-
-Business Record
-
-↓
-
-Business Snapshot Results
-
-↓
-
-90-Day Growth Review
-```
-
-The Worker successfully generates a Business Record.
-
-The Business Snapshot workflow is stable.
-
-Current work is focused on improving consulting quality rather than application architecture.
+The priority is making the product usable every Monday morning.
 
 ---
 
 # Current Objective
 
-Improve consulting intelligence.
+Build the Agency Operating System MVP.
 
-Transform observable evidence into Growth Leak Intelligence.
+Current implementation order:
 
-Produce deterministic consulting recommendations.
+Mission Control (Today)
 
-Preserve the Business Record as the single source of truth.
+↓
 
-Demonstrate the value of the 90-Day Growth Review.
+Prospects
 
----
+↓
 
-# Next File
+Clients
 
-worker.js
+↓
 
----
+Work
 
-# After That
+↓
 
-business-snapshot-results.html
+Proof
 
----
+↓
 
-# Product Status
+Case Studies
 
-✅ Business Record Architecture Locked
-
-✅ Consulting Intelligence Architecture Locked
-
-✅ Growth Review Framework Locked
-
-✅ Business Snapshot Specification Locked
-
-✅ Customer Journey Locked
-
-✅ Business Snapshot Workflow Operational
-
-🚧 Growth Leak Intelligence In Progress
+Every screen must answer one business question and directly support the consulting workflow.
 
 ---
 
-# Engineering Rules
+# Stop
 
-• One file at a time.
+Read the required documents.
 
-• Fresh-install files only.
-
-• Test after every deployment.
-
-• Never break production.
-
-• Business Record is the single source of truth.
-
-• Evidence before assumptions.
-
-• Preserve backwards compatibility.
-
-• Improve consulting quality before adding new capabilities.
-
----
-
-# Success Criteria
-
-The Business Snapshot should:
-
-• Require only a website URL.
-
-• Produce deterministic Business Records.
-
-• Identify evidence-based Growth Leaks.
-
-• Demonstrate consulting expertise.
-
-• Create confidence in the consulting methodology.
-
-• Naturally lead into the 90-Day Growth Review.
-
----
-
-# Product Philosophy
-
-Technology collects evidence.
-
-The Business Record organizes truth.
-
-Growth Leak Intelligence explains business impact.
-
-Consulting creates understanding.
-
-Implementation creates measurable business growth.
-
-Technology supports the consulting methodology.
-
-Consulting remains the product.
-
----
-
-STOP.
+Understand the product.
 
 Continue the current sprint.
+
+Do not redesign the product.
