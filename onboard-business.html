@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Onboard Business | GCM OS</title>
+  <meta name="description" content="Onboard a business into the Global Concepts Media Agency Operating System." />
+  <style>
+    :root{
+      --navy:#071426;--navy2:#0b1d33;--blue:#1f68d8;--blueSoft:#eaf2ff;
+      --gold:#d6a94a;--surface:#fff;--soft:#f5f7fb;--muted:#637083;
+      --text:#132238;--border:#dbe2ec;--success:#1f7a4f;--successSoft:#e9f7f0;
+      --danger:#b33a3a;--shadow:0 8px 24px rgba(7,20,38,.07);--radius:18px;
+    }
+    *{box-sizing:border-box} body{margin:0;background:var(--soft);color:var(--text);
+      font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    a{text-decoration:none;color:inherit} button,input,select,textarea{font:inherit}
+    .shell{min-height:100vh;display:grid;grid-template-columns:250px minmax(0,1fr)}
+    .sidebar{position:sticky;top:0;height:100vh;padding:24px 18px;color:#fff;
+      background:radial-gradient(circle at top right,rgba(52,124,232,.19),transparent 34%),
+      linear-gradient(180deg,var(--navy2),var(--navy));display:flex;flex-direction:column}
+    .brand{display:flex;gap:12px;align-items:center;padding:2px 8px 22px;border-bottom:1px solid rgba(255,255,255,.12)}
+    .mark{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;
+      border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.08);color:var(--gold);font-weight:900}
+    .brand strong,.brand span{display:block}.brand strong{font-size:.95rem}.brand span{font-size:.72rem;color:rgba(255,255,255,.58);text-transform:uppercase;letter-spacing:.12em;margin-top:2px}
+    .navlabel{margin:24px 10px 10px;color:rgba(255,255,255,.42);font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.14em}
+    nav{display:grid;gap:6px}.navlink{min-height:46px;padding:0 13px;border-radius:12px;display:flex;gap:12px;align-items:center;color:rgba(255,255,255,.72);font-weight:700;font-size:.92rem}
+    .navlink:hover,.navlink.current{background:rgba(52,124,232,.2);color:#fff}.foot{margin-top:auto;padding:18px 8px 2px;border-top:1px solid rgba(255,255,255,.12);font-size:.78rem;color:rgba(255,255,255,.67)}
+    .main{padding:28px 32px 48px}.inner{width:min(100%,1240px);margin:auto}
+    .top{display:flex;justify-content:space-between;gap:20px;margin-bottom:24px}.eyebrow{margin:0 0 6px;color:var(--blue);font-size:.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.14em}
+    h1{margin:0;font-size:clamp(2rem,4vw,3.1rem);line-height:1;letter-spacing:-.045em;color:var(--navy)}
+    .sub{margin:10px 0 0;color:var(--muted);max-width:760px}.actions{display:flex;gap:10px;align-items:flex-start}
+    .btn{min-height:42px;padding:0 16px;border-radius:11px;border:1px solid transparent;display:inline-flex;align-items:center;justify-content:center;font-weight:850;cursor:pointer}
+    .btn-primary{background:var(--blue);color:#fff}.btn-secondary{background:#fff;border-color:var(--border);color:var(--navy)}
+    .grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(320px,.75fr);gap:18px;align-items:start}
+    .panel{background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+    .ph{padding:20px 22px 16px;border-bottom:1px solid var(--border)}.ph h2{margin:0;font-size:1rem}.ph p{margin:5px 0 0;color:var(--muted);font-size:.82rem}
+    .pb{padding:22px}.section+.section{margin-top:28px;padding-top:25px;border-top:1px solid var(--border)}
+    .section h3{margin:0 0 5px;font-size:1rem}.section>p{margin:0 0 16px;color:var(--muted);font-size:.8rem}
+    .fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}.field{display:grid;gap:7px}.full{grid-column:1/-1}
+    label,.legend{color:var(--muted);font-size:.72rem;font-weight:850;text-transform:uppercase;letter-spacing:.08em}
+    .req{color:var(--danger)} input,select,textarea{width:100%;border:1px solid var(--border);border-radius:11px;background:#fff;color:var(--text);outline:none}
+    input,select{min-height:44px;padding:0 13px}textarea{min-height:110px;padding:12px 13px;resize:vertical}
+    input:focus,select:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(31,104,216,.12)}
+    fieldset{border:0;padding:0;margin:0}.entrygrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
+    .entry{position:relative}.entry input{position:absolute;opacity:0}.entry label{display:block;min-height:88px;padding:14px;border:1px solid var(--border);border-radius:13px;background:var(--soft);cursor:pointer}
+    .entry input:checked+label{border-color:var(--blue);background:var(--blueSoft)}.entry strong,.entry span{display:block}.entry strong{font-size:.83rem;color:var(--navy)}.entry span{font-size:.72rem;color:var(--muted);margin-top:4px}
+    .formactions{display:flex;justify-content:flex-end;gap:10px;margin-top:24px}
+    .recommend{padding:23px;background:linear-gradient(135deg,rgba(31,104,216,.98),rgba(11,29,51,.99));color:#fff;border-radius:var(--radius);box-shadow:var(--shadow)}
+    .recommend .eyebrow{color:#a8c9ff}.recommend h2{margin:0;font-size:1.55rem;line-height:1.08}.recommend p{color:rgba(255,255,255,.72);font-size:.84rem}
+    .meta{display:grid;gap:9px;margin-top:18px}.metarow{display:flex;justify-content:space-between;gap:16px;padding-bottom:9px;border-bottom:1px solid rgba(255,255,255,.14)}
+    .metarow:last-child{border-bottom:0}.metarow span{color:rgba(255,255,255,.58);font-size:.72rem}.metarow strong{font-size:.77rem;text-align:right}
+    .process{list-style:none;margin:0;padding:0}.process li{display:grid;grid-template-columns:auto 1fr;gap:11px;padding:15px 18px;border-bottom:1px solid var(--border)}
+    .process li:last-child{border-bottom:0}.num{width:27px;height:27px;border-radius:50%;display:grid;place-items:center;background:var(--blueSoft);color:var(--blue);font-size:.7rem;font-weight:900}
+    .process strong,.process span{display:block}.process strong{font-size:.8rem}.process span{margin-top:3px;color:var(--muted);font-size:.72rem}
+    .success{display:none;margin-bottom:18px;padding:15px 17px;border:1px solid #bce2cd;border-radius:13px;background:var(--successSoft);color:var(--success);font-weight:800}
+    .success.show{display:block}
+    @media(max-width:980px){.grid{grid-template-columns:1fr}}
+    @media(max-width:860px){.shell{grid-template-columns:1fr}.sidebar{display:none}.main{padding:20px}}
+    @media(max-width:700px){.top{flex-direction:column}.fields,.entrygrid{grid-template-columns:1fr}.formactions{flex-direction:column-reverse}.formactions .btn{width:100%}}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <a class="brand" href="today.html"><span class="mark">G</span><span><strong>Global Concepts Media</strong><span>Agency Operating System</span></span></a>
+      <p class="navlabel">Workspace</p>
+      <nav>
+        <a class="navlink" href="today.html">⌂ <span>Today</span></a>
+        <a class="navlink current" href="prospects.html">◎ <span>Prospects</span></a>
+        <a class="navlink" href="#">◫ <span>Clients</span></a>
+        <a class="navlink" href="#">✓ <span>Work</span></a>
+        <a class="navlink" href="#">↗ <span>Proof</span></a>
+        <a class="navlink" href="#">★ <span>Case Studies</span></a>
+        <a class="navlink" href="#">⚙ <span>Settings</span></a>
+      </nav>
+      <div class="foot">● Onboarding workspace ready</div>
+    </aside>
+
+    <main class="main">
+      <div class="inner">
+        <header class="top">
+          <div>
+            <p class="eyebrow">Business Workspace</p>
+            <h1>Onboard a Business</h1>
+            <p class="sub">Create one permanent operating record for a cold prospect, referral, Snapshot customer, Growth Review buyer, or existing client.</p>
+          </div>
+          <div class="actions"><a class="btn btn-secondary" href="prospects.html">Cancel</a></div>
+        </header>
+
+        <div class="success" id="success">Business Workspace created. Opening the workspace now.</div>
+
+        <section class="grid">
+          <article class="panel">
+            <div class="ph"><h2>New Business Record</h2><p>Enter only what is known. Missing details can be verified later.</p></div>
+            <div class="pb">
+              <form id="form">
+                <section class="section">
+                  <h3>Business</h3><p>Start with the minimum information needed to create the workspace.</p>
+                  <div class="fields">
+                    <div class="field"><label for="business">Business Name <span class="req">*</span></label><input id="business" name="businessName" required placeholder="ABC Roofing" /></div>
+                    <div class="field"><label for="website">Website</label><input id="website" name="website" type="url" placeholder="https://www.example.com" /></div>
+                    <div class="field"><label for="contact">Primary Contact</label><input id="contact" name="contactName" placeholder="Owner or decision-maker" /></div>
+                    <div class="field"><label for="phone">Phone</label><input id="phone" name="phone" type="tel" placeholder="(321) 555-0123" /></div>
+                    <div class="field"><label for="email">Email</label><input id="email" name="email" type="email" placeholder="owner@example.com" /></div>
+                    <div class="field"><label for="referral">Referral Source</label><input id="referral" name="referralSource" placeholder="Who referred this business?" disabled /></div>
+                    <div class="field full"><label for="notes">Initial Notes</label><textarea id="notes" name="notes" placeholder="Add context, timing, or known priorities..."></textarea></div>
+                  </div>
+                </section>
+
+                <section class="section">
+                  <h3>Entry Method</h3><p>Select how this business entered GCM OS.</p>
+                  <fieldset>
+                    <legend class="legend">How did this business enter GCM OS?</legend>
+                    <div class="entrygrid">
+                      <div class="entry"><input id="cold" name="entryMethod" type="radio" value="cold-prospect" checked><label for="cold"><strong>Cold Prospect</strong><span>Identified for personalized outreach.</span></label></div>
+                      <div class="entry"><input id="ref" name="entryMethod" type="radio" value="referral"><label for="ref"><strong>Referral</strong><span>Warm introduction from a trusted source.</span></label></div>
+                      <div class="entry"><input id="snapshot" name="entryMethod" type="radio" value="website-snapshot"><label for="snapshot"><strong>Website Snapshot</strong><span>Entered through the free Snapshot workflow.</span></label></div>
+                      <div class="entry"><input id="review" name="entryMethod" type="radio" value="paid-growth-review"><label for="review"><strong>Paid Growth Review</strong><span>The $299 review has been purchased.</span></label></div>
+                      <div class="entry"><input id="client" name="entryMethod" type="radio" value="existing-client"><label for="client"><strong>Existing Client</strong><span>Current client being added to the OS.</span></label></div>
+                      <div class="entry"><input id="previous" name="entryMethod" type="radio" value="previous-client"><label for="previous"><strong>Previous Client</strong><span>Former client with existing history.</span></label></div>
+                      <div class="entry"><input id="manual" name="entryMethod" type="radio" value="manual-entry"><label for="manual"><strong>Manual Entry</strong><span>Create a record without a predefined path.</span></label></div>
+                    </div>
+                  </fieldset>
+                </section>
+
+                <section class="section">
+                  <h3>Initial Stage</h3><p>The recommended stage updates automatically but can be changed.</p>
+                  <div class="field"><label for="stage">Current Stage</label>
+                    <select id="stage" name="currentStage">
+                      <option value="prospect">Prospect</option><option value="outreach">Outreach</option>
+                      <option value="discovery">Discovery</option><option value="growth-review">Growth Review</option>
+                      <option value="client">Client</option><option value="implementation">Implementation</option>
+                    </select>
+                  </div>
+                </section>
+
+                <div class="formactions">
+                  <button class="btn btn-secondary" id="clear" type="button">Clear</button>
+                  <button class="btn btn-primary" type="submit">Create Business Workspace</button>
+                </div>
+              </form>
+            </div>
+          </article>
+
+          <aside>
+            <article class="recommend">
+              <p class="eyebrow">Recommended First Action</p>
+              <h2 id="action">Run Client Pre-Research</h2>
+              <p id="reason">Research the publicly observable business evidence before making a personalized first call.</p>
+              <div class="meta">
+                <div class="metarow"><span>Entry Method</span><strong id="entryLabel">Cold Prospect</strong></div>
+                <div class="metarow"><span>Starting Stage</span><strong id="stageLabel">Prospect</strong></div>
+                <div class="metarow"><span>Workspace</span><strong>One permanent record</strong></div>
+              </div>
+            </article>
+
+            <article class="panel" style="margin-top:18px">
+              <div class="ph"><h2>What Happens Next</h2><p>The selected path determines the first workflow, not the entire future.</p></div>
+              <ol class="process">
+                <li><span class="num">1</span><span><strong>Create the Business Workspace</strong><span>One permanent operating record is created.</span></span></li>
+                <li><span class="num">2</span><span><strong>Begin at the correct stage</strong><span>A referral does not need the cold-prospect path.</span></span></li>
+                <li><span class="num">3</span><span><strong>Track every future action</strong><span>Research, work, results, proof, and history accumulate.</span></span></li>
+              </ol>
+            </article>
+          </aside>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    (() => {
+      "use strict";
+      const KEY = "gcm-os-business-records-v1";
+      const ACTIVE_KEY = "gcm-os-active-business-v1";
+      const flows = {
+        "cold-prospect": ["Cold Prospect","prospect","Prospect","Run Client Pre-Research","Research the publicly observable business evidence before making a personalized first call."],
+        "referral": ["Referral","outreach","Outreach","Prepare the Introduction Call","Use the trusted referral context to make a prompt, personal first contact."],
+        "website-snapshot": ["Website Snapshot","discovery","Discovery","Review the Snapshot and Schedule Discovery","Use the Snapshot as the starting point, then verify business priorities."],
+        "paid-growth-review": ["Paid Growth Review","growth-review","Growth Review","Begin the 90-Day Growth Review","Begin evidence collection and roadmap preparation."],
+        "existing-client": ["Existing Client","implementation","Implementation","Create the Current Work Queue","Capture active priorities, measurements, completed work, and the next action."],
+        "previous-client": ["Previous Client","client","Client","Review the Relationship and Current Opportunity","Document the previous engagement and determine the current opportunity."],
+        "manual-entry": ["Manual Entry","prospect","Prospect","Choose the Next Best Action","Create the workspace first, then select the workflow that matches the situation."]
+      };
+
+      const form = document.getElementById("form");
+      const stage = document.getElementById("stage");
+      const referral = document.getElementById("referral");
+      const action = document.getElementById("action");
+      const reason = document.getElementById("reason");
+      const entryLabel = document.getElementById("entryLabel");
+      const stageLabel = document.getElementById("stageLabel");
+      const success = document.getElementById("success");
+
+      function selected(){ return form.querySelector('input[name="entryMethod"]:checked').value; }
+      function update(){
+        const value = selected(), f = flows[value];
+        stage.value = f[1]; entryLabel.textContent = f[0]; stageLabel.textContent = f[2];
+        action.textContent = f[3]; reason.textContent = f[4];
+        referral.disabled = value !== "referral";
+        if (referral.disabled) referral.value = "";
+      }
+      function slug(v){return v.trim().toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,70)}
+      form.addEventListener("change", e => { if(e.target.name==="entryMethod") update(); });
+      form.addEventListener("submit", e => {
+        e.preventDefault(); if(!form.reportValidity()) return;
+        const data = new FormData(form), value = selected(), f = flows[value];
+        const record = {
+          id: slug(data.get("businessName"))+"-"+Date.now(),
+          businessName:String(data.get("businessName")||"").trim(),
+          website:String(data.get("website")||"").trim(),
+          contactName:String(data.get("contactName")||"").trim(),
+          phone:String(data.get("phone")||"").trim(),
+          email:String(data.get("email")||"").trim(),
+          referralSource:String(data.get("referralSource")||"").trim(),
+          notes:String(data.get("notes")||"").trim(),
+          entryMethod:value, entryMethodLabel:f[0], currentStage:stage.value,
+          recommendedAction:f[3], createdAt:new Date().toISOString()
+        };
+        const records = JSON.parse(localStorage.getItem(KEY) || "[]");
+        records.push(record);
+        localStorage.setItem(KEY, JSON.stringify(records));
+        localStorage.setItem(ACTIVE_KEY, JSON.stringify(record));
+        success.classList.add("show");
+        setTimeout(()=>{ window.location.href="prospect-workspace.html"; },650);
+      });
+      document.getElementById("clear").addEventListener("click",()=>{form.reset();success.classList.remove("show");update();document.getElementById("business").focus()});
+      update();
+    })();
+  </script>
+</body>
+</html>
