@@ -4,35 +4,500 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Communications | GCM OS</title>
-  <meta name="description" content="Capture important client communications from email screenshots and route them into GCM OS." />
+  <meta
+    name="description"
+    content="Analyze important client email screenshots and route them into GCM OS."
+  />
+
   <style>
     :root {
-      --gcm-navy-950:#071426;--gcm-navy-900:#0b1d33;--gcm-blue-600:#1f68d8;--gcm-blue-500:#347ce8;--gcm-blue-100:#eaf2ff;--gcm-gold-500:#d6a94a;
-      --surface:#fff;--surface-soft:#f5f7fb;--border:#dbe2ec;--text:#132238;--text-muted:#637083;--text-soft:#8290a3;
-      --success:#1f7a4f;--success-soft:#e9f7f0;--critical:#b33a3a;--info:#245fae;--info-soft:#edf5ff;
-      --shadow-sm:0 8px 24px rgba(7,20,38,.07);--radius-md:16px;--radius-lg:22px;--content-width:1480px;
+      --navy-950: #071426;
+      --navy-900: #0b1d33;
+      --blue-600: #1f68d8;
+      --blue-500: #347ce8;
+      --blue-100: #eaf2ff;
+      --gold-500: #d6a94a;
+      --surface: #ffffff;
+      --surface-soft: #f5f7fb;
+      --border: #dbe2ec;
+      --text: #132238;
+      --muted: #637083;
+      --soft: #8290a3;
+      --success: #1f7a4f;
+      --success-soft: #e9f7f0;
+      --warning: #9a6414;
+      --warning-soft: #fff4dd;
+      --danger: #b33a3a;
+      --danger-soft: #fff0f0;
+      --shadow: 0 12px 34px rgba(7, 20, 38, 0.09);
+      --radius: 18px;
+      --content-width: 1480px;
     }
-    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:var(--surface-soft);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5}
-    button,input,select,textarea{font:inherit}button{cursor:pointer}a{color:inherit;text-decoration:none}.skip-link{position:absolute;top:-48px;left:16px;z-index:1000;padding:10px 14px;border-radius:8px;background:#fff;color:var(--gcm-navy-950);font-weight:800}.skip-link:focus{top:16px}
-    .app-shell{min-height:100vh;display:grid;grid-template-columns:250px minmax(0,1fr)}.sidebar{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;padding:24px 18px;background:radial-gradient(circle at top right,rgba(52,124,232,.19),transparent 34%),linear-gradient(180deg,var(--gcm-navy-900),var(--gcm-navy-950));color:#fff;overflow-y:auto}
-    .brand{display:flex;align-items:center;gap:12px;padding:2px 8px 22px;border-bottom:1px solid rgba(255,255,255,.12)}.brand-mark{width:42px;height:42px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.22);border-radius:13px;background:rgba(255,255,255,.08);color:var(--gcm-gold-500);font-weight:900}.brand-copy strong,.brand-copy span{display:block}.brand-copy strong{font-size:.95rem}.brand-copy span{margin-top:2px;color:rgba(255,255,255,.58);font-size:.75rem;text-transform:uppercase;letter-spacing:.12em}
-    .nav-label{margin:24px 10px 10px;color:rgba(255,255,255,.42);font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.14em}.primary-nav{display:grid;gap:6px}.nav-link{display:flex;align-items:center;gap:12px;min-height:46px;padding:0 13px;border-radius:12px;color:rgba(255,255,255,.72);font-size:.92rem;font-weight:700}.nav-link:hover,.nav-link:focus-visible{background:rgba(255,255,255,.08);color:#fff;outline:none}.nav-link[aria-current="page"]{background:rgba(52,124,232,.2);color:#fff;box-shadow:inset 3px 0 0 var(--gcm-gold-500)}.nav-icon{width:22px;text-align:center}.sidebar-footer{margin-top:auto;padding:18px 8px 2px;border-top:1px solid rgba(255,255,255,.12)}.sidebar-status{display:flex;align-items:center;gap:9px;color:rgba(255,255,255,.67);font-size:.78rem}.status-dot{width:8px;height:8px;border-radius:50%;background:#5fd397;box-shadow:0 0 0 4px rgba(95,211,151,.12)}
-    .main{min-width:0;padding:28px 32px 48px}.main-inner{width:min(100%,var(--content-width));margin:0 auto}.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:22px}.eyebrow{margin:0 0 6px;color:var(--gcm-blue-600);font-size:.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.14em}.page-title{margin:0;color:var(--gcm-navy-950);font-size:clamp(2rem,4vw,3.15rem);line-height:1;letter-spacing:-.045em}.page-subtitle{max-width:760px;margin:10px 0 0;color:var(--text-muted);font-size:1rem}.date-chip{display:inline-flex;align-items:center;min-height:42px;padding:0 14px;border:1px solid var(--border);border-radius:999px;background:var(--surface);color:var(--text-muted);box-shadow:var(--shadow-sm);font-size:.84rem;font-weight:800;white-space:nowrap}
-    .capture-grid{display:grid;grid-template-columns:minmax(0,.95fr) minmax(420px,1.05fr);gap:18px;align-items:start}.stack{display:grid;gap:18px}.panel{border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--surface);box-shadow:var(--shadow-sm);overflow:hidden}.panel-header{padding:20px 22px 16px;border-bottom:1px solid var(--border)}.panel-title{margin:0;color:var(--gcm-navy-950);font-size:1rem;font-weight:900}.panel-description{margin:5px 0 0;color:var(--text-muted);font-size:.82rem}.panel-body{padding:22px}
-    .drop-zone{min-height:280px;display:grid;place-items:center;padding:22px;border:2px dashed #b9c7d9;border-radius:var(--radius-md);background:#fbfcfe;text-align:center}.drop-zone.is-dragging{border-color:var(--gcm-blue-600);background:var(--gcm-blue-100)}.drop-zone.has-image{padding:10px;background:#0b1626;border-style:solid}.drop-copy strong,.drop-copy span{display:block}.drop-copy strong{margin-bottom:6px;color:var(--gcm-navy-950);font-size:1rem}.drop-copy span{color:var(--text-muted);font-size:.82rem}.preview-image{display:none;width:100%;max-height:560px;object-fit:contain;border-radius:10px}.drop-zone.has-image .preview-image{display:block}.drop-zone.has-image .drop-copy{display:none}.upload-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
-    .button{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 16px;border:1px solid transparent;border-radius:11px;font-size:.86rem;font-weight:850}.button-primary{background:var(--gcm-blue-600);color:#fff;box-shadow:0 10px 24px rgba(31,104,216,.22)}.button-primary:disabled{cursor:not-allowed;opacity:.48;box-shadow:none}.button-secondary{border-color:var(--border);background:var(--surface);color:var(--gcm-navy-900)}.button-danger{border-color:#efcccc;background:#fff6f6;color:var(--critical)}
-    .field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}.field{display:grid;gap:7px}.field-full{grid-column:1/-1}label,legend{color:var(--gcm-navy-900);font-size:.78rem;font-weight:850}input,select,textarea{width:100%;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--text);padding:11px 12px;outline:none}textarea{min-height:104px;resize:vertical}input:focus,select:focus,textarea:focus{border-color:var(--gcm-blue-500);box-shadow:0 0 0 3px rgba(52,124,232,.13)}
-    .analysis-status{margin-bottom:14px;padding:12px 14px;border:1px solid #cfe0f8;border-radius:11px;background:var(--info-soft);color:var(--info);font-size:.82rem;font-weight:750}.decision-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:8px}.decision-option{position:relative}.decision-option input{position:absolute;opacity:0;pointer-events:none}.decision-option label{min-height:64px;display:flex;align-items:center;padding:12px 13px;border:1px solid var(--border);border-radius:11px;background:#fff;color:var(--text-muted);cursor:pointer}.decision-option input:checked+label{border-color:var(--gcm-blue-600);background:var(--gcm-blue-100);color:var(--gcm-navy-900)}.save-row{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:18px;padding-top:18px;border-top:1px solid var(--border)}.save-note{margin:0;color:var(--text-soft);font-size:.76rem}
-    .history-list{display:grid;gap:10px}.history-empty{margin:0;padding:18px;border:1px dashed var(--border);border-radius:12px;color:var(--text-muted);text-align:center;font-size:.84rem}.history-item{padding:14px;border:1px solid var(--border);border-radius:12px;background:#fff}.history-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.history-title{margin:0;color:var(--gcm-navy-950);font-size:.88rem;font-weight:900}.history-meta,.history-summary{margin:5px 0 0;color:var(--text-muted);font-size:.76rem}.status-label{display:inline-flex;align-items:center;min-height:25px;padding:0 8px;border-radius:999px;background:var(--success-soft);color:var(--success);font-size:.66rem;font-weight:900;white-space:nowrap}.mobile-menu-button{display:none}
-    @media(max-width:1100px){.capture-grid{grid-template-columns:1fr}}@media(max-width:860px){.app-shell{display:block}.sidebar{position:fixed;inset:0 auto 0 0;z-index:50;width:min(86vw,280px);transform:translateX(-104%);transition:transform 180ms ease}.sidebar.is-open{transform:translateX(0)}.mobile-menu-button{display:inline-flex}.main{padding:20px}.topbar{align-items:flex-start;flex-direction:column}}@media(max-width:640px){.field-grid,.decision-grid{grid-template-columns:1fr}.main{padding:16px}.panel-body,.panel-header{padding-left:17px;padding-right:17px}.save-row{align-items:stretch;flex-direction:column}}
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--surface-soft);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+    }
+
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    a { color: inherit; text-decoration: none; }
+
+    .app-shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 250px minmax(0, 1fr);
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 24px 18px;
+      background:
+        radial-gradient(circle at top right, rgba(52, 124, 232, 0.19), transparent 34%),
+        linear-gradient(180deg, var(--navy-900), var(--navy-950));
+      color: #fff;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 2px 8px 22px;
+      border-bottom: 1px solid rgba(255,255,255,.12);
+    }
+
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255,255,255,.22);
+      border-radius: 13px;
+      background: rgba(255,255,255,.08);
+      color: var(--gold-500);
+      font-weight: 900;
+    }
+
+    .brand-copy strong, .brand-copy span { display: block; }
+    .brand-copy strong { font-size: .95rem; }
+    .brand-copy span {
+      margin-top: 2px;
+      color: rgba(255,255,255,.58);
+      font-size: .75rem;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+    }
+
+    .nav-label {
+      margin: 24px 10px 10px;
+      color: rgba(255,255,255,.42);
+      font-size: .68rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .14em;
+    }
+
+    .primary-nav { display: grid; gap: 6px; }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 46px;
+      padding: 0 13px;
+      border-radius: 12px;
+      color: rgba(255,255,255,.72);
+      font-size: .92rem;
+      font-weight: 700;
+    }
+
+    .nav-link:hover,
+    .nav-link:focus-visible {
+      background: rgba(255,255,255,.08);
+      color: #fff;
+      outline: none;
+    }
+
+    .nav-link[aria-current="page"] {
+      background: rgba(52,124,232,.2);
+      color: #fff;
+      box-shadow: inset 3px 0 0 var(--gold-500);
+    }
+
+    .nav-icon { width: 22px; text-align: center; }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding: 18px 8px 2px;
+      border-top: 1px solid rgba(255,255,255,.12);
+      color: rgba(255,255,255,.66);
+      font-size: .78rem;
+    }
+
+    .main {
+      min-width: 0;
+      padding: 28px 32px 48px;
+    }
+
+    .main-inner {
+      width: min(100%, var(--content-width));
+      margin: 0 auto;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 22px;
+    }
+
+    .eyebrow {
+      margin: 0 0 6px;
+      color: var(--blue-600);
+      font-size: .72rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .14em;
+    }
+
+    h1 {
+      margin: 0;
+      color: var(--navy-950);
+      font-size: clamp(2rem, 4vw, 3.15rem);
+      line-height: 1;
+      letter-spacing: -.045em;
+    }
+
+    .subtitle {
+      max-width: 760px;
+      margin: 10px 0 0;
+      color: var(--muted);
+    }
+
+    .date-chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 42px;
+      padding: 0 14px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--muted);
+      box-shadow: var(--shadow);
+      font-size: .84rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .workspace-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(420px, .8fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .stack { display: grid; gap: 18px; }
+
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 18px 20px 15px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .panel-header h2 {
+      margin: 0;
+      color: var(--navy-950);
+      font-size: 1rem;
+    }
+
+    .panel-header p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: .82rem;
+    }
+
+    .panel-body { padding: 20px; }
+
+    .drop-zone {
+      min-height: 620px;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      border: 2px dashed #b9c7d9;
+      border-radius: 14px;
+      background: #fbfcfe;
+      text-align: center;
+    }
+
+    .drop-zone.has-image {
+      background: #0b1626;
+      border-style: solid;
+      padding: 10px;
+    }
+
+    .drop-zone.is-dragging {
+      border-color: var(--blue-600);
+      background: var(--blue-100);
+    }
+
+    .drop-copy strong, .drop-copy span { display: block; }
+    .drop-copy strong { color: var(--navy-950); font-size: 1rem; }
+    .drop-copy span { margin-top: 6px; color: var(--muted); font-size: .82rem; }
+
+    .preview-image {
+      display: none;
+      width: 100%;
+      max-height: 760px;
+      object-fit: contain;
+      border-radius: 10px;
+    }
+
+    .drop-zone.has-image .preview-image { display: block; }
+    .drop-zone.has-image .drop-copy { display: none; }
+
+    .button-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      padding: 0 16px;
+      border: 1px solid transparent;
+      border-radius: 11px;
+      font-size: .86rem;
+      font-weight: 850;
+    }
+
+    .button-primary {
+      background: var(--blue-600);
+      color: #fff;
+      box-shadow: 0 10px 24px rgba(31,104,216,.22);
+    }
+
+    .button-secondary {
+      border-color: var(--border);
+      background: #fff;
+      color: var(--navy-900);
+    }
+
+    .button-danger {
+      border-color: #efcccc;
+      background: #fff6f6;
+      color: var(--danger);
+    }
+
+    .button:disabled {
+      cursor: not-allowed;
+      opacity: .48;
+      box-shadow: none;
+    }
+
+    .field { display: grid; gap: 7px; margin-bottom: 14px; }
+    label, legend { color: var(--navy-900); font-size: .78rem; font-weight: 850; }
+
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--text);
+      padding: 11px 12px;
+      outline: none;
+    }
+
+    textarea { min-height: 96px; resize: vertical; }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--blue-500);
+      box-shadow: 0 0 0 3px rgba(52,124,232,.13);
+    }
+
+    .analysis-placeholder,
+    .analysis-error,
+    .analysis-ready {
+      padding: 14px;
+      border-radius: 12px;
+      font-size: .82rem;
+      font-weight: 750;
+    }
+
+    .analysis-placeholder {
+      border: 1px solid #cfe0f8;
+      background: var(--blue-100);
+      color: #245fae;
+    }
+
+    .analysis-error {
+      border: 1px solid #efcccc;
+      background: var(--danger-soft);
+      color: var(--danger);
+    }
+
+    .analysis-ready {
+      border: 1px solid #cde7d9;
+      background: var(--success-soft);
+      color: var(--success);
+    }
+
+    .analysis-section {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+
+    .analysis-section:first-of-type {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: 0;
+    }
+
+    .analysis-section h3 {
+      margin: 0 0 6px;
+      color: var(--navy-950);
+      font-size: .82rem;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    .analysis-section p {
+      margin: 0;
+      color: var(--text);
+      font-size: .88rem;
+      white-space: pre-wrap;
+    }
+
+    .classification {
+      display: inline-flex;
+      min-height: 28px;
+      align-items: center;
+      padding: 0 9px;
+      border-radius: 999px;
+      background: var(--warning-soft);
+      color: var(--warning);
+      font-size: .72rem;
+      font-weight: 900;
+    }
+
+    .decision-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 9px;
+      margin-top: 8px;
+    }
+
+    .decision-option { position: relative; }
+
+    .decision-option input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .decision-option label {
+      min-height: 58px;
+      display: flex;
+      align-items: center;
+      padding: 11px 12px;
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      background: #fff;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    .decision-option input:checked + label {
+      border-color: var(--blue-600);
+      background: var(--blue-100);
+      color: var(--navy-900);
+    }
+
+    .history-item {
+      padding: 13px;
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      margin-top: 10px;
+    }
+
+    .history-item:first-child { margin-top: 0; }
+
+    .history-item strong {
+      display: block;
+      color: var(--navy-950);
+      font-size: .86rem;
+    }
+
+    .history-item span,
+    .history-item p {
+      display: block;
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: .75rem;
+    }
+
+    .empty {
+      margin: 0;
+      padding: 18px;
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      color: var(--muted);
+      text-align: center;
+      font-size: .84rem;
+    }
+
+    @media (max-width: 1100px) {
+      .workspace-grid { grid-template-columns: 1fr; }
+      .drop-zone { min-height: 460px; }
+    }
+
+    @media (max-width: 850px) {
+      .app-shell { display: block; }
+      .sidebar { display: none; }
+      .main { padding: 18px; }
+      .topbar { flex-direction: column; }
+    }
+
+    @media (max-width: 620px) {
+      .decision-grid { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
+
 <body>
-  <a class="skip-link" href="#main-content">Skip to main content</a>
   <div class="app-shell">
-    <aside class="sidebar" id="sidebar" aria-label="Primary navigation">
-      <a class="brand" href="today.html" aria-label="GCM OS Today"><span class="brand-mark">G</span><span class="brand-copy"><strong>Global Concepts Media</strong><span>Agency Operating System</span></span></a>
+    <aside class="sidebar" aria-label="Primary navigation">
+      <a class="brand" href="today.html">
+        <span class="brand-mark">G</span>
+        <span class="brand-copy">
+          <strong>Global Concepts Media</strong>
+          <span>Agency Operating System</span>
+        </span>
+      </a>
+
       <p class="nav-label">Workspace</p>
+
       <nav class="primary-nav">
         <a class="nav-link" href="today.html"><span class="nav-icon">⌂</span><span>Today</span></a>
         <a class="nav-link" href="client-pre-research.html"><span class="nav-icon">◎</span><span>Prospects</span></a>
@@ -43,53 +508,532 @@
         <a class="nav-link" href="#"><span class="nav-icon">★</span><span>Case Studies</span></a>
         <a class="nav-link" href="#"><span class="nav-icon">⚙</span><span>Settings</span></a>
       </nav>
-      <div class="sidebar-footer"><div class="sidebar-status"><span class="status-dot"></span><span>Mission Control operational</span></div></div>
+
+      <div class="sidebar-footer">Mission Control operational</div>
     </aside>
-    <main class="main" id="main-content"><div class="main-inner">
-      <header class="topbar"><div><p class="eyebrow">Mission Control</p><h1 class="page-title">Client Communications</h1><p class="page-subtitle">Capture only the Gmail messages that matter, evaluate what they mean, and decide whether they become client history, work, proof, or a response.</p></div><div><button class="button button-secondary mobile-menu-button" id="mobile-menu-button" type="button" aria-controls="sidebar" aria-expanded="false">Menu</button> <span class="date-chip" id="current-date"></span></div></header>
-      <section class="capture-grid">
-        <div class="stack">
-          <article class="panel"><div class="panel-header"><h2 class="panel-title">1. Add Email Screenshot</h2><p class="panel-description">Take a screenshot in Gmail, then drag it here or choose the image.</p></div><div class="panel-body"><div class="drop-zone" id="drop-zone" tabindex="0"><img class="preview-image" id="preview-image" alt="Uploaded email screenshot preview"/><div class="drop-copy"><strong>Drop email screenshot here</strong><span>PNG, JPG, JPEG, or WEBP — maximum 10 MB</span></div></div><div class="upload-actions"><label class="button button-primary" for="file-input">Choose Screenshot</label><input id="file-input" type="file" accept="image/png,image/jpeg,image/webp" hidden/><button class="button button-danger" id="remove-image" type="button" disabled>Remove</button></div></div></article>
-          <article class="panel"><div class="panel-header"><h2 class="panel-title">Recent Captures</h2><p class="panel-description">Browser test records saved on this device.</p></div><div class="panel-body"><div class="history-list" id="history-list"></div></div></article>
-        </div>
-        <div class="stack">
-          <article class="panel"><div class="panel-header"><h2 class="panel-title">2. Identify the Communication</h2><p class="panel-description">Confirm the client and what kind of message this is.</p></div><div class="panel-body"><div class="field-grid">
-            <div class="field"><label for="client">Client</label><select id="client" required><option value="">Select client</option><option>Southeast Safes</option><option>1-800 4A Gun Safe</option><option>A1 Action Safe &amp; Lock</option><option>North Florida Safes</option><option>HB Guns</option><option>Pickett Weaponry</option><option>Global Concepts Media</option></select></div>
-            <div class="field"><label for="communication-date">Communication Date</label><input id="communication-date" type="date"/></div>
-            <div class="field"><label for="source">Source</label><select id="source"><option value="">Select source</option><option>Client Email</option><option>SEMrush</option><option>Google Search Console</option><option>Google Ads</option><option>Shopify</option><option>Cloudflare</option><option>GoDaddy</option><option>Other</option></select></div>
-            <div class="field"><label for="communication-type">Communication Type</label><select id="communication-type"><option value="">Select type</option><option>Client Request</option><option>Client Question</option><option>Client Issue</option><option>Platform Alert</option><option>Performance Report</option><option>Approval or Decision</option><option>General Client Record</option></select></div>
-            <div class="field field-full"><label for="title">Record Title</label><input id="title" type="text" placeholder="Example: SEMrush backlink audit email"/></div>
-          </div></div></article>
-          <article class="panel"><div class="panel-header"><h2 class="panel-title">3. Evaluate</h2><p class="panel-description">This first screen tests capture, routing, and record storage. AI screenshot analysis will be connected to the Worker next.</p></div><div class="panel-body"><div class="analysis-status">Upload a screenshot and complete the client fields. For this first deployment, enter the evaluation manually so we can verify the workflow before connecting AI.</div><div class="field-grid">
-            <div class="field field-full"><label for="summary">What happened?</label><textarea id="summary" placeholder="Summarize what the email says or requests."></textarea></div>
-            <div class="field field-full"><label for="importance">Why does it matter?</label><textarea id="importance" placeholder="Explain the client, operational, marketing, or revenue impact."></textarea></div>
-            <div class="field field-full"><label for="recommended-action">Recommended next action</label><textarea id="recommended-action" placeholder="Example: Review six lost backlinks and determine whether any require recovery."></textarea></div>
-          </div></div></article>
-          <article class="panel"><div class="panel-header"><h2 class="panel-title">4. Route the Communication</h2><p class="panel-description">Choose what this email should become inside GCM OS.</p></div><div class="panel-body"><fieldset style="border:0;padding:0;margin:0"><legend>Destination</legend><div class="decision-grid">
-            <div class="decision-option"><input id="decision-log" name="decision" type="radio" value="Client Record Only"/><label for="decision-log">Client Record Only</label></div>
-            <div class="decision-option"><input id="decision-work" name="decision" type="radio" value="Create Work Item"/><label for="decision-work">Create Work Item</label></div>
-            <div class="decision-option"><input id="decision-proof" name="decision" type="radio" value="Proof of Work Support"/><label for="decision-proof">Proof of Work Support</label></div>
-            <div class="decision-option"><input id="decision-reply" name="decision" type="radio" value="Reply Required"/><label for="decision-reply">Reply Required</label></div>
-            <div class="decision-option"><input id="decision-monitor" name="decision" type="radio" value="Monitor"/><label for="decision-monitor">Monitor</label></div>
-            <div class="decision-option"><input id="decision-ignore" name="decision" type="radio" value="Do Not Save"/><label for="decision-ignore">Do Not Save</label></div>
-          </div></fieldset><div class="save-row"><p class="save-note" id="save-note">Screenshot and record data remain in this browser for the prototype.</p><button class="button button-primary" id="save-record" type="button" disabled>Save Communication</button></div></div></article>
-        </div>
-      </section>
-    </div></main>
+
+    <main class="main">
+      <div class="main-inner">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Mission Control</p>
+            <h1>Client Communications</h1>
+            <p class="subtitle">
+              Upload an important Gmail screenshot, analyze what it means, and decide whether it becomes client history, investigation, work, proof, or a reply.
+            </p>
+          </div>
+          <span class="date-chip" id="current-date"></span>
+        </header>
+
+        <section class="workspace-grid">
+          <div class="stack">
+            <article class="panel">
+              <div class="panel-header">
+                <h2>1. Email Screenshot</h2>
+                <p>The screenshot is the primary source record.</p>
+              </div>
+              <div class="panel-body">
+                <div class="drop-zone" id="drop-zone" tabindex="0">
+                  <img id="preview-image" class="preview-image" alt="Uploaded email screenshot preview" />
+                  <div class="drop-copy">
+                    <strong>Drop email screenshot here</strong>
+                    <span>PNG, JPG, JPEG, or WEBP — maximum 10 MB</span>
+                  </div>
+                </div>
+
+                <div class="button-row">
+                  <label class="button button-primary" for="file-input">Choose Screenshot</label>
+                  <input id="file-input" type="file" accept="image/png,image/jpeg,image/webp" hidden />
+                  <button class="button button-danger" id="remove-image" type="button" disabled>Remove</button>
+                </div>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-header">
+                <h2>Recent Captures</h2>
+                <p>Prototype records saved in this browser.</p>
+              </div>
+              <div class="panel-body" id="history-list"></div>
+            </article>
+          </div>
+
+          <div class="stack">
+            <article class="panel">
+              <div class="panel-header">
+                <h2>2. Analyze Communication</h2>
+                <p>Select the client, then let GCM OS evaluate the screenshot.</p>
+              </div>
+              <div class="panel-body">
+                <div class="field">
+                  <label for="client">Client</label>
+                  <select id="client">
+                    <option value="">Select client</option>
+                    <option>Southeast Safes</option>
+                    <option>1-800 4A Gun Safe</option>
+                    <option>A1 Action Safe &amp; Lock</option>
+                    <option>North Florida Safes</option>
+                    <option>HB Guns</option>
+                    <option>Pickett Weaponry</option>
+                    <option>Global Concepts Media</option>
+                  </select>
+                </div>
+
+                <button class="button button-primary" id="analyze-button" type="button" disabled>
+                  Analyze Screenshot
+                </button>
+
+                <div style="margin-top:14px;" id="analysis-status" class="analysis-placeholder">
+                  Upload a screenshot and select a client.
+                </div>
+              </div>
+            </article>
+
+            <article class="panel" id="analysis-panel" hidden>
+              <div class="panel-header">
+                <h2>3. Review Analysis</h2>
+                <p>Confirm what the communication means before saving it.</p>
+              </div>
+              <div class="panel-body">
+                <div class="analysis-section">
+                  <h3>Source</h3>
+                  <p id="result-source"></p>
+                </div>
+
+                <div class="analysis-section">
+                  <h3>Communication Type</h3>
+                  <p id="result-type"></p>
+                </div>
+
+                <div class="analysis-section">
+                  <h3>What the Email Says</h3>
+                  <p id="result-summary"></p>
+                </div>
+
+                <div class="analysis-section">
+                  <h3>Problem Assessment</h3>
+                  <span class="classification" id="result-classification"></span>
+                  <p id="result-assessment" style="margin-top:7px;"></p>
+                </div>
+
+                <div class="analysis-section">
+                  <h3>Recommended Next Step</h3>
+                  <p id="result-recommendation"></p>
+                </div>
+
+                <div class="analysis-section">
+                  <h3>Proof of Work Wording</h3>
+                  <textarea id="result-proof"></textarea>
+                </div>
+              </div>
+            </article>
+
+            <article class="panel" id="route-panel" hidden>
+              <div class="panel-header">
+                <h2>4. Route and Save</h2>
+                <p>Choose what this communication becomes inside GCM OS.</p>
+              </div>
+              <div class="panel-body">
+                <fieldset style="border:0;padding:0;margin:0;">
+                  <legend>Final Decision</legend>
+                  <div class="decision-grid">
+                    <div class="decision-option">
+                      <input id="decision-reviewed" name="decision" type="radio" value="Save as Reviewed" />
+                      <label for="decision-reviewed">Save as Reviewed</label>
+                    </div>
+                    <div class="decision-option">
+                      <input id="decision-investigate" name="decision" type="radio" value="Create Investigation" />
+                      <label for="decision-investigate">Create Investigation</label>
+                    </div>
+                    <div class="decision-option">
+                      <input id="decision-work" name="decision" type="radio" value="Create Work Item" />
+                      <label for="decision-work">Create Work Item</label>
+                    </div>
+                    <div class="decision-option">
+                      <input id="decision-proof" name="decision" type="radio" value="Add to Proof of Work" />
+                      <label for="decision-proof">Add to Proof of Work</label>
+                    </div>
+                    <div class="decision-option">
+                      <input id="decision-reply" name="decision" type="radio" value="Reply Required" />
+                      <label for="decision-reply">Reply Required</label>
+                    </div>
+                    <div class="decision-option">
+                      <input id="decision-ignore" name="decision" type="radio" value="Do Not Save" />
+                      <label for="decision-ignore">Do Not Save</label>
+                    </div>
+                  </div>
+                </fieldset>
+
+                <div class="button-row">
+                  <button class="button button-primary" id="save-button" type="button" disabled>
+                    Save Communication
+                  </button>
+                </div>
+              </div>
+            </article>
+          </div>
+        </section>
+      </div>
+    </main>
   </div>
+
   <script>
-    (()=>{"use strict";const STORAGE_KEY="gcm-os-client-communications-v1",MAX_FILE_SIZE=10*1024*1024,ALLOWED_TYPES=new Set(["image/png","image/jpeg","image/webp"]);const e={sidebar:document.getElementById("sidebar"),mobileMenuButton:document.getElementById("mobile-menu-button"),currentDate:document.getElementById("current-date"),dropZone:document.getElementById("drop-zone"),fileInput:document.getElementById("file-input"),previewImage:document.getElementById("preview-image"),removeImage:document.getElementById("remove-image"),client:document.getElementById("client"),communicationDate:document.getElementById("communication-date"),source:document.getElementById("source"),communicationType:document.getElementById("communication-type"),title:document.getElementById("title"),summary:document.getElementById("summary"),importance:document.getElementById("importance"),recommendedAction:document.getElementById("recommended-action"),saveRecord:document.getElementById("save-record"),saveNote:document.getElementById("save-note"),historyList:document.getElementById("history-list")};let imageDataUrl="",imageFileName="";init();
-      function init(){const t=new Date;e.communicationDate.value=dateValue(t);e.currentDate.textContent=new Intl.DateTimeFormat("en-US",{weekday:"short",month:"short",day:"numeric",year:"numeric"}).format(t);bind();renderHistory();validate()}
-      function bind(){e.mobileMenuButton.addEventListener("click",()=>{const o=e.sidebar.classList.toggle("is-open");e.mobileMenuButton.setAttribute("aria-expanded",String(o))});e.fileInput.addEventListener("change",x=>{const[f]=x.target.files;if(f)handleFile(f)});["dragenter","dragover"].forEach(n=>e.dropZone.addEventListener(n,x=>{x.preventDefault();e.dropZone.classList.add("is-dragging")}));["dragleave","drop"].forEach(n=>e.dropZone.addEventListener(n,x=>{x.preventDefault();e.dropZone.classList.remove("is-dragging")}));e.dropZone.addEventListener("drop",x=>{const[f]=x.dataTransfer.files;if(f)handleFile(f)});e.dropZone.addEventListener("click",()=>e.fileInput.click());e.dropZone.addEventListener("keydown",x=>{if(x.key==="Enter"||x.key===" "){x.preventDefault();e.fileInput.click()}});e.removeImage.addEventListener("click",removeImage);document.querySelectorAll("input,select,textarea").forEach(c=>{c.addEventListener("input",validate);c.addEventListener("change",validate)});e.saveRecord.addEventListener("click",save)}
-      function handleFile(f){if(!ALLOWED_TYPES.has(f.type)){note("Please choose a PNG, JPG, JPEG, or WEBP image.",true);return}if(f.size>MAX_FILE_SIZE){note("The screenshot is larger than 10 MB.",true);return}const r=new FileReader;r.onload=()=>{imageDataUrl=String(r.result||"");imageFileName=f.name;e.previewImage.src=imageDataUrl;e.dropZone.classList.add("has-image");e.removeImage.disabled=false;note(`Screenshot ready: ${f.name}`,false);validate()};r.onerror=()=>note("The screenshot could not be read.",true);r.readAsDataURL(f)}
-      function removeImage(){imageDataUrl="";imageFileName="";e.previewImage.removeAttribute("src");e.dropZone.classList.remove("has-image");e.fileInput.value="";e.removeImage.disabled=true;validate()}
-      function decision(){const s=document.querySelector('input[name="decision"]:checked');return s?s.value:""}
-      function validate(){e.saveRecord.disabled=!Boolean(imageDataUrl&&e.client.value&&e.communicationDate.value&&e.source.value&&e.communicationType.value&&e.title.value.trim()&&e.summary.value.trim()&&e.importance.value.trim()&&e.recommendedAction.value.trim()&&decision())}
-      function save(){const d=decision();if(d==="Do Not Save"){reset();note("Communication was intentionally not saved.",false);return}const record={id:id(),recordType:"communicationIntelligence",clientId:slug(e.client.value),clientName:e.client.value,communicationDate:e.communicationDate.value,capturedAt:new Date().toISOString(),source:e.source.value,communicationType:e.communicationType.value,title:e.title.value.trim(),summary:e.summary.value.trim(),importance:e.importance.value.trim(),recommendedAction:e.recommendedAction.value.trim(),decision:d,status:"Captured",screenshot:{fileName:imageFileName,dataUrl:imageDataUrl},sourceRecordIds:[],version:"1.0.0"};const records=read();records.unshift(record);try{localStorage.setItem(STORAGE_KEY,JSON.stringify(records.slice(0,25)))}catch(err){note("The browser could not store the screenshot. Try a smaller image or clear old prototype records.",true);return}renderHistory();reset();note("Communication saved to the local prototype record.",false)}
-      function read(){try{const p=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");return Array.isArray(p)?p:[]}catch{return[]}}
-      function renderHistory(){const records=read();if(!records.length){e.historyList.innerHTML='<p class="history-empty">No communications captured yet.</p>';return}e.historyList.innerHTML=records.slice(0,10).map(r=>`<article class="history-item"><div class="history-top"><div><h3 class="history-title">${esc(r.title)}</h3><p class="history-meta">${esc(r.clientName)} · ${esc(r.source)} · ${esc(formatDate(r.communicationDate))}</p></div><span class="status-label">${esc(r.decision)}</span></div><p class="history-summary">${esc(r.summary)}</p></article>`).join("")}
-      function reset(){removeImage();e.client.value="";e.source.value="";e.communicationType.value="";e.title.value="";e.summary.value="";e.importance.value="";e.recommendedAction.value="";e.communicationDate.value=dateValue(new Date);document.querySelectorAll('input[name="decision"]').forEach(i=>i.checked=false);validate()}
-      function note(m,err){e.saveNote.textContent=m;e.saveNote.style.color=err?"var(--critical)":"var(--text-soft)"}function id(){return window.crypto&&typeof window.crypto.randomUUID==="function"?`communication-${window.crypto.randomUUID()}`:`communication-${Date.now()}-${Math.random().toString(16).slice(2)}`}function slug(v){return v.toLowerCase().trim().replace(/&/g,"and").replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")}function dateValue(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}function formatDate(v){const d=new Date(`${v}T12:00:00`);return Number.isNaN(d.getTime())?v:new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric",year:"numeric"}).format(d)}function esc(v){return String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;")}
+    (() => {
+      "use strict";
+
+      /*
+       * This page is ready for the screenshot-analysis Worker route.
+       *
+       * Set ANALYZE_ENDPOINT after the Worker route is created.
+       * Expected response shape:
+       *
+       * {
+       *   "ok": true,
+       *   "analysis": {
+       *     "source": "SEMrush",
+       *     "communicationType": "Platform Alert",
+       *     "title": "SEMrush Backlink Audit update",
+       *     "summary": "...",
+       *     "problemClassification": "Possible issue — investigation required",
+       *     "problemAssessment": "...",
+       *     "recommendedAction": "...",
+       *     "proofOfWork": "..."
+       *   }
+       * }
+       */
+      const ANALYZE_ENDPOINT = "";
+      const STORAGE_KEY = "gcm-os-client-communications-v2";
+      const MAX_FILE_SIZE = 10 * 1024 * 1024;
+      const ALLOWED_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+
+      const el = {
+        currentDate: document.getElementById("current-date"),
+        dropZone: document.getElementById("drop-zone"),
+        fileInput: document.getElementById("file-input"),
+        previewImage: document.getElementById("preview-image"),
+        removeImage: document.getElementById("remove-image"),
+        client: document.getElementById("client"),
+        analyzeButton: document.getElementById("analyze-button"),
+        analysisStatus: document.getElementById("analysis-status"),
+        analysisPanel: document.getElementById("analysis-panel"),
+        routePanel: document.getElementById("route-panel"),
+        resultSource: document.getElementById("result-source"),
+        resultType: document.getElementById("result-type"),
+        resultSummary: document.getElementById("result-summary"),
+        resultClassification: document.getElementById("result-classification"),
+        resultAssessment: document.getElementById("result-assessment"),
+        resultRecommendation: document.getElementById("result-recommendation"),
+        resultProof: document.getElementById("result-proof"),
+        saveButton: document.getElementById("save-button"),
+        historyList: document.getElementById("history-list")
+      };
+
+      let imageDataUrl = "";
+      let imageFileName = "";
+      let currentAnalysis = null;
+
+      initialize();
+
+      function initialize() {
+        const today = new Date();
+        el.currentDate.textContent = new Intl.DateTimeFormat("en-US", {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          year: "numeric"
+        }).format(today);
+
+        bindEvents();
+        renderHistory();
+        validateAnalyze();
+      }
+
+      function bindEvents() {
+        el.fileInput.addEventListener("change", event => {
+          const [file] = event.target.files;
+          if (file) handleFile(file);
+        });
+
+        ["dragenter", "dragover"].forEach(name => {
+          el.dropZone.addEventListener(name, event => {
+            event.preventDefault();
+            el.dropZone.classList.add("is-dragging");
+          });
+        });
+
+        ["dragleave", "drop"].forEach(name => {
+          el.dropZone.addEventListener(name, event => {
+            event.preventDefault();
+            el.dropZone.classList.remove("is-dragging");
+          });
+        });
+
+        el.dropZone.addEventListener("drop", event => {
+          const [file] = event.dataTransfer.files;
+          if (file) handleFile(file);
+        });
+
+        el.dropZone.addEventListener("click", () => el.fileInput.click());
+        el.dropZone.addEventListener("keydown", event => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            el.fileInput.click();
+          }
+        });
+
+        el.removeImage.addEventListener("click", removeImage);
+        el.client.addEventListener("change", validateAnalyze);
+        el.analyzeButton.addEventListener("click", analyzeScreenshot);
+
+        document.querySelectorAll('input[name="decision"]').forEach(input => {
+          input.addEventListener("change", () => {
+            el.saveButton.disabled = !getDecision();
+          });
+        });
+
+        el.saveButton.addEventListener("click", saveCommunication);
+      }
+
+      function handleFile(file) {
+        if (!ALLOWED_TYPES.has(file.type)) {
+          setStatus("Please choose a PNG, JPG, JPEG, or WEBP screenshot.", "error");
+          return;
+        }
+
+        if (file.size > MAX_FILE_SIZE) {
+          setStatus("The screenshot is larger than 10 MB.", "error");
+          return;
+        }
+
+        const reader = new FileReader();
+
+        reader.onload = () => {
+          imageDataUrl = String(reader.result || "");
+          imageFileName = file.name;
+          el.previewImage.src = imageDataUrl;
+          el.dropZone.classList.add("has-image");
+          el.removeImage.disabled = false;
+          clearAnalysis();
+          setStatus("Screenshot ready. Select the client and analyze it.", "ready");
+          validateAnalyze();
+        };
+
+        reader.onerror = () => setStatus("The screenshot could not be read.", "error");
+        reader.readAsDataURL(file);
+      }
+
+      function removeImage() {
+        imageDataUrl = "";
+        imageFileName = "";
+        el.previewImage.removeAttribute("src");
+        el.dropZone.classList.remove("has-image");
+        el.fileInput.value = "";
+        el.removeImage.disabled = true;
+        clearAnalysis();
+        setStatus("Upload a screenshot and select a client.", "placeholder");
+        validateAnalyze();
+      }
+
+      function validateAnalyze() {
+        el.analyzeButton.disabled = !(imageDataUrl && el.client.value);
+      }
+
+      async function analyzeScreenshot() {
+        if (!imageDataUrl || !el.client.value) return;
+
+        if (!ANALYZE_ENDPOINT) {
+          setStatus(
+            "The screen is ready, but screenshot intelligence is not connected yet. The next Worker file must add the communications analysis route.",
+            "error"
+          );
+          return;
+        }
+
+        el.analyzeButton.disabled = true;
+        el.analyzeButton.textContent = "Analyzing…";
+        setStatus("Reading the screenshot and evaluating the communication…", "placeholder");
+
+        try {
+          const response = await fetch(ANALYZE_ENDPOINT, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "analyze-client-communication",
+              client: el.client.value,
+              image: imageDataUrl,
+              fileName: imageFileName
+            })
+          });
+
+          if (!response.ok) {
+            throw new Error(`Analysis request failed with status ${response.status}.`);
+          }
+
+          const payload = await response.json();
+          if (!payload?.ok || !payload?.analysis) {
+            throw new Error(payload?.error || "The Worker returned an invalid analysis.");
+          }
+
+          currentAnalysis = payload.analysis;
+          renderAnalysis(currentAnalysis);
+          setStatus("Analysis complete. Review the result and choose what happens next.", "ready");
+        } catch (error) {
+          console.error(error);
+          setStatus(error.message || "The screenshot could not be analyzed.", "error");
+        } finally {
+          el.analyzeButton.textContent = "Analyze Screenshot";
+          validateAnalyze();
+        }
+      }
+
+      function renderAnalysis(analysis) {
+        el.resultSource.textContent = analysis.source || "Unknown";
+        el.resultType.textContent = analysis.communicationType || "General Client Record";
+        el.resultSummary.textContent = analysis.summary || "";
+        el.resultClassification.textContent =
+          analysis.problemClassification || "Needs review";
+        el.resultAssessment.textContent = analysis.problemAssessment || "";
+        el.resultRecommendation.textContent = analysis.recommendedAction || "";
+        el.resultProof.value = analysis.proofOfWork || "";
+
+        el.analysisPanel.hidden = false;
+        el.routePanel.hidden = false;
+      }
+
+      function clearAnalysis() {
+        currentAnalysis = null;
+        el.analysisPanel.hidden = true;
+        el.routePanel.hidden = true;
+        el.saveButton.disabled = true;
+        document.querySelectorAll('input[name="decision"]').forEach(input => {
+          input.checked = false;
+        });
+      }
+
+      function getDecision() {
+        return document.querySelector('input[name="decision"]:checked')?.value || "";
+      }
+
+      function saveCommunication() {
+        const decision = getDecision();
+        if (!decision || !currentAnalysis) return;
+
+        if (decision === "Do Not Save") {
+          reset();
+          setStatus("Communication intentionally not saved.", "ready");
+          return;
+        }
+
+        const record = {
+          id: createId(),
+          recordType: "clientCommunication",
+          clientName: el.client.value,
+          clientId: slugify(el.client.value),
+          capturedAt: new Date().toISOString(),
+          source: currentAnalysis.source || "Unknown",
+          communicationType:
+            currentAnalysis.communicationType || "General Client Record",
+          title:
+            currentAnalysis.title ||
+            `${currentAnalysis.source || "Client"} communication`,
+          summary: currentAnalysis.summary || "",
+          problemClassification:
+            currentAnalysis.problemClassification || "Needs review",
+          problemAssessment: currentAnalysis.problemAssessment || "",
+          recommendedAction: currentAnalysis.recommendedAction || "",
+          proofOfWork: el.resultProof.value.trim(),
+          decision,
+          screenshot: {
+            fileName: imageFileName,
+            dataUrl: imageDataUrl
+          },
+          version: "2.0.0"
+        };
+
+        const records = readRecords();
+        records.unshift(record);
+
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(records.slice(0, 20)));
+        } catch (error) {
+          setStatus(
+            "The browser could not store the screenshot. Try a smaller image or clear old prototype records.",
+            "error"
+          );
+          return;
+        }
+
+        renderHistory();
+        reset();
+        setStatus("Communication saved to the prototype client record.", "ready");
+      }
+
+      function reset() {
+        removeImage();
+        el.client.value = "";
+        clearAnalysis();
+        validateAnalyze();
+      }
+
+      function setStatus(message, type) {
+        el.analysisStatus.className =
+          type === "error"
+            ? "analysis-error"
+            : type === "ready"
+              ? "analysis-ready"
+              : "analysis-placeholder";
+        el.analysisStatus.textContent = message;
+      }
+
+      function readRecords() {
+        try {
+          const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+          return Array.isArray(value) ? value : [];
+        } catch {
+          return [];
+        }
+      }
+
+      function renderHistory() {
+        const records = readRecords();
+
+        if (!records.length) {
+          el.historyList.innerHTML = '<p class="empty">No communications captured yet.</p>';
+          return;
+        }
+
+        el.historyList.innerHTML = records.slice(0, 10).map(record => `
+          <article class="history-item">
+            <strong>${escapeHtml(record.title)}</strong>
+            <span>${escapeHtml(record.clientName)} · ${escapeHtml(record.source)} · ${escapeHtml(record.decision)}</span>
+            <p>${escapeHtml(record.summary)}</p>
+          </article>
+        `).join("");
+      }
+
+      function createId() {
+        return window.crypto?.randomUUID
+          ? `communication-${window.crypto.randomUUID()}`
+          : `communication-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      }
+
+      function slugify(value) {
+        return value
+          .toLowerCase()
+          .trim()
+          .replace(/&/g, "and")
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "");
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
     })();
   </script>
 </body>
