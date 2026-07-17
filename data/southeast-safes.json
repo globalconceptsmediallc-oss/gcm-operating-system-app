@@ -1,0 +1,375 @@
+{
+  "schemaVersion": "1.0.0",
+  "businessId": "southeast-safes",
+  "business": {
+    "name": "Southeast Safes",
+    "legalName": null,
+    "industry": "Safe and Vault Retail",
+    "businessType": "Retail",
+    "website": "https://sesafes.com",
+    "primaryMarket": "Melbourne, Florida",
+    "serviceAreas": [
+      "Melbourne, Florida",
+      "Brevard County, Florida"
+    ],
+    "address": {
+      "street": null,
+      "city": "Melbourne",
+      "state": "Florida",
+      "postalCode": null,
+      "country": "United States"
+    },
+    "phone": null,
+    "email": null,
+    "primaryContact": {
+      "name": null,
+      "role": null,
+      "phone": null,
+      "email": null
+    },
+    "summary": "Southeast Safes is an active Global Concepts Media client serving the Melbourne and Brevard County market. The business sells residential and commercial safes, including American-made options, and uses website, advertising, radio, content, and ongoing marketing support to generate showroom visits, calls, and online inquiries.",
+    "tags": [
+      "Active Client",
+      "Safe Retail",
+      "Melbourne",
+      "Brevard County",
+      "Shopify",
+      "Radio Advertising"
+    ]
+  },
+  "relationship": {
+    "recordType": "Client",
+    "status": "Active",
+    "entryMethod": "Existing Client",
+    "stage": "Optimization",
+    "clientSince": null,
+    "clientEnded": null,
+    "monthlyAgreement": 3050,
+    "billingStatus": "Current",
+    "accountHealth": "Needs Attention",
+    "accountHealthReason": "The client reported that sales have declined by approximately 50 percent, making demand generation and conversion improvement the immediate priority."
+  },
+  "workspace": {
+    "currentPriority": "Develop and deploy a stronger sales-recovery campaign that establishes why customers should purchase a safe now.",
+    "nextAction": "Finalize the Southeast Safes radio commercial and confirm the offer, call to action, campaign schedule, and measurement plan.",
+    "nextActionReason": "Sales are reported to be down approximately 50 percent, so the highest-value immediate action is improving the urgency and effectiveness of current advertising.",
+    "nextReviewDate": null,
+    "lastClientContact": "2026-07-14",
+    "lastWorkDate": "2026-07-14",
+    "owner": "Global Concepts Media",
+    "workingNotes": "Use Southeast Safes as the first production Business Record and the golden client dataset for validating the Business Workspace. Unknown business, campaign, and performance information must remain null or marked for verification rather than being estimated."
+  },
+  "currentPriorities": [
+    {
+      "id": "ses-priority-001",
+      "title": "Recover declining safe sales",
+      "category": "Growth",
+      "status": "In Progress",
+      "priority": "Critical",
+      "owner": "Global Concepts Media",
+      "businessValue": "Generate more qualified calls, website visits, and showroom traffic during a significant sales decline.",
+      "dueDate": null,
+      "nextAction": "Complete the immediate sales-recovery advertising message and deployment plan."
+    },
+    {
+      "id": "ses-priority-002",
+      "title": "Finalize urgency-based radio commercial",
+      "category": "Advertising",
+      "status": "In Progress",
+      "priority": "High",
+      "owner": "Global Concepts Media",
+      "businessValue": "Give listeners a clear reason to protect valuables before a fire, theft, storm, or other loss occurs.",
+      "dueDate": null,
+      "nextAction": "Approve the final script and confirm production and scheduling."
+    },
+    {
+      "id": "ses-priority-003",
+      "title": "Establish a measurable client performance baseline",
+      "category": "Measurement",
+      "status": "Planned",
+      "priority": "High",
+      "owner": "Global Concepts Media",
+      "businessValue": "Create a verified starting point for evaluating advertising, website, SEO, sales, calls, and lead performance.",
+      "dueDate": null,
+      "nextAction": "Collect current sales, call, traffic, advertising, and search-performance data."
+    }
+  ],
+  "workQueue": [
+    {
+      "id": "ses-work-001",
+      "title": "Finalize Southeast Safes radio commercial",
+      "description": "Refine the commercial so the opening establishes the risk of waiting, the middle explains what customers could lose, and the closing clearly directs listeners to the Melbourne showroom or SESAFES.com.",
+      "category": "Advertising",
+      "status": "In Progress",
+      "priority": "Critical",
+      "owner": "Global Concepts Media",
+      "estimatedMinutes": null,
+      "actualMinutes": null,
+      "createdDate": "2026-07-14",
+      "dueDate": null,
+      "completedDate": null,
+      "businessValue": "Improve the effectiveness of radio advertising during the current sales decline.",
+      "nextAction": "Lock the final script.",
+      "proofOfWorkId": "ses-pow-001"
+    },
+    {
+      "id": "ses-work-002",
+      "title": "Document current sales decline",
+      "description": "Confirm the reporting period, previous sales baseline, current sales total, product mix, and whether the decline affects calls, showroom visits, close rate, average order value, or overall demand.",
+      "category": "Measurement",
+      "status": "Planned",
+      "priority": "High",
+      "owner": "Global Concepts Media",
+      "estimatedMinutes": null,
+      "actualMinutes": null,
+      "createdDate": "2026-07-16",
+      "dueDate": null,
+      "completedDate": null,
+      "businessValue": "Identify the actual source of the reported decline instead of treating every possible cause as an advertising problem.",
+      "nextAction": "Collect verified sales and lead data from the client.",
+      "proofOfWorkId": null
+    },
+    {
+      "id": "ses-work-003",
+      "title": "Create current marketing baseline",
+      "description": "Record active advertising channels, campaign spending, website traffic, calls, form submissions, showroom activity, search visibility, social activity, and known sales results.",
+      "category": "Strategy",
+      "status": "Planned",
+      "priority": "High",
+      "owner": "Global Concepts Media",
+      "estimatedMinutes": null,
+      "actualMinutes": null,
+      "createdDate": "2026-07-16",
+      "dueDate": null,
+      "completedDate": null,
+      "businessValue": "Provide the evidence required for weekly planning, client reporting, optimization, and future case-study development.",
+      "nextAction": "Identify each available data source and record the latest verified reporting period.",
+      "proofOfWorkId": null
+    },
+    {
+      "id": "ses-work-004",
+      "title": "Review website conversion path",
+      "description": "Review the homepage, product discovery, calls to action, store information, trust signals, mobile experience, and contact paths for barriers that could reduce inquiries or showroom visits.",
+      "category": "Website",
+      "status": "Backlog",
+      "priority": "Medium",
+      "owner": "Global Concepts Media",
+      "estimatedMinutes": null,
+      "actualMinutes": null,
+      "createdDate": "2026-07-16",
+      "dueDate": null,
+      "completedDate": null,
+      "businessValue": "Ensure advertising traffic reaches a website capable of converting interest into calls, visits, and sales.",
+      "nextAction": "Complete a fresh conversion review of SESAFES.com.",
+      "proofOfWorkId": null
+    }
+  ],
+  "advertising": {
+    "currentStatus": "Needs Review",
+    "monthlyBudget": null,
+    "campaigns": [
+      {
+        "id": "ses-campaign-radio-001",
+        "platform": "Radio",
+        "campaignName": "Protect What Matters Most",
+        "campaignType": "Radio Commercial",
+        "status": "Draft",
+        "objective": "Generate safe purchases, qualified calls, showroom visits, and website visits by communicating the consequences of waiting until after a loss occurs.",
+        "offer": "Quality safes for different homes, families, and budgets, including American-made safes.",
+        "landingPage": "https://sesafes.com",
+        "dailyBudget": null,
+        "monthlyBudget": null,
+        "startDate": null,
+        "endDate": null,
+        "spend": null,
+        "impressions": null,
+        "clicks": null,
+        "ctr": null,
+        "conversions": null,
+        "costPerLead": null,
+        "sales": null,
+        "revenue": null,
+        "lastReviewed": "2026-07-14",
+        "nextOptimization": "Finalize the script, confirm the station schedule and campaign dates, and define how calls, website activity, showroom visits, and sales will be attributed.",
+        "notes": "The campaign is being revised because sales were reported to be down approximately 50 percent. Performance data and media spending still require verification."
+      }
+    ]
+  },
+  "seo": {
+    "status": "Needs Review",
+    "primaryProject": null,
+    "visibility": null,
+    "topThreeKeywords": null,
+    "topTenKeywords": null,
+    "keywordsImproved": null,
+    "keywordsDeclined": null,
+    "technicalIssuesOpen": null,
+    "lastReviewed": null,
+    "nextAction": "Confirm whether an active SEMrush position-tracking project exists for Southeast Safes and import the latest visibility, keyword, and technical-audit data.",
+    "records": []
+  },
+  "website": {
+    "platform": "Shopify",
+    "repository": null,
+    "productionUrl": "https://sesafes.com",
+    "status": "Active",
+    "lastDeployment": null,
+    "nextAction": "Complete a current website conversion and merchandising review using the live production site.",
+    "changes": []
+  },
+  "socialMedia": {
+    "status": "Needs Review",
+    "lastReviewed": null,
+    "nextAction": "Verify active social profiles, posting frequency, audience size, recent content, engagement, and the role of social media in current sales activity.",
+    "channels": [],
+    "content": []
+  },
+  "proofOfWork": [
+    {
+      "id": "ses-pow-001",
+      "date": "2026-07-14",
+      "phase": "Client Growth",
+      "category": "Advertising",
+      "task": "Reviewed and revised the Southeast Safes radio commercial concept in response to a reported decline in sales.",
+      "universeImpact": "Improves the client-facing advertising message and establishes a reusable approach for urgency-based safe-retail campaigns.",
+      "canonLocked": false,
+      "assetCreated": "Southeast Safes radio commercial draft",
+      "status": "In Progress",
+      "priority": "Critical",
+      "version": null,
+      "timeMinutes": null,
+      "nextAction": "Approve and lock the final commercial script.",
+      "revenuePath": true,
+      "notes": "The commercial focuses on protecting cash, firearms, jewelry, photographs, documents, and heirlooms before fire, theft, natural disaster, or another loss occurs.",
+      "milestoneTag": "Sales Recovery",
+      "businessValue": "Strengthens the immediate campaign intended to generate more safe purchases while sales are down.",
+      "evidence": [
+        {
+          "type": "Note",
+          "label": "Client-reported sales decline",
+          "url": null,
+          "value": "Sales reported to be down approximately 50 percent."
+        },
+        {
+          "type": "File",
+          "label": "Radio commercial draft",
+          "url": null,
+          "value": "Draft copy developed for Southeast Safes."
+        }
+      ],
+      "result": "Draft messaging was improved, but campaign deployment and performance results have not yet been verified.",
+      "caseStudyEligible": true,
+      "sourceWorkItemId": "ses-work-001"
+    },
+    {
+      "id": "ses-pow-002",
+      "date": "2026-07-16",
+      "phase": "Operating System Validation",
+      "category": "Business Record",
+      "task": "Created the first production Business Record for Southeast Safes.",
+      "universeImpact": "Establishes the golden client record used to validate the GCM OS Business Workspace, client operations, proof of work, metrics, reporting, and case-study architecture.",
+      "canonLocked": false,
+      "assetCreated": "data/southeast-safes.json",
+      "status": "Complete",
+      "priority": "High",
+      "version": "1.0.0",
+      "timeMinutes": null,
+      "nextAction": "Connect the Business Record to the Business Workspace renderer.",
+      "revenuePath": true,
+      "notes": "Known information was recorded. Unverified information remains null or explicitly marked for review.",
+      "milestoneTag": "Golden Client Record",
+      "businessValue": "Moves GCM OS from hardcoded client pages to a reusable operating record capable of supporting real agency work.",
+      "evidence": [
+        {
+          "type": "File",
+          "label": "Southeast Safes Business Record",
+          "url": "data/southeast-safes.json",
+          "value": "Business Record version 1.0.0"
+        }
+      ],
+      "result": "The first schema-compatible production client record was created.",
+      "caseStudyEligible": false,
+      "sourceWorkItemId": null
+    }
+  ],
+  "metrics": [
+    {
+      "id": "ses-metric-sales-decline-001",
+      "date": "2026-07-14",
+      "period": "Current period compared with prior performance",
+      "category": "Sales",
+      "metric": "Reported sales change",
+      "value": -50,
+      "unit": "Percent",
+      "previousValue": null,
+      "change": -50,
+      "source": "Client report",
+      "notes": "The approximate decline was reported by the client. The reporting period, prior baseline, current sales total, and supporting sales records still require verification."
+    }
+  ],
+  "results": [],
+  "growthReviews": [],
+  "caseStudy": {
+    "status": "Building",
+    "score": null,
+    "title": null,
+    "clientChallenge": "Southeast Safes reported that sales had declined by approximately 50 percent and needed a stronger reason for customers to purchase a safe now rather than postpone the decision.",
+    "strategy": "Document the actual performance baseline, strengthen urgency-based advertising, improve the website conversion path, measure response across marketing channels, and preserve all work and results as structured evidence.",
+    "workCompleted": [
+      "Initial radio commercial messaging review",
+      "Urgency and risk-based campaign positioning",
+      "Creation of the Southeast Safes production Business Record"
+    ],
+    "measuredResults": [],
+    "proofOfWorkIds": [
+      "ses-pow-001"
+    ],
+    "resultIds": [],
+    "publishApproved": false
+  },
+  "documents": [],
+  "history": [
+    {
+      "id": "ses-history-001",
+      "date": "2026-07-14",
+      "time": null,
+      "type": "Client Contact",
+      "category": "Sales",
+      "title": "Sales decline identified",
+      "description": "The client reported that sales were down approximately 50 percent and requested stronger advertising that gives customers a reason to purchase a safe now.",
+      "sourceId": "ses-metric-sales-decline-001",
+      "createdBy": "Global Concepts Media"
+    },
+    {
+      "id": "ses-history-002",
+      "date": "2026-07-14",
+      "time": null,
+      "type": "Campaign",
+      "category": "Radio Advertising",
+      "title": "Radio commercial revision started",
+      "description": "Work began on a commercial focused on protecting valuables before fire, theft, natural disaster, or another loss occurs.",
+      "sourceId": "ses-campaign-radio-001",
+      "createdBy": "Global Concepts Media"
+    },
+    {
+      "id": "ses-history-003",
+      "date": "2026-07-16",
+      "time": null,
+      "type": "Record Created",
+      "category": "Business Record",
+      "title": "Southeast Safes Business Record created",
+      "description": "Southeast Safes became the first real production client record and the golden dataset for the GCM OS Business Workspace.",
+      "sourceId": "ses-pow-002",
+      "createdBy": "Global Concepts Media"
+    }
+  ],
+  "metadata": {
+    "createdAt": "2026-07-16T07:00:00-04:00",
+    "updatedAt": "2026-07-16T07:00:00-04:00",
+    "createdBy": "Global Concepts Media",
+    "updatedBy": "Global Concepts Media",
+    "source": "GCM OS production client setup",
+    "recordVersion": 1,
+    "archived": false
+  }
+}
