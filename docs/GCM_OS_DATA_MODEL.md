@@ -1,7 +1,7 @@
 # GCM OS DATA MODEL
 
-**Document Version:** 1.0  
-**Status:** Locked  
+**Document Version:** 1.1  
+**Status:** Ready for Review  
 **Last Updated:** 2026-07-17  
 **System:** Global Concepts Media Operating System  
 **Document Role:** Foundational Architecture  
@@ -47,7 +47,11 @@ Current Business State
         ↓
 Consulting Intelligence
         ↓
-Generated Views and Outputs
+Report Generation
+        ↓
+Communication Intelligence
+        ↓
+Audience-Specific Deliverables
 ```
 
 The operating system must preserve what happened, when it happened, why it mattered, what evidence supports it, and what business outcome resulted.
@@ -98,11 +102,14 @@ Client
 │   └── Initiatives
 │       ├── Activities
 │       │   └── Evidence
-│       └── Deliverables
+│       ├── Deliverables
+│       └── Outcomes
 ├── KPI History
 ├── Current Business State
 ├── Consulting Intelligence
-└── Reports
+├── Report Configurations
+├── Reports
+└── Communication Intelligence
 ```
 
 This hierarchy describes responsibility and relationship.
@@ -125,10 +132,13 @@ The GCM OS data model consists of the following primary record types:
 6. Activity
 7. Evidence
 8. Deliverable
-9. KPI History
-10. Current Business State
-11. Consulting Intelligence
-12. Report
+9. Outcome
+10. KPI History
+11. Current Business State
+12. Consulting Intelligence
+13. Report Configuration
+14. Report
+15. Communication Intelligence
 
 Each record type has one clearly defined responsibility.
 
@@ -1010,7 +1020,91 @@ Deliverable
 
 ---
 
-# 9. KPI History
+
+# 9. Outcome
+
+## Responsibility
+
+The Outcome record owns a verified result, milestone, achievement, or business effect produced by one or more Activities, Initiatives, Deliverables, or KPI changes.
+
+An Outcome answers:
+
+> What meaningful result occurred, and what records prove it?
+
+An Outcome may represent:
+
+- Operational result
+- Completed milestone
+- Leading indicator
+- Performance improvement
+- Measured business outcome
+- Strategic outcome
+- Verified client win
+
+An Outcome must not be created solely because work was completed.
+
+It must be supported by source records and evidence.
+
+## The Outcome record owns
+
+- Outcome identity
+- Outcome type
+- Description
+- Business significance
+- Observation date
+- Measurement period
+- Source records
+- Supporting Evidence
+- Supporting KPI Measurements
+- Verification status
+- Win classification
+- Business impact
+- Limitations
+- Status
+
+## Win classification
+
+A Win is not a separate source of truth.
+
+A Win is a verified classification of an Outcome.
+
+Recommended win status values:
+
+- Not Evaluated
+- Candidate Win
+- Verified Win
+- Not a Win
+- Superseded
+
+## Minimum Outcome structure
+
+```text
+Outcome
+├── id
+├── clientId
+├── programId
+├── objectiveId
+├── initiativeId
+├── title
+├── description
+├── outcomeType
+├── significance
+├── status
+├── observedAt
+├── measurementPeriodStart
+├── measurementPeriodEnd
+├── sourceRecordIds
+├── evidenceIds
+├── kpiMeasurementIds
+├── businessImpact
+├── verificationStatus
+├── winStatus
+└── notes
+```
+
+---
+
+# 10. KPI History
 
 ## Responsibility
 
@@ -1127,7 +1221,7 @@ KPIMeasurement
 
 ---
 
-# 10. Current Business State
+# 11. Current Business State
 
 ## Responsibility
 
@@ -1232,7 +1326,7 @@ CurrentBusinessState
 
 ---
 
-# 11. Consulting Intelligence
+# 12. Consulting Intelligence
 
 ## Responsibility
 
@@ -1332,7 +1426,87 @@ ConsultingIntelligence
 
 ---
 
-# 12. Report
+
+# 13. Report Configuration
+
+## Responsibility
+
+The Report Configuration record owns the reusable rules used to select, filter, group, and render operational records into a Report.
+
+A Report Configuration answers:
+
+> Which records should be included, how should they be organized, and what type of output should be produced?
+
+Report Configurations support workflows such as:
+
+- Single-client weekly email
+- Multi-client internal summary
+- All-client Proof of Work digest
+- Monthly performance report
+- Growth Review generation
+- Case study generation
+
+## The Report Configuration record owns
+
+- Report type
+- Scope mode
+- Selected clients
+- Reporting period rules
+- Activity filters
+- Outcome and Win filters
+- Deliverable filters
+- KPI filters
+- Grouping rules
+- Audience
+- Output variant
+- Template version
+- Status
+- Creation and ownership metadata
+
+## Recommended scope modes
+
+- Single Client
+- Multi-Client
+- All Clients
+
+## Recommended output variants
+
+- Client Email
+- Internal Summary
+- Proof of Work Digest
+- Executive Summary
+- Growth Review
+- Case Study
+- Presentation
+
+## Minimum Report Configuration structure
+
+```text
+ReportConfiguration
+├── id
+├── name
+├── reportType
+├── scopeMode
+├── clientIds
+├── periodStart
+├── periodEnd
+├── includeCompletedActivities
+├── includeOutcomes
+├── includeWins
+├── includeDeliverables
+├── includeKPIChanges
+├── groupingMode
+├── outputVariant
+├── audience
+├── templateVersion
+├── createdAt
+├── createdBy
+└── status
+```
+
+---
+
+# 14. Report
 
 ## Responsibility
 
@@ -1428,6 +1602,106 @@ Report
 
 ---
 
+
+# 15. Communication Intelligence
+
+## Responsibility
+
+Communication Intelligence owns the audience-specific explanation of verified work, outcomes, and consulting meaning.
+
+It answers:
+
+> How should this information be communicated so the intended audience understands why it matters?
+
+Communication Intelligence transforms accurate operational and consulting records into appropriate language without changing the underlying facts.
+
+## Communication Intelligence may produce
+
+- Client email narrative
+- Executive summary
+- Proof of Work narrative
+- Growth Review narrative
+- Case study narrative
+- Proposal language
+- Sales collateral
+- Internal management summary
+- Presentation copy
+
+## Communication Intelligence must be based on
+
+- Activities
+- Evidence
+- Deliverables
+- Outcomes
+- KPI History
+- Current Business State
+- Consulting Intelligence
+- Report Configuration
+- Generated Report data
+
+## Client-value communication principle
+
+Client-facing communication should explain:
+
+- What was done
+- Why it matters to the client
+- What changed
+- What result or opportunity it creates
+- What happens next
+
+The language should emphasize business value rather than merely listing technical tasks.
+
+For example:
+
+```text
+Operational record:
+Updated page titles.
+
+Consulting meaning:
+Improved page relevance for important search topics.
+
+Client communication:
+We strengthened how search engines understand your services, helping improve long-term visibility for customers searching online.
+```
+
+## Communication integrity rules
+
+Communication Intelligence must not:
+
+- Invent work
+- Invent Evidence
+- Invent KPI results
+- Overstate business impact
+- Convert a pending outcome into a completed result
+- Present assumptions as verified facts
+- Remove important limitations
+- Change the meaning of the source records
+
+## Minimum Communication Intelligence structure
+
+```text
+CommunicationIntelligence
+├── id
+├── clientId
+├── reportId
+├── reportConfigurationId
+├── communicationType
+├── audience
+├── voice
+├── generatedAt
+├── generatedBy
+├── sourceRecordIds
+├── summary
+├── narrative
+├── keyClientBenefits
+├── nextSteps
+├── limitations
+├── approvalStatus
+└── deliveredAt
+```
+
+---
+
 # Relationship Model
 
 The principal record relationships are:
@@ -1460,6 +1734,7 @@ Initiative
   ├── may support many Objectives
   ├── has many Activities
   ├── has many Deliverables
+  ├── may produce many Outcomes
   └── may reference many KPI Definitions
 
 Activity
@@ -1481,6 +1756,15 @@ Deliverable
   ├── may result from many Activities
   └── may have many Evidence records
 
+Outcome
+  ├── belongs to one Client
+  ├── may belong to one Program
+  ├── may belong to one Objective
+  ├── may belong to one Initiative
+  ├── may result from many source records
+  ├── may reference many KPI Measurements
+  └── may be classified as a verified Win
+
 KPI Measurement
   ├── belongs to one KPI Definition
   ├── belongs to one Client
@@ -1496,11 +1780,22 @@ Consulting Intelligence
   ├── is generated from many source records
   └── may recommend Programs, Initiatives, or Activities
 
+Report Configuration
+  ├── defines scope, filters, grouping, audience, and output type
+  └── may generate many Reports
+
 Report
-  ├── belongs to one Client
-  ├── references one Current Business State snapshot
+  ├── belongs to one or more Clients
+  ├── references one Report Configuration
+  ├── may reference one Current Business State snapshot
   ├── references Consulting Intelligence
   └── references all material source records
+
+Communication Intelligence
+  ├── belongs to one generated Report
+  ├── references the Report Configuration
+  ├── references all material source records
+  └── produces audience-specific communication
 ```
 
 ---
@@ -1519,11 +1814,14 @@ Report
 | Work performed | Activity |
 | Proof supporting a claim | Evidence |
 | Item produced | Deliverable |
+| Verified result or Win | Outcome |
 | KPI meaning and calculation | KPI Definition |
 | KPI value for a period | KPI Measurement |
 | Current verified client condition | Current Business State |
 | Interpretation and recommendation | Consulting Intelligence |
+| Report filtering and grouping rules | Report Configuration |
 | Presented output | Report |
+| Audience-specific narrative | Communication Intelligence |
 
 No secondary record may become an independent owner of information assigned in this matrix.
 
@@ -1783,6 +2081,47 @@ KPI History and outcome records show what changed.
 
 ---
 
+
+# Email Builder and Client Communication Model
+
+The Email Builder is a generated reporting and communication workflow.
+
+It must not become an independent operational database.
+
+Its workflow is:
+
+```text
+Client Selection
+        +
+Date Range
+        +
+Activity, Outcome, Win, Deliverable, and KPI Filters
+        +
+Grouping Rules
+        +
+Output Template
+        ↓
+Generated Report
+        ↓
+Communication Intelligence
+        ↓
+Client Email, Internal Summary, or Proof of Work Digest
+```
+
+Completed work is generated from Activity records.
+
+Wins are generated from verified Outcome records.
+
+Date range, client scope, grouping, and output type are owned by the Report Configuration.
+
+The initial Report organizes the selected facts.
+
+Communication Intelligence then converts the Report into a client-value voice that explains what was done, why it matters, what result it supports, and what happens next.
+
+The client email is therefore a rendered communication artifact, not a source of truth.
+
+---
+
 # Growth Review Model
 
 The 90-Day Growth Review must be generated from:
@@ -1942,11 +2281,14 @@ The data model should be implemented in the following order:
 6. Activity
 7. Evidence
 8. Deliverable
-9. KPI Definition
-10. KPI Measurement
-11. Current Business State
-12. Consulting Intelligence
-13. Report
+9. Outcome
+10. KPI Definition
+11. KPI Measurement
+12. Current Business State
+13. Consulting Intelligence
+14. Report Configuration
+15. Report
+16. Communication Intelligence
 ```
 
 This order establishes the permanent operational records before generated intelligence and outputs.
@@ -1969,6 +2311,9 @@ Examples:
 - Existing Business Record data becomes source material for Current Business State generation.
 - Existing Growth Reviews become historical Report records.
 - Existing recommendations become Consulting Intelligence records.
+- Existing Wins become verified Outcome records.
+- Existing Email Builder settings become Report Configuration records.
+- Existing client-facing email summaries become Communication Intelligence records.
 
 Migration must preserve original dates, sources, and historical meaning whenever available.
 
@@ -2012,11 +2357,14 @@ Client
 │   └── Initiatives
 │       ├── Activities
 │       │   └── Evidence
-│       └── Deliverables
+│       ├── Deliverables
+│       └── Outcomes
 ├── KPI History
 ├── Current Business State
 ├── Consulting Intelligence
-└── Reports
+├── Report Configurations
+├── Reports
+└── Communication Intelligence
 ```
 
 The governing rules are:
@@ -2042,9 +2390,11 @@ The governing rules are:
 
 # Approval Status
 
-**Version 1.0:** Locked  
+**Version 1.1:** Ready for Review  
 
-This document is the foundational architectural authority for the Global Concepts Media Operating System data model.
+This revision adds formal Outcome, Report Configuration, and Communication Intelligence records based on the verified Email Builder and client communication workflow.
+
+Once approved, Version 1.1 becomes the foundational architectural authority for the Global Concepts Media Operating System data model.
 
 Future changes require:
 
