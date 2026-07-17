@@ -95,7 +95,7 @@
               <div class="client-heading"><div class="client-mark">${escapeHtml(initials)}</div><div><h2 class="client-name">${escapeHtml(b.name||"Unnamed Client")}</h2><div class="client-meta"><span class="pill pill-success">${escapeHtml(r.status||"Unknown")}</span><span class="pill ${healthClass(r.accountHealth)}">${escapeHtml(r.accountHealth||"Health Not Set")}</span><span class="pill pill-info">${escapeHtml(r.stage||"Stage Not Set")}</span></div></div></div>
               <div class="client-overview"><div class="client-stat"><p class="client-stat-label">Current Priority</p><p class="client-stat-value">${escapeHtml(w.currentPriority||"No current priority recorded.")}</p></div><div class="client-stat"><p class="client-stat-label">Next Action</p><p class="client-stat-value">${escapeHtml(w.nextAction||"No next action recorded.")}</p></div><div class="client-stat"><p class="client-stat-label">Last Activity</p><p class="client-stat-value">${escapeHtml(formatDate(w.lastWorkDate))}</p></div></div>
             </div>
-            <div class="client-actions"><a class="button button-secondary" href="${escapeHtml(b.website||"#")}" ${b.website?'target="_blank" rel="noopener noreferrer"':""}>Visit Website</a><button class="button button-primary" type="button" data-details-target="${detailsId}" aria-expanded="false">Open Client</button></div>
+            <div class="client-actions"><a class="button button-secondary" href="${escapeHtml(b.website||"#")}" ${b.website?'target="_blank" rel="noopener noreferrer"':""}>Visit Website</a><a class="button button-primary" href="business-workspace.html?business=${encodeURIComponent(client.businessId)}">Open Client</a></div>
           </div>
           <div class="client-details" id="${detailsId}"><div class="details-grid">
             <section class="detail-block"><h3>Account Health</h3><p>${escapeHtml(r.accountHealthReason||"No account health explanation recorded.")}</p></section>
@@ -119,7 +119,6 @@
           updateSummary(clients);clientList.innerHTML=clients.map(renderClient).join("");
         }catch(error){console.error(error);clientList.innerHTML=`<div class="error-state">Client records could not be loaded. Confirm that <strong>data/southeast-safes.json</strong> exists and that this page is opened from the deployed site.</div>`}
       }
-      clientList.addEventListener("click",event=>{const button=event.target.closest("[data-details-target]");if(!button)return;const details=$(button.dataset.detailsTarget);if(!details)return;const open=details.classList.toggle("is-open");button.setAttribute("aria-expanded",String(open));button.textContent=open?"Close Client":"Open Client"});
       menu.addEventListener("click",()=>{const open=sidebar.classList.toggle("is-open");menu.setAttribute("aria-expanded",String(open))});
       $("current-date").textContent=new Intl.DateTimeFormat("en-US",{weekday:"long",month:"long",day:"numeric"}).format(new Date());
       loadClients();
