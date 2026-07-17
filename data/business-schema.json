@@ -1,0 +1,1697 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://globalconceptsmedia.com/schemas/business-schema.json",
+  "title": "GCM OS Business Record",
+  "description": "Canonical data structure for every prospect, client, former client, and business managed inside the Global Concepts Media Operating System.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "businessId",
+    "business",
+    "relationship",
+    "workspace",
+    "currentPriorities",
+    "workQueue",
+    "advertising",
+    "seo",
+    "website",
+    "socialMedia",
+    "proofOfWork",
+    "metrics",
+    "results",
+    "growthReviews",
+    "caseStudy",
+    "documents",
+    "history",
+    "metadata"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "businessId": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "description": "Permanent lowercase slug used to identify the business."
+    },
+    "business": {
+      "$ref": "#/$defs/business"
+    },
+    "relationship": {
+      "$ref": "#/$defs/relationship"
+    },
+    "workspace": {
+      "$ref": "#/$defs/workspace"
+    },
+    "currentPriorities": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/priority"
+      }
+    },
+    "workQueue": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/workItem"
+      }
+    },
+    "advertising": {
+      "$ref": "#/$defs/advertising"
+    },
+    "seo": {
+      "$ref": "#/$defs/seo"
+    },
+    "website": {
+      "$ref": "#/$defs/website"
+    },
+    "socialMedia": {
+      "$ref": "#/$defs/socialMedia"
+    },
+    "proofOfWork": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/proofOfWorkEntry"
+      }
+    },
+    "metrics": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/metricSnapshot"
+      }
+    },
+    "results": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/result"
+      }
+    },
+    "growthReviews": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/growthReview"
+      }
+    },
+    "caseStudy": {
+      "$ref": "#/$defs/caseStudy"
+    },
+    "documents": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/document"
+      }
+    },
+    "history": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/historyEntry"
+      }
+    },
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    }
+  },
+  "$defs": {
+    "nullableString": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "dateString": {
+      "type": "string",
+      "format": "date"
+    },
+    "dateTimeString": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "money": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "percentage": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "business": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "legalName",
+        "industry",
+        "businessType",
+        "website",
+        "primaryMarket",
+        "serviceAreas",
+        "address",
+        "phone",
+        "email",
+        "primaryContact",
+        "summary",
+        "tags"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "legalName": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "industry": {
+          "type": "string",
+          "minLength": 1
+        },
+        "businessType": {
+          "type": "string",
+          "enum": [
+            "Local Service Business",
+            "Retail",
+            "Ecommerce",
+            "Professional Service",
+            "Home Service",
+            "Multi-Location Business",
+            "Other"
+          ]
+        },
+        "website": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "primaryMarket": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "serviceAreas": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "address": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "street",
+            "city",
+            "state",
+            "postalCode",
+            "country"
+          ],
+          "properties": {
+            "street": {
+              "$ref": "#/$defs/nullableString"
+            },
+            "city": {
+              "$ref": "#/$defs/nullableString"
+            },
+            "state": {
+              "$ref": "#/$defs/nullableString"
+            },
+            "postalCode": {
+              "$ref": "#/$defs/nullableString"
+            },
+            "country": {
+              "type": "string",
+              "default": "United States"
+            }
+          }
+        },
+        "phone": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "email": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "primaryContact": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "role",
+            "phone",
+            "email"
+          ],
+          "properties": {
+            "name": {
+              "$ref": "#/$defs/nullableString"
+            },
+            "role": {
+              "$ref": "#/$defs/nullableString"
+            },
+            "phone": {
+              "$ref": "#/$defs/nullableString"
+            },
+            "email": {
+              "$ref": "#/$defs/nullableString"
+            }
+          }
+        },
+        "summary": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "relationship": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "recordType",
+        "status",
+        "entryMethod",
+        "stage",
+        "clientSince",
+        "clientEnded",
+        "monthlyAgreement",
+        "billingStatus",
+        "accountHealth",
+        "accountHealthReason"
+      ],
+      "properties": {
+        "recordType": {
+          "type": "string",
+          "enum": [
+            "Prospect",
+            "Client",
+            "Former Client",
+            "Previous Client",
+            "Partner",
+            "Internal"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Active",
+            "Inactive",
+            "Archived",
+            "Paused",
+            "Lost",
+            "Converted"
+          ]
+        },
+        "entryMethod": {
+          "type": "string",
+          "enum": [
+            "Cold Prospect",
+            "Referral",
+            "Business Snapshot",
+            "Growth Review",
+            "Existing Client",
+            "Previous Client",
+            "Manual Entry",
+            "Other"
+          ]
+        },
+        "stage": {
+          "type": "string",
+          "enum": [
+            "Research",
+            "Outreach",
+            "Discovery",
+            "Growth Review",
+            "Proposal",
+            "Onboarding",
+            "Implementation",
+            "Optimization",
+            "Retention",
+            "Paused",
+            "Closed",
+            "Archived"
+          ]
+        },
+        "clientSince": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        },
+        "clientEnded": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        },
+        "monthlyAgreement": {
+          "$ref": "#/$defs/money"
+        },
+        "billingStatus": {
+          "type": "string",
+          "enum": [
+            "Current",
+            "Past Due",
+            "Not Applicable",
+            "Needs Verification"
+          ]
+        },
+        "accountHealth": {
+          "type": "string",
+          "enum": [
+            "Strong",
+            "Stable",
+            "Needs Attention",
+            "At Risk",
+            "Paused",
+            "Unknown"
+          ]
+        },
+        "accountHealthReason": {
+          "type": "string"
+        }
+      }
+    },
+    "workspace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "currentPriority",
+        "nextAction",
+        "nextActionReason",
+        "nextReviewDate",
+        "lastClientContact",
+        "lastWorkDate",
+        "owner",
+        "workingNotes"
+      ],
+      "properties": {
+        "currentPriority": {
+          "type": "string"
+        },
+        "nextAction": {
+          "type": "string"
+        },
+        "nextActionReason": {
+          "type": "string"
+        },
+        "nextReviewDate": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        },
+        "lastClientContact": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        },
+        "lastWorkDate": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        },
+        "owner": {
+          "type": "string"
+        },
+        "workingNotes": {
+          "type": "string"
+        }
+      }
+    },
+    "priority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "category",
+        "status",
+        "priority",
+        "owner",
+        "businessValue",
+        "dueDate",
+        "nextAction"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Not Started",
+            "Planned",
+            "In Progress",
+            "Waiting",
+            "Blocked",
+            "Complete",
+            "Deferred"
+          ]
+        },
+        "priority": {
+          "type": "string",
+          "enum": [
+            "Critical",
+            "High",
+            "Medium",
+            "Low"
+          ]
+        },
+        "owner": {
+          "type": "string"
+        },
+        "businessValue": {
+          "type": "string"
+        },
+        "dueDate": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        },
+        "nextAction": {
+          "type": "string"
+        }
+      }
+    },
+    "workItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "description",
+        "category",
+        "status",
+        "priority",
+        "owner",
+        "estimatedMinutes",
+        "actualMinutes",
+        "createdDate",
+        "dueDate",
+        "completedDate",
+        "businessValue",
+        "nextAction",
+        "proofOfWorkId"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Backlog",
+            "Planned",
+            "In Progress",
+            "Waiting",
+            "Blocked",
+            "Complete",
+            "Deferred"
+          ]
+        },
+        "priority": {
+          "type": "string",
+          "enum": [
+            "Critical",
+            "High",
+            "Medium",
+            "Low"
+          ]
+        },
+        "owner": {
+          "type": "string"
+        },
+        "estimatedMinutes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "actualMinutes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "createdDate": {
+          "$ref": "#/$defs/dateString"
+        },
+        "dueDate": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        },
+        "completedDate": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        },
+        "businessValue": {
+          "type": "string"
+        },
+        "nextAction": {
+          "type": "string"
+        },
+        "proofOfWorkId": {
+          "$ref": "#/$defs/nullableString"
+        }
+      }
+    },
+    "advertising": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "currentStatus",
+        "monthlyBudget",
+        "campaigns"
+      ],
+      "properties": {
+        "currentStatus": {
+          "type": "string",
+          "enum": [
+            "Active",
+            "Partially Active",
+            "Paused",
+            "Not Running",
+            "Needs Review"
+          ]
+        },
+        "monthlyBudget": {
+          "$ref": "#/$defs/money"
+        },
+        "campaigns": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/campaign"
+          }
+        }
+      }
+    },
+    "campaign": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "platform",
+        "campaignName",
+        "campaignType",
+        "status",
+        "objective",
+        "offer",
+        "landingPage",
+        "dailyBudget",
+        "monthlyBudget",
+        "startDate",
+        "endDate",
+        "spend",
+        "impressions",
+        "clicks",
+        "ctr",
+        "conversions",
+        "costPerLead",
+        "sales",
+        "revenue",
+        "lastReviewed",
+        "nextOptimization",
+        "notes"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "platform": {
+          "type": "string"
+        },
+        "campaignName": {
+          "type": "string"
+        },
+        "campaignType": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Running",
+            "Paused",
+            "Draft",
+            "Completed",
+            "Needs Review"
+          ]
+        },
+        "objective": {
+          "type": "string"
+        },
+        "offer": {
+          "type": "string"
+        },
+        "landingPage": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "dailyBudget": {
+          "$ref": "#/$defs/money"
+        },
+        "monthlyBudget": {
+          "$ref": "#/$defs/money"
+        },
+        "startDate": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        },
+        "endDate": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        },
+        "spend": {
+          "$ref": "#/$defs/money"
+        },
+        "impressions": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "clicks": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "ctr": {
+          "$ref": "#/$defs/percentage"
+        },
+        "conversions": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "costPerLead": {
+          "$ref": "#/$defs/money"
+        },
+        "sales": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "revenue": {
+          "$ref": "#/$defs/money"
+        },
+        "lastReviewed": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        },
+        "nextOptimization": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "seo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "primaryProject",
+        "visibility",
+        "topThreeKeywords",
+        "topTenKeywords",
+        "keywordsImproved",
+        "keywordsDeclined",
+        "technicalIssuesOpen",
+        "lastReviewed",
+        "nextAction",
+        "records"
+      ],
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "primaryProject": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "visibility": {
+          "$ref": "#/$defs/percentage"
+        },
+        "topThreeKeywords": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "topTenKeywords": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "keywordsImproved": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "keywordsDeclined": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "technicalIssuesOpen": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "lastReviewed": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        },
+        "nextAction": {
+          "type": "string"
+        },
+        "records": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/seoRecord"
+          }
+        }
+      }
+    },
+    "seoRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "date",
+        "visibility",
+        "topThreeKeywords",
+        "topTenKeywords",
+        "keywordsImproved",
+        "keywordsDeclined",
+        "notes"
+      ],
+      "properties": {
+        "date": {
+          "$ref": "#/$defs/dateString"
+        },
+        "visibility": {
+          "$ref": "#/$defs/percentage"
+        },
+        "topThreeKeywords": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "topTenKeywords": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "keywordsImproved": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "keywordsDeclined": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "website": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "platform",
+        "repository",
+        "productionUrl",
+        "status",
+        "lastDeployment",
+        "nextAction",
+        "changes"
+      ],
+      "properties": {
+        "platform": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "repository": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "productionUrl": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "status": {
+          "type": "string"
+        },
+        "lastDeployment": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        },
+        "nextAction": {
+          "type": "string"
+        },
+        "changes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/websiteChange"
+          }
+        }
+      }
+    },
+    "websiteChange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "date",
+        "title",
+        "changeType",
+        "status",
+        "url",
+        "businessValue",
+        "result",
+        "proofOfWorkId"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "date": {
+          "$ref": "#/$defs/dateString"
+        },
+        "title": {
+          "type": "string"
+        },
+        "changeType": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "url": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "businessValue": {
+          "type": "string"
+        },
+        "result": {
+          "type": "string"
+        },
+        "proofOfWorkId": {
+          "$ref": "#/$defs/nullableString"
+        }
+      }
+    },
+    "socialMedia": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "lastReviewed",
+        "nextAction",
+        "channels",
+        "content"
+      ],
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "lastReviewed": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        },
+        "nextAction": {
+          "type": "string"
+        },
+        "channels": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/socialChannel"
+          }
+        },
+        "content": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/socialContent"
+          }
+        }
+      }
+    },
+    "socialChannel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "platform",
+        "profileUrl",
+        "status",
+        "followers",
+        "lastPostDate",
+        "notes"
+      ],
+      "properties": {
+        "platform": {
+          "type": "string"
+        },
+        "profileUrl": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "status": {
+          "type": "string"
+        },
+        "followers": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "lastPostDate": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "socialContent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "platform",
+        "contentType",
+        "title",
+        "status",
+        "publishDate",
+        "url",
+        "result",
+        "proofOfWorkId"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "platform": {
+          "type": "string"
+        },
+        "contentType": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "publishDate": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        },
+        "url": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "result": {
+          "type": "string"
+        },
+        "proofOfWorkId": {
+          "$ref": "#/$defs/nullableString"
+        }
+      }
+    },
+    "proofOfWorkEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "date",
+        "phase",
+        "category",
+        "task",
+        "universeImpact",
+        "canonLocked",
+        "assetCreated",
+        "status",
+        "priority",
+        "version",
+        "timeMinutes",
+        "nextAction",
+        "revenuePath",
+        "notes",
+        "milestoneTag",
+        "businessValue",
+        "evidence",
+        "result",
+        "caseStudyEligible",
+        "sourceWorkItemId"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "date": {
+          "$ref": "#/$defs/dateString"
+        },
+        "phase": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "task": {
+          "type": "string"
+        },
+        "universeImpact": {
+          "type": "string"
+        },
+        "canonLocked": {
+          "type": "boolean"
+        },
+        "assetCreated": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Planned",
+            "In Progress",
+            "Complete",
+            "Blocked",
+            "Deferred"
+          ]
+        },
+        "priority": {
+          "type": "string",
+          "enum": [
+            "Critical",
+            "High",
+            "Medium",
+            "Low"
+          ]
+        },
+        "version": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "timeMinutes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "nextAction": {
+          "type": "string"
+        },
+        "revenuePath": {
+          "type": "boolean"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "milestoneTag": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "businessValue": {
+          "type": "string"
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence"
+          }
+        },
+        "result": {
+          "type": "string"
+        },
+        "caseStudyEligible": {
+          "type": "boolean"
+        },
+        "sourceWorkItemId": {
+          "$ref": "#/$defs/nullableString"
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "label",
+        "url",
+        "value"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "URL",
+            "Screenshot",
+            "File",
+            "Metric",
+            "Note",
+            "Before and After",
+            "Other"
+          ]
+        },
+        "label": {
+          "type": "string"
+        },
+        "url": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "value": {
+          "$ref": "#/$defs/nullableString"
+        }
+      }
+    },
+    "metricSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "date",
+        "period",
+        "category",
+        "metric",
+        "value",
+        "unit",
+        "previousValue",
+        "change",
+        "source",
+        "notes"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "date": {
+          "$ref": "#/$defs/dateString"
+        },
+        "period": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "metric": {
+          "type": "string"
+        },
+        "value": {
+          "type": [
+            "number",
+            "string",
+            "null"
+          ]
+        },
+        "unit": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "previousValue": {
+          "type": [
+            "number",
+            "string",
+            "null"
+          ]
+        },
+        "change": {
+          "type": [
+            "number",
+            "string",
+            "null"
+          ]
+        },
+        "source": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "date",
+        "category",
+        "title",
+        "description",
+        "baseline",
+        "currentValue",
+        "measuredImpact",
+        "businessValue",
+        "verified",
+        "proofOfWorkIds"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "date": {
+          "$ref": "#/$defs/dateString"
+        },
+        "category": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "baseline": {
+          "type": [
+            "number",
+            "string",
+            "null"
+          ]
+        },
+        "currentValue": {
+          "type": [
+            "number",
+            "string",
+            "null"
+          ]
+        },
+        "measuredImpact": {
+          "type": "string"
+        },
+        "businessValue": {
+          "type": "string"
+        },
+        "verified": {
+          "type": "boolean"
+        },
+        "proofOfWorkIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "growthReview": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "status",
+        "reviewPeriodStart",
+        "reviewPeriodEnd",
+        "completedDate",
+        "summary",
+        "recommendations",
+        "documentUrl"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Not Started",
+            "In Progress",
+            "Complete",
+            "Archived"
+          ]
+        },
+        "reviewPeriodStart": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        },
+        "reviewPeriodEnd": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        },
+        "completedDate": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "recommendations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/recommendation"
+          }
+        },
+        "documentUrl": {
+          "$ref": "#/$defs/nullableString"
+        }
+      }
+    },
+    "recommendation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "priority",
+        "businessValue",
+        "status",
+        "convertedWorkItemId"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "priority": {
+          "type": "string",
+          "enum": [
+            "Critical",
+            "High",
+            "Medium",
+            "Low"
+          ]
+        },
+        "businessValue": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Recommended",
+            "Approved",
+            "Deferred",
+            "Rejected",
+            "Implemented"
+          ]
+        },
+        "convertedWorkItemId": {
+          "$ref": "#/$defs/nullableString"
+        }
+      }
+    },
+    "caseStudy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "score",
+        "title",
+        "clientChallenge",
+        "strategy",
+        "workCompleted",
+        "measuredResults",
+        "proofOfWorkIds",
+        "resultIds",
+        "publishApproved"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "Not Started",
+            "Building",
+            "Ready for Review",
+            "Approved",
+            "Published"
+          ]
+        },
+        "score": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 100
+        },
+        "title": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "clientChallenge": {
+          "type": "string"
+        },
+        "strategy": {
+          "type": "string"
+        },
+        "workCompleted": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "measuredResults": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "proofOfWorkIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "resultIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "publishApproved": {
+          "type": "boolean"
+        }
+      }
+    },
+    "document": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "category",
+        "fileType",
+        "url",
+        "createdDate",
+        "version",
+        "status",
+        "notes"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "fileType": {
+          "type": "string"
+        },
+        "url": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "createdDate": {
+          "$ref": "#/$defs/dateString"
+        },
+        "version": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "status": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "historyEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "date",
+        "time",
+        "type",
+        "category",
+        "title",
+        "description",
+        "sourceId",
+        "createdBy"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "date": {
+          "$ref": "#/$defs/dateString"
+        },
+        "time": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "Record Created",
+            "Client Contact",
+            "Meeting",
+            "Task Created",
+            "Task Completed",
+            "Campaign",
+            "Website",
+            "SEO",
+            "Social Media",
+            "Proof of Work",
+            "Metric",
+            "Result",
+            "Growth Review",
+            "Document",
+            "Decision",
+            "Status Change",
+            "Note",
+            "Other"
+          ]
+        },
+        "category": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "sourceId": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "createdBy": {
+          "type": "string"
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "createdAt",
+        "updatedAt",
+        "createdBy",
+        "updatedBy",
+        "source",
+        "recordVersion",
+        "archived"
+      ],
+      "properties": {
+        "createdAt": {
+          "$ref": "#/$defs/dateTimeString"
+        },
+        "updatedAt": {
+          "$ref": "#/$defs/dateTimeString"
+        },
+        "createdBy": {
+          "type": "string"
+        },
+        "updatedBy": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "recordVersion": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "archived": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
