@@ -1,0 +1,1670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+
+  <title>Business Workspace | GCM OS</title>
+
+  <meta
+    name="description"
+    content="Global Concepts Media business workspace powered by the GCM OS Business Record."
+  />
+
+  <style>
+    :root {
+      --page-background: #f3f6fb;
+      --panel-background: #ffffff;
+      --panel-muted: #f8fafc;
+      --border-color: #dbe3ef;
+      --text-primary: #142033;
+      --text-secondary: #5c6a7f;
+      --brand-blue: #0868b8;
+      --brand-blue-dark: #04538f;
+      --brand-blue-light: #e9f3fd;
+      --success: #16813f;
+      --success-light: #e9f7ef;
+      --warning: #a86600;
+      --warning-light: #fff4dc;
+      --danger: #b42318;
+      --danger-light: #fff0ee;
+      --critical: #7a1712;
+      --shadow: 0 16px 40px rgba(20, 32, 51, 0.08);
+      --radius-large: 20px;
+      --radius-medium: 14px;
+      --radius-small: 9px;
+      --content-width: 1440px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: var(--page-background);
+      color: var(--text-primary);
+      font-family:
+        Inter,
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .app-shell {
+      min-height: 100vh;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(255, 255, 255, 0.96);
+      border-bottom: 1px solid var(--border-color);
+      backdrop-filter: blur(14px);
+    }
+
+    .topbar-inner {
+      width: min(calc(100% - 40px), var(--content-width));
+      min-height: 72px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: var(--brand-blue);
+      color: #ffffff;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+    }
+
+    .brand-copy {
+      display: grid;
+      gap: 2px;
+    }
+
+    .brand-name {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--brand-blue);
+    }
+
+    .brand-product {
+      margin: 0;
+      font-size: 0.88rem;
+      color: var(--text-secondary);
+    }
+
+    .topbar-status {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    .status-indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #a6b0bf;
+    }
+
+    .status-indicator.ready {
+      background: var(--success);
+    }
+
+    .status-indicator.loading {
+      background: var(--warning);
+    }
+
+    .status-indicator.error {
+      background: var(--danger);
+    }
+
+    .page {
+      width: min(calc(100% - 40px), var(--content-width));
+      margin: 0 auto;
+      padding: 38px 0 64px;
+    }
+
+    .loading-panel,
+    .error-panel {
+      min-height: 320px;
+      display: grid;
+      place-items: center;
+      padding: 40px;
+      background: var(--panel-background);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-large);
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+
+    .loading-copy,
+    .error-copy {
+      max-width: 620px;
+    }
+
+    .loading-copy h1,
+    .error-copy h1 {
+      margin: 0 0 12px;
+      font-size: clamp(2rem, 4vw, 3.4rem);
+      line-height: 1.04;
+    }
+
+    .loading-copy p,
+    .error-copy p {
+      margin: 0;
+      color: var(--text-secondary);
+      font-size: 1.05rem;
+      line-height: 1.7;
+    }
+
+    .error-details {
+      margin-top: 20px;
+      padding: 16px;
+      border-radius: var(--radius-small);
+      background: var(--danger-light);
+      color: var(--danger);
+      text-align: left;
+      overflow-wrap: anywhere;
+    }
+
+    .workspace {
+      display: none;
+    }
+
+    .workspace.visible {
+      display: block;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.7fr) minmax(300px, 0.8fr);
+      gap: 24px;
+      align-items: stretch;
+      margin-bottom: 24px;
+    }
+
+    .hero-main,
+    .hero-side {
+      background: var(--panel-background);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-large);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-main {
+      padding: 34px;
+    }
+
+    .hero-side {
+      padding: 28px;
+      display: grid;
+      align-content: start;
+      gap: 18px;
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--brand-blue);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .hero-title {
+      margin: 0;
+      font-size: clamp(2.4rem, 5vw, 4.7rem);
+      line-height: 0.98;
+      letter-spacing: -0.045em;
+    }
+
+    .hero-summary {
+      max-width: 900px;
+      margin: 22px 0 0;
+      color: var(--text-secondary);
+      font-size: 1.06rem;
+      line-height: 1.75;
+    }
+
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 24px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 34px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: var(--brand-blue-light);
+      color: var(--brand-blue-dark);
+      font-size: 0.86rem;
+      font-weight: 700;
+    }
+
+    .health-card {
+      display: grid;
+      gap: 8px;
+    }
+
+    .health-label {
+      color: var(--text-secondary);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+    }
+
+    .health-value {
+      font-size: 1.55rem;
+      font-weight: 800;
+    }
+
+    .health-reason {
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+
+    .metric-strip {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .metric-card {
+      min-height: 126px;
+      padding: 22px;
+      background: var(--panel-background);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-medium);
+      box-shadow: var(--shadow);
+    }
+
+    .metric-label {
+      margin: 0;
+      color: var(--text-secondary);
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+    }
+
+    .metric-value {
+      margin: 12px 0 0;
+      font-size: 2rem;
+      font-weight: 850;
+      line-height: 1;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.75fr);
+      gap: 24px;
+      align-items: start;
+    }
+
+    .primary-column,
+    .secondary-column {
+      display: grid;
+      gap: 24px;
+    }
+
+    .panel {
+      background: var(--panel-background);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-large);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 24px 26px 18px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 1.35rem;
+      letter-spacing: -0.02em;
+    }
+
+    .panel-description {
+      margin: 7px 0 0;
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+
+    .panel-body {
+      padding: 22px 26px 26px;
+    }
+
+    .next-action {
+      padding: 26px;
+      border-radius: var(--radius-medium);
+      background: linear-gradient(
+        135deg,
+        var(--brand-blue) 0%,
+        var(--brand-blue-dark) 100%
+      );
+      color: #ffffff;
+    }
+
+    .next-action-label {
+      margin: 0 0 10px;
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      opacity: 0.78;
+    }
+
+    .next-action-title {
+      margin: 0;
+      font-size: clamp(1.7rem, 3vw, 2.7rem);
+      line-height: 1.08;
+      letter-spacing: -0.025em;
+    }
+
+    .next-action-reason {
+      margin: 14px 0 0;
+      max-width: 850px;
+      font-size: 1rem;
+      line-height: 1.65;
+      opacity: 0.88;
+    }
+
+    .next-action-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      margin-top: 20px;
+    }
+
+    .next-action-meta .pill {
+      background: rgba(255, 255, 255, 0.16);
+      color: #ffffff;
+    }
+
+    .list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .list-empty {
+      padding: 20px;
+      border: 1px dashed var(--border-color);
+      border-radius: var(--radius-medium);
+      background: var(--panel-muted);
+      color: var(--text-secondary);
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    .work-item,
+    .priority-item,
+    .activity-item,
+    .alert-item {
+      padding: 18px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-medium);
+      background: #ffffff;
+    }
+
+    .work-item-header,
+    .priority-item-header,
+    .activity-item-header,
+    .alert-item-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .item-title {
+      margin: 0;
+      font-size: 1rem;
+      line-height: 1.4;
+    }
+
+    .item-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .item-copy {
+      margin: 10px 0 0;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 5px 9px;
+      border-radius: 999px;
+      background: var(--panel-muted);
+      color: var(--text-secondary);
+      font-size: 0.76rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .badge.critical {
+      background: var(--danger-light);
+      color: var(--critical);
+    }
+
+    .badge.high {
+      background: var(--warning-light);
+      color: var(--warning);
+    }
+
+    .badge.medium {
+      background: var(--brand-blue-light);
+      color: var(--brand-blue-dark);
+    }
+
+    .badge.complete {
+      background: var(--success-light);
+      color: var(--success);
+    }
+
+    .alert-item {
+      border-left-width: 5px;
+    }
+
+    .alert-item.critical {
+      border-left-color: var(--critical);
+    }
+
+    .alert-item.high {
+      border-left-color: var(--danger);
+    }
+
+    .alert-item.medium {
+      border-left-color: var(--warning);
+    }
+
+    .alert-action {
+      margin: 12px 0 0;
+      font-weight: 700;
+      line-height: 1.5;
+    }
+
+    .section-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .tab-button {
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 15px;
+      background: var(--panel-muted);
+      color: var(--text-secondary);
+      font-weight: 750;
+      cursor: pointer;
+    }
+
+    .tab-button.active {
+      background: var(--brand-blue);
+      color: #ffffff;
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .detail-card {
+      padding: 18px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-medium);
+      background: var(--panel-muted);
+    }
+
+    .detail-label {
+      margin: 0;
+      color: var(--text-secondary);
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .detail-value {
+      margin: 9px 0 0;
+      font-weight: 750;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }
+
+    .footer-note {
+      margin-top: 28px;
+      color: var(--text-secondary);
+      font-size: 0.88rem;
+      text-align: center;
+    }
+
+    @media (max-width: 1100px) {
+      .hero,
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .metric-strip {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 760px) {
+      .topbar-inner,
+      .page {
+        width: min(calc(100% - 24px), var(--content-width));
+      }
+
+      .topbar-inner {
+        min-height: 64px;
+      }
+
+      .brand-product,
+      .topbar-status span:last-child {
+        display: none;
+      }
+
+      .page {
+        padding-top: 22px;
+      }
+
+      .hero-main,
+      .hero-side,
+      .panel-header,
+      .panel-body {
+        padding-left: 20px;
+        padding-right: 20px;
+      }
+
+      .metric-strip {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .detail-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 500px) {
+      .metric-strip {
+        grid-template-columns: 1fr;
+      }
+
+      .work-item-header,
+      .priority-item-header,
+      .activity-item-header,
+      .alert-item-header {
+        display: grid;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <div class="brand-mark">GCM</div>
+
+          <div class="brand-copy">
+            <p class="brand-name">Global Concepts Media</p>
+            <p class="brand-product">Business Workspace</p>
+          </div>
+        </div>
+
+        <div class="topbar-status">
+          <span
+            id="runtime-status-indicator"
+            class="status-indicator loading"
+            aria-hidden="true"
+          ></span>
+
+          <span id="runtime-status-text">Loading Business Record</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="page">
+      <section id="loading-panel" class="loading-panel">
+        <div class="loading-copy">
+          <p class="eyebrow">GCM OS</p>
+          <h1>Loading Business Workspace</h1>
+          <p>
+            The Business Record is being loaded and the executive workspace
+            is being generated.
+          </p>
+        </div>
+      </section>
+
+      <section id="error-panel" class="error-panel" hidden>
+        <div class="error-copy">
+          <p class="eyebrow">Workspace Error</p>
+          <h1>Business Record could not be loaded</h1>
+          <p>
+            Review the error below, confirm the required files are deployed,
+            and reload this page.
+          </p>
+
+          <div id="error-details" class="error-details"></div>
+        </div>
+      </section>
+
+      <div id="workspace" class="workspace">
+        <section class="hero">
+          <div class="hero-main">
+            <p class="eyebrow">Business Workspace</p>
+
+            <h1 id="business-name" class="hero-title">
+              Business
+            </h1>
+
+            <p id="business-summary" class="hero-summary"></p>
+
+            <div id="business-tags" class="hero-meta"></div>
+          </div>
+
+          <aside class="hero-side">
+            <div class="health-card">
+              <span class="health-label">Account Health</span>
+              <span id="account-health" class="health-value"></span>
+              <span id="account-health-reason" class="health-reason"></span>
+            </div>
+
+            <div class="health-card">
+              <span class="health-label">Current Stage</span>
+              <span id="relationship-stage" class="health-value"></span>
+            </div>
+
+            <div class="health-card">
+              <span class="health-label">Monthly Agreement</span>
+              <span id="monthly-agreement" class="health-value"></span>
+            </div>
+          </aside>
+        </section>
+
+        <section class="metric-strip">
+          <article class="metric-card">
+            <p class="metric-label">Open Work</p>
+            <p id="metric-open-work" class="metric-value">0</p>
+          </article>
+
+          <article class="metric-card">
+            <p class="metric-label">Overdue</p>
+            <p id="metric-overdue" class="metric-value">0</p>
+          </article>
+
+          <article class="metric-card">
+            <p class="metric-label">Active Alerts</p>
+            <p id="metric-alerts" class="metric-value">0</p>
+          </article>
+
+          <article class="metric-card">
+            <p class="metric-label">Proof of Work</p>
+            <p id="metric-proof" class="metric-value">0</p>
+          </article>
+
+          <article class="metric-card">
+            <p class="metric-label">Verified Results</p>
+            <p id="metric-results" class="metric-value">0</p>
+          </article>
+        </section>
+
+        <section class="dashboard-grid">
+          <div class="primary-column">
+            <section class="panel">
+              <div class="panel-header">
+                <h2 class="panel-title">Next Best Action</h2>
+                <p class="panel-description">
+                  The highest-value action derived from the Business Record.
+                </p>
+              </div>
+
+              <div class="panel-body">
+                <div class="next-action">
+                  <p class="next-action-label">Recommended action</p>
+
+                  <h3
+                    id="next-action-title"
+                    class="next-action-title"
+                  ></h3>
+
+                  <p
+                    id="next-action-reason"
+                    class="next-action-reason"
+                  ></p>
+
+                  <div id="next-action-meta" class="next-action-meta"></div>
+                </div>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-header">
+                <h2 class="panel-title">Current Work</h2>
+                <p class="panel-description">
+                  Active work ranked by priority, status, and due date.
+                </p>
+              </div>
+
+              <div class="panel-body">
+                <div id="current-work-list" class="list"></div>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-header">
+                <h2 class="panel-title">Business Intelligence</h2>
+                <p class="panel-description">
+                  Operational details stored in the Business Record.
+                </p>
+              </div>
+
+              <div class="panel-body">
+                <div class="section-tabs" role="tablist">
+                  <button
+                    class="tab-button active"
+                    type="button"
+                    data-tab="advertising"
+                  >
+                    Advertising
+                  </button>
+
+                  <button
+                    class="tab-button"
+                    type="button"
+                    data-tab="seo"
+                  >
+                    SEO
+                  </button>
+
+                  <button
+                    class="tab-button"
+                    type="button"
+                    data-tab="website"
+                  >
+                    Website
+                  </button>
+
+                  <button
+                    class="tab-button"
+                    type="button"
+                    data-tab="social"
+                  >
+                    Social
+                  </button>
+
+                  <button
+                    class="tab-button"
+                    type="button"
+                    data-tab="case-study"
+                  >
+                    Case Study
+                  </button>
+                </div>
+
+                <div
+                  id="tab-advertising"
+                  class="tab-panel active"
+                  data-tab-panel="advertising"
+                ></div>
+
+                <div
+                  id="tab-seo"
+                  class="tab-panel"
+                  data-tab-panel="seo"
+                ></div>
+
+                <div
+                  id="tab-website"
+                  class="tab-panel"
+                  data-tab-panel="website"
+                ></div>
+
+                <div
+                  id="tab-social"
+                  class="tab-panel"
+                  data-tab-panel="social"
+                ></div>
+
+                <div
+                  id="tab-case-study"
+                  class="tab-panel"
+                  data-tab-panel="case-study"
+                ></div>
+              </div>
+            </section>
+          </div>
+
+          <aside class="secondary-column">
+            <section class="panel">
+              <div class="panel-header">
+                <h2 class="panel-title">Alerts</h2>
+                <p class="panel-description">
+                  Conditions requiring attention.
+                </p>
+              </div>
+
+              <div class="panel-body">
+                <div id="alerts-list" class="list"></div>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-header">
+                <h2 class="panel-title">Business Priorities</h2>
+                <p class="panel-description">
+                  Current strategic priorities for this business.
+                </p>
+              </div>
+
+              <div class="panel-body">
+                <div id="priorities-list" class="list"></div>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-header">
+                <h2 class="panel-title">Recent Activity</h2>
+                <p class="panel-description">
+                  Recent history, completed work, and recorded results.
+                </p>
+              </div>
+
+              <div class="panel-body">
+                <div id="recent-activity-list" class="list"></div>
+              </div>
+            </section>
+          </aside>
+        </section>
+
+        <p id="footer-note" class="footer-note"></p>
+      </div>
+    </main>
+  </div>
+
+  <script src="businessWorkspace.js"></script>
+
+  <script>
+    (function initializeBusinessWorkspacePage() {
+      "use strict";
+
+      const DEFAULT_BUSINESS_ID = "southeast-safes";
+
+      const loadingPanel = document.getElementById("loading-panel");
+      const errorPanel = document.getElementById("error-panel");
+      const errorDetails = document.getElementById("error-details");
+      const workspaceElement = document.getElementById("workspace");
+
+      const statusIndicator = document.getElementById(
+        "runtime-status-indicator"
+      );
+
+      const statusText = document.getElementById("runtime-status-text");
+
+      document.addEventListener("DOMContentLoaded", start);
+
+      async function start() {
+        setRuntimeStatus("loading", "Loading Business Record");
+
+        try {
+          const businessId =
+            getBusinessIdFromUrl() || DEFAULT_BUSINESS_ID;
+
+          await BusinessWorkspace.load(businessId);
+
+          renderWorkspace();
+
+          loadingPanel.hidden = true;
+          errorPanel.hidden = true;
+          workspaceElement.classList.add("visible");
+
+          setRuntimeStatus("ready", "Business Record Ready");
+        } catch (error) {
+          console.error("Business Workspace failed to load:", error);
+
+          loadingPanel.hidden = true;
+          errorPanel.hidden = false;
+          workspaceElement.classList.remove("visible");
+
+          errorDetails.textContent = formatError(error);
+
+          setRuntimeStatus("error", "Workspace Error");
+        }
+      }
+
+      function renderWorkspace() {
+        const business = BusinessWorkspace.getBusiness();
+        const relationship = BusinessWorkspace.getRelationship();
+        const workspace = BusinessWorkspace.getWorkspace();
+        const executive = BusinessWorkspace.getExecutive();
+
+        renderBusinessHeader(
+          business,
+          relationship,
+          workspace.record.workspace
+        );
+
+        renderExecutiveMetrics(executive.summary);
+        renderNextBestAction(executive.nextBestAction);
+        renderCurrentWork(executive.currentWork);
+        renderAlerts(executive.alerts);
+        renderPriorities(executive.priorities);
+        renderRecentActivity(executive.recentActivity);
+        renderOperationalDetails();
+        renderFooter(workspace);
+        initializeTabs();
+      }
+
+      function renderBusinessHeader(
+        business,
+        relationship,
+        workspaceRecord
+      ) {
+        setText("business-name", business.name);
+        setText("business-summary", business.summary);
+
+        setText(
+          "account-health",
+          relationship.accountHealth || "Unknown"
+        );
+
+        setText(
+          "account-health-reason",
+          relationship.accountHealthReason ||
+            "No account-health reason has been recorded."
+        );
+
+        setText(
+          "relationship-stage",
+          relationship.stage || "Unknown"
+        );
+
+        setText(
+          "monthly-agreement",
+          formatCurrency(relationship.monthlyAgreement)
+        );
+
+        const tagsElement = document.getElementById("business-tags");
+        tagsElement.innerHTML = "";
+
+        const tags = [
+          relationship.recordType,
+          relationship.status,
+          business.industry,
+          business.primaryMarket,
+          workspaceRecord.owner
+        ].filter(Boolean);
+
+        tags.forEach((tag) => {
+          tagsElement.appendChild(createPill(tag));
+        });
+      }
+
+      function renderExecutiveMetrics(summary) {
+        setText("metric-open-work", summary.openWorkItems);
+        setText("metric-overdue", summary.overdueWorkItems);
+        setText("metric-alerts", summary.activeAlerts);
+        setText("metric-proof", summary.proofOfWorkCount);
+        setText("metric-results", summary.verifiedResultsCount);
+      }
+
+      function renderNextBestAction(nextAction) {
+        setText(
+          "next-action-title",
+          nextAction?.action || "No next action available"
+        );
+
+        setText(
+          "next-action-reason",
+          nextAction?.reason ||
+            "Review the Business Record and create the next work item."
+        );
+
+        const metaElement = document.getElementById("next-action-meta");
+        metaElement.innerHTML = "";
+
+        if (nextAction?.priority) {
+          metaElement.appendChild(
+            createPill(`Priority: ${nextAction.priority}`)
+          );
+        }
+
+        if (nextAction?.category) {
+          metaElement.appendChild(
+            createPill(`Category: ${nextAction.category}`)
+          );
+        }
+      }
+
+      function renderCurrentWork(items) {
+        const container = document.getElementById("current-work-list");
+        container.innerHTML = "";
+
+        if (!items.length) {
+          container.appendChild(
+            createEmptyState("No active work is currently scheduled.")
+          );
+          return;
+        }
+
+        items.forEach((item) => {
+          const article = document.createElement("article");
+          article.className = "work-item";
+
+          article.innerHTML = `
+            <div class="work-item-header">
+              <div>
+                <h3 class="item-title">${escapeHtml(item.title)}</h3>
+              </div>
+
+              ${createBadgeHtml(item.priority)}
+            </div>
+
+            <p class="item-copy">
+              ${escapeHtml(
+                item.description ||
+                  item.businessValue ||
+                  "No description recorded."
+              )}
+            </p>
+
+            <div class="item-meta">
+              ${createBadgeHtml(item.status)}
+              ${createBadgeHtml(item.category)}
+              ${
+                item.dueDate
+                  ? createBadgeHtml(`Due ${formatDate(item.dueDate)}`)
+                  : ""
+              }
+            </div>
+
+            ${
+              item.nextAction
+                ? `
+                  <p class="item-copy">
+                    <strong>Next:</strong>
+                    ${escapeHtml(item.nextAction)}
+                  </p>
+                `
+                : ""
+            }
+          `;
+
+          container.appendChild(article);
+        });
+      }
+
+      function renderAlerts(alerts) {
+        const container = document.getElementById("alerts-list");
+        container.innerHTML = "";
+
+        if (!alerts.length) {
+          container.appendChild(
+            createEmptyState("No active alerts were generated.")
+          );
+          return;
+        }
+
+        alerts.forEach((alert) => {
+          const article = document.createElement("article");
+          const levelClass = normalizeClassName(alert.level);
+
+          article.className = `alert-item ${levelClass}`;
+
+          article.innerHTML = `
+            <div class="alert-item-header">
+              <h3 class="item-title">${escapeHtml(alert.title)}</h3>
+              ${createBadgeHtml(alert.level)}
+            </div>
+
+            <p class="item-copy">${escapeHtml(alert.message)}</p>
+
+            ${
+              alert.action
+                ? `
+                  <p class="alert-action">
+                    ${escapeHtml(alert.action)}
+                  </p>
+                `
+                : ""
+            }
+          `;
+
+          container.appendChild(article);
+        });
+      }
+
+      function renderPriorities(priorities) {
+        const container = document.getElementById("priorities-list");
+        container.innerHTML = "";
+
+        if (!priorities.length) {
+          container.appendChild(
+            createEmptyState("No business priorities are recorded.")
+          );
+          return;
+        }
+
+        priorities.forEach((priority) => {
+          const article = document.createElement("article");
+          article.className = "priority-item";
+
+          article.innerHTML = `
+            <div class="priority-item-header">
+              <h3 class="item-title">${escapeHtml(priority.title)}</h3>
+              ${createBadgeHtml(priority.priority)}
+            </div>
+
+            <p class="item-copy">
+              ${escapeHtml(
+                priority.businessValue ||
+                  "No business value has been recorded."
+              )}
+            </p>
+
+            <div class="item-meta">
+              ${createBadgeHtml(priority.status)}
+              ${createBadgeHtml(priority.category)}
+            </div>
+
+            ${
+              priority.nextAction
+                ? `
+                  <p class="item-copy">
+                    <strong>Next:</strong>
+                    ${escapeHtml(priority.nextAction)}
+                  </p>
+                `
+                : ""
+            }
+          `;
+
+          container.appendChild(article);
+        });
+      }
+
+      function renderRecentActivity(activity) {
+        const container = document.getElementById(
+          "recent-activity-list"
+        );
+
+        container.innerHTML = "";
+
+        if (!activity.length) {
+          container.appendChild(
+            createEmptyState(
+              "No recent activity was found within the current reporting window."
+            )
+          );
+          return;
+        }
+
+        activity.slice(0, 8).forEach((entry) => {
+          const article = document.createElement("article");
+          article.className = "activity-item";
+
+          article.innerHTML = `
+            <div class="activity-item-header">
+              <h3 class="item-title">${escapeHtml(entry.title)}</h3>
+              ${createBadgeHtml(formatDate(entry.date))}
+            </div>
+
+            <p class="item-copy">
+              ${escapeHtml(
+                entry.description || "No description recorded."
+              )}
+            </p>
+
+            <div class="item-meta">
+              ${createBadgeHtml(entry.type)}
+              ${createBadgeHtml(entry.category)}
+            </div>
+          `;
+
+          container.appendChild(article);
+        });
+      }
+
+      function renderOperationalDetails() {
+        renderAdvertising();
+        renderSEO();
+        renderWebsite();
+        renderSocial();
+        renderCaseStudy();
+      }
+
+      function renderAdvertising() {
+        const advertising = BusinessWorkspace.getAdvertising();
+        const campaigns = advertising.campaigns || [];
+
+        const campaignName =
+          campaigns[0]?.campaignName || "No campaign recorded";
+
+        const campaignStatus =
+          campaigns[0]?.status || "Unknown";
+
+        const nextOptimization =
+          campaigns[0]?.nextOptimization ||
+          "No next optimization has been recorded.";
+
+        renderDetailGrid("tab-advertising", [
+          ["Status", advertising.currentStatus || "Unknown"],
+          [
+            "Monthly Budget",
+            formatCurrency(advertising.monthlyBudget)
+          ],
+          ["Primary Campaign", campaignName],
+          ["Campaign Status", campaignStatus],
+          ["Next Optimization", nextOptimization],
+          ["Campaign Count", campaigns.length]
+        ]);
+      }
+
+      function renderSEO() {
+        const seo = BusinessWorkspace.getSEO();
+
+        renderDetailGrid("tab-seo", [
+          ["Status", seo.status || "Unknown"],
+          ["Visibility", formatUnknown(seo.visibility)],
+          [
+            "Top 3 Keywords",
+            formatUnknown(seo.topThreeKeywords)
+          ],
+          [
+            "Top 10 Keywords",
+            formatUnknown(seo.topTenKeywords)
+          ],
+          [
+            "Technical Issues Open",
+            formatUnknown(seo.technicalIssuesOpen)
+          ],
+          [
+            "Next Action",
+            seo.nextAction || "No next action recorded."
+          ]
+        ]);
+      }
+
+      function renderWebsite() {
+        const website = BusinessWorkspace.getWebsite();
+
+        renderDetailGrid("tab-website", [
+          ["Platform", website.platform || "Unknown"],
+          ["Status", website.status || "Unknown"],
+          [
+            "Production URL",
+            website.productionUrl || "Unknown"
+          ],
+          [
+            "Last Deployment",
+            website.lastDeployment
+              ? formatDate(website.lastDeployment)
+              : "Unknown"
+          ],
+          [
+            "Repository",
+            website.repository || "Not recorded"
+          ],
+          [
+            "Next Action",
+            website.nextAction || "No next action recorded."
+          ]
+        ]);
+      }
+
+      function renderSocial() {
+        const social = BusinessWorkspace.getSocial();
+
+        renderDetailGrid("tab-social", [
+          ["Status", social.status || "Unknown"],
+          [
+            "Last Reviewed",
+            social.lastReviewed
+              ? formatDate(social.lastReviewed)
+              : "Unknown"
+          ],
+          [
+            "Active Channels",
+            social.channels?.length || 0
+          ],
+          [
+            "Content Records",
+            social.content?.length || 0
+          ],
+          [
+            "Next Action",
+            social.nextAction || "No next action recorded."
+          ]
+        ]);
+      }
+
+      function renderCaseStudy() {
+        const caseStudy = BusinessWorkspace.getCaseStudy();
+
+        renderDetailGrid("tab-case-study", [
+          ["Status", caseStudy.status || "Unknown"],
+          ["Score", formatUnknown(caseStudy.score)],
+          [
+            "Publish Approved",
+            caseStudy.publishApproved ? "Yes" : "No"
+          ],
+          [
+            "Work Completed",
+            caseStudy.workCompleted?.length || 0
+          ],
+          [
+            "Measured Results",
+            caseStudy.measuredResults?.length || 0
+          ],
+          [
+            "Client Challenge",
+            caseStudy.clientChallenge ||
+              "No client challenge recorded."
+          ],
+          [
+            "Strategy",
+            caseStudy.strategy || "No strategy recorded."
+          ]
+        ]);
+      }
+
+      function renderDetailGrid(elementId, details) {
+        const container = document.getElementById(elementId);
+        container.innerHTML = "";
+
+        const grid = document.createElement("div");
+        grid.className = "detail-grid";
+
+        details.forEach(([label, value]) => {
+          const card = document.createElement("article");
+          card.className = "detail-card";
+
+          card.innerHTML = `
+            <p class="detail-label">${escapeHtml(label)}</p>
+            <p class="detail-value">${escapeHtml(
+              String(value ?? "Unknown")
+            )}</p>
+          `;
+
+          grid.appendChild(card);
+        });
+
+        container.appendChild(grid);
+      }
+
+      function renderFooter(workspace) {
+        const generatedAt =
+          workspace.executive?.generatedAt ||
+          workspace.loadedAt;
+
+        const runtimeVersion =
+          workspace.runtimeVersion || "Unknown";
+
+        setText(
+          "footer-note",
+          `Workspace generated ${formatDateTime(
+            generatedAt
+          )} · Runtime ${runtimeVersion} · Business Record ${
+            workspace.record.schemaVersion
+          }`
+        );
+      }
+
+      function initializeTabs() {
+        const buttons = document.querySelectorAll(".tab-button");
+        const panels = document.querySelectorAll(".tab-panel");
+
+        buttons.forEach((button) => {
+          button.addEventListener("click", () => {
+            const selectedTab = button.dataset.tab;
+
+            buttons.forEach((candidate) => {
+              candidate.classList.toggle(
+                "active",
+                candidate === button
+              );
+            });
+
+            panels.forEach((panel) => {
+              panel.classList.toggle(
+                "active",
+                panel.dataset.tabPanel === selectedTab
+              );
+            });
+          });
+        });
+      }
+
+      function getBusinessIdFromUrl() {
+        const parameters = new URLSearchParams(window.location.search);
+        return parameters.get("business");
+      }
+
+      function setRuntimeStatus(status, message) {
+        statusIndicator.className =
+          `status-indicator ${normalizeClassName(status)}`;
+
+        statusText.textContent = message;
+      }
+
+      function setText(elementId, value) {
+        const element = document.getElementById(elementId);
+
+        if (element) {
+          element.textContent =
+            value === null || value === undefined || value === ""
+              ? "Unknown"
+              : String(value);
+        }
+      }
+
+      function createPill(value) {
+        const element = document.createElement("span");
+        element.className = "pill";
+        element.textContent = value;
+        return element;
+      }
+
+      function createEmptyState(message) {
+        const element = document.createElement("div");
+        element.className = "list-empty";
+        element.textContent = message;
+        return element;
+      }
+
+      function createBadgeHtml(value) {
+        if (value === null || value === undefined || value === "") {
+          return "";
+        }
+
+        const className = normalizeClassName(value);
+
+        return `
+          <span class="badge ${className}">
+            ${escapeHtml(String(value))}
+          </span>
+        `;
+      }
+
+      function normalizeClassName(value) {
+        return String(value || "")
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "");
+      }
+
+      function formatCurrency(value) {
+        if (
+          value === null ||
+          value === undefined ||
+          value === "" ||
+          Number.isNaN(Number(value))
+        ) {
+          return "Unknown";
+        }
+
+        return new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: "USD",
+          maximumFractionDigits: 0
+        }).format(Number(value));
+      }
+
+      function formatDate(value) {
+        if (!value) {
+          return "Unknown";
+        }
+
+        const date = new Date(`${String(value).slice(0, 10)}T12:00:00`);
+
+        if (Number.isNaN(date.getTime())) {
+          return String(value);
+        }
+
+        return new Intl.DateTimeFormat("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric"
+        }).format(date);
+      }
+
+      function formatDateTime(value) {
+        if (!value) {
+          return "at an unknown time";
+        }
+
+        const date = new Date(value);
+
+        if (Number.isNaN(date.getTime())) {
+          return String(value);
+        }
+
+        return new Intl.DateTimeFormat("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+          hour: "numeric",
+          minute: "2-digit"
+        }).format(date);
+      }
+
+      function formatUnknown(value) {
+        return value === null ||
+          value === undefined ||
+          value === ""
+          ? "Unknown"
+          : value;
+      }
+
+      function formatError(error) {
+        const code = error?.code
+          ? `[${error.code}] `
+          : "";
+
+        const message =
+          error?.message ||
+          "An unknown Business Workspace error occurred.";
+
+        const validationErrors =
+          error?.details?.validationErrors;
+
+        if (
+          Array.isArray(validationErrors) &&
+          validationErrors.length
+        ) {
+          const details = validationErrors
+            .map(
+              (item) =>
+                `${item.path}: ${item.message}`
+            )
+            .join(" | ");
+
+          return `${code}${message} ${details}`;
+        }
+
+        return `${code}${message}`;
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+    })();
+  </script>
+</body>
+</html>
