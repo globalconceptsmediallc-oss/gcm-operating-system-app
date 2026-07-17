@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clients | GCM OS</title>
+  <meta name="description" content="Active client management for the Global Concepts Media Agency Operating System." />
+  <style>
+    :root {
+      --navy-950:#071426; --navy-900:#0b1d33; --blue:#1f68d8; --gold:#d6a94a;
+      --surface:#fff; --soft:#f5f7fb; --border:#dbe2ec; --text:#132238;
+      --muted:#637083; --soft-text:#8290a3; --success:#1f7a4f; --success-soft:#e9f7f0;
+      --warning:#9a6414; --warning-soft:#fff4dd; --info:#245fae; --info-soft:#edf5ff;
+      --critical:#b33a3a; --critical-soft:#fff0f0; --shadow:0 8px 24px rgba(7,20,38,.07);
+    }
+    *{box-sizing:border-box} body{margin:0;min-height:100vh;background:var(--soft);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5}
+    a{color:inherit;text-decoration:none} button{font:inherit}
+    .app-shell{min-height:100vh;display:grid;grid-template-columns:250px minmax(0,1fr)}
+    .sidebar{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;padding:24px 18px;background:radial-gradient(circle at top right,rgba(52,124,232,.19),transparent 34%),linear-gradient(180deg,var(--navy-900),var(--navy-950));color:#fff;overflow-y:auto}
+    .brand{display:flex;align-items:center;gap:12px;padding:2px 8px 22px;border-bottom:1px solid rgba(255,255,255,.12)}
+    .brand-mark{width:42px;height:42px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.22);border-radius:13px;background:rgba(255,255,255,.08);color:var(--gold);font-weight:900}
+    .brand-copy strong,.brand-copy span{display:block}.brand-copy strong{font-size:.95rem}.brand-copy span{margin-top:2px;color:rgba(255,255,255,.58);font-size:.75rem;text-transform:uppercase;letter-spacing:.12em}
+    .nav-label{margin:24px 10px 10px;color:rgba(255,255,255,.42);font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.14em}
+    .primary-nav{display:grid;gap:6px}.nav-link{display:flex;align-items:center;gap:12px;min-height:46px;padding:0 13px;border-radius:12px;color:rgba(255,255,255,.72);font-size:.92rem;font-weight:700}.nav-link:hover,.nav-link:focus-visible{background:rgba(255,255,255,.08);color:#fff;outline:none}.nav-link[aria-current="page"]{background:rgba(52,124,232,.2);color:#fff;box-shadow:inset 3px 0 0 var(--gold)}.nav-icon{width:22px;text-align:center}
+    .sidebar-footer{margin-top:auto;padding:18px 8px 2px;border-top:1px solid rgba(255,255,255,.12)}.sidebar-status{display:flex;align-items:center;gap:9px;color:rgba(255,255,255,.67);font-size:.78rem}.status-dot{width:8px;height:8px;border-radius:50%;background:#5fd397;box-shadow:0 0 0 4px rgba(95,211,151,.12)}
+    .main{min-width:0;padding:28px 32px 48px}.main-inner{width:min(100%,1480px);margin:0 auto}.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:24px}.eyebrow{margin:0 0 6px;color:var(--blue);font-size:.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.14em}.page-title{margin:0;color:var(--navy-950);font-size:clamp(2rem,4vw,3.15rem);line-height:1;letter-spacing:-.045em}.page-subtitle{margin:10px 0 0;color:var(--muted)}.topbar-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}.date-chip{display:inline-flex;align-items:center;min-height:42px;padding:0 14px;border:1px solid var(--border);border-radius:999px;background:var(--surface);color:var(--muted);box-shadow:var(--shadow);font-size:.84rem;font-weight:800}
+    .button{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 16px;border:1px solid transparent;border-radius:11px;cursor:pointer;font-size:.86rem;font-weight:850}.button-primary{background:var(--blue);color:#fff}.button-secondary{border-color:var(--border);background:#fff;color:var(--navy-900)}.mobile-menu-button{display:none}
+    .summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}.summary-card{padding:18px;border:1px solid var(--border);border-radius:16px;background:#fff;box-shadow:var(--shadow)}.summary-label{margin:0;color:var(--muted);font-size:.74rem;font-weight:850;text-transform:uppercase;letter-spacing:.08em}.summary-value{margin:8px 0 0;color:var(--navy-950);font-size:2rem;font-weight:900;line-height:1}.summary-note{margin:8px 0 0;color:var(--soft-text);font-size:.78rem}
+    .panel{border:1px solid var(--border);border-radius:22px;background:#fff;box-shadow:var(--shadow);overflow:hidden}.panel-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:20px 22px 16px;border-bottom:1px solid var(--border)}.panel-title{margin:0;color:var(--navy-950);font-size:1rem;font-weight:900}.panel-description{margin:5px 0 0;color:var(--muted);font-size:.82rem}
+    .client-list{display:grid;gap:16px;padding:18px}.client-card{border:1px solid var(--border);border-radius:16px;background:linear-gradient(180deg,#fff,#fbfcfe);overflow:hidden}.client-card-main{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:24px;padding:22px;align-items:center}.client-heading{display:flex;align-items:center;gap:14px}.client-mark{width:48px;height:48px;display:grid;place-items:center;flex:0 0 auto;border-radius:14px;background:var(--navy-900);color:var(--gold);font-weight:900}.client-name{margin:0;color:var(--navy-950);font-size:1.22rem;font-weight:900}.client-meta{display:flex;flex-wrap:wrap;gap:7px;margin-top:7px}.pill{display:inline-flex;align-items:center;min-height:27px;padding:0 9px;border-radius:999px;font-size:.68rem;font-weight:900}.pill-success{background:var(--success-soft);color:var(--success)}.pill-warning{background:var(--warning-soft);color:var(--warning)}.pill-info{background:var(--info-soft);color:var(--info)}
+    .client-overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px}.client-stat{padding:13px 14px;border:1px solid var(--border);border-radius:12px;background:var(--soft)}.client-stat-label{margin:0;color:var(--soft-text);font-size:.68rem;font-weight:850;text-transform:uppercase;letter-spacing:.07em}.client-stat-value{margin:5px 0 0;color:var(--text);font-size:.84rem;font-weight:850}.client-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+    .client-details{display:none;padding:0 22px 22px;border-top:1px solid var(--border);background:#fbfcfe}.client-details.is-open{display:block}.details-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding-top:18px}.detail-block{padding:16px;border:1px solid var(--border);border-radius:13px;background:#fff}.detail-block h3{margin:0 0 9px;color:var(--navy-950);font-size:.82rem;font-weight:900;text-transform:uppercase;letter-spacing:.07em}.detail-block p{margin:0;color:var(--muted);font-size:.84rem}.detail-list{list-style:none;margin:0;padding:0}.detail-list li{padding:9px 0;border-bottom:1px solid var(--border)}.detail-list li:last-child{border-bottom:0;padding-bottom:0}.detail-list strong{display:block;color:var(--text);font-size:.82rem}.detail-list span{display:block;margin-top:3px;color:var(--soft-text);font-size:.74rem}.loading,.error-state{padding:36px 22px;text-align:center;color:var(--muted)}.error-state{color:var(--critical);background:var(--critical-soft)}
+    @media(max-width:1050px){.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.client-card-main{grid-template-columns:1fr}.client-actions{justify-content:flex-start}}
+    @media(max-width:860px){.app-shell{grid-template-columns:1fr}.sidebar{position:fixed;inset:0 auto 0 0;z-index:100;width:250px;transform:translateX(-100%);transition:transform .18s ease}.sidebar.is-open{transform:translateX(0)}.mobile-menu-button{display:inline-flex}.main{padding:20px}}
+    @media(max-width:680px){.main{padding:16px}.topbar{flex-direction:column}.topbar-actions{width:100%;justify-content:flex-start}.summary-grid,.client-overview,.details-grid{grid-template-columns:1fr}.client-card-main{padding:18px}.client-details{padding:0 18px 18px}}
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar" aria-label="Primary navigation">
+      <a class="brand" href="today.html"><span class="brand-mark">G</span><span class="brand-copy"><strong>Global Concepts Media</strong><span>Agency Operating System</span></span></a>
+      <p class="nav-label">Workspace</p>
+      <nav class="primary-nav">
+        <a class="nav-link" href="today.html"><span class="nav-icon">⌂</span><span>Today</span></a>
+        <a class="nav-link" href="client-pre-research.html"><span class="nav-icon">◎</span><span>Prospects</span></a>
+        <a class="nav-link" href="clients.html" aria-current="page"><span class="nav-icon">◫</span><span>Clients</span></a>
+        <a class="nav-link" href="#"><span class="nav-icon">✓</span><span>Work</span></a>
+        <a class="nav-link" href="#"><span class="nav-icon">↗</span><span>Proof</span></a>
+        <a class="nav-link" href="#"><span class="nav-icon">★</span><span>Case Studies</span></a>
+        <a class="nav-link" href="#"><span class="nav-icon">⚙</span><span>Settings</span></a>
+      </nav>
+      <div class="sidebar-footer"><div class="sidebar-status"><span class="status-dot"></span><span>Client data connected</span></div></div>
+    </aside>
+
+    <main class="main">
+      <div class="main-inner">
+        <header class="topbar">
+          <div><p class="eyebrow">Client Operations</p><h1 class="page-title">Clients</h1><p class="page-subtitle">Review active client priorities, work, proof, and account health.</p></div>
+          <div class="topbar-actions"><button class="button button-secondary mobile-menu-button" id="mobile-menu-button" type="button">Menu</button><div class="date-chip" id="current-date"></div></div>
+        </header>
+
+        <section class="summary-grid">
+          <article class="summary-card"><p class="summary-label">Active Clients</p><p class="summary-value" id="active-client-count">0</p><p class="summary-note">Loaded from production client records.</p></article>
+          <article class="summary-card"><p class="summary-label">Need Attention</p><p class="summary-value" id="attention-client-count">0</p><p class="summary-note">Accounts requiring a decision or action.</p></article>
+          <article class="summary-card"><p class="summary-label">Open Work</p><p class="summary-value" id="open-work-count">0</p><p class="summary-note">Incomplete client work items.</p></article>
+          <article class="summary-card"><p class="summary-label">Proof Items</p><p class="summary-value" id="proof-count">0</p><p class="summary-note">Recorded evidence of completed work.</p></article>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header"><div><h2 class="panel-title">Active Client Accounts</h2><p class="panel-description">Client information is loaded from the data directory.</p></div></div>
+          <div class="client-list" id="client-list"><div class="loading">Loading client records…</div></div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    (()=>{
+      "use strict";
+      const CLIENT_FILES=["data/southeast-safes.json"];
+      const $=id=>document.getElementById(id);
+      const clientList=$("client-list"),sidebar=$("sidebar"),menu=$("mobile-menu-button");
+      const escapeHtml=value=>String(value??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+      const formatDate=value=>{if(!value)return"Not recorded";const d=new Date(`${value}T12:00:00`);return Number.isNaN(d.getTime())?value:new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric",year:"numeric"}).format(d)};
+      const getOpenWork=client=>(client.workQueue||[]).filter(item=>!["complete","completed"].includes(String(item.status||"").toLowerCase()));
+      const healthClass=health=>{const h=String(health||"").toLowerCase();if(h.includes("healthy")||h.includes("good"))return"pill-success";if(h.includes("attention")||h.includes("risk"))return"pill-warning";return"pill-info"};
+      function renderClient(client,index){
+        const b=client.business||{},r=client.relationship||{},w=client.workspace||{};
+        const open=getOpenWork(client),proof=(client.proofOfWork||[]).slice(-3).reverse(),priorities=(client.currentPriorities||[]).slice(0,3),detailsId=`client-details-${index}`;
+        const initials=(b.name||"GC").split(/\s+/).map(x=>x[0]).join("").slice(0,2).toUpperCase();
+        const list=(items,titleKey,metaFn,empty)=>items.length?`<ul class="detail-list">${items.map(item=>`<li><strong>${escapeHtml(item[titleKey]||"Untitled")}</strong><span>${escapeHtml(metaFn(item))}</span></li>`).join("")}</ul>`:`<p>${empty}</p>`;
+        return `<article class="client-card">
+          <div class="client-card-main">
+            <div>
+              <div class="client-heading"><div class="client-mark">${escapeHtml(initials)}</div><div><h2 class="client-name">${escapeHtml(b.name||"Unnamed Client")}</h2><div class="client-meta"><span class="pill pill-success">${escapeHtml(r.status||"Unknown")}</span><span class="pill ${healthClass(r.accountHealth)}">${escapeHtml(r.accountHealth||"Health Not Set")}</span><span class="pill pill-info">${escapeHtml(r.stage||"Stage Not Set")}</span></div></div></div>
+              <div class="client-overview"><div class="client-stat"><p class="client-stat-label">Current Priority</p><p class="client-stat-value">${escapeHtml(w.currentPriority||"No current priority recorded.")}</p></div><div class="client-stat"><p class="client-stat-label">Next Action</p><p class="client-stat-value">${escapeHtml(w.nextAction||"No next action recorded.")}</p></div><div class="client-stat"><p class="client-stat-label">Last Activity</p><p class="client-stat-value">${escapeHtml(formatDate(w.lastWorkDate))}</p></div></div>
+            </div>
+            <div class="client-actions"><a class="button button-secondary" href="${escapeHtml(b.website||"#")}" ${b.website?'target="_blank" rel="noopener noreferrer"':""}>Visit Website</a><button class="button button-primary" type="button" data-details-target="${detailsId}" aria-expanded="false">Open Client</button></div>
+          </div>
+          <div class="client-details" id="${detailsId}"><div class="details-grid">
+            <section class="detail-block"><h3>Account Health</h3><p>${escapeHtml(r.accountHealthReason||"No account health explanation recorded.")}</p></section>
+            <section class="detail-block"><h3>Next Action Reason</h3><p>${escapeHtml(w.nextActionReason||"No next-action reason recorded.")}</p></section>
+            <section class="detail-block"><h3>Current Priorities</h3>${list(priorities,"title",x=>`${x.priority||"No priority"} · ${x.status||"No status"}`,"No current priorities recorded.")}</section>
+            <section class="detail-block"><h3>Open Work</h3>${list(open.slice(0,5),"title",x=>`${x.priority||"No priority"} · ${x.status||"No status"}`,"No open work items.")}</section>
+            <section class="detail-block"><h3>Recent Proof</h3>${list(proof,"task",x=>`${formatDate(x.date)} · ${x.status||"No status"}`,"No proof of work recorded.")}</section>
+            <section class="detail-block"><h3>Client Record</h3><p>${escapeHtml(b.summary||"No client summary recorded.")}</p></section>
+          </div></div>
+        </article>`;
+      }
+      function updateSummary(clients){
+        $("active-client-count").textContent=clients.filter(c=>String(c.relationship?.status||"").toLowerCase()==="active").length;
+        $("attention-client-count").textContent=clients.filter(c=>{const h=String(c.relationship?.accountHealth||"").toLowerCase();return h.includes("attention")||h.includes("risk")}).length;
+        $("open-work-count").textContent=clients.reduce((n,c)=>n+getOpenWork(c).length,0);
+        $("proof-count").textContent=clients.reduce((n,c)=>n+(c.proofOfWork||[]).length,0);
+      }
+      async function loadClients(){
+        try{
+          const clients=await Promise.all(CLIENT_FILES.map(async file=>{const response=await fetch(file,{cache:"no-store"});if(!response.ok)throw new Error(`${file}: HTTP ${response.status}`);return response.json()}));
+          updateSummary(clients);clientList.innerHTML=clients.map(renderClient).join("");
+        }catch(error){console.error(error);clientList.innerHTML=`<div class="error-state">Client records could not be loaded. Confirm that <strong>data/southeast-safes.json</strong> exists and that this page is opened from the deployed site.</div>`}
+      }
+      clientList.addEventListener("click",event=>{const button=event.target.closest("[data-details-target]");if(!button)return;const details=$(button.dataset.detailsTarget);if(!details)return;const open=details.classList.toggle("is-open");button.setAttribute("aria-expanded",String(open));button.textContent=open?"Close Client":"Open Client"});
+      menu.addEventListener("click",()=>{const open=sidebar.classList.toggle("is-open");menu.setAttribute("aria-expanded",String(open))});
+      $("current-date").textContent=new Intl.DateTimeFormat("en-US",{weekday:"long",month:"long",day:"numeric"}).format(new Date());
+      loadClients();
+    })();
+  </script>
+</body>
+</html>
