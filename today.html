@@ -1179,31 +1179,15 @@
     (() => {
       "use strict";
 
-      const DATA_KEY = "gcm-os-operational-records-v1";
+      const DATA_KEY = "gcm-os-operational-records-v2";
 
       const DEFAULT_DATA = {
-        prospects: [
-          { id: "prospect-1", name: "Qualified Prospect 1", status: "ready" },
-          { id: "prospect-2", name: "Qualified Prospect 2", status: "ready" },
-          { id: "prospect-3", name: "Prospect 3", status: "research" },
-          { id: "prospect-4", name: "Prospect 4", status: "research" },
-          { id: "prospect-5", name: "Prospect 5", status: "research" }
-        ],
-        workItems: [
-          { id: "prospect-calls", client: "Global Concepts Media", title: "Complete three personalized prospect calls", area: "Acquire", detail: "Use verified pre-research", priority: "highest", status: "open", requiresDecision: false, href: "client-pre-research.html" },
-          { id: "preston-review", client: "1-800 4A Gun Safe", title: "Review 1-800 4A Gun Safe performance and next action", area: "Deliver", detail: "Google Ads and visibility", priority: "high", status: "open", requiresDecision: true, attentionReason: "Review current performance and prepare the next measurable action.", attentionLabel: "Review due", href: "#" },
-          { id: "southeast-work", client: "Southeast Safes", title: "Confirm this week's Southeast Safes priority", area: "Deliver", detail: "One measurable objective", priority: "high", status: "open", requiresDecision: true, attentionReason: "Select and lock this week's highest-value growth task.", attentionLabel: "Needs attention", href: "#" },
-          { id: "proof-update", client: "Global Concepts Media", title: "Record completed work in Proof of Work", area: "Prove", detail: "Capture evidence before context is lost", priority: "normal", status: "open", requiresDecision: false, href: "#" }
-        ],
-        investigations: [
-          { id: "north-florida-plan", client: "North Florida Safes", title: "Confirm current sprint and measurement baseline", status: "open", requiresDecision: true, attentionReason: "Confirm whether a current sprint and measurement baseline exist.", attentionLabel: "Needs plan", href: "#" }
-        ],
+        prospects: [],
+        workItems: [],
+        investigations: [],
         alerts: [],
         communications: [],
-        proofItems: [
-          { id: "proof-operating-model", title: "GCM OS operating model", detail: "Agency workflow and design system were completed and locked.", status: "ready", href: "#" },
-          { id: "proof-html-validation", title: "HTML intelligence validation", detail: "Convert verified test results into a development milestone.", status: "pending", href: "#" }
-        ]
+        proofItems: []
       };
 
       const greeting = document.getElementById("greeting");
