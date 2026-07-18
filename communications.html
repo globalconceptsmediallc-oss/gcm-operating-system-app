@@ -530,7 +530,7 @@
             <article class="panel">
               <div class="panel-header">
                 <h2>1. Email Screenshot</h2>
-                <p>The screenshot is the primary source record.</p>
+                <p>The screenshot is temporary input only and is discarded after analysis.</p>
               </div>
               <div class="panel-body">
                 <div class="drop-zone" id="drop-zone" tabindex="0">
@@ -552,7 +552,7 @@
             <article class="panel">
               <div class="panel-header">
                 <h2>Recent Captures</h2>
-                <p>Prototype records saved in this browser.</p>
+                <p>Communication Records saved to the Mission Control operational store.</p>
               </div>
               <div class="panel-body" id="history-list"></div>
             </article>
@@ -701,8 +701,9 @@
        *   }
        * }
        */
-      const ANALYZE_ENDPOINT = "";
-      const STORAGE_KEY = "gcm-os-client-communications-v2";
+      const ANALYZE_ENDPOINT = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+      const OPERATIONAL_STORAGE_KEY = "gcm-os-operational-records-v2";
+      const LEGACY_STORAGE_KEY = "gcm-os-client-communications-v2";
       const MAX_FILE_SIZE = 10 * 1024 * 1024;
       const ALLOWED_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 
@@ -744,6 +745,7 @@
         }).format(today);
 
         bindEvents();
+        migrateLegacyRecords();
         renderHistory();
         validateAnalyze();
       }
@@ -924,40 +926,146 @@
           return;
         }
 
-        const record = {
-          id: createId(),
-          recordType: "clientCommunication",
-          clientName: el.client.value,
-          clientId: slugify(el.client.value),
-          capturedAt: new Date().toISOString(),
+        const now = new Date();
+        const communicationId = createId("communication");
+        const client = el.client.value;
+        const title =
+          currentAnalysis.title ||
+          `${currentAnalysis.source || "Client"} communication`;
+        const summary = currentAnalysis.summary || "";
+        const proofOfWork = el.resultProof.value.trim();
+        const relatedRecords = [];
+
+        const communication = {
+          id: communicationId,
+          recordType: "Communication Record",
+          date: now.toISOString().slice(0, 10),
+          capturedAt: now.toISOString(),
+          client,
+          clientId: slugify(client),
           source: currentAnalysis.source || "Unknown",
-          communicationType:
-            currentAnalysis.communicationType || "General Client Record",
-          title:
-            currentAnalysis.title ||
-            `${currentAnalysis.source || "Client"} communication`,
-          summary: currentAnalysis.summary || "",
+          category:
+            currentAnalysis.communicationType || "General Client Communication",
+          title,
+          proofOfWork,
+          communicationSummary: summary,
+          summary,
           problemClassification:
             currentAnalysis.problemClassification || "Needs review",
           problemAssessment: currentAnalysis.problemAssessment || "",
           recommendedAction: currentAnalysis.recommendedAction || "",
-          proofOfWork: el.resultProof.value.trim(),
+          status: "reviewed",
+          requiresDecision: false,
+          attentionLabel: "Communication",
+          attentionReason: summary || title,
+          investigation: null,
+          workItem: null,
+          relatedRecords,
           decision,
-          screenshot: {
-            fileName: imageFileName,
-            dataUrl: imageDataUrl
-          },
-          version: "2.0.0"
+          version: "3.0.0"
         };
 
-        const records = readRecords();
-        records.unshift(record);
+        const data = loadOperationalData();
+
+        if (decision === "Create Investigation") {
+          const investigationId = createId("investigation");
+          const investigation = {
+            id: investigationId,
+            recordType: "Investigation Record",
+            client,
+            clientId: slugify(client),
+            title: `Investigate: ${title}`,
+            detail:
+              currentAnalysis.problemAssessment ||
+              currentAnalysis.recommendedAction ||
+              summary,
+            sourceCommunicationId: communicationId,
+            status: "open",
+            priority: priorityFromClassification(
+              currentAnalysis.problemClassification
+            ),
+            requiresDecision: true,
+            attentionLabel: "Investigation",
+            attentionReason:
+              currentAnalysis.problemAssessment ||
+              "This communication requires investigation before the next action is decided.",
+            createdAt: now.toISOString(),
+            relatedRecords: [communicationId]
+          };
+          data.investigations.unshift(investigation);
+          communication.status = "investigation-open";
+          communication.investigation = investigationId;
+          communication.relatedRecords.push(investigationId);
+        }
+
+        if (decision === "Create Work Item") {
+          const workItemId = createId("work");
+          const workItem = {
+            id: workItemId,
+            recordType: "Work Item",
+            client,
+            clientId: slugify(client),
+            title:
+              currentAnalysis.recommendedAction ||
+              `Follow up: ${title}`,
+            detail: summary,
+            area:
+              currentAnalysis.communicationType || "Client Communication",
+            status: "open",
+            priority: priorityFromClassification(
+              currentAnalysis.problemClassification
+            ),
+            requiresDecision: false,
+            createdAt: now.toISOString(),
+            sourceCommunicationId: communicationId,
+            relatedRecords: [communicationId],
+            href: "communications.html"
+          };
+          data.workItems.unshift(workItem);
+          communication.status = "work-created";
+          communication.workItem = workItemId;
+          communication.relatedRecords.push(workItemId);
+        }
+
+        if (decision === "Add to Proof of Work") {
+          const proofId = createId("proof");
+          const proofItem = {
+            id: proofId,
+            recordType: "Proof of Work",
+            client,
+            clientId: slugify(client),
+            title: proofOfWork || title,
+            detail:
+              proofOfWork ||
+              "Communication reviewed and ready to document as client-facing proof.",
+            status: "ready",
+            createdAt: now.toISOString(),
+            sourceCommunicationId: communicationId,
+            relatedRecords: [communicationId],
+            href: "communications.html"
+          };
+          data.proofItems.unshift(proofItem);
+          communication.status = "proof-ready";
+          communication.relatedRecords.push(proofId);
+        }
+
+        if (decision === "Reply Required") {
+          communication.status = "reply-required";
+          communication.requiresDecision = true;
+          communication.attentionLabel = "Reply Required";
+          communication.attentionReason =
+            currentAnalysis.recommendedAction ||
+            "A response to this communication is required.";
+        }
+
+        data.communications.unshift(communication);
 
         try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(records.slice(0, 20)));
+          saveOperationalData(data);
         } catch (error) {
+          console.error(error);
           setStatus(
-            "The browser could not store the screenshot. Try a smaller image or clear old prototype records.",
+            "The browser could not save the operational records. Clear old browser data and try again.",
             "error"
           );
           return;
@@ -965,7 +1073,10 @@
 
         renderHistory();
         reset();
-        setStatus("Communication saved to the prototype client record.", "ready");
+        setStatus(
+          "Communication saved. Mission Control will now reflect the new operational record.",
+          "ready"
+        );
       }
 
       function reset() {
@@ -985,40 +1096,152 @@
         el.analysisStatus.textContent = message;
       }
 
-      function readRecords() {
+      function emptyOperationalData() {
+        return {
+          prospects: [],
+          workItems: [],
+          investigations: [],
+          alerts: [],
+          communications: [],
+          proofItems: []
+        };
+      }
+
+      function loadOperationalData() {
         try {
-          const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-          return Array.isArray(value) ? value : [];
+          const parsed = JSON.parse(
+            localStorage.getItem(OPERATIONAL_STORAGE_KEY) || "{}"
+          );
+          const defaults = emptyOperationalData();
+          return {
+            ...defaults,
+            ...parsed,
+            prospects: Array.isArray(parsed.prospects) ? parsed.prospects : [],
+            workItems: Array.isArray(parsed.workItems) ? parsed.workItems : [],
+            investigations: Array.isArray(parsed.investigations)
+              ? parsed.investigations
+              : [],
+            alerts: Array.isArray(parsed.alerts) ? parsed.alerts : [],
+            communications: Array.isArray(parsed.communications)
+              ? parsed.communications
+              : [],
+            proofItems: Array.isArray(parsed.proofItems) ? parsed.proofItems : []
+          };
         } catch {
-          return [];
+          return emptyOperationalData();
         }
       }
 
+      function saveOperationalData(data) {
+        localStorage.setItem(OPERATIONAL_STORAGE_KEY, JSON.stringify(data));
+      }
+
+      function migrateLegacyRecords() {
+        let legacy = [];
+        try {
+          const parsed = JSON.parse(
+            localStorage.getItem(LEGACY_STORAGE_KEY) || "[]"
+          );
+          legacy = Array.isArray(parsed) ? parsed : [];
+        } catch {
+          legacy = [];
+        }
+
+        if (!legacy.length) return;
+
+        const data = loadOperationalData();
+        const existingIds = new Set(data.communications.map(record => record.id));
+
+        legacy.forEach(record => {
+          if (existingIds.has(record.id)) return;
+          data.communications.push({
+            id: record.id || createId("communication"),
+            recordType: "Communication Record",
+            date: String(record.capturedAt || "").slice(0, 10),
+            capturedAt: record.capturedAt || new Date().toISOString(),
+            client: record.clientName || "Unknown Client",
+            clientId:
+              record.clientId || slugify(record.clientName || "unknown-client"),
+            source: record.source || "Unknown",
+            category:
+              record.communicationType || "General Client Communication",
+            title: record.title || "Client communication",
+            proofOfWork: record.proofOfWork || "",
+            communicationSummary: record.summary || "",
+            summary: record.summary || "",
+            problemClassification:
+              record.problemClassification || "Needs review",
+            problemAssessment: record.problemAssessment || "",
+            recommendedAction: record.recommendedAction || "",
+            status:
+              record.decision === "Reply Required"
+                ? "reply-required"
+                : "reviewed",
+            requiresDecision: record.decision === "Reply Required",
+            attentionLabel:
+              record.decision === "Reply Required"
+                ? "Reply Required"
+                : "Communication",
+            attentionReason:
+              record.recommendedAction || record.summary || record.title || "",
+            investigation: null,
+            workItem: null,
+            relatedRecords: [],
+            decision: record.decision || "Save as Reviewed",
+            version: "3.0.0",
+            migratedFromPrototype: true
+          });
+        });
+
+        saveOperationalData(data);
+        localStorage.removeItem(LEGACY_STORAGE_KEY);
+      }
+
       function renderHistory() {
-        const records = readRecords();
+        const records = loadOperationalData().communications;
 
         if (!records.length) {
-          el.historyList.innerHTML = '<p class="empty">No communications captured yet.</p>';
+          el.historyList.innerHTML =
+            '<p class="empty">No communications captured yet.</p>';
           return;
         }
 
         el.historyList.innerHTML = records.slice(0, 10).map(record => `
           <article class="history-item">
             <strong>${escapeHtml(record.title)}</strong>
-            <span>${escapeHtml(record.clientName)} · ${escapeHtml(record.source)} · ${escapeHtml(record.decision)}</span>
-            <p>${escapeHtml(record.summary)}</p>
+            <span>${escapeHtml(record.client)} · ${escapeHtml(record.source)} · ${escapeHtml(record.decision || record.status)}</span>
+            <p>${escapeHtml(record.communicationSummary || record.summary)}</p>
           </article>
         `).join("");
       }
 
-      function createId() {
+      function createId(prefix) {
         return window.crypto?.randomUUID
-          ? `communication-${window.crypto.randomUUID()}`
-          : `communication-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+          ? `${prefix}-${window.crypto.randomUUID()}`
+          : `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      }
+
+      function priorityFromClassification(classification = "") {
+        const normalized = String(classification).toLowerCase();
+        if (
+          normalized.includes("critical") ||
+          normalized.includes("urgent") ||
+          normalized.includes("confirmed")
+        ) {
+          return "highest";
+        }
+        if (
+          normalized.includes("possible") ||
+          normalized.includes("investigation") ||
+          normalized.includes("warning")
+        ) {
+          return "high";
+        }
+        return "normal";
       }
 
       function slugify(value) {
-        return value
+        return String(value || "")
           .toLowerCase()
           .trim()
           .replace(/&/g, "and")
