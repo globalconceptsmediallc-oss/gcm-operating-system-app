@@ -993,26 +993,26 @@
         <section class="summary-grid" aria-label="Today's agency summary">
           <article class="summary-card" style="--accent-soft: var(--info-soft);">
             <p class="summary-label">Prospects to Contact</p>
-            <p class="summary-value">5</p>
-            <p class="summary-note">Two are ready for personalized outreach.</p>
+            <p class="summary-value" id="prospect-count">0</p>
+            <p class="summary-note" id="prospect-note">No prospects are ready for outreach.</p>
           </article>
 
           <article class="summary-card" style="--accent-soft: var(--warning-soft);">
             <p class="summary-label">Clients Needing Attention</p>
-            <p class="summary-value">3</p>
-            <p class="summary-note">One item is due today.</p>
+            <p class="summary-value" id="attention-count">0</p>
+            <p class="summary-note" id="attention-note">No clients currently require a decision.</p>
           </article>
 
           <article class="summary-card" style="--accent-soft: var(--critical-soft);">
             <p class="summary-label">Open Work</p>
-            <p class="summary-value" id="open-task-count">4</p>
-            <p class="summary-note">Highest-impact work appears first.</p>
+            <p class="summary-value" id="open-task-count">0</p>
+            <p class="summary-note" id="open-work-note">No open work items.</p>
           </article>
 
           <article class="summary-card" style="--accent-soft: var(--success-soft);">
             <p class="summary-label">Proof Waiting</p>
-            <p class="summary-value">2</p>
-            <p class="summary-note">Completed work is ready to document.</p>
+            <p class="summary-value" id="proof-count">0</p>
+            <p class="summary-note" id="proof-note">No completed work is waiting for proof.</p>
           </article>
         </section>
 
@@ -1070,81 +1070,7 @@
                 <span class="priority-pill pill-info" id="task-progress">0 of 4 complete</span>
               </div>
 
-              <ul class="task-list" id="task-list">
-                <li class="task-item" data-task-id="prospect-calls">
-                  <input
-                    class="task-check"
-                    type="checkbox"
-                    aria-label="Complete three personalized prospect calls"
-                  />
-
-                  <div>
-                    <p class="task-title">Complete three personalized prospect calls</p>
-                    <div class="task-meta">
-                      <span>Acquire</span>
-                      <span>Use verified pre-research</span>
-                    </div>
-                  </div>
-
-                  <span class="priority-pill pill-critical">Highest</span>
-                </li>
-
-                <li class="task-item" data-task-id="preston-review">
-                  <input
-                    class="task-check"
-                    type="checkbox"
-                    aria-label="Review 1-800 4A Gun Safe performance and next action"
-                  />
-
-                  <div>
-                    <p class="task-title">
-                      Review 1-800 4A Gun Safe performance and next action
-                    </p>
-                    <div class="task-meta">
-                      <span>Deliver</span>
-                      <span>Google Ads and visibility</span>
-                    </div>
-                  </div>
-
-                  <span class="priority-pill pill-warning">High</span>
-                </li>
-
-                <li class="task-item" data-task-id="southeast-work">
-                  <input
-                    class="task-check"
-                    type="checkbox"
-                    aria-label="Confirm this week's Southeast Safes priority"
-                  />
-
-                  <div>
-                    <p class="task-title">Confirm this week's Southeast Safes priority</p>
-                    <div class="task-meta">
-                      <span>Deliver</span>
-                      <span>One measurable objective</span>
-                    </div>
-                  </div>
-
-                  <span class="priority-pill pill-warning">High</span>
-                </li>
-
-                <li class="task-item" data-task-id="proof-update">
-                  <input
-                    class="task-check"
-                    type="checkbox"
-                    aria-label="Record completed work in Proof of Work"
-                  />
-
-                  <div>
-                    <p class="task-title">Record completed work in Proof of Work</p>
-                    <div class="task-meta">
-                      <span>Prove</span>
-                      <span>Capture evidence before context is lost</span>
-                    </div>
-                  </div>
-
-                  <span class="priority-pill pill-info">Normal</span>
-                </li>
-              </ul>
+              <ul class="task-list" id="task-list"></ul>
 
               <div class="panel-footer">
                 <a class="text-link" href="#">Open full work queue →</a>
@@ -1189,46 +1115,7 @@
                 </div>
               </div>
 
-              <ul class="attention-list">
-                <li class="attention-item">
-                  <div class="attention-top">
-                    <div>
-                      <p class="attention-name">Southeast Safes</p>
-                      <p class="attention-detail">
-                        Select and lock this week's highest-value growth task.
-                      </p>
-                    </div>
-
-                    <span class="status-label status-warning">Needs attention</span>
-                  </div>
-                </li>
-
-                <li class="attention-item">
-                  <div class="attention-top">
-                    <div>
-                      <p class="attention-name">1-800 4A Gun Safe</p>
-                      <p class="attention-detail">
-                        Review current performance and prepare the next measurable action.
-                      </p>
-                    </div>
-
-                    <span class="status-label status-info">Review due</span>
-                  </div>
-                </li>
-
-                <li class="attention-item">
-                  <div class="attention-top">
-                    <div>
-                      <p class="attention-name">North Florida Safes</p>
-                      <p class="attention-detail">
-                        Confirm whether a current sprint and measurement baseline exist.
-                      </p>
-                    </div>
-
-                    <span class="status-label status-warning">Needs plan</span>
-                  </div>
-                </li>
-              </ul>
+              <ul class="attention-list" id="attention-list"></ul>
             </article>
 
             <article class="panel">
@@ -1276,33 +1163,7 @@
                 </div>
               </div>
 
-              <ul class="proof-list">
-                <li class="proof-item">
-                  <div class="proof-top">
-                    <div>
-                      <p class="proof-name">GCM OS operating model</p>
-                      <p class="proof-detail">
-                        Agency workflow and design system were completed and locked.
-                      </p>
-                    </div>
-
-                    <span class="status-label status-success">Ready</span>
-                  </div>
-                </li>
-
-                <li class="proof-item">
-                  <div class="proof-top">
-                    <div>
-                      <p class="proof-name">HTML intelligence validation</p>
-                      <p class="proof-detail">
-                        Convert verified test results into a development milestone.
-                      </p>
-                    </div>
-
-                    <span class="status-label status-info">Pending</span>
-                  </div>
-                </li>
-              </ul>
+              <ul class="proof-list" id="proof-list"></ul>
 
               <div class="panel-footer">
                 <a class="text-link" href="#">Build Proof of Work →</a>
@@ -1318,120 +1179,204 @@
     (() => {
       "use strict";
 
-      const STORAGE_KEY = "gcm-os-today-task-state-v1";
+      const DATA_KEY = "gcm-os-operational-records-v1";
+
+      const DEFAULT_DATA = {
+        prospects: [
+          { id: "prospect-1", name: "Qualified Prospect 1", status: "ready" },
+          { id: "prospect-2", name: "Qualified Prospect 2", status: "ready" },
+          { id: "prospect-3", name: "Prospect 3", status: "research" },
+          { id: "prospect-4", name: "Prospect 4", status: "research" },
+          { id: "prospect-5", name: "Prospect 5", status: "research" }
+        ],
+        workItems: [
+          { id: "prospect-calls", client: "Global Concepts Media", title: "Complete three personalized prospect calls", area: "Acquire", detail: "Use verified pre-research", priority: "highest", status: "open", requiresDecision: false, href: "client-pre-research.html" },
+          { id: "preston-review", client: "1-800 4A Gun Safe", title: "Review 1-800 4A Gun Safe performance and next action", area: "Deliver", detail: "Google Ads and visibility", priority: "high", status: "open", requiresDecision: true, attentionReason: "Review current performance and prepare the next measurable action.", attentionLabel: "Review due", href: "#" },
+          { id: "southeast-work", client: "Southeast Safes", title: "Confirm this week's Southeast Safes priority", area: "Deliver", detail: "One measurable objective", priority: "high", status: "open", requiresDecision: true, attentionReason: "Select and lock this week's highest-value growth task.", attentionLabel: "Needs attention", href: "#" },
+          { id: "proof-update", client: "Global Concepts Media", title: "Record completed work in Proof of Work", area: "Prove", detail: "Capture evidence before context is lost", priority: "normal", status: "open", requiresDecision: false, href: "#" }
+        ],
+        investigations: [
+          { id: "north-florida-plan", client: "North Florida Safes", title: "Confirm current sprint and measurement baseline", status: "open", requiresDecision: true, attentionReason: "Confirm whether a current sprint and measurement baseline exist.", attentionLabel: "Needs plan", href: "#" }
+        ],
+        alerts: [],
+        communications: [],
+        proofItems: [
+          { id: "proof-operating-model", title: "GCM OS operating model", detail: "Agency workflow and design system were completed and locked.", status: "ready", href: "#" },
+          { id: "proof-html-validation", title: "HTML intelligence validation", detail: "Convert verified test results into a development milestone.", status: "pending", href: "#" }
+        ]
+      };
 
       const greeting = document.getElementById("greeting");
       const currentDate = document.getElementById("current-date");
       const taskList = document.getElementById("task-list");
+      const attentionList = document.getElementById("attention-list");
+      const proofList = document.getElementById("proof-list");
       const openTaskCount = document.getElementById("open-task-count");
       const taskProgress = document.getElementById("task-progress");
+      const prospectCount = document.getElementById("prospect-count");
+      const prospectNote = document.getElementById("prospect-note");
+      const attentionCount = document.getElementById("attention-count");
+      const attentionNote = document.getElementById("attention-note");
+      const openWorkNote = document.getElementById("open-work-note");
+      const proofCount = document.getElementById("proof-count");
+      const proofNote = document.getElementById("proof-note");
       const sidebar = document.getElementById("sidebar");
       const mobileMenuButton = document.getElementById("mobile-menu-button");
+
+      const cloneDefaults = () => JSON.parse(JSON.stringify(DEFAULT_DATA));
+
+      function loadData() {
+        try {
+          const stored = localStorage.getItem(DATA_KEY);
+          if (!stored) {
+            const seeded = cloneDefaults();
+            localStorage.setItem(DATA_KEY, JSON.stringify(seeded));
+            return seeded;
+          }
+          const parsed = JSON.parse(stored);
+          return {
+            ...cloneDefaults(),
+            ...parsed,
+            prospects: Array.isArray(parsed.prospects) ? parsed.prospects : [],
+            workItems: Array.isArray(parsed.workItems) ? parsed.workItems : [],
+            investigations: Array.isArray(parsed.investigations) ? parsed.investigations : [],
+            alerts: Array.isArray(parsed.alerts) ? parsed.alerts : [],
+            communications: Array.isArray(parsed.communications) ? parsed.communications : [],
+            proofItems: Array.isArray(parsed.proofItems) ? parsed.proofItems : []
+          };
+        } catch (error) {
+          console.warn("Could not load operational records.", error);
+          return cloneDefaults();
+        }
+      }
+
+      function saveData(data) {
+        localStorage.setItem(DATA_KEY, JSON.stringify(data));
+      }
 
       function setDateAndGreeting() {
         const now = new Date();
         const hour = now.getHours();
-
-        let daypart = "Good evening";
-
-        if (hour < 12) {
-          daypart = "Good morning";
-        } else if (hour < 17) {
-          daypart = "Good afternoon";
-        }
-
+        const daypart = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
         greeting.textContent = `${daypart}, Andy.`;
-
-        currentDate.textContent = new Intl.DateTimeFormat("en-US", {
-          weekday: "long",
-          month: "long",
-          day: "numeric"
-        }).format(now);
+        currentDate.textContent = new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric" }).format(now);
       }
 
-      function loadTaskState() {
-        try {
-          const savedState = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-
-          taskList.querySelectorAll(".task-item").forEach((item) => {
-            const taskId = item.dataset.taskId;
-            const checkbox = item.querySelector(".task-check");
-            const isComplete = Boolean(savedState[taskId]);
-
-            checkbox.checked = isComplete;
-            item.classList.toggle("is-complete", isComplete);
-          });
-        } catch (error) {
-          console.warn("Could not load task state.", error);
-        }
-
-        updateTaskSummary();
+      function escapeHtml(value) {
+        return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
       }
 
-      function saveTaskState() {
-        const state = {};
+      function priorityClass(priority) {
+        return priority === "highest" ? "pill-critical" : priority === "high" ? "pill-warning" : "pill-info";
+      }
 
-        taskList.querySelectorAll(".task-item").forEach((item) => {
-          const taskId = item.dataset.taskId;
-          const checkbox = item.querySelector(".task-check");
+      function priorityLabel(priority) {
+        return priority === "highest" ? "Highest" : priority === "high" ? "High" : "Normal";
+      }
 
-          state[taskId] = checkbox.checked;
+      function statusClass(label = "") {
+        const normalized = label.toLowerCase();
+        if (normalized.includes("ready") || normalized.includes("complete")) return "status-success";
+        if (normalized.includes("review")) return "status-info";
+        return "status-warning";
+      }
+
+      function renderWorkQueue(data) {
+        const items = data.workItems.filter((item) => item.status !== "archived").sort((a, b) => ({ highest: 0, high: 1, normal: 2 }[a.priority] ?? 3) - ({ highest: 0, high: 1, normal: 2 }[b.priority] ?? 3));
+        taskList.innerHTML = items.map((item) => `
+          <li class="task-item${item.status === "complete" ? " is-complete" : ""}" data-task-id="${escapeHtml(item.id)}">
+            <input class="task-check" type="checkbox" ${item.status === "complete" ? "checked" : ""} aria-label="${escapeHtml(item.title)}" />
+            <div>
+              <p class="task-title"><a href="${escapeHtml(item.href || "#")}">${escapeHtml(item.title)}</a></p>
+              <div class="task-meta"><span>${escapeHtml(item.area || "Work")}</span><span>${escapeHtml(item.detail || item.client || "")}</span></div>
+            </div>
+            <span class="priority-pill ${priorityClass(item.priority)}">${priorityLabel(item.priority)}</span>
+          </li>`).join("");
+      }
+
+      function buildAttentionRollup(data) {
+        const records = [
+          ...data.alerts.map((r) => ({ ...r, recordType: "Alert" })),
+          ...data.investigations.map((r) => ({ ...r, recordType: "Investigation" })),
+          ...data.workItems.map((r) => ({ ...r, recordType: "Work Item" })),
+          ...data.communications.map((r) => ({ ...r, recordType: "Communication" }))
+        ].filter((r) => !["complete", "completed", "closed", "archived", "no-action"].includes(String(r.status || "").toLowerCase()) && r.requiresDecision === true && r.client);
+        const byClient = new Map();
+        records.forEach((record) => {
+          if (!byClient.has(record.client)) byClient.set(record.client, []);
+          byClient.get(record.client).push(record);
         });
-
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-        } catch (error) {
-          console.warn("Could not save task state.", error);
-        }
+        return [...byClient.entries()].map(([client, records]) => ({ client, records }));
       }
 
-      function updateTaskSummary() {
-        const checkboxes = [...taskList.querySelectorAll(".task-check")];
-        const total = checkboxes.length;
-        const complete = checkboxes.filter((checkbox) => checkbox.checked).length;
-        const open = total - complete;
+      function renderAttention(data) {
+        const rollup = buildAttentionRollup(data);
+        attentionList.innerHTML = rollup.length ? rollup.map(({ client, records }) => {
+          const primary = records[0];
+          const extra = records.length - 1;
+          const label = primary.attentionLabel || primary.recordType;
+          return `<li class="attention-item"><a href="${escapeHtml(primary.href || "#")}"><div class="attention-top"><div><p class="attention-name">${escapeHtml(client)}</p><p class="attention-detail">${escapeHtml(primary.attentionReason || primary.title || "A decision is required.")}${extra ? ` ${extra} additional open record${extra === 1 ? "" : "s"}.` : ""}</p></div><span class="status-label ${statusClass(label)}">${escapeHtml(label)}</span></div></a></li>`;
+        }).join("") : `<li class="attention-item"><div class="attention-top"><div><p class="attention-name">No clients need attention</p><p class="attention-detail">This list updates when an open record requires a decision.</p></div><span class="status-label status-success">Clear</span></div></li>`;
+        return rollup;
+      }
 
-        openTaskCount.textContent = String(open);
-        taskProgress.textContent = `${complete} of ${total} complete`;
+      function renderProof(data) {
+        const waiting = data.proofItems.filter((item) => !["complete", "completed", "published", "archived"].includes(String(item.status || "").toLowerCase()));
+        proofList.innerHTML = waiting.length ? waiting.map((item) => {
+          const label = item.status === "ready" ? "Ready" : "Pending";
+          return `<li class="proof-item"><a href="${escapeHtml(item.href || "#")}"><div class="proof-top"><div><p class="proof-name">${escapeHtml(item.title)}</p><p class="proof-detail">${escapeHtml(item.detail || "")}</p></div><span class="status-label ${statusClass(label)}">${label}</span></div></a></li>`;
+        }).join("") : `<li class="proof-item"><div class="proof-top"><div><p class="proof-name">No proof is waiting</p><p class="proof-detail">Completed work has been documented.</p></div><span class="status-label status-success">Clear</span></div></li>`;
+        return waiting;
+      }
+
+      function renderSummary(data, attention, proofWaiting) {
+        const readyProspects = data.prospects.filter((p) => p.status === "ready");
+        const openWork = data.workItems.filter((item) => item.status === "open");
+        const completedWork = data.workItems.filter((item) => item.status === "complete");
+        prospectCount.textContent = data.prospects.length;
+        prospectNote.textContent = readyProspects.length ? `${readyProspects.length} ${readyProspects.length === 1 ? "is" : "are"} ready for personalized outreach.` : "No prospects are ready for personalized outreach.";
+        attentionCount.textContent = attention.length;
+        attentionNote.textContent = attention.length ? `${attention.length} ${attention.length === 1 ? "client requires" : "clients require"} a decision.` : "No clients currently require a decision.";
+        openTaskCount.textContent = openWork.length;
+        openWorkNote.textContent = openWork.length ? "Highest-impact work appears first." : "No open work items.";
+        proofCount.textContent = proofWaiting.length;
+        proofNote.textContent = proofWaiting.length ? `${proofWaiting.length} ${proofWaiting.length === 1 ? "item is" : "items are"} ready to document.` : "No completed work is waiting for proof.";
+        taskProgress.textContent = `${completedWork.length} of ${data.workItems.length} complete`;
+      }
+
+      function renderDashboard(data) {
+        renderWorkQueue(data);
+        const attention = renderAttention(data);
+        const proofWaiting = renderProof(data);
+        renderSummary(data, attention, proofWaiting);
       }
 
       taskList.addEventListener("change", (event) => {
         const checkbox = event.target.closest(".task-check");
-
-        if (!checkbox) {
-          return;
-        }
-
-        const taskItem = checkbox.closest(".task-item");
-        taskItem.classList.toggle("is-complete", checkbox.checked);
-
-        saveTaskState();
-        updateTaskSummary();
+        if (!checkbox) return;
+        const id = checkbox.closest(".task-item")?.dataset.taskId;
+        const data = loadData();
+        const item = data.workItems.find((record) => record.id === id);
+        if (!item) return;
+        item.status = checkbox.checked ? "complete" : "open";
+        saveData(data);
+        renderDashboard(data);
       });
 
       mobileMenuButton.addEventListener("click", () => {
         const isOpen = sidebar.classList.toggle("is-open");
-
         mobileMenuButton.setAttribute("aria-expanded", String(isOpen));
       });
 
       document.addEventListener("click", (event) => {
-        const clickedInsideSidebar = sidebar.contains(event.target);
-        const clickedMenuButton = mobileMenuButton.contains(event.target);
-
-        if (
-          window.innerWidth <= 860 &&
-          sidebar.classList.contains("is-open") &&
-          !clickedInsideSidebar &&
-          !clickedMenuButton
-        ) {
+        if (window.innerWidth <= 860 && sidebar.classList.contains("is-open") && !sidebar.contains(event.target) && !mobileMenuButton.contains(event.target)) {
           sidebar.classList.remove("is-open");
           mobileMenuButton.setAttribute("aria-expanded", "false");
         }
       });
 
       setDateAndGreeting();
-      loadTaskState();
+      renderDashboard(loadData());
     })();
   </script>
 </body>
