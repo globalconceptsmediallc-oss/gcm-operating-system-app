@@ -984,8 +984,24 @@
           const businessId =
             getBusinessIdFromUrl() || DEFAULT_BUSINESS_ID;
 
-          await BusinessWorkspace.load(businessId);
+const response = await fetch(WORKER_URL, {
+    method: "POST",
+    headers: {
+        "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+        action: "get-client-workspace",
+        clientCode: "SES"
+    })
+});
 
+if (!response.ok) {
+    throw new Error(`Workspace request failed: ${response.status}`);
+}
+
+const workspace = await response.json();
+
+BusinessWorkspace.loadFromObject(workspace.record);
           renderWorkspace();
 
           loadingPanel.hidden = true;
