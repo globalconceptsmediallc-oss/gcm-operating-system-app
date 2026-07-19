@@ -963,6 +963,8 @@
       "use strict";
 
       const DEFAULT_BUSINESS_ID = "southeast-safes";
+      const WORKER_URL =
+        "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
 
       const loadingPanel = document.getElementById("loading-panel");
       const errorPanel = document.getElementById("error-panel");
@@ -984,24 +986,41 @@
           const businessId =
             getBusinessIdFromUrl() || DEFAULT_BUSINESS_ID;
 
-const response = await fetch(WORKER_URL, {
-    method: "POST",
-    headers: {
-        "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-        action: "get-client-workspace",
-        clientCode: "SES"
-    })
-});
+          const response = await fetch(WORKER_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json"
+            },
+            body: JSON.stringify({
+              action: "get-client-workspace",
+              clientCode:
+                businessId === "southeast-safes"
+                  ? "SES"
+                  : businessId
+            })
+          });
 
-if (!response.ok) {
-    throw new Error(`Workspace request failed: ${response.status}`);
-}
+          if (!response.ok) {
+            throw new Error(
+              `Workspace request failed. HTTP ${response.status}.`
+            );
+          }
 
-const workspace = await response.json();
+          const payload = await response.json();
 
-BusinessWorkspace.loadFromObject(workspace.record);
+          if (!payload?.ok || !payload?.record) {
+            throw new Error(
+              payload?.error ||
+                "The Worker did not return a valid Business Record."
+            );
+          }
+
+          BusinessWorkspace.loadFromObject(payload.record, {
+            requestedBusinessId: businessId,
+            recordUrl: WORKER_URL
+          });
+
           renderWorkspace();
 
           loadingPanel.hidden = true;
