@@ -15,7 +15,7 @@
     }
     *{box-sizing:border-box}
     body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
-    button,input,select{font:inherit}
+    button,input,select,textarea{font:inherit}
     button{cursor:pointer}
     a{color:inherit;text-decoration:none}
     .shell{min-height:100vh;display:grid;grid-template-columns:250px minmax(0,1fr)}
@@ -59,7 +59,9 @@
     .button:disabled{cursor:not-allowed;opacity:.48}
     .field{display:grid;gap:7px;margin-bottom:14px}
     label,legend{color:var(--navy2);font-size:.78rem;font-weight:850}
-    select{width:100%;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--text);padding:11px 12px}
+    select,textarea{width:100%;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--text);padding:11px 12px}
+    textarea{min-height:150px;resize:vertical;line-height:1.45}
+    .field-help{margin:-2px 0 0;color:var(--muted);font-size:.75rem}
     .status{padding:14px;border-radius:12px;font-size:.82rem;font-weight:750}
     .status.pending{border:1px solid #cfe0f8;background:var(--info-bg);color:var(--info)}
     .status.ready{border:1px solid #cde7d9;background:var(--success-bg);color:var(--success)}
@@ -105,7 +107,7 @@
       <a href="#">★ <span>Case Studies</span></a>
       <a href="#">⚙ <span>Settings</span></a>
     </nav>
-    <div class="sidebar-footer">Mission Control operational<br>Communications v2.1.0</div>
+    <div class="sidebar-footer">Mission Control operational<br>Communications v2.2.0</div>
   </aside>
 
   <main>
@@ -114,7 +116,7 @@
         <div>
           <p class="eyebrow">Mission Control</p>
           <h1>Client Communications</h1>
-          <p class="subtitle">Upload a Gmail screenshot, review the operational decision, and save the approved records directly to the production D1 database.</p>
+          <p class="subtitle">Paste readable email text, keep the screenshot as supporting evidence, review the operational decision, and save approved records directly to production D1.</p>
         </div>
         <span class="date-chip" id="current-date"></span>
       </header>
@@ -144,7 +146,7 @@
 
         <div class="stack">
           <article class="panel">
-            <div class="panel-header"><h2>2. Generate Operational Decision</h2><p>Select the client, then let GCM OS evaluate the screenshot.</p></div>
+            <div class="panel-header"><h2>2. Generate Operational Decision</h2><p>Select the client and paste the readable email text. The screenshot remains supporting evidence.</p></div>
             <div class="panel-body">
               <div class="field">
                 <label for="client">Client</label>
@@ -162,8 +164,19 @@
                   <option>Lumi Studio</option>
                 </select>
               </div>
+              <div class="field">
+                <label for="source-text">Paste Email Text</label>
+                <textarea id="source-text" placeholder="Paste the sender, subject, and readable email content here.
+
+Example:
+SEMrush
+Backlink Audit update
+6 High Quality Domains Lost
+9 New Trusted Domains"></textarea>
+                <p class="field-help">This text is the dependable analysis input. The screenshot is temporary supporting evidence.</p>
+              </div>
               <button class="button primary" id="analyze-button" type="button" disabled>Generate Operational Decision</button>
-              <div id="analysis-status" class="status pending" style="margin-top:14px">Upload a screenshot and select a client.</div>
+              <div id="analysis-status" class="status pending" style="margin-top:14px">Select a client and paste the email text. A screenshot is optional supporting evidence.</div>
             </div>
           </article>
 
@@ -212,7 +225,7 @@
 (() => {
   "use strict";
 
-  const VERSION = "2.1.0";
+  const VERSION = "2.2.0";
   const ENDPOINT = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const CONTRACT_VERSION = "communications-operational-decision-v3";
   const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -234,7 +247,7 @@
   const $ = id => document.getElementById(id);
   const el = {
     date:$("current-date"), drop:$("drop-zone"), input:$("file-input"),
-    preview:$("preview-image"), remove:$("remove-image"), client:$("client"),
+    preview:$("preview-image"), remove:$("remove-image"), client:$("client"), sourceText:$("source-text"),
     analyze:$("analyze-button"), status:$("analysis-status"),
     analysisPanel:$("analysis-panel"), routePanel:$("route-panel"),
     title:$("decision-title"), route:$("decision-route"), importance:$("result-importance"),
@@ -291,6 +304,10 @@
       validateAnalyze();
       loadClientWorkspace();
     });
+    el.sourceText.addEventListener("input", () => {
+      clearDecision();
+      validateAnalyze();
+    });
     el.analyze.addEventListener("click", analyzeScreenshot);
     el.accept.addEventListener("click", commitDecision);
     el.reject.addEventListener("click", resetPage);
@@ -316,7 +333,7 @@
       el.drop.classList.add("has-image");
       el.remove.disabled = false;
       clearDecision();
-      setStatus("Screenshot ready. Select the client and generate the decision.", "ready");
+      setStatus("Screenshot ready as supporting evidence. Select the client, paste the email text, and generate the decision.", "ready");
       validateAnalyze();
     };
     reader.onerror = () => setStatus("The screenshot could not be read.", "error");
@@ -331,20 +348,21 @@
     el.input.value = "";
     el.remove.disabled = true;
     clearDecision();
-    setStatus("Upload a screenshot and select a client.", "pending");
+    setStatus("Select a client and paste the email text. A screenshot is optional supporting evidence.", "pending");
     validateAnalyze();
   }
 
   function validateAnalyze() {
-    el.analyze.disabled = !(imageDataUrl && el.client.value);
+    el.analyze.disabled = !(el.client.value && el.sourceText.value.trim());
   }
 
   async function analyzeScreenshot() {
-    if (!imageDataUrl || !el.client.value) return;
+    const sourceText = el.sourceText.value.trim();
+    if (!sourceText || !el.client.value) return;
 
     el.analyze.disabled = true;
     el.analyze.textContent = "Generating...";
-    setStatus("Reading the screenshot and determining the operational route...", "pending");
+    setStatus("Analyzing the pasted email text and determining the operational route...", "pending");
 
     try {
       const response = await fetch(ENDPOINT, {
@@ -357,8 +375,9 @@
           action:"analyze-client-communication",
           client:el.client.value,
           clientId:CLIENT_CODES[el.client.value],
-          image:imageDataUrl,
-          fileName:imageFileName,
+          sourceText,
+          image:imageDataUrl || undefined,
+          fileName:imageFileName || "pasted-email-text",
           contractVersion:CONTRACT_VERSION
         })
       });
@@ -374,7 +393,7 @@
       setStatus("Decision generated. Review the route before accepting.", "ready");
     } catch (error) {
       console.error(error);
-      setStatus(error.message || "The screenshot could not be evaluated.", "error");
+      setStatus(error.message || "The email text could not be evaluated.", "error");
     } finally {
       el.analyze.textContent = "Generate Operational Decision";
       validateAnalyze();
@@ -573,7 +592,9 @@
   function resetPage() {
     resetImage();
     el.client.value = "";
+    el.sourceText.value = "";
     el.history.innerHTML = '<p class="empty">Select a client to load live records.</p>';
+    validateAnalyze();
   }
 
   function buildRouteSummary(routes) {
