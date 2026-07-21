@@ -1,118 +1,603 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Communications | GCM OS</title>
-  <meta name="description" content="Convert important client communications into reviewed operational decisions inside GCM OS." />
+  <meta name="description" content="Convert client email screenshots into operational records in GCM OS.">
   <style>
-    :root{--navy-950:#071426;--navy-900:#0b1d33;--blue-600:#1f68d8;--blue-500:#347ce8;--blue-100:#eaf2ff;--gold-500:#d6a94a;--surface:#fff;--surface-soft:#f5f7fb;--border:#dbe2ec;--text:#132238;--muted:#637083;--success:#1f7a4f;--success-soft:#e9f7f0;--warning:#9a6414;--warning-soft:#fff4dd;--danger:#b33a3a;--danger-soft:#fff0f0;--shadow:0 12px 34px rgba(7,20,38,.09);--radius:18px;--content-width:1480px}
-    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:var(--surface-soft);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5}button,input,select,textarea{font:inherit}button{cursor:pointer}a{color:inherit;text-decoration:none}.app-shell{min-height:100vh;display:grid;grid-template-columns:250px minmax(0,1fr)}.sidebar{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;padding:24px 18px;background:radial-gradient(circle at top right,rgba(52,124,232,.19),transparent 34%),linear-gradient(180deg,var(--navy-900),var(--navy-950));color:#fff}.brand{display:flex;align-items:center;gap:12px;padding:2px 8px 22px;border-bottom:1px solid rgba(255,255,255,.12)}.brand-mark{width:42px;height:42px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.22);border-radius:13px;background:rgba(255,255,255,.08);color:var(--gold-500);font-weight:900}.brand-copy strong,.brand-copy span{display:block}.brand-copy strong{font-size:.95rem}.brand-copy span{margin-top:2px;color:rgba(255,255,255,.58);font-size:.75rem;text-transform:uppercase;letter-spacing:.12em}.nav-label{margin:24px 10px 10px;color:rgba(255,255,255,.42);font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.14em}.primary-nav{display:grid;gap:6px}.nav-link{display:flex;align-items:center;gap:12px;min-height:46px;padding:0 13px;border-radius:12px;color:rgba(255,255,255,.72);font-size:.92rem;font-weight:700}.nav-link:hover,.nav-link:focus-visible{background:rgba(255,255,255,.08);color:#fff;outline:none}.nav-link[aria-current="page"]{background:rgba(52,124,232,.2);color:#fff;box-shadow:inset 3px 0 0 var(--gold-500)}.nav-icon{width:22px;text-align:center}.sidebar-footer{margin-top:auto;padding:18px 8px 2px;border-top:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.66);font-size:.78rem}.main{min-width:0;padding:28px 32px 48px}.main-inner{width:min(100%,var(--content-width));margin:0 auto}.topbar{display:flex;justify-content:space-between;gap:24px;margin-bottom:22px}.eyebrow{margin:0 0 6px;color:var(--blue-600);font-size:.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.14em}h1{margin:0;color:var(--navy-950);font-size:clamp(2rem,4vw,3.15rem);line-height:1;letter-spacing:-.045em}.subtitle{max-width:780px;margin:10px 0 0;color:var(--muted)}.date-chip{display:inline-flex;align-items:center;min-height:42px;padding:0 14px;border:1px solid var(--border);border-radius:999px;background:var(--surface);color:var(--muted);box-shadow:var(--shadow);font-size:.84rem;font-weight:800;white-space:nowrap}.workspace-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(420px,.8fr);gap:18px;align-items:start}.stack{display:grid;gap:18px}.panel{border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow);overflow:hidden}.panel-header{padding:18px 20px 15px;border-bottom:1px solid var(--border)}.panel-header h2{margin:0;color:var(--navy-950);font-size:1rem}.panel-header p{margin:4px 0 0;color:var(--muted);font-size:.82rem}.panel-body{padding:20px}.drop-zone{min-height:620px;display:grid;place-items:center;padding:18px;border:2px dashed #b9c7d9;border-radius:14px;background:#fbfcfe;text-align:center}.drop-zone.has-image{background:#0b1626;border-style:solid;padding:10px}.drop-zone.is-dragging{border-color:var(--blue-600);background:var(--blue-100)}.drop-copy strong,.drop-copy span{display:block}.drop-copy strong{color:var(--navy-950);font-size:1rem}.drop-copy span{margin-top:6px;color:var(--muted);font-size:.82rem}.preview-image{display:none;width:100%;max-height:760px;object-fit:contain;border-radius:10px}.drop-zone.has-image .preview-image{display:block}.drop-zone.has-image .drop-copy{display:none}.button-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}.button{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 16px;border:1px solid transparent;border-radius:11px;font-size:.86rem;font-weight:850}.button-primary{background:var(--blue-600);color:#fff;box-shadow:0 10px 24px rgba(31,104,216,.22)}.button-secondary{border-color:var(--border);background:#fff;color:var(--navy-900)}.button-danger{border-color:#efcccc;background:#fff6f6;color:var(--danger)}.button:disabled{cursor:not-allowed;opacity:.48;box-shadow:none}.field{display:grid;gap:7px;margin-bottom:14px}label,legend{color:var(--navy-900);font-size:.78rem;font-weight:850}input,select,textarea{width:100%;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--text);padding:11px 12px;outline:none}input:focus,select:focus,textarea:focus{border-color:var(--blue-500);box-shadow:0 0 0 3px rgba(52,124,232,.13)}.analysis-placeholder,.analysis-error,.analysis-ready{padding:14px;border-radius:12px;font-size:.82rem;font-weight:750}.analysis-placeholder{border:1px solid #cfe0f8;background:var(--blue-100);color:#245fae}.analysis-error{border:1px solid #efcccc;background:var(--danger-soft);color:var(--danger)}.analysis-ready{border:1px solid #cde7d9;background:var(--success-soft);color:var(--success)}.decision-banner{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;padding:16px;border:1px solid #cfe0f8;border-radius:14px;background:var(--blue-100)}.decision-banner strong{display:block;color:var(--navy-950);font-size:.92rem}.decision-banner span{display:block;margin-top:3px;color:var(--muted);font-size:.78rem}.importance-badge{display:inline-flex;min-height:32px;align-items:center;padding:0 11px;border-radius:999px;background:var(--warning-soft);color:var(--warning);font-size:.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.05em}.analysis-section{margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}.analysis-section:first-of-type{margin-top:0;padding-top:0;border-top:0}.analysis-section h3{margin:0 0 6px;color:var(--navy-950);font-size:.82rem;text-transform:uppercase;letter-spacing:.05em}.analysis-section p{margin:0;color:var(--text);font-size:.88rem;white-space:pre-wrap}.route-list{display:grid;gap:10px;margin-top:10px}.route-option{display:grid;grid-template-columns:24px minmax(0,1fr);gap:10px;align-items:start;padding:13px;border:1px solid var(--border);border-radius:12px;background:#fff}.route-option.is-recommended{border-color:#bcd4f7;background:#f7faff}.route-option input{width:18px;height:18px;margin:2px 0 0;accent-color:var(--blue-600)}.route-option strong{display:block;color:var(--navy-950);font-size:.86rem}.route-option span{display:block;margin-top:3px;color:var(--muted);font-size:.76rem}.override-note{margin:12px 0 0;color:var(--muted);font-size:.78rem}.history-item{padding:13px;border:1px solid var(--border);border-radius:11px;margin-top:10px}.history-item:first-child{margin-top:0}.history-item strong{display:block;color:var(--navy-950);font-size:.86rem}.history-item span,.history-item p{display:block;margin:4px 0 0;color:var(--muted);font-size:.75rem}.empty{margin:0;padding:18px;border:1px dashed var(--border);border-radius:12px;color:var(--muted);text-align:center;font-size:.84rem}@media(max-width:1100px){.workspace-grid{grid-template-columns:1fr}.drop-zone{min-height:460px}}@media(max-width:850px){.app-shell{display:block}.sidebar{display:none}.main{padding:18px}.topbar{flex-direction:column}}@media(max-width:620px){.decision-banner{grid-template-columns:1fr}}
+    :root{
+      --navy:#071426;--navy2:#0b1d33;--blue:#1f68d8;--blue2:#347ce8;
+      --gold:#d6a94a;--bg:#f5f7fb;--card:#fff;--border:#dbe2ec;
+      --text:#132238;--muted:#637083;--success:#1f7a4f;--success-bg:#e9f7f0;
+      --danger:#b33a3a;--danger-bg:#fff0f0;--info:#245fae;--info-bg:#eaf2ff;
+      --shadow:0 12px 34px rgba(7,20,38,.09);--radius:18px
+    }
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+    button,input,select{font:inherit}
+    button{cursor:pointer}
+    a{color:inherit;text-decoration:none}
+    .shell{min-height:100vh;display:grid;grid-template-columns:250px minmax(0,1fr)}
+    .sidebar{position:sticky;top:0;height:100vh;padding:24px 18px;display:flex;flex-direction:column;color:#fff;background:linear-gradient(180deg,var(--navy2),var(--navy))}
+    .brand{display:flex;align-items:center;gap:12px;padding:2px 8px 22px;border-bottom:1px solid rgba(255,255,255,.12)}
+    .brand-mark{width:42px;height:42px;display:grid;place-items:center;border-radius:13px;background:rgba(255,255,255,.08);color:var(--gold);font-weight:900}
+    .brand-copy strong,.brand-copy span{display:block}
+    .brand-copy span{margin-top:2px;color:rgba(255,255,255,.58);font-size:.72rem;text-transform:uppercase;letter-spacing:.12em}
+    .nav-label{margin:24px 10px 10px;color:rgba(255,255,255,.42);font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.14em}
+    .nav{display:grid;gap:6px}
+    .nav a{display:flex;align-items:center;gap:12px;min-height:46px;padding:0 13px;border-radius:12px;color:rgba(255,255,255,.72);font-size:.92rem;font-weight:700}
+    .nav a[aria-current="page"]{background:rgba(52,124,232,.2);color:#fff;box-shadow:inset 3px 0 0 var(--gold)}
+    .sidebar-footer{margin-top:auto;padding:18px 8px 2px;border-top:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.66);font-size:.78rem}
+    main{min-width:0;padding:28px 32px 48px}
+    .main-inner{max-width:1480px;margin:0 auto}
+    .topbar{display:flex;justify-content:space-between;gap:24px;margin-bottom:22px}
+    .eyebrow{margin:0 0 6px;color:var(--blue);font-size:.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.14em}
+    h1{margin:0;color:var(--navy);font-size:clamp(2rem,4vw,3.15rem);line-height:1}
+    .subtitle{max-width:800px;margin:10px 0 0;color:var(--muted)}
+    .date-chip{align-self:flex-start;padding:11px 14px;border:1px solid var(--border);border-radius:999px;background:#fff;color:var(--muted);font-size:.84rem;font-weight:800;white-space:nowrap}
+    .grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(420px,.8fr);gap:18px;align-items:start}
+    .stack{display:grid;gap:18px}
+    .panel{border:1px solid var(--border);border-radius:var(--radius);background:var(--card);box-shadow:var(--shadow);overflow:hidden}
+    .panel-header{padding:18px 20px 15px;border-bottom:1px solid var(--border)}
+    .panel-header h2{margin:0;color:var(--navy);font-size:1rem}
+    .panel-header p{margin:4px 0 0;color:var(--muted);font-size:.82rem}
+    .panel-body{padding:20px}
+    .drop-zone{min-height:620px;display:grid;place-items:center;padding:18px;border:2px dashed #b9c7d9;border-radius:14px;background:#fbfcfe;text-align:center}
+    .drop-zone.has-image{background:#0b1626;border-style:solid;padding:10px}
+    .drop-zone.is-dragging{border-color:var(--blue);background:var(--info-bg)}
+    .drop-copy strong,.drop-copy span{display:block}
+    .drop-copy span{margin-top:6px;color:var(--muted);font-size:.82rem}
+    .preview{display:none;width:100%;max-height:760px;object-fit:contain;border-radius:10px}
+    .drop-zone.has-image .preview{display:block}
+    .drop-zone.has-image .drop-copy{display:none}
+    .buttons{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+    .button{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 16px;border:1px solid transparent;border-radius:11px;font-size:.86rem;font-weight:850}
+    .primary{background:var(--blue);color:#fff}
+    .secondary{border-color:var(--border);background:#fff;color:var(--navy2)}
+    .danger{border-color:#efcccc;background:#fff6f6;color:var(--danger)}
+    .button:disabled{cursor:not-allowed;opacity:.48}
+    .field{display:grid;gap:7px;margin-bottom:14px}
+    label,legend{color:var(--navy2);font-size:.78rem;font-weight:850}
+    select{width:100%;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--text);padding:11px 12px}
+    .status{padding:14px;border-radius:12px;font-size:.82rem;font-weight:750}
+    .status.pending{border:1px solid #cfe0f8;background:var(--info-bg);color:var(--info)}
+    .status.ready{border:1px solid #cde7d9;background:var(--success-bg);color:var(--success)}
+    .status.error{border:1px solid #efcccc;background:var(--danger-bg);color:var(--danger)}
+    .decision-banner{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;padding:16px;border:1px solid #cfe0f8;border-radius:14px;background:var(--info-bg)}
+    .decision-banner strong{display:block;color:var(--navy);font-size:.92rem}
+    .decision-banner span{display:block;margin-top:3px;color:var(--muted);font-size:.78rem}
+    .badge{display:inline-flex;align-items:center;min-height:32px;padding:0 11px;border-radius:999px;background:#fff4dd;color:#9a6414;font-size:.72rem;font-weight:900;text-transform:uppercase}
+    .section{margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+    .section h3{margin:0 0 6px;color:var(--navy);font-size:.82rem;text-transform:uppercase;letter-spacing:.05em}
+    .section p{margin:0;font-size:.88rem;white-space:pre-wrap}
+    .routes{display:grid;gap:10px;margin-top:10px}
+    .route{display:grid;grid-template-columns:24px minmax(0,1fr);gap:10px;align-items:start;padding:13px;border:1px solid var(--border);border-radius:12px}
+    .route.recommended{border-color:#bcd4f7;background:#f7faff}
+    .route input{width:18px;height:18px;margin:2px 0 0;accent-color:var(--blue)}
+    .route strong{display:block;color:var(--navy);font-size:.86rem}
+    .route span span{display:block;margin-top:3px;color:var(--muted);font-size:.76rem}
+    .note{margin:12px 0 0;color:var(--muted);font-size:.78rem}
+    .history-item{padding:13px;border:1px solid var(--border);border-radius:11px;margin-top:10px}
+    .history-item:first-child{margin-top:0}
+    .history-item strong{display:block;color:var(--navy);font-size:.86rem}
+    .history-item span,.history-item p{display:block;margin:4px 0 0;color:var(--muted);font-size:.75rem}
+    .empty{margin:0;padding:18px;border:1px dashed var(--border);border-radius:12px;color:var(--muted);text-align:center;font-size:.84rem}
+    @media(max-width:1100px){.grid{grid-template-columns:1fr}.drop-zone{min-height:460px}}
+    @media(max-width:850px){.shell{display:block}.sidebar{display:none}main{padding:18px}.topbar{flex-direction:column}}
   </style>
 </head>
 <body>
-  <div class="app-shell">
-    <aside class="sidebar" aria-label="Primary navigation">
-      <a class="brand" href="today.html"><span class="brand-mark">G</span><span class="brand-copy"><strong>Global Concepts Media</strong><span>Agency Operating System</span></span></a>
-      <p class="nav-label">Workspace</p>
-      <nav class="primary-nav">
-        <a class="nav-link" href="today.html"><span class="nav-icon">⌂</span><span>Today</span></a>
-        <a class="nav-link" href="client-pre-research.html"><span class="nav-icon">◎</span><span>Prospects</span></a>
-        <a class="nav-link" href="#"><span class="nav-icon">◫</span><span>Clients</span></a>
-        <a class="nav-link" href="communications.html" aria-current="page"><span class="nav-icon">✉</span><span>Communications</span></a>
-        <a class="nav-link" href="#"><span class="nav-icon">✓</span><span>Work</span></a>
-        <a class="nav-link" href="#"><span class="nav-icon">↗</span><span>Proof</span></a>
-        <a class="nav-link" href="#"><span class="nav-icon">★</span><span>Case Studies</span></a>
-        <a class="nav-link" href="#"><span class="nav-icon">⚙</span><span>Settings</span></a>
-      </nav>
-      <div class="sidebar-footer">Mission Control operational<br>Communications v2.0.0</div>
-    </aside>
+<div class="shell">
+  <aside class="sidebar">
+    <a class="brand" href="today.html">
+      <span class="brand-mark">G</span>
+      <span class="brand-copy"><strong>Global Concepts Media</strong><span>Agency Operating System</span></span>
+    </a>
+    <p class="nav-label">Workspace</p>
+    <nav class="nav">
+      <a href="today.html">⌂ <span>Today</span></a>
+      <a href="client-pre-research.html">◎ <span>Prospects</span></a>
+      <a href="#">◫ <span>Clients</span></a>
+      <a href="communications.html" aria-current="page">✉ <span>Communications</span></a>
+      <a href="#">✓ <span>Work</span></a>
+      <a href="#">↗ <span>Proof</span></a>
+      <a href="#">★ <span>Case Studies</span></a>
+      <a href="#">⚙ <span>Settings</span></a>
+    </nav>
+    <div class="sidebar-footer">Mission Control operational<br>Communications v2.1.0</div>
+  </aside>
 
-    <main class="main"><div class="main-inner">
-      <header class="topbar"><div><p class="eyebrow">Mission Control</p><h1>Client Communications</h1><p class="subtitle">Upload an important client email screenshot and convert it into a reviewed operational decision.</p></div><span class="date-chip" id="current-date"></span></header>
+  <main>
+    <div class="main-inner">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Mission Control</p>
+          <h1>Client Communications</h1>
+          <p class="subtitle">Upload a Gmail screenshot, review the operational decision, and save the approved records directly to the production D1 database.</p>
+        </div>
+        <span class="date-chip" id="current-date"></span>
+      </header>
 
-      <section class="workspace-grid">
+      <section class="grid">
         <div class="stack">
-          <article class="panel"><div class="panel-header"><h2>1. Email Screenshot</h2><p>The screenshot is temporary evidence and is discarded after analysis.</p></div><div class="panel-body">
-            <div class="drop-zone" id="drop-zone" tabindex="0"><img id="preview-image" class="preview-image" alt="Uploaded email screenshot preview"><div class="drop-copy"><strong>Drop email screenshot here</strong><span>PNG, JPG, JPEG, or WEBP — maximum 10 MB</span></div></div>
-            <div class="button-row"><label class="button button-primary" for="file-input">Choose Screenshot</label><input id="file-input" type="file" accept="image/png,image/jpeg,image/webp" hidden><button class="button button-danger" id="remove-image" type="button" disabled>Remove</button></div>
-          </div></article>
+          <article class="panel">
+            <div class="panel-header"><h2>1. Email Screenshot</h2><p>The screenshot is temporary input and is not saved as completed work.</p></div>
+            <div class="panel-body">
+              <div class="drop-zone" id="drop-zone" tabindex="0">
+                <img id="preview-image" class="preview" alt="Email screenshot preview">
+                <div class="drop-copy"><strong>Drop email screenshot here</strong><span>PNG, JPG, JPEG, or WEBP — maximum 10 MB</span></div>
+              </div>
+              <div class="buttons">
+                <label class="button primary" for="file-input">Choose Screenshot</label>
+                <input id="file-input" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+                <button class="button danger" id="remove-image" type="button" disabled>Remove</button>
+              </div>
+            </div>
+          </article>
 
-          <article class="panel"><div class="panel-header"><h2>Recent Decisions</h2><p>Operational decisions saved by the current prototype storage layer.</p></div><div class="panel-body" id="history-list"></div></article>
+          <article class="panel">
+            <div class="panel-header"><h2>Recent D1 Communications</h2><p>Live communication records for the selected client.</p></div>
+            <div class="panel-body" id="history-list"><p class="empty">Select a client to load live records.</p></div>
+          </article>
         </div>
 
         <div class="stack">
-          <article class="panel"><div class="panel-header"><h2>2. Generate Operational Decision</h2><p>Select the client, then let GCM OS evaluate what happened and what should happen next.</p></div><div class="panel-body">
-            <div class="field"><label for="client">Client</label><select id="client"><option value="">Select client</option><option>Southeast Safes</option><option>1-800 4A Gun Safe</option><option>A1 Action Safe &amp; Lock</option><option>North Florida Safes</option><option>HB Guns</option><option>Pickett Weaponry</option><option>Global Concepts Media</option></select></div>
-            <button class="button button-primary" id="analyze-button" type="button" disabled>Generate Operational Decision</button>
-            <div style="margin-top:14px" id="analysis-status" class="analysis-placeholder">Upload a screenshot and select a client.</div>
-          </div></article>
+          <article class="panel">
+            <div class="panel-header"><h2>2. Generate Operational Decision</h2><p>Select the client, then let GCM OS evaluate the screenshot.</p></div>
+            <div class="panel-body">
+              <div class="field">
+                <label for="client">Client</label>
+                <select id="client">
+                  <option value="">Select client</option>
+                  <option>Southeast Safes</option>
+                  <option>1-800 4A Gun Safe</option>
+                  <option>A1 Action Safe &amp; Lock</option>
+                  <option>North Florida Safes</option>
+                  <option>HB Guns</option>
+                  <option>Pickett Weaponry</option>
+                  <option>South Florida Safes</option>
+                  <option>Move A Safe</option>
+                  <option>Global Concepts Media</option>
+                  <option>Lumi Studio</option>
+                </select>
+              </div>
+              <button class="button primary" id="analyze-button" type="button" disabled>Generate Operational Decision</button>
+              <div id="analysis-status" class="status pending" style="margin-top:14px">Upload a screenshot and select a client.</div>
+            </div>
+          </article>
 
-          <article class="panel" id="analysis-panel" hidden><div class="panel-header"><h2>3. Review Operational Decision</h2><p>Confirm the business meaning and recommended route before records are created.</p></div><div class="panel-body">
-            <div class="decision-banner"><div><strong id="decision-title">Operational Decision</strong><span id="decision-route">Communication review required</span></div><span class="importance-badge" id="result-importance">Needs review</span></div>
-            <div class="analysis-section"><h3>Source</h3><p id="result-source"></p></div>
-            <div class="analysis-section"><h3>Communication Type</h3><p id="result-type"></p></div>
-            <div class="analysis-section"><h3>Operational Summary</h3><p id="result-summary"></p></div>
-            <div class="analysis-section"><h3>Business Impact</h3><p id="result-impact"></p></div>
-            <div class="analysis-section"><h3>AI Recommendation</h3><p id="result-recommendation"></p></div>
-            <div class="analysis-section"><h3>Reasoning</h3><p id="result-reasoning"></p></div>
-          </div></article>
+          <article class="panel" id="analysis-panel" hidden>
+            <div class="panel-header"><h2>3. Review Operational Decision</h2><p>Confirm what happened and what records should be created.</p></div>
+            <div class="panel-body">
+              <div class="decision-banner">
+                <div><strong id="decision-title">Operational Decision</strong><span id="decision-route"></span></div>
+                <span class="badge" id="result-importance">Needs review</span>
+              </div>
+              <div class="section"><h3>Source</h3><p id="result-source"></p></div>
+              <div class="section"><h3>Communication Type</h3><p id="result-type"></p></div>
+              <div class="section"><h3>Operational Summary</h3><p id="result-summary"></p></div>
+              <div class="section"><h3>Business Impact</h3><p id="result-impact"></p></div>
+              <div class="section"><h3>AI Recommendation</h3><p id="result-recommendation"></p></div>
+              <div class="section"><h3>Reasoning</h3><p id="result-reasoning"></p></div>
+            </div>
+          </article>
 
-          <article class="panel" id="route-panel" hidden><div class="panel-header"><h2>4. Confirm Route</h2><p>The AI recommends a route. You remain responsible for the final operational decision.</p></div><div class="panel-body">
-            <fieldset style="border:0;padding:0;margin:0"><legend>Recommended Records and Actions</legend><div class="route-list">
-              <label class="route-option" id="route-save-wrap"><input id="route-save" type="checkbox" checked><span><strong>Save Communication</strong><span>Create the permanent Communication Record.</span></span></label>
-              <label class="route-option" id="route-investigation-wrap"><input id="route-investigation" type="checkbox"><span><strong>Create Investigation</strong><span>Open an investigation when the facts or cause must be verified.</span></span></label>
-              <label class="route-option" id="route-work-wrap"><input id="route-work" type="checkbox"><span><strong>Create Work Item</strong><span>Create planned work only when the required action is already known.</span></span></label>
-              <label class="route-option" id="route-reply-wrap"><input id="route-reply" type="checkbox"><span><strong>Reply Required</strong><span>Flag the communication when a response must be prepared or sent.</span></span></label>
-            </div></fieldset>
-            <p class="override-note">Change any checkbox to override the AI recommendation. Reading an email does not create Proof of Work.</p>
-            <div class="button-row"><button class="button button-primary" id="accept-button" type="button">Accept Recommendation</button><button class="button button-secondary" id="do-not-save-button" type="button">Do Not Save</button></div>
-          </div></article>
+          <article class="panel" id="route-panel" hidden>
+            <div class="panel-header"><h2>4. Confirm Route</h2><p>Accepting creates real D1 records.</p></div>
+            <div class="panel-body">
+              <fieldset style="border:0;padding:0;margin:0">
+                <legend>Records and Actions</legend>
+                <div class="routes">
+                  <label class="route" id="route-save-wrap"><input id="route-save" type="checkbox"><span><strong>Save Communication</strong><span>Create the permanent Communication Record.</span></span></label>
+                  <label class="route" id="route-investigation-wrap"><input id="route-investigation" type="checkbox"><span><strong>Create Investigation</strong><span>Open an investigation because impact is not yet verified.</span></span></label>
+                  <label class="route" id="route-work-wrap"><input id="route-work" type="checkbox"><span><strong>Create Work Item</strong><span>Create planned work only after required work is known.</span></span></label>
+                  <label class="route" id="route-reply-wrap"><input id="route-reply" type="checkbox"><span><strong>Reply Required</strong><span>Flag when a response must be prepared.</span></span></label>
+                </div>
+              </fieldset>
+              <p class="note">For the SEMrush Backlink Audit road test: Communication and Investigation must be selected. Work Item must remain unselected.</p>
+              <div class="buttons">
+                <button class="button primary" id="accept-button" type="button">Accept Recommendation</button>
+                <button class="button secondary" id="do-not-save-button" type="button">Do Not Save</button>
+              </div>
+            </div>
+          </article>
         </div>
       </section>
-    </div></main>
-  </div>
+    </div>
+  </main>
+</div>
 
-  <script>
-  (()=>{"use strict";
-    const PAGE_VERSION="2.0.0";
-    const ANALYZE_ENDPOINT="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
-    const OPERATIONAL_STORAGE_KEY="gcm-os-operational-records-v2";
-    const LEGACY_STORAGE_KEY="gcm-os-client-communications-v2";
-    const MAX_FILE_SIZE=10*1024*1024;
-    const ALLOWED_TYPES=new Set(["image/png","image/jpeg","image/webp"]);
-    const $=id=>document.getElementById(id);
-    const el={currentDate:$("current-date"),dropZone:$("drop-zone"),fileInput:$("file-input"),previewImage:$("preview-image"),removeImage:$("remove-image"),client:$("client"),analyzeButton:$("analyze-button"),analysisStatus:$("analysis-status"),analysisPanel:$("analysis-panel"),routePanel:$("route-panel"),decisionTitle:$("decision-title"),decisionRoute:$("decision-route"),resultImportance:$("result-importance"),resultSource:$("result-source"),resultType:$("result-type"),resultSummary:$("result-summary"),resultImpact:$("result-impact"),resultRecommendation:$("result-recommendation"),resultReasoning:$("result-reasoning"),routeSave:$("route-save"),routeInvestigation:$("route-investigation"),routeWork:$("route-work"),routeReply:$("route-reply"),routeSaveWrap:$("route-save-wrap"),routeInvestigationWrap:$("route-investigation-wrap"),routeWorkWrap:$("route-work-wrap"),routeReplyWrap:$("route-reply-wrap"),acceptButton:$("accept-button"),doNotSaveButton:$("do-not-save-button"),historyList:$("history-list")};
-    let imageDataUrl="",imageFileName="",currentDecision=null;
-    init();
-    function init(){el.currentDate.textContent=new Intl.DateTimeFormat("en-US",{weekday:"short",month:"short",day:"numeric",year:"numeric"}).format(new Date());bindEvents();migrateLegacyRecords();renderHistory();validateAnalyze()}
-    function bindEvents(){el.fileInput.addEventListener("change",e=>{const[f]=e.target.files;if(f)handleFile(f)});["dragenter","dragover"].forEach(n=>el.dropZone.addEventListener(n,e=>{e.preventDefault();el.dropZone.classList.add("is-dragging")}));["dragleave","drop"].forEach(n=>el.dropZone.addEventListener(n,e=>{e.preventDefault();el.dropZone.classList.remove("is-dragging")}));el.dropZone.addEventListener("drop",e=>{const[f]=e.dataTransfer.files;if(f)handleFile(f)});el.dropZone.addEventListener("click",()=>el.fileInput.click());el.dropZone.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();el.fileInput.click()}});el.removeImage.addEventListener("click",removeImage);el.client.addEventListener("change",validateAnalyze);el.analyzeButton.addEventListener("click",analyzeScreenshot);el.acceptButton.addEventListener("click",acceptRecommendation);el.doNotSaveButton.addEventListener("click",doNotSave)}
-    function handleFile(file){if(!ALLOWED_TYPES.has(file.type)){setStatus("Please choose a PNG, JPG, JPEG, or WEBP screenshot.","error");return}if(file.size>MAX_FILE_SIZE){setStatus("The screenshot is larger than 10 MB.","error");return}const reader=new FileReader();reader.onload=()=>{imageDataUrl=String(reader.result||"");imageFileName=file.name;el.previewImage.src=imageDataUrl;el.dropZone.classList.add("has-image");el.removeImage.disabled=false;clearDecision();setStatus("Screenshot ready. Select the client and generate an operational decision.","ready");validateAnalyze()};reader.onerror=()=>setStatus("The screenshot could not be read.","error");reader.readAsDataURL(file)}
-    function removeImage(){imageDataUrl="";imageFileName="";el.previewImage.removeAttribute("src");el.dropZone.classList.remove("has-image");el.fileInput.value="";el.removeImage.disabled=true;clearDecision();setStatus("Upload a screenshot and select a client.","placeholder");validateAnalyze()}
-    function validateAnalyze(){el.analyzeButton.disabled=!(imageDataUrl&&el.client.value)}
-    async function analyzeScreenshot(){if(!imageDataUrl||!el.client.value)return;el.analyzeButton.disabled=true;el.analyzeButton.textContent="Generating…";setStatus("Reading the screenshot and determining the recommended operational route…","placeholder");try{const response=await fetch(ANALYZE_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"analyze-client-communication",client:el.client.value,image:imageDataUrl,fileName:imageFileName,responseMode:"operational-decision-v1"})});if(!response.ok)throw new Error(`Operational decision request failed with status ${response.status}.`);const payload=await response.json();if(!payload?.ok||!payload?.analysis)throw new Error(payload?.error||"The Worker returned an invalid operational decision.");currentDecision=normalizeDecision(payload.analysis);renderDecision(currentDecision);setStatus("Operational decision generated. Review the recommendation before accepting it.","ready")}catch(error){console.error(error);setStatus(error.message||"The screenshot could not be evaluated.","error")}finally{el.analyzeButton.textContent="Generate Operational Decision";validateAnalyze()}}
-    function normalizeDecision(a){const classification=String(a.importance||a.problemClassification||"Needs review"),importance=normalizeImportance(classification),operationalSummary=a.operationalSummary||a.summary||"",businessImpact=a.businessImpact||a.problemAssessment||"The business impact requires consultant review.",reasoning=a.reasoning||a.problemAssessment||a.recommendedAction||"The recommendation is based on the observable information in the communication.",routes=a.recommendedRoutes||inferRoutes({importance,classification,recommendedAction:a.recommendedAction||"",reasoning});return{source:a.source||"Unknown",communicationType:a.communicationType||"General Client Communication",title:a.title||`${a.source||"Client"} communication`,operationalSummary,businessImpact,importance,recommendedAction:a.recommendedAction||buildRouteSummary(routes),reasoning,recommendedRoutes:{saveCommunication:routes.saveCommunication!==false,createInvestigation:Boolean(routes.createInvestigation),createWorkItem:Boolean(routes.createWorkItem),replyRequired:Boolean(routes.replyRequired)}}}
-    function normalizeImportance(v){const n=String(v||"").toLowerCase();if(n.includes("critical")||n.includes("urgent"))return"Critical";if(n.includes("high")||n.includes("confirmed issue"))return"High";if(n.includes("medium")||n.includes("possible")||n.includes("investigation")||n.includes("warning"))return"Medium";if(n.includes("low"))return"Low";if(n.includes("informational")||n.includes("information only")||n.includes("no issue"))return"Informational";return"Medium"}
-    function inferRoutes({importance,classification,recommendedAction,reasoning}){const c=[classification,recommendedAction,reasoning].join(" ").toLowerCase(),createInvestigation=c.includes("investigat")||c.includes("verify")||c.includes("determine whether")||c.includes("review required"),createWorkItem=!createInvestigation&&(c.includes("fix")||c.includes("update")||c.includes("implement")||c.includes("correct")||c.includes("publish")),replyRequired=c.includes("reply")||c.includes("respond")||c.includes("client response");return{saveCommunication:true,createInvestigation,createWorkItem,replyRequired:replyRequired||importance==="Critical"}}
-    function renderDecision(d){el.decisionTitle.textContent=d.title;el.decisionRoute.textContent=buildRouteSummary(d.recommendedRoutes);el.resultImportance.textContent=d.importance;el.resultSource.textContent=d.source;el.resultType.textContent=d.communicationType;el.resultSummary.textContent=d.operationalSummary;el.resultImpact.textContent=d.businessImpact;el.resultRecommendation.textContent=d.recommendedAction;el.resultReasoning.textContent=d.reasoning;applyRecommendedRoute(el.routeSave,el.routeSaveWrap,d.recommendedRoutes.saveCommunication);applyRecommendedRoute(el.routeInvestigation,el.routeInvestigationWrap,d.recommendedRoutes.createInvestigation);applyRecommendedRoute(el.routeWork,el.routeWorkWrap,d.recommendedRoutes.createWorkItem);applyRecommendedRoute(el.routeReply,el.routeReplyWrap,d.recommendedRoutes.replyRequired);el.analysisPanel.hidden=false;el.routePanel.hidden=false}
-    function applyRecommendedRoute(input,wrap,checked){input.checked=Boolean(checked);wrap.classList.toggle("is-recommended",Boolean(checked))}
-    function clearDecision(){currentDecision=null;el.analysisPanel.hidden=true;el.routePanel.hidden=true;[[el.routeSave,el.routeSaveWrap],[el.routeInvestigation,el.routeInvestigationWrap],[el.routeWork,el.routeWorkWrap],[el.routeReply,el.routeReplyWrap]].forEach(([i,w])=>{i.checked=false;w.classList.remove("is-recommended")})}
-    function acceptRecommendation(){if(!currentDecision)return;const routes={saveCommunication:el.routeSave.checked,createInvestigation:el.routeInvestigation.checked,createWorkItem:el.routeWork.checked,replyRequired:el.routeReply.checked};if(!routes.saveCommunication&&(routes.createInvestigation||routes.createWorkItem||routes.replyRequired)){setStatus("Save Communication must remain selected when creating related operational records.","error");return}if(!routes.saveCommunication){doNotSave();return}saveOperationalDecision(routes)}
-    function doNotSave(){resetPage();setStatus("Communication intentionally not saved.","ready")}
-    function saveOperationalDecision(routes){const now=new Date(),communicationId=createId("communication"),client=el.client.value,relatedRecords=[],communication={id:communicationId,recordType:"Communication Record",date:now.toISOString().slice(0,10),capturedAt:now.toISOString(),client,clientId:slugify(client),source:currentDecision.source,category:currentDecision.communicationType,title:currentDecision.title,communicationSummary:currentDecision.operationalSummary,summary:currentDecision.operationalSummary,businessImpact:currentDecision.businessImpact,importance:currentDecision.importance,aiRecommendation:currentDecision.recommendedAction,aiReasoning:currentDecision.reasoning,recommendedRoutes:currentDecision.recommendedRoutes,confirmedRoutes:routes,status:routes.replyRequired?"reply-required":routes.createInvestigation?"investigation-open":routes.createWorkItem?"work-created":"reviewed",requiresDecision:routes.replyRequired,attentionLabel:routes.replyRequired?"Reply Required":routes.createInvestigation?"Investigation":"Communication",attentionReason:currentDecision.businessImpact||currentDecision.operationalSummary,investigation:null,workItem:null,relatedRecords,version:PAGE_VERSION},data=loadOperationalData();if(routes.createInvestigation){const id=createId("investigation");data.investigations.unshift({id,recordType:"Investigation Record",client,clientId:slugify(client),title:`Investigate: ${currentDecision.title}`,detail:currentDecision.reasoning||currentDecision.businessImpact,sourceCommunicationId:communicationId,status:"open",priority:priorityFromImportance(currentDecision.importance),requiresDecision:true,attentionLabel:"Investigation",attentionReason:currentDecision.businessImpact||"This communication requires investigation before the next action is decided.",createdAt:now.toISOString(),relatedRecords:[communicationId]});communication.investigation=id;communication.relatedRecords.push(id)}if(routes.createWorkItem){const id=createId("work");data.workItems.unshift({id,recordType:"Work Item",client,clientId:slugify(client),title:currentDecision.recommendedAction||`Follow up: ${currentDecision.title}`,detail:currentDecision.operationalSummary,area:currentDecision.communicationType,status:"open",priority:priorityFromImportance(currentDecision.importance),requiresDecision:false,createdAt:now.toISOString(),sourceCommunicationId:communicationId,relatedRecords:[communicationId],href:"communications.html"});communication.workItem=id;communication.relatedRecords.push(id)}data.communications.unshift(communication);try{saveOperationalData(data)}catch(error){console.error(error);setStatus("The browser could not save the operational records. Clear old browser data and try again.","error");return}renderHistory();resetPage();setStatus("Operational decision saved. The current prototype store now contains the communication and related records.","ready")}
-    function resetPage(){imageDataUrl="";imageFileName="";currentDecision=null;el.previewImage.removeAttribute("src");el.dropZone.classList.remove("has-image");el.fileInput.value="";el.removeImage.disabled=true;el.client.value="";clearDecision();validateAnalyze()}
-    function setStatus(message,type){el.analysisStatus.className=type==="error"?"analysis-error":type==="ready"?"analysis-ready":"analysis-placeholder";el.analysisStatus.textContent=message}
-    function emptyOperationalData(){return{prospects:[],workItems:[],investigations:[],alerts:[],communications:[],proofItems:[]}}
-    function loadOperationalData(){try{const p=JSON.parse(localStorage.getItem(OPERATIONAL_STORAGE_KEY)||"{}"),d=emptyOperationalData();return{...d,...p,prospects:Array.isArray(p.prospects)?p.prospects:[],workItems:Array.isArray(p.workItems)?p.workItems:[],investigations:Array.isArray(p.investigations)?p.investigations:[],alerts:Array.isArray(p.alerts)?p.alerts:[],communications:Array.isArray(p.communications)?p.communications:[],proofItems:Array.isArray(p.proofItems)?p.proofItems:[]}}catch{return emptyOperationalData()}}
-    function saveOperationalData(data){localStorage.setItem(OPERATIONAL_STORAGE_KEY,JSON.stringify(data))}
-    function migrateLegacyRecords(){let legacy=[];try{const p=JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY)||"[]");legacy=Array.isArray(p)?p:[]}catch{legacy=[]}if(!legacy.length)return;const data=loadOperationalData(),ids=new Set(data.communications.map(r=>r.id));legacy.forEach(r=>{if(ids.has(r.id))return;data.communications.push({id:r.id||createId("communication"),recordType:"Communication Record",date:String(r.capturedAt||"").slice(0,10),capturedAt:r.capturedAt||new Date().toISOString(),client:r.clientName||"Unknown Client",clientId:r.clientId||slugify(r.clientName||"unknown-client"),source:r.source||"Unknown",category:r.communicationType||"General Client Communication",title:r.title||"Client communication",communicationSummary:r.summary||"",summary:r.summary||"",businessImpact:r.problemAssessment||"",importance:normalizeImportance(r.problemClassification||"Needs review"),aiRecommendation:r.recommendedAction||"",aiReasoning:r.problemAssessment||"",recommendedRoutes:{saveCommunication:true,createInvestigation:r.decision==="Create Investigation",createWorkItem:r.decision==="Create Work Item",replyRequired:r.decision==="Reply Required"},confirmedRoutes:{saveCommunication:true,createInvestigation:r.decision==="Create Investigation",createWorkItem:r.decision==="Create Work Item",replyRequired:r.decision==="Reply Required"},status:r.decision==="Reply Required"?"reply-required":"reviewed",requiresDecision:r.decision==="Reply Required",attentionLabel:r.decision==="Reply Required"?"Reply Required":"Communication",attentionReason:r.recommendedAction||r.summary||r.title||"",investigation:null,workItem:null,relatedRecords:[],version:PAGE_VERSION,migratedFromPrototype:true})});saveOperationalData(data);localStorage.removeItem(LEGACY_STORAGE_KEY)}
-    function renderHistory(){const records=loadOperationalData().communications;if(!records.length){el.historyList.innerHTML='<p class="empty">No operational decisions captured yet.</p>';return}el.historyList.innerHTML=records.slice(0,10).map(r=>`<article class="history-item"><strong>${escapeHtml(r.title)}</strong><span>${escapeHtml(r.client)} · ${escapeHtml(r.source)} · ${escapeHtml(r.importance||r.status)}</span><p>${escapeHtml(r.communicationSummary||r.summary)}</p></article>`).join("")}
-    function buildRouteSummary(routes){const steps=["Communication"];if(routes.createInvestigation)steps.push("Investigation");if(routes.createWorkItem)steps.push("Work Item");if(routes.replyRequired)steps.push("Reply Required");return steps.join(" → ")}
-    function priorityFromImportance(v=""){const n=String(v).toLowerCase();return n==="critical"?"highest":n==="high"?"high":n==="medium"?"normal":"low"}
-    function createId(prefix){return window.crypto?.randomUUID?`${prefix}-${window.crypto.randomUUID()}`:`${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`}
-    function slugify(v){return String(v||"").toLowerCase().trim().replace(/&/g,"and").replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")}
-    function escapeHtml(v){return String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;")}
-  })();
-  </script>
+<script>
+(() => {
+  "use strict";
+
+  const VERSION = "2.1.0";
+  const ENDPOINT = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+  const CONTRACT_VERSION = "communications-operational-decision-v3";
+  const MAX_FILE_SIZE = 10 * 1024 * 1024;
+  const ALLOWED_TYPES = new Set(["image/png","image/jpeg","image/webp"]);
+
+  const CLIENT_CODES = {
+    "Southeast Safes":"SES",
+    "1-800 4A Gun Safe":"4A",
+    "A1 Action Safe & Lock":"A1",
+    "North Florida Safes":"NFS",
+    "HB Guns":"HBG",
+    "Pickett Weaponry":"PW",
+    "South Florida Safes":"SFS",
+    "Move A Safe":"MAS",
+    "Global Concepts Media":"GCM",
+    "Lumi Studio":"LUMI"
+  };
+
+  const $ = id => document.getElementById(id);
+  const el = {
+    date:$("current-date"), drop:$("drop-zone"), input:$("file-input"),
+    preview:$("preview-image"), remove:$("remove-image"), client:$("client"),
+    analyze:$("analyze-button"), status:$("analysis-status"),
+    analysisPanel:$("analysis-panel"), routePanel:$("route-panel"),
+    title:$("decision-title"), route:$("decision-route"), importance:$("result-importance"),
+    source:$("result-source"), type:$("result-type"), summary:$("result-summary"),
+    impact:$("result-impact"), recommendation:$("result-recommendation"),
+    reasoning:$("result-reasoning"), save:$("route-save"),
+    investigation:$("route-investigation"), work:$("route-work"), reply:$("route-reply"),
+    saveWrap:$("route-save-wrap"), investigationWrap:$("route-investigation-wrap"),
+    workWrap:$("route-work-wrap"), replyWrap:$("route-reply-wrap"),
+    accept:$("accept-button"), reject:$("do-not-save-button"), history:$("history-list")
+  };
+
+  let imageDataUrl = "";
+  let imageFileName = "";
+  let currentDecision = null;
+
+  init();
+
+  function init() {
+    el.date.textContent = new Intl.DateTimeFormat("en-US", {
+      weekday:"short", month:"short", day:"numeric", year:"numeric"
+    }).format(new Date());
+
+    el.input.addEventListener("change", event => {
+      const [file] = event.target.files;
+      if (file) handleFile(file);
+    });
+
+    ["dragenter","dragover"].forEach(name => el.drop.addEventListener(name, event => {
+      event.preventDefault();
+      el.drop.classList.add("is-dragging");
+    }));
+
+    ["dragleave","drop"].forEach(name => el.drop.addEventListener(name, event => {
+      event.preventDefault();
+      el.drop.classList.remove("is-dragging");
+    }));
+
+    el.drop.addEventListener("drop", event => {
+      const [file] = event.dataTransfer.files;
+      if (file) handleFile(file);
+    });
+
+    el.drop.addEventListener("click", () => el.input.click());
+    el.drop.addEventListener("keydown", event => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        el.input.click();
+      }
+    });
+
+    el.remove.addEventListener("click", resetImage);
+    el.client.addEventListener("change", () => {
+      validateAnalyze();
+      loadClientWorkspace();
+    });
+    el.analyze.addEventListener("click", analyzeScreenshot);
+    el.accept.addEventListener("click", commitDecision);
+    el.reject.addEventListener("click", resetPage);
+
+    validateAnalyze();
+  }
+
+  function handleFile(file) {
+    if (!ALLOWED_TYPES.has(file.type)) {
+      setStatus("Choose a PNG, JPG, JPEG, or WEBP screenshot.", "error");
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      setStatus("The screenshot is larger than 10 MB.", "error");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      imageDataUrl = String(reader.result || "");
+      imageFileName = file.name;
+      el.preview.src = imageDataUrl;
+      el.drop.classList.add("has-image");
+      el.remove.disabled = false;
+      clearDecision();
+      setStatus("Screenshot ready. Select the client and generate the decision.", "ready");
+      validateAnalyze();
+    };
+    reader.onerror = () => setStatus("The screenshot could not be read.", "error");
+    reader.readAsDataURL(file);
+  }
+
+  function resetImage() {
+    imageDataUrl = "";
+    imageFileName = "";
+    el.preview.removeAttribute("src");
+    el.drop.classList.remove("has-image");
+    el.input.value = "";
+    el.remove.disabled = true;
+    clearDecision();
+    setStatus("Upload a screenshot and select a client.", "pending");
+    validateAnalyze();
+  }
+
+  function validateAnalyze() {
+    el.analyze.disabled = !(imageDataUrl && el.client.value);
+  }
+
+  async function analyzeScreenshot() {
+    if (!imageDataUrl || !el.client.value) return;
+
+    el.analyze.disabled = true;
+    el.analyze.textContent = "Generating...";
+    setStatus("Reading the screenshot and determining the operational route...", "pending");
+
+    try {
+      const response = await fetch(ENDPOINT, {
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          "X-GCM-Contract-Version":CONTRACT_VERSION
+        },
+        body:JSON.stringify({
+          action:"analyze-client-communication",
+          client:el.client.value,
+          clientId:CLIENT_CODES[el.client.value],
+          image:imageDataUrl,
+          fileName:imageFileName,
+          contractVersion:CONTRACT_VERSION
+        })
+      });
+
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok || !payload.ok || !payload.analysis) {
+        throw new Error(payload.error || `Analysis failed with HTTP ${response.status}.`);
+      }
+
+      currentDecision = normalizeDecision(payload.analysis);
+      renderDecision(currentDecision);
+      setStatus("Decision generated. Review the route before accepting.", "ready");
+    } catch (error) {
+      console.error(error);
+      setStatus(error.message || "The screenshot could not be evaluated.", "error");
+    } finally {
+      el.analyze.textContent = "Generate Operational Decision";
+      validateAnalyze();
+    }
+  }
+
+  function normalizeDecision(a) {
+    const routes = a.recommendedRoutes || {};
+    return {
+      source:a.source || "Unknown",
+      communicationType:a.communicationType || "General Communication",
+      title:a.title || "Client communication",
+      operationalSummary:a.operationalSummary || a.summary || "",
+      businessImpact:a.businessImpact || a.problemAssessment || "Business impact not yet verified.",
+      importance:a.importance || "Medium",
+      recommendedAction:a.recommendedAction || "Review the communication.",
+      reasoning:a.reasoning || a.problemAssessment || "The recommendation is based on the observable communication.",
+      recommendedRoutes:{
+        saveCommunication:routes.saveCommunication !== false,
+        createInvestigation:Boolean(routes.createInvestigation),
+        createWorkItem:Boolean(routes.createWorkItem),
+        replyRequired:Boolean(routes.replyRequired)
+      }
+    };
+  }
+
+  function renderDecision(d) {
+    el.title.textContent = d.title;
+    el.route.textContent = buildRouteSummary(d.recommendedRoutes);
+    el.importance.textContent = d.importance;
+    el.source.textContent = d.source;
+    el.type.textContent = d.communicationType;
+    el.summary.textContent = d.operationalSummary;
+    el.impact.textContent = d.businessImpact;
+    el.recommendation.textContent = d.recommendedAction;
+    el.reasoning.textContent = d.reasoning;
+
+    applyRoute(el.save, el.saveWrap, d.recommendedRoutes.saveCommunication);
+    applyRoute(el.investigation, el.investigationWrap, d.recommendedRoutes.createInvestigation);
+    applyRoute(el.work, el.workWrap, d.recommendedRoutes.createWorkItem);
+    applyRoute(el.reply, el.replyWrap, d.recommendedRoutes.replyRequired);
+
+    el.analysisPanel.hidden = false;
+    el.routePanel.hidden = false;
+  }
+
+  function applyRoute(input, wrap, selected) {
+    input.checked = Boolean(selected);
+    wrap.classList.toggle("recommended", Boolean(selected));
+  }
+
+  async function commitDecision() {
+    if (!currentDecision) return;
+
+    const routes = {
+      saveCommunication:el.save.checked,
+      createInvestigation:el.investigation.checked,
+      createWorkItem:el.work.checked,
+      replyRequired:el.reply.checked
+    };
+
+    if (!routes.saveCommunication) {
+      setStatus("Save Communication must remain selected.", "error");
+      return;
+    }
+
+    if (routes.createWorkItem) {
+      setStatus("Road test stopped: Work Item must not be selected for this email.", "error");
+      return;
+    }
+
+    if (!routes.createInvestigation) {
+      setStatus("Road test stopped: Investigation must be selected for this email.", "error");
+      return;
+    }
+
+    const clientCode = CLIENT_CODES[el.client.value];
+    if (!clientCode) {
+      setStatus("The selected client does not have a valid client code.", "error");
+      return;
+    }
+
+    const reviewedDecision = {
+      ...currentDecision,
+      recommendedRoutes:routes
+    };
+
+    el.accept.disabled = true;
+    el.accept.textContent = "Saving to D1...";
+    setStatus("Creating the Communication and Investigation in D1...", "pending");
+
+    try {
+      const response = await fetch(ENDPOINT, {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          action:"commit-operational-decision",
+          clientCode,
+          occurredAt:new Date().toISOString(),
+          direction:"incoming",
+          owner:"Andrew",
+          rawContent:reviewedDecision.operationalSummary,
+          decision:reviewedDecision
+        })
+      });
+
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok || !result.ok) {
+        throw new Error(result.error || `D1 save failed with HTTP ${response.status}.`);
+      }
+
+      if (result.workItemId) {
+        throw new Error("Road test failed: the Worker created a Work Item.");
+      }
+
+      if (!result.communicationId) {
+        throw new Error("Road test failed: no Communication ID was returned.");
+      }
+
+      if (!result.investigationId && !result.duplicate) {
+        throw new Error("Road test failed: no Investigation ID was returned.");
+      }
+
+      if (result.duplicate) {
+        setStatus(`Already saved — Communication #${result.communicationId}. No duplicate records were created.`, "ready");
+      } else {
+        setStatus(`Saved to D1 — Communication #${result.communicationId}, Investigation #${result.investigationId}, no Work Item.`, "ready");
+      }
+
+      el.accept.textContent = "Saved to D1";
+      await loadClientWorkspace();
+    } catch (error) {
+      console.error(error);
+      el.accept.disabled = false;
+      el.accept.textContent = "Accept Recommendation";
+      setStatus(error.message || "The D1 save failed.", "error");
+    }
+  }
+
+  async function loadClientWorkspace() {
+    const clientCode = CLIENT_CODES[el.client.value];
+    if (!clientCode) {
+      el.history.innerHTML = '<p class="empty">Select a client to load live records.</p>';
+      return;
+    }
+
+    el.history.innerHTML = '<p class="empty">Loading live D1 records...</p>';
+
+    try {
+      const response = await fetch(ENDPOINT, {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          action:"get-client-workspace",
+          clientCode
+        })
+      });
+
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.error || "Live records could not be loaded.");
+      }
+
+      const records = payload.operational?.communications || [];
+
+      if (!records.length) {
+        el.history.innerHTML = '<p class="empty">No D1 communications found for this client.</p>';
+        return;
+      }
+
+      el.history.innerHTML = records.slice(0,10).map(record => `
+        <article class="history-item">
+          <strong>${escapeHtml(record.subject || record.title || "Communication")}</strong>
+          <span>${escapeHtml(record.source || "Unknown")} · ${escapeHtml(record.status || "saved")}</span>
+          <p>${escapeHtml(record.ai_summary || record.communication_summary || record.raw_content || "")}</p>
+        </article>
+      `).join("");
+    } catch (error) {
+      console.error(error);
+      el.history.innerHTML = `<p class="empty">${escapeHtml(error.message || "Live records could not be loaded.")}</p>`;
+    }
+  }
+
+  function clearDecision() {
+    currentDecision = null;
+    el.analysisPanel.hidden = true;
+    el.routePanel.hidden = true;
+    [el.save,el.investigation,el.work,el.reply].forEach(input => input.checked = false);
+    [el.saveWrap,el.investigationWrap,el.workWrap,el.replyWrap].forEach(wrap => wrap.classList.remove("recommended"));
+    el.accept.disabled = false;
+    el.accept.textContent = "Accept Recommendation";
+  }
+
+  function resetPage() {
+    resetImage();
+    el.client.value = "";
+    el.history.innerHTML = '<p class="empty">Select a client to load live records.</p>';
+  }
+
+  function buildRouteSummary(routes) {
+    const steps = ["Communication"];
+    if (routes.createInvestigation) steps.push("Investigation");
+    if (routes.createWorkItem) steps.push("Work Item");
+    if (routes.replyRequired) steps.push("Reply Required");
+    return steps.join(" → ");
+  }
+
+  function setStatus(message, type) {
+    el.status.className = `status ${type}`;
+    el.status.textContent = message;
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g,"&amp;")
+      .replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;")
+      .replace(/'/g,"&#039;");
+  }
+})();
+</script>
 </body>
 </html>
