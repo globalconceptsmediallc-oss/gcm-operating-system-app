@@ -6,7 +6,7 @@
    Purpose: Shared production constants and configuration.
    ========================================================= */
 
-export const VERSION = "6.3.7";
+export const VERSION = "7.0.0";
 export const API_CONTRACT_VERSION = "communications-operational-decision-v3";
 export const COMMUNICATION_ANALYSIS_ENGINE_VERSION = "3.4.0";
 export const COMMUNICATION_VISION_MODEL = "@cf/llava-hf/llava-1.5-7b-hf";
