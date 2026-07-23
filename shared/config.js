@@ -1,15 +1,23 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/config.js
-   Version: 7.1.0
-   Source: Production Worker 7.0.0
+   Version: 7.1.1
+   Source: Production Worker 7.1.0
+   Sprint: Communications — Screenshot Vision
    Purpose: Shared production constants and configuration.
+            Updates the communication vision model only.
    ========================================================= */
 
-export const VERSION = "7.1.0";
+export const VERSION = "7.1.1";
 export const API_CONTRACT_VERSION = "communications-operational-decision-v3";
-export const COMMUNICATION_ANALYSIS_ENGINE_VERSION = "3.4.0";
-export const COMMUNICATION_VISION_MODEL = "@cf/llava-hf/llava-1.5-7b-hf";
+export const COMMUNICATION_ANALYSIS_ENGINE_VERSION = "3.4.1";
+
+/*
+ * Workers AI vision model used to read communication screenshots.
+ * This replaces the previous LLaVA model.
+ */
+export const COMMUNICATION_VISION_MODEL = "@cf/meta/llama-3.2-11b-vision-instruct";
+
 export const COMMUNICATION_REASONING_MODEL = "@cf/openai/gpt-oss-20b";
 
 export const ACTIONS = Object.freeze({
