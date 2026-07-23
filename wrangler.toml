@@ -4,3 +4,8 @@ compatibility_date = "2026-07-02"
 
 [vars]
 ENVIRONMENT = "development"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "gcm-operating-system"
+database_id = "ce93408a-85ee-4103-88aa-cd4a12169305"
