@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.2.0
+   Version: 7.3.0
    Source: Production Worker 6.3.7
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
@@ -58,16 +58,6 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
     }, 400);
   }
 
-  if (!client && !clientId) {
-    return jsonResponse({
-      ok: false,
-      requestId,
-      action: ACTIONS.ANALYZE_COMMUNICATION,
-      contractVersion: API_CONTRACT_VERSION,
-      error: "A client or clientId is required."
-    }, 400);
-  }
-
   if (!imageDataUrl && !sourceText) {
     return jsonResponse({
       ok: false,
@@ -114,6 +104,8 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
     if (extractionResult.error) errors.push(extractionResult.error);
     visibleEvidence = extractionResult.data;
   }
+
+  const detectedClient = detectClientFromEvidence(visibleEvidence);
 
   /* Stage 1: deterministic platform and notification classification. */
   {
@@ -228,8 +220,9 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
     generatedAt: new Date().toISOString(),
     processingStatus,
     client: {
-      id: clientId || null,
-      name: client || null
+      id: clientId || detectedClient?.id || null,
+      name: client || detectedClient?.name || null,
+      detectedFromEvidence: Boolean(!client && !clientId && detectedClient)
     },
     input: {
       type: sourceText ? "text" : "screenshot",
@@ -682,6 +675,7 @@ function buildVisionEvidencePrompt({ client, clientId, fileName, focusedRecovery
     "Do not infer facts that are not visible.",
     "The selected client and filename are context only, not screenshot evidence.",
     ...instructions,
+    "Identify any visible client/business name, project domain, website domain, or account name exactly as shown; these may be used to associate the communication with the correct client.",
     "Identify visible platform names such as SEMrush, Google Search Console, Google Business Profile, Google Analytics, or GA4.",
     "Preserve readable notification labels such as Position Tracking, Backlink Audit, or Site Audit.",
     "Put every readable metric in visibleMetrics with its number, label, and direction.",
@@ -976,6 +970,34 @@ async function executeBusinessMeaningStage({
       data: normalized
     })
   };
+}
+
+function detectClientFromEvidence(evidence) {
+  const searchable = [
+    evidence?.visibleSource,
+    evidence?.visibleSubject,
+    evidence?.visibleText,
+    ...(evidence?.visibleFacts || []),
+    ...(evidence?.visibleMetrics || [])
+  ].filter(Boolean).join(" ").toLowerCase();
+
+  const clients = [
+    { id: "SES", name: "Southeast Safes", patterns: [/\bsoutheast safes?\b/i, /\bsesafes\.com\b/i] },
+    { id: "4A", name: "1-800 4A Gun Safe", patterns: [/\b1-?800 4a gun safe\b/i, /\b18004agunsafe\.com\b/i, /\bazlibertysafe\.com\b/i] },
+    { id: "A1", name: "A1 Action Safe & Lock", patterns: [/\ba1 action safe(?:\s*&|\s+and)\s*lock\b/i, /\ba1actionsafeandlock\.com\b/i] },
+    { id: "NFS", name: "North Florida Safes", patterns: [/\bnorth florida safes?\b/i, /\bnorthfloridasafes\.com\b/i] },
+    { id: "HBG", name: "HB Guns", patterns: [/\bhb guns\b/i, /\bhbguns\.com\b/i] },
+    { id: "PW", name: "Pickett Weaponry", patterns: [/\bpickett weaponry\b/i, /\bpickettweaponry\.com\b/i] },
+    { id: "SFS", name: "South Florida Safes", patterns: [/\bsouth florida safes?\b/i, /\bsouthfloridasafes\.com\b/i] },
+    { id: "MAS", name: "Move A Safe", patterns: [/\bmove a safe\b/i, /\bmoveasafe\.com\b/i] },
+    { id: "GCM", name: "Global Concepts Media", patterns: [/\bglobal concepts media\b/i, /\bglobalconceptsmedia\.com\b/i] },
+    { id: "LUMI", name: "Lumi Studio", patterns: [/\blumi studio\b/i, /\blumistudiohouse\.com\b/i] }
+  ];
+
+  for (const candidate of clients) {
+    if (candidate.patterns.some(pattern => pattern.test(searchable))) return candidate;
+  }
+  return null;
 }
 
 function deterministicNotificationClassification(evidence) {
