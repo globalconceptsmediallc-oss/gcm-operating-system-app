@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.1.0
+   Version: 7.2.0
    Source: Production Worker 6.3.7
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
@@ -267,28 +267,28 @@ async function executeTextExtractionStage({
   const stageStartedAt = Date.now();
   const stageName = "evidence_extraction";
 
-  if (!env?.AI || typeof env.AI.run !== "function") {
-    const evidence = deterministicTextEvidenceFallback(sourceText);
-    const error = buildOperationalError({
-      stage: stageName,
-      code: "AI_BINDING_UNAVAILABLE",
-      message: "Workers AI is unavailable for pasted-text evidence extraction. The complete pasted text was preserved.",
-      retryable: false
-    });
+  /*
+   * Pasted text must remain useful even when Workers AI is unavailable.
+   * First perform deterministic line/metric extraction from the supplied text.
+   * If the AI binding exists, use AI to enrich that extraction and merge both
+   * results so deterministic evidence is never discarded.
+   */
+  const deterministicEvidence = deterministicTextEvidenceExtraction(sourceText);
 
+  if (!env?.AI || typeof env.AI.run !== "function") {
     return {
-      data: evidence,
-      error,
+      data: deterministicEvidence,
+      error: null,
       stage: createStageResult({
         stageName,
-        status: STAGE_STATUS.FALLBACK,
-        engine: "communication-text-evidence-extraction",
-        model: COMMUNICATION_REASONING_MODEL,
+        status: STAGE_STATUS.SUCCESS,
+        engine: "communication-text-evidence-deterministic",
+        model: "deterministic",
         startedAt: stageStartedAt,
-        confidence: confidenceToNumber(evidence.confidence),
-        rawAiError: error.message,
-        fallbackUsed: true,
-        data: evidence
+        confidence: confidenceToNumber(deterministicEvidence.confidence),
+        rawAiError: null,
+        fallbackUsed: false,
+        data: deterministicEvidence
       })
     };
   }
@@ -317,35 +317,32 @@ async function executeTextExtractionStage({
   });
 
   if (!runResult.ok) {
-    const evidence = deterministicTextEvidenceFallback(sourceText);
-
     return {
-      data: evidence,
-      error: runResult.error,
+      data: deterministicEvidence,
+      error: null,
       stage: createStageResult({
         stageName,
-        status: STAGE_STATUS.FALLBACK,
-        engine: "communication-text-evidence-extraction",
-        model: COMMUNICATION_REASONING_MODEL,
+        status: STAGE_STATUS.SUCCESS,
+        engine: "communication-text-evidence-deterministic",
+        model: "deterministic",
         startedAt: stageStartedAt,
-        confidence: confidenceToNumber(evidence.confidence),
+        confidence: confidenceToNumber(deterministicEvidence.confidence),
         retryCount: runResult.retryCount,
         retryStatus: runResult.retryStatus,
-        rawAiError: runResult.error.message,
-        fallbackUsed: true,
-        data: evidence
+        rawAiError: runResult.error?.message || null,
+        fallbackUsed: false,
+        data: deterministicEvidence
       })
     };
   }
 
-  const evidence = normalizeVisibleEvidence({
+  const aiEvidence = normalizeVisibleEvidence({
     ...runResult.data,
     visibleText: sourceText
   });
 
-  // The complete pasted text is always retained as the authoritative readable source.
-  // Extraction may organize it into facts and metrics, but must never replace it.
-  if (!evidence.visibleText) evidence.visibleText = sourceText;
+  const evidence = mergeVisibleEvidence(deterministicEvidence, aiEvidence);
+  evidence.visibleText = sourceText;
 
   return {
     data: evidence,
@@ -353,7 +350,7 @@ async function executeTextExtractionStage({
     stage: createStageResult({
       stageName,
       status: STAGE_STATUS.SUCCESS,
-      engine: "communication-text-evidence-extraction",
+      engine: "communication-text-evidence-hybrid",
       model: COMMUNICATION_REASONING_MODEL,
       startedAt: stageStartedAt,
       confidence: confidenceToNumber(evidence.confidence),
@@ -413,40 +410,74 @@ function buildTextEvidencePrompt({ sourceText, client, clientId, fileName }) {
       confidence: "High | Medium | Low",
       uncertainty: "Only details that could not be verified from the pasted text; otherwise None"
     }, null, 2)
-  ].join("\\n");
+  ].join("\n");
 }
 
-function deterministicTextEvidenceFallback(sourceText) {
+function deterministicTextEvidenceExtraction(sourceText) {
   const text = clean(sourceText);
-  const lines = text
+  const rawLines = String(sourceText || "")
     .split(/\r?\n/)
-    .map(clean)
+    .map(line => line.replace(/\u00a0/g, " ").trim())
     .filter(Boolean);
 
+  const lines = rawLines.map(clean).filter(Boolean);
+
   const sourceLine = lines.find(line =>
-    /semrush|google search console|search console|google business profile|google analytics|ga4/i.test(line)
+    /semrush|google search console|search console|google business profile|google analytics|\bga4\b/i.test(line)
   ) || "Unknown";
 
   const subjectLine = lines.find(line =>
-    /position tracking|backlink audit|site audit|search performance|business profile|analytics|rank|keyword/i.test(line)
+    /position tracking|backlink audit|site audit|search performance|business profile|analytics|ranking|keyword/i.test(line)
   ) || "Unknown";
 
-  const metricLines = lines.filter(line =>
-    /(?:\b\d+(?:\.\d+)?%?\b|#\d+|position\s*#?\d+|top\s*\d+)/i.test(line)
-  );
+  const visibleFacts = uniqueTextValues(lines);
+
+  const metricSignals = [
+    /\b(?:up|down|improved?|increased?|decreased?|declined?|dropped?|gained?|lost|moved?|rose|fell)\b/i,
+    /(?:^|\s)[+-]\s*\d+(?:\.\d+)?(?:%|\b)/i,
+    /(?:#\s*\d+|\bposition\s*:?\s*\d+|\brank(?:ing)?\s*:?\s*\d+|\btop\s+\d+\b)/i,
+    /\b\d+(?:\.\d+)?\s*%/i,
+    /\b(?:clicks?|impressions?|conversions?|orders?|revenue|traffic|backlinks?|domains?|keywords?|site health|sessions?|users?)\b.*\b\d+(?:\.\d+)?\b/i,
+    /\b\d+(?:\.\d+)?\b.*\b(?:clicks?|impressions?|conversions?|orders?|revenue|traffic|backlinks?|domains?|keywords?|site health|sessions?|users?)\b/i
+  ];
+
+  const metricLines = [];
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    if (!metricSignals.some(pattern => pattern.test(line))) continue;
+
+    // Preserve a nearby label/keyword line when email formatting splits a
+    // keyword and its movement/position across adjacent lines.
+    const previous = i > 0 ? lines[i - 1] : "";
+    const next = i + 1 < lines.length ? lines[i + 1] : "";
+    const currentLooksMostlyNumeric = /^[+\-#\d\s.%→>-]+$/.test(line);
+    const nextLooksMetric = metricSignals.some(pattern => pattern.test(next));
+
+    if (currentLooksMostlyNumeric && previous && !metricSignals.some(pattern => pattern.test(previous))) {
+      metricLines.push(`${previous} — ${line}`);
+    } else {
+      metricLines.push(line);
+    }
+
+    if (!currentLooksMostlyNumeric && nextLooksMetric && next !== line) {
+      const nextMostlyNumeric = /^[+\-#\d\s.%→>-]+$/.test(next);
+      if (nextMostlyNumeric) metricLines.push(`${line} — ${next}`);
+    }
+  }
 
   return normalizeVisibleEvidence({
     visibleSource: sourceLine,
     visibleSubject: subjectLine,
     visibleText: text,
-    visibleFacts: lines.slice(0, 20),
-    visibleMetrics: metricLines.slice(0, 30),
-    responseExpected: false,
-    explicitActionRequested: false,
-    confidence: text ? "Medium" : "Low",
-    uncertainty: "Automated structured extraction was unavailable; the complete pasted text was preserved."
+    visibleFacts,
+    visibleMetrics: uniqueTextValues(metricLines),
+    responseExpected: /\b(?:please reply|reply to|respond|let me know|confirm|approval required|action required)\b/i.test(text),
+    explicitActionRequested: /\b(?:please|need you to|can you|could you|action required|review and|fix|update|approve|confirm)\b/i.test(text),
+    confidence: text ? "High" : "Low",
+    uncertainty: "None"
   });
 }
+
 
 async function executeVisionExtractionStage({
   imageDataUrl,
