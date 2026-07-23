@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.3.0
+   Version: 7.3.1
    Source: Production Worker 6.3.7
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
@@ -549,9 +549,19 @@ async function executeVisionExtractionStage({
     env,
     model: COMMUNICATION_VISION_MODEL,
     input: {
-      image: imageBytes,
-      prompt: primaryPrompt,
-      max_tokens: 1800
+      messages: [
+        {
+          role: "system",
+          content: "You extract only visible evidence from business communication screenshots. Return one valid JSON object only."
+        },
+        {
+          role: "user",
+          content: primaryPrompt
+        }
+      ],
+      image: imageDataUrl,
+      max_tokens: 1800,
+      temperature: 0
     },
     stageName,
     requestId,
@@ -581,9 +591,19 @@ async function executeVisionExtractionStage({
       env,
       model: COMMUNICATION_VISION_MODEL,
       input: {
-        image: imageBytes,
-        prompt: recoveryPrompt,
-        max_tokens: 1800
+        messages: [
+          {
+            role: "system",
+            content: "You extract only visible evidence from business communication screenshots. Return one valid JSON object only."
+          },
+          {
+            role: "user",
+            content: recoveryPrompt
+          }
+        ],
+        image: imageDataUrl,
+        max_tokens: 1800,
+        temperature: 0
       },
       stageName: `${stageName}_focused_recovery`,
       requestId,
