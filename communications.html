@@ -107,7 +107,7 @@
       <a href="#">★ <span>Case Studies</span></a>
       <a href="#">⚙ <span>Settings</span></a>
     </nav>
-    <div class="sidebar-footer">Mission Control operational<br>Communications v2.2.0</div>
+    <div class="sidebar-footer">Mission Control operational<br>Communications v2.3.0</div>
   </aside>
 
   <main>
@@ -208,7 +208,7 @@ Backlink Audit update
                   <label class="route" id="route-reply-wrap"><input id="route-reply" type="checkbox"><span><strong>Reply Required</strong><span>Flag when a response must be prepared.</span></span></label>
                 </div>
               </fieldset>
-              <p class="note">For the SEMrush Backlink Audit road test: Communication and Investigation must be selected. Work Item must remain unselected.</p>
+              <p class="note">Save Communication creates the permanent record. Investigation, Work Item, and Reply Required are optional and should only be selected when the communication requires them.</p>
               <div class="buttons">
                 <button class="button primary" id="accept-button" type="button">Accept Recommendation</button>
                 <button class="button secondary" id="do-not-save-button" type="button">Do Not Save</button>
@@ -225,7 +225,7 @@ Backlink Audit update
 (() => {
   "use strict";
 
-  const VERSION = "2.2.0";
+  const VERSION = "2.3.0";
   const ENDPOINT = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const CONTRACT_VERSION = "communications-operational-decision-v3";
   const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -460,16 +460,6 @@ Backlink Audit update
       return;
     }
 
-    if (routes.createWorkItem) {
-      setStatus("Road test stopped: Work Item must not be selected for this email.", "error");
-      return;
-    }
-
-    if (!routes.createInvestigation) {
-      setStatus("Road test stopped: Investigation must be selected for this email.", "error");
-      return;
-    }
-
     const clientCode = CLIENT_CODES[el.client.value];
     if (!clientCode) {
       setStatus("The selected client does not have a valid client code.", "error");
@@ -482,8 +472,9 @@ Backlink Audit update
     };
 
     el.accept.disabled = true;
-    el.accept.textContent = "Saving to D1...";
-    setStatus("Creating the Communication and Investigation in D1...", "pending");
+    el.reject.disabled = true;
+    el.accept.textContent = "Saving...";
+    setStatus("Saving the approved operational record to D1...", "pending");
 
     try {
       const response = await fetch(ENDPOINT, {
@@ -495,7 +486,7 @@ Backlink Audit update
           occurredAt:new Date().toISOString(),
           direction:"incoming",
           owner:"Andrew",
-          rawContent:reviewedDecision.operationalSummary,
+          rawContent:el.sourceText.value.trim() || reviewedDecision.operationalSummary,
           decision:reviewedDecision
         })
       });
@@ -506,29 +497,42 @@ Backlink Audit update
         throw new Error(result.error || `D1 save failed with HTTP ${response.status}.`);
       }
 
-      if (result.workItemId) {
-        throw new Error("Road test failed: the Worker created a Work Item.");
-      }
-
       if (!result.communicationId) {
-        throw new Error("Road test failed: no Communication ID was returned.");
+        throw new Error("Save failed: no Communication ID was returned.");
       }
 
-      if (!result.investigationId && !result.duplicate) {
-        throw new Error("Road test failed: no Investigation ID was returned.");
-      }
+      const created = ["Communication"];
+      if (result.investigationId) created.push("Investigation");
+      if (result.workItemId) created.push("Work Item");
+      if (routes.replyRequired) created.push("Reply Required flag");
 
       if (result.duplicate) {
         setStatus(`Already saved — Communication #${result.communicationId}. No duplicate records were created.`, "ready");
       } else {
-        setStatus(`Saved to D1 — Communication #${result.communicationId}, Investigation #${result.investigationId}, no Work Item.`, "ready");
+        setStatus(`Saved ✓ ${created.join(", ")}. Ready for the next communication.`, "ready");
       }
 
-      el.accept.textContent = "Saved to D1";
+      el.accept.textContent = "Saved ✓";
       await loadClientWorkspace();
+
+      // Prepare the same client for the next communication.
+      const selectedClient = el.client.value;
+      imageDataUrl = "";
+      imageFileName = "";
+      el.preview.removeAttribute("src");
+      el.drop.classList.remove("has-image");
+      el.input.value = "";
+      el.remove.disabled = true;
+      el.sourceText.value = "";
+      clearDecision();
+      el.client.value = selectedClient;
+      setStatus("Saved ✓ Ready for the next communication.", "ready");
+      validateAnalyze();
+      el.sourceText.focus();
     } catch (error) {
       console.error(error);
       el.accept.disabled = false;
+      el.reject.disabled = false;
       el.accept.textContent = "Accept Recommendation";
       setStatus(error.message || "The D1 save failed.", "error");
     }
@@ -586,6 +590,7 @@ Backlink Audit update
     [el.save,el.investigation,el.work,el.reply].forEach(input => input.checked = false);
     [el.saveWrap,el.investigationWrap,el.workWrap,el.replyWrap].forEach(wrap => wrap.classList.remove("recommended"));
     el.accept.disabled = false;
+    el.reject.disabled = false;
     el.accept.textContent = "Accept Recommendation";
   }
 
