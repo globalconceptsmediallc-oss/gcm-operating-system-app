@@ -1,12 +1,13 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.0.0
-   Source: Production Worker 6.3.7 modular extraction
-   Sprint: Operational Pilot — Modular Stability Sprint
+   Version: 7.1.0
+   Source: Production Worker 7.0.0
+   Sprint: Mission Control — Card 1
    Purpose: Lightweight production router for operational
             communication analysis, client workspace retrieval,
-            and reviewed operational-decision commits.
+            reviewed operational-decision commits, and live
+            Mission Control retrieval.
 
    Required project structure:
 
@@ -22,6 +23,7 @@
      communicationAnalysis.js
      operationalDecision.js
      clientWorkspace.js
+     missionControl.js
    ========================================================= */
 
 import {
@@ -50,6 +52,10 @@ import {
   handleCommitOperationalDecision
 } from "./routes/operationalDecision.js";
 
+import {
+  handleMissionControl
+} from "./routes/missionControl.js";
+
 export default {
   async fetch(request, env) {
     const requestId = crypto.randomUUID();
@@ -66,8 +72,8 @@ export default {
         system: "GCM OS Operational Worker",
         version: VERSION,
         contractVersion: API_CONTRACT_VERSION,
-        sprint: "Operational Pilot — Modular Stability Sprint",
-        architecture: "Lightweight router with modular operational routes, shared infrastructure, isolated diagnostics, deterministic classification, guarded AI, and D1 persistence",
+        sprint: "Mission Control — Card 1",
+        architecture: "Lightweight router with modular operational routes, shared infrastructure, isolated diagnostics, deterministic classification, guarded AI, D1 persistence, and live Mission Control retrieval",
         actions: Object.values(ACTIONS),
         engines: [
           "notification-detection",
@@ -76,7 +82,8 @@ export default {
           "operational-routing",
           "consultant-summary",
           "client-workspace",
-          "operational-decision-commit"
+          "operational-decision-commit",
+          "mission-control"
         ],
         modules: {
           shared: [
@@ -88,7 +95,8 @@ export default {
           routes: [
             "communication-analysis",
             "client-workspace",
-            "operational-decision"
+            "operational-decision",
+            "mission-control"
           ]
         },
         removedLegacyPipelines: [
@@ -150,6 +158,13 @@ export default {
 
         case ACTIONS.COMMIT_OPERATIONAL_DECISION:
           return await handleCommitOperationalDecision(
+            body,
+            env,
+            requestId
+          );
+
+        case ACTIONS.GET_MISSION_CONTROL:
+          return await handleMissionControl(
             body,
             env,
             requestId
