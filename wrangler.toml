@@ -5,6 +5,9 @@ compatibility_date = "2026-07-02"
 [vars]
 ENVIRONMENT = "development"
 
+[ai]
+binding = "AI"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "gcm-operating-system"
