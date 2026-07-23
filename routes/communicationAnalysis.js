@@ -1,10 +1,10 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.0.0
+   Version: 7.1.0
    Source: Production Worker 6.3.7
    Purpose: Complete production communication analysis route,
-            including screenshot evidence extraction,
+            including pasted-text and screenshot evidence extraction,
             notification classification, business meaning,
             operational routing, and consultant summary.
    ========================================================= */
@@ -84,30 +84,22 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
   let operationalDecision = null;
   let consultantSummary = null;
 
-  /* Stage 1 + 2: extract visible evidence without operational reasoning. */
+  /* Stage 1 + 2: extract evidence without operational reasoning.
+     Pasted text is the dependable primary source when supplied.
+     The screenshot remains supporting evidence and is used when text is absent. */
   if (sourceText) {
-    const stageStartedAt = Date.now();
-    visibleEvidence = normalizeVisibleEvidence({
-      visibleSource: "Unknown",
-      visibleSubject: "Unknown",
-      visibleText: sourceText,
-      visibleFacts: [sourceText],
-      visibleMetrics: [],
-      responseExpected: false,
-      explicitActionRequested: false,
-      confidence: "High",
-      uncertainty: "None"
+    const extractionResult = await executeTextExtractionStage({
+      sourceText,
+      client,
+      clientId,
+      fileName,
+      env,
+      requestId
     });
+    stages.push(extractionResult.stage);
 
-    stages.push(createStageResult({
-      stageName: "evidence_extraction",
-      status: STAGE_STATUS.SUCCESS,
-      engine: "supplied-text",
-      model: "deterministic",
-      startedAt: stageStartedAt,
-      confidence: 1,
-      data: visibleEvidence
-    }));
+    if (extractionResult.error) errors.push(extractionResult.error);
+    visibleEvidence = extractionResult.data;
   } else {
     const extractionResult = await executeVisionExtractionStage({
       imageDataUrl,
@@ -262,6 +254,198 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
       partialStageCount: partialStages.length
     }
   }, 200);
+}
+
+async function executeTextExtractionStage({
+  sourceText,
+  client,
+  clientId,
+  fileName,
+  env,
+  requestId
+}) {
+  const stageStartedAt = Date.now();
+  const stageName = "evidence_extraction";
+
+  if (!env?.AI || typeof env.AI.run !== "function") {
+    const evidence = deterministicTextEvidenceFallback(sourceText);
+    const error = buildOperationalError({
+      stage: stageName,
+      code: "AI_BINDING_UNAVAILABLE",
+      message: "Workers AI is unavailable for pasted-text evidence extraction. The complete pasted text was preserved.",
+      retryable: false
+    });
+
+    return {
+      data: evidence,
+      error,
+      stage: createStageResult({
+        stageName,
+        status: STAGE_STATUS.FALLBACK,
+        engine: "communication-text-evidence-extraction",
+        model: COMMUNICATION_REASONING_MODEL,
+        startedAt: stageStartedAt,
+        confidence: confidenceToNumber(evidence.confidence),
+        rawAiError: error.message,
+        fallbackUsed: true,
+        data: evidence
+      })
+    };
+  }
+
+  const prompt = buildTextEvidencePrompt({
+    sourceText,
+    client,
+    clientId,
+    fileName
+  });
+
+  const runResult = await runAiJsonWithRetry({
+    env,
+    model: COMMUNICATION_REASONING_MODEL,
+    input: {
+      messages: [
+        { role: "system", content: "Return one valid JSON object only. Extract evidence; do not interpret it." },
+        { role: "user", content: prompt }
+      ]
+    },
+    stageName,
+    requestId,
+    route: ACTIONS.ANALYZE_COMMUNICATION,
+    timeoutMs: 30000,
+    maxRetries: 1
+  });
+
+  if (!runResult.ok) {
+    const evidence = deterministicTextEvidenceFallback(sourceText);
+
+    return {
+      data: evidence,
+      error: runResult.error,
+      stage: createStageResult({
+        stageName,
+        status: STAGE_STATUS.FALLBACK,
+        engine: "communication-text-evidence-extraction",
+        model: COMMUNICATION_REASONING_MODEL,
+        startedAt: stageStartedAt,
+        confidence: confidenceToNumber(evidence.confidence),
+        retryCount: runResult.retryCount,
+        retryStatus: runResult.retryStatus,
+        rawAiError: runResult.error.message,
+        fallbackUsed: true,
+        data: evidence
+      })
+    };
+  }
+
+  const evidence = normalizeVisibleEvidence({
+    ...runResult.data,
+    visibleText: sourceText
+  });
+
+  // The complete pasted text is always retained as the authoritative readable source.
+  // Extraction may organize it into facts and metrics, but must never replace it.
+  if (!evidence.visibleText) evidence.visibleText = sourceText;
+
+  return {
+    data: evidence,
+    error: null,
+    stage: createStageResult({
+      stageName,
+      status: STAGE_STATUS.SUCCESS,
+      engine: "communication-text-evidence-extraction",
+      model: COMMUNICATION_REASONING_MODEL,
+      startedAt: stageStartedAt,
+      confidence: confidenceToNumber(evidence.confidence),
+      retryCount: runResult.retryCount,
+      retryStatus: runResult.retryStatus,
+      fallbackUsed: false,
+      data: evidence
+    })
+  };
+}
+
+function buildTextEvidencePrompt({ sourceText, client, clientId, fileName }) {
+  return [
+    "You are the Communication Evidence Extractor for the Global Concepts Media Operating System.",
+    "Read the supplied business email text and extract only facts explicitly supported by that text.",
+    "Do not decide what work should be done.",
+    "Do not infer causes, results, previous values, dates, locations, devices, or business outcomes that are not explicitly stated.",
+    "The selected client and filename are context only and must not be treated as source evidence.",
+    "",
+    "PRESERVATION RULES",
+    "1. Identify the sender/platform/source when explicitly present.",
+    "2. Identify the email subject, report name, or primary notification headline when explicitly present.",
+    "3. Put important non-metric statements in visibleFacts as short standalone facts.",
+    "4. Put EVERY explicitly stated measurable observation in visibleMetrics.",
+    "5. For keyword ranking notifications, preserve the keyword phrase, movement amount/direction, and current/final position whenever stated.",
+    "6. Preserve explicitly stated percentages, counts, traffic, clicks, impressions, conversions, cost, revenue, orders, rankings, site-health values, backlink counts, and similar measurements.",
+    "7. When a metric includes context such as location, device, search engine, reporting date, or comparison period, keep that context in the metric wording.",
+    "8. Do not calculate a prior ranking from a movement amount unless the prior ranking itself is explicitly stated.",
+    "9. Do not collapse several keyword movements into a generic phrase such as 'rankings changed'. Each readable movement must be its own visibleMetrics item.",
+    "10. Do not omit negative measurements because positive measurements also exist, or vice versa.",
+    "11. responseExpected is true only when the source explicitly expects a response.",
+    "12. explicitActionRequested is true only when the source explicitly asks for an action.",
+    "13. Use Unknown only when a requested identity field truly is not stated.",
+    "14. Never wrap the JSON in markdown fences.",
+    "",
+    `Selected client: ${client || clientId || "Unknown"}`,
+    `Temporary filename: ${fileName}`,
+    "",
+    "PASTED EMAIL TEXT",
+    sourceText,
+    "",
+    "Return only valid JSON matching this contract:",
+    JSON.stringify({
+      visibleSource: "Explicit sender, platform, or organization; otherwise Unknown",
+      visibleSubject: "Explicit email subject, report name, or primary headline; otherwise Unknown",
+      visibleText: "The materially readable source text",
+      visibleFacts: [
+        "Short source-grounded fact",
+        "Another short source-grounded fact"
+      ],
+      visibleMetrics: [
+        "Exact measurable observation with its label/value/direction/context",
+        "One item per distinct metric or keyword movement"
+      ],
+      responseExpected: false,
+      explicitActionRequested: false,
+      confidence: "High | Medium | Low",
+      uncertainty: "Only details that could not be verified from the pasted text; otherwise None"
+    }, null, 2)
+  ].join("\\n");
+}
+
+function deterministicTextEvidenceFallback(sourceText) {
+  const text = clean(sourceText);
+  const lines = text
+    .split(/\r?\n/)
+    .map(clean)
+    .filter(Boolean);
+
+  const sourceLine = lines.find(line =>
+    /semrush|google search console|search console|google business profile|google analytics|ga4/i.test(line)
+  ) || "Unknown";
+
+  const subjectLine = lines.find(line =>
+    /position tracking|backlink audit|site audit|search performance|business profile|analytics|rank|keyword/i.test(line)
+  ) || "Unknown";
+
+  const metricLines = lines.filter(line =>
+    /(?:\b\d+(?:\.\d+)?%?\b|#\d+|position\s*#?\d+|top\s*\d+)/i.test(line)
+  );
+
+  return normalizeVisibleEvidence({
+    visibleSource: sourceLine,
+    visibleSubject: subjectLine,
+    visibleText: text,
+    visibleFacts: lines.slice(0, 20),
+    visibleMetrics: metricLines.slice(0, 30),
+    responseExpected: false,
+    explicitActionRequested: false,
+    confidence: text ? "Medium" : "Low",
+    uncertainty: "Automated structured extraction was unavailable; the complete pasted text was preserved."
+  });
 }
 
 async function executeVisionExtractionStage({
@@ -1036,10 +1220,10 @@ function buildDeterministicBusinessMeaning({ visibleEvidence, classification }) 
         ? "Positive"
         : "Neutral";
 
-  const facts = [
-    ...(visibleEvidence?.visibleFacts || []),
-    ...(visibleEvidence?.visibleMetrics || [])
-  ].filter(Boolean).slice(0, 3);
+  const facts = uniqueTextValues([
+    ...(visibleEvidence?.visibleMetrics || []),
+    ...(visibleEvidence?.visibleFacts || [])
+  ]);
   const evidenceDetail = facts.length ? ` Visible evidence: ${facts.join("; ")}.` : "";
 
   const templates = {
@@ -1278,7 +1462,7 @@ function buildCommunicationTitle({ source, classification, direction, operationa
 }
 
 function buildEvidenceSummary(evidence, classification) {
-  const facts = [...(evidence?.visibleFacts || []), ...(evidence?.visibleMetrics || [])].slice(0, 3);
+  const facts = uniqueTextValues([...(evidence?.visibleMetrics || []), ...(evidence?.visibleFacts || [])]);
   return facts.length
     ? `${classification.notificationFamily} communication: ${facts.join("; ")}.`
     : `A ${classification.notificationFamily} communication was received.`;
