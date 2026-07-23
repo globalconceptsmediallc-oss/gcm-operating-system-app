@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.3.1
+   Version: 7.3.2
    Source: Production Worker 6.3.7
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
@@ -75,9 +75,40 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
   let consultantSummary = null;
 
   /* Stage 1 + 2: extract evidence without operational reasoning.
-     Pasted text is the dependable primary source when supplied.
-     The screenshot remains supporting evidence and is used when text is absent. */
-  if (sourceText) {
+     When both pasted text and a screenshot are supplied, use BOTH sources.
+     Pasted text preserves dependable readable text while vision contributes
+     screenshot-only evidence such as tables, metric cards, rankings, and
+     movement values. Neither source is allowed to silently replace the other. */
+  if (sourceText && imageDataUrl) {
+    const [textExtractionResult, visionExtractionResult] = await Promise.all([
+      executeTextExtractionStage({
+        sourceText,
+        client,
+        clientId,
+        fileName,
+        env,
+        requestId
+      }),
+      executeVisionExtractionStage({
+        imageDataUrl,
+        client,
+        clientId,
+        fileName,
+        env,
+        requestId
+      })
+    ]);
+
+    stages.push(textExtractionResult.stage, visionExtractionResult.stage);
+
+    if (textExtractionResult.error) errors.push(textExtractionResult.error);
+    if (visionExtractionResult.error) errors.push(visionExtractionResult.error);
+
+    visibleEvidence = mergeVisibleEvidence(
+      textExtractionResult.data,
+      visionExtractionResult.data
+    );
+  } else if (sourceText) {
     const extractionResult = await executeTextExtractionStage({
       sourceText,
       client,
@@ -225,7 +256,7 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
       detectedFromEvidence: Boolean(!client && !clientId && detectedClient)
     },
     input: {
-      type: sourceText ? "text" : "screenshot",
+      type: sourceText && imageDataUrl ? "hybrid" : sourceText ? "text" : "screenshot",
       fileName
     },
     classification,
