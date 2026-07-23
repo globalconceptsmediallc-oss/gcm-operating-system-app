@@ -667,6 +667,26 @@
       font-weight: 900;
     }
 
+    .attention-link {
+      display: block;
+      margin: -17px -20px;
+      padding: 17px 20px;
+      transition:
+        background 160ms ease,
+        color 160ms ease;
+    }
+
+    .attention-link:hover,
+    .attention-link:focus-visible {
+      background: var(--info-soft);
+      outline: none;
+    }
+
+    .attention-link:hover .attention-name,
+    .attention-link:focus-visible .attention-name {
+      color: var(--gcm-blue-600);
+    }
+
     .attention-detail,
     .proof-detail {
       margin: 5px 0 0;
@@ -1116,7 +1136,7 @@
               <div class="panel-header">
                 <div>
                   <h2 class="panel-title">Clients Needing Attention</h2>
-                  <p class="panel-description">Only clients requiring a decision appear here.</p>
+                  <p class="panel-description">Click a client to open the record and see what needs attention.</p>
                 </div>
               </div>
 
@@ -1185,6 +1205,7 @@
       "use strict";
 
       const DATA_KEY = "gcm-os-operational-records-v2";
+      const WORKER_ENDPOINT = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
 
       const DEFAULT_DATA = {
         prospects: [],
@@ -1283,30 +1304,93 @@
           </li>`).join("");
       }
 
-      function buildAttentionRollup(data) {
-        const records = [
-          ...data.alerts.map((r) => ({ ...r, recordType: "Alert" })),
-          ...data.investigations.map((r) => ({ ...r, recordType: "Investigation" })),
-          ...data.workItems.map((r) => ({ ...r, recordType: "Work Item" })),
-          ...data.communications.map((r) => ({ ...r, recordType: "Communication" }))
-        ].filter((r) => !["complete", "completed", "closed", "archived", "no-action"].includes(String(r.status || "").toLowerCase()) && r.requiresDecision === true && r.client);
-        const byClient = new Map();
-        records.forEach((record) => {
-          if (!byClient.has(record.client)) byClient.set(record.client, []);
-          byClient.get(record.client).push(record);
-        });
-        return [...byClient.entries()].map(([client, records]) => ({ client, records }));
+      function renderAttentionLoading() {
+        attentionList.innerHTML = `
+          <li class="attention-item">
+            <p class="attention-name">Loading clients...</p>
+          </li>
+        `;
+        attentionCount.textContent = "—";
+        attentionNote.textContent = "Checking live operational records.";
       }
 
-      function renderAttention(data) {
-        const rollup = buildAttentionRollup(data);
-        attentionList.innerHTML = rollup.length ? rollup.map(({ client, records }) => {
-          const primary = records[0];
-          const extra = records.length - 1;
-          const label = primary.attentionLabel || primary.recordType;
-          return `<li class="attention-item"><a href="${escapeHtml(primary.href || "#")}"><div class="attention-top"><div><p class="attention-name">${escapeHtml(client)}</p><p class="attention-detail">${escapeHtml(primary.attentionReason || primary.title || "A decision is required.")}${extra ? ` ${extra} additional open record${extra === 1 ? "" : "s"}.` : ""}</p></div><span class="status-label ${statusClass(label)}">${escapeHtml(label)}</span></div></a></li>`;
-        }).join("") : `<li class="attention-item"><div class="attention-top"><div><p class="attention-name">No clients need attention</p><p class="attention-detail">This list updates when an open record requires a decision.</p></div><span class="status-label status-success">Clear</span></div></li>`;
-        return rollup;
+      function renderAttentionClients(clients) {
+        if (!clients.length) {
+          attentionList.innerHTML = `
+            <li class="attention-item">
+              <p class="attention-name">No clients need attention</p>
+            </li>
+          `;
+          attentionCount.textContent = "0";
+          attentionNote.textContent = "No clients currently require attention.";
+          return;
+        }
+
+        attentionList.innerHTML = clients.map((client) => `
+          <li class="attention-item">
+            <a
+              class="attention-link"
+              href="${escapeHtml(client.href || "clients.html")}"
+              aria-label="Open ${escapeHtml(client.clientName || "client")} workspace"
+            >
+              <p class="attention-name">${escapeHtml(client.clientName || "Unknown Client")}</p>
+            </a>
+          </li>
+        `).join("");
+
+        attentionCount.textContent = String(clients.length);
+        attentionNote.textContent =
+          clients.length === 1
+            ? "Click the client name to see what needs attention."
+            : "Click a client name to see what needs attention.";
+      }
+
+      function renderAttentionError(message) {
+        attentionList.innerHTML = `
+          <li class="attention-item">
+            <p class="attention-name">Clients could not be loaded</p>
+            <p class="attention-detail">${escapeHtml(message || "Mission Control is temporarily unavailable.")}</p>
+          </li>
+        `;
+        attentionCount.textContent = "—";
+        attentionNote.textContent = "Live attention records are unavailable.";
+      }
+
+      async function loadMissionControlAttention() {
+        renderAttentionLoading();
+
+        try {
+          const response = await fetch(WORKER_ENDPOINT, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              action: "get-mission-control"
+            })
+          });
+
+          const payload = await response.json();
+
+          if (!response.ok || payload?.ok !== true) {
+            throw new Error(
+              payload?.error ||
+              payload?.details ||
+              "Mission Control request failed."
+            );
+          }
+
+          const clients = Array.isArray(
+            payload?.missionControl?.clientsRequiringAttention
+          )
+            ? payload.missionControl.clientsRequiringAttention
+            : [];
+
+          renderAttentionClients(clients);
+        } catch (error) {
+          console.error("Could not load Mission Control attention records.", error);
+          renderAttentionError(error?.message);
+        }
       }
 
       function renderProof(data) {
@@ -1318,14 +1402,12 @@
         return waiting;
       }
 
-      function renderSummary(data, attention, proofWaiting) {
+      function renderSummary(data, proofWaiting) {
         const readyProspects = data.prospects.filter((p) => p.status === "ready");
         const openWork = data.workItems.filter((item) => item.status === "open");
         const completedWork = data.workItems.filter((item) => item.status === "complete");
         prospectCount.textContent = data.prospects.length;
         prospectNote.textContent = readyProspects.length ? `${readyProspects.length} ${readyProspects.length === 1 ? "is" : "are"} ready for personalized outreach.` : "No prospects are ready for personalized outreach.";
-        attentionCount.textContent = attention.length;
-        attentionNote.textContent = attention.length ? `${attention.length} ${attention.length === 1 ? "client requires" : "clients require"} a decision.` : "No clients currently require a decision.";
         openTaskCount.textContent = openWork.length;
         openWorkNote.textContent = openWork.length ? "Highest-impact work appears first." : "No open work items.";
         proofCount.textContent = proofWaiting.length;
@@ -1335,9 +1417,8 @@
 
       function renderDashboard(data) {
         renderWorkQueue(data);
-        const attention = renderAttention(data);
         const proofWaiting = renderProof(data);
-        renderSummary(data, attention, proofWaiting);
+        renderSummary(data, proofWaiting);
       }
 
       taskList.addEventListener("change", (event) => {
@@ -1366,6 +1447,7 @@
 
       setDateAndGreeting();
       renderDashboard(loadData());
+      loadMissionControlAttention();
     })();
   </script>
 </body>
