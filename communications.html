@@ -107,7 +107,7 @@
       <a href="#">★ <span>Case Studies</span></a>
       <a href="#">⚙ <span>Settings</span></a>
     </nav>
-    <div class="sidebar-footer">Mission Control operational<br>Communications v2.3.0</div>
+    <div class="sidebar-footer">Mission Control operational<br>Communications v2.4.0</div>
   </aside>
 
   <main>
@@ -116,7 +116,7 @@
         <div>
           <p class="eyebrow">Mission Control</p>
           <h1>Client Communications</h1>
-          <p class="subtitle">Paste readable email text, keep the screenshot as supporting evidence, review the operational decision, and save approved records directly to production D1.</p>
+          <p class="subtitle">Upload a readable communication screenshot. GCM OS will read the screenshot, identify the client when possible, extract the operational evidence, and prepare the record for review before saving to production D1.</p>
         </div>
         <span class="date-chip" id="current-date"></span>
       </header>
@@ -124,7 +124,7 @@
       <section class="grid">
         <div class="stack">
           <article class="panel">
-            <div class="panel-header"><h2>1. Email Screenshot</h2><p>The screenshot is temporary input and is not saved as completed work.</p></div>
+            <div class="panel-header"><h2>1. Communication Screenshot</h2><p>The screenshot is the primary analysis input and is not saved as completed work.</p></div>
             <div class="panel-body">
               <div class="drop-zone" id="drop-zone" tabindex="0">
                 <img id="preview-image" class="preview" alt="Email screenshot preview">
@@ -146,10 +146,10 @@
 
         <div class="stack">
           <article class="panel">
-            <div class="panel-header"><h2>2. Generate Operational Decision</h2><p>Select the client and paste the readable email text. The screenshot remains supporting evidence.</p></div>
+            <div class="panel-header"><h2>2. Generate Operational Decision</h2><p>Upload the screenshot and generate the decision. Client and text may be supplied only when you want to correct or supplement what the screenshot contains.</p></div>
             <div class="panel-body">
               <div class="field">
-                <label for="client">Client</label>
+                <label for="client">Client <span style="font-weight:600;color:var(--muted)">(optional override)</span></label>
                 <select id="client">
                   <option value="">Select client</option>
                   <option>Southeast Safes</option>
@@ -165,7 +165,7 @@
                 </select>
               </div>
               <div class="field">
-                <label for="source-text">Paste Email Text</label>
+                <label for="source-text">Email Text <span style="font-weight:600;color:var(--muted)">(optional supplement)</span></label>
                 <textarea id="source-text" placeholder="Paste the sender, subject, and readable email content here.
 
 Example:
@@ -173,7 +173,7 @@ SEMrush
 Backlink Audit update
 6 High Quality Domains Lost
 9 New Trusted Domains"></textarea>
-                <p class="field-help">This text is the dependable analysis input. The screenshot is temporary supporting evidence.</p>
+                <p class="field-help">Leave this blank when the screenshot is readable. Use it only to supplement or correct screenshot extraction.</p>
               </div>
               <button class="button primary" id="analyze-button" type="button" disabled>Generate Operational Decision</button>
               <div id="analysis-status" class="status pending" style="margin-top:14px">Select a client and paste the email text. A screenshot is optional supporting evidence.</div>
@@ -225,7 +225,7 @@ Backlink Audit update
 (() => {
   "use strict";
 
-  const VERSION = "2.3.0";
+  const VERSION = "2.4.0";
   const ENDPOINT = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const CONTRACT_VERSION = "communications-operational-decision-v3";
   const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -333,7 +333,7 @@ Backlink Audit update
       el.drop.classList.add("has-image");
       el.remove.disabled = false;
       clearDecision();
-      setStatus("Screenshot ready as supporting evidence. Select the client, paste the email text, and generate the decision.", "ready");
+      setStatus("Screenshot ready. Generate the operational decision; client and email text are optional overrides.", "ready");
       validateAnalyze();
     };
     reader.onerror = () => setStatus("The screenshot could not be read.", "error");
@@ -348,21 +348,24 @@ Backlink Audit update
     el.input.value = "";
     el.remove.disabled = true;
     clearDecision();
-    setStatus("Select a client and paste the email text. A screenshot is optional supporting evidence.", "pending");
+    setStatus("Upload a readable communication screenshot to begin.", "pending");
     validateAnalyze();
   }
 
   function validateAnalyze() {
-    el.analyze.disabled = !(el.client.value && el.sourceText.value.trim());
+    el.analyze.disabled = !imageDataUrl;
   }
 
   async function analyzeScreenshot() {
     const sourceText = el.sourceText.value.trim();
-    if (!sourceText || !el.client.value) return;
+    if (!imageDataUrl) {
+      setStatus("Upload a readable communication screenshot first.", "error");
+      return;
+    }
 
     el.analyze.disabled = true;
     el.analyze.textContent = "Generating...";
-    setStatus("Analyzing the pasted email text and determining the operational route...", "pending");
+    setStatus("Reading the screenshot, identifying the client, extracting evidence, and determining the operational route...", "pending");
 
     try {
       const response = await fetch(ENDPOINT, {
@@ -373,10 +376,10 @@ Backlink Audit update
         },
         body:JSON.stringify({
           action:"analyze-client-communication",
-          client:el.client.value,
-          clientId:CLIENT_CODES[el.client.value],
-          sourceText,
-          image:imageDataUrl || undefined,
+          client:el.client.value || undefined,
+          clientId:CLIENT_CODES[el.client.value] || undefined,
+          sourceText:sourceText || undefined,
+          image:imageDataUrl,
           fileName:imageFileName || "pasted-email-text",
           contractVersion:CONTRACT_VERSION
         })
@@ -389,11 +392,29 @@ Backlink Audit update
       }
 
       currentDecision = normalizeDecision(payload.analysis);
+
+      const detectedClient =
+        payload.analysis.client ||
+        payload.analysis.clientName ||
+        payload.client ||
+        payload.clientName ||
+        "";
+
+      if (!el.client.value && detectedClient) {
+        const matchedOption = Array.from(el.client.options).find(
+          option => option.value.toLowerCase() === String(detectedClient).trim().toLowerCase()
+        );
+        if (matchedOption) {
+          el.client.value = matchedOption.value;
+          await loadClientWorkspace();
+        }
+      }
+
       renderDecision(currentDecision);
-      setStatus("Decision generated. Review the route before accepting.", "ready");
+      setStatus("Decision generated. Confirm the detected client and operational route before accepting.", "ready");
     } catch (error) {
       console.error(error);
-      setStatus(error.message || "The email text could not be evaluated.", "error");
+      setStatus(error.message || "The screenshot could not be evaluated.", "error");
     } finally {
       el.analyze.textContent = "Generate Operational Decision";
       validateAnalyze();
@@ -403,6 +424,9 @@ Backlink Audit update
   function normalizeDecision(a) {
     const routes = a.recommendedRoutes || {};
     return {
+      client:a.client || a.clientName || "",
+      clientName:a.clientName || a.client || "",
+      clientCode:a.clientCode || a.clientId || "",
       source:a.source || "Unknown",
       communicationType:a.communicationType || "General Communication",
       title:a.title || "Client communication",
@@ -460,9 +484,18 @@ Backlink Audit update
       return;
     }
 
-    const clientCode = CLIENT_CODES[el.client.value];
+    const detectedClientName =
+      currentDecision.client ||
+      currentDecision.clientName ||
+      "";
+
+    const clientCode =
+      CLIENT_CODES[el.client.value] ||
+      currentDecision.clientCode ||
+      CLIENT_CODES[detectedClientName];
+
     if (!clientCode) {
-      setStatus("The selected client does not have a valid client code.", "error");
+      setStatus("Client could not be identified confidently. Select the client before saving.", "error");
       return;
     }
 
@@ -516,7 +549,7 @@ Backlink Audit update
       await loadClientWorkspace();
 
       // Prepare the same client for the next communication.
-      const selectedClient = el.client.value;
+      const selectedClient = el.client.value || reviewedDecision.clientName || reviewedDecision.client || "";
       imageDataUrl = "";
       imageFileName = "";
       el.preview.removeAttribute("src");
