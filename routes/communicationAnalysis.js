@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.3.7
+   Version: 7.3.8
    Source: Production Worker 6.3.7
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
@@ -598,6 +598,16 @@ async function executeVisionExtractionStage({
     };
   }
 
+  const preparedImage = await prepareVisionImageForAnalysis({
+    imageDataUrl,
+    imageBytes,
+    sourceText,
+    env,
+    requestId
+  });
+
+  const visionImageDataUrl = preparedImage.dataUrl;
+
   const primaryPrompt = buildVisionEvidencePrompt({
     sourceText,
     client,
@@ -620,7 +630,7 @@ async function executeVisionExtractionStage({
           content: primaryPrompt
         }
       ],
-      image: imageDataUrl,
+      image: visionImageDataUrl,
       max_tokens: 1800,
       temperature: 0
     },
@@ -663,7 +673,7 @@ async function executeVisionExtractionStage({
             content: recoveryPrompt
           }
         ],
-        image: imageDataUrl,
+        image: visionImageDataUrl,
         max_tokens: 1800,
         temperature: 0
       },
@@ -716,7 +726,7 @@ async function executeVisionExtractionStage({
             content: tablePrompt
           }
         ],
-        image: imageDataUrl,
+        image: visionImageDataUrl,
         max_tokens: 1600,
         temperature: 0
       },
@@ -795,6 +805,105 @@ async function executeVisionExtractionStage({
       data: evidence
     })
   };
+}
+
+async function prepareVisionImageForAnalysis({
+  imageDataUrl,
+  imageBytes,
+  sourceText = "",
+  env,
+  requestId
+}) {
+  const positionTrackingAnchored = /\bposition tracking\b/i.test(clean(sourceText));
+
+  /*
+   * Cloudflare Images binding is optional at deploy time.
+   * When present, use it to crop/resize the desktop screenshot around the
+   * central email/report body before Workers AI sees it. When absent or when
+   * transformation fails, safely preserve the existing full-resolution input.
+   */
+  if (!positionTrackingAnchored || !env?.IMAGES || typeof env.IMAGES.input !== "function") {
+    return {
+      dataUrl: imageDataUrl,
+      transformed: false,
+      reason: positionTrackingAnchored
+        ? "IMAGES binding unavailable; original screenshot preserved."
+        : "Focused Position Tracking preprocessing not required."
+    };
+  }
+
+  try {
+    const mimeType = imageMimeTypeFromDataUrl(imageDataUrl);
+    const sourceBytes = new Uint8Array(imageBytes);
+
+    /*
+     * The recurring GCM OS workflow captures a desktop/browser screenshot in
+     * which the useful email/report body is centered and relatively narrow.
+     * A portrait crop removes most browser/sidebar chrome and enlarges the
+     * report area for small-table reading. Gravity is intentionally centered
+     * slightly right of midpoint to favor the email body/report content.
+     */
+    const transformedResponse = (
+      await env.IMAGES
+        .input(sourceBytes)
+        .transform({
+          width: 1050,
+          height: 1350,
+          fit: "cover",
+          gravity: { x: 0.58, y: 0.5 },
+        })
+        .output({
+          format: mimeType === "image/png" ? "image/png" : "image/jpeg"
+        })
+    ).response();
+
+    if (!transformedResponse.ok) {
+      throw new Error(`Images preprocessing returned HTTP ${transformedResponse.status}.`);
+    }
+
+    const transformedBytes = new Uint8Array(await transformedResponse.arrayBuffer());
+    if (!transformedBytes.length) {
+      throw new Error("Images preprocessing returned an empty image.");
+    }
+
+    return {
+      dataUrl: byteArrayToDataUrl(transformedBytes, mimeType),
+      transformed: true,
+      reason: "Position Tracking screenshot cropped and enlarged for vision analysis."
+    };
+  } catch (error) {
+    logWorkerError({
+      requestId,
+      route: ACTIONS.ANALYZE_COMMUNICATION,
+      stage: "vision_image_preprocessing",
+      error
+    });
+
+    return {
+      dataUrl: imageDataUrl,
+      transformed: false,
+      reason: `Image preprocessing failed; original screenshot preserved. ${safeErrorMessage(error)}`
+    };
+  }
+}
+
+function imageMimeTypeFromDataUrl(dataUrl) {
+  const match = String(dataUrl || "").match(/^data:(image\/(?:png|jpeg|jpg|webp));base64,/i);
+  if (!match) return "image/png";
+  const mimeType = match[1].toLowerCase();
+  return mimeType === "image/jpg" ? "image/jpeg" : mimeType;
+}
+
+function byteArrayToDataUrl(bytes, mimeType = "image/png") {
+  let binary = "";
+  const chunkSize = 0x8000;
+
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    const chunk = bytes.subarray(index, Math.min(index + chunkSize, bytes.length));
+    binary += String.fromCharCode(...chunk);
+  }
+
+  return `data:${mimeType};base64,${btoa(binary)}`;
 }
 
 function buildVisionEvidencePrompt({ sourceText = "", client, clientId, fileName, focusedRecovery }) {
