@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.3.4
+   Version: 7.3.5
    Source: Production Worker 6.3.7
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
@@ -679,7 +679,62 @@ async function executeVisionExtractionStage({
     }
   }
 
-  const evidence = mergeVisibleEvidence(primaryEvidence, recoveryEvidence);
+  let evidence = mergeVisibleEvidence(primaryEvidence, recoveryEvidence);
+
+  /*
+   * Position Tracking screenshots often contain small metric and keyword tables
+   * that are easy for a broad screenshot pass to miss. When the pasted text
+   * anchors the report as Position Tracking, run one additional narrow pass
+   * devoted only to the visible summary metrics and keyword rows.
+   *
+   * This pass is enrichment only. It cannot change the report family and is
+   * sanitized before being merged with the broader evidence.
+   */
+  const positionTrackingAnchored = /\bposition tracking\b/i.test(clean(sourceText));
+  let tableResult = null;
+  let tableEvidence = null;
+
+  if (positionTrackingAnchored) {
+    const tablePrompt = buildPositionTrackingTablePrompt({
+      sourceText,
+      client,
+      clientId,
+      fileName
+    });
+
+    tableResult = await runAiJsonWithRetry({
+      env,
+      model: COMMUNICATION_VISION_MODEL,
+      input: {
+        messages: [
+          {
+            role: "system",
+            content: "Extract only clearly readable Position Tracking table evidence. Return one valid JSON object only."
+          },
+          {
+            role: "user",
+            content: tablePrompt
+          }
+        ],
+        image: imageDataUrl,
+        max_tokens: 1600,
+        temperature: 0
+      },
+      stageName: `${stageName}_position_tracking_table`,
+      requestId,
+      route: ACTIONS.ANALYZE_COMMUNICATION,
+      timeoutMs: 30000,
+      maxRetries: 1
+    });
+
+    if (tableResult.ok) {
+      tableEvidence = sanitizePositionTrackingVisionEvidence(
+        normalizeVisibleEvidence(tableResult.data)
+      );
+
+      evidence = mergeVisibleEvidence(evidence, tableEvidence);
+    }
+  }
 
   if (!evidence || isWeakVisibleEvidence(evidence)) {
     const primaryMessage = primaryResult.ok ? "Primary vision extraction returned insufficient readable evidence." : primaryResult.error.message;
@@ -727,8 +782,15 @@ async function executeVisionExtractionStage({
       model: COMMUNICATION_VISION_MODEL,
       startedAt: stageStartedAt,
       confidence: confidenceToNumber(evidence.confidence),
-      retryCount: (primaryResult.retryCount || 0) + (recoveryResult?.retryCount || 0),
-      retryStatus: usedRecovery ? "focused_recovery_succeeded" : primaryResult.retryStatus,
+      retryCount:
+        (primaryResult.retryCount || 0)
+        + (recoveryResult?.retryCount || 0)
+        + (tableResult?.retryCount || 0),
+      retryStatus: tableEvidence
+        ? "position_tracking_table_enrichment_succeeded"
+        : usedRecovery
+          ? "focused_recovery_succeeded"
+          : primaryResult.retryStatus,
       fallbackUsed: false,
       data: evidence
     })
@@ -818,6 +880,54 @@ function buildVisionEvidencePrompt({ sourceText = "", client, clientId, fileName
       explicitActionRequested: false,
       confidence: "High | Medium | Low",
       uncertainty: "Only unreadable or unverified details; otherwise None"
+    }, null, 2)
+  ].join("\\n");
+}
+
+function buildPositionTrackingTablePrompt({ sourceText = "", client, clientId, fileName }) {
+  return [
+    "You are reading a SEMrush Position Tracking weekly-update screenshot.",
+    "The pasted email text confirms the report family is Position Tracking.",
+    "Your only job in this pass is to transcribe clearly readable performance evidence from the report body.",
+    "",
+    "STRICT RULES",
+    "1. Ignore browser chrome, Gmail navigation, sender controls, labels, tabs, and unrelated page text.",
+    "2. Focus on the central SEMrush report body.",
+    "3. Look specifically for the Visibility section, Traffic section, Top keywords table, and Top landing pages section.",
+    "4. For Visibility and Traffic, copy only the displayed value and displayed change when both are readable.",
+    "5. For each readable Top keywords row, preserve the exact keyword phrase plus any readable Position, Change, and Volume values.",
+    "6. For each readable landing-page row, preserve the exact URL/path plus any readable Traffic and Change values.",
+    "7. Do not infer missing digits, signs, positions, volumes, or percentages.",
+    "8. Do not calculate a previous position from a displayed change.",
+    "9. Do not invent SEMrush metrics that are not visibly present.",
+    "10. Do NOT output backlinks, referring domains, anchor text, trusted domains, high-quality domains, toxic score, domains lost, domains gained, Site Audit health, or Google Search Console metrics.",
+    "11. If a row is too small or blurry to read confidently, omit that row.",
+    "12. Prefer fewer verified rows over plausible-looking guesses.",
+    "13. Keep one distinct measurable observation per visibleMetrics item.",
+    "14. Never wrap the JSON in markdown fences.",
+    "",
+    `Selected client context: ${client || clientId || "Unknown"}`,
+    `Temporary filename: ${fileName}`,
+    "Report anchor from pasted text: Position Tracking",
+    "",
+    "Return only valid JSON matching this contract:",
+    JSON.stringify({
+      visibleSource: "SEMrush if visibly confirmed; otherwise Unknown",
+      visibleSubject: "Position Tracking if visibly confirmed; otherwise Unknown",
+      visibleText: "Only clearly readable report-body text relevant to the measurable evidence",
+      visibleFacts: [
+        "Clearly readable project/domain/date/location fact when visible"
+      ],
+      visibleMetrics: [
+        "Visibility: <value>; Change: <value>",
+        "Traffic: <value>; Change: <value>",
+        "Keyword: <exact phrase>; Position: <value>; Change: <value>; Volume: <value>",
+        "Landing page: <exact URL/path>; Traffic: <value>; Change: <value>"
+      ],
+      responseExpected: false,
+      explicitActionRequested: false,
+      confidence: "High | Medium | Low",
+      uncertainty: "Name only the sections or values that could not be read; otherwise None"
     }, null, 2)
   ].join("\\n");
 }
