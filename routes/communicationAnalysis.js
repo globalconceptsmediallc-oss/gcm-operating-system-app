@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.3.5
+   Version: 7.3.6
    Source: Production Worker 6.3.7
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
@@ -1859,7 +1859,122 @@ function confidenceToNumber(value) {
 
 function normalizeTextArray(value) {
   if (!Array.isArray(value)) return [];
-  return value.map(clean).filter(Boolean).slice(0, 30);
+
+  return value
+    .map(normalizeEvidenceArrayItem)
+    .map(clean)
+    .filter(Boolean)
+    .slice(0, 30);
+}
+
+function normalizeEvidenceArrayItem(value) {
+  if (value === null || value === undefined) return "";
+
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+
+  if (Array.isArray(value)) {
+    return value
+      .map(normalizeEvidenceArrayItem)
+      .map(clean)
+      .filter(Boolean)
+      .join("; ");
+  }
+
+  if (!isPlainObject(value)) {
+    return clean(value);
+  }
+
+  /*
+   * Workers AI may return evidence rows as structured JSON objects even when
+   * the prompt asks for strings. Preserve those values instead of allowing
+   * JavaScript string coercion to collapse them into "[object Object]".
+   *
+   * Common Position Tracking example:
+   * { keyword: "ammo safes", position: 9, change: "+91", volume: 10 }
+   * becomes:
+   * "Keyword: ammo safes; Position: 9; Change: +91; Volume: 10"
+   */
+  const preferredOrder = [
+    "keyword",
+    "landingPage",
+    "landing_page",
+    "url",
+    "path",
+    "metric",
+    "label",
+    "name",
+    "value",
+    "position",
+    "change",
+    "direction",
+    "volume",
+    "traffic",
+    "visibility",
+    "date",
+    "location",
+    "device"
+  ];
+
+  const entries = [];
+  const usedKeys = new Set();
+
+  const appendEntry = (key, rawValue) => {
+    if (rawValue === null || rawValue === undefined || rawValue === "") return;
+
+    const normalizedValue = normalizeEvidenceArrayItem(rawValue);
+    if (!normalizedValue) return;
+
+    const label = humanizeEvidenceKey(key);
+    entries.push(`${label}: ${normalizedValue}`);
+    usedKeys.add(key);
+  };
+
+  for (const key of preferredOrder) {
+    if (Object.prototype.hasOwnProperty.call(value, key)) {
+      appendEntry(key, value[key]);
+    }
+  }
+
+  for (const [key, rawValue] of Object.entries(value)) {
+    if (usedKeys.has(key)) continue;
+    appendEntry(key, rawValue);
+  }
+
+  return entries.join("; ");
+}
+
+function humanizeEvidenceKey(key) {
+  const aliases = {
+    landingPage: "Landing page",
+    landing_page: "Landing page",
+    url: "URL",
+    keyword: "Keyword",
+    position: "Position",
+    change: "Change",
+    direction: "Direction",
+    volume: "Volume",
+    traffic: "Traffic",
+    visibility: "Visibility",
+    metric: "Metric",
+    label: "Label",
+    name: "Name",
+    value: "Value",
+    date: "Date",
+    location: "Location",
+    device: "Device",
+    path: "Path"
+  };
+
+  if (aliases[key]) return aliases[key];
+
+  return String(key || "")
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^./, character => character.toUpperCase());
 }
 
 function importanceToPriority(value) {
