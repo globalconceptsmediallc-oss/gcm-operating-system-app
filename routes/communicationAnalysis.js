@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.3.3
+   Version: 7.3.4
    Source: Production Worker 6.3.7
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
@@ -91,6 +91,7 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
       }),
       executeVisionExtractionStage({
         imageDataUrl,
+        sourceText,
         client,
         clientId,
         fileName,
@@ -104,33 +105,36 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
     if (textExtractionResult.error) errors.push(textExtractionResult.error);
     if (visionExtractionResult.error) errors.push(visionExtractionResult.error);
 
-    visibleEvidence = mergeVisibleEvidence(
-      textExtractionResult.data,
-      visionExtractionResult.data
-    );
-
     /*
      * Hybrid evidence rule:
-     * pasted email text anchors communication identity.
-     * Vision may enrich screenshot-only evidence such as tables, rankings,
-     * metrics, and movement values, but it may not replace a dependable
-     * source/report identity derived from the pasted text.
+     * pasted email text anchors the report identity while vision contributes
+     * screenshot-only evidence such as tables, rankings, metrics, and changes.
+     * For a recognized Position Tracking email, remove obvious backlink-only
+     * hallucinations before merging.
      */
-    const textIdentity = classifyCommunication({
-      sourceText,
-      visibleEvidence: textExtractionResult.data
-    });
+    const textClassification = deterministicNotificationClassification(
+      textExtractionResult.data
+    );
 
-    if (textIdentity.source !== "Unknown") {
-      visibleEvidence.source = textIdentity.source;
+    const visionEvidenceForMerge =
+      textClassification.notificationType === "position_tracking"
+        ? sanitizePositionTrackingVisionEvidence(visionExtractionResult.data)
+        : visionExtractionResult.data;
+
+    visibleEvidence = mergeVisibleEvidence(
+      textExtractionResult.data,
+      visionEvidenceForMerge
+    );
+
+    const anchoredSubject = clean(textExtractionResult.data?.visibleSubject);
+    const anchoredSource = clean(textExtractionResult.data?.visibleSource);
+
+    if (anchoredSubject && anchoredSubject !== "Unknown") {
+      visibleEvidence.visibleSubject = anchoredSubject;
     }
 
-    if (textIdentity.communicationType !== "General Communication") {
-      visibleEvidence.communicationType = textIdentity.communicationType;
-    }
-
-    if (textIdentity.title && textIdentity.title !== "Unknown — Information") {
-      visibleEvidence.title = textIdentity.title;
+    if (anchoredSource && anchoredSource !== "Unknown") {
+      visibleEvidence.visibleSource = anchoredSource;
     }
   } else if (sourceText) {
     const extractionResult = await executeTextExtractionStage({
@@ -529,6 +533,7 @@ function deterministicTextEvidenceExtraction(sourceText) {
 
 async function executeVisionExtractionStage({
   imageDataUrl,
+  sourceText = "",
   client,
   clientId,
   fileName,
@@ -594,6 +599,7 @@ async function executeVisionExtractionStage({
   }
 
   const primaryPrompt = buildVisionEvidencePrompt({
+    sourceText,
     client,
     clientId,
     fileName,
@@ -636,6 +642,7 @@ async function executeVisionExtractionStage({
 
   if (needsFocusedRecovery) {
     const recoveryPrompt = buildVisionEvidencePrompt({
+      sourceText,
       client,
       clientId,
       fileName,
@@ -728,19 +735,48 @@ async function executeVisionExtractionStage({
   };
 }
 
-function buildVisionEvidencePrompt({ client, clientId, fileName, focusedRecovery }) {
+function buildVisionEvidencePrompt({ sourceText = "", client, clientId, fileName, focusedRecovery }) {
+  const pastedText = clean(sourceText);
+  const pastedTextIsPositionTracking = /\bposition tracking\b/i.test(pastedText);
+
   const instructions = focusedRecovery
     ? [
         "This is a focused recovery pass because a prior pass could not read enough evidence.",
-        "Inspect the entire screenshot carefully, including small text, logos, headings, colored metric cards, and notification body text.",
-        "For an SEMrush screenshot, explicitly look for the words SEMrush, Backlink Audit, Position Tracking, Site Audit, domains lost, domains gained, trusted domains, high quality domains, backlinks, keywords, and site health.",
-        "Do not return Unknown merely because the screenshot is an email. Read the visible email body and report cards.",
-        "Copy visible numbers together with their labels, for example: 6 High Quality Domains Lost or 9 New Trusted Domains."
+        "Inspect the entire screenshot carefully, including small text, headings, summary cards, keyword tables, and notification body text.",
+        "Copy only values you can actually read. If a value is unclear, omit it instead of guessing.",
+        "Do not create totals, percentages, counts, keyword names, positions, or movement values that are not visibly readable."
       ]
     : [
         "Inspect the complete screenshot, not only the sender line or email chrome.",
-        "Read visible logos, headings, notification names, metric labels, numbers, and direction words such as lost, gained, new, declined, improved, failed, or warning.",
-        "For platform notifications, preserve the exact platform and report family when visible."
+        "Read visible headings, report names, metric labels, numbers, tables, keyword phrases, positions, and direction/change values.",
+        "Copy only values that are visibly readable. If a value is unclear, omit it instead of guessing."
+      ];
+
+  const reportSpecificInstructions = pastedTextIsPositionTracking
+    ? [
+        "",
+        "REPORT FAMILY ANCHOR",
+        "The supplied pasted email text explicitly identifies this communication as Position Tracking.",
+        "Use that only to anchor the report family. Do not invent evidence from the pasted text.",
+        "Treat the screenshot as a Position Tracking report unless the screenshot visibly proves otherwise.",
+        "Do NOT reinterpret this as Backlink Audit, Site Audit, Google Search Console, or another report family.",
+        "",
+        "POSITION TRACKING TABLE RULES",
+        "1. Focus on the visible Position Tracking summary and keyword table.",
+        "2. Extract every clearly readable keyword row separately.",
+        "3. For each readable row, preserve the keyword phrase and any clearly readable current position, movement/change, search volume, URL/landing page, or other labeled value.",
+        "4. Preserve visible summary metrics such as Visibility, estimated Traffic, average position, or keyword counts only when the screenshot visibly labels them.",
+        "5. Never invent a metric merely because it is common in SEMrush.",
+        "6. Do not output backlink-only metrics such as backlinks, referring domains, anchor text distribution, trusted domains, high-quality domains, toxic score, domains lost, or domains gained unless those exact labels are visibly present in this screenshot.",
+        "7. Do not convert unreadable table cells into plausible-looking numbers.",
+        "8. One visibleMetrics item should represent one distinct visible summary metric or one distinct keyword-row observation."
+      ]
+    : [
+        "",
+        "GENERAL PLATFORM RULES",
+        "Identify visible platform/report names only when actually readable.",
+        "For SEMrush screenshots, distinguish Position Tracking, Backlink Audit, and Site Audit by the visible report heading and table labels.",
+        "Never substitute metrics from a different SEMrush report family."
       ];
 
   return [
@@ -750,30 +786,74 @@ function buildVisionEvidencePrompt({ client, clientId, fileName, focusedRecovery
     "Do not infer facts that are not visible.",
     "The selected client and filename are context only, not screenshot evidence.",
     ...instructions,
-    "Identify any visible client/business name, project domain, website domain, or account name exactly as shown; these may be used to associate the communication with the correct client.",
-    "Identify visible platform names such as SEMrush, Google Search Console, Google Business Profile, Google Analytics, or GA4.",
-    "Preserve readable notification labels such as Position Tracking, Backlink Audit, or Site Audit.",
-    "Put every readable metric in visibleMetrics with its number, label, and direction.",
+    ...reportSpecificInstructions,
+    "",
+    "EVIDENCE PRESERVATION RULES",
+    "Identify any visible client/business name, project domain, website domain, or account name exactly as shown.",
+    "Identify visible platform names such as SEMrush only when they are actually visible.",
+    "Preserve readable report labels such as Position Tracking, Backlink Audit, or Site Audit.",
     "Put important non-metric statements in visibleFacts.",
-    "When something truly cannot be read, use Unknown only for that field.",
+    "Put every clearly readable measurable observation in visibleMetrics.",
+    "For keyword ranking rows, preserve the keyword phrase together with its readable position/change values in the same visibleMetrics item when possible.",
+    "When something truly cannot be read, omit the uncertain metric instead of guessing.",
+    "Use Unknown only for requested identity fields that truly cannot be verified.",
     "Never wrap the JSON in markdown fences.",
     "",
     `Selected client: ${client || clientId || "Unknown"}`,
     `Temporary filename: ${fileName}`,
+    pastedText
+      ? `Pasted-text report anchor: ${pastedTextIsPositionTracking ? "Position Tracking" : "Other/Unconfirmed"}`
+      : "Pasted-text report anchor: None",
     "",
     "Return only valid JSON matching this contract:",
     JSON.stringify({
       visibleSource: "Visible sender, platform, or organization; otherwise Unknown",
       visibleSubject: "Visible email subject, report name, or primary headline; otherwise Unknown",
-      visibleText: "Concise transcription of all materially readable screenshot text",
+      visibleText: "Concise transcription of materially readable screenshot text",
       visibleFacts: ["Short visible facts copied or closely transcribed from the screenshot"],
-      visibleMetrics: ["Number + metric label + direction, preserving the visible wording"],
+      visibleMetrics: [
+        "One exact readable summary metric OR one keyword row with its readable position/change context"
+      ],
       responseExpected: false,
       explicitActionRequested: false,
       confidence: "High | Medium | Low",
-      uncertainty: "Only the unreadable or unverified details; otherwise None"
+      uncertainty: "Only unreadable or unverified details; otherwise None"
     }, null, 2)
-  ].join("\n");
+  ].join("\\n");
+}
+
+function sanitizePositionTrackingVisionEvidence(evidence) {
+  if (!evidence) return evidence;
+
+  const backlinkOnlyMetric = /(?:^|\b)(?:backlinks?|referring domains?|anchor text|trusted domains?|high quality domains?|domains? lost|domains? gained|toxic(?:ity)? score)(?:\b|:)/i;
+
+  const safeMetrics = (evidence.visibleMetrics || []).filter(
+    item => !backlinkOnlyMetric.test(clean(item))
+  );
+
+  const safeFacts = (evidence.visibleFacts || []).filter(item => {
+    const value = clean(item);
+    if (!value) return false;
+    if (/https?:\/\/|[a-z0-9-]+\.[a-z]{2,}/i.test(value)) return true;
+    return !backlinkOnlyMetric.test(value);
+  });
+
+  const safeTextParts = String(evidence.visibleText || "")
+    .split(/(?<=[.!?;])\s+|\n+/)
+    .map(clean)
+    .filter(Boolean)
+    .filter(part => !backlinkOnlyMetric.test(part));
+
+  return normalizeVisibleEvidence({
+    ...evidence,
+    visibleSubject: /backlink audit/i.test(clean(evidence.visibleSubject))
+      ? "Unknown"
+      : evidence.visibleSubject,
+    visibleText: safeTextParts.join(" "),
+    visibleFacts: safeFacts,
+    visibleMetrics: safeMetrics,
+    uncertainty: clean(evidence.uncertainty) || "None"
+  });
 }
 
 function isWeakVisibleEvidence(evidence) {
