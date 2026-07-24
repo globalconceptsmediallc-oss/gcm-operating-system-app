@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.3.6
+   Version: 7.3.7
    Source: Production Worker 6.3.7
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
@@ -903,6 +903,8 @@ function buildPositionTrackingTablePrompt({ sourceText = "", client, clientId, f
     "10. Do NOT output backlinks, referring domains, anchor text, trusted domains, high-quality domains, toxic score, domains lost, domains gained, Site Audit health, or Google Search Console metrics.",
     "11. If a row is too small or blurry to read confidently, omit that row.",
     "12. Prefer fewer verified rows over plausible-looking guesses.",
+    "12a. If you cannot read the exact keyword phrase confidently, omit the entire keyword row even if Position or Change is readable.",
+    "12b. Never reconstruct a keyword from partial letters or surrounding context.",
     "13. Keep one distinct measurable observation per visibleMetrics item.",
     "14. Never wrap the JSON in markdown fences.",
     "",
@@ -933,39 +935,114 @@ function buildPositionTrackingTablePrompt({ sourceText = "", client, clientId, f
 }
 
 function sanitizePositionTrackingVisionEvidence(evidence) {
-  if (!evidence) return evidence;
+  if (!evidence || !isPlainObject(evidence)) return evidence;
 
-  const backlinkOnlyMetric = /(?:^|\b)(?:backlinks?|referring domains?|anchor text|trusted domains?|high quality domains?|domains? lost|domains? gained|toxic(?:ity)? score)(?:\b|:)/i;
+  const blockedPatterns = [
+    /\bbacklink/i,
+    /\breferring domains?\b/i,
+    /\banchor text\b/i,
+    /\btrusted domains?\b/i,
+    /\bhigh[- ]quality domains?\b/i,
+    /\btoxic(?:ity)? score\b/i,
+    /\bdomains? (?:lost|gained)\b/i,
+    /\bsite audit\b/i,
+    /\bhealth score\b/i,
+    /\bgoogle search console\b/i
+  ];
 
-  const safeMetrics = (evidence.visibleMetrics || []).filter(
-    item => !backlinkOnlyMetric.test(clean(item))
-  );
+  const safeLine = value => {
+    const line = clean(value);
+    if (!line) return "";
+    if (blockedPatterns.some(pattern => pattern.test(line))) return "";
+    if (/\[object Object\]/i.test(line)) return "";
+    return line;
+  };
 
-  const safeFacts = (evidence.visibleFacts || []).filter(item => {
-    const value = clean(item);
-    if (!value) return false;
-    if (/https?:\/\/|[a-z0-9-]+\.[a-z]{2,}/i.test(value)) return true;
-    return !backlinkOnlyMetric.test(value);
-  });
+  const sanitizeArray = values => {
+    if (!Array.isArray(values)) return [];
+    return values
+      .map(normalizeEvidenceArrayItem)
+      .map(safeLine)
+      .filter(Boolean)
+      .filter(isCrediblePositionTrackingEvidenceLine)
+      .slice(0, 30);
+  };
 
-  const safeTextParts = String(evidence.visibleText || "")
-    .split(/(?<=[.!?;])\s+|\n+/)
-    .map(clean)
-    .filter(Boolean)
-    .filter(part => !backlinkOnlyMetric.test(part));
-
-  return normalizeVisibleEvidence({
+  return {
     ...evidence,
-    visibleSubject: /backlink audit/i.test(clean(evidence.visibleSubject))
-      ? "Unknown"
-      : evidence.visibleSubject,
-    visibleText: safeTextParts.join(" "),
-    visibleFacts: safeFacts,
-    visibleMetrics: safeMetrics,
-    uncertainty: clean(evidence.uncertainty) || "None"
-  });
+    visibleText: safeLine(evidence.visibleText),
+    visibleFacts: sanitizeArray(evidence.visibleFacts),
+    visibleMetrics: sanitizeArray(evidence.visibleMetrics)
+  };
 }
 
+function isCrediblePositionTrackingEvidenceLine(value) {
+  const line = clean(value);
+  if (!line) return false;
+
+  // Preserve non-keyword Position Tracking metrics when they contain a value.
+  if (/^(visibility|traffic|landing page|url|date|location|device)\s*:/i.test(line)) {
+    return /\d/.test(line);
+  }
+
+  if (!/^keyword\s*:/i.test(line)) {
+    return true;
+  }
+
+  /*
+   * Keyword rows are the highest-risk evidence in a small screenshot.
+   * Keep only rows that look like plausible search queries and contain an
+   * explicit numeric Position. This deliberately favors omission over storing
+   * garbled OCR/vision output as business evidence.
+   */
+  const keywordMatch = line.match(/^keyword\s*:\s*([^;]+)(?:;|$)/i);
+  const positionMatch = line.match(/;\s*position\s*:\s*(\d{1,3})(?:;|$)/i);
+
+  if (!keywordMatch || !positionMatch) return false;
+
+  const keyword = clean(keywordMatch[1]).toLowerCase();
+  const position = Number(positionMatch[1]);
+
+  if (!keyword || !Number.isFinite(position) || position < 1 || position > 100) {
+    return false;
+  }
+
+  // Reject obvious UI/browser fragments and malformed extraction.
+  const blockedKeywordFragments = [
+    "gmail",
+    "position tracking",
+    "semrush",
+    "globalconceptsmedia",
+    "inbox",
+    "view full report",
+    "weekly update",
+    "hello",
+    "project",
+    "device & location"
+  ];
+
+  if (blockedKeywordFragments.some(fragment => keyword.includes(fragment))) {
+    return false;
+  }
+
+  // Require ordinary keyword-like characters and a reasonable token count.
+  if (!/^[a-z0-9][a-z0-9 '&+./-]*$/i.test(keyword)) return false;
+
+  const words = keyword.split(/\s+/).filter(Boolean);
+  if (words.length < 2 || words.length > 8) return false;
+
+  // Reject highly suspicious function-word-heavy phrases produced by blurry OCR.
+  const weakWords = new Set([
+    "the", "a", "an", "to", "of", "and", "or", "for", "in", "on", "at",
+    "is", "are", "was", "were", "be", "been", "you", "your", "that",
+    "this", "these", "those", "may", "no", "page", "site", "sites"
+  ]);
+
+  const weakCount = words.filter(word => weakWords.has(word)).length;
+  if (words.length >= 4 && weakCount / words.length >= 0.6) return false;
+
+  return true;
+}
 function isWeakVisibleEvidence(evidence) {
   if (!evidence) return true;
 
