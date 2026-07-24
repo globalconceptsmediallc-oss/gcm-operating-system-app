@@ -8,6 +8,9 @@ ENVIRONMENT = "development"
 [ai]
 binding = "AI"
 
+[images]
+binding = "IMAGES"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "gcm-operating-system"
