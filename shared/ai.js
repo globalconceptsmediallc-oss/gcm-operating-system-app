@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/ai.js
-   Version: 7.0.0
+   Version: 7.0.1
    Source: Production Worker 6.3.7
    Purpose: Shared Workers AI execution, retry handling,
             timeout control, JSON parsing, diagnostics,
@@ -229,6 +229,8 @@ export function errorCodeForAiFailure(error) {
 /**
  * Build a standard stage diagnostic result.
  *
+ * v7.0.1: preserves optional debug metadata supplied by a route.
+ *
  * @param {object} input
  * @returns {object}
  */
@@ -243,7 +245,8 @@ export function createStageResult({
   retryStatus = "not_required",
   rawAiError = null,
   fallbackUsed = false,
-  data = null
+  data = null,
+  debug = null
 }) {
   return {
     stageName,
@@ -256,7 +259,8 @@ export function createStageResult({
     retryStatus,
     rawAiError,
     fallbackUsed,
-    data
+    data,
+    debug
   };
 }
 
