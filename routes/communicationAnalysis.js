@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.4.3
+   Version: 7.4.4
    Source: Production Worker 6.3.7
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
@@ -1785,8 +1785,19 @@ function buildDeterministicBusinessMeaning({ visibleEvidence, classification }) 
   const standingIssueSignal =
     /error|warning|issue|problem|crawlability|not crawled|couldn['’]?t crawl|cannot crawl|blocked/.test(text);
 
+  /*
+   * v7.4.4 SITE-AUDIT MONITORING RULE
+   *
+   * A recurring Site Audit can contain standing errors, warnings, crawlability
+   * advice, and unresolved issues every week. Those standing conditions are
+   * monitoring evidence, not a new adverse event. For Site Audit specifically,
+   * escalation requires evidence of actual deterioration/change such as a
+   * decline, failure, worsening condition, new issue, or increased issue count.
+   */
   const negative =
-    adverseChangeSignal || (standingIssueSignal && !stabilitySignal);
+    type === "site_audit"
+      ? adverseChangeSignal
+      : adverseChangeSignal || (standingIssueSignal && !stabilitySignal);
 
   const positive = /improv|increas|gain|grew|growth|up\b|new high|milestone|positive/.test(text);
   const eventDirection = negative && positive
@@ -1832,11 +1843,16 @@ function buildDeterministicBusinessMeaning({ visibleEvidence, classification }) 
     site_audit: {
       summary: `A SEMrush Site Audit notification was received.${evidenceDetail}`,
       impact: negative
-        ? "Visible technical issues may affect crawlability or site performance and should be verified in the Site Audit project."
-        : "The notification documents the current technical-audit condition and should be retained for monitoring.",
+        ? "A new or worsening technical condition may affect crawlability or site performance and should be verified in the Site Audit project."
+        : "The notification documents the current technical-audit condition and should be retained as historical monitoring evidence.",
       action: negative
-        ? "Save the communication and verify the reported Site Audit condition before creating corrective work."
-        : "Save the communication to the client history and continue monitoring Site Audit changes."
+        ? "Save the communication and verify the newly adverse Site Audit condition before creating corrective work."
+        : "Save the communication to the client history and continue routine Site Audit monitoring.",
+      reasoning: negative
+        ? "The Site Audit contains evidence of a new or worsening technical condition. Verification is appropriate before corrective work is assigned."
+        : "Routine SEMrush Site Audit monitoring communication. Standing errors, warnings, or crawlability notices do not by themselves require an Investigation without evidence of deterioration.",
+      recordPurpose: "Technical SEO Monitoring Evidence",
+      operationalLabel: negative ? "Review Required" : "Technical Monitoring Update"
     },
     search_performance: {
       summary: `A Google Search Console notification was received.${evidenceDetail}`,
