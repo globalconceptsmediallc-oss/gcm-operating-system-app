@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.4.1
+   Version: 7.4.2
    Source: Production Worker 6.3.7
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
@@ -1576,19 +1576,19 @@ function buildOperationalDecision({ visibleEvidence, classification, businessMea
     routes.createWorkItem = false;
 
     /*
-     * v7.4.1 ROUTINE-MONITORING ROUTING GUARDRAIL
+     * v7.4.2 ROUTINE-MONITORING ROUTING GUARDRAIL
      *
-     * For automated monitoring platforms, positive/neutral evidence is
-     * historical monitoring evidence unless the visible communication itself
-     * establishes a reason to escalate. Business Meaning may recommend review,
-     * but that recommendation must not by itself create an Investigation.
+     * For automated monitoring platforms, positive/neutral evidence remains
+     * historical monitoring evidence unless the visible evidence itself
+     * establishes a reason to escalate. A Business Meaning recommendation
+     * alone must not create an Investigation.
      */
     if (automatedPlatforms.has(classification.platform)) {
       routes.createInvestigation = false;
     }
 
     if (!["High", "Critical"].includes(importance)) {
-      importance = "Low";
+        importance = "Low";
     }
 }
 
@@ -1739,7 +1739,26 @@ function buildDeterministicBusinessMeaning({ visibleEvidence, classification }) 
     ...(visibleEvidence?.visibleMetrics || [])
   ].filter(Boolean).join(" ").toLowerCase();
 
-  const negative = /declin|decreas|drop|lost|loss|error|warning|critical|failed|down|toxic|issue|problem|negative/.test(text);
+  /*
+   * v7.4.2 ROUTINE-MONITORING STABILITY GUARDRAIL
+   *
+   * Automated reports often repeat standing errors, warnings, issues, or
+   * crawlability notices even when the report explicitly states that there
+   * has been no significant change. Standing conditions alone are not a new
+   * adverse event.
+   */
+  const stabilitySignal =
+    /haven['’]?t detected any significant changes|no significant changes|no significant change|no change|unchanged|remains? stable|stable since|without significant change/.test(text);
+
+  const adverseChangeSignal =
+    /declin|decreas|drop|dropped|lost|loss|critical|failed|failure|down\b|toxic|worsen|worsened|worsening|new error|new warning|new issue|errors? increased|warnings? increased|issues? increased|significant negative change|adverse movement/.test(text);
+
+  const standingIssueSignal =
+    /error|warning|issue|problem|crawlability|not crawled|couldn['’]?t crawl|cannot crawl|blocked/.test(text);
+
+  const negative =
+    adverseChangeSignal || (standingIssueSignal && !stabilitySignal);
+
   const positive = /improv|increas|gain|grew|growth|up\b|new high|milestone|positive/.test(text);
   const eventDirection = negative && positive
     ? "Mixed"
