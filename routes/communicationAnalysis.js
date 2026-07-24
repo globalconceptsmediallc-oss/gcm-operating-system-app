@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.3.2
+   Version: 7.3.3
    Source: Production Worker 6.3.7
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
@@ -108,6 +108,30 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
       textExtractionResult.data,
       visionExtractionResult.data
     );
+
+    /*
+     * Hybrid evidence rule:
+     * pasted email text anchors communication identity.
+     * Vision may enrich screenshot-only evidence such as tables, rankings,
+     * metrics, and movement values, but it may not replace a dependable
+     * source/report identity derived from the pasted text.
+     */
+    const textIdentity = classifyCommunication({
+      sourceText,
+      visibleEvidence: textExtractionResult.data
+    });
+
+    if (textIdentity.source !== "Unknown") {
+      visibleEvidence.source = textIdentity.source;
+    }
+
+    if (textIdentity.communicationType !== "General Communication") {
+      visibleEvidence.communicationType = textIdentity.communicationType;
+    }
+
+    if (textIdentity.title && textIdentity.title !== "Unknown — Information") {
+      visibleEvidence.title = textIdentity.title;
+    }
   } else if (sourceText) {
     const extractionResult = await executeTextExtractionStage({
       sourceText,
