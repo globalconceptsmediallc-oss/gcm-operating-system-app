@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.3.8
+   Version: 7.3.9
    Source: Production Worker 6.3.7
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
@@ -564,7 +564,12 @@ async function executeVisionExtractionStage({
         confidence: 0,
         rawAiError: error.message,
         fallbackUsed: true,
-        data: null
+        data: null,
+        debug: {
+          preprocessingApplied: preparedImage.transformed === true,
+          preprocessingReason: preparedImage.reason || "",
+          processedImageDataUrl: visionImageDataUrl
+        }
       })
     };
   }
@@ -802,11 +807,21 @@ async function executeVisionExtractionStage({
           ? "focused_recovery_succeeded"
           : primaryResult.retryStatus,
       fallbackUsed: false,
-      data: evidence
+      data: evidence,
+      debug: {
+        preprocessingApplied: preparedImage.transformed === true,
+        preprocessingReason: preparedImage.reason || "",
+        processedImageDataUrl: visionImageDataUrl
+      }
     })
   };
 }
 
+/*
+ * v7.3.9 ROAD-TEST DIAGNOSTIC:
+ * The stage now carries the exact processed image in stage.debug so we can
+ * verify what Workers AI received. No D1/save/routing behavior is changed.
+ */
 async function prepareVisionImageForAnalysis({
   imageDataUrl,
   imageBytes,
