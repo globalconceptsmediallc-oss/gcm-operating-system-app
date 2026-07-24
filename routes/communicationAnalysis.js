@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.4.2
+   Version: 7.4.3
    Source: Production Worker 6.3.7
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
@@ -1634,6 +1634,35 @@ function buildOperationalDecision({ visibleEvidence, classification, businessMea
   const businessImpact = clean(businessMeaning?.businessImpact) || "The communication should be retained in the client history and reviewed according to the visible evidence.";
   const recommendedAction = clean(businessMeaning?.recommendedAction) || defaultOperationalAction({ routes, visibleEvidence });
   const reasoning = clean(businessMeaning?.reasoning) || `Routing is based on deterministic ${classification.notificationFamily} classification and the visible evidence confidence.`;
+
+  /*
+   * v7.4.3 FINAL ROUTE/REASONING CONSISTENCY GUARDRAIL
+   *
+   * The MoveASafe road test exposed a contradiction: Business Meaning said
+   * "No operational action is currently required beyond maintaining the
+   * historical record" while the final route still created an Investigation.
+   *
+   * For automated monitoring platforms, an explicit no-action / historical-
+   * monitoring conclusion must control the final route unless the item has
+   * already reached High or Critical importance from stronger evidence.
+   */
+  const reasoningText = reasoning.toLowerCase();
+  const recommendedActionText = recommendedAction.toLowerCase();
+  const noActionMonitoringConclusion =
+    /no operational action is currently required|no operational action required|maintain(?:ing)? the historical record|historical monitoring evidence|routine monitoring communication/.test(
+      `${reasoningText} ${recommendedActionText}`
+    );
+
+  if (
+    automatedPlatforms.has(classification.platform) &&
+    noActionMonitoringConclusion &&
+    !["High", "Critical"].includes(importance)
+  ) {
+    routes.createInvestigation = false;
+    routes.createWorkItem = false;
+    routes.replyRequired = false;
+    importance = "Low";
+  }
 
   return {
     source,
