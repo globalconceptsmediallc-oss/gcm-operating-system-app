@@ -1,3 +1,75 @@
+GLOBAL CONCEPTS MEDIA OPERATING SYSTEM — MASTER
+
+File: GCM_OS_MASTER.mdVersion: 1.3Status: AUTHORITATIVEPurpose: Master Architecture, Operating Standard, Production Handoff, and Current-State ReferenceLast Updated: 2026-07-25
+
+AUTHORITY
+
+This document is the primary authority for the Global Concepts Media Operating System (GCM OS).
+
+It exists to prevent architecture drift, conflicting documentation, lost decisions, and incomplete handoffs between development sessions.
+
+If an older GCM OS Markdown document conflicts with this document, this document takes precedence unless verified production evidence demonstrates that this document must be updated.
+
+Production evidence may include:
+
+Current production code
+
+D1 database structure
+
+Cloudflare configuration
+
+Current application behavior
+
+Verified operational road tests
+
+Current business workflows
+
+When production evidence reveals that this document is incomplete or inaccurate, this document should be updated.
+
+Do not create another competing master architecture document.
+
+PRODUCT MISSION
+
+GCM OS is the Agency Operating System used to run Global Concepts Media.
+
+Its purpose is to help Global Concepts Media consistently:
+
+Acquire better clients.
+
+Deliver measurable business improvements.
+
+Prove the value of completed work.
+
+Turn successful client engagements into future revenue.
+
+The operating model is:
+
+ACQUIRE↓DELIVER↓PROVE↓GROW↓ACQUIRE
+
+This is the Global Concepts Media agency flywheel.
+
+BUSINESS OBJECTIVE
+
+GCM OS must become operational enough that system development no longer consumes the majority of available working time.
+
+The operating system succeeds when it allows Global Concepts Media to spend the majority of its time:
+
+Prospecting
+
+Acquiring clients
+
+Performing client work
+
+Solving client problems
+
+Measuring results
+
+Communicating value
+
+Growing the agency
+
+GCM OS exists to support the business.
+
 Building GCM OS is not itself the primary business activity.
 
 CORE PRODUCT PRINCIPLE
