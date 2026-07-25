@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Work | GCM OS</title>
+
+  <meta
+    name="description"
+    content="Global Concepts Media Operating System investigation workspace."
+  />
+
+  <style>
+    :root {
+      --navy: #07192e;
+      --navy-2: #0b2746;
+      --blue: #1f6fd6;
+      --blue-soft: #edf5ff;
+      --gold: #e2b84d;
+      --background: #f2f5fa;
+      --card: #ffffff;
+      --border: #d9e1eb;
+      --text: #102039;
+      --muted: #66758a;
+      --green: #1f7a4d;
+      --green-soft: #eaf7f0;
+      --yellow: #986414;
+      --yellow-soft: #fff5df;
+      --red: #b23b3b;
+      --red-soft: #fff0f0;
+      --shadow: 0 12px 32px rgba(8, 23, 48, 0.08);
+      --radius: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--background);
+      color: var(--text);
+      font-family:
+        Inter,
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+    }
+
+    button,
+    select {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .app-shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 152px minmax(0, 1fr);
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 18px 10px;
+      background: linear-gradient(180deg, var(--navy-2), var(--navy));
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 2px 6px 18px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .brand-mark {
+      width: 28px;
+      height: 28px;
+      border-radius: 9px;
+      display: grid;
+      place-items: center;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--gold);
+      font-weight: 900;
+    }
+
+    .brand-copy strong,
+    .brand-copy span {
+      display: block;
+    }
+
+    .brand-copy strong {
+      font-size: 0.72rem;
+    }
+
+    .brand-copy span {
+      margin-top: 3px;
+      color: rgba(255, 255, 255, 0.56);
+      font-size: 0.54rem;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+    }
+
+    .nav-label {
+      margin: 18px 8px 8px;
+      color: rgba(255, 255, 255, 0.42);
+      font-size: 0.53rem;
+      font-weight: 800;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+    }
+
+    .nav {
+      display: grid;
+      gap: 6px;
+    }
+
+    .nav a {
+      min-height: 32px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 9px;
+      border-radius: 8px;
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+
+    .nav a.active {
+      background: rgba(38, 111, 218, 0.2);
+      color: #ffffff;
+      box-shadow: inset 3px 0 0 var(--gold);
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding: 14px 6px 2px;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      color: rgba(255, 255, 255, 0.58);
+      font-size: 0.58rem;
+      line-height: 1.5;
+    }
+
+    main {
+      min-width: 0;
+      padding: 24px 28px 44px;
+    }
+
+    .page {
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+
+    .eyebrow {
+      margin: 0 0 7px;
+      color: var(--blue);
+      font-size: 0.72rem;
+      font-weight: 900;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      color: var(--navy);
+      font-size: clamp(1.75rem, 3.2vw, 2.5rem);
+      line-height: 1;
+    }
+
+    .subtitle {
+      max-width: 760px;
+      margin: 8px 0 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .classification {
+      padding: 9px 12px;
+      border: 1px solid #c8d9f2;
+      border-radius: 999px;
+      background: var(--blue-soft);
+      color: #205c9f;
+      font-size: 0.58rem;
+      font-weight: 850;
+      white-space: nowrap;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .summary-card {
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+
+    .summary-label {
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 850;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+
+    .summary-value {
+      display: block;
+      margin-top: 5px;
+      color: var(--navy);
+      font-size: 1.45rem;
+      font-weight: 900;
+    }
+
+    .workspace-grid {
+      display: grid;
+      grid-template-columns: minmax(320px, 0.74fr) minmax(0, 1.26fr);
+      gap: 12px;
+      align-items: start;
+    }
+
+    .panel {
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+
+    .panel-header {
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .panel-header h2 {
+      margin: 0;
+      color: var(--navy);
+      font-size: 1rem;
+    }
+
+    .panel-header p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 0.8rem;
+      line-height: 1.45;
+    }
+
+    .panel-body {
+      padding: 14px 16px 18px;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      margin-bottom: 13px;
+    }
+
+    select,
+    .button {
+      min-height: 40px;
+      padding: 0 12px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: #ffffff;
+      color: var(--text);
+    }
+
+    select {
+      min-width: 215px;
+    }
+
+    .button {
+      color: var(--navy);
+      font-size: 0.8rem;
+      font-weight: 850;
+    }
+
+    .status {
+      margin-bottom: 13px;
+      padding: 12px 13px;
+      border-radius: 10px;
+      font-size: 0.79rem;
+      font-weight: 750;
+      line-height: 1.45;
+    }
+
+    .status.loading {
+      border: 1px solid #cbdcf4;
+      background: var(--blue-soft);
+      color: #225e9e;
+    }
+
+    .status.ready {
+      border: 1px solid #cbe5d6;
+      background: var(--green-soft);
+      color: var(--green);
+    }
+
+    .status.error {
+      border: 1px solid #efcccc;
+      background: var(--red-soft);
+      color: var(--red);
+    }
+
+    .investigation-list {
+      display: grid;
+      gap: 9px;
+      max-height: 720px;
+      overflow: auto;
+    }
+
+    .investigation {
+      width: 100%;
+      padding: 13px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #ffffff;
+      color: var(--text);
+      text-align: left;
+    }
+
+    .investigation:hover {
+      border-color: #abc5eb;
+      background: #fbfdff;
+    }
+
+    .investigation.active {
+      border-color: var(--blue);
+      background: var(--blue-soft);
+    }
+
+    .investigation-title {
+      display: block;
+      color: var(--navy);
+      font-size: 0.87rem;
+      font-weight: 850;
+      line-height: 1.4;
+    }
+
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.7rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 7px;
+      border-radius: 999px;
+      background: #eef2f7;
+      color: #59677b;
+      font-size: 0.65rem;
+      font-weight: 850;
+      text-transform: uppercase;
+    }
+
+    .badge.high,
+    .badge.urgent {
+      background: var(--red-soft);
+      color: var(--red);
+    }
+
+    .badge.normal,
+    .badge.medium {
+      background: var(--yellow-soft);
+      color: var(--yellow);
+    }
+
+    .badge.low {
+      background: var(--blue-soft);
+      color: #245ea3;
+    }
+
+    .detail-empty {
+      padding: 42px 20px;
+      border: 1px dashed var(--border);
+      border-radius: 9px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .detail-title {
+      margin: 0;
+      color: var(--navy);
+      font-size: 1.4rem;
+      line-height: 1.25;
+    }
+
+    .detail-subtitle {
+      margin: 7px 0 0;
+      color: var(--muted);
+      font-size: 0.79rem;
+    }
+
+    .detail-stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 9px;
+      margin-top: 16px;
+    }
+
+    .detail-stat {
+      padding: 11px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fafbfd;
+    }
+
+    .detail-stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.64rem;
+      font-weight: 850;
+      text-transform: uppercase;
+    }
+
+    .detail-stat strong {
+      display: block;
+      margin-top: 4px;
+      color: var(--navy);
+      font-size: 0.82rem;
+    }
+
+    .detail-section {
+      margin-top: 17px;
+      padding-top: 15px;
+      border-top: 1px solid var(--border);
+    }
+
+    .detail-section h3 {
+      margin: 0 0 7px;
+      color: var(--navy);
+      font-size: 0.72rem;
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .detail-section p {
+      margin: 0;
+      color: var(--text);
+      font-size: 0.88rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+
+    .communication {
+      padding: 13px;
+      border: 1px solid #cbdcf4;
+      border-radius: 8px;
+      background: #f8fbff;
+    }
+
+    .communication strong {
+      display: block;
+      color: var(--navy);
+      font-size: 0.88rem;
+    }
+
+    .communication small {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+    }
+
+    .communication p {
+      margin-top: 10px;
+    }
+
+    .empty {
+      padding: 14px 16px;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 0.8rem;
+    }
+
+    @media (max-width: 1050px) {
+      .workspace-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .investigation-list {
+        max-height: none;
+      }
+    }
+
+    @media (max-width: 800px) {
+      .app-shell {
+        display: block;
+      }
+
+      .sidebar {
+        display: none;
+      }
+
+      main {
+        padding: 14px 16px;
+      }
+
+      .page-header {
+        display: grid;
+      }
+
+      .summary-grid,
+      .detail-stats {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="today.html">
+        <span class="brand-mark">G</span>
+        <span class="brand-copy">
+          <strong>Global Concepts Media</strong>
+          <span>Agency Operating System</span>
+        </span>
+      </a>
+
+      <p class="nav-label">Workspace</p>
+
+      <nav class="nav">
+        <a href="today.html">⌂ <span>Today</span></a>
+        <a href="client-pre-research.html">◎ <span>Prospects</span></a>
+        <a href="clients.html">◫ <span>Clients</span></a>
+        <a href="communications.html">✉ <span>Communications</span></a>
+        <a class="active" href="work.html">✓ <span>Work</span></a>
+      </nav>
+
+      <div class="sidebar-footer">
+        Mission Control operational<br />
+        Work v1.0.1
+      </div>
+    </aside>
+
+    <main>
+      <div class="page">
+        <header class="page-header">
+          <div>
+            <p class="eyebrow">Mission Control</p>
+            <h1>Work Queue</h1>
+            <p class="subtitle">
+              Review the open investigations already stored in D1 and see exactly
+              what needs attention before any work is created.
+            </p>
+          </div>
+
+          <span class="classification">Read Only · v1.0.1</span>
+        </header>
+
+        <section class="summary-grid">
+          <article class="summary-card">
+            <span class="summary-label">Open Investigations</span>
+            <strong id="open-investigations" class="summary-value">—</strong>
+          </article>
+
+          <article class="summary-card">
+            <span class="summary-label">Clients With Open Work</span>
+            <strong id="clients-with-investigations" class="summary-value">—</strong>
+          </article>
+
+          <article class="summary-card">
+            <span class="summary-label">Existing Work Items</span>
+            <strong id="work-items" class="summary-value">—</strong>
+          </article>
+        </section>
+
+        <section class="workspace-grid">
+          <article class="panel">
+            <div class="panel-header">
+              <h2>Open Investigations</h2>
+              <p>
+                Live records from the existing client workspace Worker action.
+              </p>
+            </div>
+
+            <div class="panel-body">
+              <div class="toolbar">
+                <select id="client-filter" aria-label="Filter by client">
+                  <option value="">All clients</option>
+                </select>
+
+                <button id="refresh-button" class="button" type="button">
+                  Refresh
+                </button>
+              </div>
+
+              <div id="runtime-status" class="status loading">
+                Loading open investigations from production D1…
+              </div>
+
+              <div id="investigation-list" class="investigation-list"></div>
+            </div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-header">
+              <h2>Investigation Context</h2>
+              <p>
+                The first version answers one question: what needs investigating and why?
+              </p>
+            </div>
+
+            <div id="detail-panel" class="panel-body">
+              <div class="detail-empty">
+                Select an open investigation from the list.
+              </div>
+            </div>
+          </article>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    (function initializeWorkPage() {
+      "use strict";
+
+      const VERSION = "1.0.1";
+
+      const WORKER_URL =
+        "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+
+      /*
+       * Existing GCM OS client codes.
+       * Work v1 does not write any data; it asks the existing
+       * get-client-workspace action for each client's live D1 records.
+       */
+      const CLIENTS = [
+        { code: "SES", name: "Southeast Safes" },
+        { code: "4A", name: "1-800 4A Gun Safe" },
+        { code: "A1", name: "A1 Action Safe & Lock" },
+        { code: "NFS", name: "North Florida Safes" },
+        { code: "HBG", name: "HB Guns" },
+        { code: "PW", name: "Pickett Weaponry" },
+        { code: "SFS", name: "South Florida Safes" },
+        { code: "MAS", name: "Move A Safe" },
+        { code: "GCM", name: "Global Concepts Media" },
+        { code: "LUMI", name: "Lumi Studio" }
+      ];
+
+      const elements = {
+        openInvestigations: document.getElementById("open-investigations"),
+        clientsWithInvestigations: document.getElementById("clients-with-investigations"),
+        workItems: document.getElementById("work-items"),
+        clientFilter: document.getElementById("client-filter"),
+        refreshButton: document.getElementById("refresh-button"),
+        runtimeStatus: document.getElementById("runtime-status"),
+        investigationList: document.getElementById("investigation-list"),
+        detailPanel: document.getElementById("detail-panel")
+      };
+
+      let investigations = [];
+      let workItemCount = 0;
+      let selectedKey = "";
+
+      CLIENTS.forEach((client) => {
+        const option = document.createElement("option");
+        option.value = client.code;
+        option.textContent = client.name;
+        elements.clientFilter.appendChild(option);
+      });
+
+      elements.clientFilter.addEventListener("change", renderInvestigationList);
+      elements.refreshButton.addEventListener("click", loadWorkPage);
+
+      loadWorkPage();
+
+      async function loadWorkPage() {
+        setStatus("loading", "Loading open investigations from production D1…");
+        elements.refreshButton.disabled = true;
+        selectedKey = "";
+        elements.investigationList.innerHTML = "";
+        elements.detailPanel.innerHTML =
+          '<div class="detail-empty">Select an open investigation from the list.</div>';
+
+        try {
+          const results = await Promise.allSettled(
+            CLIENTS.map((client) => loadClientWorkspace(client))
+          );
+
+          const loadedInvestigations = [];
+          let loadedWorkItems = 0;
+          const failures = [];
+
+          results.forEach((result, index) => {
+            const client = CLIENTS[index];
+
+            if (result.status !== "fulfilled") {
+              failures.push(
+                `${client.name}: ${result.reason?.message || "workspace load failed"}`
+              );
+              return;
+            }
+
+            const payload = result.value;
+            const operational = payload.operational || {};
+            const communications = Array.isArray(operational.communications)
+              ? operational.communications
+              : [];
+            const clientInvestigations = Array.isArray(operational.investigations)
+              ? operational.investigations
+              : [];
+
+            const communicationById = new Map(
+              communications.map((communication) => [
+                Number(communication.id),
+                communication
+              ])
+            );
+
+            clientInvestigations
+              .filter((item) => !isClosedInvestigation(item))
+              .forEach((item) => {
+                loadedInvestigations.push({
+                  ...item,
+                  clientCode:
+                    operational.client?.client_code ||
+                    client.code,
+                  clientName:
+                    operational.client?.name ||
+                    client.name,
+                  communication:
+                    communicationById.get(Number(item.communication_id)) || null
+                });
+              });
+
+            loadedWorkItems += Number(payload.counts?.workItems || 0);
+          });
+
+          investigations = loadedInvestigations.sort(sortInvestigations);
+          workItemCount = loadedWorkItems;
+
+          renderSummary();
+          renderInvestigationList();
+
+          if (failures.length) {
+            setStatus(
+              "error",
+              `Loaded ${investigations.length} open investigations. ${failures.length} client workspace request${failures.length === 1 ? "" : "s"} failed.`
+            );
+
+            console.warn("Work Page v1 workspace load failures:", failures);
+          } else {
+            setStatus(
+              "ready",
+              `Loaded ${investigations.length} open investigations from production D1.`
+            );
+          }
+        } catch (error) {
+          console.error("Work Page v1 failed:", error);
+
+          investigations = [];
+          workItemCount = 0;
+          renderSummary();
+
+          elements.investigationList.innerHTML =
+            `<div class="empty">${escapeHtml(
+              error?.message || "The investigation workspace could not be loaded."
+            )}</div>`;
+
+          setStatus(
+            "error",
+            error?.message || "The investigation workspace could not be loaded."
+          );
+        } finally {
+          elements.refreshButton.disabled = false;
+        }
+      }
+
+      async function loadClientWorkspace(client) {
+        const response = await fetch(WORKER_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json"
+          },
+          body: JSON.stringify({
+            action: "get-client-workspace",
+            clientCode: client.code
+          })
+        });
+
+        const payload = await response.json().catch(() => ({}));
+
+        if (!response.ok || !payload?.ok) {
+          throw new Error(
+            payload?.error ||
+            `Workspace request failed with HTTP ${response.status}.`
+          );
+        }
+
+        /*
+         * Work v1 deliberately consumes the operational payload already
+         * returned by get-client-workspace. No new Worker route or D1 query
+         * is introduced by this page.
+         */
+        return payload;
+      }
+
+      function renderSummary() {
+        elements.openInvestigations.textContent = investigations.length;
+
+        elements.clientsWithInvestigations.textContent =
+          new Set(investigations.map((item) => item.clientCode)).size;
+
+        elements.workItems.textContent = workItemCount;
+      }
+
+      function renderInvestigationList() {
+        const clientFilter = elements.clientFilter.value;
+
+        const visibleInvestigations = clientFilter
+          ? investigations.filter((item) => item.clientCode === clientFilter)
+          : investigations;
+
+        if (!visibleInvestigations.length) {
+          elements.investigationList.innerHTML =
+            '<div class="empty">No open investigations match this view.</div>';
+          return;
+        }
+
+        elements.investigationList.innerHTML = visibleInvestigations
+          .map((item) => {
+            const key = investigationKey(item);
+            const priority = normalizeValue(item.priority || "normal");
+
+            return `
+              <button
+                class="investigation${key === selectedKey ? " active" : ""}"
+                type="button"
+                data-investigation-key="${escapeHtml(key)}"
+              >
+                <span class="investigation-title">
+                  ${escapeHtml(item.title || "Investigation")}
+                </span>
+
+                <span class="meta-row">
+                  <span>${escapeHtml(item.clientName)}</span>
+                  <span class="badge ${escapeHtml(priority)}">
+                    ${escapeHtml(item.priority || "normal")}
+                  </span>
+                  <span>${escapeHtml(item.status || "open")}</span>
+                  <span>${escapeHtml(formatDate(item.opened_at || item.created_at))}</span>
+                </span>
+              </button>
+            `;
+          })
+          .join("");
+
+        elements.investigationList
+          .querySelectorAll("[data-investigation-key]")
+          .forEach((button) => {
+            button.addEventListener("click", () => {
+              selectedKey = button.dataset.investigationKey || "";
+
+              const investigation = investigations.find(
+                (item) => investigationKey(item) === selectedKey
+              );
+
+              if (investigation) {
+                renderInvestigationDetail(investigation);
+              }
+
+              renderInvestigationList();
+            });
+          });
+      }
+
+      function renderInvestigationDetail(item) {
+        const communication = item.communication;
+
+        elements.detailPanel.innerHTML = `
+          <h2 class="detail-title">
+            ${escapeHtml(item.title || "Investigation")}
+          </h2>
+
+          <p class="detail-subtitle">
+            ${escapeHtml(item.clientName)}
+            · Investigation #${escapeHtml(item.id)}
+            ${
+              item.communication_id
+                ? `· Communication #${escapeHtml(item.communication_id)}`
+                : ""
+            }
+          </p>
+
+          <div class="detail-stats">
+            <div class="detail-stat">
+              <span>Priority</span>
+              <strong>${escapeHtml(item.priority || "normal")}</strong>
+            </div>
+
+            <div class="detail-stat">
+              <span>Status</span>
+              <strong>${escapeHtml(item.status || "open")}</strong>
+            </div>
+
+            <div class="detail-stat">
+              <span>Assigned To</span>
+              <strong>${escapeHtml(
+                item.assigned_to ||
+                item.owner ||
+                "Unassigned"
+              )}</strong>
+            </div>
+          </div>
+
+          <section class="detail-section">
+            <h3>What Needs Investigation</h3>
+            <p>${escapeHtml(
+              item.description ||
+              "No investigation description was stored."
+            )}</p>
+          </section>
+
+          <section class="detail-section">
+            <h3>Recommended Next Step</h3>
+            <p>${escapeHtml(
+              item.recommendation ||
+              "No recommendation was stored."
+            )}</p>
+          </section>
+
+          <section class="detail-section">
+            <h3>Current Finding</h3>
+            <p>${escapeHtml(
+              item.finding_summary ||
+              "No finding has been recorded yet."
+            )}</p>
+          </section>
+
+          <section class="detail-section">
+            <h3>Originating Communication</h3>
+
+            ${
+              communication
+                ? `
+                  <div class="communication">
+                    <strong>
+                      ${escapeHtml(
+                        communication.subject ||
+                        communication.category ||
+                        "Communication"
+                      )}
+                    </strong>
+
+                    <small>
+                      ${escapeHtml(communication.source || "Unknown source")}
+                      · ${escapeHtml(
+                        formatDate(
+                          communication.occurred_at ||
+                          communication.created_at
+                        )
+                      )}
+                    </small>
+
+                    <p>${escapeHtml(
+                      communication.ai_summary ||
+                      communication.raw_content ||
+                      "No communication summary was stored."
+                    )}</p>
+                  </div>
+                `
+                : `
+                  <div class="communication">
+                    <strong>
+                      Communication #${escapeHtml(
+                        item.communication_id || "Unknown"
+                      )}
+                    </strong>
+
+                    <p>
+                      The investigation has a communication link, but that
+                      communication was not returned in this workspace response.
+                    </p>
+                  </div>
+                `
+            }
+          </section>
+        `;
+      }
+
+      function isClosedInvestigation(item) {
+        const status = normalizeValue(item?.status);
+
+        return status === "resolved" || status === "closed";
+      }
+
+      function sortInvestigations(a, b) {
+        const priorityOrder = {
+          urgent: 0,
+          high: 1,
+          normal: 2,
+          medium: 2,
+          low: 3
+        };
+
+        const firstPriority =
+          priorityOrder[normalizeValue(a.priority)] ?? 4;
+
+        const secondPriority =
+          priorityOrder[normalizeValue(b.priority)] ?? 4;
+
+        if (firstPriority !== secondPriority) {
+          return firstPriority - secondPriority;
+        }
+
+        const firstDate =
+          Date.parse(a.opened_at || a.created_at || "") || 0;
+
+        const secondDate =
+          Date.parse(b.opened_at || b.created_at || "") || 0;
+
+        return secondDate - firstDate;
+      }
+
+      function investigationKey(item) {
+        return `${item.clientCode}:${item.id}`;
+      }
+
+      function normalizeValue(value) {
+        return String(value || "")
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, "_");
+      }
+
+      function formatDate(value) {
+        if (!value) {
+          return "Date not recorded";
+        }
+
+        const date = new Date(value);
+
+        if (Number.isNaN(date.getTime())) {
+          return String(value).slice(0, 10);
+        }
+
+        return new Intl.DateTimeFormat("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric"
+        }).format(date);
+      }
+
+      function setStatus(type, message) {
+        elements.runtimeStatus.className = `status ${type}`;
+        elements.runtimeStatus.textContent = message;
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      console.info(`GCM OS Work Page v${VERSION}`);
+    })();
+  </script>
+</body>
+</html>
