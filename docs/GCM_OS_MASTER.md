@@ -1,86 +1,6 @@
-GLOBAL CONCEPTS MEDIA OPERATING SYSTEM — MASTER
-
-File: GCM_OS_MASTER.mdVersion: 1.2Status: AUTHORITATIVEPurpose: Master Architecture, Operating Standard, Production Handoff, and Current-State ReferenceLast Updated: 2026-07-25
-
-1. AUTHORITY
-
-This document is the primary authority for the Global Concepts Media Operating System (GCM OS).
-
-It exists to prevent architecture drift, conflicting documentation, lost decisions, and incomplete handoffs between development sessions.
-
-If an older GCM OS Markdown document conflicts with this document, this document takes precedence unless verified production evidence demonstrates that this document must be updated.
-
-Production evidence may include:
-
-Current production code
-
-D1 database structure
-
-Cloudflare configuration
-
-Current application behavior
-
-Verified operational road tests
-
-Current business workflows
-
-When production evidence reveals that this document is incomplete or inaccurate, this document should be updated.
-
-Do not create another competing master architecture document.
-
-2. PRODUCT MISSION
-
-GCM OS is the Agency Operating System used to run Global Concepts Media.
-
-Its purpose is to help Global Concepts Media consistently:
-
-Acquire better clients.
-
-Deliver measurable business improvements.
-
-Prove the value of completed work.
-
-Turn successful client engagements into future revenue.
-
-The operating model is:
-
-ACQUIRE
-   ↓
-DELIVER
-   ↓
-PROVE
-   ↓
-GROW
-   ↓
-ACQUIRE
-
-This is the Global Concepts Media agency flywheel.
-
-3. BUSINESS OBJECTIVE
-
-GCM OS must become operational enough that system development no longer consumes the majority of available working time.
-
-The operating system succeeds when it allows Global Concepts Media to spend the majority of its time:
-
-Prospecting
-
-Acquiring clients
-
-Performing client work
-
-Solving client problems
-
-Measuring results
-
-Communicating value
-
-Growing the agency
-
-GCM OS exists to support the business.
-
 Building GCM OS is not itself the primary business activity.
 
-4. CORE PRODUCT PRINCIPLE
+CORE PRODUCT PRINCIPLE
 
 The consulting workflow is the product.
 
@@ -100,7 +20,7 @@ Grow the agency
 
 If a proposed feature does none of these things, it should not be prioritized.
 
-5. OPERATIONAL PRINCIPLE
+OPERATIONAL PRINCIPLE
 
 GCM OS should mirror the real operational workflow of Global Concepts Media.
 
@@ -108,7 +28,7 @@ The software should not force the agency to follow an artificial workflow simply
 
 Real operational evidence should determine how the system evolves.
 
-6. EVIDENCE BEFORE ASSUMPTIONS
+EVIDENCE BEFORE ASSUMPTIONS
 
 Evidence Before Assumptions is a permanent GCM OS principle.
 
@@ -132,7 +52,7 @@ AI interpretation must remain distinguishable from factual evidence.
 
 Important recommendations should remain traceable to supporting evidence.
 
-7. EVIDENCE SOURCES
+EVIDENCE SOURCES
 
 GCM OS may receive evidence from multiple sources.
 
@@ -198,7 +118,7 @@ Other connected business systems
 
 Evidence does not have to originate from AI to be valid.
 
-8. DATA MODEL PRINCIPLE
+DATA MODEL PRINCIPLE
 
 GCM OS is a record-based operating system.
 
@@ -208,7 +128,7 @@ Different durable records own different information.
 
 The system should preserve relationships between those records rather than forcing all information into one master object.
 
-9. BUSINESS RECORD
+BUSINESS RECORD
 
 The Business Record remains useful but is not the entire operating system.
 
@@ -240,7 +160,7 @@ Known business information should not require repeated manual entry.
 
 Operational history belongs in the appropriate operational records rather than being forced into the Business Record.
 
-10. OPERATIONAL RECORDS
+OPERATIONAL RECORDS
 
 Current GCM OS includes concepts such as:
 
@@ -270,29 +190,11 @@ Reports and dashboards read from operational records.
 
 Reports do not replace those records.
 
-11. CURRENT OPERATIONAL CYCLE
+CURRENT OPERATIONAL CYCLE
 
 The active-client operational cycle is:
 
-Communication / Evidence
-        ↓
-Understand What Happened
-        ↓
-Investigation When Warranted
-        ↓
-Work When Required
-        ↓
-Evidence / Measurement
-        ↓
-Outcome
-        ↓
-Proof of Work
-        ↓
-Client Intelligence / Reporting
-        ↓
-Client Communication
-        ↓
-Next Action
+Communication / Evidence↓Understand What Happened↓Investigation When Warranted↓Work When Required↓Evidence / Measurement↓Outcome↓Proof of Work↓Client Intelligence / Reporting↓Client Communication↓Next Action
 
 Not every communication requires work.
 
@@ -302,7 +204,7 @@ Not every investigation produces an immediate task.
 
 The system must preserve these distinctions.
 
-12. COMMUNICATIONS
+COMMUNICATIONS
 
 Communications represent meaningful incoming or outgoing business communication.
 
@@ -330,29 +232,13 @@ Communications may lead to work.
 
 Receiving a communication or automated report does not automatically constitute Proof of Work.
 
-13. CURRENT COMMUNICATIONS ROAD TEST
+CURRENT COMMUNICATIONS ROAD TEST
 
 The production Communications workflow has now been road-tested with real screenshots and real client communications.
 
 The current flow is:
 
-Select / Detect Client
-        ↓
-Paste Email Text and/or Upload Screenshot
-        ↓
-Generate Operational Decision
-        ↓
-Review Detected Client
-        ↓
-Review Analysis
-        ↓
-Determine Routing
-        ↓
-Accept & Save
-        ↓
-Communication Saved to D1
-        ↓
-Investigation Created When Selected
+Select / Detect Client↓Paste Email Text and/or Upload Screenshot↓Generate Operational Decision↓Review Detected Client↓Review Analysis↓Determine Routing↓Accept & Save↓Communication Saved to D1↓Investigation Created When Selected
 
 Verified production behavior includes:
 
@@ -382,7 +268,7 @@ A communication may create an Investigation, but an Investigation must not autom
 
 The Investigation exists to determine whether action is actually required.
 
-14. INVESTIGATIONS
+INVESTIGATIONS
 
 An Investigation represents something that requires further understanding before the correct operational action is known.
 
@@ -414,27 +300,7 @@ What should we do with this?
 
 The system should then support a process such as:
 
-Review Original Evidence
-        ↓
-Define Investigation Objective
-        ↓
-Determine What Must Be Checked
-        ↓
-Collect Additional Evidence
-        ↓
-Interpret the Evidence
-        ↓
-Record the Finding
-        ↓
-Decision
-   ↙             ↘
-No Action        Action Required
-   ↓                  ↓
-Resolve          Create Specific Work Item
-Investigation          ↓
-                  Perform Work
-                       ↓
-                  Capture Evidence / Result
+Review Original Evidence↓Define Investigation Objective↓Determine What Must Be Checked↓Collect Additional Evidence↓Interpret the Evidence↓Record the Finding↓Decision↙             ↘No Action        Action Required↓                  ↓Resolve          Create Specific Work ItemInvestigation          ↓Perform Work↓Capture Evidence / Result
 
 An investigation may legitimately end with:
 
@@ -448,7 +314,7 @@ Corrective work required
 
 The existence of an investigation does not prove that work is necessary.
 
-15. WORK / ACTIVITIES
+WORK / ACTIVITIES
 
 Work represents actions performed to improve, correct, create, investigate, implement, optimize, or maintain something for a client.
 
@@ -510,7 +376,7 @@ This is expected because Investigation Processing has not yet been operationaliz
 
 The next phase should create Work Items only after an investigation confirms that specific corrective work is required.
 
-16. PROOF OF WORK
+PROOF OF WORK
 
 Proof of Work represents completed work and its value.
 
@@ -580,25 +446,11 @@ Supporting evidence
 
 The richness of these records is important because downstream client communication depends on the quality of upstream operational intelligence.
 
-17. HISTORICAL PROOF OF WORK LESSON
+HISTORICAL PROOF OF WORK LESSON
 
 Before GCM OS, the successful workflow was approximately:
 
-Client Email / Screenshot
-        ↓
-ChatGPT Analysis
-        ↓
-Business Interpretation
-        ↓
-Rich TSV Proof of Work Record
-        ↓
-Proof of Work Spreadsheet
-        ↓
-Accumulated Client History
-        ↓
-Weekly / Monthly Reporting
-        ↓
-Client Communication
+Client Email / Screenshot↓ChatGPT Analysis↓Business Interpretation↓Rich TSV Proof of Work Record↓Proof of Work Spreadsheet↓Accumulated Client History↓Weekly / Monthly Reporting↓Client Communication
 
 The important function performed by ChatGPT was not transcription.
 
@@ -610,25 +462,13 @@ Investigation-to-Proof Consulting Loop
 
 The road test clarified that the historical process also contained an important middle loop:
 
-Initial Evidence / TSV
-        ↓
-Ask: What Is the Next Step?
-        ↓
-Investigate
-        ↓
-Perform the Correct Fix
-        ↓
-Create Follow-Up TSV / Proof Record
-        ↓
-Wait for Result / Continue Monitoring
-        ↓
-Use Completed Work + Result in Weekly Client Email
+Initial Evidence / TSV↓Ask: What Is the Next Step?↓Investigate↓Perform the Correct Fix↓Create Follow-Up TSV / Proof Record↓Wait for Result / Continue Monitoring↓Use Completed Work + Result in Weekly Client Email
 
 This is now a required GCM OS behavior.
 
 The software should not reduce this consulting loop to a generic ticket system.
 
-18. SCREENSHOT AND DOCUMENT INTAKE
+SCREENSHOT AND DOCUMENT INTAKE
 
 Screenshot analysis is an intake mechanism.
 
@@ -640,31 +480,13 @@ Make AI read a screenshot.
 
 The objective is:
 
-Screenshot / Email
-        ↓
-Understand the Evidence
-        ↓
-Identify the Correct Client
-        ↓
-Understand What Happened
-        ↓
-Preserve Important Measurable Evidence
-        ↓
-Explain Why It Matters
-        ↓
-Determine Whether Investigation Is Required
-        ↓
-Determine Whether Work Is Required
-        ↓
-Preserve Results
-        ↓
-Support Future Client Reporting
+Screenshot / Email↓Understand the Evidence↓Identify the Correct Client↓Understand What Happened↓Preserve Important Measurable Evidence↓Explain Why It Matters↓Determine Whether Investigation Is Required↓Determine Whether Work Is Required↓Preserve Results↓Support Future Client Reporting
 
 OCR or vision accuracy alone does not define success.
 
 The intelligence created from the evidence is what creates business value.
 
-19. CLIENT REPORTING
+CLIENT REPORTING
 
 Operational records must preserve enough structured intelligence to support high-quality client communication.
 
@@ -694,7 +516,7 @@ Proof of Work Digest
 
 Future GCM OS reporting should preserve this capability through structured operational history.
 
-20. CLIENT COMMUNICATION STANDARD
+CLIENT COMMUNICATION STANDARD
 
 Client communications should communicate value rather than merely list activity.
 
@@ -726,7 +548,7 @@ What is still being monitored
 
 What work is planned for the week ahead
 
-21. MISSION CONTROL
+MISSION CONTROL
 
 Mission Control is the operational starting point.
 
@@ -752,7 +574,7 @@ work.html
 
 This connection was deployed and verified in production.
 
-22. BUSINESS / CLIENT WORKSPACE PRINCIPLE
+BUSINESS / CLIENT WORKSPACE PRINCIPLE
 
 A business should accumulate history rather than being recreated as it progresses through the GCM relationship.
 
@@ -780,7 +602,7 @@ The workspace organizes operational information.
 
 It does not replace the underlying records.
 
-23. PROSPECTING
+PROSPECTING
 
 Prospecting belongs to the Acquire pillar.
 
@@ -814,7 +636,7 @@ Unknown information remains unknown.
 
 One highest-value next action should be clear.
 
-24. CONSULTING CAPABILITIES
+CONSULTING CAPABILITIES
 
 Capabilities exist to answer useful consulting questions.
 
@@ -838,7 +660,7 @@ A capability should exist because it improves a real consulting or operational d
 
 Capabilities do not exist merely because the technology can support them.
 
-25. ARTIFICIAL INTELLIGENCE
+ARTIFICIAL INTELLIGENCE
 
 GCM OS is AI-assisted.
 
@@ -872,7 +694,7 @@ AI architecture should remain modular where that improves reliability and mainta
 
 The Worker is an orchestration/execution layer, not the consulting methodology itself.
 
-26. 90-DAY GROWTH REVIEW
+90-DAY GROWTH REVIEW
 
 The 90-Day Growth Review remains an important paid consulting deliverable.
 
@@ -906,7 +728,7 @@ For prospects, the Growth Review may rely heavily on public evidence.
 
 For existing clients, it may use richer verified operational history already contained within GCM OS.
 
-27. BUSINESS SNAPSHOT
+BUSINESS SNAPSHOT
 
 The Business Snapshot remains a prospect-facing entry product.
 
@@ -916,7 +738,7 @@ It should not attempt to replace the deeper consulting engagement.
 
 The Snapshot belongs primarily to the Acquire pillar.
 
-28. REPORTS AND DELIVERABLES
+REPORTS AND DELIVERABLES
 
 Reports are outputs.
 
@@ -942,27 +764,15 @@ Case Study
 
 Reports should be generated from durable operational intelligence whenever practical.
 
-29. CONTINUOUS IMPROVEMENT
+CONTINUOUS IMPROVEMENT
 
 The operating cycle is:
 
-Evidence
-   ↓
-Understand
-   ↓
-Recommend / Investigate
-   ↓
-Implement
-   ↓
-Measure
-   ↓
-Learn
-   ↓
-Improve
+Evidence↓Understand↓Recommend / Investigate↓Implement↓Measure↓Learn↓Improve
 
 New evidence should improve the understanding of the business without destroying historical context.
 
-30. PRODUCTION INFRASTRUCTURE
+PRODUCTION INFRASTRUCTURE
 
 Current GCM OS production infrastructure includes:
 
@@ -982,9 +792,7 @@ Cloudflare Images
 
 Current Cloudflare bindings are:
 
-AI = Workers AI
-DB = D1
-IMAGES = Cloudflare Images
+AI = Workers AIDB = D1IMAGES = Cloudflare Images
 
 Production application repository:
 
@@ -998,7 +806,7 @@ Production Worker:
 
 gcm-business-intelligence-worker
 
-31. WRANGLER.TOML — PRODUCTION RULE
+WRANGLER.TOML — PRODUCTION RULE
 
 wrangler.toml is part of the production architecture.
 
@@ -1020,7 +828,7 @@ That issue is considered resolved.
 
 Do not reopen it unless new production evidence demonstrates a problem.
 
-32. AUDITED REPOSITORY AND PRODUCTION STATE
+AUDITED REPOSITORY AND PRODUCTION STATE
 
 The repository was audited file-by-file before this Master update.
 
@@ -1126,10 +934,7 @@ Current state is intentionally read-only.
 
 Verified D1 state at this checkpoint:
 
-Open Investigations: 23
-Clients With Open Investigations: 7
-Existing Work Items: 0
-Evidence Records: 0
+Open Investigations: 23Clients With Open Investigations: 7Existing Work Items: 0Evidence Records: 0
 
 The D1 schema already contains and links:
 
@@ -1225,7 +1030,7 @@ This reflects historical capability development and may not match the current pr
 
 Tests and workflows should therefore be evaluated with the capability they protect rather than treated automatically as current production dependencies.
 
-33. ENGINEERING GOVERNANCE
+ENGINEERING GOVERNANCE
 
 Engineering should minimize technical and business risk.
 
@@ -1251,21 +1056,9 @@ Do not add features simply because they are technically interesting.
 
 Production changes follow:
 
-Understand
-   ↓
-Define Success
-   ↓
-Change
-   ↓
-Deploy
-   ↓
-Test
-   ↓
-Verify
-   ↓
-Lock
+Understand↓Define Success↓Change↓Deploy↓Test↓Verify↓Lock
 
-34. DEVELOPMENT STANDARD
+DEVELOPMENT STANDARD
 
 Andy is not a coder.
 
@@ -1295,10 +1088,7 @@ Every production file must contain a clear installed-version header near the top
 
 At minimum the header must identify:
 
-Global Concepts Media Operating System
-File: <filename>
-Version: <version>
-Status: Production
+Global Concepts Media Operating SystemFile: <filename>Version: <version>Status: Production
 
 Use the correct comment syntax for the file type.
 
@@ -1325,7 +1115,7 @@ Handoffs
 
 Future production replacement files must include this header before they are delivered for deployment.
 
-35. DESIGN PRINCIPLES
+DESIGN PRINCIPLES
 
 GCM OS is a professional operating environment.
 
@@ -1351,7 +1141,7 @@ Visual complexity should not be introduced without operational value.
 
 New operational pages should visually belong to the existing Mission Control application shell rather than introduce a competing interface style.
 
-36. REPOSITORY PRINCIPLE
+REPOSITORY PRINCIPLE
 
 Repository responsibilities should remain clear.
 
@@ -1363,7 +1153,7 @@ Other repositories may preserve specialized standards, methodology, marketing as
 
 Methodology and operational execution should not be confused.
 
-37. DOCUMENTATION AUTHORITY
+DOCUMENTATION AUTHORITY
 
 This Master replaces the practice of requiring a new development session to interpret multiple generations of architecture before work can begin.
 
@@ -1395,7 +1185,7 @@ The 90-Day Growth Review is the architectural center of GCM OS.
 
 These statements reflect earlier stages of development.
 
-38. HANDOFF STANDARD
+HANDOFF STANDARD
 
 A new GCM OS development thread should begin with this file.
 
@@ -1443,7 +1233,7 @@ The next development thread needs a new authoritative starting point.
 
 This reduces development drag while preserving reliable handoffs.
 
-39. CURRENT AUDIT STATUS
+CURRENT AUDIT STATUS
 
 The repository discovery pass and file-by-file audit have been completed.
 
@@ -1497,27 +1287,11 @@ Verify before continuing.
 
 Do not redesign the system during cleanup.
 
-40. CURRENT BUSINESS SUCCESS CONDITION
+CURRENT BUSINESS SUCCESS CONDITION
 
 GCM OS is operational when Global Concepts Media can reliably:
 
-Receive Client Communication / Evidence
-        ↓
-Understand What Happened
-        ↓
-Investigate When Necessary
-        ↓
-Perform the Correct Work
-        ↓
-Preserve Evidence and Results
-        ↓
-Create Useful Proof of Work
-        ↓
-Accumulate Client Intelligence
-        ↓
-Generate Strong Client Communications
-        ↓
-Know What Needs Attention Next
+Receive Client Communication / Evidence↓Understand What Happened↓Investigate When Necessary↓Perform the Correct Work↓Preserve Evidence and Results↓Create Useful Proof of Work↓Accumulate Client Intelligence↓Generate Strong Client Communications↓Know What Needs Attention Next
 
 At the same time, the system must support prospecting and client acquisition.
 
@@ -1525,149 +1299,193 @@ The ultimate success condition is:
 
 Global Concepts Media spends the majority of its time acquiring clients, performing valuable client work, communicating measurable value, and growing the business rather than continually building its operating system.
 
-41. CURRENT PRODUCTION HANDOFF — 2026-07-25
+CURRENT PRODUCTION HANDOFF — 2026-07-25
 
 This section is the authoritative starting point for the next development thread.
 
-Verified Production State
+Verified Investigation Processing Road Test
 
-Communications intake and persistence are operational enough to continue the end-to-end road test.
+The Investigation Processing phase has now been road-tested in production using real Southeast Safes evidence.
 
 Production Work Queue:
 
-File: work.html
-Version: 1.0.2
-Status: Production
+File: work.htmlVersion: 1.1.0Status: Production
 
-Verified road-test result:
+Verified behavior:
 
-Open Investigations: 23
-Clients With Open Investigations: 7
-Existing Work Items: 0
-Evidence Records: 0
+The Work Queue reads live open Investigations from production D1.
 
-work.html v1.0.2:
+The consultant can review the originating Communication, Investigation description, recommended next step, current finding, and assigned owner.
 
-Is connected to Mission Control.
+An Investigation Finding can be recorded.
 
-Reads live production D1 state.
+An Investigation can be closed when no specific Work Item is required.
 
-Lists open investigations.
+Closing an Investigation removes it from the open Investigation count.
 
-Filters by client.
+Investigation Processing remains deliberately separate from Work Item creation.
 
-Opens the highest-priority investigation automatically.
+The road test confirmed the governing rule:
 
-Displays originating communication context.
+Communication / Evidence↓Investigation When Warranted↓Gather Additional Evidence↓Record Finding↓Operational Decision↙                     ↘No Work Required         Specific Work Required↓                           ↓Close Investigation       Create Work Item↓Perform Work↓Evidence / Result↓Proof of Work
 
-Displays investigation description and recommendation.
+Historical Routing Corrections
 
-Displays current finding when present.
+The road test found historical Communications that had been over-routed into Investigations even though their source evidence described routine monitoring or informational updates.
 
-Is intentionally read-only at this checkpoint.
+Two verified examples were corrected directly in D1:
 
-Uses existing Worker actions rather than creating duplicate routes.
+Communication #7 — Pickett Weaponry — SEMrush Position Tracking — Ranking Change Review
 
-Has the required production file/version/status header installed.
+Communication #17 — South Florida Safes — SEMrush Position Tracking — Monitoring Update
 
-The previous Work page issue where one guessed client workspace request failed was corrected by using live Mission Control client discovery instead of a hard-coded client list.
+For these historical records, the source evidence did not support an active Investigation. Their Communication routing was corrected to informational/analyzed with requires_investigation = 0.
 
-Current Phase
+This established an important operational lesson:
 
-Investigation Processing
+The existence of a historical Investigation does not prove that the original Communication warranted investigation.
 
-This is the next development phase.
+When road-testing older records, compare the Investigation against the originating evidence before treating the routing as valid.
 
-Do not skip directly from Investigation to Work Item creation.
+Southeast Safes Backlink Investigation Road Test
 
-The system must first recreate the useful consultant-guided process that historically happened after reviewing a Proof of Work / TSV entry.
+The first substantive consultant-guided Investigation road test used:
 
-The processing loop is:
+Client: Southeast SafesInvestigation: #1Communication: #1Title: SEMrush Backlink Audit — Negative
 
-Original Communication / Evidence
-        ↓
-Understand the Signal
-        ↓
-Define What Must Be Investigated
-        ↓
-Guide the Consultant Through the Checks
-        ↓
-Capture Additional Evidence
-        ↓
-Record the Finding
-        ↓
-Decision
-   ↙             ↘
-No Action        Action Required
-   ↓                  ↓
-Resolve          Create Specific Work Item
-Investigation          ↓
-                  Perform Work
-                       ↓
-                  Record What Was Done
-                       ↓
-                  Capture Evidence / Result
-                       ↓
-                  Proof of Work
-                       ↓
-                  Weekly / Client Communication
-                       ↓
-                  Continue Monitoring When Appropriate
+The originating Communication contained only a general SEMrush Backlink Audit notification and was not rich enough by itself to determine corrective work.
 
-First Road-Test Candidate
+The consultant therefore opened the live SEMrush Backlink Audit and supplied current evidence.
 
-Use a real existing investigation rather than synthetic data.
+Verified SEMrush evidence included:
 
-Current first candidate:
+Overall Toxicity Score: High
 
-Client: A1 Action Safe & Lock
-Investigation: #21
-Communication: #26
-Title: SEMrush Position Tracking — Ranking Change Review
+14 toxic referring domains
 
-The road test should answer:
+17 potentially toxic domains
 
-What exactly should be checked to determine whether the ranking decline represents a real business/search visibility problem, and what evidence is needed before corrective work is created?
+70 non-toxic domains
 
-Expected investigation logic includes:
+101 referring domains
 
-Verify whether the observed keyword decline is isolated or persistent.
+311 analyzed backlinks
 
-Evaluate the commercially important tracked keywords rather than treating every keyword equally.
+15 toxic backlinks in the review queue
 
-Cross-check another source such as Search Console, Analytics, GBP, or other available evidence.
+26 potentially toxic backlinks in the review queue
 
-Diagnose cause only if a meaningful decline is confirmed.
+199 backlinks/domains already disavowed from prior work
 
-Create a Work Item only for a specific confirmed corrective action.
+The detailed toxic-domain review showed specific referring domains carrying high toxicity scores, including scores into the 90s.
 
-Record the work performed.
+The Investigation finding was strengthened in D1 with this evidence.
 
-Preserve evidence/results.
+The recommendation is not to bulk-disavow domains merely because SEMrush labels them toxic.
 
-Continue monitoring where results require time.
+The required consulting process is:
 
-Make the completed work and results available for weekly client communication.
+Review the currently flagged toxic referring domains individually.
+
+Determine which domains are genuinely harmful, irrelevant, suspicious, or otherwise require action.
+
+Distinguish legitimate or useful links from links that should be removed or disavowed.
+
+Create specific corrective Work only after that review establishes an actionable backlink problem.
+
+The screenshot evidence demonstrated that the OS investigation process should be capable of using additional evidence gathered after the originating Communication.
+
+This is the intended operating model:
+
+Communication creates the signal.
+
+Investigation gathers and interprets richer evidence.
+
+Work is created only when the Investigation establishes a specific action.
+
+Client Workspace vs. Work Queue — Verified Responsibility
+
+The road test also clarified the distinction between the Clients interface and the Work Queue.
+
+The Client workspace is the business-level operational view.
+
+It should answer questions such as:
+
+What do we know about this client?
+
+What is currently happening?
+
+What work is active?
+
+What proof exists?
+
+What results exist?
+
+What recent activity has occurred?
+
+What should happen next?
+
+The Work Queue is the cross-client action-processing view.
+
+It should answer:
+
+What needs to be investigated or worked now?
+
+Therefore:
+
+Client workspace = understand one client.
+
+Work Queue = process actionable work across clients.
+
+These views must read from the same underlying operational records.
+
+They must not become competing sources of truth.
+
+A client may appear as needing attention because unresolved Investigation or Work exists even when the client workspace itself does not own that Investigation record.
+
+The Work Queue remains the correct place to process the Investigation.
+
+The Client workspace should ultimately surface enough of that operational state to make the client's current condition understandable.
+
+Dashboard Consistency Finding
+
+The road test exposed a current presentation inconsistency between Mission Control, the Clients page, the individual Client workspace, and the Work Queue.
+
+Examples observed during the road test included differing Open Work / attention counts and client-workspace summaries that did not yet clearly reflect the Investigation state visible in the Work Queue.
+
+This is a presentation/read-model issue to be resolved deliberately.
+
+Do not solve it by duplicating operational records.
+
+The governing architecture remains:
+
+D1 operational records are durable state.
+
+Mission Control, Clients, Client Workspace, Work Queue, and Proof are views over that state.
+
+Next Development Objective
+
+Continue the end-to-end Investigation Processing road test before broad feature development.
+
+The next work should determine how an Investigation that confirms specific corrective action becomes a Work Item and then progresses through:
+
+Specific Work Required↓Create Work Item↓Perform Work↓Record What Was Done↓Capture Evidence / Result↓Proof of Work↓Client Communication
+
+The Southeast Safes backlink Investigation is a valid candidate for continuing this process after the 14 flagged toxic referring domains are individually reviewed.
+
+Do not create corrective Work merely because SEMrush reports a High toxicity score.
+
+First determine which of the flagged domains actually warrant action.
 
 Next Development Success Condition
 
-The next Investigation Processing capability should allow an open investigation to move from:
+The next production capability should prove that GCM OS can take one real Investigation from evidence gathering through a justified operational decision and, when action is confirmed, create a specific Work Item without losing the evidence and reasoning that led to it.
 
-Open Investigation
+That Work Item must later be capable of supporting Proof of Work and client communication.
 
-to a documented consultant finding and operational decision:
+Do not redesign the D1 data model unless the road test demonstrates that the existing structure cannot support this process.
 
-No Action / Monitoring
-
-or:
-
-Specific Work Required
-
-without prematurely creating Work Items.
-
-Do not redesign the D1 data model unless the road test demonstrates that the existing structure cannot support the required process.
-
-42. MASTER UPDATE RULE
+MASTER UPDATE RULE
 
 This document is authoritative, but it is not allowed to ignore verified reality.
 
@@ -1695,7 +1513,7 @@ Production evidence informs architecture.
 
 It does not automatically dictate architecture.
 
-43. GUIDING PRINCIPLE
+GUIDING PRINCIPLE
 
 GCM OS exists to make Global Concepts Media easier to operate and easier to grow.
 
