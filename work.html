@@ -1,8 +1,12 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.0.2
-   Status: Production
+   Version: 1.1.0
+   Status: Production Candidate
+   Sprint: Investigation Processing — Road Test #21
+   Purpose: Review open Investigations from production D1 and
+            process an existing Investigation by recording the
+            finding and closing it when no Work Item is required.
    ========================================================= -->
 <!DOCTYPE html>
 <html lang="en">
@@ -59,12 +63,18 @@
     }
 
     button,
-    select {
+    select,
+    textarea {
       font: inherit;
     }
 
     button {
       cursor: pointer;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
     }
 
     a {
@@ -294,13 +304,18 @@
     }
 
     select,
-    .button {
-      min-height: 40px;
-      padding: 0 12px;
+    .button,
+    textarea {
       border: 1px solid var(--border);
       border-radius: 9px;
       background: #ffffff;
       color: var(--text);
+    }
+
+    select,
+    .button {
+      min-height: 40px;
+      padding: 0 12px;
     }
 
     select {
@@ -311,6 +326,25 @@
       color: var(--navy);
       font-size: 0.8rem;
       font-weight: 850;
+    }
+
+    .button.primary {
+      border-color: var(--blue);
+      background: var(--blue);
+      color: #ffffff;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 150px;
+      padding: 12px;
+      resize: vertical;
+      line-height: 1.5;
+    }
+
+    textarea:focus {
+      outline: 2px solid rgba(31, 111, 214, 0.16);
+      border-color: var(--blue);
     }
 
     .status {
@@ -509,6 +543,39 @@
       margin-top: 10px;
     }
 
+    .processing-box {
+      padding: 14px;
+      border: 1px solid #cbdcf4;
+      border-radius: 10px;
+      background: #f8fbff;
+    }
+
+    .processing-box label {
+      display: block;
+      margin-bottom: 7px;
+      color: var(--navy);
+      font-size: 0.78rem;
+      font-weight: 850;
+    }
+
+    .processing-note {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.75rem;
+      line-height: 1.45;
+    }
+
+    .processing-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      margin-top: 12px;
+    }
+
+    .processing-message {
+      margin-top: 12px;
+    }
+
     .empty {
       padding: 14px 16px;
       border: 1px dashed var(--border);
@@ -579,7 +646,7 @@
 
       <div class="sidebar-footer">
         Mission Control operational<br />
-        Work v1.0.2
+        Work v1.1.0
       </div>
     </aside>
 
@@ -590,12 +657,12 @@
             <p class="eyebrow">Mission Control</p>
             <h1>Work Queue</h1>
             <p class="subtitle">
-              Review the open investigations already stored in D1 and see exactly
-              what needs attention before any work is created.
+              Review the open investigations already stored in D1, record what
+              the investigation found, and close it when no specific work is required.
             </p>
           </div>
 
-          <span class="classification">Read Only · v1.0.2</span>
+          <span class="classification">Investigation Processing · v1.1.0</span>
         </header>
 
         <section class="summary-grid">
@@ -647,7 +714,8 @@
             <div class="panel-header">
               <h2>Investigation Context</h2>
               <p>
-                The first version answers one question: what needs investigating and why?
+                Review the evidence, record the finding, and decide whether this
+                investigation requires specific work.
               </p>
             </div>
 
@@ -666,17 +734,11 @@
     (function initializeWorkPage() {
       "use strict";
 
-      const VERSION = "1.0.2";
+      const VERSION = "1.1.0";
 
       const WORKER_URL =
         "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
 
-      /*
-       * Work v1.0.2 no longer guesses which clients exist.
-       * It first asks the already-audited get-mission-control action for the
-       * live clients that actually have unresolved investigations/work, then
-       * loads those client workspaces.
-       */
       let activeClients = [];
 
       const elements = {
@@ -693,8 +755,31 @@
       let investigations = [];
       let workItemCount = 0;
       let selectedKey = "";
+      let processingInvestigation = false;
 
-      elements.clientFilter.addEventListener("change", renderInvestigationList);
+      elements.clientFilter.addEventListener("change", () => {
+        renderInvestigationList();
+
+        const visible = getVisibleInvestigations();
+
+        if (
+          selectedKey &&
+          !visible.some((item) => investigationKey(item) === selectedKey)
+        ) {
+          selectedKey = "";
+
+          if (visible.length) {
+            selectedKey = investigationKey(visible[0]);
+            renderInvestigationDetail(visible[0]);
+          } else {
+            elements.detailPanel.innerHTML =
+              '<div class="detail-empty">No open investigations match this view.</div>';
+          }
+
+          renderInvestigationList();
+        }
+      });
+
       elements.refreshButton.addEventListener("click", loadWorkPage);
 
       loadWorkPage();
@@ -781,12 +866,12 @@
           renderSummary();
           renderInvestigationList();
 
-          // Open the highest-priority investigation immediately so the page is
-          // operational on arrival instead of presenting an empty right panel.
-          if (investigations.length) {
-            selectedKey = investigationKey(investigations[0]);
+          const visible = getVisibleInvestigations();
+
+          if (visible.length) {
+            selectedKey = investigationKey(visible[0]);
             renderInvestigationList();
-            renderInvestigationDetail(investigations[0]);
+            renderInvestigationDetail(visible[0]);
           } else {
             elements.detailPanel.innerHTML =
               '<div class="detail-empty">No open investigations were returned.</div>';
@@ -797,7 +882,7 @@
               "error",
               `Loaded ${investigations.length} open investigations. ${failures.length} live client workspace request${failures.length === 1 ? "" : "s"} still failed.`
             );
-            console.warn("Work Page v1.0.2 workspace load failures:", failures);
+            console.warn("Work Page v1.1.0 workspace load failures:", failures);
           } else {
             setStatus(
               "ready",
@@ -805,7 +890,7 @@
             );
           }
         } catch (error) {
-          console.error("Work Page v1.0.2 failed:", error);
+          console.error("Work Page v1.1.0 failed:", error);
 
           investigations = [];
           workItemCount = 0;
@@ -911,12 +996,91 @@
           );
         }
 
-        /*
-         * Work v1 deliberately consumes the operational payload already
-         * returned by get-client-workspace. No new Worker route or D1 query
-         * is introduced by this page.
-         */
         return payload;
+      }
+
+      async function processNoWorkRequired(item, findingSummary) {
+        if (processingInvestigation) {
+          return;
+        }
+
+        processingInvestigation = true;
+
+        const button = document.getElementById("close-no-work-button");
+        const textarea = document.getElementById("finding-summary");
+        const message = document.getElementById("processing-message");
+
+        if (button) {
+          button.disabled = true;
+          button.textContent = "Saving…";
+        }
+
+        if (textarea) {
+          textarea.disabled = true;
+        }
+
+        if (message) {
+          message.className = "status loading processing-message";
+          message.textContent =
+            `Saving the finding and closing Investigation #${item.id}…`;
+        }
+
+        try {
+          const response = await fetch(WORKER_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json"
+            },
+            body: JSON.stringify({
+              action: "process-investigation",
+              clientCode: item.clientCode,
+              investigationId: Number(item.id),
+              findingSummary,
+              outcome: "no_work_required"
+            })
+          });
+
+          const payload = await response.json().catch(() => ({}));
+
+          if (!response.ok || payload?.ok !== true) {
+            throw new Error(
+              payload?.error ||
+              `Investigation processing failed with HTTP ${response.status}.`
+            );
+          }
+
+          if (message) {
+            message.className = "status ready processing-message";
+            message.textContent =
+              `Investigation #${item.id} closed. No Work Item was created.`;
+          }
+
+          /*
+           * Reload from production rather than mutating local state so the
+           * Work Queue proves the D1 write and live retrieval path together.
+           */
+          await loadWorkPage();
+        } catch (error) {
+          console.error("Investigation processing failed:", error);
+
+          if (message) {
+            message.className = "status error processing-message";
+            message.textContent =
+              error?.message || "The Investigation could not be processed.";
+          }
+
+          if (button) {
+            button.disabled = false;
+            button.textContent = "Close — No Work Required";
+          }
+
+          if (textarea) {
+            textarea.disabled = false;
+          }
+        } finally {
+          processingInvestigation = false;
+        }
       }
 
       function renderSummary() {
@@ -928,12 +1092,16 @@
         elements.workItems.textContent = workItemCount;
       }
 
-      function renderInvestigationList() {
+      function getVisibleInvestigations() {
         const clientFilter = elements.clientFilter.value;
 
-        const visibleInvestigations = clientFilter
+        return clientFilter
           ? investigations.filter((item) => item.clientCode === clientFilter)
           : investigations;
+      }
+
+      function renderInvestigationList() {
+        const visibleInvestigations = getVisibleInvestigations();
 
         if (!visibleInvestigations.length) {
           elements.investigationList.innerHTML =
@@ -1102,7 +1270,70 @@
                 `
             }
           </section>
+
+          <section class="detail-section">
+            <h3>Process Investigation</h3>
+
+            <div class="processing-box">
+              <label for="finding-summary">Investigation Finding</label>
+
+              <textarea
+                id="finding-summary"
+                placeholder="Record what the investigation found before closing it."
+              >${escapeHtml(item.finding_summary || "")}</textarea>
+
+              <p class="processing-note">
+                Investigation Processing v1 is deliberately limited to the
+                road-tested outcome: close the Investigation when no specific
+                Work Item is required. This action does not create work.
+              </p>
+
+              <div class="processing-actions">
+                <button
+                  id="close-no-work-button"
+                  class="button primary"
+                  type="button"
+                >
+                  Close — No Work Required
+                </button>
+              </div>
+
+              <div
+                id="processing-message"
+                class="processing-message"
+                aria-live="polite"
+              ></div>
+            </div>
+          </section>
         `;
+
+        const button = document.getElementById("close-no-work-button");
+        const textarea = document.getElementById("finding-summary");
+        const message = document.getElementById("processing-message");
+
+        if (button && textarea && message) {
+          button.addEventListener("click", async () => {
+            const findingSummary = textarea.value.trim();
+
+            if (!findingSummary) {
+              message.className = "status error processing-message";
+              message.textContent =
+                "Record the Investigation Finding before closing this Investigation.";
+              textarea.focus();
+              return;
+            }
+
+            const confirmed = window.confirm(
+              `Close Investigation #${item.id} with no Work Item created?`
+            );
+
+            if (!confirmed) {
+              return;
+            }
+
+            await processNoWorkRequired(item, findingSummary);
+          });
+        }
       }
 
       function isClosedInvestigation(item) {
