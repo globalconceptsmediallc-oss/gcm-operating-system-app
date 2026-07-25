@@ -1,13 +1,15 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.1.0
-   Source: Production Worker 7.0.0
-   Sprint: Mission Control — Card 1
+   Version: 7.2.0
+   Status: Production Candidate
+   Source: Production Worker 7.1.0
+   Sprint: Investigation Processing — Road Test #21
    Purpose: Lightweight production router for operational
             communication analysis, client workspace retrieval,
-            reviewed operational-decision commits, and live
-            Mission Control retrieval.
+            reviewed operational-decision commits, live Mission
+            Control retrieval, and existing-Investigation
+            processing.
 
    Required project structure:
 
@@ -24,6 +26,7 @@
      operationalDecision.js
      clientWorkspace.js
      missionControl.js
+     investigationProcessing.js
    ========================================================= */
 
 import {
@@ -56,6 +59,10 @@ import {
   handleMissionControl
 } from "./routes/missionControl.js";
 
+import {
+  handleProcessInvestigation
+} from "./routes/investigationProcessing.js";
+
 export default {
   async fetch(request, env) {
     const requestId = crypto.randomUUID();
@@ -72,8 +79,8 @@ export default {
         system: "GCM OS Operational Worker",
         version: VERSION,
         contractVersion: API_CONTRACT_VERSION,
-        sprint: "Mission Control — Card 1",
-        architecture: "Lightweight router with modular operational routes, shared infrastructure, isolated diagnostics, deterministic classification, guarded AI, D1 persistence, and live Mission Control retrieval",
+        sprint: "Investigation Processing — Road Test #21",
+        architecture: "Lightweight router with modular operational routes, shared infrastructure, isolated diagnostics, deterministic classification, guarded AI, D1 persistence, live Mission Control retrieval, and existing-Investigation processing",
         actions: Object.values(ACTIONS),
         engines: [
           "notification-detection",
@@ -83,7 +90,8 @@ export default {
           "consultant-summary",
           "client-workspace",
           "operational-decision-commit",
-          "mission-control"
+          "mission-control",
+          "investigation-processing"
         ],
         modules: {
           shared: [
@@ -96,7 +104,8 @@ export default {
             "communication-analysis",
             "client-workspace",
             "operational-decision",
-            "mission-control"
+            "mission-control",
+            "investigation-processing"
           ]
         },
         removedLegacyPipelines: [
@@ -165,6 +174,13 @@ export default {
 
         case ACTIONS.GET_MISSION_CONTROL:
           return await handleMissionControl(
+            body,
+            env,
+            requestId
+          );
+
+        case ACTIONS.PROCESS_INVESTIGATION:
+          return await handleProcessInvestigation(
             body,
             env,
             requestId
