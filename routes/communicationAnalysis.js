@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.4.4
+   Version: 7.4.5
    Source: Production Worker 6.3.7
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
@@ -960,9 +960,16 @@ function buildVisionEvidencePrompt({ sourceText = "", client, clientId, fileName
     : [
         "",
         "GENERAL PLATFORM RULES",
-        "Identify visible platform/report names only when actually readable.",
+        "Identify visible platform/report names only when actually readable or when the report layout contains a distinctive, internally consistent metric signature.",
         "For SEMrush screenshots, distinguish Position Tracking, Backlink Audit, and Site Audit by the visible report heading and table labels.",
-        "Never substitute metrics from a different SEMrush report family."
+        "Never substitute metrics from a different SEMrush report family.",
+        "",
+        "GOOGLE ANALYTICS REPORT RULES",
+        "1. A report showing combinations such as Active Users, New Users, Avg engagement time, Events, Views, Page/Screen Name, or Bounce Rate is Google Analytics / GA4 performance evidence even when the Google Analytics logo or sender name is outside the cropped screenshot.",
+        "2. Preserve each clearly readable summary metric and its displayed percentage change separately.",
+        "3. Preserve clearly readable page/screen performance rows when available, including Views, Active Users, and Bounce Rate.",
+        "4. Do not label the source as Gmail merely because the screenshot was captured inside Gmail. Gmail is the container, not the business-information source.",
+        "5. Do not invent Google Analytics metrics that are not visibly present."
       ];
 
   return [
@@ -1475,6 +1482,31 @@ function deterministicNotificationClassification(evidence) {
     ...(evidence?.visibleMetrics || [])
   ].filter(Boolean).join(" ").toLowerCase();
 
+  /*
+   * v7.4.5 GOOGLE ANALYTICS SIGNATURE RECOGNITION
+   *
+   * Real GA4 report emails may be cropped below the sender/logo area. In those
+   * screenshots, Gmail can be visible while Google Analytics is not named.
+   * Recognize GA4 from a combination of its characteristic report metrics
+   * rather than requiring the literal words "Google Analytics" or "GA4".
+   */
+  const analyticsSignatureSignals = [
+    /\bactive users?\b/i,
+    /\bnew users?\b/i,
+    /\bavg(?:erage)? engagement time\b/i,
+    /\bevents?\b/i,
+    /\bpage\/?screen name\b/i,
+    /\bbounce rate\b/i,
+    /\bviews?\b/i
+  ];
+
+  const analyticsSignatureScore = analyticsSignatureSignals.reduce(
+    (total, pattern) => total + (pattern.test(searchable) ? 1 : 0),
+    0
+  );
+
+  const analyticsMetricSignature = analyticsSignatureScore >= 2;
+
   const platformRules = [
     { platform: "semrush", patterns: [/\bsemrush\b/i] },
     { platform: "google_search_console", patterns: [/google search console/i, /\bsearch console\b/i] },
@@ -1502,6 +1534,10 @@ function deterministicNotificationClassification(evidence) {
     }
   }
 
+  if (platform === "unknown" && analyticsMetricSignature) {
+    platform = "google_analytics";
+  }
+
   let notificationType = "unknown";
   let notificationFamily = "Unknown";
   let bestScore = 0;
@@ -1513,6 +1549,12 @@ function deterministicNotificationClassification(evidence) {
       notificationType = rule.type;
       notificationFamily = rule.family;
     }
+  }
+
+  if (analyticsMetricSignature && notificationType === "unknown") {
+    notificationType = "analytics";
+    notificationFamily = "Google Analytics";
+    bestScore = Math.max(bestScore, analyticsSignatureScore);
   }
 
   if (platform === "unknown" && notificationType === "client_request") {
