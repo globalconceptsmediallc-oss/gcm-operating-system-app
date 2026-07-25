@@ -1,6 +1,6 @@
 GLOBAL CONCEPTS MEDIA OPERATING SYSTEM — MASTER
 
-File: GCM_OS_MASTER.mdVersion: 1.1Status: AUTHORITATIVEPurpose: Master Architecture, Operating Standard, Production Handoff, and Current-State Reference
+File: GCM_OS_MASTER.mdVersion: 1.2Status: AUTHORITATIVEPurpose: Master Architecture, Operating Standard, Production Handoff, and Current-State ReferenceLast Updated: 2026-07-25
 
 1. AUTHORITY
 
@@ -332,9 +332,11 @@ Receiving a communication or automated report does not automatically constitute 
 
 13. CURRENT COMMUNICATIONS ROAD TEST
 
-The current production Communications workflow allows:
+The production Communications workflow has now been road-tested with real screenshots and real client communications.
 
-Select Client
+The current flow is:
+
+Select / Detect Client
         ↓
 Paste Email Text and/or Upload Screenshot
         ↓
@@ -347,20 +349,38 @@ Review Analysis
 Determine Routing
         ↓
 Accept & Save
+        ↓
+Communication Saved to D1
+        ↓
+Investigation Created When Selected
 
-Current production behavior requires Create Investigation to be selected before saving.
+Verified production behavior includes:
 
-Therefore, under the current workflow, saving intentionally creates both:
+Screenshot intake is functioning.
 
-Communication
+Workers AI is reading usable screenshot evidence.
 
-Investigation
+Client identification and operational interpretation are functioning across tested SEMrush, Google Analytics, Google Merchant Center, and related communications.
 
-This is current production behavior.
+Accepted communications are saving to D1.
 
-It should not be changed during the audit unless later production evidence demonstrates a reason to change it.
+Recent D1 communications are visible in the Communications interface.
 
-Failed or inaccurate road-test communications are not intentionally saved as valid operational records.
+Investigations created from accepted communications are present in the D1 investigations table.
+
+The Communications road test demonstrated that many routine monitoring notices should remain historical communication evidence and should not automatically become corrective work.
+
+Some communications correctly warrant investigation.
+
+Road testing is being performed by comparing GCM OS output against the richer historical Proof of Work / TSV interpretation process.
+
+Current production behavior allows the consultant to decide whether an investigation should be created.
+
+The road test established an important operational rule:
+
+A communication may create an Investigation, but an Investigation must not automatically become a Work Item.
+
+The Investigation exists to determine whether action is actually required.
 
 14. INVESTIGATIONS
 
@@ -383,6 +403,50 @@ Conflicting evidence
 Situation requiring verification
 
 Investigation exists so GCM OS does not prematurely convert uncertainty into work.
+
+Investigation Processing Principle
+
+The Investigation stage must reproduce the useful consulting function that previously happened manually with ChatGPT after reviewing the Proof of Work / TSV evidence.
+
+The consultant should be able to ask:
+
+What should we do with this?
+
+The system should then support a process such as:
+
+Review Original Evidence
+        ↓
+Define Investigation Objective
+        ↓
+Determine What Must Be Checked
+        ↓
+Collect Additional Evidence
+        ↓
+Interpret the Evidence
+        ↓
+Record the Finding
+        ↓
+Decision
+   ↙             ↘
+No Action        Action Required
+   ↓                  ↓
+Resolve          Create Specific Work Item
+Investigation          ↓
+                  Perform Work
+                       ↓
+                  Capture Evidence / Result
+
+An investigation may legitimately end with:
+
+No issue confirmed
+
+Monitoring only
+
+More evidence required
+
+Corrective work required
+
+The existence of an investigation does not prove that work is necessary.
 
 15. WORK / ACTIVITIES
 
@@ -407,6 +471,44 @@ Actual impact when known
 Time invested
 
 Completed work contributes to client history and may become Proof of Work.
+
+Current D1 Work State
+
+The D1 work_items table is already structured and linked to:
+
+client_id
+
+investigation_id
+
+communication_id
+
+It also contains fields for:
+
+Title
+
+Description
+
+Category
+
+Priority
+
+Status
+
+Owner
+
+Expected impact
+
+Actual impact
+
+Started / completed timestamps
+
+As of the verified 2026-07-25 production road test:
+
+Existing Work Items: 0
+
+This is expected because Investigation Processing has not yet been operationalized.
+
+The next phase should create Work Items only after an investigation confirms that specific corrective work is required.
 
 16. PROOF OF WORK
 
@@ -504,6 +606,28 @@ It transformed evidence into useful business intelligence.
 
 GCM OS should preserve this capability.
 
+Investigation-to-Proof Consulting Loop
+
+The road test clarified that the historical process also contained an important middle loop:
+
+Initial Evidence / TSV
+        ↓
+Ask: What Is the Next Step?
+        ↓
+Investigate
+        ↓
+Perform the Correct Fix
+        ↓
+Create Follow-Up TSV / Proof Record
+        ↓
+Wait for Result / Continue Monitoring
+        ↓
+Use Completed Work + Result in Weekly Client Email
+
+This is now a required GCM OS behavior.
+
+The software should not reduce this consulting loop to a generic ticket system.
+
 18. SCREENSHOT AND DOCUMENT INTAKE
 
 Screenshot analysis is an intake mechanism.
@@ -588,6 +712,20 @@ Communication Intelligence may change presentation for the audience.
 
 It must not change the underlying facts.
 
+The weekly client communication should be able to explain:
+
+What issue or opportunity was identified
+
+What was investigated
+
+What corrective or growth work was performed
+
+What evidence/result currently exists
+
+What is still being monitored
+
+What work is planned for the week ahead
+
 21. MISSION CONTROL
 
 Mission Control is the operational starting point.
@@ -603,6 +741,16 @@ Mission Control does not own the underlying business information.
 It reads from operational records.
 
 Priority should remain understandable and useful rather than over-engineered.
+
+Current Work Connection
+
+Mission Control is now connected to the production Work Queue.
+
+The left navigation Work link and the Open full work queue → link in today.html both route to:
+
+work.html
+
+This connection was deployed and verified in production.
 
 22. BUSINESS / CLIENT WORKSPACE PRINCIPLE
 
@@ -822,7 +970,7 @@ Browser-based application
 
 GitHub repository
 
-Cloudflare deployment
+GitHub Pages application hosting
 
 Cloudflare Worker
 
@@ -837,6 +985,18 @@ Current Cloudflare bindings are:
 AI = Workers AI
 DB = D1
 IMAGES = Cloudflare Images
+
+Production application repository:
+
+globalconceptsmediallc-oss/gcm-operating-system-app
+
+Production GitHub Pages application:
+
+https://globalconceptsmediallc-oss.github.io/gcm-operating-system-app/
+
+Production Worker:
+
+gcm-business-intelligence-worker
 
 31. WRANGLER.TOML — PRODUCTION RULE
 
@@ -878,7 +1038,7 @@ shared/http.js — 7.0.0 — HTTP, normalization, and Worker diagnostics.
 
 routes/missionControl.js — 7.1.0 — live clients-requiring-attention retrieval.
 
-Operational routes also exist for communication analysis, client workspace retrieval, and reviewed operational-decision commits.
+Operational routes exist for communication analysis, client workspace retrieval, and reviewed operational-decision commits.
 
 wrangler.toml declares the AI, IMAGES, and DB bindings.
 
@@ -918,11 +1078,13 @@ Communication vision model: @cf/meta/llama-3.2-11b-vision-instruct
 
 Communication reasoning model: @cf/openai/gpt-oss-20b
 
-The screenshot-vision road test reached the Worker successfully, but the vision model was blocked by the model provider's one-time license/AUP activation requirement. Therefore screenshot extraction is not yet considered operationally verified.
+The one-time Meta model license/AUP activation issue was resolved during the road test.
+
+Screenshot extraction and downstream communication analysis are now functioning in production for the tested communication types.
 
 Mission Control — Current Verified Rule
 
-Mission Control Card 1 currently identifies clients requiring attention from unresolved:
+Mission Control identifies clients requiring attention from unresolved:
 
 Investigations
 
@@ -931,6 +1093,65 @@ Work Items
 Each client appears once and links to that client's workspace.
 
 Mission Control is therefore reading operational state rather than owning it.
+
+Work Queue — Current Verified Production State
+
+New production file:
+
+work.html — 1.0.2 — production read-only Investigation / Work Queue.
+
+Verified production behavior:
+
+Connected from Mission Control navigation.
+
+Reads live client attention state using the existing get-mission-control action.
+
+Reads the associated client workspaces using the existing get-client-workspace action.
+
+Loads 23 open investigations across 7 clients from production D1.
+
+Shows the originating communication and investigation context.
+
+Displays priority, status, assigned owner, investigation description, recommendation, and current finding.
+
+Automatically opens the highest-priority investigation.
+
+Client filter is built from live Mission Control data.
+
+The earlier failed client-workspace request caused by hard-coded client guesses was removed.
+
+Full Mission Control navigation shell is present.
+
+Current state is intentionally read-only.
+
+Verified D1 state at this checkpoint:
+
+Open Investigations: 23
+Clients With Open Investigations: 7
+Existing Work Items: 0
+Evidence Records: 0
+
+The D1 schema already contains and links:
+
+communications
+
+investigations
+
+work_items
+
+evidence
+
+activity_records
+
+alerts
+
+measurements
+
+clients
+
+client_baselines
+
+No new table is currently required for the next phase.
 
 Audited Legacy / Prototype Repository Material
 
@@ -1062,9 +1283,47 @@ Provide complete fresh-install replacement files when code changes are required.
 
 Avoid partial patches or unexplained insertion snippets.
 
-Make one change at a time.
+Make one change at a time unless Andy explicitly asks to bundle closely related fixes.
 
 Verify the result before proceeding.
+
+Do not ask Andy to rediscover files, routes, architecture, hosting, or configuration that were already established by the completed audit unless a specific current production file is genuinely required and is not available.
+
+Mandatory Production File Version Header
+
+Every production file must contain a clear installed-version header near the top of the file.
+
+At minimum the header must identify:
+
+Global Concepts Media Operating System
+File: <filename>
+Version: <version>
+Status: Production
+
+Use the correct comment syntax for the file type.
+
+Example for HTML:
+
+<!-- =========================================================
+   Global Concepts Media Operating System
+   File: work.html
+   Version: 1.0.2
+   Status: Production
+   ========================================================= -->
+
+This rule exists so the installed version can be identified quickly during:
+
+Audits
+
+Road tests
+
+Debugging
+
+Deployments
+
+Handoffs
+
+Future production replacement files must include this header before they are delivered for deployment.
 
 35. DESIGN PRINCIPLES
 
@@ -1089,6 +1348,8 @@ Every screen should make the correct next action understandable.
 Desktop is the primary working environment.
 
 Visual complexity should not be introduced without operational value.
+
+New operational pages should visually belong to the existing Mission Control application shell rather than introduce a competing interface style.
 
 36. REPOSITORY PRINCIPLE
 
@@ -1140,7 +1401,7 @@ A new GCM OS development thread should begin with this file.
 
 The handoff instruction is:
 
-Read GCM_OS_MASTER.md completely before proposing changes. It is the current authority for GCM OS. Do not rely on older architecture that conflicts with it. Review the actual production file involved in the current task before changing it. If production evidence conflicts with the Master, identify the conflict before changing either one.
+Read GCM_OS_MASTER.md completely before proposing changes. It is the current authority for GCM OS. Do not rely on older architecture that conflicts with it. Use the completed file-by-file audit and current production state already recorded here. Do not ask Andy to reconstruct files or architecture that were already established unless a specific current production file is genuinely required for the next change. Review the actual production file involved in the current task before changing it. If production evidence conflicts with the Master, identify the conflict before changing either one.
 
 This allows a new development session to understand:
 
@@ -1166,9 +1427,27 @@ What production task is currently active
 
 without reconstructing the entire project from old conversations.
 
+Handoff Update Timing Rule
+
+Do not continuously rewrite this Master during active development.
+
+Update it at meaningful handoff checkpoints when:
+
+A production capability has been verified.
+
+A governing rule has changed.
+
+Important production evidence changes the known system state.
+
+The next development thread needs a new authoritative starting point.
+
+This reduces development drag while preserving reliable handoffs.
+
 39. CURRENT AUDIT STATUS
 
-The repository discovery pass has now been completed across the Markdown documentation and the current repository file/folder inventory.
+The repository discovery pass and file-by-file audit have been completed.
+
+Do not restart repository discovery as the default response to a new task.
 
 The audit has already:
 
@@ -1178,7 +1457,7 @@ Reviewed the repository one file at a time.
 
 Identified current operational production code.
 
-Identified historical, prototype, and potentially obsolete files that still require deliberate disposition.
+Identified historical, prototype, and potentially obsolete files requiring deliberate disposition.
 
 Removed several files that were confirmed unnecessary.
 
@@ -1188,9 +1467,17 @@ Identified parser duplication and test/workflow drift.
 
 Confirmed that repository presence alone does not establish production responsibility.
 
+Road-tested the Communications workflow with real client evidence.
+
+Verified D1 Communication and Investigation persistence.
+
+Verified the existing D1 Work Item and Evidence schemas.
+
+Built, connected, deployed, and verified the production Work Queue.
+
 The audit is not permission to mass-delete or mass-rewrite the repository.
 
-For any remaining cleanup or production change:
+For any future cleanup or production change:
 
 Review the specific file and its dependencies.
 
@@ -1209,30 +1496,6 @@ Test.
 Verify before continuing.
 
 Do not redesign the system during cleanup.
-
-Immediate Operational Priority
-
-The immediate objective after repository stabilization is to return GCM OS to business use.
-
-The current Communications screenshot workflow is not yet fully verified because screenshot vision extraction is blocked by the one-time model activation requirement for @cf/meta/llama-3.2-11b-vision-instruct.
-
-Once screenshot analysis is functioning, the operational road test should continue through the real client workflow:
-
-Communication
-    ↓
-Investigation
-    ↓
-Work / Resolution
-    ↓
-Proof of Work
-    ↓
-Client History
-    ↓
-Client Email / Value Communication
-
-A key road-test success condition is that existing structured client history can generate a useful client email describing work completed and why it matters.
-
-This should be proven before unnecessary new Communications features are added.
 
 40. CURRENT BUSINESS SUCCESS CONDITION
 
@@ -1262,11 +1525,153 @@ The ultimate success condition is:
 
 Global Concepts Media spends the majority of its time acquiring clients, performing valuable client work, communicating measurable value, and growing the business rather than continually building its operating system.
 
-41. MASTER UPDATE RULE
+41. CURRENT PRODUCTION HANDOFF — 2026-07-25
+
+This section is the authoritative starting point for the next development thread.
+
+Verified Production State
+
+Communications intake and persistence are operational enough to continue the end-to-end road test.
+
+Production Work Queue:
+
+File: work.html
+Version: 1.0.2
+Status: Production
+
+Verified road-test result:
+
+Open Investigations: 23
+Clients With Open Investigations: 7
+Existing Work Items: 0
+Evidence Records: 0
+
+work.html v1.0.2:
+
+Is connected to Mission Control.
+
+Reads live production D1 state.
+
+Lists open investigations.
+
+Filters by client.
+
+Opens the highest-priority investigation automatically.
+
+Displays originating communication context.
+
+Displays investigation description and recommendation.
+
+Displays current finding when present.
+
+Is intentionally read-only at this checkpoint.
+
+Uses existing Worker actions rather than creating duplicate routes.
+
+Has the required production file/version/status header installed.
+
+The previous Work page issue where one guessed client workspace request failed was corrected by using live Mission Control client discovery instead of a hard-coded client list.
+
+Current Phase
+
+Investigation Processing
+
+This is the next development phase.
+
+Do not skip directly from Investigation to Work Item creation.
+
+The system must first recreate the useful consultant-guided process that historically happened after reviewing a Proof of Work / TSV entry.
+
+The processing loop is:
+
+Original Communication / Evidence
+        ↓
+Understand the Signal
+        ↓
+Define What Must Be Investigated
+        ↓
+Guide the Consultant Through the Checks
+        ↓
+Capture Additional Evidence
+        ↓
+Record the Finding
+        ↓
+Decision
+   ↙             ↘
+No Action        Action Required
+   ↓                  ↓
+Resolve          Create Specific Work Item
+Investigation          ↓
+                  Perform Work
+                       ↓
+                  Record What Was Done
+                       ↓
+                  Capture Evidence / Result
+                       ↓
+                  Proof of Work
+                       ↓
+                  Weekly / Client Communication
+                       ↓
+                  Continue Monitoring When Appropriate
+
+First Road-Test Candidate
+
+Use a real existing investigation rather than synthetic data.
+
+Current first candidate:
+
+Client: A1 Action Safe & Lock
+Investigation: #21
+Communication: #26
+Title: SEMrush Position Tracking — Ranking Change Review
+
+The road test should answer:
+
+What exactly should be checked to determine whether the ranking decline represents a real business/search visibility problem, and what evidence is needed before corrective work is created?
+
+Expected investigation logic includes:
+
+Verify whether the observed keyword decline is isolated or persistent.
+
+Evaluate the commercially important tracked keywords rather than treating every keyword equally.
+
+Cross-check another source such as Search Console, Analytics, GBP, or other available evidence.
+
+Diagnose cause only if a meaningful decline is confirmed.
+
+Create a Work Item only for a specific confirmed corrective action.
+
+Record the work performed.
+
+Preserve evidence/results.
+
+Continue monitoring where results require time.
+
+Make the completed work and results available for weekly client communication.
+
+Next Development Success Condition
+
+The next Investigation Processing capability should allow an open investigation to move from:
+
+Open Investigation
+
+to a documented consultant finding and operational decision:
+
+No Action / Monitoring
+
+or:
+
+Specific Work Required
+
+without prematurely creating Work Items.
+
+Do not redesign the D1 data model unless the road test demonstrates that the existing structure cannot support the required process.
+
+42. MASTER UPDATE RULE
 
 This document is authoritative, but it is not allowed to ignore verified reality.
 
-As the remaining GCM OS files are audited:
+As GCM OS develops:
 
 If verified production evidence confirms the Master:
 
@@ -1274,7 +1679,7 @@ No change is required.
 
 If verified production evidence adds important missing information:
 
-Update the Master.
+Update the Master at the next meaningful handoff checkpoint.
 
 If verified production evidence conflicts with the Master:
 
@@ -1290,7 +1695,7 @@ Production evidence informs architecture.
 
 It does not automatically dictate architecture.
 
-42. GUIDING PRINCIPLE
+43. GUIDING PRINCIPLE
 
 GCM OS exists to make Global Concepts Media easier to operate and easier to grow.
 
