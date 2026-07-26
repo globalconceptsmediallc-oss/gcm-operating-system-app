@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.4.13
+   Version: 7.4.14
    Source: Production Worker 6.3.7
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
@@ -2100,31 +2100,26 @@ function buildDeterministicBusinessMeaning({ visibleEvidence, classification }) 
     /error|warning|issue|problem|crawlability|not crawled|couldn['’]?t crawl|cannot crawl|blocked/.test(text);
 
   /*
-   * v7.4.6 SPECIFIC UNRESOLVED-CONDITION GUARDRAIL
+   * v7.4.14 SITE-AUDIT ESCALATION RULE — ROAD-TEST LOCK
    *
-   * A recurring Site Audit may be stable overall while still reporting a
-   * concrete unresolved discrepancy that requires diagnosis. Examples include
-   * "only 50 out of 52 pages crawled" or an explicitly stated page that could
-   * not be crawled. These are not merely generic standing warnings: they are
-   * specific unresolved technical conditions whose cause is still unknown.
+   * A Site Audit is a recurring monitoring report. Existing errors, warnings,
+   * notices, redirects, 4XX pages, crawl discrepancies, or other standing
+   * technical issues do NOT create an Investigation merely because they are
+   * present in the report.
    *
-   * This signal is intentionally narrow so ordinary recurring warnings/errors
-   * continue to remain monitoring evidence unless they worsen or identify a
-   * concrete unresolved crawl/indexing discrepancy.
-   */
-  const specificUnresolvedConditionSignal =
-    /\bonly\s+\d+\s+(?:out\s+of|of)\s+\d+\s+pages?\b|\bcrawled\s+only\s+\d+\s+(?:out\s+of|of)\s+\d+\s+pages?\b|\b(?:page|pages)\b[^.\n]{0,80}\b(?:not crawled|couldn['’]?t crawl|cannot crawl|failed to crawl)\b/.test(text);
-
-  /*
-   * v7.4.6 SITE-AUDIT MONITORING RULE
+   * Escalate only when the current communication contains evidence of a NEW or
+   * MATERIALLY WORSENING condition. The strongest deterministic signal is a
+   * positive signed delta on an adverse issue metric such as Errors, Warnings,
+   * Issues, Pages With Issues, or Broken Pages. Explicit wording such as
+   * "worsened", "new error", or "errors increased" also qualifies.
    *
-   * Standing errors/warnings remain routine monitoring evidence. Escalation
-   * occurs only when the report shows deterioration OR a specific unresolved
-   * technical condition whose cause needs investigation.
+   * "No change", unchanged standing counts, and improving adverse counts remain
+   * Technical Monitoring Updates. Corrective work is never created directly
+   * from the Site Audit notification; an Investigation must establish it first.
    */
   const negative =
     type === "site_audit"
-      ? adverseChangeSignal || specificUnresolvedConditionSignal
+      ? adverseChangeSignal
       : adverseChangeSignal || (standingIssueSignal && !stabilitySignal);
 
   const positive = /improv|increas|gain|grew|growth|up\b|new high|milestone|positive/.test(text);
