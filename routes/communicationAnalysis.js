@@ -1,7 +1,12 @@
+Library
+/
+communicationAnalysis-v7.4.21.txt
+
+
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.4.20
+   Version: 7.4.21
    Source: Production Worker 6.3.7
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
@@ -845,7 +850,20 @@ async function executeVisionExtractionStage({
         focusedEvidence: siteAuditEvidence
       });
 
-      evidence = mergeVisibleEvidence(evidence, siteAuditEvidence);
+      /*
+       * v7.4.21 AUTHORITATIVE SITE-AUDIT EVIDENCE
+       *
+       * The broad vision pass remains useful for client/source/context
+       * identification, but its Site Audit metric transcription is not allowed
+       * to compete with the dedicated focused Site Audit extractor.
+       *
+       * Preserve broad non-metric context and replace Site Audit metric evidence
+       * with the focused evidence object before any routing decision is made.
+       */
+      evidence = makeSiteAuditEvidenceAuthoritative({
+        broadEvidence: evidence,
+        focusedEvidence: siteAuditEvidence
+      });
     }
 
     /*
@@ -973,9 +991,9 @@ async function executeVisionExtractionStage({
         + (siteAuditResult?.retryCount || 0)
         + (siteAuditChangeVerificationResult?.retryCount || 0),
       retryStatus: siteAuditChangeVerification
-        ? "site_audit_change_verification_succeeded"
+        ? "site_audit_authoritative_evidence_change_verification_succeeded"
         : siteAuditEvidence
-          ? "site_audit_metric_enrichment_succeeded"
+          ? "site_audit_authoritative_evidence_succeeded"
           : tableEvidence
             ? "position_tracking_table_enrichment_succeeded"
             : usedRecovery
@@ -1274,6 +1292,88 @@ function buildVisionEvidencePrompt({ sourceText = "", client, clientId, fileName
       uncertainty: "Only unreadable or unverified details; otherwise None"
     }, null, 2)
   ].join("\\n");
+}
+
+/*
+ * v7.4.21 AUTHORITATIVE SITE-AUDIT EVIDENCE
+ *
+ * Keep broad-pass identity/context facts, but remove broad-pass Site Audit
+ * metric lines before applying the focused Site Audit evidence. This prevents
+ * contradictory metric transcriptions from different vision passes from being
+ * merged into the final decision input.
+ */
+function makeSiteAuditEvidenceAuthoritative({
+  broadEvidence,
+  focusedEvidence
+}) {
+  const broad = normalizeVisibleEvidence(broadEvidence || {});
+  const focused = normalizeVisibleEvidence(focusedEvidence || {});
+
+  const isSiteAuditMetricLine = value => {
+    const line = clean(normalizeEvidenceArrayItem(value));
+    if (!line) return false;
+
+    return (
+      /\bsite\s*health\b/i.test(line) ||
+      /\bcrawled\s*pages?\b/i.test(line) ||
+      /\bhealthy\s*pages?\b/i.test(line) ||
+      /\bbroken(?:\s+pages?)?\b/i.test(line) ||
+      /\bpages?\s+with\s+issues?\b/i.test(line) ||
+      /\bredirects?\b/i.test(line) ||
+      /\bblocked(?:\s+pages?)?\b/i.test(line) ||
+      /\berrors?\b/i.test(line) ||
+      /\bwarnings?\b/i.test(line) ||
+      /\bnotices?\b/i.test(line)
+    );
+  };
+
+  const broadFacts = (broad.visibleFacts || [])
+    .map(normalizeEvidenceArrayItem)
+    .map(clean)
+    .filter(Boolean)
+    .filter(value => !isSiteAuditMetricLine(value));
+
+  const broadMetrics = (broad.visibleMetrics || [])
+    .map(normalizeEvidenceArrayItem)
+    .map(clean)
+    .filter(Boolean)
+    .filter(value => !isSiteAuditMetricLine(value));
+
+  const focusedFacts = (focused.visibleFacts || [])
+    .map(normalizeEvidenceArrayItem)
+    .map(clean)
+    .filter(Boolean);
+
+  const focusedMetrics = (focused.visibleMetrics || [])
+    .map(normalizeEvidenceArrayItem)
+    .map(clean)
+    .filter(Boolean);
+
+  /*
+   * Do not carry broad visibleText into the final Site Audit evidence because
+   * it may contain the same conflicting metric transcription in prose form.
+   * The focused pass becomes the authoritative visibleText source when present.
+   */
+  const authoritativeText =
+    clean(focused.visibleText) ||
+    [
+      ...focusedFacts,
+      ...focusedMetrics
+    ].join("; ");
+
+  return normalizeVisibleEvidence({
+    ...broad,
+    ...focused,
+    visibleText: authoritativeText,
+    visibleFacts: uniqueTextValues([
+      ...broadFacts,
+      ...focusedFacts
+    ]),
+    visibleMetrics: uniqueTextValues([
+      ...broadMetrics,
+      ...focusedMetrics
+    ])
+  });
 }
 
 /*
