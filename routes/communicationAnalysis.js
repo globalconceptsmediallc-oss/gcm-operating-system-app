@@ -1,8 +1,3 @@
-Library
-/
-communicationAnalysis-v7.4.21.txt
-
-
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
