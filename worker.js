@@ -1,15 +1,15 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.2.0
+   Version: 7.3.0
    Status: Production Candidate
-   Source: Production Worker 7.1.0
-   Sprint: Investigation Processing — Road Test #21
+   Source: Production Worker 7.2.0
+   Sprint: Work Item Completion — Road Test #21
    Purpose: Lightweight production router for operational
             communication analysis, client workspace retrieval,
             reviewed operational-decision commits, live Mission
-            Control retrieval, and existing-Investigation
-            processing.
+            Control retrieval, existing-Investigation processing,
+            and existing-Work-Item completion.
 
    Required project structure:
 
@@ -27,6 +27,7 @@
      clientWorkspace.js
      missionControl.js
      investigationProcessing.js
+     workItemProcessing.js
    ========================================================= */
 
 import {
@@ -63,6 +64,10 @@ import {
   handleProcessInvestigation
 } from "./routes/investigationProcessing.js";
 
+import {
+  handleProcessWorkItem
+} from "./routes/workItemProcessing.js";
+
 export default {
   async fetch(request, env) {
     const requestId = crypto.randomUUID();
@@ -79,8 +84,8 @@ export default {
         system: "GCM OS Operational Worker",
         version: VERSION,
         contractVersion: API_CONTRACT_VERSION,
-        sprint: "Investigation Processing — Road Test #21",
-        architecture: "Lightweight router with modular operational routes, shared infrastructure, isolated diagnostics, deterministic classification, guarded AI, D1 persistence, live Mission Control retrieval, and existing-Investigation processing",
+        sprint: "Work Item Completion — Road Test #21",
+        architecture: "Lightweight router with modular operational routes, shared infrastructure, isolated diagnostics, deterministic classification, guarded AI, D1 persistence, live Mission Control retrieval, existing-Investigation processing, and existing-Work-Item completion",
         actions: Object.values(ACTIONS),
         engines: [
           "notification-detection",
@@ -91,7 +96,8 @@ export default {
           "client-workspace",
           "operational-decision-commit",
           "mission-control",
-          "investigation-processing"
+          "investigation-processing",
+          "work-item-processing"
         ],
         modules: {
           shared: [
@@ -105,7 +111,8 @@ export default {
             "client-workspace",
             "operational-decision",
             "mission-control",
-            "investigation-processing"
+            "investigation-processing",
+            "work-item-processing"
           ]
         },
         removedLegacyPipelines: [
@@ -181,6 +188,13 @@ export default {
 
         case ACTIONS.PROCESS_INVESTIGATION:
           return await handleProcessInvestigation(
+            body,
+            env,
+            requestId
+          );
+
+        case ACTIONS.PROCESS_WORK_ITEM:
+          return await handleProcessWorkItem(
             body,
             env,
             requestId
