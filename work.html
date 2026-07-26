@@ -1,12 +1,14 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.1.0
+   Version: 1.2.0
    Status: Production Candidate
    Sprint: Investigation Processing — Road Test #21
    Purpose: Review open Investigations from production D1 and
             process an existing Investigation by recording the
-            finding and closing it when no Work Item is required.
+            finding, then either closing it when no Work Item is
+            required or creating one linked Work Item when specific
+            work is required.
    ========================================================= -->
 <!DOCTYPE html>
 <html lang="en">
@@ -646,7 +648,7 @@
 
       <div class="sidebar-footer">
         Mission Control operational<br />
-        Work v1.1.0
+        Work v1.2.0
       </div>
     </aside>
 
@@ -658,11 +660,12 @@
             <h1>Work Queue</h1>
             <p class="subtitle">
               Review the open investigations already stored in D1, record what
-              the investigation found, and close it when no specific work is required.
+              the investigation found, and decide whether to close it or create
+              specific linked work.
             </p>
           </div>
 
-          <span class="classification">Investigation Processing · v1.1.0</span>
+          <span class="classification">Investigation Processing · v1.2.0</span>
         </header>
 
         <section class="summary-grid">
@@ -734,7 +737,7 @@
     (function initializeWorkPage() {
       "use strict";
 
-      const VERSION = "1.1.0";
+      const VERSION = "1.2.0";
 
       const WORKER_URL =
         "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
@@ -882,7 +885,7 @@
               "error",
               `Loaded ${investigations.length} open investigations. ${failures.length} live client workspace request${failures.length === 1 ? "" : "s"} still failed.`
             );
-            console.warn("Work Page v1.1.0 workspace load failures:", failures);
+            console.warn("Work Page v1.2.0 workspace load failures:", failures);
           } else {
             setStatus(
               "ready",
@@ -890,7 +893,7 @@
             );
           }
         } catch (error) {
-          console.error("Work Page v1.1.0 failed:", error);
+          console.error("Work Page v1.2.0 failed:", error);
 
           investigations = [];
           workItemCount = 0;
@@ -1077,6 +1080,100 @@
 
           if (textarea) {
             textarea.disabled = false;
+          }
+        } finally {
+          processingInvestigation = false;
+        }
+      }
+
+
+      async function processSpecificWorkRequired(
+        item,
+        findingSummary,
+        workTitle,
+        workDescription
+      ) {
+        if (processingInvestigation) {
+          return;
+        }
+
+        processingInvestigation = true;
+
+        const noWorkButton = document.getElementById("close-no-work-button");
+        const workButton = document.getElementById("create-work-button");
+        const textarea = document.getElementById("finding-summary");
+        const titleInput = document.getElementById("work-title");
+        const descriptionInput = document.getElementById("work-description");
+        const message = document.getElementById("processing-message");
+
+        [noWorkButton, workButton, textarea, titleInput, descriptionInput]
+          .filter(Boolean)
+          .forEach((element) => {
+            element.disabled = true;
+          });
+
+        if (workButton) {
+          workButton.textContent = "Creating Work…";
+        }
+
+        if (message) {
+          message.className = "status loading processing-message";
+          message.textContent =
+            `Recording the finding and creating linked work for Investigation #${item.id}…`;
+        }
+
+        try {
+          const response = await fetch(WORKER_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json"
+            },
+            body: JSON.stringify({
+              action: "process-investigation",
+              clientCode: item.clientCode,
+              investigationId: Number(item.id),
+              findingSummary,
+              outcome: "specific_work_required",
+              workTitle,
+              workDescription
+            })
+          });
+
+          const payload = await response.json().catch(() => ({}));
+
+          if (!response.ok || payload?.ok !== true) {
+            throw new Error(
+              payload?.error ||
+              `Investigation processing failed with HTTP ${response.status}.`
+            );
+          }
+
+          if (message) {
+            message.className = "status ready processing-message";
+            message.textContent = payload?.workItem?.id
+              ? `Work Item #${payload.workItem.id} is linked to Investigation #${item.id}.`
+              : `Investigation #${item.id} already has linked work.`;
+          }
+
+          await loadWorkPage();
+        } catch (error) {
+          console.error("Specific work processing failed:", error);
+
+          if (message) {
+            message.className = "status error processing-message";
+            message.textContent =
+              error?.message || "The linked Work Item could not be created.";
+          }
+
+          [noWorkButton, workButton, textarea, titleInput, descriptionInput]
+            .filter(Boolean)
+            .forEach((element) => {
+              element.disabled = false;
+            });
+
+          if (workButton) {
+            workButton.textContent = "Create Specific Work";
           }
         } finally {
           processingInvestigation = false;
@@ -1283,18 +1380,46 @@
               >${escapeHtml(item.finding_summary || "")}</textarea>
 
               <p class="processing-note">
-                Investigation Processing v1 is deliberately limited to the
-                road-tested outcome: close the Investigation when no specific
-                Work Item is required. This action does not create work.
+                Choose the outcome proved by the investigation. No Work Required
+                closes the Investigation. Specific Work Required creates one
+                linked Work Item and keeps the Investigation open.
               </p>
+
+              <div class="detail-section" style="margin-top:12px;padding-top:12px;">
+                <h3>Specific Work Required</h3>
+
+                <label for="work-title">Work Required</label>
+                <textarea
+                  id="work-title"
+                  style="min-height:72px;"
+                  placeholder="Example: Correct confirmed toxic backlink profile"
+                ></textarea>
+
+                <label for="work-description" style="margin-top:10px;">
+                  Specific Action
+                </label>
+                <textarea
+                  id="work-description"
+                  style="min-height:105px;"
+                  placeholder="Record the specific action the investigation requires."
+                ></textarea>
+              </div>
 
               <div class="processing-actions">
                 <button
                   id="close-no-work-button"
-                  class="button primary"
+                  class="button"
                   type="button"
                 >
                   Close — No Work Required
+                </button>
+
+                <button
+                  id="create-work-button"
+                  class="button primary"
+                  type="button"
+                >
+                  Create Specific Work
                 </button>
               </div>
 
@@ -1308,7 +1433,10 @@
         `;
 
         const button = document.getElementById("close-no-work-button");
+        const createWorkButton = document.getElementById("create-work-button");
         const textarea = document.getElementById("finding-summary");
+        const workTitle = document.getElementById("work-title");
+        const workDescription = document.getElementById("work-description");
         const message = document.getElementById("processing-message");
 
         if (button && textarea && message) {
@@ -1332,6 +1460,59 @@
             }
 
             await processNoWorkRequired(item, findingSummary);
+          });
+        }
+
+        if (
+          createWorkButton &&
+          textarea &&
+          workTitle &&
+          workDescription &&
+          message
+        ) {
+          createWorkButton.addEventListener("click", async () => {
+            const findingSummary = textarea.value.trim();
+            const title = workTitle.value.trim();
+            const description = workDescription.value.trim();
+
+            if (!findingSummary) {
+              message.className = "status error processing-message";
+              message.textContent =
+                "Record the Investigation Finding before creating work.";
+              textarea.focus();
+              return;
+            }
+
+            if (!title) {
+              message.className = "status error processing-message";
+              message.textContent =
+                "Record the specific Work Required before creating the Work Item.";
+              workTitle.focus();
+              return;
+            }
+
+            if (!description) {
+              message.className = "status error processing-message";
+              message.textContent =
+                "Record the Specific Action before creating the Work Item.";
+              workDescription.focus();
+              return;
+            }
+
+            const confirmed = window.confirm(
+              `Create one linked Work Item for Investigation #${item.id} and keep the Investigation open?`
+            );
+
+            if (!confirmed) {
+              return;
+            }
+
+            await processSpecificWorkRequired(
+              item,
+              findingSummary,
+              title,
+              description
+            );
           });
         }
       }
