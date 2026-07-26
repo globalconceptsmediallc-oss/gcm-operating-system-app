@@ -1,14 +1,13 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.2.0
+   Version: 1.3.0
    Status: Production Candidate
    Sprint: Investigation Processing — Road Test #21
-   Purpose: Review open Investigations from production D1 and
-            process an existing Investigation by recording the
-            finding, then either closing it when no Work Item is
-            required or creating one linked Work Item when specific
-            work is required.
+   Purpose: Review open Investigations and linked Work Items
+            from production D1. Process Investigations into specific
+            work, then record completed work, result/evidence, and
+            complete the linked Work Item.
    ========================================================= -->
 <!DOCTYPE html>
 <html lang="en">
@@ -648,7 +647,7 @@
 
       <div class="sidebar-footer">
         Mission Control operational<br />
-        Work v1.2.0
+        Work v1.3.0
       </div>
     </aside>
 
@@ -659,13 +658,12 @@
             <p class="eyebrow">Mission Control</p>
             <h1>Work Queue</h1>
             <p class="subtitle">
-              Review the open investigations already stored in D1, record what
-              the investigation found, and decide whether to close it or create
-              specific linked work.
+              Process open investigations and the specific Work Items they create.
+              Record completed work and evidence without creating a second source of truth.
             </p>
           </div>
 
-          <span class="classification">Investigation Processing · v1.2.0</span>
+          <span class="classification">Work Processing · v1.3.0</span>
         </header>
 
         <section class="summary-grid">
@@ -683,6 +681,14 @@
             <span class="summary-label">Existing Work Items</span>
             <strong id="work-items" class="summary-value">—</strong>
           </article>
+        </section>
+
+        <section id="open-work-panel" class="panel" style="margin-bottom:12px;">
+          <div class="panel-header">
+            <h2>Open Work Items</h2>
+            <p>Specific actionable work already created from investigations.</p>
+          </div>
+          <div id="open-work-list" class="panel-body"></div>
         </section>
 
         <section class="workspace-grid">
@@ -737,7 +743,7 @@
     (function initializeWorkPage() {
       "use strict";
 
-      const VERSION = "1.2.0";
+      const VERSION = "1.3.0";
 
       const WORKER_URL =
         "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
@@ -752,13 +758,16 @@
         refreshButton: document.getElementById("refresh-button"),
         runtimeStatus: document.getElementById("runtime-status"),
         investigationList: document.getElementById("investigation-list"),
-        detailPanel: document.getElementById("detail-panel")
+        detailPanel: document.getElementById("detail-panel"),
+        openWorkList: document.getElementById("open-work-list")
       };
 
       let investigations = [];
+      let workItems = [];
       let workItemCount = 0;
       let selectedKey = "";
       let processingInvestigation = false;
+      let processingWorkItem = false;
 
       elements.clientFilter.addEventListener("change", () => {
         renderInvestigationList();
@@ -803,6 +812,7 @@
             investigations = [];
             workItemCount = 0;
             renderSummary();
+            renderOpenWorkItems();
             renderInvestigationList();
             elements.detailPanel.innerHTML =
               '<div class="detail-empty">No unresolved investigations or work items were returned by Mission Control.</div>';
@@ -815,6 +825,7 @@
           );
 
           const loadedInvestigations = [];
+          workItems = [];
           let loadedWorkItems = 0;
           const failures = [];
 
@@ -836,6 +847,19 @@
             const clientInvestigations = Array.isArray(operational.investigations)
               ? operational.investigations
               : [];
+            const clientWorkItems = Array.isArray(operational.workItems)
+              ? operational.workItems
+              : [];
+
+            clientWorkItems
+              .filter((item) => !isCompletedWorkItem(item))
+              .forEach((item) => {
+                workItems.push({
+                  ...item,
+                  clientCode: operational.client?.client_code || client.code,
+                  clientName: operational.client?.name || client.name
+                });
+              });
 
             const communicationById = new Map(
               communications.map((communication) => [
@@ -867,6 +891,7 @@
           workItemCount = loadedWorkItems;
 
           renderSummary();
+          renderOpenWorkItems();
           renderInvestigationList();
 
           const visible = getVisibleInvestigations();
@@ -885,7 +910,7 @@
               "error",
               `Loaded ${investigations.length} open investigations. ${failures.length} live client workspace request${failures.length === 1 ? "" : "s"} still failed.`
             );
-            console.warn("Work Page v1.2.0 workspace load failures:", failures);
+            console.warn("Work Page v1.3.0 workspace load failures:", failures);
           } else {
             setStatus(
               "ready",
@@ -893,7 +918,7 @@
             );
           }
         } catch (error) {
-          console.error("Work Page v1.2.0 failed:", error);
+          console.error("Work Page v1.3.0 failed:", error);
 
           investigations = [];
           workItemCount = 0;
@@ -1178,6 +1203,162 @@
         } finally {
           processingInvestigation = false;
         }
+      }
+
+
+      function renderOpenWorkItems() {
+        if (!elements.openWorkList) return;
+
+        if (!workItems.length) {
+          elements.openWorkList.innerHTML =
+            '<div class="empty">No open Work Items were returned.</div>';
+          return;
+        }
+
+        elements.openWorkList.innerHTML = workItems.map((item) => `
+          <div class="processing-box" style="margin-bottom:12px;">
+            <h3 style="margin:0;color:#07192e;">
+              Work Item #${escapeHtml(item.id)} · ${escapeHtml(item.title || "Work Item")}
+            </h3>
+            <p class="detail-subtitle">
+              ${escapeHtml(item.clientName)} · Investigation #${escapeHtml(item.investigation_id || "—")}
+            </p>
+
+            <section class="detail-section">
+              <h3>Specific Action</h3>
+              <p>${escapeHtml(item.description || "No work description stored.")}</p>
+            </section>
+
+            <section class="detail-section">
+              <h3>Complete Work Item</h3>
+
+              <label for="work-performed-${escapeHtml(item.id)}">Work Performed</label>
+              <textarea id="work-performed-${escapeHtml(item.id)}"
+                placeholder="Record what was actually done."></textarea>
+
+              <label for="work-result-${escapeHtml(item.id)}" style="margin-top:10px;">Result</label>
+              <textarea id="work-result-${escapeHtml(item.id)}"
+                placeholder="Record the verified result or actual impact."></textarea>
+
+              <label for="work-evidence-${escapeHtml(item.id)}" style="margin-top:10px;">Completion Evidence</label>
+              <textarea id="work-evidence-${escapeHtml(item.id)}"
+                placeholder="Record the evidence that proves completion."></textarea>
+
+              <div class="processing-actions">
+                <button class="button primary"
+                  type="button"
+                  data-complete-work="${escapeHtml(item.id)}">
+                  Complete Work Item
+                </button>
+              </div>
+
+              <div id="work-message-${escapeHtml(item.id)}"
+                class="processing-message" aria-live="polite"></div>
+            </section>
+          </div>
+        `).join("");
+
+        elements.openWorkList.querySelectorAll("[data-complete-work]").forEach((button) => {
+          button.addEventListener("click", async () => {
+            const id = Number(button.dataset.completeWork);
+            const item = workItems.find((entry) => Number(entry.id) === id);
+            if (!item) return;
+
+            const workPerformed = document.getElementById(`work-performed-${id}`)?.value.trim() || "";
+            const actualImpact = document.getElementById(`work-result-${id}`)?.value.trim() || "";
+            const evidenceDescription = document.getElementById(`work-evidence-${id}`)?.value.trim() || "";
+            const message = document.getElementById(`work-message-${id}`);
+
+            if (!workPerformed || !actualImpact || !evidenceDescription) {
+              if (message) {
+                message.className = "status error processing-message";
+                message.textContent =
+                  "Work Performed, Result, and Completion Evidence are all required.";
+              }
+              return;
+            }
+
+            const confirmed = window.confirm(
+              `Complete Work Item #${id} and close its linked Investigation?`
+            );
+            if (!confirmed) return;
+
+            await processWorkItemCompletion(
+              item,
+              workPerformed,
+              actualImpact,
+              evidenceDescription
+            );
+          });
+        });
+      }
+
+      async function processWorkItemCompletion(
+        item,
+        workPerformed,
+        actualImpact,
+        evidenceDescription
+      ) {
+        if (processingWorkItem) return;
+        processingWorkItem = true;
+
+        const message = document.getElementById(`work-message-${item.id}`);
+
+        if (message) {
+          message.className = "status loading processing-message";
+          message.textContent = `Completing Work Item #${item.id} in production D1…`;
+        }
+
+        try {
+          const response = await fetch(WORKER_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json"
+            },
+            body: JSON.stringify({
+              action: "process-work-item",
+              clientCode: item.clientCode,
+              workItemId: Number(item.id),
+              workPerformed,
+              actualImpact,
+              evidenceDescription,
+              evidenceSource: "Road Test #21 Completion Evidence",
+              evidenceType: "completion"
+            })
+          });
+
+          const payload = await response.json().catch(() => ({}));
+
+          if (!response.ok || payload?.ok !== true) {
+            throw new Error(
+              payload?.error ||
+              `Work Item processing failed with HTTP ${response.status}.`
+            );
+          }
+
+          if (message) {
+            message.className = "status ready processing-message";
+            message.textContent =
+              `Work Item #${item.id} completed and its linked Investigation closed.`;
+          }
+
+          await loadWorkPage();
+        } catch (error) {
+          console.error("Work Item completion failed:", error);
+          if (message) {
+            message.className = "status error processing-message";
+            message.textContent =
+              error?.message || "The Work Item could not be completed.";
+          }
+        } finally {
+          processingWorkItem = false;
+        }
+      }
+
+      function isCompletedWorkItem(item) {
+        const status = normalizeValue(item?.status);
+        return ["complete", "completed", "closed", "resolved", "cancelled", "canceled"].includes(status);
       }
 
       function renderSummary() {
