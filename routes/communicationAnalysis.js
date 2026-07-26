@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.4.14
+   Version: 7.4.15
    Source: Production Worker 6.3.7
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
@@ -2058,38 +2058,51 @@ function buildDeterministicBusinessMeaning({ visibleEvidence, classification }) 
     /haven['’]?t detected any significant changes|no significant changes|no significant change|no change|unchanged|remains? stable|stable since|without significant change/.test(text);
 
   /*
-   * v7.4.11 SITE-AUDIT STRUCTURED NUMERIC-DETERIORATION GUARDRAIL
+   * v7.4.15 SITE-AUDIT METRIC-LOCAL DETERIORATION GUARDRAIL
    *
-   * Site Audit extraction may preserve the metric label, current count, and
-   * signed change in different evidence strings. Evaluate each extracted
-   * evidence item first, then evaluate the ordered evidence stream so a
-   * positive delta on Errors, Warnings, Issues, or Broken pages is still
-   * recognized when extraction separates the label from the numbers.
+   * Road testing proved that scanning visibleText/facts or an ordered merged
+   * evidence stream can falsely associate an unrelated positive number with a
+   * standing adverse metric. Example: a stable Site Audit can contain "Errors
+   * 8 — no change" while another nearby metric contains a positive value.
    *
-   * Positive deltas on adverse issue counts mean deterioration and require an
-   * Investigation. They never create a Work Item until the investigation
-   * identifies the corrective work.
+   * Numeric deterioration is therefore accepted ONLY when one structured
+   * visibleMetrics item contains BOTH:
+   *   1. an adverse Site Audit metric label, and
+   *   2. that same metric's explicit positive signed Change/delta.
+   *
+   * Examples that escalate:
+   *   "Errors: 136; Change: +27"
+   *   "Warnings: 7600; Change: +27"
+   *
+   * Examples that do not escalate:
+   *   "Errors: 8; no change"
+   *   "Warnings: 547; no change"
+   *   "Notices: 94; no change"
+   *
+   * Explicit adverse wording such as "errors increased", "new error", or
+   * "worsened" remains handled separately by adverseChangeSignal below.
    */
-  const siteAuditEvidenceItems = [
-    visibleEvidence?.visibleSubject,
-    visibleEvidence?.visibleText,
-    ...(visibleEvidence?.visibleFacts || []),
-    ...(visibleEvidence?.visibleMetrics || [])
-  ].map(clean).filter(Boolean);
+  const siteAuditMetricItems = (visibleEvidence?.visibleMetrics || [])
+    .map(clean)
+    .filter(Boolean);
 
   const adverseIssueMetricLabelPattern =
     /\b(?:errors?|warnings?|issues?|pages\s+with\s+issues|broken(?:\s+pages?)?)\b/i;
 
-  const positiveSignedDeltaPattern =
-    /(?:\bchange\s*:\s*)?\+\s*\d+(?:\.\d+)?(?:%|\b)/i;
+  const explicitPositiveMetricChangePattern =
+    /\bchange\s*:\s*\+\s*\d+(?:\.\d+)?(?:%|\b)/i;
+
+  const compactPositiveMetricDeltaPattern =
+    /\b(?:errors?|warnings?|issues?|pages\s+with\s+issues|broken(?:\s+pages?)?)\b[^\n;|]{0,50}\+\s*\d+(?:\.\d+)?(?:%|\b)/i;
 
   const adverseIssueCountIncreaseSignal =
-    siteAuditEvidenceItems.some(item =>
+    siteAuditMetricItems.some(item =>
       adverseIssueMetricLabelPattern.test(item) &&
-      positiveSignedDeltaPattern.test(item)
-    ) ||
-    /\b(?:errors?|warnings?|issues?|broken(?:\s+pages?)?)\b[\s\S]{0,120}?\+\s*\d+(?:\.\d+)?(?:%|\b)/i.test(
-      siteAuditEvidenceItems.join(" | ")
+      (
+        explicitPositiveMetricChangePattern.test(item) ||
+        compactPositiveMetricDeltaPattern.test(item)
+      ) &&
+      !/\bno\s+change\b|\bunchanged\b/i.test(item)
     );
 
   const adverseChangeSignal =
