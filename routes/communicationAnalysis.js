@@ -1,7 +1,12 @@
+Library
+/
+communicationAnalysis-v7.4.12_FRESH_INSTALL.txt
+
+
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.4.11
+   Version: 7.4.12
    Source: Production Worker 6.3.7
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
@@ -433,6 +438,10 @@ function buildTextEvidencePrompt({ sourceText, client, clientId, fileName }) {
     "8. Do not calculate a prior ranking from a movement amount unless the prior ranking itself is explicitly stated.",
     "9. Do not collapse several keyword movements into a generic phrase such as 'rankings changed'. Each readable movement must be its own visibleMetrics item.",
     "10. Do not omit negative measurements because positive measurements also exist, or vice versa.",
+    "10A. SITE AUDIT METRIC ASSOCIATION: when a Site Audit metric has a label, current value, and displayed change/delta, keep them together in ONE visibleMetrics item.",
+    "10B. Examples of the required Site Audit form: 'Site Health: 71%; Change: +1%', 'Errors: 136; Change: +27', 'Warnings: 7600; Change: +27', 'Notices: 2219; Change: -4', 'Broken Pages: 6; Change: -1'.",
+    "10C. Never output a Site Audit count or signed delta as an unlabeled standalone metric when its label is readable. Preserve the label/value/change relationship exactly as shown.",
+    "10D. A positive delta on Errors, Warnings, Issues, or Broken Pages is deterioration evidence; extraction must preserve the signed delta but must not make the operational decision.",
     "11. responseExpected is true only when the source explicitly expects a response.",
     "12. explicitActionRequested is true only when the source explicitly asks for an action.",
     "13. Use Unknown only when a requested identity field truly is not stated.",
@@ -921,6 +930,15 @@ function byteArrayToDataUrl(bytes, mimeType = "image/png") {
   return `data:${mimeType};base64,${btoa(binary)}`;
 }
 
+/*
+ * v7.4.12 SITE-AUDIT EVIDENCE-ASSOCIATION FIX
+ *
+ * Vision and text extraction are required to preserve a Site Audit metric's
+ * label, current value, and signed change/delta as one evidence observation.
+ * This fixes the upstream evidence shape so deterministic routing can evaluate
+ * deterioration without guessing which detached number belongs to which label.
+ * No database, UI, save, or Work Item behavior is changed.
+ */
 function buildVisionEvidencePrompt({ sourceText = "", client, clientId, fileName, focusedRecovery }) {
   const pastedText = clean(sourceText);
   const pastedTextIsPositionTracking = /\bposition tracking\b/i.test(pastedText);
@@ -988,6 +1006,10 @@ function buildVisionEvidencePrompt({ sourceText = "", client, clientId, fileName
     "Put important non-metric statements in visibleFacts.",
     "Put every clearly readable measurable observation in visibleMetrics.",
     "For keyword ranking rows, preserve the keyword phrase together with its readable position/change values in the same visibleMetrics item when possible.",
+    "SITE AUDIT METRIC ASSOCIATION RULE: if the screenshot is a Site Audit, keep each readable metric label, current value, and displayed signed change/delta together in ONE visibleMetrics item.",
+    "Required Site Audit format examples: 'Site Health: 71%; Change: +1%', 'Errors: 136; Change: +27', 'Warnings: 7600; Change: +27', 'Notices: 2219; Change: -4', 'Broken Pages: 6; Change: -1'.",
+    "Do not return unlabeled Site Audit numbers or detached signed deltas when the screenshot visibly associates them with a metric label.",
+    "Preserve + and - signs exactly. Do not reinterpret whether a change is good or bad during extraction.",
     "When something truly cannot be read, omit the uncertain metric instead of guessing.",
     "Use Unknown only for requested identity fields that truly cannot be verified.",
     "Never wrap the JSON in markdown fences.",
