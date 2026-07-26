@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.4.10
+   Version: 7.4.11
    Source: Production Worker 6.3.7
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
@@ -1932,16 +1932,39 @@ function buildDeterministicBusinessMeaning({ visibleEvidence, classification }) 
     /haven['’]?t detected any significant changes|no significant changes|no significant change|no change|unchanged|remains? stable|stable since|without significant change/.test(text);
 
   /*
-   * v7.4.10 SITE-AUDIT NUMERIC-DETERIORATION GUARDRAIL
+   * v7.4.11 SITE-AUDIT STRUCTURED NUMERIC-DETERIORATION GUARDRAIL
    *
-   * SEMrush Site Audit emails often express deterioration as a metric followed
-   * by a signed delta (for example "Errors 136 +27") rather than words such as
-   * "errors increased". Treat positive deltas on adverse issue counts as
-   * deterioration. This must create an Investigation, but never a Work Item
-   * until the investigation identifies the corrective work.
+   * Site Audit extraction may preserve the metric label, current count, and
+   * signed change in different evidence strings. Evaluate each extracted
+   * evidence item first, then evaluate the ordered evidence stream so a
+   * positive delta on Errors, Warnings, Issues, or Broken pages is still
+   * recognized when extraction separates the label from the numbers.
+   *
+   * Positive deltas on adverse issue counts mean deterioration and require an
+   * Investigation. They never create a Work Item until the investigation
+   * identifies the corrective work.
    */
+  const siteAuditEvidenceItems = [
+    visibleEvidence?.visibleSubject,
+    visibleEvidence?.visibleText,
+    ...(visibleEvidence?.visibleFacts || []),
+    ...(visibleEvidence?.visibleMetrics || [])
+  ].map(clean).filter(Boolean);
+
+  const adverseIssueMetricLabelPattern =
+    /\b(?:errors?|warnings?|issues?|broken(?:\s+pages?)?)\b/i;
+
+  const positiveSignedDeltaPattern =
+    /(?:^|[\s:;,()\[\]—-])\+\s*\d+(?:\.\d+)?(?:%|\b)/;
+
   const adverseIssueCountIncreaseSignal =
-    /\b(?:errors?|warnings?|issues?|broken)\b[^\n.;]{0,40}\+\s*\d+(?:\.\d+)?\b/i.test(text);
+    siteAuditEvidenceItems.some(item =>
+      adverseIssueMetricLabelPattern.test(item) &&
+      positiveSignedDeltaPattern.test(item)
+    ) ||
+    /\b(?:errors?|warnings?|issues?|broken(?:\s+pages?)?)\b[\s\S]{0,120}?\+\s*\d+(?:\.\d+)?(?:%|\b)/i.test(
+      siteAuditEvidenceItems.join(" | ")
+    );
 
   const adverseChangeSignal =
     /declin|decreas|drop|dropped|lost|loss|critical|failed|failure|down\b|toxic|worsen|worsened|worsening|new error|new warning|new issue|errors? increased|warnings? increased|issues? increased|significant negative change|adverse movement/.test(text)
