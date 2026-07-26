@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.4.9
+   Version: 7.4.10
    Source: Production Worker 6.3.7
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
@@ -1931,8 +1931,21 @@ function buildDeterministicBusinessMeaning({ visibleEvidence, classification }) 
   const stabilitySignal =
     /haven['’]?t detected any significant changes|no significant changes|no significant change|no change|unchanged|remains? stable|stable since|without significant change/.test(text);
 
+  /*
+   * v7.4.10 SITE-AUDIT NUMERIC-DETERIORATION GUARDRAIL
+   *
+   * SEMrush Site Audit emails often express deterioration as a metric followed
+   * by a signed delta (for example "Errors 136 +27") rather than words such as
+   * "errors increased". Treat positive deltas on adverse issue counts as
+   * deterioration. This must create an Investigation, but never a Work Item
+   * until the investigation identifies the corrective work.
+   */
+  const adverseIssueCountIncreaseSignal =
+    /\b(?:errors?|warnings?|issues?|broken)\b[^\n.;]{0,40}\+\s*\d+(?:\.\d+)?\b/i.test(text);
+
   const adverseChangeSignal =
-    /declin|decreas|drop|dropped|lost|loss|critical|failed|failure|down\b|toxic|worsen|worsened|worsening|new error|new warning|new issue|errors? increased|warnings? increased|issues? increased|significant negative change|adverse movement/.test(text);
+    /declin|decreas|drop|dropped|lost|loss|critical|failed|failure|down\b|toxic|worsen|worsened|worsening|new error|new warning|new issue|errors? increased|warnings? increased|issues? increased|significant negative change|adverse movement/.test(text)
+    || adverseIssueCountIncreaseSignal;
 
   const standingIssueSignal =
     /error|warning|issue|problem|crawlability|not crawled|couldn['’]?t crawl|cannot crawl|blocked/.test(text);
