@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.4.16
+   Version: 7.4.17
    Source: Production Worker 6.3.7
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
@@ -825,6 +825,19 @@ async function executeVisionExtractionStage({
 
       evidence = mergeVisibleEvidence(evidence, siteAuditEvidence);
     }
+
+    /*
+     * v7.4.17 FINAL SITE-AUDIT EVIDENCE RECONCILIATION
+     *
+     * v7.4.16 protected the focused Site Audit pass before merge, but a
+     * contradictory positive delta could already exist in primary/recovery
+     * vision evidence. Reconcile the final assembled evidence so an explicit
+     * metric-local "no change" observation wins over a contradictory positive
+     * delta for that same adverse metric, regardless of which vision pass
+     * produced it. Genuine deterioration remains untouched when no explicit
+     * stable observation exists for that metric.
+     */
+    evidence = reconcileFinalSiteAuditNoChangeEvidence(evidence);
   }
 
   if (!evidence || isWeakVisibleEvidence(evidence)) {
@@ -1167,6 +1180,92 @@ function protectExplicitSiteAuditNoChangeEvidence({
     ...focusedEvidence,
     visibleMetrics: protectedMetrics
   };
+}
+
+
+/*
+ * v7.4.17 FINAL SITE-AUDIT EVIDENCE RECONCILIATION
+ *
+ * Inspect the complete assembled Site Audit evidence after all vision passes.
+ * If a metric is explicitly reported as "no change" or "unchanged", remove
+ * contradictory positive-delta observations for that SAME adverse metric from
+ * visibleMetrics, visibleFacts, and visibleText. This prevents hallucinated
+ * deltas from surviving an earlier primary/recovery pass while preserving real
+ * deterioration when the screenshot does not establish stability.
+ */
+function reconcileFinalSiteAuditNoChangeEvidence(evidence) {
+  if (!evidence || !isPlainObject(evidence)) return evidence;
+
+  const metricDefinitions = [
+    { key: "errors", pattern: /\berrors?\b/i },
+    { key: "warnings", pattern: /\bwarnings?\b/i },
+    { key: "notices", pattern: /\bnotices?\b/i },
+    { key: "broken_pages", pattern: /\bbroken(?:\s+pages?)?\b/i },
+    { key: "pages_with_issues", pattern: /\bpages?\s+with\s+issues?\b|\bissues?\b/i }
+  ];
+
+  const allItems = [
+    evidence.visibleText,
+    ...(evidence.visibleFacts || []),
+    ...(evidence.visibleMetrics || [])
+  ].map(clean).filter(Boolean);
+
+  const stableMetrics = new Set();
+
+  for (const item of allItems) {
+    if (!/\bno\s+change\b|\bunchanged\b/i.test(item)) continue;
+
+    for (const definition of metricDefinitions) {
+      if (definition.pattern.test(item)) stableMetrics.add(definition.key);
+    }
+  }
+
+  if (!stableMetrics.size) return evidence;
+
+  const contradictsExplicitStability = value => {
+    const item = clean(value);
+    if (!item) return false;
+
+    const hasPositiveDelta =
+      /\bchange\s*:\s*\+\s*\d+(?:\.\d+)?(?:%|\b)/i.test(item) ||
+      /\b(?:errors?|warnings?|notices?|issues?|broken(?:\s+pages?)?)\b[^\n.;]{0,40}\+\s*\d+(?:\.\d+)?\b/i.test(item);
+
+    if (!hasPositiveDelta) return false;
+
+    return metricDefinitions.some(definition =>
+      stableMetrics.has(definition.key) && definition.pattern.test(item)
+    );
+  };
+
+  const cleanArray = values => (values || [])
+    .map(normalizeEvidenceArrayItem)
+    .map(clean)
+    .filter(Boolean)
+    .filter(item => !contradictsExplicitStability(item));
+
+  let visibleText = clean(evidence.visibleText);
+
+  /*
+   * visibleText can contain several metric statements in one transcription.
+   * Remove only contradictory metric-local clauses/segments, not the complete
+   * transcription, so project/domain/date and other valid evidence survive.
+   */
+  if (visibleText && contradictsExplicitStability(visibleText)) {
+    const segments = visibleText
+      .split(/(?<=[.;])\s+|\n+/)
+      .map(clean)
+      .filter(Boolean)
+      .filter(segment => !contradictsExplicitStability(segment));
+
+    visibleText = segments.join(" ");
+  }
+
+  return normalizeVisibleEvidence({
+    ...evidence,
+    visibleText,
+    visibleFacts: cleanArray(evidence.visibleFacts),
+    visibleMetrics: cleanArray(evidence.visibleMetrics)
+  });
 }
 
 function buildSiteAuditMetricsPrompt({ client, clientId, fileName }) {
