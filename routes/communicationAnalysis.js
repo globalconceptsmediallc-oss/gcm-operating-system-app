@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.4.6
+   Version: 7.4.7
    Source: Production Worker 6.3.7
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
@@ -1511,7 +1511,8 @@ function deterministicNotificationClassification(evidence) {
     { platform: "semrush", patterns: [/\bsemrush\b/i] },
     { platform: "google_search_console", patterns: [/google search console/i, /\bsearch console\b/i] },
     { platform: "google_business_profile", patterns: [/google business profile/i, /\bbusiness profile\b/i] },
-    { platform: "google_analytics", patterns: [/google analytics/i, /\bga4\b/i] }
+    { platform: "google_analytics", patterns: [/google analytics/i, /\bga4\b/i] },
+    { platform: "google_maps_platform", patterns: [/google maps platform/i, /google-maps-platform/i] }
   ];
 
   const typeRules = [
@@ -1523,6 +1524,7 @@ function deterministicNotificationClassification(evidence) {
     { type: "analytics", family: "Google Analytics", patterns: [/google analytics/i, /\bga4\b/i, /analytics notification/i] },
     { type: "billing_notice", family: "Billing Notice", patterns: [/invoice/i, /billing/i, /payment failed/i, /past due/i, /receipt/i] },
     { type: "access_security", family: "Access or Security Notice", patterns: [/security alert/i, /new sign-in/i, /password/i, /access request/i, /verification code/i, /compromised/i] },
+    { type: "vendor_notice", family: "Platform / Vendor Notice", patterns: [/google maps platform/i, /google-maps-platform/i, /platform customer/i, /service notice/i, /action advised/i, /deprecat(?:e|ed|ion)/i, /development environments?/i] },
     { type: "client_request", family: "Human Email", patterns: [/can you/i, /could you/i, /please/i, /need you to/i, /let me know/i, /approve/i, /schedule/i] }
   ];
 
@@ -1555,6 +1557,13 @@ function deterministicNotificationClassification(evidence) {
     notificationType = "analytics";
     notificationFamily = "Google Analytics";
     bestScore = Math.max(bestScore, analyticsSignatureScore);
+  }
+
+  /* v7.4.7: recognized automated platform identity outranks generic polite request wording. */
+  if (platform === "google_maps_platform") {
+    notificationType = "vendor_notice";
+    notificationFamily = "Platform / Vendor Notice";
+    bestScore = Math.max(bestScore, 2);
   }
 
   if (platform === "unknown" && notificationType === "client_request") {
@@ -1798,10 +1807,39 @@ function buildDeterministicBusinessMeaning({ visibleEvidence, classification }) 
     "site_audit",
     "search_performance",
     "business_profile",
-    "analytics"
+    "analytics",
+    "vendor_notice"
   ]);
 
   if (!supportedTypes.has(type)) return null;
+
+  /* v7.4.7: deterministic triage for automated platform/vendor notices. */
+  if (type === "vendor_notice") {
+    return {
+      eventDirection: "Neutral",
+      operationalSummary: "A platform/vendor service notice was received. No current client-specific impact is identified in the visible evidence.",
+      businessImpact: "The notice describes a platform or development-environment change, but the visible evidence does not establish that a current GCM client requires action.",
+      importance: "Low",
+      recommendedAction: "No Operational Record Required. No current client impact or required operational action is identified.",
+      investigationSuggested: false,
+      workItemSuggested: false,
+      replySuggested: false,
+      reasoning: "This is an automated platform/vendor notice rather than a human client request. Without evidence tying the notice to a current client account or required GCM action, it should not create operational work.",
+      recordPurpose: "No Operational Record Required",
+      operationalLabel: "No Operational Record Required",
+      confidence: "High",
+      fallbackUsed: false,
+      intelligenceTrace: {
+        engine: "communication-intelligence-v1",
+        path: "deterministic",
+        definition: "platform-vendor-notice",
+        platform,
+        notificationType: type,
+        aiUsed: false,
+        fallbackUsed: false
+      }
+    };
+  }
 
   const text = [
     visibleEvidence?.visibleSubject,
@@ -2000,7 +2038,8 @@ function operationalLabelForNotificationType(type, direction) {
     site_audit: "Technical Monitoring Update",
     search_performance: "Search Performance Update",
     business_profile: "Local Presence Update",
-    analytics: "Analytics Update"
+    analytics: "Analytics Update",
+    vendor_notice: "Platform / Vendor Notice"
   };
   return labels[type] || "Information";
 }
@@ -2084,6 +2123,7 @@ function normalizeSource(classification, evidence) {
     google_search_console: "Google Search Console",
     google_business_profile: "Google Business Profile",
     google_analytics: "Google Analytics",
+    google_maps_platform: "Google Maps Platform",
     client_email: "Client Email",
     vendor_email: "Vendor Email"
   };
