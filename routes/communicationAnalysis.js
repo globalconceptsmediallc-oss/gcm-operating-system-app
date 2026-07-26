@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.4.17
+   Version: 7.4.18
    Source: Production Worker 6.3.7
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
@@ -434,7 +434,7 @@ function buildTextEvidencePrompt({ sourceText, client, clientId, fileName }) {
     "9. Do not collapse several keyword movements into a generic phrase such as 'rankings changed'. Each readable movement must be its own visibleMetrics item.",
     "10. Do not omit negative measurements because positive measurements also exist, or vice versa.",
     "10A. SITE AUDIT METRIC ASSOCIATION: when a Site Audit metric has a label, current value, and displayed change/delta, keep them together in ONE visibleMetrics item.",
-    "10B. Examples of the required Site Audit form: 'Site Health: 71%; Change: +1%', 'Errors: 136; Change: +27', 'Warnings: 7600; Change: +27', 'Notices: 2219; Change: -4', 'Broken Pages: 6; Change: -1'.",
+    "10B. Required Site Audit form: 'Site Health: <current value>; Change: <signed change or no change>', 'Errors: <current value>; Change: <signed change or no change>', 'Warnings: <current value>; Change: <signed change or no change>', 'Notices: <current value>; Change: <signed change or no change>', 'Broken Pages: <current value>; Change: <signed change or no change>'.",
     "10C. Never output a Site Audit count or signed delta as an unlabeled standalone metric when its label is readable. Preserve the label/value/change relationship exactly as shown.",
     "10D. A positive delta on Errors, Warnings, Issues, or Broken Pages is deterioration evidence; extraction must preserve the signed delta but must not make the operational decision.",
     "11. responseExpected is true only when the source explicitly expects a response.",
@@ -1090,7 +1090,7 @@ function buildVisionEvidencePrompt({ sourceText = "", client, clientId, fileName
     "Put every clearly readable measurable observation in visibleMetrics.",
     "For keyword ranking rows, preserve the keyword phrase together with its readable position/change values in the same visibleMetrics item when possible.",
     "SITE AUDIT METRIC ASSOCIATION RULE: if the screenshot is a Site Audit, keep each readable metric label, current value, and displayed signed change/delta together in ONE visibleMetrics item.",
-    "Required Site Audit format examples: 'Site Health: 71%; Change: +1%', 'Errors: 136; Change: +27', 'Warnings: 7600; Change: +27', 'Notices: 2219; Change: -4', 'Broken Pages: 6; Change: -1'.",
+    "Required Site Audit form: 'Site Health: <current value>; Change: <signed change or no change>', 'Errors: <current value>; Change: <signed change or no change>', 'Warnings: <current value>; Change: <signed change or no change>', 'Notices: <current value>; Change: <signed change or no change>', 'Broken Pages: <current value>; Change: <signed change or no change>'.",
     "Do not return unlabeled Site Audit numbers or detached signed deltas when the screenshot visibly associates them with a metric label.",
     "Preserve + and - signs exactly. Do not reinterpret whether a change is good or bad during extraction.",
     "When something truly cannot be read, omit the uncertain metric instead of guessing.",
@@ -1268,6 +1268,14 @@ function reconcileFinalSiteAuditNoChangeEvidence(evidence) {
   });
 }
 
+/*
+ * v7.4.18 SITE-AUDIT PROMPT EXAMPLE HARDENING
+ *
+ * Site Audit AI prompts use neutral placeholders only. Real production-like
+ * numbers are not embedded in prompt examples, preventing example values from
+ * being echoed as screenshot evidence. No routing, database, save, UI, or
+ * Work Item behavior is changed.
+ */
 function buildSiteAuditMetricsPrompt({ client, clientId, fileName }) {
   return [
     "You are reading a SEMrush Site Audit notification screenshot.",
@@ -1311,8 +1319,8 @@ function buildSiteAuditMetricsPrompt({ client, clientId, fileName }) {
         "Clearly readable project/domain/date fact when visible"
       ],
       visibleMetrics: [
-        "Errors: 136; Change: +27",
-        "Warnings: 7600; Change: +27"
+        "Errors: <current value>; Change: <signed change or no change>",
+        "Warnings: <current value>; Change: <signed change or no change>"
       ],
       responseExpected: false,
       explicitActionRequested: false,
