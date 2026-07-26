@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.4.19
+   Version: 7.4.20
    Source: Production Worker 6.3.7
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
@@ -718,6 +718,8 @@ async function executeVisionExtractionStage({
   let siteAuditResult = null;
   let siteAuditEvidence = null;
   let siteAuditPreparedImage = null;
+  let siteAuditChangeVerificationResult = null;
+  let siteAuditChangeVerification = null;
 
   if (positionTrackingAnchored) {
     const tablePrompt = buildPositionTrackingTablePrompt({
@@ -847,6 +849,64 @@ async function executeVisionExtractionStage({
     }
 
     /*
+     * v7.4.20 SITE-AUDIT CHANGE-STATUS VERIFICATION
+     *
+     * Road testing showed that even an enlarged focused pass can sometimes
+     * invent a signed delta where the report visibly says "no change".
+     * When the assembled Site Audit evidence contains a positive delta on an
+     * adverse metric, run one final narrow verification pass whose ONLY job is
+     * to classify the displayed change state for each adverse metric as:
+     * increase, decrease, no_change, or not_readable.
+     *
+     * The verification pass does not read current counts and contains no
+     * example numbers. A verified no_change/decrease removes contradictory
+     * positive deltas for that metric. A verified increase preserves them.
+     */
+    if (hasSiteAuditPositiveAdverseDelta(evidence)) {
+      const verificationPrompt = buildSiteAuditChangeVerificationPrompt({
+        client,
+        clientId,
+        fileName
+      });
+
+      siteAuditChangeVerificationResult = await runAiJsonWithRetry({
+        env,
+        model: COMMUNICATION_VISION_MODEL,
+        input: {
+          messages: [
+            {
+              role: "system",
+              content: "Verify only the visibly displayed change state for SEMrush Site Audit adverse metrics. Return one valid JSON object only."
+            },
+            {
+              role: "user",
+              content: verificationPrompt
+            }
+          ],
+          image: siteAuditPreparedImage?.dataUrl || visionImageDataUrl,
+          max_tokens: 900,
+          temperature: 0
+        },
+        stageName: `${stageName}_site_audit_change_verification`,
+        requestId,
+        route: ACTIONS.ANALYZE_COMMUNICATION,
+        timeoutMs: 30000,
+        maxRetries: 1
+      });
+
+      if (siteAuditChangeVerificationResult.ok) {
+        siteAuditChangeVerification = normalizeSiteAuditChangeVerification(
+          siteAuditChangeVerificationResult.data
+        );
+
+        evidence = applySiteAuditChangeVerification({
+          evidence,
+          verification: siteAuditChangeVerification
+        });
+      }
+    }
+
+    /*
      * v7.4.17 FINAL SITE-AUDIT EVIDENCE RECONCILIATION
      *
      * v7.4.16 protected the focused Site Audit pass before merge, but a
@@ -910,14 +970,17 @@ async function executeVisionExtractionStage({
         (primaryResult.retryCount || 0)
         + (recoveryResult?.retryCount || 0)
         + (tableResult?.retryCount || 0)
-        + (siteAuditResult?.retryCount || 0),
-      retryStatus: siteAuditEvidence
-        ? "site_audit_metric_enrichment_succeeded"
-        : tableEvidence
-          ? "position_tracking_table_enrichment_succeeded"
-          : usedRecovery
-            ? "focused_recovery_succeeded"
-            : primaryResult.retryStatus,
+        + (siteAuditResult?.retryCount || 0)
+        + (siteAuditChangeVerificationResult?.retryCount || 0),
+      retryStatus: siteAuditChangeVerification
+        ? "site_audit_change_verification_succeeded"
+        : siteAuditEvidence
+          ? "site_audit_metric_enrichment_succeeded"
+          : tableEvidence
+            ? "position_tracking_table_enrichment_succeeded"
+            : usedRecovery
+              ? "focused_recovery_succeeded"
+              : primaryResult.retryStatus,
       fallbackUsed: false,
       data: evidence,
       debug: {
@@ -1211,6 +1274,138 @@ function buildVisionEvidencePrompt({ sourceText = "", client, clientId, fileName
       uncertainty: "Only unreadable or unverified details; otherwise None"
     }, null, 2)
   ].join("\\n");
+}
+
+/*
+ * v7.4.20 SITE-AUDIT CHANGE-STATUS VERIFICATION HELPERS
+ */
+function hasSiteAuditPositiveAdverseDelta(evidence) {
+  return (evidence?.visibleMetrics || [])
+    .map(clean)
+    .filter(Boolean)
+    .some(item =>
+      /\b(?:errors?|warnings?|issues?|pages\s+with\s+issues|broken(?:\s+pages?)?)\b/i.test(item) &&
+      (
+        /\bchange\s*:\s*\+\s*\d+(?:\.\d+)?(?:%|\b)/i.test(item) ||
+        /\b(?:errors?|warnings?|issues?|pages\s+with\s+issues|broken(?:\s+pages?)?)\b[^\n;|]{0,50}\+\s*\d+(?:\.\d+)?(?:%|\b)/i.test(item)
+      )
+    );
+}
+
+function buildSiteAuditChangeVerificationPrompt({ client, clientId, fileName }) {
+  return [
+    "You are verifying one SEMrush Site Audit screenshot.",
+    "Do NOT transcribe current counts. Do NOT infer previous values.",
+    "Your only job is to read the change indicator displayed beside each listed adverse metric.",
+    "",
+    "STRICT RULES",
+    "1. Focus only on Errors, Warnings, Pages With Issues, and Broken Pages.",
+    "2. For each metric, return exactly one status: increase, decrease, no_change, or not_readable.",
+    "3. If the screenshot literally says 'no change' beside a metric, return no_change.",
+    "4. If a clearly visible plus-signed change is beside that metric, return increase.",
+    "5. If a clearly visible minus-signed change is beside that metric, return decrease.",
+    "6. If the change indicator cannot be read confidently, return not_readable.",
+    "7. Do not use the general sentence about whether site health changed to determine a metric's status.",
+    "8. Do not guess. Prefer not_readable over a plausible answer.",
+    "9. Return only valid JSON. No markdown.",
+    "",
+    `Selected client context: ${client || clientId || "Unknown"}`,
+    `Temporary filename: ${fileName}`,
+    "",
+    "Return only this JSON contract:",
+    JSON.stringify({
+      errors: "increase | decrease | no_change | not_readable",
+      warnings: "increase | decrease | no_change | not_readable",
+      pagesWithIssues: "increase | decrease | no_change | not_readable",
+      brokenPages: "increase | decrease | no_change | not_readable"
+    }, null, 2)
+  ].join("\n");
+}
+
+function normalizeSiteAuditChangeVerification(value) {
+  const allowed = new Set(["increase", "decrease", "no_change", "not_readable"]);
+  const normalizeStatus = status => {
+    const cleaned = clean(status).toLowerCase().replace(/\s+/g, "_");
+    return allowed.has(cleaned) ? cleaned : "not_readable";
+  };
+
+  return {
+    errors: normalizeStatus(value?.errors),
+    warnings: normalizeStatus(value?.warnings),
+    pagesWithIssues: normalizeStatus(value?.pagesWithIssues),
+    brokenPages: normalizeStatus(value?.brokenPages)
+  };
+}
+
+function applySiteAuditChangeVerification({ evidence, verification }) {
+  if (!evidence || !verification) return evidence;
+
+  const definitions = [
+    { key: "errors", pattern: /\berrors?\b/i },
+    { key: "warnings", pattern: /\bwarnings?\b/i },
+    { key: "pagesWithIssues", pattern: /\bpages?\s+with\s+issues?\b|\bissues?\b/i },
+    { key: "brokenPages", pattern: /\bbroken(?:\s+pages?)?\b/i }
+  ];
+
+  const shouldRemovePositiveDelta = item => {
+    const line = clean(item);
+    if (!line) return false;
+
+    const hasPositiveDelta =
+      /\bchange\s*:\s*\+\s*\d+(?:\.\d+)?(?:%|\b)/i.test(line) ||
+      /\b(?:errors?|warnings?|issues?|pages\s+with\s+issues|broken(?:\s+pages?)?)\b[^\n;|]{0,50}\+\s*\d+(?:\.\d+)?(?:%|\b)/i.test(line);
+
+    if (!hasPositiveDelta) return false;
+
+    return definitions.some(definition => {
+      const status = verification[definition.key];
+      return (
+        definition.pattern.test(line) &&
+        (status === "no_change" || status === "decrease")
+      );
+    });
+  };
+
+  const cleanArray = values => (values || [])
+    .map(normalizeEvidenceArrayItem)
+    .map(clean)
+    .filter(Boolean)
+    .filter(item => !shouldRemovePositiveDelta(item));
+
+  let visibleText = clean(evidence.visibleText);
+  if (visibleText && shouldRemovePositiveDelta(visibleText)) {
+    visibleText = visibleText
+      .split(/(?<=[.;])\s+|\n+/)
+      .map(clean)
+      .filter(Boolean)
+      .filter(segment => !shouldRemovePositiveDelta(segment))
+      .join(" ");
+  }
+
+  const verificationFacts = definitions
+    .map(definition => {
+      const status = verification[definition.key];
+      if (status === "no_change") {
+        const label = definition.key === "pagesWithIssues"
+          ? "Pages With Issues"
+          : definition.key === "brokenPages"
+            ? "Broken Pages"
+            : definition.key.charAt(0).toUpperCase() + definition.key.slice(1);
+        return `${label}: no change`;
+      }
+      return "";
+    })
+    .filter(Boolean);
+
+  return normalizeVisibleEvidence({
+    ...evidence,
+    visibleText,
+    visibleFacts: uniqueTextValues([
+      ...cleanArray(evidence.visibleFacts),
+      ...verificationFacts
+    ]),
+    visibleMetrics: cleanArray(evidence.visibleMetrics)
+  });
 }
 
 function protectExplicitSiteAuditNoChangeEvidence({
