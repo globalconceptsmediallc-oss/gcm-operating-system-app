@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.4.15
+   Version: 7.4.16
    Source: Production Worker 6.3.7
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
@@ -803,6 +803,26 @@ async function executeVisionExtractionStage({
 
     if (siteAuditResult.ok) {
       siteAuditEvidence = normalizeVisibleEvidence(siteAuditResult.data);
+
+      /*
+       * v7.4.16 SITE-AUDIT "NO CHANGE" EVIDENCE PROTECTION
+       *
+       * Road testing with South Florida Safes proved that a focused vision pass
+       * can occasionally attach a positive signed delta to an adverse metric
+       * even when the broader screenshot evidence explicitly says that metric
+       * has "no change". Before merging focused Site Audit enrichment, protect
+       * explicit stable metric observations already present in the broader
+       * evidence. A contradictory focused delta is discarded for that metric.
+       *
+       * This does not suppress genuine deterioration. When the broader evidence
+       * does not explicitly establish "no change", focused labeled deltas such
+       * as "Errors: 136; Change: +27" remain eligible for routing.
+       */
+      siteAuditEvidence = protectExplicitSiteAuditNoChangeEvidence({
+        baseEvidence: evidence,
+        focusedEvidence: siteAuditEvidence
+      });
+
       evidence = mergeVisibleEvidence(evidence, siteAuditEvidence);
     }
   }
@@ -1085,6 +1105,68 @@ function buildVisionEvidencePrompt({ sourceText = "", client, clientId, fileName
       uncertainty: "Only unreadable or unverified details; otherwise None"
     }, null, 2)
   ].join("\\n");
+}
+
+function protectExplicitSiteAuditNoChangeEvidence({
+  baseEvidence,
+  focusedEvidence
+}) {
+  if (!focusedEvidence || !isPlainObject(focusedEvidence)) return focusedEvidence;
+
+  const baseItems = [
+    baseEvidence?.visibleText,
+    ...(baseEvidence?.visibleFacts || []),
+    ...(baseEvidence?.visibleMetrics || [])
+  ].map(clean).filter(Boolean);
+
+  const metricDefinitions = [
+    { key: "errors", pattern: /\berrors?\b/i },
+    { key: "warnings", pattern: /\bwarnings?\b/i },
+    { key: "notices", pattern: /\bnotices?\b/i },
+    { key: "broken_pages", pattern: /\bbroken(?:\s+pages?)?\b/i },
+    { key: "pages_with_issues", pattern: /\bpages?\s+with\s+issues?\b|\bissues?\b/i }
+  ];
+
+  const explicitlyStableMetrics = new Set();
+
+  for (const item of baseItems) {
+    if (!/\bno\s+change\b|\bunchanged\b/i.test(item)) continue;
+
+    for (const definition of metricDefinitions) {
+      if (definition.pattern.test(item)) {
+        explicitlyStableMetrics.add(definition.key);
+      }
+    }
+  }
+
+  if (!explicitlyStableMetrics.size) return focusedEvidence;
+
+  const protectedMetrics = (focusedEvidence.visibleMetrics || [])
+    .map(normalizeEvidenceArrayItem)
+    .map(clean)
+    .filter(Boolean)
+    .filter(item => {
+      const hasContradictoryPositiveDelta =
+        /\bchange\s*:\s*\+\s*\d+(?:\.\d+)?(?:%|\b)/i.test(item);
+
+      if (!hasContradictoryPositiveDelta) return true;
+
+      for (const definition of metricDefinitions) {
+        if (
+          explicitlyStableMetrics.has(definition.key) &&
+          definition.pattern.test(item)
+        ) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+
+  return {
+    ...focusedEvidence,
+    visibleMetrics: protectedMetrics
+  };
 }
 
 function buildSiteAuditMetricsPrompt({ client, clientId, fileName }) {
