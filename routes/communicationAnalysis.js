@@ -1,12 +1,7 @@
-Library
-/
-communicationAnalysis-v7.4.12_FRESH_INSTALL.txt
-
-
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.4.12
+   Version: 7.4.13
    Source: Production Worker 6.3.7
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
@@ -715,8 +710,13 @@ async function executeVisionExtractionStage({
    * sanitized before being merged with the broader evidence.
    */
   const positionTrackingAnchored = /\bposition tracking\b/i.test(clean(sourceText));
+  const siteAuditAnchored =
+    deterministicNotificationClassification(evidence).notificationType === "site_audit";
+
   let tableResult = null;
   let tableEvidence = null;
+  let siteAuditResult = null;
+  let siteAuditEvidence = null;
 
   if (positionTrackingAnchored) {
     const tablePrompt = buildPositionTrackingTablePrompt({
@@ -757,6 +757,53 @@ async function executeVisionExtractionStage({
       );
 
       evidence = mergeVisibleEvidence(evidence, tableEvidence);
+    }
+  }
+
+  /*
+   * v7.4.13 SITE-AUDIT FOCUSED METRICS PASS
+   *
+   * Broad screenshot extraction can read the Site Audit numbers while dropping
+   * the metric labels. That makes deterioration impossible to evaluate safely.
+   * When the broad evidence classifies as Site Audit, run one narrow pass that
+   * is allowed to return only labeled Site Audit metrics. Merge those labeled
+   * observations back into the evidence before business meaning/routing.
+   */
+  if (siteAuditAnchored) {
+    const siteAuditPrompt = buildSiteAuditMetricsPrompt({
+      client,
+      clientId,
+      fileName
+    });
+
+    siteAuditResult = await runAiJsonWithRetry({
+      env,
+      model: COMMUNICATION_VISION_MODEL,
+      input: {
+        messages: [
+          {
+            role: "system",
+            content: "Extract only clearly readable SEMrush Site Audit metrics with their labels and signed changes. Return one valid JSON object only."
+          },
+          {
+            role: "user",
+            content: siteAuditPrompt
+          }
+        ],
+        image: visionImageDataUrl,
+        max_tokens: 1400,
+        temperature: 0
+      },
+      stageName: `${stageName}_site_audit_metrics`,
+      requestId,
+      route: ACTIONS.ANALYZE_COMMUNICATION,
+      timeoutMs: 30000,
+      maxRetries: 1
+    });
+
+    if (siteAuditResult.ok) {
+      siteAuditEvidence = normalizeVisibleEvidence(siteAuditResult.data);
+      evidence = mergeVisibleEvidence(evidence, siteAuditEvidence);
     }
   }
 
@@ -809,12 +856,15 @@ async function executeVisionExtractionStage({
       retryCount:
         (primaryResult.retryCount || 0)
         + (recoveryResult?.retryCount || 0)
-        + (tableResult?.retryCount || 0),
-      retryStatus: tableEvidence
-        ? "position_tracking_table_enrichment_succeeded"
-        : usedRecovery
-          ? "focused_recovery_succeeded"
-          : primaryResult.retryStatus,
+        + (tableResult?.retryCount || 0)
+        + (siteAuditResult?.retryCount || 0),
+      retryStatus: siteAuditEvidence
+        ? "site_audit_metric_enrichment_succeeded"
+        : tableEvidence
+          ? "position_tracking_table_enrichment_succeeded"
+          : usedRecovery
+            ? "focused_recovery_succeeded"
+            : primaryResult.retryStatus,
       fallbackUsed: false,
       data: evidence,
       debug: {
@@ -1035,6 +1085,60 @@ function buildVisionEvidencePrompt({ sourceText = "", client, clientId, fileName
       uncertainty: "Only unreadable or unverified details; otherwise None"
     }, null, 2)
   ].join("\\n");
+}
+
+function buildSiteAuditMetricsPrompt({ client, clientId, fileName }) {
+  return [
+    "You are reading a SEMrush Site Audit notification screenshot.",
+    "Your only job is to transcribe clearly readable Site Audit summary metrics and their displayed changes.",
+    "",
+    "STRICT RULES",
+    "1. Ignore browser chrome, Gmail navigation, sender controls, labels, tabs, and unrelated page text.",
+    "2. Focus on the central SEMrush Site Audit report body.",
+    "3. Read the Site Health, Crawled Pages, page-status counts, Errors, Warnings, Notices, and any visible signed change beside those values.",
+    "4. Every metric MUST keep its readable label and value together.",
+    "5. When a signed change is visible, keep it in the same visibleMetrics item using 'Change: +N' or 'Change: -N'.",
+    "6. Preserve plus and minus signs exactly as shown.",
+    "7. Never return an unlabeled number.",
+    "8. Never infer a label from position alone if you cannot actually read the label.",
+    "9. Never calculate a previous value.",
+    "10. Do not decide whether a change is good or bad. Extract evidence only.",
+    "11. If a label or number is too blurry to read confidently, omit that metric.",
+    "12. Never wrap the JSON in markdown fences.",
+    "",
+    `Selected client context: ${client || clientId || "Unknown"}`,
+    `Temporary filename: ${fileName}`,
+    "",
+    "Preferred visibleMetrics forms when readable:",
+    "Site Health: <value>; Change: <signed change>",
+    "Crawled Pages: <value>",
+    "Healthy Pages: <value>; Change: <signed change>",
+    "Broken Pages: <value>; Change: <signed change>",
+    "Pages With Issues: <value>; Change: <signed change>",
+    "Redirect Pages: <value>; Change: <signed change>",
+    "Blocked Pages: <value>; Change: <signed change>",
+    "Errors: <value>; Change: <signed change>",
+    "Warnings: <value>; Change: <signed change>",
+    "Notices: <value>; Change: <signed change>",
+    "",
+    "Return only valid JSON matching this contract:",
+    JSON.stringify({
+      visibleSource: "SEMrush if visibly confirmed; otherwise Unknown",
+      visibleSubject: "Site Audit if visibly confirmed; otherwise Unknown",
+      visibleText: "Only clearly readable Site Audit metric text",
+      visibleFacts: [
+        "Clearly readable project/domain/date fact when visible"
+      ],
+      visibleMetrics: [
+        "Errors: 136; Change: +27",
+        "Warnings: 7600; Change: +27"
+      ],
+      responseExpected: false,
+      explicitActionRequested: false,
+      confidence: "High | Medium | Low",
+      uncertainty: "Only unreadable or unverified metric labels/values; otherwise None"
+    }, null, 2)
+  ].join("\n");
 }
 
 function buildPositionTrackingTablePrompt({ sourceText = "", client, clientId, fileName }) {
@@ -1974,10 +2078,10 @@ function buildDeterministicBusinessMeaning({ visibleEvidence, classification }) 
   ].map(clean).filter(Boolean);
 
   const adverseIssueMetricLabelPattern =
-    /\b(?:errors?|warnings?|issues?|broken(?:\s+pages?)?)\b/i;
+    /\b(?:errors?|warnings?|issues?|pages\s+with\s+issues|broken(?:\s+pages?)?)\b/i;
 
   const positiveSignedDeltaPattern =
-    /(?:^|[\s:;,()\[\]—-])\+\s*\d+(?:\.\d+)?(?:%|\b)/;
+    /(?:\bchange\s*:\s*)?\+\s*\d+(?:\.\d+)?(?:%|\b)/i;
 
   const adverseIssueCountIncreaseSignal =
     siteAuditEvidenceItems.some(item =>
