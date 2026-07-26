@@ -1,15 +1,16 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/workItemProcessing.js
-   Version: 7.3.1
+   Version: 7.3.2
    Status: Production Candidate
    Source: Production Worker 7.3.0
    Sprint: Work Item Completion — Road Test #21
    Purpose: Complete an existing linked Work Item by recording
             work performed, result, completion evidence, and
             completion timestamps, then close the linked
-            Investigation. Uses only confirmed production D1
-            Work Item columns. Completed Work Items flow into the
+            Investigation. Removes unsupported scheduling fields
+            from the production Work Item query. Completed Work
+            Items flow into the
             existing proof_of_work D1 view automatically.
    ========================================================= */
 
@@ -140,7 +141,6 @@ export async function handleProcessWorkItem(body, env, requestId) {
         wi.expected_impact,
         wi.actual_impact,
         wi.started_at,
-        wi.verification_due_at,
         wi.verified_at,
         wi.completed_at,
         wi.minutes_spent,
@@ -337,7 +337,6 @@ async function loadWorkItem(db, workItemId) {
       wi.expected_impact,
       wi.actual_impact,
       wi.started_at,
-      wi.verification_due_at,
       wi.verified_at,
       wi.completed_at,
       wi.minutes_spent,
@@ -433,7 +432,6 @@ function mapWorkItem(row) {
     expectedImpact: row.expected_impact,
     actualImpact: row.actual_impact,
     startedAt: row.started_at,
-    verificationDueAt: row.verification_due_at,
     verifiedAt: row.verified_at,
     completedAt: row.completed_at,
     minutesSpent: row.minutes_spent,
