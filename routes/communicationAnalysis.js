@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.4.7
+   Version: 7.4.8
    Source: Production Worker 6.3.7
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
@@ -479,7 +479,7 @@ function deterministicTextEvidenceExtraction(sourceText) {
   ) || "Unknown";
 
   const subjectLine = lines.find(line =>
-    /position tracking|backlink audit|site audit|search performance|business profile|analytics|ranking|keyword/i.test(line)
+    /merchant listings?|structured data|position tracking|backlink audit|site audit|search performance|business profile|analytics|ranking|keyword/i.test(line)
   ) || "Unknown";
 
   const visibleFacts = uniqueTextValues(lines);
@@ -1516,6 +1516,7 @@ function deterministicNotificationClassification(evidence) {
   ];
 
   const typeRules = [
+    { type: "merchant_listing_structured_data", family: "Google Search Console — Merchant Listings Structured Data", patterns: [/merchant listings?/i, /merchant listings? structured data/i, /structured data issues?/i, /invalid string length in field ["']?sku["']?/i] },
     { type: "position_tracking", family: "SEMrush Position Tracking", patterns: [/position tracking/i, /keyword positions?/i, /rankings?/i, /keywords? improved/i, /keywords? declined/i, /top 3/i, /top 10/i] },
     { type: "backlink_audit", family: "SEMrush Backlink Audit", patterns: [/backlink audit/i, /backlinks?/i, /referring domains?/i, /lost domains?/i, /new domains?/i, /toxic(?:ity)?/i] },
     { type: "site_audit", family: "SEMrush Site Audit", patterns: [/site audit/i, /site health/i, /crawled pages?/i, /crawlability/i, /core web vitals/i, /technical issues?/i] },
@@ -1557,6 +1558,19 @@ function deterministicNotificationClassification(evidence) {
     notificationType = "analytics";
     notificationFamily = "Google Analytics";
     bestScore = Math.max(bestScore, analyticsSignatureScore);
+  }
+
+  /*
+   * v7.4.8 SEARCH CONSOLE SUBTYPE GUARDRAIL
+   * Search Console is a platform, not a notification type.
+   */
+  const merchantListingStructuredDataSignal =
+    /merchant listings?|merchant listings? structured data|structured data issues?|invalid string length in field ["']?sku["']?/i.test(searchable);
+
+  if (platform === "google_search_console" && merchantListingStructuredDataSignal) {
+    notificationType = "merchant_listing_structured_data";
+    notificationFamily = "Google Search Console — Merchant Listings Structured Data";
+    bestScore = Math.max(bestScore, 3);
   }
 
   /* v7.4.7: recognized automated platform identity outranks generic polite request wording. */
@@ -1670,6 +1684,7 @@ function buildOperationalDecision({ visibleEvidence, classification, businessMea
     position_tracking: "SEMrush",
     backlink_audit: "SEMrush",
     site_audit: "SEMrush",
+    merchant_listing_structured_data: "Google Search Console",
     search_performance: "Google Search Console",
     business_profile: "Google Business Profile",
     analytics: "Google Analytics"
@@ -1805,6 +1820,7 @@ function buildDeterministicBusinessMeaning({ visibleEvidence, classification }) 
     "position_tracking",
     "backlink_audit",
     "site_audit",
+    "merchant_listing_structured_data",
     "search_performance",
     "business_profile",
     "analytics",
@@ -1948,6 +1964,14 @@ function buildDeterministicBusinessMeaning({ visibleEvidence, classification }) 
       recordPurpose: "Technical SEO Monitoring Evidence",
       operationalLabel: negative ? "Review Required" : "Technical Monitoring Update"
     },
+    merchant_listing_structured_data: {
+      summary: `Google Search Console detected a Merchant listings structured-data issue.${evidenceDetail} The reported condition should be diagnosed before corrective work is assigned.`,
+      impact: "The visible evidence identifies a Merchant listings structured-data problem. The notice describes it as non-critical, so it does not currently prevent the affected page or feature from appearing on Google, but the affected product/page and markup cause should be verified.",
+      action: "Save the communication and open an Investigation to identify the affected product/page, verify the invalid SKU structured-data value, and determine the required correction. Do not create a Work Item until the required fix is known.",
+      reasoning: "This is a specific Search Console structured-data condition, not a search-performance report. The evidence establishes an issue that requires diagnosis, but it does not yet establish the exact corrective work.",
+      recordPurpose: "Structured Data Issue Evidence",
+      operationalLabel: "Review Required"
+    },
     search_performance: {
       summary: `A Google Search Console notification was received.${evidenceDetail}`,
       impact: negative
@@ -1981,7 +2005,7 @@ function buildDeterministicBusinessMeaning({ visibleEvidence, classification }) 
   if (!template) return null;
 
   const investigationSuggested =
-    type === "backlink_audit"
+    ["backlink_audit", "merchant_listing_structured_data"].includes(type)
       ? true
       : negative && [
           "position_tracking",
@@ -1995,7 +2019,7 @@ function buildDeterministicBusinessMeaning({ visibleEvidence, classification }) 
     eventDirection,
     operationalSummary: template.summary,
     businessImpact: template.impact,
-    importance: negative ? "Medium" : "Low",
+    importance: type === "merchant_listing_structured_data" ? "Medium" : negative ? "Medium" : "Low",
     recommendedAction: template.action,
     investigationSuggested,
     workItemSuggested: false,
@@ -2023,6 +2047,7 @@ function recordPurposeForNotificationType(type) {
     position_tracking: "Historical SEO Monitoring Evidence",
     backlink_audit: "Backlink Health Monitoring Evidence",
     site_audit: "Technical SEO Monitoring Evidence",
+    merchant_listing_structured_data: "Structured Data Issue Evidence",
     search_performance: "Organic Search Performance Evidence",
     business_profile: "Local Presence Monitoring Evidence",
     analytics: "Website Performance Monitoring Evidence"
@@ -2036,6 +2061,7 @@ function operationalLabelForNotificationType(type, direction) {
     position_tracking: "Monitoring Update",
     backlink_audit: "Backlink Monitoring Update",
     site_audit: "Technical Monitoring Update",
+    merchant_listing_structured_data: "Review Required",
     search_performance: "Search Performance Update",
     business_profile: "Local Presence Update",
     analytics: "Analytics Update",
@@ -2106,6 +2132,7 @@ function communicationTypeForClassification(classification) {
     position_tracking: "SEO Ranking Alert",
     backlink_audit: "SEO Backlink Alert",
     site_audit: "Technical SEO Audit Alert",
+    merchant_listing_structured_data: "Merchant Listings Structured Data Alert",
     search_performance: "Search Performance Notification",
     business_profile: "Local Presence Notification",
     analytics: "Analytics Notification",
