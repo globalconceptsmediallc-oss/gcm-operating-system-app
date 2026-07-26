@@ -1,3 +1,10 @@
+<!-- =========================================================
+   Global Concepts Media Operating System
+   File: client-pre-research.html
+   Version: 1.0.1
+   Source: Production Frontend
+   Purpose: Prospect pre-research with standard GCM OS sidebar navigation.
+   ========================================================= -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -71,10 +78,110 @@
       color: inherit;
     }
 
+    .shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 250px minmax(0, 1fr);
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 24px 18px;
+      display: flex;
+      flex-direction: column;
+      color: #fff;
+      background: linear-gradient(180deg, #0b1d33, #071426);
+    }
+
+    .sidebar .brand {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 12px;
+      padding: 2px 8px 22px;
+      border-bottom: 1px solid rgba(255,255,255,.12);
+      text-decoration: none;
+    }
+
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 13px;
+      background: rgba(255,255,255,.08);
+      color: #d6a94a;
+      font-weight: 900;
+    }
+
+    .brand-copy strong,
+    .brand-copy span {
+      display: block;
+    }
+
+    .brand-copy strong {
+      color: #fff;
+      font-size: .92rem;
+      line-height: 1.05;
+    }
+
+    .brand-copy span {
+      margin-top: 2px;
+      color: rgba(255,255,255,.58);
+      font-size: .72rem;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+    }
+
+    .nav-label {
+      margin: 24px 10px 10px;
+      color: rgba(255,255,255,.42);
+      font-size: .68rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .14em;
+    }
+
+    .nav {
+      display: grid;
+      gap: 6px;
+    }
+
+    .nav a {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 46px;
+      padding: 0 13px;
+      border-radius: 12px;
+      color: rgba(255,255,255,.72);
+      font-size: .92rem;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .nav a[aria-current="page"] {
+      background: rgba(52,124,232,.2);
+      color: #fff;
+      box-shadow: inset 3px 0 0 #d6a94a;
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding: 18px 8px 2px;
+      border-top: 1px solid rgba(255,255,255,.12);
+      color: rgba(255,255,255,.66);
+      font-size: .78rem;
+    }
+
+    .os-main {
+      min-width: 0;
+    }
+
     .site-header {
-      background: var(--navy);
-      color: var(--white);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      display: none;
     }
 
     .header-inner {
@@ -718,6 +825,11 @@
       }
     }
 
+    @media (max-width: 850px) {
+      .shell { display: block; }
+      .sidebar { display: none; }
+    }
+
     @media (max-width: 680px) {
       .header-inner {
         align-items: flex-start;
@@ -756,6 +868,37 @@
 </head>
 
 <body>
+<div class="shell">
+  <aside class="sidebar">
+    <a class="brand" href="today.html">
+      <span class="brand-mark">G</span>
+      <span class="brand-copy">
+        <strong>Global Concepts<br>Media</strong>
+        <span>Agency Operating System</span>
+      </span>
+    </a>
+
+    <p class="nav-label">Workspace</p>
+
+    <nav class="nav">
+      <a href="today.html">⌂ <span>Today</span></a>
+      <a href="client-pre-research.html" aria-current="page">◎ <span>Prospects</span></a>
+      <a href="clients.html">◫ <span>Clients</span></a>
+      <a href="communications.html">✉ <span>Communications</span></a>
+      <a href="work.html">✓ <span>Work</span></a>
+      <a href="#">↗ <span>Proof</span></a>
+      <a href="#">★ <span>Case Studies</span></a>
+      <a href="#">⚙ <span>Settings</span></a>
+    </nav>
+
+    <div class="sidebar-footer">
+      Mission Control operational<br>
+      Prospects v1.0.1
+    </div>
+  </aside>
+
+  <div class="os-main">
+
   <header class="site-header">
     <div class="header-inner">
       <a class="brand" href="index.html">
@@ -2089,5 +2232,7 @@
 
     websiteUrlInput.focus();
   </script>
+  </div>
+</div>
 </body>
 </html>
