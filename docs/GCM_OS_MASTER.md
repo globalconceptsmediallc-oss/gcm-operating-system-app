@@ -1,6 +1,6 @@
 GLOBAL CONCEPTS MEDIA OPERATING SYSTEM — MASTER
 
-File: GCM_OS_MASTER.mdVersion: 1.3Status: AUTHORITATIVEPurpose: Master Architecture, Operating Standard, Production Handoff, and Current-State ReferenceLast Updated: 2026-07-25
+File: GCM_OS_MASTER.mdVersion: 1.4Status: AUTHORITATIVEPurpose: Master Architecture, Operating Standard, Production Handoff, and Current-State ReferenceLast Updated: 2026-07-26
 
 AUTHORITY
 
@@ -372,7 +372,7 @@ What should we do with this?
 
 The system should then support a process such as:
 
-Review Original Evidence↓Define Investigation Objective↓Determine What Must Be Checked↓Collect Additional Evidence↓Interpret the Evidence↓Record the Finding↓Decision↙             ↘No Action        Action Required↓                  ↓Resolve          Create Specific Work ItemInvestigation          ↓Perform Work↓Capture Evidence / Result
+Review Original Evidence↓Define Investigation Objective↓Determine What Must Be Checked↓Collect Additional Evidence↓Interpret the Evidence↓Record the Finding↓Decision↙ ↘No Action Action Required↓ ↓Resolve Create Specific Work ItemInvestigation ↓Perform Work↓Capture Evidence / Result
 
 An investigation may legitimately end with:
 
@@ -1160,18 +1160,11 @@ Every production file must contain a clear installed-version header near the top
 
 At minimum the header must identify:
 
-Global Concepts Media Operating SystemFile: <filename>Version: <version>Status: Production
+Global Concepts Media Operating SystemFile: Version: Status: Production
 
 Use the correct comment syntax for the file type.
 
 Example for HTML:
-
-<!-- =========================================================
-   Global Concepts Media Operating System
-   File: work.html
-   Version: 1.0.2
-   Status: Production
-   ========================================================= -->
 
 This rule exists so the installed version can be identified quickly during:
 
@@ -1399,7 +1392,7 @@ Investigation Processing remains deliberately separate from Work Item creation.
 
 The road test confirmed the governing rule:
 
-Communication / Evidence↓Investigation When Warranted↓Gather Additional Evidence↓Record Finding↓Operational Decision↙                     ↘No Work Required         Specific Work Required↓                           ↓Close Investigation       Create Work Item↓Perform Work↓Evidence / Result↓Proof of Work
+Communication / Evidence↓Investigation When Warranted↓Gather Additional Evidence↓Record Finding↓Operational Decision↙ ↘No Work Required Specific Work Required↓ ↓Close Investigation Create Work Item↓Perform Work↓Evidence / Result↓Proof of Work
 
 Historical Routing Corrections
 
@@ -1594,3 +1587,205 @@ The system should preserve knowledge, reduce repeated work, improve decisions, p
 Technology serves the agency.
 
 The agency does not serve the technology.
+
+CURRENT PRODUCTION HANDOFF — 2026-07-26
+
+This section adds the verified production road-test findings from 2026-07-26. All earlier architecture, audit findings, governance rules, infrastructure, and operating principles in this Master remain authoritative unless explicitly changed below.
+
+PICKETT WEAPONRY — END-TO-END INVESTIGATION-TO-WORK ROAD TEST
+
+The Investigation Processing road test continued in production using a real Google Search Console communication for Pickett Weaponry.
+
+Verified record chain:
+
+Client: Pickett WeaponryCommunication: #34Investigation: #24Work Item: #3Issue: Google Search Console — Redirect ErrorAffected published page: /virtual-tour-1/
+
+The originating Google Search Console communication reported a new indexing reason: Redirect error.
+
+Investigation of the live WordPress site established the specific cause. The WordPress Redirection plugin contained a 301 self-redirect for /virtual-tour-1/, sending the URL back to itself. Direct testing produced a “Too many redirects” browser error.
+
+The WordPress Pages interface confirmed that Virtual Tour 1 was a legitimate published page using the slug virtual-tour-1.
+
+The conflicting 301 self-redirect was disabled. The published Virtual Tour 1 page was then retested successfully and loaded normally.
+
+This road test proved the intended chain:
+
+External Communication / Evidence↓Communication Record↓Investigation↓Additional Live Evidence↓Investigation Finding↓Specific Work Required↓Work Item↓Corrective Action Performed↓Immediate Result Recorded↓Future External Verification When Available
+
+The Investigation Finding recorded that the redirect configuration error was confirmed, the self-redirect was disabled, and the published page loaded normally after correction.
+
+The Work Item required disabling the erroneous 301 self-redirect and verifying that the published page loaded normally without the redirect loop.
+
+This is a valid example of a Communication becoming an Investigation and then becoming a Work Item because the Investigation established a specific corrective action.
+
+WORK COMPLETION VS. FUTURE VERIFICATION
+
+The Pickett Weaponry road test clarified an important distinction.
+
+Corrective work can be completed and recorded when the action itself has been performed and its immediate operational result has been verified.
+
+The Work Item does not need to remain artificially open until an external system later confirms the downstream effect.
+
+For this case:
+
+The redirect was corrected.The published page loaded normally.
+
+That is sufficient to record the corrective work as completed.
+
+Google Search Console may later provide additional evidence showing whether indexing or the reported redirect condition has cleared. That later evidence is follow-up measurement / verification. It does not delay the fact that the corrective work was performed.
+
+The governing principle is:
+
+Work Completion≠Final Downstream Outcome Verification
+
+Instead:
+
+Problem Identified↓Work Performed↓Immediate Result Verified↓Work Completed↓Later Measurement / External Evidence↓Outcome Updated When Known
+
+PROOF — CLARIFIED OPERATIONAL RESPONSIBILITY
+
+The road test clarified that Proof is primarily the client-value communication layer for work completed during a selected period.
+
+Proof should gather meaningful completed work and operational activity for a client during a date range and support a useful client communication.
+
+Proof is not limited to records whose final downstream business outcome has already been externally verified.
+
+A completed action may be reportable while its longer-term result remains under monitoring.
+
+For example, the Pickett redirect loop was diagnosed and corrected and the page was verified to load normally. That completed corrective work belongs in client history and can be communicated. Future Search Console evidence can later establish whether Google clears the indexing condition.
+
+Proof/reporting should distinguish when useful between:
+
+Completed workImmediate verified resultLonger-term outcome still being monitoredLater verified outcome
+
+Proof must not fabricate final impact merely because work was completed. It should communicate what is known at the time of reporting.
+
+NOT ALL VALUABLE WORK ORIGINATES AS A WORK ITEM
+
+The road test also clarified that Work Items are not the only source of legitimate client work.
+
+Global Concepts Media performs valuable work through multiple operational paths, including:
+
+Communication → Investigation → Work ItemDirect consultant workRoutine optimizationPlanned client activityHistorical activity recordsMaintenanceContent or marketing activityMonitoring followed by direct actionOther completed operational activity supported by evidence
+
+Therefore the future Proof/reporting system must not assume:
+
+No Work Item = No Client Work
+
+Work Items preserve specific actionable work produced by Investigations. They are not the exclusive definition of work performed by the agency.
+
+The existing operational model already includes activity_records and historical client activity concepts.
+
+Future Proof development must determine how completed work from appropriate durable records is assembled without creating duplicate sources of truth.
+
+The governing requirement is:
+
+Proof must represent the meaningful work actually performed for the client during the reporting period, regardless of whether every action originated from an Investigation-created Work Item.
+
+SOUTH FLORIDA SAFES — SEMRUSH SITEMAP CRAWL ROAD TEST
+
+The Communications road test continued with a real SEMrush Site Audit communication for South Florida Safes.
+
+The source email reported:
+
+Project: southfloridasafes.comSite Health: 87%Crawled Pages: 63Errors: 8Warnings: 547Notices: 94
+
+The communication specifically stated:
+
+“We crawled only 50 out of 52 pages submitted in your sitemap.xml.”
+
+This is materially different from a routine monitoring message that merely reports stable audit metrics.
+
+The sitemap states that 52 pages should be available for crawling, while SEMrush reports that only 50 were crawled. That mismatch represents an unresolved technical condition.
+
+The correct consulting response is to determine why the two submitted sitemap URLs were not crawled and whether the condition represents an intentional exclusion, redirect, broken or unavailable URL, canonical/indexing condition, sitemap problem, crawlability problem, or another legitimate technical reason.
+
+Therefore this communication warrants Investigation unless additional evidence already proves that the two-page difference is intentional and harmless.
+
+COMMUNICATIONS AI ROUTING REGRESSION FINDING
+
+During the South Florida Safes road test, the current Communications AI generated:
+
+Title: SEMrush Site Audit — Technical Monitoring UpdatePriority: LowAI Recommendation: Save the communication to the client history and continue routine Site Audit monitoring.
+
+The AI reasoning treated the message as routine monitoring because the broader Site Audit metrics did not show significant deterioration.
+
+That routing missed the actionable evidence contained in the communication: 50 of 52 sitemap-submitted pages were crawled.
+
+This establishes a production intelligence weakness.
+
+The Communications system must not classify an automated report as routine monitoring solely because aggregate metrics are stable.
+
+It must evaluate whether the communication contains a specific unresolved condition that requires explanation.
+
+Examples include:
+
+Submitted URLs not crawledPages unexpectedly excludedBroken pagesRedirect errorsCoverage/indexing anomaliesLost rankings requiring explanationMaterial tracking failuresOther specific conditions that cannot be understood from the notification alone
+
+The decision should be based on the meaning of the evidence, not merely the source type or whether headline metrics changed.
+
+A useful routing distinction is:
+
+Routine Monitoring Evidence
+
+The communication reports state or movement but contains no unresolved condition requiring consultant investigation.
+
+Investigation-Warranted Evidence
+
+The communication identifies a specific discrepancy, failure, anomaly, unexplained change, or condition requiring additional evidence before the correct action is known.
+
+South Florida Safes “50 of 52 pages” is now the regression case for this distinction.
+
+NEXT DEVELOPMENT OBJECTIVE — COMMUNICATIONS ROUTING HARDENING
+
+Before moving broadly into Proof/reporting development, correct and road-test the Communications AI routing weakness exposed by the South Florida Safes SEMrush communication.
+
+The next production change should improve operational decision generation so that specific unresolved conditions inside otherwise routine automated reports can trigger Investigation when warranted.
+
+The change must preserve the earlier lesson that routine monitoring communications should not be over-routed into Investigations.
+
+The objective is not:
+
+Create more Investigations.
+
+The objective is:
+
+Create the correct Investigations.
+
+The South Florida Safes SEMrush screenshot/email should be used as a regression test.
+
+Expected result:
+
+The system should recognize that “50 of 52 pages submitted in sitemap.xml were crawled” is an unresolved technical discrepancy requiring Investigation.
+
+At the same time, previously verified routine monitoring examples should continue to remain Communication history rather than becoming unnecessary Investigations.
+
+The production change should be made only after reviewing the current production Communications analysis file or smallest dependency set responsible for routing.
+
+Do not redesign the D1 data model unless the road test demonstrates a structural limitation.
+
+NEXT DEVELOPMENT SUCCESS CONDITION
+
+The next development thread succeeds when Communications AI can distinguish routine informational/monitoring evidence from a specific unresolved condition requiring Investigation using real production communications.
+
+The South Florida Safes sitemap case must route correctly without causing known routine monitoring communications to be over-routed.
+
+After that routing behavior is verified, continue the end-to-end operational road test toward assembling completed client work into Proof/client communication.
+
+2026-07-26 HANDOFF STARTING INSTRUCTION
+
+Begin the next development thread by reading this complete GCM_OS_MASTER.md Version 1.4.
+
+Do not reconstruct the architecture from earlier conversations.
+
+Do not restart the repository audit.
+
+Do not redesign Proof before completing the current Communications routing correction.
+
+First review the current production file or smallest dependency set responsible for Communications AI operational routing.
+
+Use the South Florida Safes SEMrush Site Audit communication reporting “50 of 52 pages submitted in sitemap.xml” as the primary regression case.
+
+Preserve the established distinction between routine monitoring and genuine unresolved conditions.
+
+Make one production change at a time, deploy it, road-test it with real evidence, verify the result, and then determine the next step.
