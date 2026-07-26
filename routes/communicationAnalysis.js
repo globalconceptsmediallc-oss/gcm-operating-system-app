@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.4.18
+   Version: 7.4.19
    Source: Production Worker 6.3.7
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
@@ -717,6 +717,7 @@ async function executeVisionExtractionStage({
   let tableEvidence = null;
   let siteAuditResult = null;
   let siteAuditEvidence = null;
+  let siteAuditPreparedImage = null;
 
   if (positionTrackingAnchored) {
     const tablePrompt = buildPositionTrackingTablePrompt({
@@ -770,6 +771,25 @@ async function executeVisionExtractionStage({
    * observations back into the evidence before business meaning/routing.
    */
   if (siteAuditAnchored) {
+    /*
+     * v7.4.19 SITE-AUDIT IMAGE PREPROCESSING
+     *
+     * The SFS road test proved that the focused Site Audit pass was still
+     * reading the full desktop screenshot, where the report metrics are too
+     * small for dependable transcription. After the broad pass identifies the
+     * report as Site Audit, crop and enlarge the central report body before the
+     * focused metrics pass. This changes evidence extraction only.
+     */
+    siteAuditPreparedImage = await prepareSiteAuditImageForAnalysis({
+      imageDataUrl,
+      imageBytes,
+      env,
+      requestId
+    });
+
+    const siteAuditImageDataUrl =
+      siteAuditPreparedImage?.dataUrl || visionImageDataUrl;
+
     const siteAuditPrompt = buildSiteAuditMetricsPrompt({
       client,
       clientId,
@@ -790,7 +810,7 @@ async function executeVisionExtractionStage({
             content: siteAuditPrompt
           }
         ],
-        image: visionImageDataUrl,
+        image: siteAuditImageDataUrl,
         max_tokens: 1400,
         temperature: 0
       },
@@ -903,7 +923,10 @@ async function executeVisionExtractionStage({
       debug: {
         preprocessingApplied: preparedImage.transformed === true,
         preprocessingReason: preparedImage.reason || "",
-        processedImageDataUrl: visionImageDataUrl
+        processedImageDataUrl: visionImageDataUrl,
+        siteAuditPreprocessingApplied: siteAuditPreparedImage?.transformed === true,
+        siteAuditPreprocessingReason: siteAuditPreparedImage?.reason || "",
+        siteAuditProcessedImageDataUrl: siteAuditPreparedImage?.dataUrl || ""
       }
     })
   };
@@ -914,6 +937,76 @@ async function executeVisionExtractionStage({
  * The stage now carries the exact processed image in stage.debug so we can
  * verify what Workers AI received. No D1/save/routing behavior is changed.
  */
+/*
+ * v7.4.19 SITE-AUDIT FOCUSED IMAGE PREPROCESSING
+ *
+ * Once the broad vision pass has identified a Site Audit, use Cloudflare Images
+ * to crop away most browser/Gmail chrome and enlarge the central SEMrush report
+ * before the focused metrics extractor runs. If IMAGES is unavailable or the
+ * transform fails, safely fall back to the original screenshot.
+ */
+async function prepareSiteAuditImageForAnalysis({
+  imageDataUrl,
+  imageBytes,
+  env,
+  requestId
+}) {
+  if (!env?.IMAGES || typeof env.IMAGES.input !== "function") {
+    return {
+      dataUrl: imageDataUrl,
+      transformed: false,
+      reason: "IMAGES binding unavailable; original Site Audit screenshot preserved."
+    };
+  }
+
+  try {
+    const mimeType = imageMimeTypeFromDataUrl(imageDataUrl);
+    const sourceBytes = new Uint8Array(imageBytes);
+
+    const transformedResponse = (
+      await env.IMAGES
+        .input(sourceBytes)
+        .transform({
+          width: 1100,
+          height: 1500,
+          fit: "cover",
+          gravity: { x: 0.57, y: 0.48 }
+        })
+        .output({
+          format: mimeType === "image/png" ? "image/png" : "image/jpeg"
+        })
+    ).response();
+
+    if (!transformedResponse.ok) {
+      throw new Error(`Site Audit image preprocessing returned HTTP ${transformedResponse.status}.`);
+    }
+
+    const transformedBytes = new Uint8Array(await transformedResponse.arrayBuffer());
+    if (!transformedBytes.length) {
+      throw new Error("Site Audit image preprocessing returned an empty image.");
+    }
+
+    return {
+      dataUrl: byteArrayToDataUrl(transformedBytes, mimeType),
+      transformed: true,
+      reason: "Site Audit screenshot cropped and enlarged for focused metric extraction."
+    };
+  } catch (error) {
+    logWorkerError({
+      requestId,
+      route: ACTIONS.ANALYZE_COMMUNICATION,
+      stage: "site_audit_image_preprocessing",
+      error
+    });
+
+    return {
+      dataUrl: imageDataUrl,
+      transformed: false,
+      reason: `Site Audit image preprocessing failed; original screenshot preserved. ${safeErrorMessage(error)}`
+    };
+  }
+}
+
 async function prepareVisionImageForAnalysis({
   imageDataUrl,
   imageBytes,
