@@ -1,17 +1,17 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/workItemProcessing.js
-   Version: 7.3.2
+   Version: 7.3.3
    Status: Production Candidate
-   Source: Production Worker 7.3.0
+   Source: Production Worker 7.3.2
    Sprint: Work Item Completion — Road Test #21
    Purpose: Complete an existing linked Work Item by recording
             work performed, result, completion evidence, and
             completion timestamps, then close the linked
-            Investigation. Removes unsupported scheduling fields
-            from the production Work Item query. Completed Work
-            Items flow into the
-            existing proof_of_work D1 view automatically.
+            Investigation. Uses only columns confirmed in the
+            production work_items and evidence D1 schemas. Completed
+            Work Items flow into the existing proof_of_work D1 view
+            automatically.
    ========================================================= */
 
 import {
@@ -64,12 +64,6 @@ export async function handleProcessWorkItem(body, env, requestId) {
     body?.evidenceUrl ||
     body?.evidence_url
   );
-  const minutesSpent = normalizeMinutes(
-    body?.minutesSpent ??
-    body?.minutes_spent ??
-    0
-  );
-
   if (!db || typeof db.prepare !== "function") {
     return jsonResponse({
       ok: false,
@@ -141,9 +135,7 @@ export async function handleProcessWorkItem(body, env, requestId) {
         wi.expected_impact,
         wi.actual_impact,
         wi.started_at,
-        wi.verified_at,
         wi.completed_at,
-        wi.minutes_spent,
         wi.created_at,
         wi.updated_at,
         c.client_code,
@@ -199,16 +191,13 @@ export async function handleProcessWorkItem(body, env, requestId) {
           status = 'completed',
           actual_impact = ?,
           started_at = COALESCE(started_at, CURRENT_TIMESTAMP),
-          verified_at = CURRENT_TIMESTAMP,
           completed_at = CURRENT_TIMESTAMP,
-          minutes_spent = ?,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
           AND client_id = ?
       `).bind(
         completedDescription,
         actualImpact,
-        minutesSpent,
         workItem.id,
         workItem.client_id
       ),
@@ -337,9 +326,7 @@ async function loadWorkItem(db, workItemId) {
       wi.expected_impact,
       wi.actual_impact,
       wi.started_at,
-      wi.verified_at,
       wi.completed_at,
-      wi.minutes_spent,
       wi.created_at,
       wi.updated_at,
       c.client_code,
@@ -432,9 +419,7 @@ function mapWorkItem(row) {
     expectedImpact: row.expected_impact,
     actualImpact: row.actual_impact,
     startedAt: row.started_at,
-    verifiedAt: row.verified_at,
     completedAt: row.completed_at,
-    minutesSpent: row.minutes_spent,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   };
@@ -502,16 +487,6 @@ function appendWorkPerformed(existingDescription, workPerformed) {
   }
 
   return `${existing}\n\nWork Performed: ${workPerformed}`;
-}
-
-function normalizeMinutes(value) {
-  const parsed = Number(value);
-
-  if (!Number.isFinite(parsed) || parsed < 0) {
-    return 0;
-  }
-
-  return Math.round(parsed);
 }
 
 function isCompletedStatus(value) {
