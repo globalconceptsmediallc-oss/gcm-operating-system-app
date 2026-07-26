@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.4.8
+   Version: 7.4.9
    Source: Production Worker 6.3.7
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
@@ -479,7 +479,7 @@ function deterministicTextEvidenceExtraction(sourceText) {
   ) || "Unknown";
 
   const subjectLine = lines.find(line =>
-    /merchant listings?|structured data|position tracking|backlink audit|site audit|search performance|business profile|analytics|ranking|keyword/i.test(line)
+    /disavow file updated|merchant listings?|structured data|position tracking|backlink audit|site audit|search performance|business profile|analytics|ranking|keyword/i.test(line)
   ) || "Unknown";
 
   const visibleFacts = uniqueTextValues(lines);
@@ -1516,6 +1516,7 @@ function deterministicNotificationClassification(evidence) {
   ];
 
   const typeRules = [
+    { type: "disavow_file_update", family: "Google Search Console — Disavow File Update", patterns: [/disavow file updated/i, /update to the disavow file/i, /new disavow file contains/i, /disavow links?/i] },
     { type: "merchant_listing_structured_data", family: "Google Search Console — Merchant Listings Structured Data", patterns: [/merchant listings?/i, /merchant listings? structured data/i, /structured data issues?/i, /invalid string length in field ["']?sku["']?/i] },
     { type: "position_tracking", family: "SEMrush Position Tracking", patterns: [/position tracking/i, /keyword positions?/i, /rankings?/i, /keywords? improved/i, /keywords? declined/i, /top 3/i, /top 10/i] },
     { type: "backlink_audit", family: "SEMrush Backlink Audit", patterns: [/backlink audit/i, /backlinks?/i, /referring domains?/i, /lost domains?/i, /new domains?/i, /toxic(?:ity)?/i] },
@@ -1570,6 +1571,20 @@ function deterministicNotificationClassification(evidence) {
   if (platform === "google_search_console" && merchantListingStructuredDataSignal) {
     notificationType = "merchant_listing_structured_data";
     notificationFamily = "Google Search Console — Merchant Listings Structured Data";
+    bestScore = Math.max(bestScore, 3);
+  }
+
+  /*
+   * v7.4.9 SEARCH CONSOLE DISAVOW SUBTYPE GUARDRAIL
+   * A Disavow File Updated notice is a confirmation/history event, not a
+   * generic Search Performance notification.
+   */
+  const disavowFileUpdateSignal =
+    /disavow file updated|update to the disavow file|new disavow file contains|disavow links?/i.test(searchable);
+
+  if (platform === "google_search_console" && disavowFileUpdateSignal) {
+    notificationType = "disavow_file_update";
+    notificationFamily = "Google Search Console — Disavow File Update";
     bestScore = Math.max(bestScore, 3);
   }
 
@@ -1685,6 +1700,7 @@ function buildOperationalDecision({ visibleEvidence, classification, businessMea
     backlink_audit: "SEMrush",
     site_audit: "SEMrush",
     merchant_listing_structured_data: "Google Search Console",
+    disavow_file_update: "Google Search Console",
     search_performance: "Google Search Console",
     business_profile: "Google Business Profile",
     analytics: "Google Analytics"
@@ -1821,6 +1837,7 @@ function buildDeterministicBusinessMeaning({ visibleEvidence, classification }) 
     "backlink_audit",
     "site_audit",
     "merchant_listing_structured_data",
+    "disavow_file_update",
     "search_performance",
     "business_profile",
     "analytics",
@@ -1849,6 +1866,45 @@ function buildDeterministicBusinessMeaning({ visibleEvidence, classification }) 
         engine: "communication-intelligence-v1",
         path: "deterministic",
         definition: "platform-vendor-notice",
+        platform,
+        notificationType: type,
+        aiUsed: false,
+        fallbackUsed: false
+      }
+    };
+  }
+
+  /*
+   * v7.4.9 DISAVOW FILE UPDATE CONFIRMATION
+   * Search Console is confirming that a disavow file changed. Preserve the
+   * visible counts as historical backlink-management evidence. The notice
+   * itself does not establish a new problem requiring investigation or work.
+   */
+  if (type === "disavow_file_update") {
+    const facts = uniqueTextValues([
+      ...(visibleEvidence?.visibleMetrics || []),
+      ...(visibleEvidence?.visibleFacts || [])
+    ]);
+    const evidenceDetail = facts.length ? ` Visible evidence: ${facts.join("; ")}.` : "";
+
+    return {
+      eventDirection: "Neutral",
+      operationalSummary: `Google Search Console confirmed that the site's Disavow File was updated.${evidenceDetail}`,
+      businessImpact: "This records a backlink-management change in Google Search Console and should be retained as historical evidence of the disavow-file state.",
+      importance: "Low",
+      recommendedAction: "Save the communication to the client history. No new Investigation or Work Item is required from this confirmation alone.",
+      investigationSuggested: false,
+      workItemSuggested: false,
+      replySuggested: false,
+      reasoning: "A Disavow File Updated notice confirms a completed change in Search Console. It is evidence/history rather than a new search-performance alert.",
+      recordPurpose: "Historical Backlink Management Evidence",
+      operationalLabel: "Disavow File Update — Confirmation",
+      confidence: "High",
+      fallbackUsed: false,
+      intelligenceTrace: {
+        engine: "communication-intelligence-v1",
+        path: "deterministic",
+        definition: "google-search-console-disavow-file-update",
         platform,
         notificationType: type,
         aiUsed: false,
