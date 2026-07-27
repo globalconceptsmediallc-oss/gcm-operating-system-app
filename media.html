@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media.html
-   Version: 1.6.0
+   Version: 1.6.1
    Status: Production Candidate
    Sprint: Media Operations — Station Communication Road Test
    Purpose: Live D1-driven Media Operations workspace with a focused
@@ -319,18 +319,25 @@
         return stationDeadline(deadlineReferenceDate(record));
       }
 
+      function previousWorkingDay(date) {
+        const result = new Date(date);
+        result.setHours(0, 0, 0, 0);
+
+        do {
+          result.setDate(result.getDate() - 1);
+        } while (result.getDay() === 0 || result.getDay() === 6);
+
+        return result;
+      }
+
       function isDeadlineDue(record) {
         const deadline = recordStationDeadline(record);
         if (!deadline) return false;
 
-        const due = new Date(
-          deadline.getFullYear(),
-          deadline.getMonth(),
-          deadline.getDate(),
-          12, 0, 0, 0
-        );
+        const warningStart = previousWorkingDay(deadline);
+        const now = new Date();
 
-        return new Date() >= due;
+        return now >= warningStart;
       }
 
       function calculatedAttentionReason(record) {
