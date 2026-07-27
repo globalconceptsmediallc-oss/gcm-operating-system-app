@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: communications.html
-   Version: 2.4.3
+   Version: 2.5.0
    Source: Production Frontend
    Purpose: Client Communications intake and operational routing.
    ========================================================= -->
@@ -12,6 +12,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Communications | GCM OS</title>
   <meta name="description" content="Convert client email screenshots into operational records in GCM OS.">
+  <link rel="stylesheet" href="shared/gcm-shell.css">
   <style>
     :root{
       --navy:#071426;--navy2:#0b1d33;--blue:#1f68d8;--blue2:#347ce8;
@@ -101,25 +102,6 @@
 </head>
 <body>
 <div class="shell">
-  <aside class="sidebar">
-    <a class="brand" href="today.html">
-      <span class="brand-mark">G</span>
-      <span class="brand-copy"><strong>Global Concepts Media</strong><span>Agency Operating System</span></span>
-    </a>
-    <p class="nav-label">Workspace</p>
-    <nav class="nav">
-      <a href="today.html">⌂ <span>Today</span></a>
-      <a href="client-pre-research.html">◎ <span>Prospects</span></a>
-      <a href="clients.html">◫ <span>Clients</span></a>
-      <a href="communications.html" aria-current="page">✉ <span>Communications</span></a>
-      <a href="work.html">✓ <span>Work</span></a>
-      <a href="#">↗ <span>Proof</span></a>
-      <a href="#">★ <span>Case Studies</span></a>
-      <a href="#">⚙ <span>Settings</span></a>
-    </nav>
-    <div class="sidebar-footer">Mission Control operational<br>Communications v2.4.3</div>
-  </aside>
-
   <main>
     <div class="main-inner">
       <header class="topbar">
@@ -241,11 +223,12 @@ Backlink Audit update
   </main>
 </div>
 
+<script src="shared/gcm-shell.js"></script>
 <script>
 (() => {
   "use strict";
 
-  const VERSION = "2.4.3";
+  const VERSION = "2.5.0";
   const ENDPOINT = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const CONTRACT_VERSION = "communications-operational-decision-v3";
   const MAX_FILE_SIZE = 10 * 1024 * 1024;
