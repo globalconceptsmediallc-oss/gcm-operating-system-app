@@ -1,6 +1,6 @@
 GLOBAL CONCEPTS MEDIA OPERATING SYSTEM — MASTER
 
-File: GCM_OS_MASTER.mdVersion: 1.4Status: AUTHORITATIVEPurpose: Master Architecture, Operating Standard, Production Handoff, and Current-State ReferenceLast Updated: 2026-07-26
+File: GCM_OS_MASTER.mdVersion: 1.5Status: AUTHORITATIVEPurpose: Master Architecture, Operating Standard, Production Handoff, and Current-State ReferenceLast Updated: 2026-07-27
 
 AUTHORITY
 
@@ -1789,3 +1789,243 @@ Use the South Florida Safes SEMrush Site Audit communication reporting “50 of 
 Preserve the established distinction between routine monitoring and genuine unresolved conditions.
 
 Make one production change at a time, deploy it, road-test it with real evidence, verify the result, and then determine the next step.
+
+CURRENT PRODUCTION HANDOFF — 2026-07-27
+
+This section supersedes the earlier 2026-07-26 next-development objective as the authoritative starting point. Earlier verified architecture and production evidence remain valid unless explicitly changed below.
+
+PROOF & CLIENT REPORTING — VERIFIED ROAD-TEST STATE
+
+Proof has now been built, deployed, connected from Today, and road-tested against real D1 client history.
+
+Production / road-test files:
+
+proof.html — Version 2.0.0 production candidate.
+
+today.html — Version 1.2.0. Today → Proof navigation and the Build Proof of Work link were deployed and verified.
+
+Governing Proof principle:
+
+D1 stores the detail.Proof interprets the detail.Client Email communicates the business value.
+
+Proof is a reporting/read layer over durable operational records. It must not become a competing source of truth.
+
+Proof must ultimately assemble the appropriate combination of:
+
+Client baseline / starting point
+
+Historical completed work
+
+Current completed work
+
+Verified results / wins
+
+Monitoring / Communications history
+
+Recorded time
+
+Current position / later measurement
+
+Routine monitoring evidence must not be converted into an Investigation or completed Work record merely so it can appear in Proof.
+
+PROOF OUTPUT RESPONSIBILITIES
+
+Client Email is the default client-facing output.
+
+It must be concise and written from the business owner's point of view. It should synthesize many technical records into a small number of meaningful business-level points rather than convert records into paragraphs one-for-one.
+
+A strong Client Email should answer:
+
+What improved or changed?
+
+What meaningful work did GCM perform?
+
+What was protected, prevented, or correctly left unchanged?
+
+What is being monitored next?
+
+Why should the business owner care?
+
+Proof of Work Digest is the detailed supporting-evidence / receipts output. It remains useful for clients who request detailed accountability, billing support, or deeper explanation. More detail does not automatically create more perceived value and should not be the default client communication.
+
+Internal Summary is the comprehensive operational output for GCM management, audits, troubleshooting, historical recall, and deeper analysis.
+
+HISTORICAL REPORTING REQUIREMENT
+
+Historical is a required Proof reporting period in addition to This Week, Last 7 Days, This Month, and Custom.
+
+Historical should automatically determine the complete trustworthy client chronology rather than require a manually entered Custom range.
+
+The intended model is:
+
+Starting Baseline↓Historical Work↓Monitoring / Performance Movement↓Corrective and Growth Work↓Verified Results↓Current Position / Overall Progress
+
+Historical detailed views should normally run oldest to newest.
+
+Historical Client Email should synthesize the journey rather than dump every historical record.
+
+D1 already contains client_baselines. Proof v2.0.0 does not yet fully integrate those baselines into its historical narrative. This is a known requirement, not permission to create a parallel baseline system.
+
+TIME — VERIFIED FINDING
+
+Historical migrated activity records contain time_minutes from the earlier Proof of Work workflow.
+
+The Proof road test demonstrated that substantial historical time already exists in D1.
+
+Newer operational records may have missing time.
+
+Deferred requirement: audit/backfill missing time where the underlying work record and historical evidence support a defensible estimate. Do not build a second synchronization system merely to recreate time values that can reasonably be reconstructed.
+
+Going forward, completed work should preserve Time Invested when practical.
+
+PROOF — OPEN FUNCTIONAL DEFECTS / AUDIT REQUIREMENTS
+
+Historical date synchronization.Historical can generate one range while visible Start Date / End Date controls show another. The UI must display the actual resolved range or clearly show that Historical overrides manual dates. Only Custom should require editable manual dates.
+
+Historical starting point / baseline.The current Historical range has not yet proven that the stored client_baselines record is being used. Historical must eventually use the earliest trustworthy baseline/history appropriate to the client.
+
+Subject-line logic.Subjects should communicate purpose to the business owner rather than database/report mechanics. Manual subject editing is not a priority; consistent generated subjects are acceptable.
+
+Results / Wins semantics.The road test showed a suspicious one-to-one relationship between Completed Work and Results / Wins. Completed work is not automatically a win. Audit the D1 fields and counting logic before trusting this number in client reporting.
+
+Monitoring signals.Monitoring Communications are a separate evidence stream from completed work. Ranking/Position Tracking communications intentionally preserved as monitoring should contribute to trend intelligence without being turned into Investigations or Work. Client Email should synthesize a trend only when the evidence supports one.
+
+Generate Proof behavior.Generate Proof should deliberately rebuild from source records. Edited drafts should not be unexpectedly overwritten merely because a selector changes.
+
+Grouping.Chronological grouping is valuable for detailed/historical evidence. Client Email should normally synthesize around business meaning rather than database chronology.
+
+Before another broad Proof rebuild, audit this functional contract:
+
+Client↓Reporting Period↓Actual Date Range↓Baseline / Starting Point↓Source Records↓Completed Work↓Verified Results / Wins↓Monitoring Intelligence↓Recorded Time↓Business-Owner Narrative↓Editable Final Draft
+
+Do not redesign D1 unless this audit demonstrates a structural limitation.
+
+COMMUNICATIONS — CURRENT ROAD-TEST DIRECTION
+
+Routine monitoring communications must remain durable Communication history and must not be forced into Investigations merely to appear in Proof.
+
+Specific unresolved discrepancies, failures, or anomalies may warrant Investigation even when contained inside an otherwise routine automated report.
+
+A remaining screenshot/image-stage diagnostic issue consumed substantial debugging time and is banked. Do not restart that debugging path by default unless new production evidence makes it necessary.
+
+Current Communications functionality is sufficient to continue operational road testing and preserve meaningful communication history.
+
+NAVIGATION — CURRENT STATE
+
+Today → Proof is deployed and verified.
+
+Navigation is duplicated at page level rather than confirmed as one central navigation component. Remaining operational pages should be connected to proof.html deliberately as their current production files are reviewed. Do not mass-rewrite pages merely to normalize navigation.
+
+MEDIA MONITORING — NEXT MAJOR OPERATIONAL PAGE
+
+The next development thread should begin by converting the existing Media Monitoring spreadsheet/process into a functioning GCM OS page.
+
+Review the actual spreadsheet/process before designing the page.
+
+Determine:
+
+What each spreadsheet row represents.
+
+Which fields are durable records.
+
+Which client or GCM entity each record belongs to.
+
+What requires action versus historical monitoring.
+
+What should feed Mission Control, client history, Proof, or reporting.
+
+Whether the existing D1 schema can support the workflow before adding any table.
+
+The page must mirror the real GCM media-monitoring workflow rather than invent a generic dashboard.
+
+Do not create a parallel data system merely because the current workflow lives in a spreadsheet.
+
+CALENDAR / APPOINTMENTS — UPCOMING CAPABILITY
+
+GCM OS should include a useful calendar / appointment capability.
+
+Before building, determine:
+
+Which appointments belong in GCM OS.
+
+Whether the page is primarily an operational calendar, appointment pipeline, client-meeting view, or a deliberate combination.
+
+How appointments relate to Clients, Prospects, Communications, Work, and Mission Control.
+
+Whether Google Calendar should remain the connected calendar source of truth rather than duplicating calendar state in D1.
+
+What appointment information, if any, requires durable GCM OS records beyond the connected calendar event.
+
+Use the existing source of truth where appropriate. Do not duplicate calendar state without a demonstrated operational reason.
+
+CASE STUDIES — PURPOSE MUST BE DEFINED BEFORE BUILDING
+
+The Case Studies navigation item does not by itself establish a finished business purpose.
+
+Case Studies conceptually belongs to the GROW → ACQUIRE portion of the agency flywheel.
+
+Before building, determine whether Case Studies should:
+
+identify client outcomes strong enough to become marketing assets;
+
+assemble verified before/after evidence from baselines, work, and results;
+
+generate internal case-study candidates;
+
+produce public-facing case-study drafts;
+
+support prospecting and sales with verified examples;
+
+or perform a deliberate combination of these responsibilities.
+
+Any Case Study must be grounded in verified evidence.
+
+Likely relationship to evaluate:
+
+Client Baseline↓Work / Intervention↓Measured Result↓Proof / Client History↓Verified Business Outcome↓Case Study Candidate↓GCM Sales / Acquisition Asset
+
+Do not fabricate outcomes or automatically publish client information.
+
+NEXT DEVELOPMENT PRIORITY — 2026-07-27
+
+Do not restart the repository audit or reconstruct Communications → Investigation → Work → Proof architecture.
+
+Priority order:
+
+Media Monitoring — review the existing spreadsheet/process and convert it into a functioning OS operational page.
+
+Calendar / Appointments — determine the correct workflow and relationship to Google Calendar and existing OS records.
+
+Case Studies — define its business purpose and data flow before building.
+
+Proof hardening — after auditing its read-model/data contract, correct Historical dates/baselines, Results/Wins semantics, monitoring classification, and business-owner narrative.
+
+Finish remaining Proof navigation connections as relevant production pages are reviewed, without allowing navigation cleanup to become a broad rebuild.
+
+These priorities are sequential, not permission to build everything simultaneously.
+
+Continue the production method:
+
+Understand the real workflow↓Review the actual current source/process↓Define success↓Make the smallest coherent production change↓Deploy↓Road-test with real evidence↓Verify↓Lock↓Move on
+
+2026-07-27 HANDOFF STARTING INSTRUCTION
+
+Begin the next development thread by reading GCM_OS_MASTER.md Version 1.5 completely.
+
+It is the current authority for GCM OS.
+
+Do not restart the repository audit.Do not ask Andy to reconstruct architecture already recorded in the Master.Do not assume a navigation label proves a page's business purpose is already defined.
+
+FIRST ACTIVE TASK: MEDIA MONITORING.
+
+Review the existing Media Monitoring spreadsheet/process before proposing page architecture.
+
+The objective is to reproduce the useful real-world workflow inside GCM OS, preserve durable client intelligence, and connect actionable information to the existing operating cycle without creating a competing source of truth.
+
+After Media Monitoring is operationally understood and road-tested, address Calendar / Appointments, then define Case Studies deliberately.
+
+Proof remains an active hardening track, but do not begin by blindly rebuilding proof.html. Its known defects and audit contract are documented above.
+
+The success condition is not the number of pages built.
+
+The success condition is that each new page removes real manual work from Global Concepts Media while strengthening the same durable operating system.
