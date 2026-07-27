@@ -1,8 +1,8 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 1.4.0
-   Change: Add live Media attention beacon and Mission Control media check
+   Version: 1.5.0
+   Change: Shared GCM OS application shell integration
    Source: Production today.html 1.2.0
    ========================================================= -->
 <!DOCTYPE html>
@@ -986,73 +986,7 @@
   <a class="skip-link" href="#main-content">Skip to main content</a>
 
   <div class="app-shell">
-    <aside class="sidebar" id="sidebar" aria-label="Primary navigation">
-      <a class="brand" href="today.html" aria-label="GCM OS Today">
-        <span class="brand-mark">G</span>
-
-        <span class="brand-copy">
-          <strong>Global Concepts Media</strong>
-          <span>Agency Operating System</span>
-        </span>
-      </a>
-
-      <p class="nav-label">Workspace</p>
-
-      <nav class="primary-nav">
-        <a class="nav-link" href="today.html" aria-current="page">
-          <span class="nav-icon" aria-hidden="true">⌂</span>
-          <span>Today</span>
-        </a>
-
-        <a class="nav-link" href="client-pre-research.html">
-          <span class="nav-icon" aria-hidden="true">◎</span>
-          <span>Prospects</span>
-        </a>
-
-       <a class="nav-link" href="clients.html">
-  <span class="nav-icon" aria-hidden="true">◫</span>
-  <span>Clients</span>
-</a>
-
-        <a class="nav-link" href="communications.html">
-          <span class="nav-icon" aria-hidden="true">✉</span>
-          <span>Communications</span>
-        </a>
-
-        <a class="nav-link" href="work.html">
-          <span class="nav-icon" aria-hidden="true">✓</span>
-          <span>Work</span>
-        </a>
-
-        <a class="nav-link" href="proof.html">
-          <span class="nav-icon" aria-hidden="true">↗</span>
-          <span>Proof</span>
-        </a>
-
-        <a class="nav-link" href="media.html" id="media-nav-link">
-          <span class="nav-icon" aria-hidden="true">◉</span>
-          <span>Media</span>
-          <span class="media-nav-badge" id="media-nav-badge" aria-label="Media items needing attention"></span>
-        </a>
-
-        <a class="nav-link" href="#">
-          <span class="nav-icon" aria-hidden="true">★</span>
-          <span>Case Studies</span>
-        </a>
-
-        <a class="nav-link" href="#">
-          <span class="nav-icon" aria-hidden="true">⚙</span>
-          <span>Settings</span>
-        </a>
-      </nav>
-
-      <div class="sidebar-footer">
-        <div class="sidebar-status">
-          <span class="status-dot" aria-hidden="true"></span>
-          <span>Mission Control operational</span>
-        </div>
-      </div>
-    </aside>
+    <aside data-gcm-shell-sidebar aria-label="Primary navigation"></aside>
 
     <main class="main" id="main-content">
       <div class="main-inner">
@@ -1066,15 +1000,6 @@
           </div>
 
           <div class="topbar-actions">
-            <button
-              class="button button-secondary mobile-menu-button"
-              id="mobile-menu-button"
-              type="button"
-              aria-controls="sidebar"
-              aria-expanded="false"
-            >
-              Menu
-            </button>
 
             <div class="date-chip" id="current-date" aria-label="Current date"></div>
 
@@ -1279,6 +1204,7 @@
     </main>
   </div>
 
+  <script src="shared/gcm-shell.js"></script>
   <script>
     (() => {
       "use strict";
@@ -1309,10 +1235,6 @@
       const openWorkNote = document.getElementById("open-work-note");
       const proofCount = document.getElementById("proof-count");
       const proofNote = document.getElementById("proof-note");
-      const sidebar = document.getElementById("sidebar");
-      const mobileMenuButton = document.getElementById("mobile-menu-button");
-      const mediaNavLink = document.getElementById("media-nav-link");
-      const mediaNavBadge = document.getElementById("media-nav-badge");
       const mediaCheckPanel = document.getElementById("media-check-panel");
       const mediaCheckTitle = document.getElementById("media-check-title");
       const mediaCheckDetail = document.getElementById("media-check-detail");
@@ -1481,16 +1403,27 @@
         const total = Number(count) || 0;
         const hasAttention = total > 0;
 
-        mediaNavLink.classList.toggle("media-attention", hasAttention);
-        mediaNavBadge.classList.toggle("is-visible", hasAttention);
         mediaCheckPanel.classList.toggle("is-visible", hasAttention);
 
+        const mediaNavLink = document.querySelector('[data-gcm-shell-sidebar] a[href="media.html"]');
+        let mediaNavBadge = mediaNavLink?.querySelector(".media-nav-badge");
+
+        if (mediaNavLink) {
+          mediaNavLink.classList.toggle("media-attention", hasAttention);
+          if (hasAttention && !mediaNavBadge) {
+            mediaNavBadge = document.createElement("span");
+            mediaNavBadge.className = "media-nav-badge";
+            mediaNavLink.appendChild(mediaNavBadge);
+          }
+          if (mediaNavBadge) {
+            mediaNavBadge.classList.toggle("is-visible", hasAttention);
+            mediaNavBadge.textContent = hasAttention ? String(total) : "";
+          }
+        }
+
         if (hasAttention) {
-          mediaNavBadge.textContent = String(total);
           mediaCheckTitle.textContent = `${total} media ${total === 1 ? "item needs" : "items need"} attention`;
           mediaCheckDetail.textContent = "Traffic deadlines are active. Open Media to review the placements before the station deadline.";
-        } else {
-          mediaNavBadge.textContent = "";
         }
       }
 
@@ -1590,17 +1523,14 @@
         renderDashboard(data);
       });
 
-      mobileMenuButton.addEventListener("click", () => {
-        const isOpen = sidebar.classList.toggle("is-open");
-        mobileMenuButton.setAttribute("aria-expanded", String(isOpen));
-      });
-
-      document.addEventListener("click", (event) => {
-        if (window.innerWidth <= 860 && sidebar.classList.contains("is-open") && !sidebar.contains(event.target) && !mobileMenuButton.contains(event.target)) {
-          sidebar.classList.remove("is-open");
-          mobileMenuButton.setAttribute("aria-expanded", "false");
-        }
-      });
+      if (!window.GCMOShell) {
+        console.error("Today 1.5.0: shared/gcm-shell.js did not load.");
+      } else {
+        window.GCMOShell.mount({
+          currentPage: "today",
+          statusText: "Mission Control operational · Today v1.5.0"
+        });
+      }
 
       setDateAndGreeting();
       renderDashboard(loadData());
