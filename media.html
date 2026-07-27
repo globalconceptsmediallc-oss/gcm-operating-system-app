@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media.html
-   Version: 1.6.1
+   Version: 1.6.2
    Status: Production Candidate
    Sprint: Media Operations — Station Communication Road Test
    Purpose: Live D1-driven Media Operations workspace with a focused
@@ -287,6 +287,20 @@
       }
 
 
+      function marketClass(value) {
+        const market = String(value || "").trim().toLowerCase();
+        if (market.includes("melbourne")) return "market-melbourne";
+        if (market.includes("orlando")) return "market-orlando";
+        return "market-other";
+      }
+
+      function marketLabel(value) {
+        const label = value || "—";
+        const cls = marketClass(value);
+        return `<span class="market-label ${cls}"><span class="market-dot"></span>${escapeHtml(label)}</span>`;
+      }
+
+
       function stationDeadline(referenceDate) {
         if (!referenceDate) return null;
 
@@ -412,8 +426,8 @@
               </tr></thead>
               <tbody>
                 ${records.map(r => `
-                  <tr>
-                    <td><div class="record-title">${escapeHtml(r.market || "—")}</div><div class="small">${escapeHtml(r.outletName || "—")} · ${escapeHtml(r.mediaType || "Media")}</div></td>
+                  <tr class="${marketClass(r.market)}">
+                    <td><div class="record-title">${marketLabel(r.market)}</div><div class="small">${escapeHtml(r.outletName || "—")} · ${escapeHtml(r.mediaType || "Media")}</div></td>
                     <td><div class="record-title">${escapeHtml(r.campaignName || r.creativeName || "Untitled")}</div><div class="small">${escapeHtml(r.creativeVersion || r.creativeName || "—")}</div></td>
                     <td>${escapeHtml(r.coopPartner || "—")}</td>
                     <td><div>${formatDate(r.startDate)}</div><div class="small">through ${formatDate(r.endDate)}</div></td>
@@ -453,7 +467,7 @@
                 : "—";
 
               return `
-                <article class="attention-card" data-record-id="${escapeHtml(r.id ?? "")}" tabindex="0">
+                <article class="attention-card ${marketClass(r.market)}" data-record-id="${escapeHtml(r.id ?? "")}" tabindex="0">
                   <strong>${escapeHtml(r.clientName)} — ${escapeHtml(r.market || "Media")} / ${escapeHtml(r.outletName || "Outlet")}: ${escapeHtml(r.campaignName || r.creativeName || "Placement")}</strong>
                   <p>${escapeHtml(attentionReason(r))} · ${dateLabel} · Station deadline: ${deadlineLabel} · Action: ${escapeHtml(r.actionType || "—")}</p>
                 </article>`;
@@ -523,7 +537,7 @@
             ? ` · ${escapeHtml(attentionReason(r))}`
             : "";
 
-          return `<div class="landscape-card">
+          return `<div class="landscape-card ${marketClass(r.market)}">
             <strong>${requiresAttention ? "⚠ " : ""}${escapeHtml(timing)} — ${escapeHtml(r.campaignName || r.creativeName || "Placement")}</strong>
             <div class="landscape-meta">
               ${escapeHtml(r.market || "—")} / ${escapeHtml(r.outletName || "—")} ·
