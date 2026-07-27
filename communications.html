@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: communications.html
-   Version: 2.5.0
+   Version: 2.5.1
    Source: Production Frontend
    Purpose: Client Communications intake and operational routing.
    ========================================================= -->
@@ -12,7 +12,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Communications | GCM OS</title>
   <meta name="description" content="Convert client email screenshots into operational records in GCM OS.">
-  <link rel="stylesheet" href="shared/gcm-shell.css">
   <style>
     :root{
       --navy:#071426;--navy2:#0b1d33;--blue:#1f68d8;--blue2:#347ce8;
@@ -102,6 +101,9 @@
 </head>
 <body>
 <div class="shell">
+  <aside data-gcm-shell-sidebar aria-label="Primary navigation"></aside>
+
+
   <main>
     <div class="main-inner">
       <header class="topbar">
@@ -110,7 +112,17 @@
           <h1>Client Communications</h1>
           <p class="subtitle">Upload a readable communication screenshot. GCM OS will read the screenshot, identify the client when possible, extract the operational evidence, and prepare the record for review before saving to production D1.</p>
         </div>
-        <span class="date-chip" id="current-date"></span>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <button
+            class="button secondary mobile-menu-button"
+            data-gcm-shell-menu-button
+            type="button"
+            aria-expanded="false"
+          >
+            Menu
+          </button>
+          <span class="date-chip" id="current-date"></span>
+        </div>
       </header>
 
       <section class="grid">
@@ -228,7 +240,7 @@ Backlink Audit update
 (() => {
   "use strict";
 
-  const VERSION = "2.5.0";
+  const VERSION = "2.5.1";
   const ENDPOINT = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const CONTRACT_VERSION = "communications-operational-decision-v3";
   const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -272,6 +284,15 @@ Backlink Audit update
   init();
 
   function init() {
+    if (!window.GCMOShell) {
+      console.error("Communications 2.5.1: shared/gcm-shell.js did not load.");
+    } else {
+      window.GCMOShell.mount({
+        currentPage: "communications",
+        statusText: "Communications operational · Communications v2.5.1"
+      });
+    }
+
     el.date.textContent = new Intl.DateTimeFormat("en-US", {
       weekday:"short", month:"short", day:"numeric", year:"numeric"
     }).format(new Date());
