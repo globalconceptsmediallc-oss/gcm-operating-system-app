@@ -1,8 +1,8 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.4.25
-   Source: Production Worker 7.4.24
+   Version: 7.4.26
+   Source: Production Worker 7.4.25
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
             notification classification, business meaning,
@@ -1268,6 +1268,9 @@ function buildVisionEvidencePrompt({ sourceText = "", client, clientId, fileName
     "HUMAN EMAIL FOLLOW-UP DATE RULE: when the sender requests an update, confirmation, notice, or other follow-up beginning on/from a visible date, preserve both the requested follow-up and that date in visibleFacts and repeat them explicitly in the operational summary.",
     "Do not collapse a dated statement such as '3 spots are in place through 7/31' into only '3 spots are currently running'; the end date is operational evidence and must remain attached to the fact.",
     "Do not collapse a dated request such as 'keep me posted on what is running starting on 8/1' into only 'reply required'; preserve the requested action and its start date in the operational summary.",
+    "HUMAN EMAIL REPLY PURPOSE RULE: when responseExpected=true, the operational summary must state what the sender expects the recipient to respond about, not merely that a reply is required.",
+    "If the sender's requested follow-up contains a visible effective/start date, include that date with the reply purpose in the operational summary.",
+    "For example, if the sender says 'Keep me posted on what is running starting on 8/1', preserve the meaning as 'Follow-up requested: keep sender posted on what is running starting 8/1' or equivalent. Do not omit the requested subject or the 8/1 date.",
     "A follow-up request does not by itself require an Investigation or Work Item. It should instead preserve the communication and indicate that a response or follow-up is required when appropriate.",
     "Do not invent markets, stations, placements, dates, or confirmations that are not visible in the screenshot.",
     "Put every clearly readable measurable observation in visibleMetrics.",
