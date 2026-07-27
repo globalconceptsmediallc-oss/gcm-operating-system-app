@@ -1,9 +1,9 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media.html
-   Version: 1.3.0
+   Version: 1.4.0
    Status: Production Candidate
-   Sprint: Media Operations — Individual Action Road Test
+   Sprint: Media Operations — Station Communication Road Test
    Purpose: Live D1-driven Media Operations workspace with a focused
             view selector and automatic station traffic deadlines
             calculated from each placement end date.
@@ -73,6 +73,17 @@
     .communication-box{padding:16px;border:1px solid var(--border);border-radius:13px}
     .build-button{margin-top:12px;min-height:42px;padding:0 14px;border:0;border-radius:10px;background:var(--gcm-blue-600);color:#fff;font-weight:900}
     .build-button:disabled{opacity:.45}.attention-card p{margin:5px 0 0;color:var(--text-muted);font-size:.78rem}
+    .action-section{margin-top:16px;padding-top:16px;border-top:1px solid var(--border)}
+    .action-section h3{margin:0 0 6px;color:var(--gcm-navy-950);font-size:.86rem}
+    .action-section p{margin:0 0 10px;color:var(--text-muted);font-size:.78rem}
+    .verify-row{display:flex;align-items:center;gap:9px;margin:4px 0 14px;font-weight:850;color:var(--gcm-navy-900)}
+    .related-select{width:100%;min-height:42px;padding:0 10px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--gcm-navy-900)}
+    .replacement-row{display:grid;grid-template-columns:1fr 180px;gap:10px;margin-top:10px}
+    .replacement-row input{min-height:42px;padding:0 10px;border:1px solid var(--border);border-radius:10px}
+    .draft-wrap{display:none;margin-top:16px}.draft-wrap.is-open{display:block}
+    .draft-subject{margin-bottom:8px;padding:11px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface-soft);font-size:.8rem}
+    .draft-body{width:100%;min-height:320px;padding:14px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--text);font:inherit;font-size:.82rem;line-height:1.55;resize:vertical}
+    @media(max-width:640px){.replacement-row{grid-template-columns:1fr}.action-grid{grid-template-columns:1fr}}
     .table-wrap{overflow-x:auto}.media-table{width:100%;border-collapse:collapse;min-width:1120px}.media-table th{padding:11px 14px;background:#fbfcfe;border-bottom:1px solid var(--border);color:var(--text-soft);font-size:.67rem;text-align:left;text-transform:uppercase;letter-spacing:.07em;white-space:nowrap}
     .media-table td{padding:13px 14px;border-bottom:1px solid var(--border);font-size:.79rem;vertical-align:top}.media-table tbody tr:last-child td{border-bottom:0}.record-title{font-weight:900;color:var(--gcm-navy-950)}.muted{color:var(--text-muted)}.small{font-size:.72rem;color:var(--text-soft);margin-top:3px}
     .badge{display:inline-flex;align-items:center;min-height:25px;padding:0 8px;border-radius:999px;font-size:.66rem;font-weight:900;text-transform:uppercase;white-space:nowrap}.badge-active{background:var(--success-soft);color:var(--success)}.badge-pending{background:var(--info-soft);color:var(--info)}.badge-expired{background:var(--surface-muted);color:var(--text-muted)}.badge-attention{background:var(--warning-soft);color:var(--warning)}.badge-unknown{background:var(--surface-muted);color:var(--text-muted)}
@@ -157,16 +168,43 @@
           </div>
           <div class="action-body">
             <div class="action-record" id="selected-media-record">Select a media record.</div>
-            <div class="action-grid">
-              <button class="action-button media-action" data-action="EXTEND" type="button">EXTEND</button>
-              <button class="action-button media-action" data-action="CHANGE" type="button">CHANGE</button>
-              <button class="action-button media-action" data-action="VERIFY CURRENT COPY" type="button">VERIFY CURRENT COPY</button>
-              <button class="action-button media-action" data-action="END" type="button">END</button>
+            <div class="action-section">
+              <h3>Primary instruction</h3>
+              <p>Choose one. A placement cannot be extended and ended at the same time.</p>
+              <div class="action-grid">
+                <button class="action-button primary-action" data-action="EXTEND" type="button">EXTEND</button>
+                <button class="action-button primary-action" data-action="CHANGE" type="button">CHANGE</button>
+                <button class="action-button primary-action" data-action="END" type="button">END</button>
+              </div>
+              <label class="verify-row"><input id="verify-current-copy" type="checkbox" /> VERIFY CURRENT COPY</label>
             </div>
+
+            <div class="action-section">
+              <h3>Related Media</h3>
+              <p>Add another existing placement from this client/market to the same station communication.</p>
+              <select class="related-select" id="related-media-select">
+                <option value="">No related placement selected</option>
+              </select>
+            </div>
+
+            <div class="action-section">
+              <h3>Replacement creative coming</h3>
+              <p>Use this when replacement production is underway but the finished file is not ready yet.</p>
+              <div class="replacement-row">
+                <input id="replacement-description" type="text" placeholder="Example: New Pre-Loved Safes creative" />
+                <input id="replacement-ready-date" type="text" placeholder="Expected Wednesday" />
+              </div>
+            </div>
+
             <div class="communication-box">
               <strong>Station Communication</strong>
-              <p id="communication-status">Choose one or more actions.</p>
+              <p id="communication-status">Choose a primary action, verification, related media, or replacement creative.</p>
               <button class="build-button" id="build-station-communication" type="button" disabled>Build Station Communication</button>
+
+              <div class="draft-wrap" id="draft-wrap">
+                <div class="draft-subject"><strong>Subject:</strong> <span id="draft-subject"></span></div>
+                <textarea class="draft-body" id="draft-body" aria-label="Generated station communication"></textarea>
+              </div>
             </div>
           </div>
         </section>
@@ -202,9 +240,16 @@
       const selectedMediaRecord = document.getElementById("selected-media-record");
       const communicationStatus = document.getElementById("communication-status");
       const buildStationCommunication = document.getElementById("build-station-communication");
-      const selectedActions = new Set();
+      const verifyCurrentCopy = document.getElementById("verify-current-copy");
+      const relatedMediaSelect = document.getElementById("related-media-select");
+      const replacementDescription = document.getElementById("replacement-description");
+      const replacementReadyDate = document.getElementById("replacement-ready-date");
+      const draftWrap = document.getElementById("draft-wrap");
+      const draftSubject = document.getElementById("draft-subject");
+      const draftBody = document.getElementById("draft-body");
       let currentRecords = [];
       let selectedRecord = null;
+      let primaryAction = "";
 
       const els = {
         attentionCount: document.getElementById("attention-count"),
@@ -352,16 +397,125 @@
 
       function openMediaAction(record) {
         selectedRecord = record;
-        selectedActions.clear();
-        document.querySelectorAll(".media-action").forEach(b => b.classList.remove("is-selected"));
+        primaryAction = "";
+        document.querySelectorAll(".primary-action").forEach(b => b.classList.remove("is-selected"));
+        verifyCurrentCopy.checked = false;
+        replacementDescription.value = "";
+        replacementReadyDate.value = "";
+        draftWrap.classList.remove("is-open");
+        draftSubject.textContent = "";
+        draftBody.value = "";
+
         selectedMediaRecord.innerHTML = `
           <div class="record-title">${escapeHtml(record.clientName)} — ${escapeHtml(record.market || "Media")} / ${escapeHtml(record.outletName || "Outlet")}</div>
           <div>${escapeHtml(record.campaignName || record.creativeName || "Placement")}</div>
           <div class="small">Run ends ${formatDate(record.endDate)} · Station deadline ${stationDeadline(record.endDate) ? escapeHtml(new Intl.DateTimeFormat("en-US",{weekday:"short",month:"short",day:"numeric",year:"numeric"}).format(stationDeadline(record.endDate))) + " by 12:00 noon" : "—"}</div>`;
-        communicationStatus.textContent = "Choose one or more actions.";
-        buildStationCommunication.disabled = true;
+
+        populateRelatedMedia(record);
+        updateCommunicationState();
         actionPanel.classList.add("is-open");
         actionPanel.scrollIntoView({behavior:"smooth",block:"start"});
+      }
+
+      function populateRelatedMedia(record) {
+        const candidates = currentRecords.filter(r =>
+          r !== record &&
+          Number(r.clientId) === Number(record.clientId) &&
+          String(r.market || "").toLowerCase() === String(record.market || "").toLowerCase()
+        );
+
+        relatedMediaSelect.innerHTML = `<option value="">No related placement selected</option>` +
+          candidates.map(r => {
+            const label = `${r.campaignName || r.creativeName || "Placement"} — ${r.outletName || "Outlet"} — ${formatDate(r.startDate)} to ${formatDate(r.endDate)} — ${r.status || "status unknown"}`;
+            return `<option value="${escapeHtml(r.id)}">${escapeHtml(label)}</option>`;
+          }).join("");
+      }
+
+      function selectedRelatedRecord() {
+        const id = String(relatedMediaSelect.value || "");
+        return currentRecords.find(r => String(r.id) === id) || null;
+      }
+
+      function updateCommunicationState() {
+        const hasInput =
+          Boolean(primaryAction) ||
+          verifyCurrentCopy.checked ||
+          Boolean(relatedMediaSelect.value) ||
+          Boolean(replacementDescription.value.trim()) ||
+          Boolean(replacementReadyDate.value.trim());
+
+        buildStationCommunication.disabled = !selectedRecord || !hasInput;
+
+        const parts = [];
+        if (primaryAction) parts.push(primaryAction);
+        if (verifyCurrentCopy.checked) parts.push("VERIFY CURRENT COPY");
+        if (relatedMediaSelect.value) parts.push("RELATED MEDIA");
+        if (replacementDescription.value.trim() || replacementReadyDate.value.trim()) parts.push("REPLACEMENT COMING");
+
+        communicationStatus.textContent = parts.length
+          ? `Selected: ${parts.join(" + ")}`
+          : "Choose a primary action, verification, related media, or replacement creative.";
+      }
+
+      function buildCommunicationDraft() {
+        if (!selectedRecord) return;
+
+        const related = selectedRelatedRecord();
+        const client = selectedRecord.clientName || "Southeast Safes";
+        const station = selectedRecord.outletName || "station";
+        const market = selectedRecord.market || "market";
+        const campaign = selectedRecord.campaignName || selectedRecord.creativeName || "current placement";
+        const replacement = replacementDescription.value.trim();
+        const ready = replacementReadyDate.value.trim();
+
+        const subject = `${client} – ${market} / ${station} Radio Traffic Update`;
+        const lines = ["Hi Stephanie,", ""];
+
+        if (primaryAction === "EXTEND") {
+          lines.push(`Please extend the current ${client} ${station} rotation for "${campaign}" beyond ${formatDate(selectedRecord.endDate)} until the replacement creative is delivered and a new end date is confirmed.`);
+          lines.push("");
+        } else if (primaryAction === "CHANGE") {
+          lines.push(`Please change the current ${client} ${station} placement for "${campaign}".`);
+          lines.push("");
+        } else if (primaryAction === "END") {
+          lines.push(`Please end the current ${client} ${station} placement for "${campaign}" as scheduled on ${formatDate(selectedRecord.endDate)}.`);
+          lines.push("");
+        }
+
+        if (verifyCurrentCopy.checked) {
+          lines.push(`Please also confirm the current ${client} copy/creative you have running on ${station} so I can reconcile our records with the station.`);
+          lines.push("");
+        }
+
+        if (replacement || ready) {
+          lines.push("Replacement Creative:");
+          if (replacement) lines.push(`- ${replacement}`);
+          if (ready) lines.push(`- Expected ready: ${ready}`);
+          lines.push("- I will send the finished production file as soon as it is ready.");
+          lines.push("");
+        }
+
+        if (related) {
+          lines.push("Related / Upcoming Media:");
+          lines.push(`- ${related.campaignName || related.creativeName || "Placement"}`);
+          lines.push(`- Market / Station: ${related.market || market} / ${related.outletName || station}`);
+          lines.push(`- Run Dates: ${formatDate(related.startDate)} – ${formatDate(related.endDate)}`);
+          if (related.fileName) lines.push(`- File Name: ${related.fileName}`);
+          if (related.scriptText) {
+            lines.push("- Script:");
+            lines.push(related.scriptText);
+          }
+          lines.push("");
+          lines.push("Please add/schedule this upcoming placement in advance and confirm once it is set.");
+          lines.push("");
+        }
+
+        lines.push("Thank you,", "Andy", "Global Concepts Media Agency");
+
+        draftSubject.textContent = subject;
+        draftBody.value = lines.join("\n");
+        draftWrap.classList.add("is-open");
+        communicationStatus.textContent = "Draft built. Review the subject and email below before anything is sent.";
       }
 
       function applyView(view) {
@@ -438,28 +592,27 @@
         }
       }
 
-      document.querySelectorAll(".media-action").forEach(button => {
+      document.querySelectorAll(".primary-action").forEach(button => {
         button.addEventListener("click", () => {
-          const action = button.dataset.action;
-          if (selectedActions.has(action)) {
-            selectedActions.delete(action);
-            button.classList.remove("is-selected");
-          } else {
-            selectedActions.add(action);
-            button.classList.add("is-selected");
-          }
-          const actions = [...selectedActions];
-          communicationStatus.textContent = actions.length ? `Selected: ${actions.join(" + ")}` : "Choose one or more actions.";
-          buildStationCommunication.disabled = actions.length === 0;
+          const action = button.dataset.action || "";
+          primaryAction = primaryAction === action ? "" : action;
+          document.querySelectorAll(".primary-action").forEach(b => {
+            b.classList.toggle("is-selected", b.dataset.action === primaryAction);
+          });
+          updateCommunicationState();
         });
       });
 
-      document.getElementById("close-action-panel").addEventListener("click", () => actionPanel.classList.remove("is-open"));
+      verifyCurrentCopy.addEventListener("change", updateCommunicationState);
+      relatedMediaSelect.addEventListener("change", updateCommunicationState);
+      replacementDescription.addEventListener("input", updateCommunicationState);
+      replacementReadyDate.addEventListener("input", updateCommunicationState);
 
-      buildStationCommunication.addEventListener("click", () => {
-        if (!selectedRecord || !selectedActions.size) return;
-        communicationStatus.innerHTML = `<strong>Road-test instructions captured:</strong> ${escapeHtml([...selectedActions].join(" + "))}.<br><span class="small">Next: build the station-specific email using these instructions and the relevant station inventory.</span>`;
+      document.getElementById("close-action-panel").addEventListener("click", () => {
+        actionPanel.classList.remove("is-open");
       });
+
+      buildStationCommunication.addEventListener("click", buildCommunicationDraft);
 
       clientSelect.addEventListener("change", () => loadMedia(clientSelect.value));
       viewSelect.addEventListener("change", () => applyView(viewSelect.value));
