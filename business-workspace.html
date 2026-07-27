@@ -1,3 +1,16 @@
+<!-- =========================================================
+   Global Concepts Media Operating System
+   File: business-workspace.html
+   Version: 1.1.0
+   Status: Production Candidate
+   Change: Shared GCM OS application shell integration
+   Source: Production business-workspace.html
+   Shared Shell: shared/gcm-shell.js 1.0.0
+   Purpose: Preserve the existing Business Workspace engine and
+            live get-client-workspace retrieval while moving the
+            page into the shared GCM OS application shell.
+   ========================================================= -->
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -76,8 +89,20 @@
       color: inherit;
     }
 
-    .app-shell {
+    .workspace-app {
       min-height: 100vh;
+    }
+
+    .gcm-shell-layout {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 250px minmax(0, 1fr);
+    }
+
+    @media (max-width: 860px) {
+      .gcm-shell-layout {
+        grid-template-columns: 1fr;
+      }
     }
 
     .topbar {
@@ -674,15 +699,18 @@
 </head>
 
 <body>
-  <div class="app-shell">
+  <div class="gcm-shell-layout">
+    <aside data-gcm-shell-sidebar aria-label="Primary navigation"></aside>
+
+    <div class="workspace-app">
     <header class="topbar">
       <div class="topbar-inner">
         <div class="brand">
-          <div class="brand-mark">GCM</div>
-
           <div class="brand-copy">
-            <p class="brand-name">Global Concepts Media</p>
-            <p class="brand-product">Business Workspace</p>
+            <p class="brand-name">Client Operations</p>
+            <p class="brand-product">
+              <a href="clients.html">Clients</a> / Business Workspace
+            </p>
           </div>
         </div>
 
@@ -954,8 +982,10 @@
         <p id="footer-note" class="footer-note"></p>
       </div>
     </main>
+    </div>
   </div>
 
+  <script src="shared/gcm-shell.js"></script>
   <script src="businessWorkspace.js"></script>
 
   <script>
@@ -976,6 +1006,17 @@
       );
 
       const statusText = document.getElementById("runtime-status-text");
+
+      if (!window.GCMOShell) {
+        console.error(
+          "Business Workspace 1.1.0: shared/gcm-shell.js did not load."
+        );
+      } else {
+        window.GCMOShell.mount({
+          currentPage: "clients",
+          statusText: "Client workspace connected · Business Workspace v1.1.0"
+        });
+      }
 
       document.addEventListener("DOMContentLoaded", start);
 
