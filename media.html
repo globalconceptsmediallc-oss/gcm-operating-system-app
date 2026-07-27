@@ -1,12 +1,12 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media.html
-   Version: 1.0.0
+   Version: 1.1.0
    Status: Production Candidate
    Sprint: Media Operations — Phase 1 Road Test
-   Purpose: Live D1-driven Media Operations workspace for reviewing
-            client media placements, attention, current rotations,
-            upcoming placements, and historical records.
+   Purpose: Live D1-driven Media Operations workspace with a focused
+            view selector for attention, current rotations, upcoming
+            placements, history, or all Media records.
 
    Source of truth:
    - D1 media_records through Worker action get-media-operations
@@ -107,6 +107,16 @@
                 <option value="">All clients</option>
               </select>
             </label>
+
+            <label class="select-wrap">
+              <select id="view-select" aria-label="Select media view">
+                <option value="attention">Needs Attention</option>
+                <option value="active">Running Now</option>
+                <option value="upcoming">Upcoming</option>
+                <option value="history">History</option>
+                <option value="all">All Media</option>
+              </select>
+            </label>
           </div>
         </header>
 
@@ -117,7 +127,7 @@
           <article class="summary-card"><p class="summary-label">History</p><p class="summary-value" id="history-count">—</p><p class="summary-note">Expired media retained for proof and reference.</p></article>
         </section>
 
-        <section class="panel attention-panel">
+        <section class="panel attention-panel" id="panel-attention">
           <div class="panel-header">
             <div><h2 class="panel-title">Needs Attention</h2><p class="panel-description">Explicit media alerts from the production record. Deadline automation will be added after this read-only road test is verified.</p></div>
             <span class="count-pill" id="attention-pill">0 items</span>
@@ -125,17 +135,17 @@
           <div id="attention-list" class="attention-list"><div class="loading">Loading media attention…</div></div>
         </section>
 
-        <section class="panel">
+        <section class="panel" id="panel-active">
           <div class="panel-header"><div><h2 class="panel-title">Running Now</h2><p class="panel-description">Current placements and the exact creative tied to each run.</p></div><span class="count-pill" id="active-pill">0 items</span></div>
           <div id="active-content" class="loading">Loading current media…</div>
         </section>
 
-        <section class="panel">
+        <section class="panel" id="panel-upcoming">
           <div class="panel-header"><div><h2 class="panel-title">Upcoming</h2><p class="panel-description">Pending and planned media that must be prepared, trafficked, confirmed, and later proved.</p></div><span class="count-pill" id="upcoming-pill">0 items</span></div>
           <div id="upcoming-content" class="loading">Loading upcoming media…</div>
         </section>
 
-        <section class="panel">
+        <section class="panel" id="panel-history">
           <div class="panel-header"><div><h2 class="panel-title">History</h2><p class="panel-description">Past placements preserved as operational history.</p></div><span class="count-pill" id="history-pill">0 items</span></div>
           <div id="history-content" class="loading">Loading media history…</div>
         </section>
@@ -149,6 +159,7 @@
 
       const WORKER_ENDPOINT = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
       const clientSelect = document.getElementById("client-select");
+      const viewSelect = document.getElementById("view-select");
       const sidebar = document.getElementById("sidebar");
       const mobileMenuButton = document.getElementById("mobile-menu-button");
 
@@ -243,6 +254,21 @@
           : `<div class="empty">No media records are explicitly flagged for attention.</div>`;
       }
 
+
+      function applyView(view) {
+        const selected = view || "attention";
+        const panels = {
+          attention: document.getElementById("panel-attention"),
+          active: document.getElementById("panel-active"),
+          upcoming: document.getElementById("panel-upcoming"),
+          history: document.getElementById("panel-history")
+        };
+
+        Object.entries(panels).forEach(([key, panel]) => {
+          panel.hidden = selected !== "all" && selected !== key;
+        });
+      }
+
       function render(payload) {
         const records = Array.isArray(payload?.mediaOperations?.records) ? payload.mediaOperations.records : [];
         const active = records.filter(r => String(r.status || "").toLowerCase() === "active");
@@ -259,6 +285,7 @@
         els.activeContent.innerHTML = table(active);
         els.upcomingContent.innerHTML = table(upcoming);
         els.historyContent.innerHTML = table(history);
+        applyView(viewSelect.value);
       }
 
       function populateClients(clients, selectedValue) {
@@ -302,12 +329,14 @@
       }
 
       clientSelect.addEventListener("change", () => loadMedia(clientSelect.value));
+      viewSelect.addEventListener("change", () => applyView(viewSelect.value));
 
       mobileMenuButton.addEventListener("click", () => {
         const open = sidebar.classList.toggle("is-open");
         mobileMenuButton.setAttribute("aria-expanded", String(open));
       });
 
+      applyView("attention");
       loadMedia();
     })();
   </script>
