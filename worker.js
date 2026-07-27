@@ -1,16 +1,16 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.4.0
+   Version: 7.5.0
    Status: Production Candidate
-   Source: Production Worker 7.3.0
-   Sprint: Media Operations — Phase 1 Retrieval
+   Source: Production Worker 7.4.0
+   Sprint: Shared GCM OS Application Shell — Client Directory
    Purpose: Lightweight production router for operational
             communication analysis, client workspace retrieval,
-            reviewed operational-decision commits, live Mission
-            Control retrieval, existing-Investigation processing,
-            existing-Work-Item completion, and read-only Media
-            Operations retrieval.
+            client directory retrieval, reviewed operational-
+            decision commits, live Mission Control retrieval,
+            existing-Investigation processing, existing-Work-Item
+            completion, and read-only Media Operations retrieval.
 
    Required project structure:
 
@@ -26,6 +26,7 @@
      communicationAnalysis.js
      operationalDecision.js
      clientWorkspace.js
+     clientDirectory.js
      missionControl.js
      investigationProcessing.js
      workItemProcessing.js
@@ -53,6 +54,10 @@ import {
 import {
   handleClientWorkspace
 } from "./routes/clientWorkspace.js";
+
+import {
+  handleClientDirectory
+} from "./routes/clientDirectory.js";
 
 import {
   handleCommitOperationalDecision
@@ -90,8 +95,9 @@ export default {
         system: "GCM OS Operational Worker",
         version: VERSION,
         contractVersion: API_CONTRACT_VERSION,
-        sprint: "Media Operations — Phase 1 Retrieval",
-        architecture: "Lightweight router with modular operational routes, shared infrastructure, isolated diagnostics, deterministic classification, guarded AI, D1 persistence, live Mission Control retrieval, existing-Investigation processing, existing-Work-Item completion, and read-only Media Operations retrieval",
+        sprint: "Shared GCM OS Application Shell — Client Directory",
+        architecture:
+          "Lightweight router with modular operational routes, shared infrastructure, isolated diagnostics, deterministic classification, guarded AI, D1 persistence, live Mission Control retrieval, read-only Client Directory retrieval, existing-Investigation processing, existing-Work-Item completion, and read-only Media Operations retrieval",
         actions: Object.values(ACTIONS),
         engines: [
           "notification-detection",
@@ -100,6 +106,7 @@ export default {
           "operational-routing",
           "consultant-summary",
           "client-workspace",
+          "client-directory",
           "operational-decision-commit",
           "mission-control",
           "investigation-processing",
@@ -116,6 +123,7 @@ export default {
           routes: [
             "communication-analysis",
             "client-workspace",
+            "client-directory",
             "operational-decision",
             "mission-control",
             "investigation-processing",
@@ -175,6 +183,13 @@ export default {
 
         case ACTIONS.GET_CLIENT_WORKSPACE:
           return await handleClientWorkspace(
+            body,
+            env,
+            requestId
+          );
+
+        case ACTIONS.GET_CLIENT_DIRECTORY:
+          return await handleClientDirectory(
             body,
             env,
             requestId
