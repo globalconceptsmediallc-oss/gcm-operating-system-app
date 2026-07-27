@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media.html
-   Version: 1.7.0
+   Version: 1.7.1
    Status: Production Candidate
    Sprint: Media Operations — Station Communication Road Test
    Purpose: Live D1-driven Media Operations workspace with a focused
@@ -67,6 +67,9 @@
     .panel-title{margin:0;color:var(--gcm-navy-950);font-size:1rem;font-weight:900}.panel-description{margin:5px 0 0;color:var(--text-muted);font-size:.82rem}.count-pill{display:inline-flex;align-items:center;min-height:28px;padding:0 10px;border-radius:999px;background:var(--info-soft);color:var(--info);font-size:.7rem;font-weight:900}
     .attention-panel{border-color:#efd9aa}.attention-panel .panel-header{background:linear-gradient(180deg,#fffaf0,#fff)}.attention-list{display:grid;gap:10px;padding:16px 18px}.attention-card{padding:15px 16px;border:1px solid #ecd7aa;border-radius:13px;background:var(--warning-soft)}
     .attention-card{cursor:pointer}.attention-card:hover{border-color:var(--gcm-gold-500)}
+    .attention-card.is-queued{border-color:#b9d7c8;background:var(--success-soft);opacity:.82}
+    .attention-card.is-queued:hover{border-color:var(--success)}
+    .queued-band{display:inline-flex;align-items:center;min-height:22px;padding:0 8px;margin-left:6px;border-radius:999px;background:#d9f0e5;color:var(--success);font-size:.66rem;font-weight:900;text-transform:uppercase}
     .attention-card strong{display:block;color:var(--gcm-navy-950);font-size:.9rem}
     .action-panel{display:none}.action-panel.is-open{display:block}.action-body{padding:20px 22px}
     .action-record{padding:14px 16px;border:1px solid var(--border);border-radius:13px;background:var(--surface-soft);margin-bottom:16px}
@@ -522,6 +525,18 @@
           </div>`;
       }
 
+      function queuedInstructionForRecord(record) {
+        return instructionQueue.find(item => String(item.recordId) === String(record?.id)) || null;
+      }
+
+      function queuedInstructionLabel(item) {
+        if (!item) return "";
+        if (item.action === "EXTEND") return `Queued — EXTEND through ${formatInputDate(item.extendThroughDate)}`;
+        if (item.action === "CHANGE") return "Queued — CHANGE";
+        if (item.action === "END") return `Queued — END on ${formatInputDate(item.endDate)}`;
+        return `Queued — ${item.action || "Instruction"}`;
+      }
+
       function renderAttention(records) {
         const flagged = records.filter(needsAttention);
 
@@ -542,11 +557,12 @@
                   }).format(deadline)) + " by 12:00 noon"
                 : "—";
 
+              const queued = queuedInstructionForRecord(r);
               return `
-                <article class="attention-card ${marketClass(r.market)}" data-record-id="${escapeHtml(r.id ?? "")}" tabindex="0">
-                  ${marketBand(r.market, r.outletName)}
+                <article class="attention-card ${marketClass(r.market)}${queued ? " is-queued" : ""}" data-record-id="${escapeHtml(r.id ?? "")}" tabindex="0">
+                  ${marketBand(r.market, r.outletName)}${queued ? `<span class="queued-band">✓ ${escapeHtml(queuedInstructionLabel(queued))}</span>` : ""}
                   <strong>${escapeHtml(r.clientName)} — ${escapeHtml(r.campaignName || r.creativeName || "Placement")}</strong>
-                  <p>${escapeHtml(attentionReason(r))} · ${dateLabel} · Station deadline: ${deadlineLabel} · Action: ${escapeHtml(r.actionType || "—")}</p>
+                  <p>${queued ? escapeHtml(queuedInstructionLabel(queued)) + " · " : ""}${escapeHtml(attentionReason(r))} · ${dateLabel} · Station deadline: ${deadlineLabel} · Action: ${escapeHtml(r.actionType || "—")}</p>
                 </article>`;
             }).join("")
           : `<div class="empty">No media records currently require attention under the three-working-day traffic rule.</div>`;
@@ -703,6 +719,7 @@
           button.addEventListener("click", () => {
             instructionQueue.splice(Number(button.dataset.queueIndex), 1);
             renderInstructionQueue();
+            renderAttention(currentRecords);
           });
         });
 
@@ -712,7 +729,11 @@
       function addCurrentInstruction() {
         if (!instructionIsValid() || !selectedRecord) return;
 
-        instructionQueue.push({
+        const existingQueueIndex = instructionQueue.findIndex(
+          item => String(item.recordId) === String(selectedRecord.id)
+        );
+
+        const queuedInstruction = {
           recordId: selectedRecord.id,
           clientId: selectedRecord.clientId,
           clientName: selectedRecord.clientName || "Client",
@@ -729,7 +750,13 @@
           verifyCurrentCopy: verifyCurrentCopy.checked,
           replacementDescription: replacementDescription.value.trim(),
           replacementReadyDate: replacementReadyDate.value.trim()
-        });
+        };
+
+        if (existingQueueIndex >= 0) {
+          instructionQueue[existingQueueIndex] = queuedInstruction;
+        } else {
+          instructionQueue.push(queuedInstruction);
+        }
 
         primaryAction = "";
         document.querySelectorAll(".primary-action").forEach(b => b.classList.remove("is-selected"));
@@ -742,6 +769,7 @@
         showInstructionFields();
         draftWrap.classList.remove("is-open");
         renderInstructionQueue();
+        renderAttention(currentRecords);
 
         communicationStatus.textContent = `${instructionQueue.length} placement instruction${instructionQueue.length === 1 ? "" : "s"} added. Select another Needs Attention placement to add it to this same email, or build the combined communication now.`;
       }
