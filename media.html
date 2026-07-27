@@ -1,12 +1,12 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media.html
-   Version: 1.5.0
+   Version: 1.5.1
    Status: Production Candidate
    Sprint: Media Operations — Station Communication Road Test
    Purpose: Live D1-driven Media Operations workspace with a focused
             view selector, automatic station traffic deadlines,
-            and automatic Station Landscape discovery.
+            and automatic Station Landscape discovery with the selected attention record included.
 
    Station deadline rule:
    - Deadline = 3 working days before end_date.
@@ -422,18 +422,40 @@
         const clientId = Number(record.clientId);
         const market = String(record.market || "").trim().toLowerCase();
         const station = String(record.outletName || "").trim().toLowerCase();
-        landscapeRecords = currentRecords.filter(r =>
+
+        const otherRecords = currentRecords.filter(r =>
           r !== record &&
           Number(r.clientId) === clientId &&
           String(r.market || "").trim().toLowerCase() === market &&
           String(r.outletName || "").trim().toLowerCase() === station &&
           ["active","pending","planned"].includes(String(r.status || "").toLowerCase())
         );
-        stationLandscape.innerHTML = landscapeRecords.length ? landscapeRecords.map(r => {
+
+        landscapeRecords = [record, ...otherRecords];
+
+        stationLandscape.innerHTML = landscapeRecords.map(r => {
           const status = String(r.status || "unknown");
-          const timing = ["pending","planned"].includes(status.toLowerCase()) ? "Upcoming" : "Running Now";
-          return `<div class="landscape-card"><strong>${escapeHtml(timing)} — ${escapeHtml(r.campaignName || r.creativeName || "Placement")}</strong><div class="landscape-meta">${escapeHtml(r.market || "—")} / ${escapeHtml(r.outletName || "—")} · ${formatDate(r.startDate)} – ${formatDate(r.endDate)} · ${escapeHtml(status)}${r.fileName ? ` · ${escapeHtml(r.fileName)}` : ""}</div></div>`;
-        }).join("") : `<div class="landscape-empty">No other current or upcoming ${escapeHtml(record.outletName || "station")} placements were found in D1 for ${escapeHtml(record.market || "this market")}.</div>`;
+          const normalizedStatus = status.toLowerCase();
+          const isSelected = r === record;
+          const timing = isSelected
+            ? "Needs Attention"
+            : ["pending","planned"].includes(normalizedStatus)
+            ? "Upcoming"
+            : "Running Now";
+
+          const attention = isSelected && r.attentionReason
+            ? ` · ${escapeHtml(r.attentionReason)}`
+            : "";
+
+          return `<div class="landscape-card">
+            <strong>${isSelected ? "⚠ " : ""}${escapeHtml(timing)} — ${escapeHtml(r.campaignName || r.creativeName || "Placement")}</strong>
+            <div class="landscape-meta">
+              ${escapeHtml(r.market || "—")} / ${escapeHtml(r.outletName || "—")} ·
+              ${formatDate(r.startDate)} – ${formatDate(r.endDate)} ·
+              ${escapeHtml(status)}${attention}${r.fileName ? ` · ${escapeHtml(r.fileName)}` : ""}
+            </div>
+          </div>`;
+        }).join("");
       }
 
       function updateCommunicationState() {
@@ -494,8 +516,9 @@
         }
 
         if (landscapeRecords.length) {
-          const running = landscapeRecords.filter(r => String(r.status || "").toLowerCase() === "active");
-          const upcoming = landscapeRecords.filter(r => ["pending","planned"].includes(String(r.status || "").toLowerCase()));
+          const landscapeOthers = landscapeRecords.filter(r => r !== selectedRecord);
+          const running = landscapeOthers.filter(r => String(r.status || "").toLowerCase() === "active");
+          const upcoming = landscapeOthers.filter(r => ["pending","planned"].includes(String(r.status || "").toLowerCase()));
           lines.push("Station Landscape From Our Records:");
           if (running.length) {
             lines.push("Currently Running:");
@@ -631,4 +654,4 @@
     })();
   </script>
 </body>
-</html
+</html>
