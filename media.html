@@ -1,12 +1,12 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media.html
-   Version: 1.4.0
+   Version: 1.5.0
    Status: Production Candidate
    Sprint: Media Operations — Station Communication Road Test
    Purpose: Live D1-driven Media Operations workspace with a focused
-            view selector and automatic station traffic deadlines
-            calculated from each placement end date.
+            view selector, automatic station traffic deadlines,
+            and automatic Station Landscape discovery.
 
    Station deadline rule:
    - Deadline = 3 working days before end_date.
@@ -77,7 +77,9 @@
     .action-section h3{margin:0 0 6px;color:var(--gcm-navy-950);font-size:.86rem}
     .action-section p{margin:0 0 10px;color:var(--text-muted);font-size:.78rem}
     .verify-row{display:flex;align-items:center;gap:9px;margin:4px 0 14px;font-weight:850;color:var(--gcm-navy-900)}
-    .related-select{width:100%;min-height:42px;padding:0 10px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--gcm-navy-900)}
+    .station-landscape{display:grid;gap:10px}.landscape-card{padding:12px 14px;border:1px solid var(--border);border-radius:10px;background:var(--surface-soft)}
+    .landscape-card strong{display:block;color:var(--gcm-navy-950);font-size:.82rem}.landscape-meta{margin-top:4px;color:var(--text-muted);font-size:.74rem}
+    .landscape-empty{padding:12px 14px;border:1px dashed var(--border);border-radius:10px;color:var(--text-muted);font-size:.78rem}
     .replacement-row{display:grid;grid-template-columns:1fr 180px;gap:10px;margin-top:10px}
     .replacement-row input{min-height:42px;padding:0 10px;border:1px solid var(--border);border-radius:10px}
     .draft-wrap{display:none;margin-top:16px}.draft-wrap.is-open{display:block}
@@ -180,11 +182,9 @@
             </div>
 
             <div class="action-section">
-              <h3>Related Media</h3>
-              <p>Add another existing placement from this client/market to the same station communication.</p>
-              <select class="related-select" id="related-media-select">
-                <option value="">No related placement selected</option>
-              </select>
+              <h3>Station Landscape</h3>
+              <p>Automatically found from D1 for this client, market, and station. No manual related-media selection is required.</p>
+              <div class="station-landscape" id="station-landscape"><div class="landscape-empty">Select a media record to load the station landscape.</div></div>
             </div>
 
             <div class="action-section">
@@ -198,7 +198,7 @@
 
             <div class="communication-box">
               <strong>Station Communication</strong>
-              <p id="communication-status">Choose a primary action, verification, related media, or replacement creative.</p>
+              <p id="communication-status">Choose a primary action, verification, or replacement creative. The station landscape is included automatically.</p>
               <button class="build-button" id="build-station-communication" type="button" disabled>Build Station Communication</button>
 
               <div class="draft-wrap" id="draft-wrap">
@@ -241,7 +241,7 @@
       const communicationStatus = document.getElementById("communication-status");
       const buildStationCommunication = document.getElementById("build-station-communication");
       const verifyCurrentCopy = document.getElementById("verify-current-copy");
-      const relatedMediaSelect = document.getElementById("related-media-select");
+      const stationLandscape = document.getElementById("station-landscape");
       const replacementDescription = document.getElementById("replacement-description");
       const replacementReadyDate = document.getElementById("replacement-ready-date");
       const draftWrap = document.getElementById("draft-wrap");
@@ -250,6 +250,7 @@
       let currentRecords = [];
       let selectedRecord = null;
       let primaryAction = "";
+      let landscapeRecords = [];
 
       const els = {
         attentionCount: document.getElementById("attention-count"),
@@ -411,36 +412,34 @@
           <div>${escapeHtml(record.campaignName || record.creativeName || "Placement")}</div>
           <div class="small">Run ends ${formatDate(record.endDate)} · Station deadline ${stationDeadline(record.endDate) ? escapeHtml(new Intl.DateTimeFormat("en-US",{weekday:"short",month:"short",day:"numeric",year:"numeric"}).format(stationDeadline(record.endDate))) + " by 12:00 noon" : "—"}</div>`;
 
-        populateRelatedMedia(record);
+        populateStationLandscape(record);
         updateCommunicationState();
         actionPanel.classList.add("is-open");
         actionPanel.scrollIntoView({behavior:"smooth",block:"start"});
       }
 
-      function populateRelatedMedia(record) {
-        const candidates = currentRecords.filter(r =>
+      function populateStationLandscape(record) {
+        const clientId = Number(record.clientId);
+        const market = String(record.market || "").trim().toLowerCase();
+        const station = String(record.outletName || "").trim().toLowerCase();
+        landscapeRecords = currentRecords.filter(r =>
           r !== record &&
-          Number(r.clientId) === Number(record.clientId) &&
-          String(r.market || "").toLowerCase() === String(record.market || "").toLowerCase()
+          Number(r.clientId) === clientId &&
+          String(r.market || "").trim().toLowerCase() === market &&
+          String(r.outletName || "").trim().toLowerCase() === station &&
+          ["active","pending","planned"].includes(String(r.status || "").toLowerCase())
         );
-
-        relatedMediaSelect.innerHTML = `<option value="">No related placement selected</option>` +
-          candidates.map(r => {
-            const label = `${r.campaignName || r.creativeName || "Placement"} — ${r.outletName || "Outlet"} — ${formatDate(r.startDate)} to ${formatDate(r.endDate)} — ${r.status || "status unknown"}`;
-            return `<option value="${escapeHtml(r.id)}">${escapeHtml(label)}</option>`;
-          }).join("");
-      }
-
-      function selectedRelatedRecord() {
-        const id = String(relatedMediaSelect.value || "");
-        return currentRecords.find(r => String(r.id) === id) || null;
+        stationLandscape.innerHTML = landscapeRecords.length ? landscapeRecords.map(r => {
+          const status = String(r.status || "unknown");
+          const timing = ["pending","planned"].includes(status.toLowerCase()) ? "Upcoming" : "Running Now";
+          return `<div class="landscape-card"><strong>${escapeHtml(timing)} — ${escapeHtml(r.campaignName || r.creativeName || "Placement")}</strong><div class="landscape-meta">${escapeHtml(r.market || "—")} / ${escapeHtml(r.outletName || "—")} · ${formatDate(r.startDate)} – ${formatDate(r.endDate)} · ${escapeHtml(status)}${r.fileName ? ` · ${escapeHtml(r.fileName)}` : ""}</div></div>`;
+        }).join("") : `<div class="landscape-empty">No other current or upcoming ${escapeHtml(record.outletName || "station")} placements were found in D1 for ${escapeHtml(record.market || "this market")}.</div>`;
       }
 
       function updateCommunicationState() {
         const hasInput =
           Boolean(primaryAction) ||
           verifyCurrentCopy.checked ||
-          Boolean(relatedMediaSelect.value) ||
           Boolean(replacementDescription.value.trim()) ||
           Boolean(replacementReadyDate.value.trim());
 
@@ -449,18 +448,17 @@
         const parts = [];
         if (primaryAction) parts.push(primaryAction);
         if (verifyCurrentCopy.checked) parts.push("VERIFY CURRENT COPY");
-        if (relatedMediaSelect.value) parts.push("RELATED MEDIA");
+        if (landscapeRecords.length) parts.push("STATION LANDSCAPE");
         if (replacementDescription.value.trim() || replacementReadyDate.value.trim()) parts.push("REPLACEMENT COMING");
 
         communicationStatus.textContent = parts.length
           ? `Selected: ${parts.join(" + ")}`
-          : "Choose a primary action, verification, related media, or replacement creative.";
+          : "Choose a primary action, verification, or replacement creative. The station landscape is included automatically.";
       }
 
       function buildCommunicationDraft() {
         if (!selectedRecord) return;
 
-        const related = selectedRelatedRecord();
         const client = selectedRecord.clientName || "Southeast Safes";
         const station = selectedRecord.outletName || "station";
         const market = selectedRecord.market || "market";
@@ -495,18 +493,25 @@
           lines.push("");
         }
 
-        if (related) {
-          lines.push("Related / Upcoming Media:");
-          lines.push(`- ${related.campaignName || related.creativeName || "Placement"}`);
-          lines.push(`- Market / Station: ${related.market || market} / ${related.outletName || station}`);
-          lines.push(`- Run Dates: ${formatDate(related.startDate)} – ${formatDate(related.endDate)}`);
-          if (related.fileName) lines.push(`- File Name: ${related.fileName}`);
-          if (related.scriptText) {
-            lines.push("- Script:");
-            lines.push(related.scriptText);
+        if (landscapeRecords.length) {
+          const running = landscapeRecords.filter(r => String(r.status || "").toLowerCase() === "active");
+          const upcoming = landscapeRecords.filter(r => ["pending","planned"].includes(String(r.status || "").toLowerCase()));
+          lines.push("Station Landscape From Our Records:");
+          if (running.length) {
+            lines.push("Currently Running:");
+            running.forEach(r => {
+              lines.push(`- ${r.campaignName || r.creativeName || "Placement"} — ${formatDate(r.startDate)} – ${formatDate(r.endDate)}`);
+              if (r.fileName) lines.push(`  File: ${r.fileName}`);
+            });
           }
-          lines.push("");
-          lines.push("Please add/schedule this upcoming placement in advance and confirm once it is set.");
+          if (upcoming.length) {
+            if (running.length) lines.push("");
+            lines.push("Upcoming / Planned:");
+            upcoming.forEach(r => {
+              lines.push(`- ${r.campaignName || r.creativeName || "Placement"} — ${formatDate(r.startDate)} – ${formatDate(r.endDate)}`);
+              if (r.fileName) lines.push(`  File: ${r.fileName}`);
+            });
+          }
           lines.push("");
         }
 
@@ -604,7 +609,6 @@
       });
 
       verifyCurrentCopy.addEventListener("change", updateCommunicationState);
-      relatedMediaSelect.addEventListener("change", updateCommunicationState);
       replacementDescription.addEventListener("input", updateCommunicationState);
       replacementReadyDate.addEventListener("input", updateCommunicationState);
 
@@ -627,4 +631,4 @@
     })();
   </script>
 </body>
-</html>
+</html
