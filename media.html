@@ -1,1 +1,315 @@
+<!-- =========================================================
+   Global Concepts Media Operating System
+   File: media.html
+   Version: 1.0.0
+   Status: Production Candidate
+   Sprint: Media Operations — Phase 1 Road Test
+   Purpose: Live D1-driven Media Operations workspace for reviewing
+            client media placements, attention, current rotations,
+            upcoming placements, and historical records.
 
+   Source of truth:
+   - D1 media_records through Worker action get-media-operations
+   - No Media localStorage
+   - Read-only in Version 1.0.0
+   ========================================================= -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Media | GCM OS</title>
+  <meta name="description" content="Media Operations for the Global Concepts Media Agency Operating System." />
+
+  <style>
+    :root {
+      --gcm-navy-950:#071426; --gcm-navy-900:#0b1d33; --gcm-navy-800:#112a47;
+      --gcm-blue-600:#1f68d8; --gcm-blue-500:#347ce8; --gcm-blue-100:#eaf2ff;
+      --gcm-gold-500:#d6a94a; --surface:#fff; --surface-soft:#f5f7fb;
+      --surface-muted:#edf1f7; --border:#dbe2ec; --text:#132238;
+      --text-muted:#637083; --text-soft:#8290a3; --success:#1f7a4f;
+      --success-soft:#e9f7f0; --warning:#9a6414; --warning-soft:#fff4dd;
+      --critical:#b33a3a; --critical-soft:#fff0f0; --info:#245fae;
+      --info-soft:#edf5ff; --shadow-sm:0 8px 24px rgba(7,20,38,.07);
+      --radius-sm:10px; --radius-md:16px; --radius-lg:22px; --content-width:1480px;
+    }
+    *{box-sizing:border-box} body{margin:0;min-height:100vh;background:var(--surface-soft);color:var(--text);
+      font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5}
+    button,input,select{font:inherit} a{color:inherit;text-decoration:none}
+    .app-shell{min-height:100vh;display:grid;grid-template-columns:250px minmax(0,1fr)}
+    .sidebar{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;padding:24px 18px;
+      background:radial-gradient(circle at top right,rgba(52,124,232,.19),transparent 34%),linear-gradient(180deg,var(--gcm-navy-900),var(--gcm-navy-950));color:#fff;overflow-y:auto}
+    .brand{display:flex;align-items:center;gap:12px;padding:2px 8px 22px;border-bottom:1px solid rgba(255,255,255,.12)}
+    .brand-mark{width:42px;height:42px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.22);border-radius:13px;background:rgba(255,255,255,.08);color:var(--gcm-gold-500);font-weight:900}
+    .brand-copy strong,.brand-copy span{display:block}.brand-copy strong{font-size:.95rem}.brand-copy span{margin-top:2px;color:rgba(255,255,255,.58);font-size:.75rem;text-transform:uppercase;letter-spacing:.12em}
+    .nav-label{margin:24px 10px 10px;color:rgba(255,255,255,.42);font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.14em}
+    .primary-nav{display:grid;gap:6px}.nav-link{display:flex;align-items:center;gap:12px;min-height:46px;padding:0 13px;border-radius:12px;color:rgba(255,255,255,.72);font-size:.92rem;font-weight:700}
+    .nav-link:hover,.nav-link:focus-visible{background:rgba(255,255,255,.08);color:#fff;outline:none}.nav-link[aria-current="page"]{background:rgba(52,124,232,.2);color:#fff;box-shadow:inset 3px 0 0 var(--gcm-gold-500)}
+    .nav-icon{width:22px;text-align:center}.sidebar-footer{margin-top:auto;padding:18px 8px 2px;border-top:1px solid rgba(255,255,255,.12)}
+    .sidebar-status{display:flex;align-items:center;gap:9px;color:rgba(255,255,255,.67);font-size:.78rem}.status-dot{width:8px;height:8px;border-radius:50%;background:#5fd397;box-shadow:0 0 0 4px rgba(95,211,151,.12)}
+    .main{min-width:0;padding:28px 32px 48px}.main-inner{width:min(100%,var(--content-width));margin:0 auto}
+    .topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:22px}.eyebrow{margin:0 0 6px;color:var(--gcm-blue-600);font-size:.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.14em}
+    .page-title{margin:0;color:var(--gcm-navy-950);font-size:clamp(2rem,4vw,3.15rem);line-height:1;letter-spacing:-.045em}.page-subtitle{margin:10px 0 0;color:var(--text-muted);font-size:1rem}
+    .topbar-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.date-chip,.select-wrap{min-height:42px;border:1px solid var(--border);border-radius:11px;background:var(--surface);box-shadow:var(--shadow-sm)}
+    .date-chip{display:inline-flex;align-items:center;padding:0 14px;color:var(--text-muted);font-size:.84rem;font-weight:800}.select-wrap{padding:0 10px}.select-wrap select{height:40px;border:0;background:transparent;color:var(--gcm-navy-900);font-weight:800;outline:none;min-width:190px}
+    .summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}.summary-card{padding:18px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);box-shadow:var(--shadow-sm)}
+    .summary-label{margin:0;color:var(--text-muted);font-size:.74rem;font-weight:850;text-transform:uppercase;letter-spacing:.08em}.summary-value{margin:8px 0 2px;color:var(--gcm-navy-950);font-size:2rem;font-weight:900;line-height:1}.summary-note{margin:8px 0 0;color:var(--text-soft);font-size:.78rem}
+    .panel{margin-bottom:18px;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--surface);box-shadow:var(--shadow-sm);overflow:hidden}.panel-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:20px 22px 16px;border-bottom:1px solid var(--border)}
+    .panel-title{margin:0;color:var(--gcm-navy-950);font-size:1rem;font-weight:900}.panel-description{margin:5px 0 0;color:var(--text-muted);font-size:.82rem}.count-pill{display:inline-flex;align-items:center;min-height:28px;padding:0 10px;border-radius:999px;background:var(--info-soft);color:var(--info);font-size:.7rem;font-weight:900}
+    .attention-panel{border-color:#efd9aa}.attention-panel .panel-header{background:linear-gradient(180deg,#fffaf0,#fff)}.attention-list{display:grid;gap:10px;padding:16px 18px}.attention-card{padding:15px 16px;border:1px solid #ecd7aa;border-radius:13px;background:var(--warning-soft)}
+    .attention-card strong{display:block;color:var(--gcm-navy-950);font-size:.9rem}.attention-card p{margin:5px 0 0;color:var(--text-muted);font-size:.78rem}
+    .table-wrap{overflow-x:auto}.media-table{width:100%;border-collapse:collapse;min-width:1120px}.media-table th{padding:11px 14px;background:#fbfcfe;border-bottom:1px solid var(--border);color:var(--text-soft);font-size:.67rem;text-align:left;text-transform:uppercase;letter-spacing:.07em;white-space:nowrap}
+    .media-table td{padding:13px 14px;border-bottom:1px solid var(--border);font-size:.79rem;vertical-align:top}.media-table tbody tr:last-child td{border-bottom:0}.record-title{font-weight:900;color:var(--gcm-navy-950)}.muted{color:var(--text-muted)}.small{font-size:.72rem;color:var(--text-soft);margin-top:3px}
+    .badge{display:inline-flex;align-items:center;min-height:25px;padding:0 8px;border-radius:999px;font-size:.66rem;font-weight:900;text-transform:uppercase;white-space:nowrap}.badge-active{background:var(--success-soft);color:var(--success)}.badge-pending{background:var(--info-soft);color:var(--info)}.badge-expired{background:var(--surface-muted);color:var(--text-muted)}.badge-attention{background:var(--warning-soft);color:var(--warning)}.badge-unknown{background:var(--surface-muted);color:var(--text-muted)}
+    details{margin-top:7px}summary{cursor:pointer;color:var(--gcm-blue-600);font-size:.72rem;font-weight:850}.script{max-width:650px;margin:8px 0 0;padding:10px;border-radius:9px;background:var(--surface-soft);white-space:pre-wrap;color:var(--text-muted);font-size:.73rem}
+    .empty,.error,.loading{padding:28px 22px;color:var(--text-muted);font-size:.86rem}.error{color:var(--critical);background:var(--critical-soft)}
+    .mobile-menu-button{display:none;min-height:42px;padding:0 14px;border:1px solid var(--border);border-radius:11px;background:#fff;font-weight:800}
+    @media(max-width:1000px){.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:860px){.app-shell{grid-template-columns:1fr}.sidebar{position:fixed;inset:0 auto 0 0;z-index:100;width:250px;transform:translateX(-100%);transition:transform .18s ease}.sidebar.is-open{transform:translateX(0)}.mobile-menu-button{display:inline-flex;align-items:center}.main{padding:20px}.topbar{align-items:center}}
+    @media(max-width:640px){.main{padding:16px}.topbar{flex-direction:column;align-items:flex-start}.topbar-actions{width:100%}.summary-grid{grid-template-columns:1fr}.select-wrap{width:100%}.select-wrap select{width:100%}}
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar" aria-label="Primary navigation">
+      <a class="brand" href="today.html">
+        <span class="brand-mark">G</span>
+        <span class="brand-copy"><strong>Global Concepts Media</strong><span>Agency Operating System</span></span>
+      </a>
+      <p class="nav-label">Workspace</p>
+      <nav class="primary-nav">
+        <a class="nav-link" href="today.html"><span class="nav-icon">⌂</span><span>Today</span></a>
+        <a class="nav-link" href="client-pre-research.html"><span class="nav-icon">◎</span><span>Prospects</span></a>
+        <a class="nav-link" href="clients.html"><span class="nav-icon">◫</span><span>Clients</span></a>
+        <a class="nav-link" href="communications.html"><span class="nav-icon">✉</span><span>Communications</span></a>
+        <a class="nav-link" href="work.html"><span class="nav-icon">✓</span><span>Work</span></a>
+        <a class="nav-link" href="proof.html"><span class="nav-icon">↗</span><span>Proof</span></a>
+        <a class="nav-link" href="media.html" aria-current="page"><span class="nav-icon">◉</span><span>Media</span></a>
+        <a class="nav-link" href="#"><span class="nav-icon">★</span><span>Case Studies</span></a>
+        <a class="nav-link" href="#"><span class="nav-icon">⚙</span><span>Settings</span></a>
+      </nav>
+      <div class="sidebar-footer"><div class="sidebar-status"><span class="status-dot"></span><span>Media Operations live</span></div></div>
+    </aside>
+
+    <main class="main">
+      <div class="main-inner">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Media Operations</p>
+            <h1 class="page-title">Media</h1>
+            <p class="page-subtitle">Know what is running, what needs attention, what is coming next, and what ran before.</p>
+          </div>
+          <div class="topbar-actions">
+            <button class="mobile-menu-button" id="mobile-menu-button" type="button">Menu</button>
+            <div class="date-chip" id="current-date"></div>
+            <label class="select-wrap">
+              <select id="client-select" aria-label="Select client">
+                <option value="">All clients</option>
+              </select>
+            </label>
+          </div>
+        </header>
+
+        <section class="summary-grid" aria-label="Media summary">
+          <article class="summary-card"><p class="summary-label">Needs Attention</p><p class="summary-value" id="attention-count">—</p><p class="summary-note">Records explicitly flagged for review.</p></article>
+          <article class="summary-card"><p class="summary-label">Running Now</p><p class="summary-value" id="active-count">—</p><p class="summary-note">Active media placements.</p></article>
+          <article class="summary-card"><p class="summary-label">Upcoming</p><p class="summary-value" id="upcoming-count">—</p><p class="summary-note">Pending or planned placements.</p></article>
+          <article class="summary-card"><p class="summary-label">History</p><p class="summary-value" id="history-count">—</p><p class="summary-note">Expired media retained for proof and reference.</p></article>
+        </section>
+
+        <section class="panel attention-panel">
+          <div class="panel-header">
+            <div><h2 class="panel-title">Needs Attention</h2><p class="panel-description">Explicit media alerts from the production record. Deadline automation will be added after this read-only road test is verified.</p></div>
+            <span class="count-pill" id="attention-pill">0 items</span>
+          </div>
+          <div id="attention-list" class="attention-list"><div class="loading">Loading media attention…</div></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header"><div><h2 class="panel-title">Running Now</h2><p class="panel-description">Current placements and the exact creative tied to each run.</p></div><span class="count-pill" id="active-pill">0 items</span></div>
+          <div id="active-content" class="loading">Loading current media…</div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header"><div><h2 class="panel-title">Upcoming</h2><p class="panel-description">Pending and planned media that must be prepared, trafficked, confirmed, and later proved.</p></div><span class="count-pill" id="upcoming-pill">0 items</span></div>
+          <div id="upcoming-content" class="loading">Loading upcoming media…</div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header"><div><h2 class="panel-title">History</h2><p class="panel-description">Past placements preserved as operational history.</p></div><span class="count-pill" id="history-pill">0 items</span></div>
+          <div id="history-content" class="loading">Loading media history…</div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const WORKER_ENDPOINT = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+      const clientSelect = document.getElementById("client-select");
+      const sidebar = document.getElementById("sidebar");
+      const mobileMenuButton = document.getElementById("mobile-menu-button");
+
+      const els = {
+        attentionCount: document.getElementById("attention-count"),
+        activeCount: document.getElementById("active-count"),
+        upcomingCount: document.getElementById("upcoming-count"),
+        historyCount: document.getElementById("history-count"),
+        attentionPill: document.getElementById("attention-pill"),
+        activePill: document.getElementById("active-pill"),
+        upcomingPill: document.getElementById("upcoming-pill"),
+        historyPill: document.getElementById("history-pill"),
+        attentionList: document.getElementById("attention-list"),
+        activeContent: document.getElementById("active-content"),
+        upcomingContent: document.getElementById("upcoming-content"),
+        historyContent: document.getElementById("history-content")
+      };
+
+      document.getElementById("current-date").textContent =
+        new Intl.DateTimeFormat("en-US", { weekday:"long", month:"long", day:"numeric" }).format(new Date());
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+          .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+      }
+
+      function formatDate(value) {
+        if (!value) return "—";
+        const parts = String(value).slice(0,10).split("-");
+        if (parts.length !== 3) return escapeHtml(value);
+        const d = new Date(Number(parts[0]), Number(parts[1])-1, Number(parts[2]));
+        return new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric",year:"numeric"}).format(d);
+      }
+
+      function badge(value, type) {
+        const label = value || "Unknown";
+        const normalized = String(type || value || "").toLowerCase();
+        const cls = normalized === "active" || normalized === "sent" || normalized === "confirmed"
+          ? "badge-active"
+          : normalized === "pending" || normalized === "planned"
+          ? "badge-pending"
+          : normalized === "expired"
+          ? "badge-expired"
+          : normalized === "attention"
+          ? "badge-attention"
+          : "badge-unknown";
+        return `<span class="badge ${cls}">${escapeHtml(label)}</span>`;
+      }
+
+      function table(records) {
+        if (!records.length) return `<div class="empty">No media records in this section.</div>`;
+        return `
+          <div class="table-wrap">
+            <table class="media-table">
+              <thead><tr>
+                <th>Market / Outlet</th><th>Campaign / Creative</th><th>Co-op</th>
+                <th>Run Dates</th><th>Status</th><th>Action</th>
+                <th>Traffic</th><th>Confirmation</th><th>File / Script</th>
+              </tr></thead>
+              <tbody>
+                ${records.map(r => `
+                  <tr>
+                    <td><div class="record-title">${escapeHtml(r.market || "—")}</div><div class="small">${escapeHtml(r.outletName || "—")} · ${escapeHtml(r.mediaType || "Media")}</div></td>
+                    <td><div class="record-title">${escapeHtml(r.campaignName || r.creativeName || "Untitled")}</div><div class="small">${escapeHtml(r.creativeVersion || r.creativeName || "—")}</div></td>
+                    <td>${escapeHtml(r.coopPartner || "—")}</td>
+                    <td><div>${formatDate(r.startDate)}</div><div class="small">through ${formatDate(r.endDate)}</div></td>
+                    <td>${badge(r.status)}</td>
+                    <td>${escapeHtml(r.actionType || "—")}</td>
+                    <td>${badge(r.trafficStatus)}</td>
+                    <td>${badge(r.confirmationStatus)}</td>
+                    <td>
+                      <div>${escapeHtml(r.fileName || "No file recorded")}</div>
+                      ${r.scriptText ? `<details><summary>View script</summary><div class="script">${escapeHtml(r.scriptText)}</div></details>` : `<div class="small">No script recorded</div>`}
+                    </td>
+                  </tr>`).join("")}
+              </tbody>
+            </table>
+          </div>`;
+      }
+
+      function renderAttention(records) {
+        const flagged = records.filter(r => String(r.attentionStatus || "").toLowerCase() === "attention");
+        els.attentionCount.textContent = String(flagged.length);
+        els.attentionPill.textContent = `${flagged.length} ${flagged.length === 1 ? "item" : "items"}`;
+        els.attentionList.innerHTML = flagged.length
+          ? flagged.map(r => `
+              <article class="attention-card">
+                <strong>${escapeHtml(r.clientName)} — ${escapeHtml(r.market || "Media")} / ${escapeHtml(r.outletName || "Outlet")}: ${escapeHtml(r.campaignName || r.creativeName || "Placement")}</strong>
+                <p>${escapeHtml(r.attentionReason || "Review required.")} · Run ends ${formatDate(r.endDate)} · Action: ${escapeHtml(r.actionType || "—")}</p>
+              </article>`).join("")
+          : `<div class="empty">No media records are explicitly flagged for attention.</div>`;
+      }
+
+      function render(payload) {
+        const records = Array.isArray(payload?.mediaOperations?.records) ? payload.mediaOperations.records : [];
+        const active = records.filter(r => String(r.status || "").toLowerCase() === "active");
+        const upcoming = records.filter(r => ["pending","planned"].includes(String(r.status || "").toLowerCase()));
+        const history = records.filter(r => String(r.status || "").toLowerCase() === "expired");
+
+        renderAttention(records);
+        els.activeCount.textContent = String(active.length);
+        els.upcomingCount.textContent = String(upcoming.length);
+        els.historyCount.textContent = String(history.length);
+        els.activePill.textContent = `${active.length} ${active.length === 1 ? "item" : "items"}`;
+        els.upcomingPill.textContent = `${upcoming.length} ${upcoming.length === 1 ? "item" : "items"}`;
+        els.historyPill.textContent = `${history.length} ${history.length === 1 ? "item" : "items"}`;
+        els.activeContent.innerHTML = table(active);
+        els.upcomingContent.innerHTML = table(upcoming);
+        els.historyContent.innerHTML = table(history);
+      }
+
+      function populateClients(clients, selectedValue) {
+        const safeClients = Array.isArray(clients) ? clients : [];
+        clientSelect.innerHTML = `<option value="">All clients</option>` +
+          safeClients.map(c => `<option value="${escapeHtml(c.clientId)}">${escapeHtml(c.clientName)}</option>`).join("");
+        clientSelect.value = selectedValue || "";
+      }
+
+      function renderError(message) {
+        const text = escapeHtml(message || "Media Operations could not be loaded.");
+        els.attentionList.innerHTML = `<div class="error">${text}</div>`;
+        els.activeContent.innerHTML = `<div class="error">${text}</div>`;
+        els.upcomingContent.innerHTML = `<div class="error">${text}</div>`;
+        els.historyContent.innerHTML = `<div class="error">${text}</div>`;
+        ["attentionCount","activeCount","upcomingCount","historyCount"].forEach(k => els[k].textContent = "—");
+      }
+
+      async function loadMedia(clientId = "") {
+        try {
+          const body = { action:"get-media-operations" };
+          if (clientId) body.clientId = Number(clientId);
+
+          const response = await fetch(WORKER_ENDPOINT, {
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify(body)
+          });
+          const payload = await response.json();
+
+          if (!response.ok || payload?.ok !== true) {
+            throw new Error(payload?.error || payload?.details || "Media request failed.");
+          }
+
+          populateClients(payload?.mediaOperations?.clients, clientId);
+          render(payload);
+        } catch (error) {
+          console.error("Could not load Media Operations.", error);
+          renderError(error?.message);
+        }
+      }
+
+      clientSelect.addEventListener("change", () => loadMedia(clientSelect.value));
+
+      mobileMenuButton.addEventListener("click", () => {
+        const open = sidebar.classList.toggle("is-open");
+        mobileMenuButton.setAttribute("aria-expanded", String(open));
+      });
+
+      loadMedia();
+    })();
+  </script>
+</body>
+</html>
