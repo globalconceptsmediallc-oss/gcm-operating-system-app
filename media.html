@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media.html
-   Version: 1.7.1
+   Version: 1.7.2
    Status: Production Candidate
    Sprint: Media Operations — Station Communication Road Test
    Purpose: Live D1-driven Media Operations workspace with a focused
@@ -77,8 +77,14 @@
     .action-button{min-height:44px;padding:0 12px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--gcm-navy-900);font-weight:900;cursor:pointer}
     .action-button.is-selected{border-color:var(--gcm-blue-500);background:var(--gcm-blue-100);color:var(--gcm-blue-600)}
     .communication-box{padding:16px;border:1px solid var(--border);border-radius:13px}
-    .build-button{margin-top:12px;min-height:42px;padding:0 14px;border:0;border-radius:10px;background:var(--gcm-blue-600);color:#fff;font-weight:900}
-    .build-button:disabled{opacity:.45}.attention-card p{margin:5px 0 0;color:var(--text-muted);font-size:.78rem}
+    .build-button{margin-top:12px;min-height:42px;padding:0 14px;border:0;border-radius:10px;background:var(--gcm-blue-600);color:#fff;font-weight:900;cursor:pointer}
+    .build-button:disabled{opacity:.45;cursor:not-allowed}
+    .draft-actions{display:none;gap:10px;flex-wrap:wrap;margin-top:12px}
+    .draft-actions.is-open{display:flex}
+    .sent-button{min-height:42px;padding:0 14px;border:0;border-radius:10px;background:var(--success);color:#fff;font-weight:900;cursor:pointer}
+    .sent-button:disabled{opacity:.45;cursor:not-allowed}
+    .copy-status{margin-top:8px;color:var(--success);font-size:.76rem;font-weight:850}
+    .awaiting-summary{margin-top:12px;padding:12px 14px;border:1px solid #b9d7c8;border-radius:10px;background:var(--success-soft);color:var(--success);font-size:.8rem;font-weight:850}.attention-card p{margin:5px 0 0;color:var(--text-muted);font-size:.78rem}
     /* Market identity stays separate from yellow operational warning status. */
     .market-melbourne{border-left:6px solid #347ce8}
     .market-orlando{border-left:6px solid #8b5cf6}
@@ -268,6 +274,12 @@
               <div class="draft-wrap" id="draft-wrap">
                 <div class="draft-subject"><strong>Subject:</strong> <span id="draft-subject"></span></div>
                 <textarea class="draft-body" id="draft-body" aria-label="Generated station communication"></textarea>
+                <div class="draft-actions" id="draft-actions">
+                  <button class="secondary-button" id="copy-email-gmail" type="button">Copy Email for Gmail</button>
+                  <button class="sent-button" id="mark-sent-awaiting" type="button">Mark Sent — Awaiting Confirmation</button>
+                </div>
+                <div class="copy-status" id="copy-status" aria-live="polite"></div>
+                <div id="awaiting-summary"></div>
               </div>
             </div>
           </div>
@@ -319,11 +331,17 @@
       const draftWrap = document.getElementById("draft-wrap");
       const draftSubject = document.getElementById("draft-subject");
       const draftBody = document.getElementById("draft-body");
+      const draftActions = document.getElementById("draft-actions");
+      const copyEmailGmail = document.getElementById("copy-email-gmail");
+      const markSentAwaiting = document.getElementById("mark-sent-awaiting");
+      const copyStatus = document.getElementById("copy-status");
+      const awaitingSummary = document.getElementById("awaiting-summary");
       let currentRecords = [];
       let selectedRecord = null;
       let primaryAction = "";
       let landscapeRecords = [];
       let instructionQueue = [];
+      let awaitingConfirmation = [];
 
       const els = {
         attentionCount: document.getElementById("attention-count"),
@@ -592,6 +610,9 @@
         changeFields.classList.remove("is-open");
         endFields.classList.remove("is-open");
         draftWrap.classList.remove("is-open");
+        draftActions.classList.remove("is-open");
+        copyStatus.textContent = "";
+        awaitingSummary.innerHTML = "";
         draftSubject.textContent = "";
         draftBody.value = "";
 
@@ -768,6 +789,9 @@
         endDate.value = selectedRecord?.endDate ? String(selectedRecord.endDate).slice(0,10) : "";
         showInstructionFields();
         draftWrap.classList.remove("is-open");
+        draftActions.classList.remove("is-open");
+        copyStatus.textContent = "";
+        awaitingSummary.innerHTML = "";
         renderInstructionQueue();
         renderAttention(currentRecords);
 
@@ -820,7 +844,49 @@
         draftSubject.textContent = subject;
         draftBody.value = lines.join("\n");
         draftWrap.classList.add("is-open");
-        communicationStatus.textContent = "Combined draft built. Review the subject and email below before anything is sent.";
+        draftActions.classList.add("is-open");
+        copyStatus.textContent = "";
+        awaitingSummary.innerHTML = "";
+        communicationStatus.textContent = "Combined draft built. Review it, copy it into Gmail, send it, then mark it Sent — Awaiting Confirmation.";
+      }
+
+      async function copyDraftForGmail() {
+        const subject = draftSubject.textContent.trim();
+        const body = draftBody.value.trim();
+        if (!subject || !body) return;
+
+        const copyText = `Subject: ${subject}\n\n${body}`;
+
+        try {
+          await navigator.clipboard.writeText(copyText);
+          copyStatus.textContent = "Copied. Paste into Gmail, review the recipient, and send.";
+        } catch (error) {
+          console.error("Clipboard copy failed.", error);
+          draftBody.focus();
+          draftBody.select();
+          copyStatus.textContent = "Automatic copy was unavailable. The email body is selected so you can copy it manually.";
+        }
+      }
+
+      function markDraftSentAwaitingConfirmation() {
+        if (!instructionQueue.length) return;
+
+        const sentAt = new Date();
+        awaitingConfirmation = instructionQueue.map(item => ({
+          ...item,
+          sentAt: sentAt.toISOString(),
+          confirmationStatus: "awaiting"
+        }));
+
+        const count = awaitingConfirmation.length;
+        instructionQueue = [];
+        renderInstructionQueue();
+        renderAttention(currentRecords);
+
+        draftActions.classList.remove("is-open");
+        buildStationCommunication.disabled = true;
+        awaitingSummary.innerHTML = `<div class="awaiting-summary">✓ ${count} placement instruction${count === 1 ? "" : "s"} marked Sent — Awaiting Station Confirmation.</div>`;
+        communicationStatus.textContent = `${count} placement instruction${count === 1 ? "" : "s"} sent and now awaiting station confirmation. Process the station reply through Communications when it arrives.`;
       }
 
       function applyView(view) {
@@ -918,6 +984,8 @@
       changeInstructions.addEventListener("input", updateCommunicationState);
       endDate.addEventListener("change", updateCommunicationState);
       addInstructionButton.addEventListener("click", addCurrentInstruction);
+      copyEmailGmail.addEventListener("click", copyDraftForGmail);
+      markSentAwaiting.addEventListener("click", markDraftSentAwaitingConfirmation);
 
       document.getElementById("close-action-panel").addEventListener("click", () => {
         actionPanel.classList.remove("is-open");
