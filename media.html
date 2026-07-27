@@ -1,12 +1,18 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media.html
-   Version: 1.1.0
+   Version: 1.2.0
    Status: Production Candidate
-   Sprint: Media Operations — Phase 1 Road Test
+   Sprint: Media Operations — Station Deadline Road Test
    Purpose: Live D1-driven Media Operations workspace with a focused
-            view selector for attention, current rotations, upcoming
-            placements, history, or all Media records.
+            view selector and automatic station traffic deadlines
+            calculated from each placement end date.
+
+   Station deadline rule:
+   - Deadline = 3 working days before end_date.
+   - Saturday and Sunday do not count.
+   - Deadline is due by 12:00 noon local operating time.
+   - No additional D1 date field is required.
 
    Source of truth:
    - D1 media_records through Worker action get-media-operations
@@ -195,6 +201,48 @@
         return new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric",year:"numeric"}).format(d);
       }
 
+
+      function stationDeadline(endDate) {
+        if (!endDate) return null;
+
+        const parts = String(endDate).slice(0,10).split("-").map(Number);
+        if (parts.length !== 3 || parts.some(Number.isNaN)) return null;
+
+        const date = new Date(parts[0], parts[1] - 1, parts[2]);
+        let workingDays = 0;
+
+        while (workingDays < 3) {
+          date.setDate(date.getDate() - 1);
+          const day = date.getDay();
+
+          if (day !== 0 && day !== 6) {
+            workingDays += 1;
+          }
+        }
+
+        return date;
+      }
+
+      function stationDeadlineHtml(endDate, status) {
+        const normalizedStatus = String(status || "").toLowerCase();
+
+        if (normalizedStatus === "expired") {
+          return `<span class="muted">Historical</span>`;
+        }
+
+        const deadline = stationDeadline(endDate);
+        if (!deadline) return "—";
+
+        const label = new Intl.DateTimeFormat("en-US", {
+          weekday:"short",
+          month:"short",
+          day:"numeric",
+          year:"numeric"
+        }).format(deadline);
+
+        return `<div class="record-title">${escapeHtml(label)}</div><div class="small">Due by 12:00 noon</div>`;
+      }
+
       function badge(value, type) {
         const label = value || "Unknown";
         const normalized = String(type || value || "").toLowerCase();
@@ -217,7 +265,7 @@
             <table class="media-table">
               <thead><tr>
                 <th>Market / Outlet</th><th>Campaign / Creative</th><th>Co-op</th>
-                <th>Run Dates</th><th>Status</th><th>Action</th>
+                <th>Run Dates</th><th>Station Deadline</th><th>Status</th><th>Action</th>
                 <th>Traffic</th><th>Confirmation</th><th>File / Script</th>
               </tr></thead>
               <tbody>
@@ -227,6 +275,7 @@
                     <td><div class="record-title">${escapeHtml(r.campaignName || r.creativeName || "Untitled")}</div><div class="small">${escapeHtml(r.creativeVersion || r.creativeName || "—")}</div></td>
                     <td>${escapeHtml(r.coopPartner || "—")}</td>
                     <td><div>${formatDate(r.startDate)}</div><div class="small">through ${formatDate(r.endDate)}</div></td>
+                    <td>${stationDeadlineHtml(r.endDate, r.status)}</td>
                     <td>${badge(r.status)}</td>
                     <td>${escapeHtml(r.actionType || "—")}</td>
                     <td>${badge(r.trafficStatus)}</td>
@@ -249,7 +298,7 @@
           ? flagged.map(r => `
               <article class="attention-card">
                 <strong>${escapeHtml(r.clientName)} — ${escapeHtml(r.market || "Media")} / ${escapeHtml(r.outletName || "Outlet")}: ${escapeHtml(r.campaignName || r.creativeName || "Placement")}</strong>
-                <p>${escapeHtml(r.attentionReason || "Review required.")} · Run ends ${formatDate(r.endDate)} · Action: ${escapeHtml(r.actionType || "—")}</p>
+                <p>${escapeHtml(r.attentionReason || "Review required.")} · Run ends ${formatDate(r.endDate)} · Station deadline: ${stationDeadline(r.endDate) ? escapeHtml(new Intl.DateTimeFormat("en-US",{weekday:"short",month:"short",day:"numeric",year:"numeric"}).format(stationDeadline(r.endDate))) + " by 12:00 noon" : "—"} · Action: ${escapeHtml(r.actionType || "—")}</p>
               </article>`).join("")
           : `<div class="empty">No media records are explicitly flagged for attention.</div>`;
       }
