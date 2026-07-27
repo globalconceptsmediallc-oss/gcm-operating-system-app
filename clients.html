@@ -1,10 +1,12 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: clients.html
-   Version: 1.1.0
-   Change: Migrate Clients to shared GCM OS application shell
-   Source: Production clients.html 1.0.1
+   Version: 1.2.0
+   Status: Production Candidate
+   Change: Replace SES-only static JSON client source with live D1 Client Directory
+   Source: Production clients.html 1.1.0
    Shared Shell: shared/gcm-shell.js 1.0.0
+   Worker: 7.5.0
    ========================================================= -->
 <!DOCTYPE html>
 <html lang="en">
@@ -12,7 +14,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Clients | GCM OS</title>
-  <meta name="description" content="Active client management for the Global Concepts Media Agency Operating System." />
+  <meta
+    name="description"
+    content="Client directory and client operations for the Global Concepts Media Agency Operating System."
+  />
 
   <style>
     :root {
@@ -55,7 +60,8 @@
       text-decoration:none;
     }
 
-    button {
+    button,
+    select {
       font:inherit;
     }
 
@@ -113,7 +119,8 @@
       justify-content:flex-end;
     }
 
-    .date-chip {
+    .date-chip,
+    .filter-select {
       display:inline-flex;
       align-items:center;
       min-height:42px;
@@ -125,6 +132,11 @@
       box-shadow:var(--shadow);
       font-size:.84rem;
       font-weight:800;
+    }
+
+    .filter-select {
+      cursor:pointer;
+      padding-right:34px;
     }
 
     .button {
@@ -223,6 +235,13 @@
       font-size:.82rem;
     }
 
+    .directory-count {
+      color:var(--soft-text);
+      font-size:.78rem;
+      font-weight:800;
+      white-space:nowrap;
+    }
+
     .client-list {
       display:grid;
       gap:16px;
@@ -267,6 +286,15 @@
       color:var(--navy-950);
       font-size:1.22rem;
       font-weight:900;
+    }
+
+    .client-code {
+      margin:3px 0 0;
+      color:var(--soft-text);
+      font-size:.72rem;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.06em;
     }
 
     .client-meta {
@@ -338,77 +366,9 @@
       justify-content:flex-end;
     }
 
-    .client-details {
-      display:none;
-      padding:0 22px 22px;
-      border-top:1px solid var(--border);
-      background:#fbfcfe;
-    }
-
-    .client-details.is-open {
-      display:block;
-    }
-
-    .details-grid {
-      display:grid;
-      grid-template-columns:repeat(2,minmax(0,1fr));
-      gap:14px;
-      padding-top:18px;
-    }
-
-    .detail-block {
-      padding:16px;
-      border:1px solid var(--border);
-      border-radius:13px;
-      background:#fff;
-    }
-
-    .detail-block h3 {
-      margin:0 0 9px;
-      color:var(--navy-950);
-      font-size:.82rem;
-      font-weight:900;
-      text-transform:uppercase;
-      letter-spacing:.07em;
-    }
-
-    .detail-block p {
-      margin:0;
-      color:var(--muted);
-      font-size:.84rem;
-    }
-
-    .detail-list {
-      list-style:none;
-      margin:0;
-      padding:0;
-    }
-
-    .detail-list li {
-      padding:9px 0;
-      border-bottom:1px solid var(--border);
-    }
-
-    .detail-list li:last-child {
-      border-bottom:0;
-      padding-bottom:0;
-    }
-
-    .detail-list strong {
-      display:block;
-      color:var(--text);
-      font-size:.82rem;
-    }
-
-    .detail-list span {
-      display:block;
-      margin-top:3px;
-      color:var(--soft-text);
-      font-size:.74rem;
-    }
-
     .loading,
-    .error-state {
+    .error-state,
+    .empty-state {
       padding:36px 22px;
       text-align:center;
       color:var(--muted);
@@ -417,6 +377,10 @@
     .error-state {
       color:var(--critical);
       background:var(--critical-soft);
+    }
+
+    .empty-state {
+      background:#fbfcfe;
     }
 
     @media(max-width:1050px) {
@@ -462,17 +426,12 @@
       }
 
       .summary-grid,
-      .client-overview,
-      .details-grid {
+      .client-overview {
         grid-template-columns:1fr;
       }
 
       .client-card-main {
         padding:18px;
-      }
-
-      .client-details {
-        padding:0 18px 18px;
       }
     }
   </style>
@@ -489,14 +448,13 @@
             <p class="eyebrow">Client Operations</p>
             <h1 class="page-title">Clients</h1>
             <p class="page-subtitle">
-              Review active client priorities, work, proof, and account health.
+              Open the complete GCM client directory and continue into the live client workspace.
             </p>
           </div>
 
           <div class="topbar-actions">
             <button
               class="button button-secondary mobile-menu-button"
-              id="mobile-menu-button"
               data-gcm-shell-menu-button
               type="button"
               aria-expanded="false"
@@ -504,48 +462,58 @@
               Menu
             </button>
 
+            <select
+              class="filter-select"
+              id="status-filter"
+              aria-label="Filter clients by status"
+            >
+              <option value="all">All Clients</option>
+            </select>
+
             <div class="date-chip" id="current-date"></div>
           </div>
         </header>
 
-        <section class="summary-grid">
+        <section class="summary-grid" aria-label="Client directory summary">
+          <article class="summary-card">
+            <p class="summary-label">Total Clients</p>
+            <p class="summary-value" id="total-client-count">—</p>
+            <p class="summary-note">All client records currently stored in D1.</p>
+          </article>
+
           <article class="summary-card">
             <p class="summary-label">Active Clients</p>
-            <p class="summary-value" id="active-client-count">0</p>
-            <p class="summary-note">Loaded from production client records.</p>
+            <p class="summary-value" id="active-client-count">—</p>
+            <p class="summary-note">Clients currently marked Active in D1.</p>
           </article>
 
           <article class="summary-card">
             <p class="summary-label">Need Attention</p>
-            <p class="summary-value" id="attention-client-count">0</p>
-            <p class="summary-note">Accounts requiring a decision or action.</p>
+            <p class="summary-value" id="attention-client-count">—</p>
+            <p class="summary-note">Based on live client workspace operational state.</p>
           </article>
 
           <article class="summary-card">
             <p class="summary-label">Open Work</p>
-            <p class="summary-value" id="open-work-count">0</p>
-            <p class="summary-note">Incomplete client work items.</p>
-          </article>
-
-          <article class="summary-card">
-            <p class="summary-label">Proof Items</p>
-            <p class="summary-value" id="proof-count">0</p>
-            <p class="summary-note">Recorded evidence of completed work.</p>
+            <p class="summary-value" id="open-work-count">—</p>
+            <p class="summary-note">Open Work Items across loaded client workspaces.</p>
           </article>
         </section>
 
         <section class="panel">
           <div class="panel-header">
             <div>
-              <h2 class="panel-title">Active Client Accounts</h2>
+              <h2 class="panel-title">Client Directory</h2>
               <p class="panel-description">
-                Client information is loaded from the data directory.
+                Directory records come from the production D1 clients table. Operational context is loaded from each client's existing workspace.
               </p>
             </div>
+
+            <span class="directory-count" id="visible-count"></span>
           </div>
 
           <div class="client-list" id="client-list">
-            <div class="loading">Loading client records…</div>
+            <div class="loading">Loading D1 client directory…</div>
           </div>
         </section>
       </div>
@@ -558,11 +526,16 @@
     (() => {
       "use strict";
 
-      const CLIENT_FILES = ["data/southeast-safes.json"];
+      const WORKER_ENDPOINT =
+        "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
 
       const $ = (id) => document.getElementById(id);
 
       const clientList = $("client-list");
+      const statusFilter = $("status-filter");
+
+      let directoryClients = [];
+      let clientRows = [];
 
       const escapeHtml = (value) =>
         String(value ?? "")
@@ -575,97 +548,213 @@
       const formatDate = (value) => {
         if (!value) return "Not recorded";
 
-        const d = new Date(`${value}T12:00:00`);
+        const raw = String(value);
+        const normalized = /^\d{4}-\d{2}-\d{2}$/.test(raw)
+          ? `${raw}T12:00:00`
+          : raw;
 
-        return Number.isNaN(d.getTime())
-          ? value
+        const date = new Date(normalized);
+
+        return Number.isNaN(date.getTime())
+          ? raw
           : new Intl.DateTimeFormat("en-US", {
               month: "short",
               day: "numeric",
               year: "numeric"
-            }).format(d);
+            }).format(date);
       };
 
-      const getOpenWork = (client) =>
-        (client.workQueue || []).filter(
-          (item) =>
-            !["complete", "completed"].includes(
-              String(item.status || "").toLowerCase()
-            )
-        );
+      function normalizeStatus(value) {
+        return String(value || "")
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, "_");
+      }
 
-      const healthClass = (health) => {
-        const h = String(health || "").toLowerCase();
+      function statusClass(status) {
+        const normalized = normalizeStatus(status);
 
-        if (h.includes("healthy") || h.includes("good")) {
-          return "pill-success";
-        }
+        if (normalized === "active") return "pill-success";
 
-        if (h.includes("attention") || h.includes("risk")) {
+        if (
+          normalized === "inactive" ||
+          normalized === "historical" ||
+          normalized === "closed"
+        ) {
           return "pill-warning";
         }
 
         return "pill-info";
-      };
+      }
 
-      function renderClient(client, index) {
-        const b = client.business || {};
-        const r = client.relationship || {};
-        const w = client.workspace || {};
+      function workspaceHealthClass(value) {
+        const normalized = String(value || "").toLowerCase();
 
-        const open = getOpenWork(client);
-        const proof = (client.proofOfWork || []).slice(-3).reverse();
-        const priorities = (client.currentPriorities || []).slice(0, 3);
-        const detailsId = `client-details-${index}`;
+        if (
+          normalized.includes("attention") ||
+          normalized.includes("risk")
+        ) {
+          return "pill-warning";
+        }
 
-        const initials = (b.name || "GC")
+        if (
+          normalized.includes("healthy") ||
+          normalized.includes("good")
+        ) {
+          return "pill-success";
+        }
+
+        return "pill-info";
+      }
+
+      async function workerRequest(body) {
+        const response = await fetch(WORKER_ENDPOINT, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(body)
+        });
+
+        const payload = await response.json();
+
+        if (!response.ok || payload?.ok !== true) {
+          throw new Error(
+            payload?.error ||
+            payload?.details ||
+            `Worker request failed with HTTP ${response.status}.`
+          );
+        }
+
+        return payload;
+      }
+
+      async function loadClientWorkspace(client) {
+        try {
+          const payload = await workerRequest({
+            action: "get-client-workspace",
+            clientCode: client.clientCode
+          });
+
+          return {
+            directory: client,
+            workspace: payload?.record || null,
+            counts: payload?.counts || {},
+            loadError: null
+          };
+        } catch (error) {
+          console.error(
+            `Could not load client workspace for ${client.clientCode}.`,
+            error
+          );
+
+          return {
+            directory: client,
+            workspace: null,
+            counts: {},
+            loadError: error?.message || "Workspace unavailable."
+          };
+        }
+      }
+
+      function renderClient(row) {
+        const directory = row.directory || {};
+        const workspace = row.workspace || {};
+        const business = workspace.business || {};
+        const relationship = workspace.relationship || {};
+        const workspaceState = workspace.workspace || {};
+        const counts = row.counts || {};
+
+        const name =
+          directory.name ||
+          business.name ||
+          "Unnamed Client";
+
+        const initials = name
           .split(/\s+/)
-          .map((x) => x[0])
+          .filter(Boolean)
+          .map((part) => part[0])
           .join("")
           .slice(0, 2)
           .toUpperCase();
 
-        const list = (items, titleKey, metaFn, empty) =>
-          items.length
-            ? `
-              <ul class="detail-list">
-                ${items
-                  .map(
-                    (item) => `
-                      <li>
-                        <strong>${escapeHtml(item[titleKey] || "Untitled")}</strong>
-                        <span>${escapeHtml(metaFn(item))}</span>
-                      </li>
-                    `
-                  )
-                  .join("")}
-              </ul>
-            `
-            : `<p>${empty}</p>`;
+        const status =
+          directory.statusLabel ||
+          relationship.status ||
+          directory.status ||
+          "Unknown";
+
+        const health =
+          relationship.accountHealth ||
+          (row.loadError ? "Workspace Unavailable" : "No Attention");
+
+        const priority =
+          workspaceState.currentPriority ||
+          (row.loadError
+            ? "Operational workspace could not be loaded."
+            : "No open priority is recorded.");
+
+        const nextAction =
+          workspaceState.nextAction ||
+          (row.loadError
+            ? "Retry the client workspace."
+            : "Review the client record.");
+
+        const lastActivity =
+          workspaceState.lastWorkDate ||
+          directory.updatedAt ||
+          directory.createdAt ||
+          null;
+
+        const website =
+          directory.website ||
+          business.website ||
+          null;
+
+        const openInvestigations =
+          Number(counts.openInvestigations) || 0;
+
+        const openWorkItems =
+          Number(counts.openWorkItems) || 0;
 
         return `
-          <article class="client-card">
+          <article
+            class="client-card"
+            data-client-status="${escapeHtml(
+              normalizeStatus(directory.status)
+            )}"
+          >
             <div class="client-card-main">
               <div>
                 <div class="client-heading">
                   <div class="client-mark">${escapeHtml(initials)}</div>
 
                   <div>
-                    <h2 class="client-name">${escapeHtml(
-                      b.name || "Unnamed Client"
-                    )}</h2>
+                    <h2 class="client-name">${escapeHtml(name)}</h2>
+
+                    <p class="client-code">
+                      ${escapeHtml(directory.clientCode || "No client code")}
+                    </p>
 
                     <div class="client-meta">
-                      <span class="pill pill-success">
-                        ${escapeHtml(r.status || "Unknown")}
+                      <span class="pill ${statusClass(directory.status)}">
+                        ${escapeHtml(status)}
                       </span>
 
-                      <span class="pill ${healthClass(r.accountHealth)}">
-                        ${escapeHtml(r.accountHealth || "Health Not Set")}
+                      <span class="pill ${workspaceHealthClass(health)}">
+                        ${escapeHtml(health)}
                       </span>
 
                       <span class="pill pill-info">
-                        ${escapeHtml(r.stage || "Stage Not Set")}
+                        ${openInvestigations} Open Investigation${
+                          openInvestigations === 1 ? "" : "s"
+                        }
+                      </span>
+
+                      <span class="pill pill-info">
+                        ${openWorkItems} Open Work Item${
+                          openWorkItems === 1 ? "" : "s"
+                        }
                       </span>
                     </div>
                   </div>
@@ -675,176 +764,212 @@
                   <div class="client-stat">
                     <p class="client-stat-label">Current Priority</p>
                     <p class="client-stat-value">
-                      ${escapeHtml(
-                        w.currentPriority || "No current priority recorded."
-                      )}
+                      ${escapeHtml(priority)}
                     </p>
                   </div>
 
                   <div class="client-stat">
                     <p class="client-stat-label">Next Action</p>
                     <p class="client-stat-value">
-                      ${escapeHtml(w.nextAction || "No next action recorded.")}
+                      ${escapeHtml(nextAction)}
                     </p>
                   </div>
 
                   <div class="client-stat">
                     <p class="client-stat-label">Last Activity</p>
                     <p class="client-stat-value">
-                      ${escapeHtml(formatDate(w.lastWorkDate))}
+                      ${escapeHtml(formatDate(lastActivity))}
                     </p>
                   </div>
                 </div>
               </div>
 
               <div class="client-actions">
-                <a
-                  class="button button-secondary"
-                  href="${escapeHtml(b.website || "#")}"
-                  ${
-                    b.website
-                      ? 'target="_blank" rel="noopener noreferrer"'
-                      : ""
-                  }
-                >
-                  Visit Website
-                </a>
+                ${
+                  website
+                    ? `
+                      <a
+                        class="button button-secondary"
+                        href="${escapeHtml(website)}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Visit Website
+                      </a>
+                    `
+                    : ""
+                }
 
                 <a
                   class="button button-primary"
                   href="business-workspace.html?business=${encodeURIComponent(
-                    client.businessId
+                    workspace.businessId ||
+                    directory.clientCode ||
+                    directory.id
                   )}"
                 >
                   Open Client
                 </a>
               </div>
             </div>
-
-            <div class="client-details" id="${detailsId}">
-              <div class="details-grid">
-                <section class="detail-block">
-                  <h3>Account Health</h3>
-                  <p>
-                    ${escapeHtml(
-                      r.accountHealthReason ||
-                        "No account health explanation recorded."
-                    )}
-                  </p>
-                </section>
-
-                <section class="detail-block">
-                  <h3>Next Action Reason</h3>
-                  <p>
-                    ${escapeHtml(
-                      w.nextActionReason ||
-                        "No next-action reason recorded."
-                    )}
-                  </p>
-                </section>
-
-                <section class="detail-block">
-                  <h3>Current Priorities</h3>
-                  ${list(
-                    priorities,
-                    "title",
-                    (x) =>
-                      `${x.priority || "No priority"} · ${
-                        x.status || "No status"
-                      }`,
-                    "No current priorities recorded."
-                  )}
-                </section>
-
-                <section class="detail-block">
-                  <h3>Open Work</h3>
-                  ${list(
-                    open.slice(0, 5),
-                    "title",
-                    (x) =>
-                      `${x.priority || "No priority"} · ${
-                        x.status || "No status"
-                      }`,
-                    "No open work items."
-                  )}
-                </section>
-
-                <section class="detail-block">
-                  <h3>Recent Proof</h3>
-                  ${list(
-                    proof,
-                    "task",
-                    (x) =>
-                      `${formatDate(x.date)} · ${x.status || "No status"}`,
-                    "No proof of work recorded."
-                  )}
-                </section>
-
-                <section class="detail-block">
-                  <h3>Client Record</h3>
-                  <p>
-                    ${escapeHtml(
-                      b.summary || "No client summary recorded."
-                    )}
-                  </p>
-                </section>
-              </div>
-            </div>
           </article>
         `;
       }
 
-      function updateSummary(clients) {
-        $("active-client-count").textContent = clients.filter(
-          (c) =>
-            String(c.relationship?.status || "").toLowerCase() === "active"
-        ).length;
+      function buildStatusFilter(clients) {
+        const statuses = Array.from(
+          new Set(
+            clients
+              .map((client) => normalizeStatus(client.status))
+              .filter(Boolean)
+          )
+        ).sort();
 
-        $("attention-client-count").textContent = clients.filter((c) => {
-          const h = String(
-            c.relationship?.accountHealth || ""
+        const labels = {
+          active: "Active Clients",
+          inactive: "Inactive Clients",
+          historical: "Historical Clients",
+          prospect: "Prospects",
+          closed: "Closed Clients"
+        };
+
+        statusFilter.innerHTML = `
+          <option value="all">All Clients</option>
+          ${statuses
+            .map(
+              (status) =>
+                `<option value="${escapeHtml(status)}">${escapeHtml(
+                  labels[status] ||
+                  status
+                    .replaceAll("_", " ")
+                    .replace(/\b\w/g, (character) =>
+                      character.toUpperCase()
+                    )
+                )}</option>`
+            )
+            .join("")}
+        `;
+      }
+
+      function renderRows() {
+        const selectedStatus = statusFilter.value || "all";
+
+        const visibleRows =
+          selectedStatus === "all"
+            ? clientRows
+            : clientRows.filter(
+                (row) =>
+                  normalizeStatus(row.directory?.status) === selectedStatus
+              );
+
+        $("visible-count").textContent =
+          `${visibleRows.length} of ${clientRows.length} client${
+            clientRows.length === 1 ? "" : "s"
+          }`;
+
+        if (!visibleRows.length) {
+          clientList.innerHTML = `
+            <div class="empty-state">
+              No clients match this status.
+            </div>
+          `;
+          return;
+        }
+
+        clientList.innerHTML = visibleRows.map(renderClient).join("");
+      }
+
+      function updateSummary(directoryPayload, rows) {
+        const total =
+          Number(directoryPayload?.counts?.total) ||
+          directoryClients.length;
+
+        const active =
+          Number(directoryPayload?.counts?.active) ||
+          directoryClients.filter(
+            (client) => normalizeStatus(client.status) === "active"
+          ).length;
+
+        const attention = rows.filter((row) => {
+          const health = String(
+            row.workspace?.relationship?.accountHealth || ""
           ).toLowerCase();
 
-          return h.includes("attention") || h.includes("risk");
+          return (
+            health.includes("attention") ||
+            health.includes("risk")
+          );
         }).length;
 
-        $("open-work-count").textContent = clients.reduce(
-          (n, c) => n + getOpenWork(c).length,
+        const openWork = rows.reduce(
+          (totalOpen, row) =>
+            totalOpen + (Number(row.counts?.openWorkItems) || 0),
           0
         );
 
-        $("proof-count").textContent = clients.reduce(
-          (n, c) => n + (c.proofOfWork || []).length,
-          0
-        );
+        $("total-client-count").textContent = String(total);
+        $("active-client-count").textContent = String(active);
+        $("attention-client-count").textContent = String(attention);
+        $("open-work-count").textContent = String(openWork);
       }
 
       async function loadClients() {
+        clientList.innerHTML = `
+          <div class="loading">
+            Loading D1 client directory…
+          </div>
+        `;
+
         try {
-          const clients = await Promise.all(
-            CLIENT_FILES.map(async (file) => {
-              const response = await fetch(file, {
-                cache: "no-store"
-              });
+          const directoryPayload = await workerRequest({
+            action: "get-client-directory"
+          });
 
-              if (!response.ok) {
-                throw new Error(`${file}: HTTP ${response.status}`);
-              }
+          directoryClients = Array.isArray(directoryPayload?.clients)
+            ? directoryPayload.clients
+            : [];
 
-              return response.json();
-            })
+          buildStatusFilter(directoryClients);
+
+          if (!directoryClients.length) {
+            updateSummary(directoryPayload, []);
+            $("visible-count").textContent = "0 clients";
+
+            clientList.innerHTML = `
+              <div class="empty-state">
+                No client records were returned from D1.
+              </div>
+            `;
+            return;
+          }
+
+          clientList.innerHTML = `
+            <div class="loading">
+              ${directoryClients.length} D1 client record${
+                directoryClients.length === 1 ? "" : "s"
+              } found. Loading operational context…
+            </div>
+          `;
+
+          clientRows = await Promise.all(
+            directoryClients.map(loadClientWorkspace)
           );
 
-          updateSummary(clients);
-          clientList.innerHTML = clients.map(renderClient).join("");
+          updateSummary(directoryPayload, clientRows);
+          renderRows();
         } catch (error) {
-          console.error(error);
+          console.error("Could not load D1 client directory.", error);
+
+          $("total-client-count").textContent = "—";
+          $("active-client-count").textContent = "—";
+          $("attention-client-count").textContent = "—";
+          $("open-work-count").textContent = "—";
+          $("visible-count").textContent = "";
 
           clientList.innerHTML = `
             <div class="error-state">
-              Client records could not be loaded. Confirm that
-              <strong>data/southeast-safes.json</strong> exists and that this
-              page is opened from the deployed site.
+              The production D1 client directory could not be loaded.
+              ${escapeHtml(error?.message || "Unknown error.")}
             </div>
           `;
         }
@@ -852,12 +977,12 @@
 
       if (!window.GCMOShell) {
         console.error(
-          "Clients 1.1.0: shared/gcm-shell.js did not load."
+          "Clients 1.2.0: shared/gcm-shell.js did not load."
         );
       } else {
         window.GCMOShell.mount({
           currentPage: "clients",
-          statusText: "Client data connected · Clients v1.1.0"
+          statusText: "D1 client directory connected · Clients v1.2.0"
         });
       }
 
@@ -866,6 +991,8 @@
         month: "long",
         day: "numeric"
       }).format(new Date());
+
+      statusFilter.addEventListener("change", renderRows);
 
       loadClients();
     })();
