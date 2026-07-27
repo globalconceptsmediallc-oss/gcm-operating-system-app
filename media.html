@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media.html
-   Version: 1.6.2
+   Version: 1.6.3
    Status: Production Candidate
    Sprint: Media Operations — Station Communication Road Test
    Purpose: Live D1-driven Media Operations workspace with a focused
@@ -75,6 +75,14 @@
     .communication-box{padding:16px;border:1px solid var(--border);border-radius:13px}
     .build-button{margin-top:12px;min-height:42px;padding:0 14px;border:0;border-radius:10px;background:var(--gcm-blue-600);color:#fff;font-weight:900}
     .build-button:disabled{opacity:.45}.attention-card p{margin:5px 0 0;color:var(--text-muted);font-size:.78rem}
+    /* Market identity stays separate from yellow operational warning status. */
+    .market-melbourne{border-left:6px solid #347ce8}
+    .market-orlando{border-left:6px solid #8b5cf6}
+    .market-other{border-left:6px solid #8290a3}
+    .market-band{display:inline-flex;align-items:center;min-height:22px;padding:0 8px;border-radius:999px;font-size:.66rem;font-weight:900;letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px}
+    .market-band.market-melbourne{border-left:0;background:#eaf2ff;color:#1f68d8}
+    .market-band.market-orlando{border-left:0;background:#f2ecff;color:#6d4bc3}
+    .market-band.market-other{border-left:0;background:#edf1f7;color:#637083}
     .action-section{margin-top:16px;padding-top:16px;border-top:1px solid var(--border)}
     .action-section h3{margin:0 0 6px;color:var(--gcm-navy-950);font-size:.86rem}
     .action-section p{margin:0 0 10px;color:var(--text-muted);font-size:.78rem}
@@ -301,6 +309,14 @@
       }
 
 
+      function marketBand(value, outletName = "") {
+        const market = value || "Market";
+        const station = outletName ? ` / ${outletName}` : "";
+        const cls = marketClass(value);
+        return `<span class="market-band ${cls}">${escapeHtml(market + station)}</span>`;
+      }
+
+
       function stationDeadline(referenceDate) {
         if (!referenceDate) return null;
 
@@ -468,7 +484,8 @@
 
               return `
                 <article class="attention-card ${marketClass(r.market)}" data-record-id="${escapeHtml(r.id ?? "")}" tabindex="0">
-                  <strong>${escapeHtml(r.clientName)} — ${escapeHtml(r.market || "Media")} / ${escapeHtml(r.outletName || "Outlet")}: ${escapeHtml(r.campaignName || r.creativeName || "Placement")}</strong>
+                  ${marketBand(r.market, r.outletName)}
+                  <strong>${escapeHtml(r.clientName)} — ${escapeHtml(r.campaignName || r.creativeName || "Placement")}</strong>
                   <p>${escapeHtml(attentionReason(r))} · ${dateLabel} · Station deadline: ${deadlineLabel} · Action: ${escapeHtml(r.actionType || "—")}</p>
                 </article>`;
             }).join("")
@@ -538,6 +555,7 @@
             : "";
 
           return `<div class="landscape-card ${marketClass(r.market)}">
+            ${marketBand(r.market, r.outletName)}
             <strong>${requiresAttention ? "⚠ " : ""}${escapeHtml(timing)} — ${escapeHtml(r.campaignName || r.creativeName || "Placement")}</strong>
             <div class="landscape-meta">
               ${escapeHtml(r.market || "—")} / ${escapeHtml(r.outletName || "—")} ·
