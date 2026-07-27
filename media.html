@@ -1,12 +1,13 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media.html
-   Version: 1.6.3
+   Version: 1.7.0
    Status: Production Candidate
    Sprint: Media Operations — Station Communication Road Test
    Purpose: Live D1-driven Media Operations workspace with a focused
             view selector, automatic station traffic deadlines,
-            and automatic Station Landscape discovery with the selected attention record included.
+            Station Landscape discovery, and a multi-placement station
+            communication builder for grouped traffic instructions.
 
    Station deadline rules:
    - Active placement deadline = 3 working days before end_date.
@@ -91,7 +92,21 @@
     .landscape-card strong{display:block;color:var(--gcm-navy-950);font-size:.82rem}.landscape-meta{margin-top:4px;color:var(--text-muted);font-size:.74rem}
     .landscape-empty{padding:12px 14px;border:1px dashed var(--border);border-radius:10px;color:var(--text-muted);font-size:.78rem}
     .replacement-row{display:grid;grid-template-columns:1fr 180px;gap:10px;margin-top:10px}
-    .replacement-row input{min-height:42px;padding:0 10px;border:1px solid var(--border);border-radius:10px}
+    .replacement-row input,.instruction-field input,.instruction-field textarea{min-height:42px;padding:9px 10px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--text)}
+    .instruction-field textarea{width:100%;min-height:90px;resize:vertical}
+    .instruction-fields{display:none;margin:0 0 16px;padding:14px;border:1px solid var(--border);border-radius:12px;background:var(--surface-soft)}
+    .instruction-fields.is-open{display:block}
+    .instruction-field label{display:block;margin-bottom:6px;color:var(--gcm-navy-900);font-size:.78rem;font-weight:850}
+    .instruction-field input{width:100%}
+    .instruction-help{margin-top:6px;color:var(--text-soft);font-size:.72rem}
+    .queue-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+    .secondary-button{min-height:42px;padding:0 14px;border:1px solid var(--gcm-blue-500);border-radius:10px;background:#fff;color:var(--gcm-blue-600);font-weight:900;cursor:pointer}
+    .secondary-button:disabled{opacity:.45;cursor:not-allowed}
+    .instruction-queue{display:grid;gap:10px;margin-top:12px}
+    .queue-item{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:10px;background:var(--surface-soft)}
+    .queue-item strong{display:block;color:var(--gcm-navy-950);font-size:.82rem}
+    .queue-item p{margin:4px 0 0;color:var(--text-muted);font-size:.74rem}
+    .queue-remove{border:0;background:transparent;color:var(--critical);font-weight:850;cursor:pointer}
     .draft-wrap{display:none;margin-top:16px}.draft-wrap.is-open{display:block}
     .draft-subject{margin-bottom:8px;padding:11px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface-soft);font-size:.8rem}
     .draft-body{width:100%;min-height:320px;padding:14px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--text);font:inherit;font-size:.82rem;line-height:1.55;resize:vertical}
@@ -188,7 +203,35 @@
                 <button class="action-button primary-action" data-action="CHANGE" type="button">CHANGE</button>
                 <button class="action-button primary-action" data-action="END" type="button">END</button>
               </div>
+
+              <div class="instruction-fields" id="extend-fields">
+                <div class="instruction-field">
+                  <label for="extend-through-date">Extend Through</label>
+                  <input id="extend-through-date" type="date" />
+                  <div class="instruction-help">Required for EXTEND. This is the new requested placement end date.</div>
+                </div>
+              </div>
+
+              <div class="instruction-fields" id="change-fields">
+                <div class="instruction-field">
+                  <label for="change-instructions">Change Instructions</label>
+                  <textarea id="change-instructions" placeholder="Describe exactly what should change for this placement."></textarea>
+                </div>
+              </div>
+
+              <div class="instruction-fields" id="end-fields">
+                <div class="instruction-field">
+                  <label for="end-date">End On</label>
+                  <input id="end-date" type="date" />
+                  <div class="instruction-help">Defaults to the current scheduled end date. Change it only if the station should stop the placement on a different date.</div>
+                </div>
+              </div>
+
               <label class="verify-row"><input id="verify-current-copy" type="checkbox" /> VERIFY CURRENT COPY</label>
+
+              <div class="queue-actions">
+                <button class="secondary-button" id="add-instruction" type="button" disabled>Add This Instruction</button>
+              </div>
             </div>
 
             <div class="action-section">
@@ -206,10 +249,18 @@
               </div>
             </div>
 
+            <div class="action-section">
+              <h3>Pending Station Communication</h3>
+              <p>Add each placement instruction here. You can then select another placement and add it to the same email.</p>
+              <div class="instruction-queue" id="instruction-queue">
+                <div class="landscape-empty">No placement instructions added yet.</div>
+              </div>
+            </div>
+
             <div class="communication-box">
               <strong>Station Communication</strong>
-              <p id="communication-status">Choose a primary action, verification, or replacement creative. The station landscape is included automatically.</p>
-              <button class="build-button" id="build-station-communication" type="button" disabled>Build Station Communication</button>
+              <p id="communication-status">Choose an instruction, add it to the pending communication, then add any other placement changes that belong in the same station email.</p>
+              <button class="build-button" id="build-station-communication" type="button" disabled>Build Combined Station Communication</button>
 
               <div class="draft-wrap" id="draft-wrap">
                 <div class="draft-subject"><strong>Subject:</strong> <span id="draft-subject"></span></div>
@@ -254,6 +305,14 @@
       const stationLandscape = document.getElementById("station-landscape");
       const replacementDescription = document.getElementById("replacement-description");
       const replacementReadyDate = document.getElementById("replacement-ready-date");
+      const extendThroughDate = document.getElementById("extend-through-date");
+      const changeInstructions = document.getElementById("change-instructions");
+      const endDate = document.getElementById("end-date");
+      const extendFields = document.getElementById("extend-fields");
+      const changeFields = document.getElementById("change-fields");
+      const endFields = document.getElementById("end-fields");
+      const addInstructionButton = document.getElementById("add-instruction");
+      const instructionQueueEl = document.getElementById("instruction-queue");
       const draftWrap = document.getElementById("draft-wrap");
       const draftSubject = document.getElementById("draft-subject");
       const draftBody = document.getElementById("draft-body");
@@ -261,6 +320,7 @@
       let selectedRecord = null;
       let primaryAction = "";
       let landscapeRecords = [];
+      let instructionQueue = [];
 
       const els = {
         attentionCount: document.getElementById("attention-count"),
@@ -509,6 +569,12 @@
         verifyCurrentCopy.checked = false;
         replacementDescription.value = "";
         replacementReadyDate.value = "";
+        extendThroughDate.value = "";
+        changeInstructions.value = "";
+        endDate.value = String(record.endDate || "").slice(0,10);
+        extendFields.classList.remove("is-open");
+        changeFields.classList.remove("is-open");
+        endFields.classList.remove("is-open");
         draftWrap.classList.remove("is-open");
         draftSubject.textContent = "";
         draftBody.value = "";
@@ -566,92 +632,167 @@
         }).join("");
       }
 
-      function updateCommunicationState() {
-        const hasInput =
-          Boolean(primaryAction) ||
-          verifyCurrentCopy.checked ||
-          Boolean(replacementDescription.value.trim()) ||
-          Boolean(replacementReadyDate.value.trim());
+      function formatInputDate(value) {
+        if (!value) return "—";
+        return formatDate(value);
+      }
 
-        buildStationCommunication.disabled = !selectedRecord || !hasInput;
+      function instructionIsValid() {
+        if (!selectedRecord || !primaryAction) return false;
+        if (primaryAction === "EXTEND") return Boolean(extendThroughDate.value);
+        if (primaryAction === "CHANGE") return Boolean(changeInstructions.value.trim());
+        if (primaryAction === "END") return Boolean(endDate.value);
+        return false;
+      }
+
+      function showInstructionFields() {
+        extendFields.classList.toggle("is-open", primaryAction === "EXTEND");
+        changeFields.classList.toggle("is-open", primaryAction === "CHANGE");
+        endFields.classList.toggle("is-open", primaryAction === "END");
+      }
+
+      function updateCommunicationState() {
+        showInstructionFields();
+
+        addInstructionButton.disabled = !instructionIsValid();
+        buildStationCommunication.disabled = instructionQueue.length === 0;
 
         const parts = [];
         if (primaryAction) parts.push(primaryAction);
+        if (primaryAction === "EXTEND" && extendThroughDate.value) parts.push(`THROUGH ${formatInputDate(extendThroughDate.value)}`);
         if (verifyCurrentCopy.checked) parts.push("VERIFY CURRENT COPY");
-        if (landscapeRecords.length) parts.push("STATION LANDSCAPE");
         if (replacementDescription.value.trim() || replacementReadyDate.value.trim()) parts.push("REPLACEMENT COMING");
 
-        communicationStatus.textContent = parts.length
-          ? `Selected: ${parts.join(" + ")}`
-          : "Choose a primary action, verification, or replacement creative. The station landscape is included automatically.";
+        if (instructionQueue.length) {
+          communicationStatus.textContent = `${instructionQueue.length} placement instruction${instructionQueue.length === 1 ? "" : "s"} ready for one station email${parts.length ? `. Current selection: ${parts.join(" + ")}` : "."}`;
+        } else {
+          communicationStatus.textContent = parts.length
+            ? `Current selection: ${parts.join(" + ")}. Add this instruction to the pending station communication.`
+            : "Choose an instruction, add it to the pending communication, then add any other placement changes that belong in the same station email.";
+        }
+      }
+
+      function renderInstructionQueue() {
+        if (!instructionQueue.length) {
+          instructionQueueEl.innerHTML = `<div class="landscape-empty">No placement instructions added yet.</div>`;
+          updateCommunicationState();
+          return;
+        }
+
+        instructionQueueEl.innerHTML = instructionQueue.map((item, index) => {
+          let instruction = item.action;
+          if (item.action === "EXTEND") instruction += ` through ${formatInputDate(item.extendThroughDate)}`;
+          if (item.action === "CHANGE") instruction += ` — ${escapeHtml(item.changeInstructions)}`;
+          if (item.action === "END") instruction += ` on ${formatInputDate(item.endDate)}`;
+
+          const extras = [];
+          if (item.verifyCurrentCopy) extras.push("Verify current copy");
+          if (item.replacementDescription) extras.push(`Replacement: ${escapeHtml(item.replacementDescription)}`);
+          if (item.replacementReadyDate) extras.push(`Expected: ${escapeHtml(item.replacementReadyDate)}`);
+
+          return `<div class="queue-item">
+            <div>
+              <strong>${escapeHtml(item.clientName)} — ${escapeHtml(item.market)} / ${escapeHtml(item.outletName)} — ${escapeHtml(item.campaignName)}</strong>
+              <p>${instruction}${extras.length ? ` · ${extras.join(" · ")}` : ""}</p>
+            </div>
+            <button class="queue-remove" type="button" data-queue-index="${index}">Remove</button>
+          </div>`;
+        }).join("");
+
+        instructionQueueEl.querySelectorAll(".queue-remove").forEach(button => {
+          button.addEventListener("click", () => {
+            instructionQueue.splice(Number(button.dataset.queueIndex), 1);
+            renderInstructionQueue();
+          });
+        });
+
+        updateCommunicationState();
+      }
+
+      function addCurrentInstruction() {
+        if (!instructionIsValid() || !selectedRecord) return;
+
+        instructionQueue.push({
+          recordId: selectedRecord.id,
+          clientId: selectedRecord.clientId,
+          clientName: selectedRecord.clientName || "Client",
+          market: selectedRecord.market || "Market",
+          outletName: selectedRecord.outletName || "Station",
+          campaignName: selectedRecord.campaignName || selectedRecord.creativeName || "Placement",
+          currentStartDate: selectedRecord.startDate || "",
+          currentEndDate: selectedRecord.endDate || "",
+          fileName: selectedRecord.fileName || "",
+          action: primaryAction,
+          extendThroughDate: primaryAction === "EXTEND" ? extendThroughDate.value : "",
+          changeInstructions: primaryAction === "CHANGE" ? changeInstructions.value.trim() : "",
+          endDate: primaryAction === "END" ? endDate.value : "",
+          verifyCurrentCopy: verifyCurrentCopy.checked,
+          replacementDescription: replacementDescription.value.trim(),
+          replacementReadyDate: replacementReadyDate.value.trim()
+        });
+
+        primaryAction = "";
+        document.querySelectorAll(".primary-action").forEach(b => b.classList.remove("is-selected"));
+        verifyCurrentCopy.checked = false;
+        replacementDescription.value = "";
+        replacementReadyDate.value = "";
+        extendThroughDate.value = "";
+        changeInstructions.value = "";
+        endDate.value = selectedRecord?.endDate ? String(selectedRecord.endDate).slice(0,10) : "";
+        showInstructionFields();
+        draftWrap.classList.remove("is-open");
+        renderInstructionQueue();
+
+        communicationStatus.textContent = `${instructionQueue.length} placement instruction${instructionQueue.length === 1 ? "" : "s"} added. Select another Needs Attention placement to add it to this same email, or build the combined communication now.`;
       }
 
       function buildCommunicationDraft() {
-        if (!selectedRecord) return;
+        if (!instructionQueue.length) return;
 
-        const client = selectedRecord.clientName || "Southeast Safes";
-        const station = selectedRecord.outletName || "station";
-        const market = selectedRecord.market || "market";
-        const campaign = selectedRecord.campaignName || selectedRecord.creativeName || "current placement";
-        const replacement = replacementDescription.value.trim();
-        const ready = replacementReadyDate.value.trim();
+        const client = instructionQueue[0].clientName || "Client";
+        const markets = [...new Set(instructionQueue.map(i => i.market).filter(Boolean))];
+        const stations = [...new Set(instructionQueue.map(i => i.outletName).filter(Boolean))];
+        const subject = `${client} – Radio Traffic Instructions – ${markets.join(" / ") || "Media Update"}`;
+        const lines = ["Hi Stephanie,", "", `Here are the current ${client} radio traffic instructions:`, ""];
 
-        const subject = `${client} – ${market} / ${station} Radio Traffic Update`;
-        const lines = ["Hi Stephanie,", ""];
+        const grouped = new Map();
+        instructionQueue.forEach(item => {
+          const key = `${item.market}|||${item.outletName}`;
+          if (!grouped.has(key)) grouped.set(key, []);
+          grouped.get(key).push(item);
+        });
 
-        if (primaryAction === "EXTEND") {
-          lines.push(`Please extend the current ${client} ${station} rotation for "${campaign}" beyond ${formatDate(selectedRecord.endDate)} until the replacement creative is delivered and a new end date is confirmed.`);
+        grouped.forEach((items, key) => {
+          const [market, station] = key.split("|||");
+          lines.push(`${market} / ${station}`);
+          items.forEach(item => {
+            if (item.action === "EXTEND") {
+              lines.push(`- Please extend "${item.campaignName}" through ${formatInputDate(item.extendThroughDate)}.`);
+            } else if (item.action === "CHANGE") {
+              lines.push(`- Please change "${item.campaignName}": ${item.changeInstructions}`);
+            } else if (item.action === "END") {
+              lines.push(`- Please end "${item.campaignName}" on ${formatInputDate(item.endDate)}.`);
+            }
+
+            if (item.verifyCurrentCopy) {
+              lines.push(`  Please also confirm the current copy/creative you have running for "${item.campaignName}".`);
+            }
+            if (item.replacementDescription || item.replacementReadyDate) {
+              const replacementParts = [];
+              if (item.replacementDescription) replacementParts.push(item.replacementDescription);
+              if (item.replacementReadyDate) replacementParts.push(`expected ${item.replacementReadyDate}`);
+              lines.push(`  Replacement creative: ${replacementParts.join(" — ")}.`);
+            }
+          });
           lines.push("");
-        } else if (primaryAction === "CHANGE") {
-          lines.push(`Please change the current ${client} ${station} placement for "${campaign}".`);
-          lines.push("");
-        } else if (primaryAction === "END") {
-          lines.push(`Please end the current ${client} ${station} placement for "${campaign}" as scheduled on ${formatDate(selectedRecord.endDate)}.`);
-          lines.push("");
-        }
+        });
 
-        if (verifyCurrentCopy.checked) {
-          lines.push(`Please also confirm the current ${client} copy/creative you have running on ${station} so I can reconcile our records with the station.`);
-          lines.push("");
-        }
-
-        if (replacement || ready) {
-          lines.push("Replacement Creative:");
-          if (replacement) lines.push(`- ${replacement}`);
-          if (ready) lines.push(`- Expected ready: ${ready}`);
-          lines.push("- I will send the finished production file as soon as it is ready.");
-          lines.push("");
-        }
-
-        if (landscapeRecords.length) {
-          const landscapeOthers = landscapeRecords.filter(r => r !== selectedRecord);
-          const running = landscapeOthers.filter(r => String(r.status || "").toLowerCase() === "active");
-          const upcoming = landscapeOthers.filter(r => ["pending","planned"].includes(String(r.status || "").toLowerCase()));
-          lines.push("Station Landscape From Our Records:");
-          if (running.length) {
-            lines.push("Currently Running:");
-            running.forEach(r => {
-              lines.push(`- ${r.campaignName || r.creativeName || "Placement"} — ${formatDate(r.startDate)} – ${formatDate(r.endDate)}`);
-              if (r.fileName) lines.push(`  File: ${r.fileName}`);
-            });
-          }
-          if (upcoming.length) {
-            if (running.length) lines.push("");
-            lines.push("Upcoming / Planned:");
-            upcoming.forEach(r => {
-              lines.push(`- ${r.campaignName || r.creativeName || "Placement"} — ${formatDate(r.startDate)} – ${formatDate(r.endDate)}`);
-              if (r.fileName) lines.push(`  File: ${r.fileName}`);
-            });
-          }
-          lines.push("");
-        }
-
-        lines.push("Thank you,", "Andy", "Global Concepts Media Agency");
+        lines.push("Please confirm these updates for both markets/stations shown above.", "", "Thank you,", "Andy", "Global Concepts Media Agency");
 
         draftSubject.textContent = subject;
         draftBody.value = lines.join("\n");
         draftWrap.classList.add("is-open");
-        communicationStatus.textContent = "Draft built. Review the subject and email below before anything is sent.";
+        communicationStatus.textContent = "Combined draft built. Review the subject and email below before anything is sent.";
       }
 
       function applyView(view) {
@@ -732,6 +873,9 @@
         button.addEventListener("click", () => {
           const action = button.dataset.action || "";
           primaryAction = primaryAction === action ? "" : action;
+          if (primaryAction === "END" && selectedRecord?.endDate) {
+            endDate.value = String(selectedRecord.endDate).slice(0,10);
+          }
           document.querySelectorAll(".primary-action").forEach(b => {
             b.classList.toggle("is-selected", b.dataset.action === primaryAction);
           });
@@ -742,6 +886,10 @@
       verifyCurrentCopy.addEventListener("change", updateCommunicationState);
       replacementDescription.addEventListener("input", updateCommunicationState);
       replacementReadyDate.addEventListener("input", updateCommunicationState);
+      extendThroughDate.addEventListener("change", updateCommunicationState);
+      changeInstructions.addEventListener("input", updateCommunicationState);
+      endDate.addEventListener("change", updateCommunicationState);
+      addInstructionButton.addEventListener("click", addCurrentInstruction);
 
       document.getElementById("close-action-panel").addEventListener("click", () => {
         actionPanel.classList.remove("is-open");
@@ -757,6 +905,7 @@
         mobileMenuButton.setAttribute("aria-expanded", String(open));
       });
 
+      renderInstructionQueue();
       applyView("attention");
       loadMedia();
     })();
