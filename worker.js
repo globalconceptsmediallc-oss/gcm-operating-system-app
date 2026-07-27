@@ -1,15 +1,16 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.3.0
+   Version: 7.4.0
    Status: Production Candidate
-   Source: Production Worker 7.2.0
-   Sprint: Work Item Completion — Road Test #21
+   Source: Production Worker 7.3.0
+   Sprint: Media Operations — Phase 1 Retrieval
    Purpose: Lightweight production router for operational
             communication analysis, client workspace retrieval,
             reviewed operational-decision commits, live Mission
             Control retrieval, existing-Investigation processing,
-            and existing-Work-Item completion.
+            existing-Work-Item completion, and read-only Media
+            Operations retrieval.
 
    Required project structure:
 
@@ -28,6 +29,7 @@
      missionControl.js
      investigationProcessing.js
      workItemProcessing.js
+     mediaOperations.js
    ========================================================= */
 
 import {
@@ -68,6 +70,10 @@ import {
   handleProcessWorkItem
 } from "./routes/workItemProcessing.js";
 
+import {
+  handleMediaOperations
+} from "./routes/mediaOperations.js";
+
 export default {
   async fetch(request, env) {
     const requestId = crypto.randomUUID();
@@ -84,8 +90,8 @@ export default {
         system: "GCM OS Operational Worker",
         version: VERSION,
         contractVersion: API_CONTRACT_VERSION,
-        sprint: "Work Item Completion — Road Test #21",
-        architecture: "Lightweight router with modular operational routes, shared infrastructure, isolated diagnostics, deterministic classification, guarded AI, D1 persistence, live Mission Control retrieval, existing-Investigation processing, and existing-Work-Item completion",
+        sprint: "Media Operations — Phase 1 Retrieval",
+        architecture: "Lightweight router with modular operational routes, shared infrastructure, isolated diagnostics, deterministic classification, guarded AI, D1 persistence, live Mission Control retrieval, existing-Investigation processing, existing-Work-Item completion, and read-only Media Operations retrieval",
         actions: Object.values(ACTIONS),
         engines: [
           "notification-detection",
@@ -97,7 +103,8 @@ export default {
           "operational-decision-commit",
           "mission-control",
           "investigation-processing",
-          "work-item-processing"
+          "work-item-processing",
+          "media-operations"
         ],
         modules: {
           shared: [
@@ -112,7 +119,8 @@ export default {
             "operational-decision",
             "mission-control",
             "investigation-processing",
-            "work-item-processing"
+            "work-item-processing",
+            "media-operations"
           ]
         },
         removedLegacyPipelines: [
@@ -195,6 +203,13 @@ export default {
 
         case ACTIONS.PROCESS_WORK_ITEM:
           return await handleProcessWorkItem(
+            body,
+            env,
+            requestId
+          );
+
+        case ACTIONS.GET_MEDIA_OPERATIONS:
+          return await handleMediaOperations(
             body,
             env,
             requestId
