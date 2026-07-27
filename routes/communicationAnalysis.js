@@ -1,8 +1,8 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.4.26
-   Source: Production Worker 7.4.25
+   Version: 7.4.27
+   Source: Production route 7.4.26
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
             notification classification, business meaning,
@@ -2450,9 +2450,26 @@ function buildOperationalDecision({ visibleEvidence, classification, businessMea
       `${reasoningText} ${recommendedActionText}`
     );
 
+  /*
+   * v7.4.27 ADVERSE-MONITORING CONSISTENCY PROTECTION
+   *
+   * The v7.4.3 no-action guardrail remains valuable for routine monitoring,
+   * but it must not cancel an Investigation when the deterministic Business
+   * Meaning engine has already identified a Negative/Mixed condition and
+   * explicitly recommended investigation.
+   *
+   * This preserves the earlier MoveASafe protection while allowing specific
+   * unresolved deterioration evidence — such as a tracked keyword leaving the
+   * Top 10 with a negative position change — to proceed to Investigation.
+   */
+  const supportedAdverseInvestigation =
+    normalizeBoolean(businessMeaning?.investigationSuggested, false) &&
+    ["Negative", "Mixed"].includes(direction);
+
   if (
     automatedPlatforms.has(classification.platform) &&
     noActionMonitoringConclusion &&
+    !supportedAdverseInvestigation &&
     !["High", "Critical"].includes(importance)
   ) {
     routes.createInvestigation = false;
@@ -2822,10 +2839,35 @@ function buildDeterministicBusinessMeaning({ visibleEvidence, classification }) 
    * Technical Monitoring Updates. Corrective work is never created directly
    * from the Site Audit notification; an Investigation must establish it first.
    */
+  /*
+   * v7.4.27 POSITION-TRACKING DETERIORATION ROUTING FIX
+   *
+   * A real SES road test showed that Position Tracking evidence such as
+   * "2 keywords left the Top 10" with keyword-row Change: -19 values could be
+   * extracted correctly but still be treated as routine monitoring because the
+   * generic adverse-change detector did not recognize a negative signed ranking
+   * movement or the phrase "left the Top 10".
+   *
+   * For Position Tracking only, recognize explicit loss of a tracked ranking
+   * tier and negative keyword-position changes as adverse evidence. This opens
+   * an Investigation so the cause can be verified before corrective work is
+   * created. It does NOT create a Work Item directly.
+   */
+  const positionTrackingAdverseMovementSignal =
+    type === "position_tracking" &&
+    (
+      /\bleft\s+the\s+top\s+(?:3|10|20|100)\b/i.test(text) ||
+      /\bdropped?\s+out\s+of\s+the\s+top\s+(?:3|10|20|100)\b/i.test(text) ||
+      /\bkeyword\b[^\n;|]{0,120}\bchange\s*:\s*-\s*\d+(?:\.\d+)?\b/i.test(text) ||
+      /\bposition\s*:\s*\d{1,3}\b[^\n;|]{0,80}\bchange\s*:\s*-\s*\d+(?:\.\d+)?\b/i.test(text)
+    );
+
   const negative =
     type === "site_audit"
       ? adverseChangeSignal
-      : adverseChangeSignal || (standingIssueSignal && !stabilitySignal);
+      : type === "position_tracking"
+        ? adverseChangeSignal || positionTrackingAdverseMovementSignal
+        : adverseChangeSignal || (standingIssueSignal && !stabilitySignal);
 
   const positive = /improv|increas|gain|grew|growth|up\b|new high|milestone|positive/.test(text);
   const eventDirection = negative && positive
