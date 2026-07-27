@@ -1,16 +1,17 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/config.js
-   Version: 7.3.0
+   Version: 7.4.0
    Status: Production Candidate
-   Source: Production Worker 7.2.0
-   Sprint: Work Item Completion — Road Test #21
+   Source: Production Worker 7.3.0
+   Sprint: Media Operations — Phase 1 Retrieval
    Purpose: Shared production constants and configuration.
-            Adds the existing Work Item processing action without
-            changing communication or Investigation behavior.
+            Adds the read-only Media Operations retrieval action
+            without changing existing Communications, Mission
+            Control, Investigation, or Work Item behavior.
    ========================================================= */
 
-export const VERSION = "7.3.0";
+export const VERSION = "7.4.0";
 export const API_CONTRACT_VERSION = "communications-operational-decision-v3";
 export const COMMUNICATION_ANALYSIS_ENGINE_VERSION = "3.4.1";
 
@@ -29,7 +30,8 @@ export const ACTIONS = Object.freeze({
   COMMIT_OPERATIONAL_DECISION: "commit-operational-decision",
   GET_MISSION_CONTROL: "get-mission-control",
   PROCESS_INVESTIGATION: "process-investigation",
-  PROCESS_WORK_ITEM: "process-work-item"
+  PROCESS_WORK_ITEM: "process-work-item",
+  GET_MEDIA_OPERATIONS: "get-media-operations"
 });
 
 export const STAGE_STATUS = Object.freeze({
