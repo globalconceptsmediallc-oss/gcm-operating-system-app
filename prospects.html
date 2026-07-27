@@ -1,3 +1,16 @@
+<!-- =========================================================
+   Global Concepts Media Operating System
+   File: prospects.html
+   Version: 1.1.0
+   Status: Production Candidate
+   Change: Shared GCM OS application shell integration
+   Source: Production prospects.html
+   Shared Shell: shared/gcm-shell.js
+   Purpose: Preserve the existing prospect search, filter, sort,
+            workflow links, and current static prospect pipeline
+            while moving navigation ownership to the shared shell.
+   ========================================================= -->
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -771,62 +784,7 @@
   <a class="skip-link" href="#main-content">Skip to main content</a>
 
   <div class="app-shell">
-    <aside class="sidebar" id="sidebar" aria-label="Primary navigation">
-      <a class="brand" href="today.html" aria-label="GCM OS Today">
-        <span class="brand-mark">G</span>
-
-        <span class="brand-copy">
-          <strong>Global Concepts Media</strong>
-          <span>Agency Operating System</span>
-        </span>
-      </a>
-
-      <p class="nav-label">Workspace</p>
-
-      <nav class="primary-nav">
-        <a class="nav-link" href="today.html">
-          <span class="nav-icon" aria-hidden="true">⌂</span>
-          <span>Today</span>
-        </a>
-
-        <a class="nav-link" href="prospects.html" aria-current="page">
-          <span class="nav-icon" aria-hidden="true">◎</span>
-          <span>Prospects</span>
-        </a>
-
-        <a class="nav-link" href="#">
-          <span class="nav-icon" aria-hidden="true">◫</span>
-          <span>Clients</span>
-        </a>
-
-        <a class="nav-link" href="#">
-          <span class="nav-icon" aria-hidden="true">✓</span>
-          <span>Work</span>
-        </a>
-
-        <a class="nav-link" href="#">
-          <span class="nav-icon" aria-hidden="true">↗</span>
-          <span>Proof</span>
-        </a>
-
-        <a class="nav-link" href="#">
-          <span class="nav-icon" aria-hidden="true">★</span>
-          <span>Case Studies</span>
-        </a>
-
-        <a class="nav-link" href="#">
-          <span class="nav-icon" aria-hidden="true">⚙</span>
-          <span>Settings</span>
-        </a>
-      </nav>
-
-      <div class="sidebar-footer">
-        <div class="sidebar-status">
-          <span class="status-dot" aria-hidden="true"></span>
-          <span>Prospect workspace operational</span>
-        </div>
-      </div>
-    </aside>
+    <aside data-gcm-shell-sidebar aria-label="Primary navigation"></aside>
 
     <main class="main" id="main-content">
       <div class="main-inner">
@@ -840,16 +798,6 @@
           </div>
 
           <div class="topbar-actions">
-            <button
-              class="button button-secondary mobile-menu-button"
-              id="mobile-menu-button"
-              type="button"
-              aria-controls="sidebar"
-              aria-expanded="false"
-            >
-              Menu
-            </button>
-
             <a class="button button-secondary" href="today.html">
               Back to Today
             </a>
@@ -1216,6 +1164,8 @@
     </main>
   </div>
 
+  <script src="shared/gcm-shell.js"></script>
+
   <script>
     (() => {
       "use strict";
@@ -1225,8 +1175,6 @@
       const sortFilter = document.getElementById("sort-filter");
       const prospectList = document.getElementById("prospect-list");
       const emptyState = document.getElementById("empty-state");
-      const mobileMenuButton = document.getElementById("mobile-menu-button");
-      const sidebar = document.getElementById("sidebar");
 
       function getCards() {
         return [...prospectList.querySelectorAll(".prospect-card")];
@@ -1278,25 +1226,14 @@
       statusFilter.addEventListener("change", applyFiltersAndSort);
       sortFilter.addEventListener("change", applyFiltersAndSort);
 
-      mobileMenuButton.addEventListener("click", () => {
-        const isOpen = sidebar.classList.toggle("is-open");
-        mobileMenuButton.setAttribute("aria-expanded", String(isOpen));
-      });
-
-      document.addEventListener("click", (event) => {
-        const clickedInsideSidebar = sidebar.contains(event.target);
-        const clickedMenuButton = mobileMenuButton.contains(event.target);
-
-        if (
-          window.innerWidth <= 860 &&
-          sidebar.classList.contains("is-open") &&
-          !clickedInsideSidebar &&
-          !clickedMenuButton
-        ) {
-          sidebar.classList.remove("is-open");
-          mobileMenuButton.setAttribute("aria-expanded", "false");
-        }
-      });
+      if (!window.GCMOShell) {
+        console.error("Prospects 1.1.0: shared/gcm-shell.js did not load.");
+      } else {
+        window.GCMOShell.mount({
+          currentPage: "prospects",
+          statusText: "Prospect workspace operational · Prospects v1.1.0"
+        });
+      }
 
       applyFiltersAndSort();
     })();
