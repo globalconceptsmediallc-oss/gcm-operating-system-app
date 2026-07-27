@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Proof | GCM OS</title>
+<style>
+:root{--navy:#07192e;--navy2:#0b2746;--blue:#1f6fd6;--blueSoft:#edf5ff;--gold:#e2b84d;--bg:#f2f5fa;--card:#fff;--border:#d9e1eb;--text:#102039;--muted:#66758a;--green:#1f7a4d;--greenSoft:#eaf7f0;--yellow:#986414;--yellowSoft:#fff5df;--red:#b23b3b;--redSoft:#fff0f0;--shadow:0 12px 32px rgba(8,23,48,.08)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,select,input,textarea{font:inherit}a{color:inherit;text-decoration:none}.shell{min-height:100vh;display:grid;grid-template-columns:152px minmax(0,1fr)}.sidebar{position:sticky;top:0;height:100vh;padding:18px 10px;background:linear-gradient(180deg,var(--navy2),var(--navy));color:#fff;display:flex;flex-direction:column}.brand{display:flex;align-items:center;gap:8px;padding:2px 6px 18px;border-bottom:1px solid rgba(255,255,255,.12)}.brand-mark{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;background:rgba(255,255,255,.08);color:var(--gold);font-weight:900}.brand-copy strong,.brand-copy span{display:block}.brand-copy strong{font-size:.72rem}.brand-copy span{margin-top:3px;color:rgba(255,255,255,.56);font-size:.54rem;letter-spacing:.11em;text-transform:uppercase}.nav-label{margin:18px 8px 8px;color:rgba(255,255,255,.42);font-size:.53rem;font-weight:800;letter-spacing:.13em;text-transform:uppercase}.nav{display:grid;gap:6px}.nav a{min-height:32px;display:flex;align-items:center;gap:8px;padding:0 9px;border-radius:8px;color:rgba(255,255,255,.72);font-size:.72rem;font-weight:700}.nav a.active{background:rgba(38,111,218,.2);color:#fff;box-shadow:inset 3px 0 0 var(--gold)}.footer{margin-top:auto;padding:14px 6px 2px;border-top:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.58);font-size:.58rem;line-height:1.5}main{padding:24px 28px 44px}.page{max-width:1320px;margin:0 auto}.top{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;margin-bottom:16px}.eyebrow{margin:0 0 7px;color:var(--blue);font-size:.72rem;font-weight:900;letter-spacing:.13em;text-transform:uppercase}h1{margin:0;color:var(--navy);font-size:clamp(1.75rem,3.2vw,2.5rem);line-height:1}.subtitle{max-width:820px;margin:8px 0 0;color:var(--muted);line-height:1.5}.chip{padding:9px 12px;border:1px solid #c8d9f2;border-radius:999px;background:var(--blueSoft);color:#205c9f;font-size:.58rem;font-weight:850;white-space:nowrap}.summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px}.card,.panel{border:1px solid var(--border);background:var(--card);box-shadow:var(--shadow)}.card{padding:14px 16px;border-radius:12px}.label{color:var(--muted);font-size:.7rem;font-weight:850;letter-spacing:.07em;text-transform:uppercase}.value{display:block;margin-top:5px;color:var(--navy);font-size:1.45rem;font-weight:900}.panel{border-radius:13px;overflow:hidden}.panel+.panel{margin-top:12px}.panel-head{padding:14px 16px 12px;border-bottom:1px solid var(--border)}.panel-head h2{margin:0;color:var(--navy);font-size:1rem}.panel-head p{margin:5px 0 0;color:var(--muted);font-size:.8rem;line-height:1.45}.panel-body{padding:14px 16px 18px}.filters{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:10px}.field label{display:block;margin-bottom:6px;color:var(--muted);font-size:.67rem;font-weight:850;letter-spacing:.05em;text-transform:uppercase}select,input[type=date],button,textarea{border:1px solid var(--border);border-radius:9px;background:#fff;color:var(--text)}select,input[type=date],button{min-height:40px;padding:0 11px;width:100%}.dates{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.opts{display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin-top:12px}.check{display:inline-flex;align-items:center;gap:7px;font-size:.8rem;font-weight:700}.actions{display:flex;gap:9px;margin-top:14px}.actions button{width:auto;min-width:120px;font-size:.8rem;font-weight:850;cursor:pointer}.primary{border-color:var(--blue);background:var(--blue);color:#fff}.status{margin-top:12px;padding:12px 13px;border-radius:10px;font-size:.79rem;font-weight:750;line-height:1.45}.loading{border:1px solid #cbdcf4;background:var(--blueSoft);color:#225e9e}.ready{border:1px solid #cbe5d6;background:var(--greenSoft);color:var(--green)}.error{border:1px solid #efcccc;background:var(--redSoft);color:var(--red)}.grid{display:grid;grid-template-columns:minmax(320px,.85fr) minmax(0,1.15fr);gap:12px;align-items:start;margin-top:12px}.records{display:grid;gap:9px;max-height:720px;overflow:auto}.record{padding:12px 13px;border:1px solid var(--border);border-radius:9px;background:#fff}.record strong{display:block;color:var(--navy);font-size:.86rem;line-height:1.35}.meta{margin-top:5px;color:var(--muted);font-size:.69rem;line-height:1.4}.record p{margin:8px 0 0;font-size:.79rem;line-height:1.45}.badge{display:inline-flex;align-items:center;padding:3px 7px;margin-right:5px;border-radius:999px;background:#eef2f7;color:#59677b;font-size:.61rem;font-weight:850;text-transform:uppercase}.result{background:var(--greenSoft);color:var(--green)}.monitor{background:var(--yellowSoft);color:var(--yellow)}.output-wrap{position:sticky;top:16px}.output{width:100%;min-height:520px;white-space:pre-wrap;line-height:1.55;font-size:.84rem;resize:vertical;padding:14px}.empty{padding:28px 18px;border:1px dashed var(--border);border-radius:9px;color:var(--muted);text-align:center;font-size:.82rem}@media(max-width:1050px){.summary{grid-template-columns:repeat(2,1fr)}.filters{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.output-wrap{position:static}}@media(max-width:760px){.shell{display:block}.sidebar{position:static;height:auto}main{padding:18px}.top{flex-direction:column}.filters,.dates,.summary{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<!-- =========================================================
+ Global Concepts Media Operating System
+ File: proof.html
+ Version: 1.0.0
+ Status: Production Candidate
+ Purpose: Read-only Proof / Client Reporting view over existing D1 records.
+ ========================================================= -->
+<div class="shell">
+<aside class="sidebar">
+<a class="brand" href="today.html"><span class="brand-mark">G</span><span class="brand-copy"><strong>Global Concepts Media</strong><span>Agency Operating System</span></span></a>
+<p class="nav-label">Workspace</p>
+<nav class="nav">
+<a href="today.html">⌂ <span>Today</span></a>
+<a href="client-pre-research.html">◎ <span>Prospects</span></a>
+<a href="clients.html">◫ <span>Clients</span></a>
+<a href="communications.html">✉ <span>Communications</span></a>
+<a href="work.html">✓ <span>Work</span></a>
+<a href="proof.html" class="active">↗ <span>Proof</span></a>
+<a href="#">★ <span>Case Studies</span></a>
+<a href="#">⚙ <span>Settings</span></a>
+</nav>
+<div class="footer">Mission Control operational<br>Proof v1.0.0</div>
+</aside>
+<main><div class="page">
+<header class="top"><div><p class="eyebrow">Prove</p><h1>Proof & Client Reporting</h1><p class="subtitle">Assemble completed work and available outcomes from existing D1 records. Proof is a reporting view only; it does not create a second source of truth.</p></div><span class="chip">D1 READ-ONLY REPORTING</span></header>
+
+<section class="summary">
+<article class="card"><span class="label">Completed Work</span><strong id="completed" class="value">—</strong></article>
+<article class="card"><span class="label">Results / Wins</span><strong id="results" class="value">—</strong></article>
+<article class="card"><span class="label">Time Recorded</span><strong id="time" class="value">—</strong></article>
+<article class="card"><span class="label">Clients Loaded</span><strong id="clients" class="value">—</strong></article>
+</section>
+
+<section class="panel">
+<div class="panel-head"><h2>Build Report</h2><p>Based on the historical Email Builder: choose the client, reporting period, and output type, then assemble existing operational history.</p></div>
+<div class="panel-body">
+<div class="filters">
+<div class="field"><label>Client</label><select id="client"><option value="ALL">All Clients</option></select></div>
+<div class="field"><label>Time</label><select id="period"><option value="this_week">This Week</option><option value="last_7">Last 7 Days</option><option value="last_week">Last Week</option><option value="this_month">This Month</option><option value="custom">Custom</option></select></div>
+<div class="field"><label>Output Type</label><select id="outputType"><option value="client_email">Client Email</option><option value="internal_summary">Internal Summary</option><option value="proof_digest">Proof of Work Digest</option></select></div>
+<div class="field"><label>Grouping</label><select id="groupMode"><option value="client">Group by Client</option><option value="date">Group by Date</option><option value="category">Group by Category</option></select></div>
+</div>
+<div id="dates" class="dates" hidden>
+<div class="field"><label>Start Date</label><input id="startDate" type="date"></div>
+<div class="field"><label>End Date</label><input id="endDate" type="date"></div>
+</div>
+<div class="opts">
+<label class="check"><input id="includeCompleted" type="checkbox" checked> Include Completed Work</label>
+<label class="check"><input id="includeResults" type="checkbox" checked> Include Results / Wins</label>
+<label class="check"><input id="includeMonitoring" type="checkbox" checked> Include Outcomes Still Being Monitored</label>
+</div>
+<div class="actions"><button id="generate" class="primary">Generate Proof</button><button id="refresh">Refresh D1</button><button id="copy">Copy Output</button></div>
+<div id="status" class="status loading">Loading client workspaces from production D1…</div>
+</div></section>
+
+<section class="grid">
+<article class="panel"><div class="panel-head"><h2>Source Records</h2><p>Completed work and available outcomes selected for the current report.</p></div><div class="panel-body"><div id="recordList" class="records"><div class="empty">Generate a report to review its source records.</div></div></div></article>
+<article class="panel output-wrap"><div class="panel-head"><h2>Generated Output</h2><p>Built from durable operational history. Editing this output does not alter D1.</p></div><div class="panel-body"><div id="outputMeta"></div><textarea id="output" class="output" spellcheck="true" placeholder="Generated proof will appear here."></textarea></div></article>
+</section>
+</div></main></div>
+
+<script>
+(()=>{"use strict";
+const VERSION="1.0.0";
+const WORKER_URL="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+const CANDIDATES=[
+{code:"SES",name:"Southeast Safes"},{code:"SFS",name:"South Florida Safes"},{code:"A1",name:"A1 Action Safe & Lock"},{code:"HBG",name:"HB Guns"},{code:"PW",name:"Pickett Weaponry"},{code:"NFS",name:"North Florida Safes"},{code:"MAS",name:"Move A Safe"},{code:"GCM",name:"Global Concepts Media"},{code:"LUMI",name:"Lumi Studio"},{code:"4A",name:"1-800 4A Gun Safe"}];
+const $=id=>document.getElementById(id);
+const el={client:$("client"),period:$("period"),outputType:$("outputType"),groupMode:$("groupMode"),dates:$("dates"),startDate:$("startDate"),endDate:$("endDate"),includeCompleted:$("includeCompleted"),includeResults:$("includeResults"),includeMonitoring:$("includeMonitoring"),generate:$("generate"),refresh:$("refresh"),copy:$("copy"),status:$("status"),recordList:$("recordList"),output:$("output"),outputMeta:$("outputMeta"),completed:$("completed"),results:$("results"),time:$("time"),clients:$("clients")};
+let workspaces=[],selectedRecords=[];
+
+el.period.addEventListener("change",()=>{el.dates.hidden=el.period.value!=="custom";if(el.period.value!=="custom")setDates(el.period.value);generate()});
+[el.client,el.outputType,el.groupMode,el.includeCompleted,el.includeResults,el.includeMonitoring,el.startDate,el.endDate].forEach(x=>x.addEventListener("change",generate));
+el.generate.addEventListener("click",generate);
+el.refresh.addEventListener("click",loadAll);
+el.copy.addEventListener("click",copyOutput);
+setDates("this_week");loadAll();
+
+async function loadAll(){
+setStatus("loading","Loading client workspaces from production D1…");el.refresh.disabled=true;el.generate.disabled=true;
+const results=await Promise.all(CANDIDATES.map(async c=>{try{const p=await loadWorkspace(c.code);return p?.ok&&p?.operational?.client?{code:String(p.operational.client.client_code||c.code),name:String(p.operational.client.name||c.name),payload:p}:null}catch(e){console.warn("Proof",c.code,e);return null}}));
+workspaces=results.filter(Boolean).sort((a,b)=>a.name.localeCompare(b.name));renderClients();el.clients.textContent=workspaces.length;setStatus("ready",`Loaded ${workspaces.length} client workspace${workspaces.length===1?"":"s"} from production D1.`);el.refresh.disabled=false;el.generate.disabled=false;generate()
+}
+async function loadWorkspace(code){
+const r=await fetch(WORKER_URL,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify({action:"get-client-workspace",clientCode:code})});const p=await r.json().catch(()=>({}));if(!r.ok||p?.ok!==true)throw new Error(p?.error||`HTTP ${r.status}`);return p
+}
+function renderClients(){const prev=el.client.value||"ALL";el.client.innerHTML='<option value="ALL">All Clients</option>';workspaces.forEach(w=>{const o=document.createElement("option");o.value=w.code;o.textContent=w.name;el.client.appendChild(o)});el.client.value=(prev==="ALL"||workspaces.some(w=>w.code===prev))?prev:"ALL"}
+function generate(){
+const range={start:el.startDate.value,end:el.endDate.value};const targets=el.client.value==="ALL"?workspaces:workspaces.filter(w=>w.code===el.client.value);
+selectedRecords=targets.flatMap(w=>buildRecords(w,range)).sort((a,b)=>b.date.localeCompare(a.date));renderRecords();renderSummary();renderOutput(range)
+}
+function buildRecords(w,range){
+const op=w.payload?.operational||{},client=op.client||{},activities=Array.isArray(op.proofOfWork)?op.proofOfWork:[],workItems=Array.isArray(op.workItems)?op.workItems:[],records=[],represented=new Set();
+if(el.includeCompleted.checked){
+activities.forEach(a=>{const date=normDate(a.activity_date||a.completed_at||a.created_at);if(!date||!inRange(date,range)||!isComplete(a.status))return;if(a.work_item_id)represented.add(Number(a.work_item_id));const result=clean(a.actual_impact),expected=clean(a.expected_impact);records.push({source:"activity_record",id:a.id,clientCode:w.code,clientName:client.name||w.name,date,category:clean(a.category)||"Client Work",title:clean(a.activity)||"Completed client work",why:expected,result,evidence:clean(a.evidence_reference),notes:clean(a.notes),owner:clean(a.owner),minutes:num(a.time_minutes),monitoring:!result&&!!expected})});
+workItems.forEach(i=>{if(!isComplete(i.status)||represented.has(Number(i.id)))return;const date=normDate(i.completed_at||i.updated_at||i.created_at);if(!date||!inRange(date,range))return;const result=clean(i.actual_impact),expected=clean(i.expected_impact);records.push({source:"work_item",id:i.id,clientCode:w.code,clientName:client.name||w.name,date,category:clean(i.category)||"Client Work",title:clean(i.title)||clean(i.description)||"Completed work item",why:expected,result,evidence:"",notes:clean(i.description),owner:clean(i.owner),minutes:0,monitoring:!result&&!!expected})})
+}
+return records.filter(r=>!(r.result&&!el.includeResults.checked)&&!(r.monitoring&&!el.includeMonitoring.checked))
+}
+function renderSummary(){el.completed.textContent=selectedRecords.length;el.results.textContent=selectedRecords.filter(r=>r.result).length;el.time.textContent=duration(selectedRecords.reduce((s,r)=>s+r.minutes,0))}
+function renderRecords(){
+if(!selectedRecords.length){el.recordList.innerHTML='<div class="empty">No completed work matches the selected client and reporting period.</div>';return}
+el.recordList.innerHTML=selectedRecords.map(r=>`<article class="record"><div><span class="badge">${esc(r.category)}</span>${r.result?'<span class="badge result">Result</span>':r.monitoring?'<span class="badge monitor">Monitoring</span>':""}</div><strong>${esc(r.title)}</strong><div class="meta">${esc(r.clientName)} · ${esc(fmtDate(r.date))}${r.owner?` · ${esc(r.owner)}`:""}${r.minutes?` · ${esc(duration(r.minutes))}`:""}</div>${r.why?`<p><strong>Why it matters:</strong> ${esc(r.why)}</p>`:""}${r.result?`<p><strong>Result:</strong> ${esc(r.result)}</p>`:""}${r.monitoring?'<p><strong>Status:</strong> Completed work; longer-term outcome is still being monitored.</p>':""}${r.evidence?`<p><strong>Evidence:</strong> ${esc(r.evidence)}</p>`:""}</article>`).join("")
+}
+function renderOutput(range){
+const clientName=el.client.value==="ALL"?"All Clients":workspaces.find(w=>w.code===el.client.value)?.name||el.client.value;el.outputMeta.innerHTML=`<span class="badge">${esc(clientName)}</span><span class="badge">${esc(fmtDate(range.start))} – ${esc(fmtDate(range.end))}</span>`;
+if(!selectedRecords.length){el.output.value=`No completed work was found for ${clientName} between ${fmtDate(range.start)} and ${fmtDate(range.end)}.`;return}
+el.output.value=el.outputType.value==="client_email"?clientEmail(range):el.outputType.value==="internal_summary"?internalSummary(range):digest(range)
+}
+function clientEmail(range){
+const groups=byClient(selectedRecords),blocks=groups.map(g=>`${el.client.value==="ALL"?g.clientName+"\n":""}Completed work:\n${g.records.map(r=>`• ${sentence(r.title)}${r.why?" "+sentence(r.why):""}${r.result?" Result: "+sentence(r.result):r.monitoring?" The work is complete and the longer-term outcome remains under monitoring.":""}`).join("\n")}`);
+const wins=selectedRecords.filter(r=>r.result),monitor=selectedRecords.filter(r=>r.monitoring),name=el.client.value==="ALL"?"there":workspaces.find(w=>w.code===el.client.value)?.name||"there";
+return [`Subject: Weekly Work Update — ${fmtDate(range.start)} to ${fmtDate(range.end)}`,"",`Hi ${name},`,"","Here is the work completed during this reporting period:","",blocks.join("\n\n"),wins.length?`\n\nResults / wins:\n${wins.map(r=>`• ${r.clientName}: ${sentence(r.result)}`).join("\n")}`:"",monitor.length?`\n\nStill being monitored:\n${monitor.map(r=>`• ${r.clientName}: ${sentence(r.title)}`).join("\n")}`:"","","We will continue monitoring items that still need longer-term performance evidence and carry the next required actions into the upcoming work cycle.","","Best,","Andrew","Global Concepts Media"].join("\n")
+}
+function internalSummary(range){const lines=["GCM OS — INTERNAL WORK SUMMARY",`${fmtDate(range.start)} to ${fmtDate(range.end)}`,"",`Completed work items: ${selectedRecords.length}`,`Recorded results / wins: ${selectedRecords.filter(r=>r.result).length}`,`Recorded time: ${duration(selectedRecords.reduce((s,r)=>s+r.minutes,0))}`,""];byClient(selectedRecords).forEach(g=>{lines.push(g.clientName.toUpperCase());g.records.forEach(r=>{lines.push(`- ${r.date} | ${r.category} | ${r.title}`);if(r.why)lines.push(`  Why: ${r.why}`);if(r.result)lines.push(`  Result: ${r.result}`);if(r.monitoring)lines.push("  Outcome: still being monitored");if(r.evidence)lines.push(`  Evidence: ${r.evidence}`)});lines.push("")});return lines.join("\n")}
+function digest(range){const lines=["GCM OS — PROOF OF WORK DIGEST",`${fmtDate(range.start)} to ${fmtDate(range.end)}`,""];groupDigest(selectedRecords).forEach(g=>{lines.push(g.label);g.records.forEach(r=>{lines.push(`• ${r.date} — ${r.clientName} — ${r.title}`);if(r.why)lines.push(`  Why it matters: ${r.why}`);if(r.result)lines.push(`  Verified / recorded result: ${r.result}`);if(r.monitoring)lines.push("  Outcome status: completed work; longer-term outcome still being monitored");if(r.evidence)lines.push(`  Evidence: ${r.evidence}`)});lines.push("")});return lines.join("\n")}
+function groupDigest(rs){if(el.groupMode.value==="date"){const m=new Map;rs.forEach(r=>{if(!m.has(r.date))m.set(r.date,[]);m.get(r.date).push(r)});return [...m.entries()].sort((a,b)=>b[0].localeCompare(a[0])).map(([d,x])=>({label:fmtDate(d).toUpperCase(),records:x}))}if(el.groupMode.value==="category"){const m=new Map;rs.forEach(r=>{const k=r.category||"Client Work";if(!m.has(k))m.set(k,[]);m.get(k).push(r)});return [...m.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([k,x])=>({label:k.toUpperCase(),records:x}))}return byClient(rs).map(g=>({label:g.clientName.toUpperCase(),records:g.records}))}
+function byClient(rs){const m=new Map;rs.forEach(r=>{if(!m.has(r.clientCode))m.set(r.clientCode,{clientName:r.clientName,records:[]});m.get(r.clientCode).records.push(r)});return [...m.values()].sort((a,b)=>a.clientName.localeCompare(b.clientName))}
+function setDates(p){const t=new Date(),today=new Date(t.getFullYear(),t.getMonth(),t.getDate());let s=new Date(today),e=new Date(today);if(p==="this_week"){const d=today.getDay(),off=d===0?-6:1-d;s.setDate(today.getDate()+off)}else if(p==="last_7"){s.setDate(today.getDate()-6)}else if(p==="last_week"){const d=today.getDay(),off=d===0?-6:1-d,m=new Date(today);m.setDate(today.getDate()+off);s=new Date(m);s.setDate(m.getDate()-7);e=new Date(s);e.setDate(s.getDate()+6)}else if(p==="this_month"){s=new Date(today.getFullYear(),today.getMonth(),1)}el.startDate.value=iso(s);el.endDate.value=iso(e)}
+function isComplete(v){return ["completed","complete","closed","done"].includes(clean(v).toLowerCase())}function inRange(d,r){return d&&r.start&&r.end&&d>=r.start&&d<=r.end}function normDate(v){if(!v)return"";const m=String(v).match(/^(\d{4}-\d{2}-\d{2})/);if(m)return m[1];const d=new Date(v);return Number.isNaN(d.getTime())?"":iso(d)}function fmtDate(v){if(!v)return"Not recorded";const d=new Date(`${v}T12:00:00`);return Number.isNaN(d.getTime())?v:new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric",year:"numeric"}).format(d)}function duration(m){m=Number(m||0);if(!m)return"0 min";if(m<60)return`${m} min`;const h=m/60;return`${h%1===0?h.toFixed(0):h.toFixed(1)} hr`}function num(v){const n=Number(v);return Number.isFinite(n)&&n>0?n:0}function clean(v){return String(v??"").trim()}function sentence(v){const x=clean(v);return !x?"":/[.!?]$/.test(x)?x:`${x}.`}function iso(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}function esc(v){return String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;")}function setStatus(type,msg){el.status.className=`status ${type}`;el.status.textContent=msg}
+async function copyOutput(){const v=el.output.value.trim();if(!v)return setStatus("error","There is no generated output to copy.");try{await navigator.clipboard.writeText(v);setStatus("ready","Generated output copied to clipboard.")}catch(e){el.output.focus();el.output.select();setStatus("error","Clipboard access was unavailable. The output is selected for manual copy.")}}
+})();
+</script>
+</body>
+</html>
