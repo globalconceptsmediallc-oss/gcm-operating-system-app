@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.4.0
+   Version: 1.4.1
    Status: Production Candidate
    Sprint: Investigation Processing — Road Test #21
    Purpose: Review open Investigations and linked Work Items
@@ -638,6 +638,141 @@
         grid-template-columns: 1fr;
       }
     }
+  
+    /* =========================================================
+       Work v1.4.1 — Audit Layout Correction
+       Layout/readability only. No operational behavior changed.
+       ========================================================= */
+
+    .app-shell {
+      grid-template-columns: 220px minmax(0, 1fr);
+    }
+
+    main {
+      width: 100%;
+      max-width: none;
+      margin: 0;
+      padding: 28px 34px 44px;
+    }
+
+    .page-wrap {
+      width: min(100%, 1240px);
+      max-width: 1240px;
+      margin: 0 auto;
+    }
+
+    .page-header {
+      margin-bottom: 18px;
+    }
+
+    .page-header h1 {
+      font-size: clamp(2rem, 3vw, 2.7rem);
+      line-height: 1.02;
+    }
+
+    .page-header p {
+      max-width: 760px;
+      font-size: 0.94rem;
+      line-height: 1.5;
+    }
+
+    .summary-grid {
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .summary-card {
+      min-height: 96px;
+      padding: 16px 18px;
+    }
+
+    .summary-card strong {
+      font-size: 1.85rem;
+      line-height: 1;
+    }
+
+    .work-card {
+      padding: 18px 20px;
+    }
+
+    .work-title {
+      font-size: 1.05rem;
+      line-height: 1.4;
+    }
+
+    .work-action {
+      font-size: 0.92rem;
+      line-height: 1.55;
+    }
+
+    .completion-grid textarea,
+    .processing-grid textarea {
+      min-height: 108px;
+      font-size: 0.92rem;
+      line-height: 1.5;
+    }
+
+    .investigation-grid {
+      grid-template-columns: minmax(300px, 0.82fr) minmax(0, 1.68fr);
+      gap: 16px;
+      align-items: start;
+      margin-top: 18px;
+    }
+
+    .investigation-list,
+    .investigation-detail {
+      min-height: 600px;
+    }
+
+    .investigation-list-body {
+      max-height: 700px;
+    }
+
+    .investigation-card {
+      padding: 12px 13px;
+    }
+
+    .investigation-detail {
+      padding: 18px 20px;
+    }
+
+    .investigation-detail-value {
+      font-size: 0.9rem;
+      line-height: 1.55;
+    }
+
+    .originating-communication {
+      max-height: 260px;
+      font-size: 0.88rem;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 1100px) {
+      main {
+        padding-left: 22px;
+        padding-right: 22px;
+      }
+
+      .investigation-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .investigation-list,
+      .investigation-detail {
+        min-height: auto;
+      }
+    }
+
+    @media (max-width: 860px) {
+      main {
+        padding: 18px 14px 32px;
+      }
+
+      .page-wrap {
+        width: 100%;
+      }
+    }
+
   </style>
 </head>
 
@@ -664,7 +799,7 @@
               type="button"
               aria-expanded="false"
             >Menu</button>
-            <span class="classification">Work Processing · v1.4.0</span>
+            <span class="classification">Work Processing · v1.4.1</span>
           </div>
         </header>
 
@@ -746,14 +881,14 @@
     (function initializeWorkPage() {
       "use strict";
 
-      const VERSION = "1.4.0";
+      const VERSION = "1.4.1";
 
       if (!window.GCMOShell) {
-        console.error("Work 1.4.0: shared/gcm-shell.js did not load.");
+        console.error("Work 1.4.1: shared/gcm-shell.js did not load.");
       } else {
         window.GCMOShell.mount({
           currentPage: "work",
-          statusText: "Work processing operational · Work v1.4.0"
+          statusText: "Work processing operational · Work v1.4.1"
         });
       }
 
@@ -922,7 +1057,7 @@
               "error",
               `Loaded ${investigations.length} open investigations. ${failures.length} live client workspace request${failures.length === 1 ? "" : "s"} still failed.`
             );
-            console.warn("Work Page v1.4.0 workspace load failures:", failures);
+            console.warn("Work Page v1.4.1 workspace load failures:", failures);
           } else {
             setStatus(
               "ready",
@@ -930,7 +1065,7 @@
             );
           }
         } catch (error) {
-          console.error("Work Page v1.4.0 failed:", error);
+          console.error("Work Page v1.4.1 failed:", error);
 
           investigations = [];
           workItemCount = 0;
