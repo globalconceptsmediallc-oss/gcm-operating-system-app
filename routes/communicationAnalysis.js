@@ -1,8 +1,8 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.4.22
-   Source: Production Worker 7.4.21
+   Version: 7.4.23
+   Source: Production Worker 7.4.22
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
             notification classification, business meaning,
@@ -1256,6 +1256,12 @@ function buildVisionEvidencePrompt({ sourceText = "", client, clientId, fileName
     "Identify visible platform names such as SEMrush only when they are actually visible.",
     "Preserve readable report labels such as Position Tracking, Backlink Audit, or Site Audit.",
     "Put important non-metric statements in visibleFacts.",
+    "HUMAN EMAIL RULE: when the screenshot is a person-to-person business email, prioritize the sender-written message body over signatures, legal footers, slogans, addresses, phone numbers, social links, and attachment thumbnails.",
+    "For a human email, preserve operational statements such as confirmations, current status, quantities, dates/deadlines, markets/stations/locations, what is running now, what changes next, explicit requests, and expected follow-up.",
+    "Do not put signature-block contact information or promotional taglines in visibleFacts unless the sender-written message body makes them operationally relevant.",
+    "If the sender confirms a quantity or current status through a stated date, preserve that confirmation as a visibleFact exactly enough to retain the quantity and date.",
+    "If the sender asks to be kept posted about a future date or change, preserve that request as a visibleFact and set responseExpected=true.",
+    "Do not invent markets, stations, placements, dates, or confirmations that are not visible in the screenshot.",
     "Put every clearly readable measurable observation in visibleMetrics.",
     "For keyword ranking rows, preserve the keyword phrase together with its readable position/change values in the same visibleMetrics item when possible.",
     "SITE AUDIT METRIC ASSOCIATION RULE: if the screenshot is a Site Audit, keep each readable metric label, current value, and displayed signed change/delta together in ONE visibleMetrics item.",
