@@ -1,9 +1,9 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: clients.html
-   Version: 1.2.0
+   Version: 1.2.1
    Status: Production Candidate
-   Change: Replace SES-only static JSON client source with live D1 Client Directory
+   Change: Correct Open Client handoff to use authoritative D1 client_code
    Source: Production clients.html 1.1.0
    Shared Shell: shared/gcm-shell.js 1.0.0
    Worker: 7.5.0
@@ -803,7 +803,6 @@
                 <a
                   class="button button-primary"
                   href="business-workspace.html?business=${encodeURIComponent(
-                    workspace.businessId ||
                     directory.clientCode ||
                     directory.id
                   )}"
@@ -982,7 +981,7 @@
       } else {
         window.GCMOShell.mount({
           currentPage: "clients",
-          statusText: "D1 client directory connected · Clients v1.2.0"
+          statusText: "D1 client directory connected · Clients v1.2.1"
         });
       }
 
