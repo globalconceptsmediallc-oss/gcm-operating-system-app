@@ -1,8 +1,8 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.4.21
-   Source: Production Worker 6.3.7
+   Version: 7.4.22
+   Source: Production Worker 7.4.21
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
             notification classification, business meaning,
@@ -2539,10 +2539,113 @@ function buildDeterministicBusinessMeaning({ visibleEvidence, classification }) 
     "search_performance",
     "business_profile",
     "analytics",
+    "client_request",
     "vendor_notice"
   ]);
 
   if (!supportedTypes.has(type)) return null;
+
+  /*
+   * v7.4.22 HUMAN COMMUNICATION DETERMINISTIC MEANING
+   *
+   * Human/client email must remain operationally useful when the reasoning
+   * model is unavailable or returns an empty response. The evidence extractor
+   * already records whether the source explicitly requests action or expects a
+   * response. Use only those evidence-grounded signals here; do not infer work,
+   * urgency, completion, or business results that the communication does not
+   * establish.
+   */
+  if (type === "client_request") {
+    const facts = uniqueTextValues([
+      ...(visibleEvidence?.visibleFacts || []),
+      ...(visibleEvidence?.visibleMetrics || [])
+    ]);
+    const evidenceDetail = facts.length
+      ? ` Visible evidence: ${facts.join("; ")}.`
+      : "";
+
+    const actionRequested = Boolean(visibleEvidence?.explicitActionRequested);
+    const responseExpected = Boolean(visibleEvidence?.responseExpected);
+
+    if (actionRequested) {
+      return {
+        eventDirection: "Neutral",
+        operationalSummary: `A human business communication was received with an explicit action request.${evidenceDetail}`,
+        businessImpact: "The communication contains a source-grounded request that should be retained and handled through the normal operational workflow.",
+        importance: "Normal",
+        recommendedAction: "Save the communication and review the explicit request. Create a Work Item only when the required action is specific and established by the evidence.",
+        investigationSuggested: false,
+        workItemSuggested: true,
+        replySuggested: responseExpected,
+        reasoning: "The visible evidence explicitly requests action. This supports operational follow-up without requiring AI interpretation, but it does not by itself prove that the requested work has been completed.",
+        recordPurpose: "Communication Record",
+        operationalLabel: "Human Email — Action Requested",
+        confidence: "High",
+        fallbackUsed: false,
+        intelligenceTrace: {
+          engine: "communication-intelligence-v1",
+          path: "deterministic",
+          definition: "human-explicit-action-request",
+          platform,
+          notificationType: type,
+          aiUsed: false,
+          fallbackUsed: false
+        }
+      };
+    }
+
+    if (responseExpected) {
+      return {
+        eventDirection: "Neutral",
+        operationalSummary: `A human business communication was received that explicitly expects a response or confirmation.${evidenceDetail}`,
+        businessImpact: "The communication should be retained as client/vendor history and answered because the source explicitly expects a response.",
+        importance: "Normal",
+        recommendedAction: "Save the communication and prepare the required response. No Investigation is required unless separate evidence establishes an unresolved problem.",
+        investigationSuggested: false,
+        workItemSuggested: false,
+        replySuggested: true,
+        reasoning: "The visible evidence explicitly indicates that a response or confirmation is expected. No separate operational problem is established by that fact alone.",
+        recordPurpose: "Communication Record",
+        operationalLabel: "Human Email — Reply Required",
+        confidence: "High",
+        fallbackUsed: false,
+        intelligenceTrace: {
+          engine: "communication-intelligence-v1",
+          path: "deterministic",
+          definition: "human-response-expected",
+          platform,
+          notificationType: type,
+          aiUsed: false,
+          fallbackUsed: false
+        }
+      };
+    }
+
+    return {
+      eventDirection: "Neutral",
+      operationalSummary: `A human business communication was received as information or confirmation.${evidenceDetail}`,
+      businessImpact: "The communication provides business history or confirmation and should be retained without automatically creating investigative or production work.",
+      importance: "Low",
+      recommendedAction: "Save the communication to the client history. No Investigation or Work Item is required from this communication alone.",
+      investigationSuggested: false,
+      workItemSuggested: false,
+      replySuggested: false,
+      reasoning: "The visible evidence contains no explicit action request and does not explicitly require a response. The communication can therefore be retained as information or confirmation without inventing additional work.",
+      recordPurpose: "Communication Record",
+      operationalLabel: "Human Email — Information / Confirmation",
+      confidence: "High",
+      fallbackUsed: false,
+      intelligenceTrace: {
+        engine: "communication-intelligence-v1",
+        path: "deterministic",
+        definition: "human-information-confirmation",
+        platform,
+        notificationType: type,
+        aiUsed: false,
+        fallbackUsed: false
+      }
+    };
+  }
 
   /* v7.4.7: deterministic triage for automated platform/vendor notices. */
   if (type === "vendor_notice") {
