@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gcm-shell.js
-   Version: 1.0.0
+   Version: 1.0.1
    Status: Production Candidate
    Purpose: Shared internal GCM OS application shell foundation.
    Source: today.html 1.4.0 + clients.html 1.0.1 production audit
@@ -10,7 +10,7 @@
 (() => {
   "use strict";
 
-  const SHELL_VERSION = "1.0.0";
+  const SHELL_VERSION = "1.0.1";
 
   const PAGE_MAP = {
     today: {
@@ -20,7 +20,7 @@
     },
     prospects: {
       label: "Prospects",
-      href: "client-pre-research.html",
+      href: "prospects.html",
       icon: "◎"
     },
     clients: {
