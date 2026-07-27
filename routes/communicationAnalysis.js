@@ -1,8 +1,8 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.4.23
-   Source: Production Worker 7.4.22
+   Version: 7.4.24
+   Source: Production Worker 7.4.23
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
             notification classification, business meaning,
@@ -1261,6 +1261,10 @@ function buildVisionEvidencePrompt({ sourceText = "", client, clientId, fileName
     "Do not put signature-block contact information or promotional taglines in visibleFacts unless the sender-written message body makes them operationally relevant.",
     "If the sender confirms a quantity or current status through a stated date, preserve that confirmation as a visibleFact exactly enough to retain the quantity and date.",
     "If the sender asks to be kept posted about a future date or change, preserve that request as a visibleFact and set responseExpected=true.",
+    "HUMAN EMAIL FOLLOW-UP RULE: a request such as keep me posted, let me know, confirm, advise, send, update me, or similar future-facing language is an explicit operational follow-up request even when the email is otherwise informational or confirmational.",
+    "When a human email contains both a confirmation/current-status statement and a future-facing follow-up request, retain both facts. Do not downgrade the message to passive historical information.",
+    "Carry visible dates and deadlines from the sender-written message body into the operational interpretation when they define how long a current condition lasts or when follow-up begins.",
+    "A follow-up request does not by itself require an Investigation or Work Item. It should instead preserve the communication and indicate that a response or follow-up is required when appropriate.",
     "Do not invent markets, stations, placements, dates, or confirmations that are not visible in the screenshot.",
     "Put every clearly readable measurable observation in visibleMetrics.",
     "For keyword ranking rows, preserve the keyword phrase together with its readable position/change values in the same visibleMetrics item when possible.",
