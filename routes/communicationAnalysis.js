@@ -1,8 +1,8 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.4.24
-   Source: Production Worker 7.4.23
+   Version: 7.4.25
+   Source: Production Worker 7.4.24
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
             notification classification, business meaning,
@@ -1264,6 +1264,10 @@ function buildVisionEvidencePrompt({ sourceText = "", client, clientId, fileName
     "HUMAN EMAIL FOLLOW-UP RULE: a request such as keep me posted, let me know, confirm, advise, send, update me, or similar future-facing language is an explicit operational follow-up request even when the email is otherwise informational or confirmational.",
     "When a human email contains both a confirmation/current-status statement and a future-facing follow-up request, retain both facts. Do not downgrade the message to passive historical information.",
     "Carry visible dates and deadlines from the sender-written message body into the operational interpretation when they define how long a current condition lasts or when follow-up begins.",
+    "HUMAN EMAIL DATE PRESERVATION RULE: when the sender states that placements, spots, campaigns, work, service, or another current condition is in place, running, active, scheduled, or valid through/until a visible date, preserve that date in visibleFacts and repeat it explicitly in the operational summary.",
+    "HUMAN EMAIL FOLLOW-UP DATE RULE: when the sender requests an update, confirmation, notice, or other follow-up beginning on/from a visible date, preserve both the requested follow-up and that date in visibleFacts and repeat them explicitly in the operational summary.",
+    "Do not collapse a dated statement such as '3 spots are in place through 7/31' into only '3 spots are currently running'; the end date is operational evidence and must remain attached to the fact.",
+    "Do not collapse a dated request such as 'keep me posted on what is running starting on 8/1' into only 'reply required'; preserve the requested action and its start date in the operational summary.",
     "A follow-up request does not by itself require an Investigation or Work Item. It should instead preserve the communication and indicate that a response or follow-up is required when appropriate.",
     "Do not invent markets, stations, placements, dates, or confirmations that are not visible in the screenshot.",
     "Put every clearly readable measurable observation in visibleMetrics.",
