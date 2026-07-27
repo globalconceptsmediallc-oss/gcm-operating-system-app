@@ -1,17 +1,19 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media.html
-   Version: 1.5.1
+   Version: 1.6.0
    Status: Production Candidate
    Sprint: Media Operations — Station Communication Road Test
    Purpose: Live D1-driven Media Operations workspace with a focused
             view selector, automatic station traffic deadlines,
             and automatic Station Landscape discovery with the selected attention record included.
 
-   Station deadline rule:
-   - Deadline = 3 working days before end_date.
+   Station deadline rules:
+   - Active placement deadline = 3 working days before end_date.
+   - Pending/planned placement deadline = 3 working days before start_date.
    - Saturday and Sunday do not count.
    - Deadline is due by 12:00 noon local operating time.
+   - Calculated warnings supplement stored D1 attention flags.
    - No additional D1 date field is required.
 
    Source of truth:
@@ -149,7 +151,7 @@
         </header>
 
         <section class="summary-grid" aria-label="Media summary">
-          <article class="summary-card"><p class="summary-label">Needs Attention</p><p class="summary-value" id="attention-count">—</p><p class="summary-note">Records explicitly flagged for review.</p></article>
+          <article class="summary-card"><p class="summary-label">Needs Attention</p><p class="summary-value" id="attention-count">—</p><p class="summary-note">Calculated traffic deadlines and stored review flags.</p></article>
           <article class="summary-card"><p class="summary-label">Running Now</p><p class="summary-value" id="active-count">—</p><p class="summary-note">Active media placements.</p></article>
           <article class="summary-card"><p class="summary-label">Upcoming</p><p class="summary-value" id="upcoming-count">—</p><p class="summary-note">Pending or planned placements.</p></article>
           <article class="summary-card"><p class="summary-label">History</p><p class="summary-value" id="history-count">—</p><p class="summary-note">Expired media retained for proof and reference.</p></article>
@@ -157,7 +159,7 @@
 
         <section class="panel attention-panel" id="panel-attention">
           <div class="panel-header">
-            <div><h2 class="panel-title">Needs Attention</h2><p class="panel-description">Explicit media alerts from the production record. Deadline automation will be added after this read-only road test is verified.</p></div>
+            <div><h2 class="panel-title">Needs Attention</h2><p class="panel-description">Automatically calculated from the three-working-day traffic rule, plus any stored D1 attention flags.</p></div>
             <span class="count-pill" id="attention-pill">0 items</span>
           </div>
           <div id="attention-list" class="attention-list"><div class="loading">Loading media attention…</div></div>
@@ -285,10 +287,10 @@
       }
 
 
-      function stationDeadline(endDate) {
-        if (!endDate) return null;
+      function stationDeadline(referenceDate) {
+        if (!referenceDate) return null;
 
-        const parts = String(endDate).slice(0,10).split("-").map(Number);
+        const parts = String(referenceDate).slice(0,10).split("-").map(Number);
         if (parts.length !== 3 || parts.some(Number.isNaN)) return null;
 
         const date = new Date(parts[0], parts[1] - 1, parts[2]);
@@ -304,6 +306,56 @@
         }
 
         return date;
+      }
+
+      function deadlineReferenceDate(record) {
+        const status = String(record?.status || "").toLowerCase();
+        return ["pending","planned"].includes(status)
+          ? record?.startDate
+          : record?.endDate;
+      }
+
+      function recordStationDeadline(record) {
+        return stationDeadline(deadlineReferenceDate(record));
+      }
+
+      function isDeadlineDue(record) {
+        const deadline = recordStationDeadline(record);
+        if (!deadline) return false;
+
+        const due = new Date(
+          deadline.getFullYear(),
+          deadline.getMonth(),
+          deadline.getDate(),
+          12, 0, 0, 0
+        );
+
+        return new Date() >= due;
+      }
+
+      function calculatedAttentionReason(record) {
+        const status = String(record?.status || "").toLowerCase();
+
+        if (status === "active" && isDeadlineDue(record)) {
+          return "CURRENT PLACEMENT TRAFFIC DEADLINE";
+        }
+
+        if (["pending","planned"].includes(status) && isDeadlineDue(record)) {
+          return "UPCOMING PLACEMENT TRAFFIC DEADLINE";
+        }
+
+        return "";
+      }
+
+      function needsAttention(record) {
+        return String(record?.attentionStatus || "").toLowerCase() === "attention" ||
+          Boolean(calculatedAttentionReason(record));
+      }
+
+      function attentionReason(record) {
+        return calculatedAttentionReason(record) ||
+          record?.attentionReason ||
+          "Review required.";
       }
 
       function stationDeadlineHtml(endDate, status) {
@@ -358,7 +410,7 @@
                     <td><div class="record-title">${escapeHtml(r.campaignName || r.creativeName || "Untitled")}</div><div class="small">${escapeHtml(r.creativeVersion || r.creativeName || "—")}</div></td>
                     <td>${escapeHtml(r.coopPartner || "—")}</td>
                     <td><div>${formatDate(r.startDate)}</div><div class="small">through ${formatDate(r.endDate)}</div></td>
-                    <td>${stationDeadlineHtml(r.endDate, r.status)}</td>
+                    <td>${stationDeadlineHtml(deadlineReferenceDate(r), r.status)}</td>
                     <td>${badge(r.status)}</td>
                     <td>${escapeHtml(r.actionType || "—")}</td>
                     <td>${badge(r.trafficStatus)}</td>
@@ -374,16 +426,32 @@
       }
 
       function renderAttention(records) {
-        const flagged = records.filter(r => String(r.attentionStatus || "").toLowerCase() === "attention");
+        const flagged = records.filter(needsAttention);
+
         els.attentionCount.textContent = String(flagged.length);
         els.attentionPill.textContent = `${flagged.length} ${flagged.length === 1 ? "item" : "items"}`;
+
         els.attentionList.innerHTML = flagged.length
-          ? flagged.map(r => `
-              <article class="attention-card" data-record-id="${escapeHtml(r.id ?? "")}" tabindex="0">
-                <strong>${escapeHtml(r.clientName)} — ${escapeHtml(r.market || "Media")} / ${escapeHtml(r.outletName || "Outlet")}: ${escapeHtml(r.campaignName || r.creativeName || "Placement")}</strong>
-                <p>${escapeHtml(r.attentionReason || "Review required.")} · Run ends ${formatDate(r.endDate)} · Station deadline: ${stationDeadline(r.endDate) ? escapeHtml(new Intl.DateTimeFormat("en-US",{weekday:"short",month:"short",day:"numeric",year:"numeric"}).format(stationDeadline(r.endDate))) + " by 12:00 noon" : "—"} · Action: ${escapeHtml(r.actionType || "—")}</p>
-              </article>`).join("")
-          : `<div class="empty">No media records are explicitly flagged for attention.</div>`;
+          ? flagged.map(r => {
+              const deadline = recordStationDeadline(r);
+              const status = String(r.status || "").toLowerCase();
+              const dateLabel = ["pending","planned"].includes(status)
+                ? `Starts ${formatDate(r.startDate)}`
+                : `Run ends ${formatDate(r.endDate)}`;
+
+              const deadlineLabel = deadline
+                ? escapeHtml(new Intl.DateTimeFormat("en-US", {
+                    weekday:"short", month:"short", day:"numeric", year:"numeric"
+                  }).format(deadline)) + " by 12:00 noon"
+                : "—";
+
+              return `
+                <article class="attention-card" data-record-id="${escapeHtml(r.id ?? "")}" tabindex="0">
+                  <strong>${escapeHtml(r.clientName)} — ${escapeHtml(r.market || "Media")} / ${escapeHtml(r.outletName || "Outlet")}: ${escapeHtml(r.campaignName || r.creativeName || "Placement")}</strong>
+                  <p>${escapeHtml(attentionReason(r))} · ${dateLabel} · Station deadline: ${deadlineLabel} · Action: ${escapeHtml(r.actionType || "—")}</p>
+                </article>`;
+            }).join("")
+          : `<div class="empty">No media records currently require attention under the three-working-day traffic rule.</div>`;
 
         els.attentionList.querySelectorAll(".attention-card").forEach((card, index) => {
           card.addEventListener("click", () => openMediaAction(flagged[index]));
@@ -410,7 +478,7 @@
         selectedMediaRecord.innerHTML = `
           <div class="record-title">${escapeHtml(record.clientName)} — ${escapeHtml(record.market || "Media")} / ${escapeHtml(record.outletName || "Outlet")}</div>
           <div>${escapeHtml(record.campaignName || record.creativeName || "Placement")}</div>
-          <div class="small">Run ends ${formatDate(record.endDate)} · Station deadline ${stationDeadline(record.endDate) ? escapeHtml(new Intl.DateTimeFormat("en-US",{weekday:"short",month:"short",day:"numeric",year:"numeric"}).format(stationDeadline(record.endDate))) + " by 12:00 noon" : "—"}</div>`;
+          <div class="small">${["pending","planned"].includes(String(record.status || "").toLowerCase()) ? "Starts " + formatDate(record.startDate) : "Run ends " + formatDate(record.endDate)} · Station deadline ${recordStationDeadline(record) ? escapeHtml(new Intl.DateTimeFormat("en-US",{weekday:"short",month:"short",day:"numeric",year:"numeric"}).format(recordStationDeadline(record))) + " by 12:00 noon" : "—"}</div>`;
 
         populateStationLandscape(record);
         updateCommunicationState();
@@ -437,18 +505,19 @@
           const status = String(r.status || "unknown");
           const normalizedStatus = status.toLowerCase();
           const isSelected = r === record;
-          const timing = isSelected
+          const requiresAttention = needsAttention(r);
+          const timing = requiresAttention
             ? "Needs Attention"
             : ["pending","planned"].includes(normalizedStatus)
             ? "Upcoming"
             : "Running Now";
 
-          const attention = isSelected && r.attentionReason
-            ? ` · ${escapeHtml(r.attentionReason)}`
+          const attention = requiresAttention
+            ? ` · ${escapeHtml(attentionReason(r))}`
             : "";
 
           return `<div class="landscape-card">
-            <strong>${isSelected ? "⚠ " : ""}${escapeHtml(timing)} — ${escapeHtml(r.campaignName || r.creativeName || "Placement")}</strong>
+            <strong>${requiresAttention ? "⚠ " : ""}${escapeHtml(timing)} — ${escapeHtml(r.campaignName || r.creativeName || "Placement")}</strong>
             <div class="landscape-meta">
               ${escapeHtml(r.market || "—")} / ${escapeHtml(r.outletName || "—")} ·
               ${formatDate(r.startDate)} – ${formatDate(r.endDate)} ·
