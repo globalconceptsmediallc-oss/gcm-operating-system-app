@@ -1,13 +1,13 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media.html
-   Version: 1.7.2
+   Version: 1.7.3
    Status: Production Candidate
    Sprint: Media Operations — Station Communication Road Test
    Purpose: Live D1-driven Media Operations workspace with a focused
             view selector, automatic station traffic deadlines,
-            Station Landscape discovery, and a multi-placement station
-            communication builder for grouped traffic instructions.
+            Station Landscape discovery, a multi-placement station
+            communication builder, and durable D1 station instructions.
 
    Station deadline rules:
    - Active placement deadline = 3 working days before end_date.
@@ -20,7 +20,8 @@
    Source of truth:
    - D1 media_records through Worker action get-media-operations
    - No Media localStorage
-   - Read-only in Version 1.0.0
+   - Sent station instructions persist to D1 through Worker action
+     commit-media-instructions
    ========================================================= -->
 <!DOCTYPE html>
 <html lang="en">
@@ -868,25 +869,74 @@
         }
       }
 
-      function markDraftSentAwaitingConfirmation() {
-        if (!instructionQueue.length) return;
+      async function markDraftSentAwaitingConfirmation() {
+        if (!instructionQueue.length || markSentAwaiting.disabled) return;
 
-        const sentAt = new Date();
-        awaitingConfirmation = instructionQueue.map(item => ({
-          ...item,
-          sentAt: sentAt.toISOString(),
-          confirmationStatus: "awaiting"
-        }));
+        const itemsToCommit = instructionQueue.map(item => ({...item}));
+        const count = itemsToCommit.length;
 
-        const count = awaitingConfirmation.length;
-        instructionQueue = [];
-        renderInstructionQueue();
-        renderAttention(currentRecords);
+        markSentAwaiting.disabled = true;
+        copyStatus.textContent = "Saving sent instructions to GCM OS…";
 
-        draftActions.classList.remove("is-open");
-        buildStationCommunication.disabled = true;
-        awaitingSummary.innerHTML = `<div class="awaiting-summary">✓ ${count} placement instruction${count === 1 ? "" : "s"} marked Sent — Awaiting Station Confirmation.</div>`;
-        communicationStatus.textContent = `${count} placement instruction${count === 1 ? "" : "s"} sent and now awaiting station confirmation. Process the station reply through Communications when it arrives.`;
+        try {
+          const response = await fetch(WORKER_ENDPOINT, {
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({
+              action:"commit-media-instructions",
+              sentTo:"Stephanie / iHeart",
+              instructions:itemsToCommit.map(item => ({
+                mediaRecordId:Number(item.recordId),
+                clientId:Number(item.clientId),
+                instructionType:item.action,
+                requestedStartDate:null,
+                requestedEndDate:item.action === "EXTEND"
+                  ? item.extendThroughDate
+                  : item.action === "END"
+                  ? item.endDate
+                  : null,
+                requestedChange:item.action === "CHANGE"
+                  ? item.changeInstructions
+                  : null,
+                originalStartDate:item.currentStartDate || null,
+                originalEndDate:item.currentEndDate || null,
+                notes:[
+                  item.verifyCurrentCopy ? "VERIFY CURRENT COPY" : "",
+                  item.replacementDescription ? `Replacement creative: ${item.replacementDescription}` : "",
+                  item.replacementReadyDate ? `Replacement expected: ${item.replacementReadyDate}` : ""
+                ].filter(Boolean).join(" | ") || null
+              }))
+            })
+          });
+
+          const payload = await response.json();
+
+          if (!response.ok || payload?.ok !== true) {
+            throw new Error(payload?.error || payload?.details || "The sent instructions could not be saved.");
+          }
+
+          const sentAt = new Date();
+          awaitingConfirmation = itemsToCommit.map(item => ({
+            ...item,
+            sentAt:sentAt.toISOString(),
+            confirmationStatus:"awaiting"
+          }));
+
+          instructionQueue = [];
+          renderInstructionQueue();
+
+          draftActions.classList.remove("is-open");
+          buildStationCommunication.disabled = true;
+          copyStatus.textContent = "Sent instructions saved to D1.";
+          awaitingSummary.innerHTML = `<div class="awaiting-summary">✓ ${count} placement instruction${count === 1 ? "" : "s"} saved as Sent — Awaiting Station Confirmation.</div>`;
+          communicationStatus.textContent = `${count} placement instruction${count === 1 ? "" : "s"} sent and durably recorded. Process Stephanie's station confirmation through Communications when it arrives.`;
+
+          await loadMedia(clientSelect.value);
+        } catch (error) {
+          console.error("Could not save sent media instructions.", error);
+          copyStatus.textContent = `Not marked sent: ${error?.message || "D1 save failed."} The instruction list has been kept so you can try again.`;
+          markSentAwaiting.disabled = false;
+        }
       }
 
       function applyView(view) {
