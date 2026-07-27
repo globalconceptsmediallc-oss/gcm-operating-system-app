@@ -1,8 +1,8 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 1.3.0
-   Change: Connect Media navigation to media.html
+   Version: 1.4.0
+   Change: Add live Media attention beacon and Mission Control media check
    Source: Production today.html 1.2.0
    ========================================================= -->
 <!DOCTYPE html>
@@ -215,6 +215,62 @@
       background: rgba(52, 124, 232, 0.2);
       color: #ffffff;
       box-shadow: inset 3px 0 0 var(--gcm-gold-500);
+    }
+
+    .nav-link.media-attention {
+      background: rgba(214, 169, 74, 0.18);
+      color: #ffffff;
+      box-shadow: inset 3px 0 0 var(--gcm-gold-500);
+    }
+
+    .media-nav-badge {
+      margin-left: auto;
+      min-width: 24px;
+      height: 24px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 0 7px;
+      border-radius: 999px;
+      background: var(--gcm-gold-500);
+      color: var(--gcm-navy-950);
+      font-size: 0.7rem;
+      font-weight: 900;
+    }
+
+    .media-nav-badge.is-visible {
+      display: inline-flex;
+    }
+
+    .media-check-panel {
+      display: none;
+      border-color: #edcf8d;
+      background: var(--gcm-gold-100);
+    }
+
+    .media-check-panel.is-visible {
+      display: block;
+    }
+
+    .media-check-body {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 18px 22px;
+    }
+
+    .media-check-copy strong {
+      display: block;
+      color: var(--gcm-navy-950);
+      font-size: 0.92rem;
+    }
+
+    .media-check-copy span {
+      display: block;
+      margin-top: 4px;
+      color: var(--text-muted);
+      font-size: 0.8rem;
     }
 
     .nav-icon {
@@ -973,9 +1029,10 @@
           <span>Proof</span>
         </a>
 
-        <a class="nav-link" href="media.html">
+        <a class="nav-link" href="media.html" id="media-nav-link">
           <span class="nav-icon" aria-hidden="true">◉</span>
           <span>Media</span>
+          <span class="media-nav-badge" id="media-nav-badge" aria-label="Media items needing attention"></span>
         </a>
 
         <a class="nav-link" href="#">
@@ -1052,6 +1109,16 @@
             <p class="summary-note" id="proof-note">No completed work is waiting for proof.</p>
           </article>
         </section>
+
+        <article class="panel media-check-panel" id="media-check-panel" aria-live="polite">
+          <div class="media-check-body">
+            <div class="media-check-copy">
+              <strong id="media-check-title">Media needs attention</strong>
+              <span id="media-check-detail">Open Media to review current traffic deadlines.</span>
+            </div>
+            <a class="button button-primary" href="media.html">Check Media</a>
+          </div>
+        </article>
 
         <section class="workspace-grid">
           <div class="stack">
@@ -1244,6 +1311,11 @@
       const proofNote = document.getElementById("proof-note");
       const sidebar = document.getElementById("sidebar");
       const mobileMenuButton = document.getElementById("mobile-menu-button");
+      const mediaNavLink = document.getElementById("media-nav-link");
+      const mediaNavBadge = document.getElementById("media-nav-badge");
+      const mediaCheckPanel = document.getElementById("media-check-panel");
+      const mediaCheckTitle = document.getElementById("media-check-title");
+      const mediaCheckDetail = document.getElementById("media-check-detail");
 
       const cloneDefaults = () => JSON.parse(JSON.stringify(DEFAULT_DATA));
 
@@ -1405,6 +1477,79 @@
         }
       }
 
+      function setMediaAttention(count) {
+        const total = Number(count) || 0;
+        const hasAttention = total > 0;
+
+        mediaNavLink.classList.toggle("media-attention", hasAttention);
+        mediaNavBadge.classList.toggle("is-visible", hasAttention);
+        mediaCheckPanel.classList.toggle("is-visible", hasAttention);
+
+        if (hasAttention) {
+          mediaNavBadge.textContent = String(total);
+          mediaCheckTitle.textContent = `${total} media ${total === 1 ? "item needs" : "items need"} attention`;
+          mediaCheckDetail.textContent = "Traffic deadlines are active. Open Media to review the placements before the station deadline.";
+        } else {
+          mediaNavBadge.textContent = "";
+        }
+      }
+
+      async function loadMediaAttention() {
+        try {
+          const response = await fetch(WORKER_ENDPOINT, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "get-media-operations" })
+          });
+
+          const payload = await response.json();
+
+          if (!response.ok || payload?.ok !== true) {
+            throw new Error(payload?.error || payload?.details || "Media Operations request failed.");
+          }
+
+          const media = payload?.mediaOperations || payload?.media || payload;
+          const attention =
+            media?.needsAttention ??
+            media?.needs_attention ??
+            media?.summary?.needsAttention ??
+            media?.summary?.needs_attention ??
+            media?.counts?.needsAttention ??
+            media?.counts?.needs_attention;
+
+          if (Array.isArray(attention)) {
+            setMediaAttention(attention.length);
+            return;
+          }
+
+          if (Number.isFinite(Number(attention))) {
+            setMediaAttention(Number(attention));
+            return;
+          }
+
+          const records =
+            media?.records ??
+            media?.placements ??
+            media?.items ??
+            [];
+
+          if (Array.isArray(records)) {
+            const count = records.filter((record) =>
+              record?.needsAttention === true ||
+              record?.needs_attention === true ||
+              String(record?.status || "").toLowerCase().includes("attention")
+            ).length;
+            setMediaAttention(count);
+            return;
+          }
+
+          setMediaAttention(0);
+        } catch (error) {
+          console.error("Could not load Media attention.", error);
+          setMediaAttention(0);
+        }
+      }
+
       function renderProof(data) {
         const waiting = data.proofItems.filter((item) => !["complete", "completed", "published", "archived"].includes(String(item.status || "").toLowerCase()));
         proofList.innerHTML = waiting.length ? waiting.map((item) => {
@@ -1460,6 +1605,7 @@
       setDateAndGreeting();
       renderDashboard(loadData());
       loadMissionControlAttention();
+      loadMediaAttention();
     })();
   </script>
 </body>
