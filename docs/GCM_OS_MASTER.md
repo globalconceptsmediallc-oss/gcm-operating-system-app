@@ -1,6 +1,6 @@
 GLOBAL CONCEPTS MEDIA OPERATING SYSTEM — MASTER
 
-File: GCM_OS_MASTER.mdVersion: 1.5Status: AUTHORITATIVEPurpose: Master Architecture, Operating Standard, Production Handoff, and Current-State ReferenceLast Updated: 2026-07-27
+File: GCM_OS_MASTER.mdVersion: 1.7Status: AUTHORITATIVEPurpose: Master Architecture, Operating Standard, Production Handoff, and Current-State ReferenceLast Updated: 2026-07-27
 
 AUTHORITY
 
@@ -2029,3 +2029,508 @@ Proof remains an active hardening track, but do not begin by blindly rebuilding 
 The success condition is not the number of pages built.
 
 The success condition is that each new page removes real manual work from Global Concepts Media while strengthening the same durable operating system.
+
+CURRENT PRODUCTION HANDOFF — 2026-07-27 — OPERATIONAL PAGE AUDIT AND NEXT DIRECTION
+
+This section supersedes the earlier 2026-07-27 next-development priority as the authoritative starting point. Earlier verified architecture, production evidence, Media Monitoring work, Proof findings, and governance rules remain valid unless explicitly changed below.
+
+WHY THIS HANDOFF CHANGED
+
+After the Media Monitoring operational work and Proof road testing, the live production application was reviewed page-by-page from the actual user navigation.
+
+The review exposed an important distinction: several GCM OS pages are already functioning operational engines, while other visible cards, links, navigation destinations, and pages are incomplete, disconnected, informational-only, or presentation-only.
+
+The next phase should therefore not begin by adding another isolated feature.
+
+The governing direction is:
+
+Preserve the working engines.Fix navigation and access.Remove or correct dead ends.Create a consistent application shell.Then apply a gentle page-by-page facelift.
+
+Do not confuse visual polish with operational functionality.
+
+TODAY / MISSION CONTROL
+
+Today remains the daily agency command center.
+
+It should help Global Concepts Media run the agency, see what needs attention, protect client delivery, move investigations and work forward, create and communicate proof, return time to prospecting and client acquisition, and surface useful prospects and revenue opportunities.
+
+Today is functional and strategically important.
+
+Some Today cards / quick actions are informational only or route to incomplete destinations. A visible card must not imply functionality that does not exist.
+
+CLIENTS
+
+The production Clients page currently presents “Active Client Accounts” but only displays Southeast Safes in the observed production state.
+
+This is inconsistent with the known D1 client history and broader GCM OS client set.
+
+The page needs a deliberate client-selection model such as All Clients / Active Clients filtering, a dropdown, searchable list, or another simple mechanism exposing the appropriate complete client set.
+
+Do not hard-code Southeast Safes as though it is the only client.
+
+Clients should be the directory / entry point for client-level operations.
+
+BUSINESS / CLIENT WORKSPACE
+
+Opening Southeast Safes from Clients reaches the existing Business Workspace.
+
+The workspace contains useful D1-backed client information and should be retained.
+
+However, the observed production workspace does not use the shared left-side GCM OS navigation shell. This creates a navigation dead end and makes the workspace feel like a separate application.
+
+Required direction: bring Business Workspace into the shared GCM OS shell without replacing its underlying operational function.
+
+Client Workspace = understand one client.Work Queue = process actionable investigations and work across clients.
+
+Do not merge these responsibilities.
+
+COMMUNICATIONS
+
+Communications is functioning and has already been extensively road-tested.
+
+Preserve its current operational role: email text and/or screenshot evidence, client identification/selection, operational analysis, routing, D1 persistence, Investigation creation when warranted, and recent communication history.
+
+Do not broadly redesign Communications during shell cleanup.
+
+WORK
+
+Work is a real operational engine, not merely a dashboard.
+
+It supports Investigation → Finding → Operational Decision → Specific Work and Work Item completion.
+
+The page is dense and visually rough, but its operational responsibilities must be preserved.
+
+Its summary cards such as open investigations, clients with open work, and existing work items were confirmed during the audit to be informational cards rather than drill-down controls.
+
+Do not imply filtering or navigation behavior that does not exist.
+
+PROOF
+
+Proof & Client Reporting is functioning as a D1 read/reporting layer and remains an active hardening track.
+
+The audit clarified that Proof itself works; the larger issue is consistent application access and navigation.
+
+Do not rebuild Proof merely because surrounding navigation is inconsistent.
+
+Retain the known hardening requirements already recorded in this Master: Historical date synchronization, baseline integration, Results/Wins semantics, monitoring intelligence, business-owner narrative, and deliberate Generate Proof behavior.
+
+PROSPECTS / CLIENT PRE-RESEARCH
+
+Prospects currently reaches Client Pre-Research.
+
+The page accepts a prospective business website and optional context and is intended to create useful intelligence for a more informed first conversation.
+
+Retain it as part of the Acquire side of GCM OS and ultimately place it in the same shared application shell.
+
+BUSINESS SNAPSHOT
+
+Business Snapshot remains a prospect-facing acquisition product.
+
+The observed flow includes Snapshot intake and the separate “Your Business Snapshot” results presentation.
+
+The external/prospect-facing results experience does not need to look identical to the internal operating interface, but links into and out of it must not create unexplained dead ends.
+
+GROWTH REVIEW
+
+The Growth Review destination was observed to return a 404.
+
+This is a verified dead link / incomplete destination.
+
+Do not leave a visible production action routing to a 404. Before restoring the action, determine the correct current production purpose and destination.
+
+MEDIA MONITORING
+
+Media Monitoring has progressed beyond the earlier spreadsheet-only planning stage and has been developed into a functioning GCM OS operational page.
+
+The Media workflow should now be treated as a working operational capability and preserved during shared-shell work.
+
+The road test established the importance of the station-instruction / confirmation loop rather than treating Media as a passive spreadsheet viewer.
+
+Do not restart Media architecture from the spreadsheet by default.
+
+The earlier “FIRST ACTIVE TASK: MEDIA MONITORING” instruction is superseded.
+
+CASE STUDIES
+
+Case Studies does not yet provide a functioning production workflow.
+
+Its conceptual GROW → ACQUIRE purpose remains valid, but do not build it merely to activate the navigation item.
+
+Its evidence requirements and business purpose must be deliberately defined before implementation.
+
+SETTINGS
+
+Settings does not yet provide a functioning production workflow.
+
+Only add settings that control real GCM OS behavior. Do not create settings merely to fill the page.
+
+SHARED APPLICATION SHELL — NEXT DEVELOPMENT OBJECTIVE
+
+The page audit established multiple page-level navigation implementations and at least one important operational page without the common navigation shell.
+
+This creates inconsistent navigation, dead ends, duplicated interface code, and maintenance risk.
+
+The next development objective is to establish a shared GCM OS application shell for the internal operating pages.
+
+The shell should provide a consistent environment for Today, Prospects / Client Pre-Research, Clients, Communications, Work, Proof, Media Monitoring, Business / Client Workspace, and future Case Studies / Settings when those workflows actually exist.
+
+Standardize the appropriate left navigation, branding, current-page state, page working area, header conventions, and production-status/footer treatment.
+
+The objective is not visual redesign for its own sake.
+
+The objective is one operating system, one predictable navigation model, no unexplained dead ends, no operational page that traps the user outside the OS, and less duplicated page-level interface maintenance.
+
+SHARED SHELL IMPLEMENTATION RULE
+
+Do not mass-rewrite every page at once.
+
+First review the current production implementation of navigation / page shell and determine the smallest maintainable shared approach appropriate for the existing GitHub Pages application.
+
+Define the shell contract before migrating operational pages.
+
+Then migrate one production page at a time:
+
+Review actual current file.Preserve page-specific operational logic.Apply shared shell.Deploy.Road-test.Verify.Lock.Move to the next page.
+
+Do not allow shell work to break Communications, Work, Proof, Media, Clients, or Business Workspace data behavior.
+
+PAGE-AUDIT GOVERNING RULE
+
+A visible UI element must accurately communicate its function.
+
+If a card is informational only, it should look informational.If an element is clickable, it should lead somewhere useful.If a page claims to represent clients, work, proof, or another operational category, the records shown must match that claim.
+
+Do not create decorative controls that imply filtering, drill-down, or workflow behavior that does not exist.Do not preserve dead links merely for visual symmetry.
+
+GENTLE FACELIFT — AFTER SHELL STABILITY
+
+The production pages do not require a wholesale redesign.
+
+After shared shell and navigation are stable, perform a gentle page-by-page facelift focused on readability, spacing, hierarchy, consistent card treatment, clear interactive versus informational elements, useful page density, consistent labels, clear next actions, and removal of visual clutter/dead UI.
+
+Preserve the existing GCM visual identity unless a specific usability problem requires change.
+
+Desktop remains the primary operating environment.
+
+COMMERCIAL / PRODUCT DIRECTION
+
+The page audit reinforced that GCM OS can support more than internal client delivery.
+
+The durable intelligence and operating workflow can support monthly agency services, paid Growth Reviews / consulting engagements, Business Snapshot prospect acquisition, and future custom operating-system / software builds based on demonstrated GCM OS methodology and capabilities.
+
+This does not change the core agency flywheel.
+
+The operating system must first work reliably for Global Concepts Media itself. Internal operational success creates the evidence and reusable capability for future consulting and software opportunities.
+
+UPDATED NEXT DEVELOPMENT PRIORITY — 2026-07-27
+
+The previous priority beginning with Media Monitoring is complete enough to move forward and is superseded by this checkpoint.
+
+Priority order:
+
+Shared GCM OS application shell — determine and implement the maintainable common navigation/interface foundation without breaking operational page logic.
+
+Clients access correction — expose the appropriate complete client set through a simple filter/dropdown/list model rather than presenting Southeast Safes as the only active client.
+
+Business Workspace shell integration — retain its D1-backed client intelligence while restoring normal OS navigation.
+
+Page-by-page shell migration and gentle facelift — Today, Prospects, Clients, Communications, Work, Proof, Media, and Business Workspace, one verified production file at a time.
+
+Dead-end cleanup — remove or correct actions such as the current Growth Review 404 and cards that imply unsupported functionality.
+
+Proof hardening — continue the documented functional audit requirements after shell/navigation stability.
+
+Calendar / Appointments — define and build only after existing OS pages operate coherently.
+
+Case Studies — define its verified business purpose and data flow before implementation.
+
+Settings — build only when real configurable system behavior requires it.
+
+These priorities are sequential guidance, not permission for a broad simultaneous rewrite.
+
+NEXT DEVELOPMENT SUCCESS CONDITION
+
+The next thread succeeds when GCM OS begins behaving like one coherent operating application rather than a collection of individually built pages.
+
+The first successful milestone is not “all pages redesigned.”
+
+It is:
+
+A maintainable shared shell direction is established.One real production page is migrated safely.Its operational behavior still works.Navigation is consistent.No duplicate source of truth is created.The method can then be repeated page by page.
+
+2026-07-27 — VERSION 1.6 HANDOFF STARTING INSTRUCTION
+
+Begin the next development thread by reading GCM_OS_MASTER.md Version 1.6 completely.
+
+It is the current authority for GCM OS.
+
+Do not restart the repository audit.Do not restart Media Monitoring architecture.Do not reconstruct Communications → Investigation → Work → Proof.Do not begin by redesigning operational engines that already work.
+
+FIRST ACTIVE TASK: SHARED GCM OS APPLICATION SHELL.
+
+Use the completed production page audit recorded in this Master.
+
+The audit established:
+
+Today is the agency command center.Prospects / Client Pre-Research is an Acquire workflow.Clients currently exposes only Southeast Safes and needs proper access to the broader client set.Business Workspace contains useful D1-backed client intelligence but lacks the common OS navigation.Communications is a functioning operational engine.Work is a functioning Investigation / Work processing engine; its top cards are informational, not drill-down controls.Proof is a functioning reporting engine with known hardening requirements.Media Monitoring is now a functioning operational capability and should be preserved.Growth Review currently has a 404 destination.Case Studies is not yet a functioning workflow.Settings is not yet a functioning workflow.
+
+Before changing code, review the actual current production file(s) responsible for the existing navigation / application shell.
+
+Determine the smallest maintainable way to create a common internal GCM OS shell for the existing GitHub Pages application.
+
+Do not mass-rewrite pages.
+
+Choose the first page migration deliberately, provide a complete fresh-install replacement file with the mandatory visible version header, deploy it, road-test it, verify that its operational behavior is unchanged, and only then continue.
+
+The business success condition remains:
+
+GCM OS reduces the time required to run Global Concepts Media, protects client delivery, makes completed value easy to prove, and returns the majority of working time to prospecting, client work, client communication, and agency growth.
+
+DEFERRED PRODUCT ENHANCEMENTS / DEVELOPMENT LEDGER — 2026-07-27
+
+PURPOSE
+
+This ledger is the durable record for enhancements, product ideas, workflow improvements, and future capabilities that are deliberately banked during road testing so development can continue without losing them.
+
+Permanent rule:
+
+If Andy and ChatGPT agree to defer an enhancement, defect, product idea, or future capability, it must be recorded in a durable project record during that working thread.
+
+“Remember it for later” is not sufficient.
+
+The Master does not need to be rewritten after every idea. A lightweight working-thread ledger may be maintained during development and reconciled into this section at the next handoff.
+
+At handoff:
+
+Working-thread ledger→ determine what was completed→ determine what remains deferred→ remove superseded ideas→ update this Master→ create the next-thread handoff.
+
+BANKED ENHANCEMENT — COORDINATED CROSS-CHANNEL PROMOTION
+
+Status: DEFERRED — IMPORTANTPillar: DELIVER / GROWApplies to: Media Operations, Client Workspace, Mission Control, Calendar/Planning, future Social Media capability
+
+GCM OS should help Global Concepts Media recognize when a currently running radio, website, event, gun-show, or other promotion should be supported by coordinated social-media activity.
+
+This is especially important because the current real-world workflow may not automatically provide complete cross-channel coordination. For example, Kristy handles Facebook activity for gun shows, but GCM may need to supplement social media so that currently running radio or website promotions are also supported appropriately.
+
+The system should eventually help answer:
+
+What promotions are currently running for this client?What radio placements are currently active?What website promotions / landing pages are currently active?What events or gun shows are being promoted?What social-media support already exists?Which active promotions are missing supporting social-media activity?What additional social content should GCM create or coordinate?When should that support begin and end so it aligns with the promotion dates?
+
+Potential future operating model:
+
+Active Promotion / Media Placement↓Identify Promotion Dates and Channels↓Check Existing Social Support↓Identify Missing Cross-Channel Support↓Create Reminder / Recommended Action↓Coordinate Supplemental Social Media↓Record Completed Support↓Measure / Report Where Appropriate
+
+This should not assume Facebook is the only social channel.
+
+It should support the business objective of making active promotions work together rather than allowing radio, website, event, and social activity to operate as disconnected silos.
+
+Do not build this as a generic social-media scheduler without first reviewing the actual GCM workflow and existing responsibilities.
+
+BANKED ENHANCEMENT — MEDIA OPERATIONS REMINDERS / ATTENTION
+
+Status: DEFERRED / PARTIALLY IMPLEMENTEDApplies to: Media Operations and Mission Control
+
+Media Operations should continue to surface time-sensitive placement obligations and confirmation loops through Mission Control.
+
+The road test established the value of deadline-driven attention, including station traffic deadlines and “Sent — Awaiting Station Confirmation” state.
+
+Future enhancement should ensure the OS can remind the consultant when a media obligation, confirmation, extension, replacement creative, or related follow-up is approaching or overdue.
+
+BANKED ENHANCEMENT — MEDIA OPERATIONS MUST BE GENERAL, NOT SES-RADIO-SPECIFIC
+
+Status: DEFERRED / GOVERNING PRODUCT REQUIREMENTApplies to: Media Operations
+
+The Media capability should ultimately support appropriate media placements for any GCM client rather than being designed only around Southeast Safes or one radio workflow.
+
+The real SES/iHeart workflow is the current road-test case, not the permanent limit of the product.
+
+The data and UI should be able to evolve to represent other outlets, markets, media types, campaigns, creatives, promotion dates, traffic requirements, and confirmation states without creating a separate system for each client.
+
+BANKED ENHANCEMENT — SINGLE COORDINATED MEDIA INSTRUCTION EMAIL
+
+Status: PARTIALLY IMPLEMENTED / PRESERVEApplies to: Media Operations
+
+When multiple related media changes are being requested from the same station / representative, the OS should support combining them into one well-written correspondence rather than forcing separate emails for each placement.
+
+The user should be able to select the appropriate changes to include in one correspondence.
+
+The road test established the practical value of a concise consolidated instruction email.
+
+BANKED ENHANCEMENT — MEDIA SEND / SENT / CONFIRMATION LOOP
+
+Status: PARTIALLY IMPLEMENTED / PRESERVEApplies to: Media Operations
+
+The operating loop must preserve:
+
+Prepare instruction→ Review→ Send / copy into Gmail under current workflow→ Mark Sent→ Await station confirmation→ Receive response confirming changes→ Update placement dates/status→ Close the loop→ Reflect the new state on Media and Mission Control.
+
+A future direct Gmail send capability may be evaluated, but the current manual copy/paste-to-Gmail workflow is acceptable while road testing.
+
+The OS must not treat “email drafted” as “change completed.”
+
+BANKED ENHANCEMENT — CURRENTLY RUNNING MEDIA / OWNER QUESTION
+
+Status: DEFERREDApplies to: Media Operations, Client Workspace, Client Reporting
+
+GCM OS should be able to answer a simple owner/client question such as:
+
+“What spots are currently running?”
+
+The answer should come from durable current placement records and should be understandable without reconstructing the media spreadsheet manually.
+
+The same principle should eventually support questions such as what creative is running, where it is running, the active date range, and what is awaiting confirmation.
+
+BANKED ENHANCEMENT — EXTENSION INTELLIGENCE
+
+Status: PARTIALLY IMPLEMENTED / PRESERVEApplies to: Media Operations
+
+When extending an existing placement, the OS should make clear when the requested creative / campaign is not currently present in the active placement list rather than silently treating it as an ordinary extension.
+
+The workflow should distinguish an actual extension from adding/restarting something that is not currently running.
+
+BANKED ENHANCEMENT — SHARED HEADER / NAVIGATION / FOOTER
+
+Status: NEXT ACTIVE DEVELOPMENT TRACKApplies to: Internal GCM OS pages
+
+The application should use a maintainable shared shell so common navigation, branding, page structure, and appropriate footer/status treatment remain consistent.
+
+This should reduce duplicated page-level maintenance and prevent operational pages such as Business Workspace from losing normal OS navigation.
+
+Implementation must remain one production page at a time and must not break working page-specific logic.
+
+BANKED ENHANCEMENT — TODAY AS OPERATE + GROW COMMAND CENTER
+
+Status: PRODUCT DIRECTIONApplies to: Today / Mission Control
+
+Today should preserve both sides of the GCM operating model:
+
+OPERATE:Protect current client delivery, surface deadlines, investigations, work, proof, confirmations, and issues requiring attention.
+
+GROW:When operational obligations permit, surface useful prospecting opportunities and help Andy spend time acquiring business.
+
+The Highest-Value Next Action concept should eventually reflect real operational priority rather than behaving as a permanently static acquisition prompt.
+
+The original prospecting intelligence vision remains part of the product.
+
+BANKED ENHANCEMENT — ONE OR TWO STRONG PROSPECTS PER DAY
+
+Status: DEFERRED PRODUCT DIRECTIONApplies to: Prospecting / Today
+
+The prospecting intelligence engine should eventually help identify approximately one or two genuinely worthwhile businesses for Andy to contact rather than merely building a large undifferentiated prospect list.
+
+The value is prioritization and useful pre-call intelligence:
+
+Who should I contact?Why is this business worth my time?What observable opportunity exists?What should I know before the first conversation?
+
+Do not invent probability of sale, budget, or intent.
+
+BANKED ENHANCEMENT — CLIENT DIRECTORY ACCESS
+
+Status: NEXT DEVELOPMENT TRACKApplies to: Clients
+
+Clients should expose the appropriate complete client set through a simple All / Active / status filter, dropdown, searchable list, or similar mechanism.
+
+The production page should not make the broader D1 client history effectively disappear because only one account is currently displayed.
+
+Historical/inactive clients must remain distinguishable from active accounts.
+
+BANKED ENHANCEMENT — CLIENT WORKSPACE AS COMPLETE OPERATIONAL VIEW
+
+Status: DEFERRED / PARTIALLY BUILTApplies to: Business Workspace
+
+The client workspace should become the single understandable operational view for one client while continuing to read from authoritative operational records.
+
+It should eventually make it easy to understand:
+
+Current account state.Why the client needs attention.Open investigations/work.Current media/promotions.Recent communications.Completed work.Proof / reporting.Measured results.Business priorities.Next best action.
+
+Do not turn the workspace into a competing database or duplicate the Work Queue.
+
+BANKED ENHANCEMENT — PROOF ACCESS FROM THE OPERATIONAL CYCLE
+
+Status: DEFERREDApplies to: Proof, Work, Client Workspace, Today
+
+Proof should remain directly accessible as a reporting tool, but completed operational work should also lead naturally toward Proof/client communication.
+
+Useful entry paths may include:
+
+Today → Proof.Client Workspace → Proof with client preselected.Work completion → relevant Proof/reporting path.Proof navigation → ad hoc weekly/monthly/historical reporting.
+
+Do not duplicate the Proof engine on other pages.
+
+BANKED ENHANCEMENT — PROOF / REPORTING HARDENING
+
+Status: DEFERRED / DOCUMENTED DEFECTSApplies to: Proof
+
+Preserve the previously documented requirements:
+
+Historical date synchronization.Stored baseline integration.Correct Results / Wins semantics.Monitoring intelligence separate from completed work.Business-owner-oriented narrative.Deliberate Generate Proof behavior.Recorded time where defensible.Detailed Proof of Work Digest and Internal Summary as supporting outputs.
+
+BANKED ENHANCEMENT — CALENDAR / APPOINTMENTS
+
+Status: DEFERREDApplies to: Future Calendar capability, Mission Control, Clients, Prospects
+
+GCM OS should eventually provide a useful appointment/calendar capability.
+
+Before building, determine the relationship to Google Calendar and avoid creating a second calendar source of truth unnecessarily.
+
+Appointments may need to connect appropriately to prospects, clients, meetings, follow-up obligations, and Mission Control.
+
+BANKED ENHANCEMENT — CASE STUDY ENGINE
+
+Status: DEFERRED / PURPOSE TO DEFINEApplies to: GROW → ACQUIRE
+
+Case Studies should eventually help turn verified client outcomes into useful acquisition assets.
+
+Potential flow:
+
+Client baseline→ work/intervention→ measured result→ Proof/client history→ verified business outcome→ case-study candidate→ internal/public sales asset.
+
+Do not fabricate outcomes or automatically publish client information.
+
+BANKED ENHANCEMENT — PRODUCTIZATION OF GCM OS
+
+Status: STRATEGIC FUTURE OPPORTUNITYApplies to: GCM business model
+
+GCM OS began from a prospecting-intelligence objective and expanded into an operating system for running Global Concepts Media.
+
+If the internal system proves useful and repeatable, that capability can support additional GCM revenue opportunities, including:
+
+Growth Reviews / consulting.Business intelligence engagements.Custom operating-system/software builds for other businesses.Implementation/automation consulting based on real operating workflows.
+
+Product evolution:
+
+Prospecting Intelligence→ Agency Operating System→ Proven Internal Operating System→ Productized Consulting→ Custom Business OS / Software.
+
+This opportunity must not turn GCM back into a permanent internal software-development project.
+
+First make GCM OS reliably useful for GCM itself.
+
+BANKED ENHANCEMENT — DEVELOPMENT LEDGER GOVERNANCE
+
+Status: PERMANENT RULE
+
+Going forward, whenever a useful enhancement arises during road testing and the decision is “do not stop; bank it for later,” record it immediately in a lightweight working-thread development ledger.
+
+The record should include:
+
+Enhancement / idea.Why it matters.Where it belongs.Current status: Deferred / Partially Implemented / Completed / Superseded.Any real-world example that caused the idea.
+
+At handoff, reconcile that ledger into this Master.
+
+This rule exists specifically so future development does not depend on conversational memory.
+
+UPDATED VERSION 1.7 HANDOFF NOTE
+
+Version 1.7 preserves the Version 1.6 shared-shell starting direction and adds the durable Deferred Product Enhancements / Development Ledger.
+
+The next thread should not attempt to build the entire ledger.
+
+FIRST ACTIVE TASK remains:
+
+SHARED GCM OS APPLICATION SHELL.
+
+The ledger is a protected future-development backlog. Items should be activated deliberately when they become the appropriate next business priority.
+
+When a new enhancement is banked in the next thread, document it during that thread rather than relying on memory.
+
