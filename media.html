@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media.html
-   Version: 1.7.3
+   Version: 1.7.4
    Status: Production Candidate
    Sprint: Media Operations — Station Communication Road Test
    Purpose: Live D1-driven Media Operations workspace with a focused
@@ -883,7 +883,8 @@
             method:"POST",
             headers:{"Content-Type":"application/json"},
             body:JSON.stringify({
-              action:"commit-media-instructions",
+              action:"get-media-operations",
+              operation:"mark_sent_awaiting_confirmation",
               sentTo:"Stephanie / iHeart",
               instructions:itemsToCommit.map(item => ({
                 mediaRecordId:Number(item.recordId),
