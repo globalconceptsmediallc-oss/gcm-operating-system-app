@@ -1,305 +1,184 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/mediaOperations.js
-   Version: 7.4.0
+   Version: 7.4.1
    Status: Production Candidate
-   Sprint: Media Operations — Phase 1 Retrieval
+   Source: Production routes/mediaOperations.js 7.4.0
+   Sprint: Media Operations — Authoritative Attention Engine
    Purpose: Read-only retrieval of durable media placement records
-            from D1 for the Media Operations workspace.
-
-   Production rules:
-   - media_records owns media placement / rotation state.
-   - clients owns client identity.
-   - communications owns actual sent / received communication.
-   - evidence owns proof.
-   - work_items owns actionable work.
-   - This route does not create, update, or delete records.
-   - Optional clientId filtering is supported.
+            from D1 plus authoritative station traffic deadlines
+            and calculated Media Needs Attention state.
    ========================================================= */
 
-import {
-  VERSION,
-  ACTIONS
-} from "../shared/config.js";
-
-import {
-  safeErrorMessage,
-  logWorkerError,
-  jsonResponse
-} from "../shared/http.js";
-
-import {
-  getDatabase,
-  rowsOf
-} from "../shared/database.js";
-
-/* =========================================================
-   Media Operations — Read-Only Retrieval
-   ========================================================= */
+import { VERSION, ACTIONS } from "../shared/config.js";
+import { safeErrorMessage, logWorkerError, jsonResponse } from "../shared/http.js";
+import { getDatabase, rowsOf } from "../shared/database.js";
 
 export async function handleMediaOperations(body, env, requestId) {
   const db = getDatabase(env);
 
   if (!db || typeof db.prepare !== "function") {
-    return jsonResponse({
-      ok: false,
-      requestId,
-      action: ACTIONS.GET_MEDIA_OPERATIONS,
-      version: VERSION,
-      error: "The D1 binding is unavailable. Bind the production database as DB, GCM_OS_DB, or DATABASE."
-    }, 503);
+    return jsonResponse({ok:false,requestId,action:ACTIONS.GET_MEDIA_OPERATIONS,version:VERSION,error:"The D1 binding is unavailable. Bind the production database as DB, GCM_OS_DB, or DATABASE."},503);
   }
 
   const requestedClientId = normalizeOptionalClientId(body?.clientId);
 
   if (body?.clientId !== undefined && requestedClientId === null) {
-    return jsonResponse({
-      ok: false,
-      requestId,
-      action: ACTIONS.GET_MEDIA_OPERATIONS,
-      version: VERSION,
-      error: "clientId must be a positive integer when provided."
-    }, 400);
+    return jsonResponse({ok:false,requestId,action:ACTIONS.GET_MEDIA_OPERATIONS,version:VERSION,error:"clientId must be a positive integer when provided."},400);
   }
 
   try {
-    const [clientsResult, mediaResult] = await Promise.all([
-      db.prepare(`
-        SELECT
-          id,
-          client_code,
-          name,
-          status
-        FROM clients
-        WHERE LOWER(COALESCE(status, 'active')) NOT IN (
-          'inactive',
-          'archived',
-          'deleted'
-        )
-        ORDER BY
-          LOWER(name) ASC,
-          id ASC
-      `).all(),
+    const clientsResult = await db.prepare(`
+      SELECT id, client_code, name, status FROM clients
+      WHERE LOWER(COALESCE(status, 'active')) NOT IN ('inactive','archived','deleted')
+      ORDER BY LOWER(name) ASC, id ASC
+    `).all();
 
-      requestedClientId
-        ? db.prepare(`
-            SELECT
-              mr.id,
-              mr.client_id,
-              c.client_code,
-              c.name AS client_name,
-              mr.media_type,
-              mr.market,
-              mr.outlet_name,
-              mr.campaign_name,
-              mr.creative_name,
-              mr.creative_version,
-              mr.file_name,
-              mr.coop_partner,
-              mr.start_date,
-              mr.end_date,
-              mr.status,
-              mr.action_type,
-              mr.script_text,
-              mr.notes,
-              mr.traffic_status,
-              mr.confirmation_status,
-              mr.attention_status,
-              mr.attention_reason,
-              mr.created_at,
-              mr.updated_at
-            FROM media_records mr
-            INNER JOIN clients c
-              ON c.id = mr.client_id
-            WHERE mr.client_id = ?
-            ORDER BY
-              CASE LOWER(COALESCE(mr.status, ''))
-                WHEN 'active' THEN 1
-                WHEN 'pending' THEN 2
-                WHEN 'planned' THEN 3
-                WHEN 'expired' THEN 4
-                ELSE 5
-              END,
-              COALESCE(mr.end_date, '9999-12-31') ASC,
-              COALESCE(mr.start_date, '9999-12-31') ASC,
-              LOWER(COALESCE(mr.market, '')) ASC,
-              LOWER(COALESCE(mr.outlet_name, '')) ASC,
-              mr.id ASC
-          `).bind(requestedClientId).all()
-        : db.prepare(`
-            SELECT
-              mr.id,
-              mr.client_id,
-              c.client_code,
-              c.name AS client_name,
-              mr.media_type,
-              mr.market,
-              mr.outlet_name,
-              mr.campaign_name,
-              mr.creative_name,
-              mr.creative_version,
-              mr.file_name,
-              mr.coop_partner,
-              mr.start_date,
-              mr.end_date,
-              mr.status,
-              mr.action_type,
-              mr.script_text,
-              mr.notes,
-              mr.traffic_status,
-              mr.confirmation_status,
-              mr.attention_status,
-              mr.attention_reason,
-              mr.created_at,
-              mr.updated_at
-            FROM media_records mr
-            INNER JOIN clients c
-              ON c.id = mr.client_id
-            ORDER BY
-              LOWER(c.name) ASC,
-              CASE LOWER(COALESCE(mr.status, ''))
-                WHEN 'active' THEN 1
-                WHEN 'pending' THEN 2
-                WHEN 'planned' THEN 3
-                WHEN 'expired' THEN 4
-                ELSE 5
-              END,
-              COALESCE(mr.end_date, '9999-12-31') ASC,
-              COALESCE(mr.start_date, '9999-12-31') ASC,
-              LOWER(COALESCE(mr.market, '')) ASC,
-              LOWER(COALESCE(mr.outlet_name, '')) ASC,
-              mr.id ASC
-          `).all()
-    ]);
+    const sql = `
+      SELECT mr.id,mr.client_id,c.client_code,c.name AS client_name,
+        mr.media_type,mr.market,mr.outlet_name,mr.campaign_name,mr.creative_name,
+        mr.creative_version,mr.file_name,mr.coop_partner,mr.start_date,mr.end_date,
+        mr.status,mr.action_type,mr.script_text,mr.notes,mr.traffic_status,
+        mr.confirmation_status,mr.attention_status,mr.attention_reason,
+        mr.created_at,mr.updated_at
+      FROM media_records mr
+      INNER JOIN clients c ON c.id = mr.client_id
+      ${requestedClientId ? "WHERE mr.client_id = ?" : ""}
+      ORDER BY LOWER(c.name) ASC,
+        CASE LOWER(COALESCE(mr.status,'')) WHEN 'active' THEN 1 WHEN 'pending' THEN 2 WHEN 'planned' THEN 3 WHEN 'expired' THEN 4 ELSE 5 END,
+        COALESCE(mr.end_date,'9999-12-31') ASC,
+        COALESCE(mr.start_date,'9999-12-31') ASC,
+        LOWER(COALESCE(mr.market,'')) ASC,
+        LOWER(COALESCE(mr.outlet_name,'')) ASC,
+        mr.id ASC
+    `;
 
-    const clients = rowsOf(clientsResult).map((client) => ({
-      clientId: Number(client.id),
-      clientCode: String(client.client_code || ""),
-      clientName: String(client.name || client.client_code || "Unknown Client"),
-      status: String(client.status || "")
+    const stmt = db.prepare(sql);
+    const mediaResult = requestedClientId ? await stmt.bind(requestedClientId).all() : await stmt.all();
+
+    const clients = rowsOf(clientsResult).map(client => ({
+      clientId:Number(client.id),clientCode:String(client.client_code||""),
+      clientName:String(client.name||client.client_code||"Unknown Client"),status:String(client.status||"")
     }));
 
-    const mediaRecords = rowsOf(mediaResult).map(mapMediaRecord);
-
-    const summary = buildSummary(mediaRecords);
+    const now = new Date();
+    const mediaRecords = rowsOf(mediaResult).map(row => enrichMediaRecord(mapMediaRecord(row), now));
 
     return jsonResponse({
-      ok: true,
-      requestId,
-      action: ACTIONS.GET_MEDIA_OPERATIONS,
-      version: VERSION,
-      mediaOperations: {
-        clientId: requestedClientId,
-        clients,
-        summary,
-        records: mediaRecords
-      }
+      ok:true,requestId,action:ACTIONS.GET_MEDIA_OPERATIONS,version:VERSION,
+      mediaOperations:{clientId:requestedClientId,clients,summary:buildSummary(mediaRecords),records:mediaRecords}
     });
   } catch (error) {
-    logWorkerError({
-      requestId,
-      route: ACTIONS.GET_MEDIA_OPERATIONS,
-      stage: "media_operations_query",
-      error
-    });
-
-    return jsonResponse({
-      ok: false,
-      requestId,
-      action: ACTIONS.GET_MEDIA_OPERATIONS,
-      version: VERSION,
-      error: "Media Operations could not load media records.",
-      details: safeErrorMessage(error)
-    }, 500);
+    logWorkerError({requestId,route:ACTIONS.GET_MEDIA_OPERATIONS,stage:"media_operations_query",error});
+    return jsonResponse({ok:false,requestId,action:ACTIONS.GET_MEDIA_OPERATIONS,version:VERSION,error:"Media Operations could not load media records.",details:safeErrorMessage(error)},500);
   }
 }
-
-/* =========================================================
-   Mapping
-   ========================================================= */
 
 function mapMediaRecord(row) {
   return {
-    id: Number(row.id),
-    clientId: Number(row.client_id),
-    clientCode: String(row.client_code || ""),
-    clientName: String(row.client_name || row.client_code || "Unknown Client"),
-    mediaType: nullableString(row.media_type),
-    market: nullableString(row.market),
-    outletName: nullableString(row.outlet_name),
-    campaignName: nullableString(row.campaign_name),
-    creativeName: nullableString(row.creative_name),
-    creativeVersion: nullableString(row.creative_version),
-    fileName: nullableString(row.file_name),
-    coopPartner: nullableString(row.coop_partner),
-    startDate: nullableString(row.start_date),
-    endDate: nullableString(row.end_date),
-    status: nullableString(row.status),
-    actionType: nullableString(row.action_type),
-    scriptText: nullableString(row.script_text),
-    notes: nullableString(row.notes),
-    trafficStatus: nullableString(row.traffic_status),
-    confirmationStatus: nullableString(row.confirmation_status),
-    attentionStatus: nullableString(row.attention_status),
-    attentionReason: nullableString(row.attention_reason),
-    createdAt: nullableString(row.created_at),
-    updatedAt: nullableString(row.updated_at)
+    id:Number(row.id),clientId:Number(row.client_id),clientCode:String(row.client_code||""),
+    clientName:String(row.client_name||row.client_code||"Unknown Client"),
+    mediaType:nullableString(row.media_type),market:nullableString(row.market),
+    outletName:nullableString(row.outlet_name),campaignName:nullableString(row.campaign_name),
+    creativeName:nullableString(row.creative_name),creativeVersion:nullableString(row.creative_version),
+    fileName:nullableString(row.file_name),coopPartner:nullableString(row.coop_partner),
+    startDate:nullableString(row.start_date),endDate:nullableString(row.end_date),
+    status:nullableString(row.status),actionType:nullableString(row.action_type),
+    scriptText:nullableString(row.script_text),notes:nullableString(row.notes),
+    trafficStatus:nullableString(row.traffic_status),confirmationStatus:nullableString(row.confirmation_status),
+    attentionStatus:nullableString(row.attention_status),attentionReason:nullableString(row.attention_reason),
+    createdAt:nullableString(row.created_at),updatedAt:nullableString(row.updated_at)
   };
 }
 
+function enrichMediaRecord(record, now) {
+  const storedAttention = String(record.attentionStatus||"").toLowerCase()==="attention";
+  const deadline = stationDeadlineForRecord(record);
+  const calculatedAttention = isCalculatedAttention(record, deadline, now);
+  const calculatedReason = calculatedAttentionReason(record);
+
+  return {...record,
+    stationDeadline:deadline ? formatDateOnly(deadline) : null,
+    stationDeadlineTime:deadline ? "12:00 noon" : null,
+    needsAttention:storedAttention || calculatedAttention,
+    calculatedAttention,
+    calculatedAttentionReason:calculatedAttention ? calculatedReason : null,
+    effectiveAttentionReason:calculatedAttention ? calculatedReason : storedAttention ? (record.attentionReason||"Stored media attention flag.") : null
+  };
+}
+
+function stationDeadlineForRecord(record) {
+  const status=String(record.status||"").toLowerCase();
+  if(status==="active") return subtractWorkingDays(parseDateOnly(record.endDate),3);
+  if(status==="pending"||status==="planned") return subtractWorkingDays(parseDateOnly(record.startDate),3);
+  return null;
+}
+
+function isCalculatedAttention(record, deadline, now) {
+  if(!deadline) return false;
+  const status=String(record.status||"").toLowerCase();
+  if(!["active","pending","planned"].includes(status)) return false;
+  const warningStart=previousWorkingDay(deadline);
+  if(!warningStart) return false;
+  const start=new Date(warningStart.getFullYear(),warningStart.getMonth(),warningStart.getDate(),0,0,0,0);
+  return now>=start;
+}
+
+function calculatedAttentionReason(record) {
+  const status=String(record.status||"").toLowerCase();
+  if(status==="active") return "CURRENT PLACEMENT TRAFFIC DEADLINE";
+  if(status==="pending"||status==="planned") return "UPCOMING PLACEMENT TRAFFIC DEADLINE";
+  return null;
+}
+
+function subtractWorkingDays(date,count) {
+  if(!date) return null;
+  const result=new Date(date); let remaining=count;
+  while(remaining>0){result.setDate(result.getDate()-1);if(isWorkingDay(result))remaining--;}
+  return result;
+}
+
+function previousWorkingDay(date) {
+  if(!date) return null;
+  const result=new Date(date);
+  do{result.setDate(result.getDate()-1);}while(!isWorkingDay(result));
+  return result;
+}
+
+function isWorkingDay(date){const day=date.getDay();return day!==0&&day!==6;}
+
+function parseDateOnly(value) {
+  if(!value) return null;
+  const m=String(value).slice(0,10).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!m) return null;
+  const y=Number(m[1]),mo=Number(m[2]),d=Number(m[3]);
+  const date=new Date(y,mo-1,d,12,0,0,0);
+  return date.getFullYear()===y&&date.getMonth()===mo-1&&date.getDate()===d ? date : null;
+}
+
+function formatDateOnly(date){
+  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+}
+
 function buildSummary(records) {
-  return records.reduce((summary, record) => {
-    const status = String(record.status || "").toLowerCase();
-
-    summary.total += 1;
-
-    if (status === "active") {
-      summary.active += 1;
-    } else if (status === "pending" || status === "planned") {
-      summary.upcoming += 1;
-    } else if (status === "expired") {
-      summary.history += 1;
-    } else {
-      summary.other += 1;
-    }
-
-    if (
-      String(record.attentionStatus || "").toLowerCase() === "attention"
-    ) {
-      summary.flaggedAttention += 1;
-    }
-
+  return records.reduce((summary,record)=>{
+    const status=String(record.status||"").toLowerCase();
+    summary.total++;
+    if(status==="active")summary.active++;
+    else if(status==="pending"||status==="planned")summary.upcoming++;
+    else if(status==="expired")summary.history++;
+    else summary.other++;
+    if(String(record.attentionStatus||"").toLowerCase()==="attention")summary.flaggedAttention++;
+    if(record.calculatedAttention===true)summary.calculatedAttention++;
+    if(record.needsAttention===true)summary.needsAttention++;
     return summary;
-  }, {
-    total: 0,
-    active: 0,
-    upcoming: 0,
-    history: 0,
-    other: 0,
-    flaggedAttention: 0
-  });
+  },{total:0,active:0,upcoming:0,history:0,other:0,flaggedAttention:0,calculatedAttention:0,needsAttention:0});
 }
 
-/* =========================================================
-   Validation Helpers
-   ========================================================= */
-
-function normalizeOptionalClientId(value) {
-  if (value === undefined || value === null || value === "") {
-    return undefined;
-  }
-
-  const numeric = Number(value);
-
-  if (!Number.isInteger(numeric) || numeric <= 0) {
-    return null;
-  }
-
-  return numeric;
+function normalizeOptionalClientId(value){
+  if(value===undefined||value===null||value==="")return undefined;
+  const numeric=Number(value);
+  return Number.isInteger(numeric)&&numeric>0 ? numeric : null;
 }
 
-function nullableString(value) {
-  return value === undefined || value === null
-    ? null
-    : String(value);
-}
+function nullableString(value){return value===undefined||value===null?null:String(value);}
