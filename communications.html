@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: communications.html
-   Version: 2.5.1
+   Version: 2.6.0
    Source: Production Frontend
    Purpose: Client Communications intake and operational routing.
    ========================================================= -->
@@ -86,6 +86,11 @@
     .route input{width:18px;height:18px;margin:2px 0 0;accent-color:var(--blue)}
     .route strong{display:block;color:var(--navy);font-size:.86rem}
     .route span span{display:block;margin-top:3px;color:var(--muted);font-size:.76rem}
+    .route.disabled{opacity:.58;background:#f7f8fa}
+    .route.disabled input{cursor:not-allowed}
+    .decision-detail{display:grid;gap:10px;margin-top:14px;padding:14px;border:1px solid #cfe0f8;border-radius:12px;background:var(--info-bg)}
+    .decision-detail-row strong{display:block;color:var(--navy);font-size:.77rem;text-transform:uppercase;letter-spacing:.05em}
+    .decision-detail-row span{display:block;margin-top:4px;color:var(--text);font-size:.83rem;line-height:1.42}
     .note{margin:12px 0 0;color:var(--muted);font-size:.78rem}
     .history-item{padding:13px;border:1px solid var(--border);border-radius:11px;margin-top:10px}
     .history-item:first-child{margin-top:0}
@@ -180,12 +185,12 @@ Backlink Audit update
                 <p class="field-help">Leave this blank when the screenshot is readable. Use it only to supplement or correct screenshot extraction.</p>
               </div>
               <button class="button primary" id="analyze-button" type="button" disabled>Generate Operational Decision</button>
-              <div id="analysis-status" class="status pending" style="margin-top:14px">Select a client and paste the email text. A screenshot is optional supporting evidence.</div>
+              <div id="analysis-status" class="status pending" style="margin-top:14px">Upload a readable communication screenshot to begin. Client and email text are optional overrides.</div>
             </div>
           </article>
 
           <article class="panel" id="analysis-panel" hidden>
-            <div class="panel-header"><h2>3. Review Operational Decision</h2><p>Confirm what happened and what records should be created.</p></div>
+            <div class="panel-header"><h2>3. Review Operational Decision</h2><p>Confirm what happened, then choose the business response in Step 4.</p></div>
             <div class="panel-body">
               <div class="decision-banner">
                 <div><strong id="decision-title">Operational Decision</strong><span id="decision-route"></span></div>
@@ -211,20 +216,52 @@ Backlink Audit update
           </article>
 
           <article class="panel" id="route-panel" hidden>
-            <div class="panel-header"><h2>4. Confirm Route</h2><p>Accepting creates real D1 records.</p></div>
+            <div class="panel-header"><h2>4. Operational Decision</h2><p>Choose the business decision. GCM OS will translate it into the correct production records.</p></div>
             <div class="panel-body">
               <fieldset style="border:0;padding:0;margin:0">
-                <legend>Records and Actions</legend>
-                <div class="routes">
-                  <label class="route" id="route-save-wrap"><input id="route-save" type="checkbox"><span><strong>Save Communication</strong><span>Create the permanent Communication Record.</span></span></label>
-                  <label class="route" id="route-investigation-wrap"><input id="route-investigation" type="checkbox"><span><strong>Create Investigation</strong><span>Open an investigation because impact is not yet verified.</span></span></label>
-                  <label class="route" id="route-work-wrap"><input id="route-work" type="checkbox"><span><strong>Create Work Item</strong><span>Create planned work only after required work is known.</span></span></label>
-                  <label class="route" id="route-reply-wrap"><input id="route-reply" type="checkbox"><span><strong>Reply Required</strong><span>Flag when a response must be prepared.</span></span></label>
+                <legend>What should happen because of this communication?</legend>
+                <div class="routes" id="operational-decision-options">
+                  <label class="route" data-decision-wrap="historical_reference">
+                    <input name="operational-decision" type="radio" value="historical_reference">
+                    <span><strong>Record for Historical Reference</strong><span>Useful evidence that requires no additional work.</span></span>
+                  </label>
+                  <label class="route" data-decision-wrap="new_investigation">
+                    <input name="operational-decision" type="radio" value="new_investigation">
+                    <span><strong>Open New Investigation</strong><span>Additional verification is required before work can be approved.</span></span>
+                  </label>
+                  <label class="route disabled" data-decision-wrap="continue_investigation">
+                    <input name="operational-decision" type="radio" value="continue_investigation" disabled>
+                    <span><strong>Continue Existing Investigation</strong><span>Available after the Investigation Workspace selector is connected.</span></span>
+                  </label>
+                  <label class="route" data-decision-wrap="create_work_item">
+                    <input name="operational-decision" type="radio" value="create_work_item">
+                    <span><strong>Create Work Item</strong><span>The required work is known and ready to be assigned.</span></span>
+                  </label>
+                  <label class="route" data-decision-wrap="external_verification">
+                    <input name="operational-decision" type="radio" value="external_verification">
+                    <span><strong>Request External Verification</strong><span>Open an investigation and flag that a response or outside confirmation is required.</span></span>
+                  </label>
+                  <label class="route disabled" data-decision-wrap="close_investigation">
+                    <input name="operational-decision" type="radio" value="close_investigation" disabled>
+                    <span><strong>Close Investigation</strong><span>Available after an existing Investigation can be selected on this page.</span></span>
+                  </label>
                 </div>
               </fieldset>
-              <p class="note">Save Communication creates the permanent record. Investigation, Work Item, and Reply Required are optional and should only be selected when the communication requires them.</p>
+
+              <div class="decision-detail" id="decision-detail">
+                <div class="decision-detail-row">
+                  <strong>Why</strong>
+                  <span id="decision-why">Select an Operational Decision.</span>
+                </div>
+                <div class="decision-detail-row">
+                  <strong>System Action</strong>
+                  <span id="decision-system-action">No records will be created until a decision is selected and executed.</span>
+                </div>
+              </div>
+
+              <p class="note">This build uses the existing production Worker safely. Decisions that require selecting or closing an existing Investigation remain disabled until the Investigation Workspace connection is built.</p>
               <div class="buttons">
-                <button class="button primary" id="accept-button" type="button">Accept Recommendation</button>
+                <button class="button primary" id="accept-button" type="button" disabled>Execute Operational Decision</button>
                 <button class="button secondary" id="do-not-save-button" type="button">Do Not Save</button>
               </div>
             </div>
@@ -240,7 +277,7 @@ Backlink Audit update
 (() => {
   "use strict";
 
-  const VERSION = "2.5.1";
+  const VERSION = "2.6.0";
   const ENDPOINT = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const CONTRACT_VERSION = "communications-operational-decision-v3";
   const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -259,6 +296,33 @@ Backlink Audit update
     "Lumi Studio":"LUMI"
   };
 
+  const DECISION_CONFIG = {
+    historical_reference:{
+      label:"Record for Historical Reference",
+      why:"The communication is useful evidence, but it does not require investigation, approved work, or a reply.",
+      systemAction:"Create the permanent Communication Record only.",
+      routes:{saveCommunication:true,createInvestigation:false,createWorkItem:false,replyRequired:false}
+    },
+    new_investigation:{
+      label:"Open New Investigation",
+      why:"The evidence indicates a possible issue or opportunity, but the impact or required work is not yet verified.",
+      systemAction:"Create the Communication Record and open a new Investigation.",
+      routes:{saveCommunication:true,createInvestigation:true,createWorkItem:false,replyRequired:false}
+    },
+    create_work_item:{
+      label:"Create Work Item",
+      why:"The required action is already known and can be assigned without additional investigation.",
+      systemAction:"Create the Communication Record and a Work Item.",
+      routes:{saveCommunication:true,createInvestigation:false,createWorkItem:true,replyRequired:false}
+    },
+    external_verification:{
+      label:"Request External Verification",
+      why:"A client, vendor, platform, or other outside party must confirm information before the matter can be resolved.",
+      systemAction:"Create the Communication Record, open an Investigation, and flag Reply Required.",
+      routes:{saveCommunication:true,createInvestigation:true,createWorkItem:false,replyRequired:true}
+    }
+  };
+
   const $ = id => document.getElementById(id);
   const el = {
     date:$("current-date"), drop:$("drop-zone"), input:$("file-input"),
@@ -268,10 +332,10 @@ Backlink Audit update
     title:$("decision-title"), route:$("decision-route"), importance:$("result-importance"),
     source:$("result-source"), type:$("result-type"), summary:$("result-summary"),
     impact:$("result-impact"), recommendation:$("result-recommendation"),
-    reasoning:$("result-reasoning"), save:$("route-save"),
-    investigation:$("route-investigation"), work:$("route-work"), reply:$("route-reply"),
-    saveWrap:$("route-save-wrap"), investigationWrap:$("route-investigation-wrap"),
-    workWrap:$("route-work-wrap"), replyWrap:$("route-reply-wrap"),
+    reasoning:$("result-reasoning"),
+    decisionInputs:Array.from(document.querySelectorAll('input[name="operational-decision"]')),
+    decisionWraps:Array.from(document.querySelectorAll("[data-decision-wrap]")),
+    decisionWhy:$("decision-why"), decisionSystemAction:$("decision-system-action"),
     accept:$("accept-button"), reject:$("do-not-save-button"), history:$("history-list"),
     visionDebugPanel:$("vision-debug-panel"), visionDebugImage:$("vision-debug-image"),
     visionDebugMeta:$("vision-debug-meta")
@@ -285,11 +349,11 @@ Backlink Audit update
 
   function init() {
     if (!window.GCMOShell) {
-      console.error("Communications 2.5.1: shared/gcm-shell.js did not load.");
+      console.error("Communications 2.6.0: shared/gcm-shell.js did not load.");
     } else {
       window.GCMOShell.mount({
         currentPage: "communications",
-        statusText: "Communications operational · Communications v2.5.1"
+        statusText: "Communications operational · Communications v2.6.0"
       });
     }
 
@@ -335,6 +399,7 @@ Backlink Audit update
       validateAnalyze();
     });
     el.analyze.addEventListener("click", analyzeScreenshot);
+    el.decisionInputs.forEach(input => input.addEventListener("change", updateOperationalDecision));
     el.accept.addEventListener("click", commitDecision);
     el.reject.addEventListener("click", resetPage);
 
@@ -480,6 +545,13 @@ Backlink Audit update
 
   function normalizeDecision(a) {
     const routes = a.recommendedRoutes || {};
+    const normalizedRoutes = {
+      saveCommunication:routes.saveCommunication !== false,
+      createInvestigation:Boolean(routes.createInvestigation),
+      createWorkItem:Boolean(routes.createWorkItem),
+      replyRequired:Boolean(routes.replyRequired)
+    };
+
     return {
       client:a.client || a.clientName || "",
       clientName:a.clientName || a.client || "",
@@ -492,18 +564,14 @@ Backlink Audit update
       importance:a.importance || "Medium",
       recommendedAction:a.recommendedAction || "Review the communication.",
       reasoning:a.reasoning || a.problemAssessment || "The recommendation is based on the observable communication.",
-      recommendedRoutes:{
-        saveCommunication:routes.saveCommunication !== false,
-        createInvestigation:Boolean(routes.createInvestigation),
-        createWorkItem:Boolean(routes.createWorkItem),
-        replyRequired:Boolean(routes.replyRequired)
-      }
+      recommendedRoutes:normalizedRoutes,
+      operationalDecision:inferOperationalDecision(normalizedRoutes)
     };
   }
 
   function renderDecision(d) {
     el.title.textContent = d.title;
-    el.route.textContent = buildRouteSummary(d.recommendedRoutes);
+    el.route.textContent = buildRouteSummary(DECISION_CONFIG[d.operationalDecision]?.routes || d.recommendedRoutes);
     el.importance.textContent = d.importance;
     el.source.textContent = d.source;
     el.type.textContent = d.communicationType;
@@ -512,34 +580,57 @@ Backlink Audit update
     el.recommendation.textContent = d.recommendedAction;
     el.reasoning.textContent = d.reasoning;
 
-    applyRoute(el.save, el.saveWrap, d.recommendedRoutes.saveCommunication);
-    applyRoute(el.investigation, el.investigationWrap, d.recommendedRoutes.createInvestigation);
-    applyRoute(el.work, el.workWrap, d.recommendedRoutes.createWorkItem);
-    applyRoute(el.reply, el.replyWrap, d.recommendedRoutes.replyRequired);
-
+    selectOperationalDecision(d.operationalDecision);
     el.analysisPanel.hidden = false;
     el.routePanel.hidden = false;
   }
 
-  function applyRoute(input, wrap, selected) {
-    input.checked = Boolean(selected);
-    wrap.classList.toggle("recommended", Boolean(selected));
+  function inferOperationalDecision(routes) {
+    if (routes.createInvestigation && routes.replyRequired) return "external_verification";
+    if (routes.createWorkItem) return "create_work_item";
+    if (routes.createInvestigation) return "new_investigation";
+    return "historical_reference";
+  }
+
+  function selectOperationalDecision(value) {
+    const available = DECISION_CONFIG[value] ? value : "historical_reference";
+    el.decisionInputs.forEach(input => {
+      input.checked = input.value === available;
+    });
+    updateOperationalDecision();
+  }
+
+  function updateOperationalDecision() {
+    const selected = el.decisionInputs.find(input => input.checked && !input.disabled);
+    const config = selected ? DECISION_CONFIG[selected.value] : null;
+
+    el.decisionWraps.forEach(wrap => {
+      wrap.classList.toggle("recommended", Boolean(selected && wrap.dataset.decisionWrap === selected.value));
+    });
+
+    el.decisionWhy.textContent = config?.why || "Select an Operational Decision.";
+    el.decisionSystemAction.textContent =
+      config?.systemAction || "No records will be created until a decision is selected and executed.";
+    el.accept.disabled = !config;
+
+    if (currentDecision && config) {
+      el.route.textContent = buildRouteSummary(config.routes);
+    }
   }
 
   async function commitDecision() {
     if (!currentDecision) return;
 
-    const routes = {
-      saveCommunication:el.save.checked,
-      createInvestigation:el.investigation.checked,
-      createWorkItem:el.work.checked,
-      replyRequired:el.reply.checked
-    };
+    const selected = el.decisionInputs.find(input => input.checked && !input.disabled);
+    const config = selected ? DECISION_CONFIG[selected.value] : null;
 
-    if (!routes.saveCommunication) {
-      setStatus("Save Communication must remain selected.", "error");
+    if (!config) {
+      setStatus("Select an Operational Decision before executing.", "error");
       return;
     }
+
+    const operationalDecision = selected.value;
+    const routes = {...config.routes};
 
     const detectedClientName =
       currentDecision.client ||
@@ -558,6 +649,8 @@ Backlink Audit update
 
     const reviewedDecision = {
       ...currentDecision,
+      operationalDecision,
+      operationalDecisionLabel:config.label,
       recommendedRoutes:routes
     };
 
@@ -577,6 +670,7 @@ Backlink Audit update
           direction:"incoming",
           owner:"Andrew",
           rawContent:el.sourceText.value.trim() || reviewedDecision.operationalSummary,
+          operationalDecision,
           decision:reviewedDecision
         })
       });
@@ -623,7 +717,7 @@ Backlink Audit update
       console.error(error);
       el.accept.disabled = false;
       el.reject.disabled = false;
-      el.accept.textContent = "Accept Recommendation";
+      el.accept.textContent = "Execute Operational Decision";
       setStatus(error.message || "The D1 save failed.", "error");
     }
   }
@@ -681,11 +775,13 @@ Backlink Audit update
     el.visionDebugImage.removeAttribute("src");
     el.visionDebugImage.style.display = "block";
     el.visionDebugMeta.textContent = "";
-    [el.save,el.investigation,el.work,el.reply].forEach(input => input.checked = false);
-    [el.saveWrap,el.investigationWrap,el.workWrap,el.replyWrap].forEach(wrap => wrap.classList.remove("recommended"));
-    el.accept.disabled = false;
+    el.decisionInputs.forEach(input => input.checked = false);
+    el.decisionWraps.forEach(wrap => wrap.classList.remove("recommended"));
+    el.decisionWhy.textContent = "Select an Operational Decision.";
+    el.decisionSystemAction.textContent = "No records will be created until a decision is selected and executed.";
+    el.accept.disabled = true;
     el.reject.disabled = false;
-    el.accept.textContent = "Accept Recommendation";
+    el.accept.textContent = "Execute Operational Decision";
   }
 
   function resetPage() {
