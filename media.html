@@ -1,9 +1,9 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media.html
-   Version: 1.7.4
+   Version: 1.8.0
    Status: Production Candidate
-   Sprint: Media Operations — Station Communication Road Test
+   Sprint: Shared GCM OS Shell Migration — Media
    Purpose: Live D1-driven Media Operations workspace with a focused
             view selector, automatic station traffic deadlines,
             Station Landscape discovery, a multi-placement station
@@ -134,25 +134,7 @@
 </head>
 <body>
   <div class="app-shell">
-    <aside class="sidebar" id="sidebar" aria-label="Primary navigation">
-      <a class="brand" href="today.html">
-        <span class="brand-mark">G</span>
-        <span class="brand-copy"><strong>Global Concepts Media</strong><span>Agency Operating System</span></span>
-      </a>
-      <p class="nav-label">Workspace</p>
-      <nav class="primary-nav">
-        <a class="nav-link" href="today.html"><span class="nav-icon">⌂</span><span>Today</span></a>
-        <a class="nav-link" href="client-pre-research.html"><span class="nav-icon">◎</span><span>Prospects</span></a>
-        <a class="nav-link" href="clients.html"><span class="nav-icon">◫</span><span>Clients</span></a>
-        <a class="nav-link" href="communications.html"><span class="nav-icon">✉</span><span>Communications</span></a>
-        <a class="nav-link" href="work.html"><span class="nav-icon">✓</span><span>Work</span></a>
-        <a class="nav-link" href="proof.html"><span class="nav-icon">↗</span><span>Proof</span></a>
-        <a class="nav-link" href="media.html" aria-current="page"><span class="nav-icon">◉</span><span>Media</span></a>
-        <a class="nav-link" href="#"><span class="nav-icon">★</span><span>Case Studies</span></a>
-        <a class="nav-link" href="#"><span class="nav-icon">⚙</span><span>Settings</span></a>
-      </nav>
-      <div class="sidebar-footer"><div class="sidebar-status"><span class="status-dot"></span><span>Media Operations live</span></div></div>
-    </aside>
+    <aside id="sidebar" data-gcm-shell-sidebar aria-label="Primary navigation"></aside>
 
     <main class="main">
       <div class="main-inner">
@@ -303,6 +285,14 @@
       </div>
     </main>
   </div>
+
+  <script src="shared/gcm-shell.js"></script>
+  <script>
+    window.GCMOShell?.mount({
+      currentPage: "media",
+      statusText: "Media Operations live"
+    });
+  </script>
 
   <script>
     (() => {
