@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/config.js
-   Version: 7.6.0
+   Version: 7.6.1
    Status: Production Candidate
    Source: Production Worker 7.5.0
    Sprint: Guided Investigation Engine — Phase 1
@@ -9,7 +9,7 @@
             Investigation retrieval.
    ========================================================= */
 
-export const VERSION = "7.6.0";
+export const VERSION = "7.6.1";
 export const API_CONTRACT_VERSION = "communications-operational-decision-v3";
 export const COMMUNICATION_ANALYSIS_ENGINE_VERSION = "3.4.1";
 
