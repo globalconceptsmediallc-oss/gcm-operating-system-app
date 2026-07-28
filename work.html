@@ -1,12 +1,12 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.5.0
+   Version: 1.6.0
    Status: Production Candidate
-   Sprint: Guided Investigation Workflow
-   Purpose: Preserve production Work Item processing while reorganizing
-            Investigations around one Current Next Step before final findings.
-   Production Baseline: work.html v1.4.1
+   Sprint: Live Guided Investigation Connection
+   Purpose: Preserve production Work Item processing and connect each selected
+            Investigation to the live Guided Investigation Worker engine.
+   Production Baseline: work.html v1.5.0
    ========================================================= -->
 <!DOCTYPE html>
 <html lang="en">
@@ -616,7 +616,7 @@
               type="button"
               aria-expanded="false"
             >Menu</button>
-            <span class="classification">Work Processing · v1.5.0</span>
+            <span class="classification">Live Guided Investigation · v1.6.0</span>
           </div>
         </header>
 
@@ -702,16 +702,16 @@
     (function initializeWorkPage() {
       "use strict";
 
-      const VERSION = "1.5.0";
+      const VERSION = "1.6.0";
       const WORKER_URL =
         "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
 
       if (!window.GCMOShell) {
-        console.error("Work 1.5.0: shared/gcm-shell.js did not load.");
+        console.error("Work 1.6.0: shared/gcm-shell.js did not load.");
       } else {
         window.GCMOShell.mount({
           currentPage: "work",
-          statusText: "Guided investigation operational · Work v1.5.0"
+          statusText: "Live guided investigation · Work v1.6.0"
         });
       }
 
@@ -734,6 +734,8 @@
       let selectedKey = "";
       let processingInvestigation = false;
       let processingWorkItem = false;
+      const guidedInvestigationCache = new Map();
+      let guidedRequestSequence = 0;
 
       elements.clientFilter.addEventListener("change", () => {
         const visible = getVisibleInvestigations();
@@ -753,7 +755,7 @@
             visible[0];
 
           selectedKey = investigationKey(selected);
-          renderInvestigationDetail(selected);
+          loadAndRenderInvestigationDetail(selected);
           renderInvestigationList();
         } else {
           elements.detailPanel.innerHTML =
@@ -864,7 +866,7 @@
           if (visible.length) {
             selectedKey = investigationKey(visible[0]);
             renderInvestigationList();
-            renderInvestigationDetail(visible[0]);
+            loadAndRenderInvestigationDetail(visible[0]);
           } else {
             elements.detailPanel.innerHTML =
               '<div class="detail-empty">No open investigations were returned.</div>';
@@ -875,7 +877,7 @@
               "error",
               `Loaded ${investigations.length} open investigations. ${failures.length} live client workspace request${failures.length === 1 ? "" : "s"} failed.`
             );
-            console.warn("Work Page v1.5.0 workspace load failures:", failures);
+            console.warn("Work Page v1.6.0 workspace load failures:", failures);
           } else {
             setStatus(
               "ready",
@@ -883,7 +885,7 @@
             );
           }
         } catch (error) {
-          console.error("Work Page v1.5.0 failed:", error);
+          console.error("Work Page v1.6.0 failed:", error);
           investigations = [];
           workItems = [];
           workItemCount = 0;
@@ -1222,7 +1224,7 @@
               );
 
               if (investigation) {
-                renderInvestigationDetail(investigation);
+                loadAndRenderInvestigationDetail(investigation);
               }
 
               renderInvestigationList();
@@ -1230,13 +1232,99 @@
           });
       }
 
-      function renderInvestigationDetail(item) {
+      async function loadAndRenderInvestigationDetail(item) {
+        const requestSequence = ++guidedRequestSequence;
+        const key = investigationKey(item);
+        const cached = guidedInvestigationCache.get(key);
+
+        renderInvestigationDetail(item, cached || null, cached ? "ready" : "loading");
+
+        if (cached) return;
+
+        try {
+          const response = await fetch(WORKER_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json"
+            },
+            body: JSON.stringify({
+              action: "get-guided-investigation",
+              clientCode: item.clientCode,
+              investigationId: Number(item.id)
+            })
+          });
+
+          const payload = await response.json().catch(() => ({}));
+
+          if (!response.ok || payload?.ok !== true || !payload?.guidance) {
+            throw new Error(
+              payload?.error ||
+              payload?.details ||
+              `Guided Investigation request failed with HTTP ${response.status}.`
+            );
+          }
+
+          guidedInvestigationCache.set(key, payload.guidance);
+
+          if (
+            requestSequence === guidedRequestSequence &&
+            selectedKey === key
+          ) {
+            renderInvestigationDetail(item, payload.guidance, "ready", payload);
+          }
+        } catch (error) {
+          console.error("Live Guided Investigation failed:", error);
+
+          if (
+            requestSequence === guidedRequestSequence &&
+            selectedKey === key
+          ) {
+            renderInvestigationDetail(item, null, "error", {
+              error: error?.message || "Live guidance could not be loaded."
+            });
+          }
+        }
+      }
+
+      function renderInvestigationDetail(item, guidance = null, guidanceState = "ready", meta = null) {
         const communication = item.communication;
+        const currentObjective =
+          guidance?.current_objective ||
+          item.description ||
+          "Determine whether the originating communication requires corrective work.";
+        const currentUnderstanding =
+          guidance?.current_understanding ||
+          communication?.ai_summary ||
+          communication?.raw_content ||
+          item.description ||
+          "No supporting evidence summary was returned.";
+        const currentUnknowns = Array.isArray(guidance?.current_unknowns)
+          ? guidance.current_unknowns.filter(Boolean)
+          : [];
+        const currentUnknownsText = currentUnknowns.length
+          ? currentUnknowns.map((value) => `• ${value}`).join("\n")
+          : item.finding_summary
+            ? "A current finding exists. Verify whether the evidence is complete enough to close the investigation or create specific work."
+            : "The scope, cause, impact, and required corrective action have not yet been proven.";
         const currentStep =
+          guidance?.current_next_step ||
           item.recommendation ||
           "Review the originating evidence and identify the next fact needed to determine whether corrective work is required.";
-
-        const expectedEvidence = deriveExpectedEvidence(item, communication);
+        const expectedEvidence =
+          guidance?.expected_evidence ||
+          deriveExpectedEvidence(item, communication);
+        const confidence = Number.isFinite(Number(guidance?.confidence))
+          ? Math.max(0, Math.min(100, Math.round(Number(guidance.confidence))))
+          : null;
+        const readyForResolution = guidance?.ready_for_resolution === true;
+        const guidanceMessage = guidanceState === "loading"
+          ? "Generating the live Current Next Step from the Investigation and originating Communication…"
+          : guidanceState === "error"
+            ? `Live guidance unavailable. Showing the stored fallback. ${meta?.error || ""}`
+            : meta?.engine
+              ? `Live guidance generated by ${meta.engine}.`
+              : "Live guidance loaded.";
 
         elements.detailPanel.innerHTML = `
           <h2 class="detail-title">
@@ -1279,33 +1367,24 @@
 
           <section class="detail-section">
             <h3>Current Objective</h3>
-            <p>${escapeHtml(
-              item.description ||
-              "Determine whether the originating communication requires corrective work."
-            )}</p>
+            <p>${escapeHtml(currentObjective)}</p>
           </section>
 
           <section class="detail-section">
             <h3>What We Know</h3>
-            <p>${escapeHtml(
-              communication?.ai_summary ||
-              communication?.raw_content ||
-              item.description ||
-              "No supporting evidence summary was returned."
-            )}</p>
+            <p>${escapeHtml(currentUnderstanding)}</p>
           </section>
 
           <section class="detail-section">
             <h3>What We Still Need To Learn</h3>
-            <p>${escapeHtml(
-              item.finding_summary
-                ? "A current finding exists. Verify whether the evidence is complete enough to close the investigation or create specific work."
-                : "The scope, cause, impact, and required corrective action have not yet been proven."
-            )}</p>
+            <p>${escapeHtml(currentUnknownsText)}</p>
           </section>
 
           <section class="guided-box" aria-label="Current investigation step">
             <p class="guided-label">Current Next Step</p>
+            <div class="status ${guidanceState === "error" ? "error" : guidanceState === "loading" ? "loading" : "ready"}" style="margin:0 0 12px;">
+              ${escapeHtml(guidanceMessage)}
+            </div>
             <h3>Do this next</h3>
             <p class="guided-step">${escapeHtml(currentStep)}</p>
 
@@ -1313,6 +1392,25 @@
               <strong>Expected Evidence</strong>
               <span>${escapeHtml(expectedEvidence)}</span>
             </div>
+
+            <div class="detail-stats" style="margin-top:14px;">
+              <div class="detail-stat">
+                <span>Guidance Confidence</span>
+                <strong>${confidence === null ? "Pending" : `${confidence}%`}</strong>
+              </div>
+              <div class="detail-stat">
+                <span>Resolution Readiness</span>
+                <strong>${readyForResolution ? "Ready for review" : "More evidence required"}</strong>
+              </div>
+              <div class="detail-stat">
+                <span>Guidance Source</span>
+                <strong>${guidance ? "Live Worker" : "Stored fallback"}</strong>
+              </div>
+            </div>
+
+            ${guidance?.resolution_reason ? `
+              <p class="workflow-note"><strong>Why:</strong> ${escapeHtml(guidance.resolution_reason)}</p>
+            ` : ""}
 
             <p class="workflow-note">
               Perform only this step. Return with the resulting screenshot,
