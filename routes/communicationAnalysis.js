@@ -1,8 +1,8 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.4.27
-   Source: Production route 7.4.26
+   Version: 7.4.28
+   Source: Production route 7.4.27
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
             notification classification, business meaning,
@@ -1255,6 +1255,9 @@ function buildVisionEvidencePrompt({ sourceText = "", client, clientId, fileName
     "Identify any visible client/business name, project domain, website domain, or account name exactly as shown.",
     "Identify visible platform names such as SEMrush only when they are actually visible.",
     "Preserve readable report labels such as Position Tracking, Backlink Audit, or Site Audit.",
+    "GOOGLE SEARCH CONSOLE PAGE-INDEXING RULE: when visible, preserve the exact headline or statement that page indexing issues were successfully fixed, validation passed/completed, or pages were validated as fixed.",
+    "When a Search Console page-indexing confirmation shows an affected website/domain or page count, preserve the domain and count as separate source-grounded facts or metrics.",
+    "Do not reduce a successful page-indexing validation notice to a generic Search Console or search-performance notification.",
     "Put important non-metric statements in visibleFacts.",
     "HUMAN EMAIL RULE: when the screenshot is a person-to-person business email, prioritize the sender-written message body over signatures, legal footers, slogans, addresses, phone numbers, social links, and attachment thumbnails.",
     "For a human email, preserve operational statements such as confirmations, current status, quantities, dates/deadlines, markets/stations/locations, what is running now, what changes next, explicit requests, and expected follow-up.",
@@ -2233,6 +2236,7 @@ function deterministicNotificationClassification(evidence) {
   const typeRules = [
     { type: "disavow_file_update", family: "Google Search Console — Disavow File Update", patterns: [/disavow file updated/i, /update to the disavow file/i, /new disavow file contains/i, /disavow links?/i] },
     { type: "merchant_listing_structured_data", family: "Google Search Console — Merchant Listings Structured Data", patterns: [/merchant listings?/i, /merchant listings? structured data/i, /structured data issues?/i, /invalid string length in field ["']?sku["']?/i] },
+    { type: "page_indexing_resolution", family: "Google Search Console — Page Indexing Resolution", patterns: [/page indexing issues? successfully fixed/i, /indexing issues? successfully fixed/i, /validation (?:passed|complete|completed|successful)/i, /pages? validated as fixed/i, /successfully validated/i] },
     { type: "position_tracking", family: "SEMrush Position Tracking", patterns: [/position tracking/i, /keyword positions?/i, /rankings?/i, /keywords? improved/i, /keywords? declined/i, /top 3/i, /top 10/i] },
     { type: "backlink_audit", family: "SEMrush Backlink Audit", patterns: [/backlink audit/i, /backlinks?/i, /referring domains?/i, /lost domains?/i, /new domains?/i, /toxic(?:ity)?/i] },
     { type: "site_audit", family: "SEMrush Site Audit", patterns: [/site audit/i, /site health/i, /crawled pages?/i, /crawlability/i, /core web vitals/i, /technical issues?/i] },
@@ -2286,6 +2290,20 @@ function deterministicNotificationClassification(evidence) {
   if (platform === "google_search_console" && merchantListingStructuredDataSignal) {
     notificationType = "merchant_listing_structured_data";
     notificationFamily = "Google Search Console — Merchant Listings Structured Data";
+    bestScore = Math.max(bestScore, 3);
+  }
+
+  /*
+   * v7.4.28 SEARCH CONSOLE PAGE-INDEXING RESOLUTION GUARDRAIL
+   * A successful validation/fix confirmation is durable technical evidence,
+   * not a generic Search Performance notification.
+   */
+  const pageIndexingResolutionSignal =
+    /page indexing issues? successfully fixed|indexing issues? successfully fixed|validation (?:passed|complete|completed|successful)|pages? validated as fixed|successfully validated/i.test(searchable);
+
+  if (platform === "google_search_console" && pageIndexingResolutionSignal) {
+    notificationType = "page_indexing_resolution";
+    notificationFamily = "Google Search Console — Page Indexing Resolution";
     bestScore = Math.max(bestScore, 3);
   }
 
@@ -2414,6 +2432,7 @@ function buildOperationalDecision({ visibleEvidence, classification, businessMea
     position_tracking: "SEMrush",
     backlink_audit: "SEMrush",
     site_audit: "SEMrush",
+    page_indexing_resolution: "Google Search Console",
     merchant_listing_structured_data: "Google Search Console",
     disavow_file_update: "Google Search Console",
     search_performance: "Google Search Console",
@@ -2570,6 +2589,7 @@ function buildDeterministicBusinessMeaning({ visibleEvidence, classification }) 
     "site_audit",
     "merchant_listing_structured_data",
     "disavow_file_update",
+    "page_indexing_resolution",
     "search_performance",
     "business_profile",
     "analytics",
@@ -2870,13 +2890,15 @@ function buildDeterministicBusinessMeaning({ visibleEvidence, classification }) 
         : adverseChangeSignal || (standingIssueSignal && !stabilitySignal);
 
   const positive = /improv|increas|gain|grew|growth|up\b|new high|milestone|positive/.test(text);
-  const eventDirection = negative && positive
-    ? "Mixed"
-    : negative
-      ? "Negative"
-      : positive
-        ? "Positive"
-        : "Neutral";
+  const eventDirection = type === "page_indexing_resolution"
+    ? "Positive"
+    : negative && positive
+      ? "Mixed"
+      : negative
+        ? "Negative"
+        : positive
+          ? "Positive"
+          : "Neutral";
 
   const facts = uniqueTextValues([
     ...(visibleEvidence?.visibleMetrics || []),
@@ -2923,6 +2945,14 @@ function buildDeterministicBusinessMeaning({ visibleEvidence, classification }) 
         : "Routine SEMrush Site Audit monitoring communication. Standing errors, warnings, or crawlability notices do not by themselves require an Investigation without evidence of deterioration.",
       recordPurpose: "Technical SEO Monitoring Evidence",
       operationalLabel: negative ? "Review Required" : "Technical Monitoring Update"
+    },
+    page_indexing_resolution: {
+      summary: `Google Search Console confirmed that a previously reported page-indexing condition was successfully validated as fixed.${evidenceDetail}`,
+      impact: "This is positive technical verification that Google accepted the reported indexing correction for the affected pages. It should be retained as outcome evidence and compared with any related open Investigation or prior corrective work.",
+      action: "Save the communication as page-indexing resolution evidence. Attach it to a related open Investigation when one exists; otherwise retain it as historical technical monitoring evidence. Do not create a new Investigation or Work Item from this confirmation alone.",
+      reasoning: "The source explicitly confirms successful validation of a previously reported indexing issue. The communication verifies an outcome but does not, by itself, prove which agency action caused the resolution.",
+      recordPurpose: "Page Indexing Resolution Evidence",
+      operationalLabel: "Technical Resolution Confirmed"
     },
     merchant_listing_structured_data: {
       summary: `Google Search Console detected a Merchant listings structured-data issue.${evidenceDetail} The reported condition should be diagnosed before corrective work is assigned.`,
@@ -3005,6 +3035,7 @@ function buildDeterministicBusinessMeaning({ visibleEvidence, classification }) 
 function recordPurposeForNotificationType(type) {
   const purposes = {
     position_tracking: "Historical SEO Monitoring Evidence",
+    page_indexing_resolution: "Page Indexing Resolution Evidence",
     backlink_audit: "Backlink Health Monitoring Evidence",
     site_audit: "Technical SEO Monitoring Evidence",
     merchant_listing_structured_data: "Structured Data Issue Evidence",
@@ -3019,6 +3050,7 @@ function operationalLabelForNotificationType(type, direction) {
   if (direction === "Negative") return "Review Required";
   const labels = {
     position_tracking: "Monitoring Update",
+    page_indexing_resolution: "Technical Resolution Confirmed",
     backlink_audit: "Backlink Monitoring Update",
     site_audit: "Technical Monitoring Update",
     merchant_listing_structured_data: "Review Required",
@@ -3090,6 +3122,7 @@ function fallbackBusinessMeaning({ classification, reason }) {
 function communicationTypeForClassification(classification) {
   const types = {
     position_tracking: "SEO Ranking Alert",
+    page_indexing_resolution: "Page Indexing Resolution Confirmation",
     backlink_audit: "SEO Backlink Alert",
     site_audit: "Technical SEO Audit Alert",
     merchant_listing_structured_data: "Merchant Listings Structured Data Alert",
