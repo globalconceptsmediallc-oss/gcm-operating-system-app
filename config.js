@@ -1,85 +1,47 @@
-/******************************************************************************
- * Global Concepts Media Operating System
- * Version 2 Foundation
- * config.js
- ******************************************************************************/
+/* =========================================================
+   Global Concepts Media Operating System
+   File: shared/config.js
+   Version: 7.6.0
+   Status: Production Candidate
+   Source: Production Worker 7.5.0
+   Sprint: Guided Investigation Engine — Phase 1
+   Purpose: Preserve production constants and add guided
+            Investigation retrieval.
+   ========================================================= */
 
-const GCM_CONFIG = {
+export const VERSION = "7.6.0";
+export const API_CONTRACT_VERSION = "communications-operational-decision-v3";
+export const COMMUNICATION_ANALYSIS_ENGINE_VERSION = "3.4.1";
 
-    APP_NAME: "Global Concepts Media Operating System",
+export const COMMUNICATION_VISION_MODEL =
+  "@cf/meta/llama-3.2-11b-vision-instruct";
 
-    VERSION: "2.0 Foundation",
+export const COMMUNICATION_REASONING_MODEL =
+  "@cf/openai/gpt-oss-20b";
 
-    COMPANY: "Global Concepts Media",
+export const ACTIONS = Object.freeze({
+  ANALYZE_COMMUNICATION: "analyze-client-communication",
+  GET_CLIENT_WORKSPACE: "get-client-workspace",
+  GET_CLIENT_DIRECTORY: "get-client-directory",
+  COMMIT_OPERATIONAL_DECISION: "commit-operational-decision",
+  GET_MISSION_CONTROL: "get-mission-control",
+  GET_GUIDED_INVESTIGATION: "get-guided-investigation",
+  PROCESS_INVESTIGATION: "process-investigation",
+  PROCESS_WORK_ITEM: "process-work-item",
+  GET_MEDIA_OPERATIONS: "get-media-operations"
+});
 
-    /////////////////////////////////////////////////
-    // OpenAI Configuration
-    /////////////////////////////////////////////////
+export const STAGE_STATUS = Object.freeze({
+  SUCCESS: "success",
+  PARTIAL: "partial",
+  FALLBACK: "fallback",
+  FAILED: "failed",
+  SKIPPED: "skipped"
+});
 
-    OPENAI: {
-
-        MODEL: "gpt-5.5",
-
-        API_URL: "https://api.openai.com/v1/responses",
-
-        API_KEY: ""
-
-        // Never hard-code production API keys.
-        // This value should be loaded from Settings
-        // or a backend service in production.
-
-    },
-
-    /////////////////////////////////////////////////
-    // Application Defaults
-    /////////////////////////////////////////////////
-
-    DEFAULTS: {
-
-        TEMPERATURE: 0.2,
-
-        MAX_OUTPUT_TOKENS: 6000,
-
-        QUALIFICATION_THRESHOLD: 75
-
-    },
-
-    /////////////////////////////////////////////////
-    // Dashboard Status
-    /////////////////////////////////////////////////
-
-    STATUS: {
-
-        WAITING: "Awaiting New Opportunity",
-
-        RESEARCHING: "Researching Website...",
-
-        ANALYZING: "Analyzing Business...",
-
-        BUILDING_REPORT: "Building Business Intelligence Brief...",
-
-        GENERATING_EMAIL: "Generating First Contact Email...",
-
-        GENERATING_SCRIPT: "Generating Discovery Call Script...",
-
-        READY: "Ready For First Contact"
-
-    },
-
-    /////////////////////////////////////////////////
-    // Export Options
-    /////////////////////////////////////////////////
-
-    EXPORT: {
-
-        FILE_EXTENSION: ".md",
-
-        COPY_SUCCESS: "Business record copied to clipboard.",
-
-        DOWNLOAD_SUCCESS: "Business record downloaded."
-
-    }
-
+export const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, X-GCM-Contract-Version",
+  "Content-Type": "application/json; charset=utf-8"
 };
-
-Object.freeze(GCM_CONFIG);
