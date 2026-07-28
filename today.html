@@ -1,8 +1,8 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 1.5.0
-   Change: Shared GCM OS application shell integration
+   Version: 2.0.0
+   Change: Mission Control rebuilt as the GCM Agency Command Center
    Source: Production today.html 1.2.0
    ========================================================= -->
 <!DOCTYPE html>
@@ -11,11 +11,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <title>Today | GCM OS</title>
+  <title>Mission Control | GCM OS</title>
 
   <meta
     name="description"
-    content="Mission Control for the Global Concepts Media Agency Operating System."
+    content="Agency Command Center for the Global Concepts Media Operating System."
   />
 
   <style>
@@ -888,6 +888,24 @@
       text-decoration: underline;
     }
 
+    .command-brief { position: relative; margin-bottom: 18px; padding: 26px; border: 1px solid rgba(52,124,232,.18); border-radius: var(--radius-lg); background: radial-gradient(circle at top right, rgba(214,169,74,.15), transparent 24%), linear-gradient(135deg,#fff 0%,#f7faff 100%); box-shadow: var(--shadow-md); overflow: hidden; }
+    .command-brief::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 6px; background: linear-gradient(180deg,var(--gcm-gold-500),var(--gcm-blue-600)); }
+    .brief-grid { display:grid; grid-template-columns:minmax(0,1.25fr) minmax(320px,.75fr); gap:28px; align-items:center; }
+    .brief-kicker { margin:0 0 8px; color:var(--gcm-blue-600); font-size:.72rem; font-weight:900; text-transform:uppercase; letter-spacing:.13em; }
+    .brief-title { margin:0; color:var(--gcm-navy-950); font-size:clamp(1.55rem,3vw,2.35rem); line-height:1.08; letter-spacing:-.04em; }
+    .brief-copy { max-width:800px; margin:12px 0 0; color:var(--text-muted); font-size:.96rem; }
+    .brief-status { display:grid; gap:10px; }
+    .brief-status-item { display:flex; justify-content:space-between; gap:14px; padding:12px 14px; border:1px solid var(--border); border-radius:12px; background:rgba(255,255,255,.82); }
+    .brief-status-item span { color:var(--text-muted); font-size:.78rem; font-weight:800; }
+    .brief-status-item strong { color:var(--gcm-navy-950); font-size:.8rem; text-align:right; }
+    .intelligence-empty { padding:24px; text-align:center; }
+    .intelligence-empty strong { display:block; color:var(--gcm-navy-950); font-size:.92rem; }
+    .intelligence-empty span { display:block; max-width:650px; margin:8px auto 0; color:var(--text-muted); font-size:.8rem; }
+    .pulse-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px; padding:18px; }
+    .pulse-card { padding:14px; border:1px solid var(--border); border-radius:13px; background:linear-gradient(180deg,#fff,#fbfcfe); }
+    .pulse-value { margin:0; color:var(--gcm-navy-950); font-size:1.45rem; font-weight:900; letter-spacing:-.035em; }
+    .pulse-label { margin:5px 0 0; color:var(--text-muted); font-size:.72rem; font-weight:750; }
+
     .mobile-menu-button {
       display: none;
     }
@@ -992,10 +1010,10 @@
       <div class="main-inner">
         <header class="topbar">
           <div>
-            <p class="eyebrow">Mission Control</p>
+            <p class="eyebrow">Agency Command Center</p>
             <h1 class="page-title" id="greeting">Good morning, Andy.</h1>
             <p class="page-subtitle">
-              Focus on the work most likely to acquire clients, deliver value, and prove results.
+              See what matters, decide what happens next, and uncover opportunities the agency may otherwise miss.
             </p>
           </div>
 
@@ -1003,36 +1021,23 @@
 
             <div class="date-chip" id="current-date" aria-label="Current date"></div>
 
-            <a class="button button-primary" href="client-pre-research.html">
-              Research Prospect
-            </a>
+            <div class="date-chip">GCM OS online</div>
           </div>
         </header>
 
-        <section class="summary-grid" aria-label="Today's agency summary">
-          <article class="summary-card" style="--accent-soft: var(--info-soft);">
-            <p class="summary-label">Prospects to Contact</p>
-            <p class="summary-value" id="prospect-count">0</p>
-            <p class="summary-note" id="prospect-note">No prospects are ready for outreach.</p>
-          </article>
-
-          <article class="summary-card" style="--accent-soft: var(--warning-soft);">
-            <p class="summary-label">Clients Needing Attention</p>
-            <p class="summary-value" id="attention-count">0</p>
-            <p class="summary-note" id="attention-note">No clients currently require a decision.</p>
-          </article>
-
-          <article class="summary-card" style="--accent-soft: var(--critical-soft);">
-            <p class="summary-label">Open Work</p>
-            <p class="summary-value" id="open-task-count">0</p>
-            <p class="summary-note" id="open-work-note">No open work items.</p>
-          </article>
-
-          <article class="summary-card" style="--accent-soft: var(--success-soft);">
-            <p class="summary-label">Proof Waiting</p>
-            <p class="summary-value" id="proof-count">0</p>
-            <p class="summary-note" id="proof-note">No completed work is waiting for proof.</p>
-          </article>
+        <section class="command-brief" aria-labelledby="command-brief-title">
+          <div class="brief-grid">
+            <div>
+              <p class="brief-kicker">Today's Command Brief</p>
+              <h2 class="brief-title" id="command-brief-title">Mission Control is checking the agency's live operating state.</h2>
+              <p class="brief-copy" id="command-brief-copy">Client attention, open work, proof, media deadlines, and opportunity signals are being assembled into one decision view.</p>
+            </div>
+            <div class="brief-status">
+              <div class="brief-status-item"><span>Client attention</span><strong id="brief-attention">Checking…</strong></div>
+              <div class="brief-status-item"><span>Media deadlines</span><strong id="brief-media">Checking…</strong></div>
+              <div class="brief-status-item"><span>Intelligence layer</span><strong>Framework active</strong></div>
+            </div>
+          </div>
         </section>
 
         <article class="panel media-check-panel" id="media-check-panel" aria-live="polite">
@@ -1051,38 +1056,20 @@
               <div class="panel-header">
                 <div>
                   <h2 class="panel-title">Highest-Value Next Action</h2>
-                  <p class="panel-description">
-                    Complete this before moving to lower-priority work.
-                  </p>
+                  <p class="panel-description">The single action most likely to protect revenue, deliver client value, or advance growth.</p>
                 </div>
-
-                <span class="priority-badge">Acquire</span>
+                <span class="priority-badge" id="priority-badge">Decision</span>
               </div>
-
               <div class="priority-body">
                 <div>
-                  <p class="priority-type">Prospect Outreach</p>
-                  <h2 class="priority-name">Call the strongest qualified prospect</h2>
-                  <p class="priority-reason">
-                    Use the completed pre-research to lead with a specific, observable growth
-                    opportunity instead of making a generic sales call.
-                  </p>
-
-                  <div class="priority-meta">
-                    <span>Research complete</span>
-                    <span>Personalized reason required</span>
-                    <span>Discovery is the next stage</span>
-                  </div>
+                  <p class="priority-type" id="priority-type">Agency Review</p>
+                  <h2 class="priority-name" id="priority-name">Review the clients currently requiring attention</h2>
+                  <p class="priority-reason" id="priority-reason">Mission Control is loading live operational records and will direct you to the strongest available decision.</p>
+                  <div class="priority-meta" id="priority-meta"><span>Evidence-based</span><span>Cross-agency priority</span></div>
                 </div>
-
                 <div class="priority-actions">
-                  <a class="button button-primary" href="client-pre-research.html">
-                    Open Pre-Research
-                  </a>
-
-                  <a class="button button-secondary" href="business-snapshot.html">
-                    Run Snapshot
-                  </a>
+                  <a class="button button-primary" id="priority-primary-action" href="clients.html">Open Clients</a>
+                  <a class="button button-secondary" id="priority-secondary-action" href="work.html">Open Work</a>
                 </div>
               </div>
             </article>
@@ -1090,113 +1077,58 @@
             <article class="panel">
               <div class="panel-header">
                 <div>
-                  <h2 class="panel-title">Today's Work Queue</h2>
-                  <p class="panel-description">
-                    Complete the highest-value work first. Checkoffs are saved on this device.
-                  </p>
+                  <h2 class="panel-title">Opportunity &amp; Gap Intelligence</h2>
+                  <p class="panel-description">Evidence-backed patterns, missing work, unmeasured outcomes, and opportunities hidden across the operating history.</p>
                 </div>
-
-                <span class="priority-pill pill-info" id="task-progress">0 of 4 complete</span>
+                <span class="priority-pill pill-info">Evidence before assumptions</span>
               </div>
-
-              <ul class="task-list" id="task-list"></ul>
-
-              <div class="panel-footer">
-                <a class="text-link" href="work.html">Open full work queue →</a>
+              <div class="intelligence-empty">
+                <strong>Historical intelligence connection is the next Worker build.</strong>
+                <span>This page will not manufacture recommendations. Opportunities will appear only when D1 supports the evidence, pattern, gap, and recommended investigation.</span>
               </div>
             </article>
 
             <article class="panel">
               <div class="panel-header">
                 <div>
-                  <h2 class="panel-title">This Week's Wins</h2>
-                  <p class="panel-description">
-                    Results that can support reporting, retention, and future sales.
-                  </p>
+                  <h2 class="panel-title">Agency Intelligence</h2>
+                  <p class="panel-description">Repeatable lessons across clients that can become prospecting angles, services, case studies, and GCM intellectual property.</p>
                 </div>
               </div>
+              <div class="intelligence-empty">
+                <strong>No cross-client finding has been proven yet.</strong>
+                <span>The future intelligence engine will compare actual work, outcomes, and gaps before promoting a pattern into an agency-level insight.</span>
+              </div>
+            </article>
 
-              <div class="wins-grid">
-                <div class="win-card">
-                  <p class="win-value">1</p>
-                  <p class="win-label">New workflow locked</p>
-                </div>
-
-                <div class="win-card">
-                  <p class="win-value">2</p>
-                  <p class="win-label">Proof items ready</p>
-                </div>
-
-                <div class="win-card">
-                  <p class="win-value">3</p>
-                  <p class="win-label">Clients actively managed</p>
-                </div>
+            <article class="panel">
+              <div class="panel-header">
+                <div><h2 class="panel-title">Operating Pulse</h2><p class="panel-description">A quiet view of the agency's current operating load.</p></div>
+              </div>
+              <div class="pulse-grid">
+                <div class="pulse-card"><p class="pulse-value" id="prospect-count">0</p><p class="pulse-label">Prospects</p></div>
+                <div class="pulse-card"><p class="pulse-value" id="attention-count">—</p><p class="pulse-label">Clients needing attention</p></div>
+                <div class="pulse-card"><p class="pulse-value" id="open-task-count">0</p><p class="pulse-label">Open work</p></div>
+                <div class="pulse-card"><p class="pulse-value" id="proof-count">0</p><p class="pulse-label">Proof waiting</p></div>
+                <div class="pulse-card"><p class="pulse-value" id="media-pulse-count">—</p><p class="pulse-label">Media attention</p></div>
               </div>
             </article>
           </div>
 
-          <aside class="stack" aria-label="Supporting agency information">
+          <aside class="stack" aria-label="Agency attention and operating queues">
             <article class="panel">
-              <div class="panel-header">
-                <div>
-                  <h2 class="panel-title">Clients Needing Attention</h2>
-                  <p class="panel-description">Click a client to open the record and see what needs attention.</p>
-                </div>
-              </div>
-
+              <div class="panel-header"><div><h2 class="panel-title">Needs Your Attention</h2><p class="panel-description">Live client decisions that require review.</p></div></div>
               <ul class="attention-list" id="attention-list"></ul>
             </article>
-
             <article class="panel">
-              <div class="panel-header">
-                <div>
-                  <h2 class="panel-title">Quick Actions</h2>
-                  <p class="panel-description">Start the next consulting workflow.</p>
-                </div>
-              </div>
-
-              <div class="quick-actions">
-                <a class="quick-action" href="client-pre-research.html">
-                  <span class="quick-action-icon" aria-hidden="true">◎</span>
-                  <strong>Research Prospect</strong>
-                  <span>Prepare a better first conversation.</span>
-                </a>
-
-                <a class="quick-action" href="business-snapshot.html">
-                  <span class="quick-action-icon" aria-hidden="true">◇</span>
-                  <strong>Run Snapshot</strong>
-                  <span>Create the first opportunity view.</span>
-                </a>
-
-                <a class="quick-action" href="growth-review-preview.html">
-                  <span class="quick-action-icon" aria-hidden="true">▤</span>
-                  <strong>Growth Review</strong>
-                  <span>Review the paid deliverable.</span>
-                </a>
-
-                <a class="quick-action" href="business-snapshot-results.html">
-                  <span class="quick-action-icon" aria-hidden="true">↗</span>
-                  <strong>View Results</strong>
-                  <span>Open the latest Snapshot output.</span>
-                </a>
-              </div>
+              <div class="panel-header"><div><h2 class="panel-title">Open Work</h2><p class="panel-description">Committed work. Highest priority appears first.</p></div><span class="priority-pill pill-info" id="task-progress">0 open</span></div>
+              <ul class="task-list" id="task-list"></ul>
+              <div class="panel-footer"><a class="text-link" href="work.html">Open full work queue →</a></div>
             </article>
-
             <article class="panel">
-              <div class="panel-header">
-                <div>
-                  <h2 class="panel-title">Proof Waiting</h2>
-                  <p class="panel-description">
-                    Completed work that has not yet become client-facing proof.
-                  </p>
-                </div>
-              </div>
-
+              <div class="panel-header"><div><h2 class="panel-title">Proof Waiting</h2><p class="panel-description">Completed work that has not yet become client-facing proof.</p></div></div>
               <ul class="proof-list" id="proof-list"></ul>
-
-              <div class="panel-footer">
-                <a class="text-link" href="proof.html">Build Proof of Work →</a>
-              </div>
+              <div class="panel-footer"><a class="text-link" href="proof.html">Build Proof of Work →</a></div>
             </article>
           </aside>
         </section>
@@ -1229,15 +1161,29 @@
       const openTaskCount = document.getElementById("open-task-count");
       const taskProgress = document.getElementById("task-progress");
       const prospectCount = document.getElementById("prospect-count");
-      const prospectNote = document.getElementById("prospect-note");
+      const prospectNote = { textContent: "" };
       const attentionCount = document.getElementById("attention-count");
-      const attentionNote = document.getElementById("attention-note");
-      const openWorkNote = document.getElementById("open-work-note");
+      const attentionNote = { textContent: "" };
+      const openWorkNote = { textContent: "" };
       const proofCount = document.getElementById("proof-count");
-      const proofNote = document.getElementById("proof-note");
+      const proofNote = { textContent: "" };
       const mediaCheckPanel = document.getElementById("media-check-panel");
       const mediaCheckTitle = document.getElementById("media-check-title");
       const mediaCheckDetail = document.getElementById("media-check-detail");
+      const commandBriefTitle = document.getElementById("command-brief-title");
+      const commandBriefCopy = document.getElementById("command-brief-copy");
+      const briefAttention = document.getElementById("brief-attention");
+      const briefMedia = document.getElementById("brief-media");
+      const mediaPulseCount = document.getElementById("media-pulse-count");
+      const priorityBadge = document.getElementById("priority-badge");
+      const priorityType = document.getElementById("priority-type");
+      const priorityName = document.getElementById("priority-name");
+      const priorityReason = document.getElementById("priority-reason");
+      const priorityMeta = document.getElementById("priority-meta");
+      const priorityPrimaryAction = document.getElementById("priority-primary-action");
+      const prioritySecondaryAction = document.getElementById("priority-secondary-action");
+      let attentionClientsState = [];
+      let mediaAttentionState = 0;
 
       const cloneDefaults = () => JSON.parse(JSON.stringify(DEFAULT_DATA));
 
@@ -1317,7 +1263,7 @@
           </li>
         `;
         attentionCount.textContent = "—";
-        attentionNote.textContent = "Checking live operational records.";
+        attentionNote.textContent = "Checking live operational records."; briefAttention.textContent = "Checking…";
       }
 
       function renderAttentionClients(clients) {
@@ -1328,7 +1274,7 @@
             </li>
           `;
           attentionCount.textContent = "0";
-          attentionNote.textContent = "No clients currently require attention.";
+          attentionNote.textContent = "No clients currently require attention."; briefAttention.textContent = "No client decisions waiting"; attentionClientsState = []; updatePriority();
           return;
         }
 
@@ -1345,10 +1291,7 @@
         `).join("");
 
         attentionCount.textContent = String(clients.length);
-        attentionNote.textContent =
-          clients.length === 1
-            ? "Click the client name to see what needs attention."
-            : "Click a client name to see what needs attention.";
+        attentionNote.textContent = "Open the client record to review the decision."; attentionClientsState = clients; briefAttention.textContent = clients.length === 1 ? "1 client decision waiting" : `${clients.length} client decisions waiting`; updatePriority();
       }
 
       function renderAttentionError(message) {
@@ -1359,7 +1302,7 @@
           </li>
         `;
         attentionCount.textContent = "—";
-        attentionNote.textContent = "Live attention records are unavailable.";
+        attentionNote.textContent = "Live attention records are unavailable."; briefAttention.textContent = "Live records unavailable"; attentionClientsState = []; updatePriority();
       }
 
       async function loadMissionControlAttention() {
@@ -1402,6 +1345,9 @@
       function setMediaAttention(count) {
         const total = Number(count) || 0;
         const hasAttention = total > 0;
+        mediaAttentionState = total;
+        mediaPulseCount.textContent = String(total);
+        briefMedia.textContent = hasAttention ? `${total} ${total === 1 ? "deadline requires" : "deadlines require"} review` : "No deadlines requiring review";
 
         mediaCheckPanel.classList.toggle("is-visible", hasAttention);
 
@@ -1425,6 +1371,7 @@
           mediaCheckTitle.textContent = `${total} media ${total === 1 ? "item needs" : "items need"} attention`;
           mediaCheckDetail.textContent = "Traffic deadlines are active. Open Media to review the placements before the station deadline.";
         }
+        updatePriority();
       }
 
       async function loadMediaAttention() {
@@ -1502,7 +1449,26 @@
         openWorkNote.textContent = openWork.length ? "Highest-impact work appears first." : "No open work items.";
         proofCount.textContent = proofWaiting.length;
         proofNote.textContent = proofWaiting.length ? `${proofWaiting.length} ${proofWaiting.length === 1 ? "item is" : "items are"} ready to document.` : "No completed work is waiting for proof.";
-        taskProgress.textContent = `${completedWork.length} of ${data.workItems.length} complete`;
+        taskProgress.textContent = `${openWork.length} open`;
+      }
+
+      function updatePriority() {
+        const data = loadData();
+        const openWork = data.workItems.filter((item) => !["complete", "completed", "archived"].includes(String(item.status || "").toLowerCase())).sort((a,b) => ({highest:0,high:1,normal:2}[a.priority] ?? 3) - ({highest:0,high:1,normal:2}[b.priority] ?? 3));
+        const proofWaiting = data.proofItems.filter((item) => !["complete","completed","published","archived"].includes(String(item.status || "").toLowerCase()));
+        if (mediaAttentionState > 0) {
+          priorityBadge.textContent = "Protect"; priorityType.textContent = "Media Deadline"; priorityName.textContent = mediaAttentionState === 1 ? "Review the active media deadline" : `Review the ${mediaAttentionState} active media deadlines`; priorityReason.textContent = "Media deadlines can create immediate execution risk. Confirm required station actions before lower-priority work."; priorityMeta.innerHTML = "<span>Live Media record</span><span>Deadline-sensitive</span><span>Protect client delivery</span>"; priorityPrimaryAction.href = "media.html"; priorityPrimaryAction.textContent = "Open Media"; prioritySecondaryAction.href = "work.html"; prioritySecondaryAction.textContent = "Open Work"; commandBriefTitle.textContent = "Media requires the first operating decision today."; commandBriefCopy.textContent = "Mission Control found an active media deadline. Protecting client delivery takes priority before routine production work."; return;
+        }
+        if (attentionClientsState.length > 0) {
+          const client = attentionClientsState[0]; priorityBadge.textContent = "Decide"; priorityType.textContent = "Client Attention"; priorityName.textContent = attentionClientsState.length === 1 ? `Review ${client.clientName || "the client requiring attention"}` : "Review the highest-priority client decision"; priorityReason.textContent = client.reason || client.detail || client.attentionReason || "A live client decision is waiting. Review the evidence before committing work."; priorityMeta.innerHTML = `<span>${attentionClientsState.length} ${attentionClientsState.length === 1 ? "client" : "clients"} requiring attention</span><span>Evidence before action</span><span>Investigation does not automatically become work</span>`; priorityPrimaryAction.href = client.href || "clients.html"; priorityPrimaryAction.textContent = client.clientName ? `Open ${client.clientName}` : "Open Clients"; prioritySecondaryAction.href = "communications-v2.html"; prioritySecondaryAction.textContent = "Open Communications"; commandBriefTitle.textContent = attentionClientsState.length === 1 ? "One client decision requires your attention." : `${attentionClientsState.length} client decisions require your attention.`; commandBriefCopy.textContent = "Resolve the strongest live client decision before adding more work."; return;
+        }
+        if (openWork.length > 0) {
+          const item = openWork[0]; priorityBadge.textContent = "Deliver"; priorityType.textContent = item.area || "Open Work"; priorityName.textContent = item.title || "Complete the highest-priority open work item"; priorityReason.textContent = item.detail || item.client || "No urgent media or client decision is waiting, so committed work becomes the next action."; priorityMeta.innerHTML = `<span>${openWork.length} open ${openWork.length === 1 ? "item" : "items"}</span><span>${priorityLabel(item.priority)} priority</span><span>Committed work</span>`; priorityPrimaryAction.href = item.href || "work.html"; priorityPrimaryAction.textContent = "Open Work Item"; prioritySecondaryAction.href = "work.html"; prioritySecondaryAction.textContent = "Open Work Queue"; commandBriefTitle.textContent = "The agency is clear of urgent decisions. Execute the strongest committed work."; commandBriefCopy.textContent = "No live media deadline or client attention record outranks the current work queue."; return;
+        }
+        if (proofWaiting.length > 0) {
+          priorityBadge.textContent = "Prove"; priorityType.textContent = "Client Value"; priorityName.textContent = "Turn completed work into client-facing proof"; priorityReason.textContent = "Completed work is waiting to become proof. Documenting value supports reporting, retention, and future sales."; priorityMeta.innerHTML = `<span>${proofWaiting.length} proof ${proofWaiting.length === 1 ? "item" : "items"} waiting</span><span>Retention support</span><span>Source records only</span>`; priorityPrimaryAction.href = "proof.html"; priorityPrimaryAction.textContent = "Build Proof"; prioritySecondaryAction.href = "clients.html"; prioritySecondaryAction.textContent = "Open Clients"; commandBriefTitle.textContent = "Operations are clear. Convert completed work into proof."; commandBriefCopy.textContent = "No stronger operational issue is visible. Document completed work so clients can see the value already delivered."; return;
+        }
+        priorityBadge.textContent = "Acquire"; priorityType.textContent = "Agency Growth"; priorityName.textContent = "Use the clear operating window to advance the strongest prospect"; priorityReason.textContent = "No urgent client, media, work, or proof obligation is visible. Use available capacity to create new revenue instead of inventing internal work."; priorityMeta.innerHTML = "<span>Operating queues clear</span><span>Revenue growth</span><span>Personalized outreach</span>"; priorityPrimaryAction.href = "client-pre-research.html"; priorityPrimaryAction.textContent = "Research Prospect"; prioritySecondaryAction.href = "clients.html"; prioritySecondaryAction.textContent = "Open Clients"; commandBriefTitle.textContent = "The agency is operationally clear. Use the window to create new revenue."; commandBriefCopy.textContent = "Mission Control found no stronger delivery or client-risk signal. The highest-value action shifts to qualified prospecting.";
       }
 
       function renderDashboard(data) {
@@ -1524,16 +1490,17 @@
       });
 
       if (!window.GCMOShell) {
-        console.error("Today 1.5.0: shared/gcm-shell.js did not load.");
+        console.error("Today 2.0.0: shared/gcm-shell.js did not load.");
       } else {
         window.GCMOShell.mount({
           currentPage: "today",
-          statusText: "Mission Control operational · Today v1.5.0"
+          statusText: "Agency Command Center operational · Today v2.0.0"
         });
       }
 
       setDateAndGreeting();
       renderDashboard(loadData());
+      updatePriority();
       loadMissionControlAttention();
       loadMediaAttention();
     })();
