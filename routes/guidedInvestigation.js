@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/guidedInvestigation.js
-   Version: 7.6.0
+   Version: 7.6.1
    Status: Production Candidate
    Source: Production Worker 7.5.0
    Sprint: Guided Investigation Engine — Phase 1
