@@ -1,83 +1,25 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.5.0
+   Version: 7.6.0
    Status: Production Candidate
-   Source: Production Worker 7.4.0
-   Sprint: Shared GCM OS Application Shell — Client Directory
-   Purpose: Lightweight production router for operational
-            communication analysis, client workspace retrieval,
-            client directory retrieval, reviewed operational-
-            decision commits, live Mission Control retrieval,
-            existing-Investigation processing, existing-Work-Item
-            completion, and read-only Media Operations retrieval.
-
-   Required project structure:
-
-   worker.js
-
-   shared/
-     config.js
-     http.js
-     database.js
-     ai.js
-
-   routes/
-     communicationAnalysis.js
-     operationalDecision.js
-     clientWorkspace.js
-     clientDirectory.js
-     missionControl.js
-     investigationProcessing.js
-     workItemProcessing.js
-     mediaOperations.js
+   Source: Production Worker 7.5.0
+   Sprint: Guided Investigation Engine — Phase 1
+   Purpose: Preserve all production routes and add live guided
+            Investigation reasoning for one current next step.
    ========================================================= */
 
-import {
-  VERSION,
-  API_CONTRACT_VERSION,
-  ACTIONS,
-  corsHeaders
-} from "./shared/config.js";
-
-import {
-  clean,
-  safeErrorMessage,
-  logWorkerError,
-  jsonResponse
-} from "./shared/http.js";
-
-import {
-  handleCommunicationAnalysis
-} from "./routes/communicationAnalysis.js";
-
-import {
-  handleClientWorkspace
-} from "./routes/clientWorkspace.js";
-
-import {
-  handleClientDirectory
-} from "./routes/clientDirectory.js";
-
-import {
-  handleCommitOperationalDecision
-} from "./routes/operationalDecision.js";
-
-import {
-  handleMissionControl
-} from "./routes/missionControl.js";
-
-import {
-  handleProcessInvestigation
-} from "./routes/investigationProcessing.js";
-
-import {
-  handleProcessWorkItem
-} from "./routes/workItemProcessing.js";
-
-import {
-  handleMediaOperations
-} from "./routes/mediaOperations.js";
+import { VERSION, API_CONTRACT_VERSION, ACTIONS, corsHeaders } from "./shared/config.js";
+import { clean, safeErrorMessage, logWorkerError, jsonResponse } from "./shared/http.js";
+import { handleCommunicationAnalysis } from "./routes/communicationAnalysis.js";
+import { handleClientWorkspace } from "./routes/clientWorkspace.js";
+import { handleClientDirectory } from "./routes/clientDirectory.js";
+import { handleCommitOperationalDecision } from "./routes/operationalDecision.js";
+import { handleMissionControl } from "./routes/missionControl.js";
+import { handleProcessInvestigation } from "./routes/investigationProcessing.js";
+import { handleGuidedInvestigation } from "./routes/guidedInvestigation.js";
+import { handleProcessWorkItem } from "./routes/workItemProcessing.js";
+import { handleMediaOperations } from "./routes/mediaOperations.js";
 
 export default {
   async fetch(request, env) {
@@ -95,9 +37,8 @@ export default {
         system: "GCM OS Operational Worker",
         version: VERSION,
         contractVersion: API_CONTRACT_VERSION,
-        sprint: "Shared GCM OS Application Shell — Client Directory",
-        architecture:
-          "Lightweight router with modular operational routes, shared infrastructure, isolated diagnostics, deterministic classification, guarded AI, D1 persistence, live Mission Control retrieval, read-only Client Directory retrieval, existing-Investigation processing, existing-Work-Item completion, and read-only Media Operations retrieval",
+        sprint: "Guided Investigation Engine — Phase 1",
+        architecture: "Modular production router with guided Investigation reasoning.",
         actions: Object.values(ACTIONS),
         engines: [
           "notification-detection",
@@ -109,23 +50,20 @@ export default {
           "client-directory",
           "operational-decision-commit",
           "mission-control",
+          "guided-investigation",
           "investigation-processing",
           "work-item-processing",
           "media-operations"
         ],
         modules: {
-          shared: [
-            "config",
-            "http",
-            "database",
-            "ai"
-          ],
+          shared: ["config", "http", "database", "ai"],
           routes: [
             "communication-analysis",
             "client-workspace",
             "client-directory",
             "operational-decision",
             "mission-control",
+            "guided-investigation",
             "investigation-processing",
             "work-item-processing",
             "media-operations"
@@ -143,25 +81,14 @@ export default {
     }
 
     if (request.method !== "POST") {
-      return jsonResponse({
-        ok: false,
-        requestId,
-        error: "Method not allowed."
-      }, 405);
+      return jsonResponse({ ok: false, requestId, error: "Method not allowed." }, 405);
     }
 
     let body;
-
     try {
       body = await request.json();
     } catch (error) {
-      logWorkerError({
-        requestId,
-        route: "request-parser",
-        stage: "request_validation",
-        error
-      });
-
+      logWorkerError({ requestId, route: "request-parser", stage: "request_validation", error });
       return jsonResponse({
         ok: false,
         requestId,
@@ -175,80 +102,34 @@ export default {
     try {
       switch (action) {
         case ACTIONS.ANALYZE_COMMUNICATION:
-          return await handleCommunicationAnalysis(
-            body,
-            env,
-            requestId
-          );
-
+          return await handleCommunicationAnalysis(body, env, requestId);
         case ACTIONS.GET_CLIENT_WORKSPACE:
-          return await handleClientWorkspace(
-            body,
-            env,
-            requestId
-          );
-
+          return await handleClientWorkspace(body, env, requestId);
         case ACTIONS.GET_CLIENT_DIRECTORY:
-          return await handleClientDirectory(
-            body,
-            env,
-            requestId
-          );
-
+          return await handleClientDirectory(body, env, requestId);
         case ACTIONS.COMMIT_OPERATIONAL_DECISION:
-          return await handleCommitOperationalDecision(
-            body,
-            env,
-            requestId
-          );
-
+          return await handleCommitOperationalDecision(body, env, requestId);
         case ACTIONS.GET_MISSION_CONTROL:
-          return await handleMissionControl(
-            body,
-            env,
-            requestId
-          );
-
+          return await handleMissionControl(body, env, requestId);
+        case ACTIONS.GET_GUIDED_INVESTIGATION:
+          return await handleGuidedInvestigation(body, env, requestId);
         case ACTIONS.PROCESS_INVESTIGATION:
-          return await handleProcessInvestigation(
-            body,
-            env,
-            requestId
-          );
-
+          return await handleProcessInvestigation(body, env, requestId);
         case ACTIONS.PROCESS_WORK_ITEM:
-          return await handleProcessWorkItem(
-            body,
-            env,
-            requestId
-          );
-
+          return await handleProcessWorkItem(body, env, requestId);
         case ACTIONS.GET_MEDIA_OPERATIONS:
-          return await handleMediaOperations(
-            body,
-            env,
-            requestId
-          );
-
+          return await handleMediaOperations(body, env, requestId);
         default:
           return jsonResponse({
             ok: false,
             requestId,
             version: VERSION,
-            error: action
-              ? `Unsupported action: ${action}`
-              : "An action is required.",
+            error: action ? `Unsupported action: ${action}` : "An action is required.",
             supportedActions: Object.values(ACTIONS)
           }, 400);
       }
     } catch (error) {
-      logWorkerError({
-        requestId,
-        route: action || "unknown",
-        stage: "request_handler",
-        error
-      });
-
+      logWorkerError({ requestId, route: action || "unknown", stage: "request_handler", error });
       return jsonResponse({
         ok: false,
         requestId,
