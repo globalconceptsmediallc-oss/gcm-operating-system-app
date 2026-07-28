@@ -1,18 +1,18 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/config.js
-   Version: 7.5.0
-   Status: Production Candidate
-   Source: Production Worker 7.4.0
-   Sprint: Shared GCM OS Application Shell — Client Directory
+   Version: 7.6.1
+   Status: Production
+   Source: Production Worker 7.6.1
+   Sprint: Guided Investigation Engine
    Purpose: Shared production constants and configuration.
-            Adds read-only Client Directory retrieval while
-            preserving existing Communications, Mission Control,
-            Investigation, Work Item, Client Workspace, and Media
-            Operations behavior.
+            Adds Guided Investigation retrieval while preserving
+            existing Communications, Mission Control, Client
+            Directory, Investigation, Work Item, Client Workspace,
+            and Media Operations behavior.
    ========================================================= */
 
-export const VERSION = "7.5.0";
+export const VERSION = "7.6.1";
 export const API_CONTRACT_VERSION = "communications-operational-decision-v3";
 export const COMMUNICATION_ANALYSIS_ENGINE_VERSION = "3.4.1";
 
@@ -31,6 +31,7 @@ export const ACTIONS = Object.freeze({
   GET_CLIENT_DIRECTORY: "get-client-directory",
   COMMIT_OPERATIONAL_DECISION: "commit-operational-decision",
   GET_MISSION_CONTROL: "get-mission-control",
+  GET_GUIDED_INVESTIGATION: "get-guided-investigation",
   PROCESS_INVESTIGATION: "process-investigation",
   PROCESS_WORK_ITEM: "process-work-item",
   GET_MEDIA_OPERATIONS: "get-media-operations"
