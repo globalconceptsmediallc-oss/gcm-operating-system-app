@@ -1,14 +1,13 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media-insertion.html
-   Version: 1.0.0
-   Status: Production Candidate — Remote-Control Road Test
+   Version: 1.1.0
+   Status: Production Candidate — Connected Remote-Control Road Test
    Source: Current GCM OS Media Operations architecture
-   Sprint: Media Campaign Insertion — Melbourne Gun Show Pilot
-   Purpose: Create and review a real media campaign package before
-            it enters Media Operations. This first road-test version
-            preserves the existing D1 Media source of truth and does
-            not use localStorage.
+   Sprint: Connected Media Campaign Insertion — Melbourne Gun Show Pilot
+   Purpose: Create and review the real Melbourne gun-show campaign,
+            insert it into the existing D1 media_records workflow, and
+            return directly to the connected Media operator workspace.
 
    Pilot:
    - Client: Southeast Safes
@@ -109,7 +108,7 @@
           <h1>Media Insertion</h1>
           <p class="subtitle">Create the campaign package that Media will operate, confirm, complete, and reuse.</p>
         </div>
-        <div class="version">Installed version 1.0.0</div>
+        <div class="version">Installed version 1.1.0</div>
       </header>
 
       <section class="summary">
@@ -198,12 +197,13 @@
         <div class="panel-head"><div><h2>5. Review and Insert</h2><p>Review the package before allowing it into the live Media workflow.</p></div></div>
         <div class="body">
           <div class="actions">
+            <a class="button secondary" href="media.html">Back to Media</a>
             <button class="button secondary" id="refresh" type="button">Refresh Package</button>
             <button class="button secondary" id="copyStation" type="button">Copy Station Email</button>
             <button class="button secondary" id="copyKristie" type="button">Copy Kristie Reminder</button>
             <button class="button primary" id="insert" type="button">Insert Campaign into GCM OS</button>
           </div>
-          <div class="status" id="saveStatus">Ready for the remote-control page test. The insert button will verify the Worker operation and will not pretend a record was saved if the production route is not yet installed.</div>
+          <div class="status" id="saveStatus">Ready for the connected road test. Insert creates the campaign in D1, then returns you to the existing Media workspace for verification.</div>
         </div>
       </section>
     </div>
@@ -383,10 +383,11 @@ Andy`;
         throw new Error(payload?.error || payload?.details || `Worker returned ${response.status}.`);
       }
       $("saveStatus").className="status ok";
-      $("saveStatus").textContent=`Campaign inserted successfully. Media record ${payload?.mediaRecordId || payload?.campaignId || "created"}. Open Media to verify it.`;
+      $("saveStatus").textContent=`Campaign inserted successfully as Media record ${payload?.mediaRecordId || "created"}. Returning to Media for verification…`;
+      window.setTimeout(() => { window.location.href = "media.html"; }, 1200);
     }catch(error){
       $("saveStatus").className="status error";
-      $("saveStatus").textContent=`No record was falsely claimed as saved. The page reached the production Worker, but the create_campaign operation is not installed or did not accept the package: ${error.message}`;
+      $("saveStatus").textContent=`The campaign was not inserted: ${error.message}`;
     }finally{
       $("insert").disabled=false;
     }
