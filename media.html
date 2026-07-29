@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media.html
-   Version: 1.8.0
+   Version: 1.9.0
    Status: Production Candidate
    Sprint: Shared GCM OS Shell Migration — Media
    Purpose: Live D1-driven Media Operations workspace with a focused
@@ -127,6 +127,15 @@
     details{margin-top:7px}summary{cursor:pointer;color:var(--gcm-blue-600);font-size:.72rem;font-weight:850}.script{max-width:650px;margin:8px 0 0;padding:10px;border-radius:9px;background:var(--surface-soft);white-space:pre-wrap;color:var(--text-muted);font-size:.73rem}
     .empty,.error,.loading{padding:28px 22px;color:var(--text-muted);font-size:.86rem}.error{color:var(--critical);background:var(--critical-soft)}
     .mobile-menu-button{display:none;min-height:42px;padding:0 14px;border:1px solid var(--border);border-radius:11px;background:#fff;font-weight:800}
+
+    .review-panel{border-color:#c8d9f2}.review-panel .panel-header{background:linear-gradient(180deg,#f4f8ff,#fff)}
+    .review-list{display:grid;gap:12px;padding:16px 18px}.review-card{padding:16px;border:1px solid var(--border);border-radius:14px;background:#fff}
+    .review-card.pending{border-color:#c8d9f2;background:var(--info-soft)}.review-card.deferred{border-color:#ecd7aa;background:var(--warning-soft)}
+    .review-top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.review-title{font-weight:900;color:var(--gcm-navy-950)}
+    .review-meta,.review-evidence{margin-top:6px;color:var(--text-muted);font-size:.78rem;line-height:1.45}.review-action{margin-top:10px;font-weight:850;color:var(--gcm-navy-900)}
+    .review-buttons{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.review-button{min-height:38px;padding:0 13px;border:1px solid var(--border);border-radius:9px;background:#fff;font-weight:850;cursor:pointer}
+    .review-button.approve{border-color:var(--success);background:var(--success);color:#fff}.review-button.reject{border-color:#efcccc;color:var(--critical)}.review-button.defer{border-color:#ecd7aa;color:var(--warning)}
+    .review-empty{padding:18px;color:var(--text-muted);font-size:.82rem}
     @media(max-width:1000px){.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:860px){.app-shell{grid-template-columns:1fr}.sidebar{position:fixed;inset:0 auto 0 0;z-index:100;width:250px;transform:translateX(-100%);transition:transform .18s ease}.sidebar.is-open{transform:translateX(0)}.mobile-menu-button{display:inline-flex;align-items:center}.main{padding:20px}.topbar{align-items:center}}
     @media(max-width:640px){.main{padding:16px}.topbar{flex-direction:column;align-items:flex-start}.topbar-actions{width:100%}.summary-grid{grid-template-columns:1fr}.select-wrap{width:100%}.select-wrap select{width:100%}}
@@ -170,6 +179,14 @@
           <article class="summary-card"><p class="summary-label">Running Now</p><p class="summary-value" id="active-count">—</p><p class="summary-note">Active media placements.</p></article>
           <article class="summary-card"><p class="summary-label">Upcoming</p><p class="summary-value" id="upcoming-count">—</p><p class="summary-note">Pending or planned placements.</p></article>
           <article class="summary-card"><p class="summary-label">History</p><p class="summary-value" id="history-count">—</p><p class="summary-note">Expired media retained for proof and reference.</p></article>
+        </section>
+
+        <section class="panel review-panel" id="panel-reviews">
+          <div class="panel-header">
+            <div><h2 class="panel-title">Pending Station Confirmations</h2><p class="panel-description">Inbound Communications matched to sent Media instructions. Review the evidence before approved changes update live Media records.</p></div>
+            <span class="count-pill" id="review-pill">0 pending</span>
+          </div>
+          <div id="review-list" class="review-list"><div class="loading">Loading station confirmation reviews…</div></div>
         </section>
 
         <section class="panel attention-panel" id="panel-attention">
@@ -327,6 +344,8 @@
       const markSentAwaiting = document.getElementById("mark-sent-awaiting");
       const copyStatus = document.getElementById("copy-status");
       const awaitingSummary = document.getElementById("awaiting-summary");
+      const reviewList = document.getElementById("review-list");
+      const reviewPill = document.getElementById("review-pill");
       let currentRecords = [];
       let selectedRecord = null;
       let primaryAction = "";
@@ -930,6 +949,72 @@
         }
       }
 
+      async function loadOperationalReviews(clientId = "") {
+        reviewList.innerHTML = '<div class="loading">Loading station confirmation reviews…</div>';
+        try {
+          const body = { action:"operational-reviews", operation:"list" };
+          if (clientId) body.clientId = Number(clientId);
+          const response = await fetch(WORKER_ENDPOINT, {
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify(body)
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || payload?.ok !== true) throw new Error(payload?.error || "Review request failed.");
+          renderOperationalReviews(payload?.operationalReviews?.reviews || []);
+        } catch (error) {
+          reviewPill.textContent = "Unavailable";
+          reviewList.innerHTML = `<div class="error">${escapeHtml(error?.message || "Operational Reviews could not be loaded.")}</div>`;
+        }
+      }
+
+      function renderOperationalReviews(reviews) {
+        const open = reviews.filter(r => ["pending","deferred"].includes(String(r.status || "").toLowerCase()));
+        reviewPill.textContent = `${open.length} pending`;
+        if (!open.length) {
+          reviewList.innerHTML = '<div class="review-empty">No station confirmations are waiting for review.</div>';
+          return;
+        }
+        reviewList.innerHTML = open.map(r => `
+          <article class="review-card ${escapeHtml(r.status || "pending")}">
+            <div class="review-top">
+              <div>
+                <div class="review-title">${escapeHtml(r.outletName || "Station")} · ${escapeHtml(r.market || "Market")}</div>
+                <div class="review-meta">Communication #${escapeHtml(r.communicationId)} · Instruction #${escapeHtml(r.matchedRecordId)} · ${escapeHtml(String(r.instructionType || "change").toUpperCase())}</div>
+              </div>
+              ${badge(r.status || "pending")}
+            </div>
+            <div class="review-action">${escapeHtml(r.recommendedAction || "Review the proposed Media update.")}</div>
+            <div class="review-evidence">${escapeHtml(r.evidenceSummary || "No evidence summary was stored.")}</div>
+            <div class="review-meta">Current: ${formatDate(r.currentStartDate)} – ${formatDate(r.currentEndDate)}${r.requestedEndDate ? ` · Requested through ${formatDate(r.requestedEndDate)}` : ""}</div>
+            <div class="review-buttons">
+              <button class="review-button approve" type="button" data-review-id="${r.id}" data-review-decision="approve">Approve & Update Media</button>
+              <button class="review-button defer" type="button" data-review-id="${r.id}" data-review-decision="defer">Await More Proof</button>
+              <button class="review-button reject" type="button" data-review-id="${r.id}" data-review-decision="reject">Reject Match</button>
+            </div>
+          </article>
+        `).join("");
+      }
+
+      async function decideOperationalReview(reviewId, decision) {
+        const label = decision === "approve" ? "approve and update Media" : decision;
+        if (!window.confirm(`Confirm ${label} for Operational Review #${reviewId}?`)) return;
+        reviewList.querySelectorAll("button").forEach(button => button.disabled = true);
+        try {
+          const response = await fetch(WORKER_ENDPOINT, {
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({ action:"operational-reviews", operation:decision, reviewId:Number(reviewId) })
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || payload?.ok !== true) throw new Error(payload?.error || "Review decision failed.");
+          await Promise.all([loadOperationalReviews(clientSelect.value), loadMedia(clientSelect.value)]);
+        } catch (error) {
+          window.alert(error?.message || "The review decision could not be saved.");
+          await loadOperationalReviews(clientSelect.value);
+        }
+      }
+
       function applyView(view) {
         const selected = view || "attention";
         const panels = {
@@ -998,6 +1083,7 @@
 
           populateClients(payload?.mediaOperations?.clients, clientId);
           render(payload);
+          await loadOperationalReviews(clientId);
         } catch (error) {
           console.error("Could not load Media Operations.", error);
           renderError(error?.message);
@@ -1040,6 +1126,12 @@
       mobileMenuButton.addEventListener("click", () => {
         const open = sidebar.classList.toggle("is-open");
         mobileMenuButton.setAttribute("aria-expanded", String(open));
+      });
+
+      reviewList.addEventListener("click", event => {
+        const button = event.target.closest("[data-review-id][data-review-decision]");
+        if (!button) return;
+        decideOperationalReview(button.dataset.reviewId, button.dataset.reviewDecision);
       });
 
       renderInstructionQueue();
