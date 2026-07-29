@@ -1,1143 +1,301 @@
 <!-- =========================================================
    Global Concepts Media Operating System
-   File: media.html
-   Version: 1.9.0
-   Status: Production Candidate
-   Sprint: Shared GCM OS Shell Migration — Media
-   Purpose: Live D1-driven Media Operations workspace with a focused
-            view selector, automatic station traffic deadlines,
-            Station Landscape discovery, a multi-placement station
-            communication builder, and durable D1 station instructions.
+   File: media-v2-roadtest.html
+   Version: 2.0.0
+   Status: Production Road Test
+   Source: Production media.html 1.9.0
+   Sprint: Media Operations — Operator Workspace
+   Purpose: Add a read-only operational decision layer above the
+            existing Media workflow without changing D1, station
+            instruction, confirmation, or placement records.
 
-   Station deadline rules:
-   - Active placement deadline = 3 working days before end_date.
-   - Pending/planned placement deadline = 3 working days before start_date.
-   - Saturday and Sunday do not count.
-   - Deadline is due by 12:00 noon local operating time.
-   - Calculated warnings supplement stored D1 attention flags.
-   - No additional D1 date field is required.
-
-   Source of truth:
-   - D1 media_records through Worker action get-media-operations
-   - No Media localStorage
-   - Sent station instructions persist to D1 through Worker action
-     commit-media-instructions
+   Road-test rules:
+   - Existing media.html remains untouched during this proof.
+   - D1 media_records remains authoritative.
+   - No campaign records are invented or written.
+   - Queue stages are derived from current placement state.
+   - The page answers: What media work should be done next?
    ========================================================= -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Media | GCM OS</title>
-  <meta name="description" content="Media Operations for the Global Concepts Media Agency Operating System." />
-
+  <title>Media Operator Road Test | GCM OS</title>
   <style>
-    :root {
-      --gcm-navy-950:#071426; --gcm-navy-900:#0b1d33; --gcm-navy-800:#112a47;
-      --gcm-blue-600:#1f68d8; --gcm-blue-500:#347ce8; --gcm-blue-100:#eaf2ff;
-      --gcm-gold-500:#d6a94a; --surface:#fff; --surface-soft:#f5f7fb;
-      --surface-muted:#edf1f7; --border:#dbe2ec; --text:#132238;
-      --text-muted:#637083; --text-soft:#8290a3; --success:#1f7a4f;
-      --success-soft:#e9f7f0; --warning:#9a6414; --warning-soft:#fff4dd;
-      --critical:#b33a3a; --critical-soft:#fff0f0; --info:#245fae;
-      --info-soft:#edf5ff; --shadow-sm:0 8px 24px rgba(7,20,38,.07);
-      --radius-sm:10px; --radius-md:16px; --radius-lg:22px; --content-width:1480px;
+    :root{
+      --navy:#071426;--navy2:#0b1d33;--blue:#1f68d8;--blue-soft:#eaf2ff;
+      --gold:#d6a94a;--surface:#fff;--soft:#f5f7fb;--muted:#637083;
+      --border:#dbe2ec;--text:#132238;--success:#1f7a4f;--success-soft:#e9f7f0;
+      --warning:#9a6414;--warning-soft:#fff4dd;--critical:#b33a3a;
+      --critical-soft:#fff0f0;--info:#245fae;--info-soft:#edf5ff;
+      --shadow:0 8px 24px rgba(7,20,38,.07);--radius:18px;
     }
-    *{box-sizing:border-box} body{margin:0;min-height:100vh;background:var(--surface-soft);color:var(--text);
-      font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5}
-    button,input,select{font:inherit} a{color:inherit;text-decoration:none}
-    .app-shell{min-height:100vh;display:grid;grid-template-columns:250px minmax(0,1fr)}
-    .sidebar{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;padding:24px 18px;
-      background:radial-gradient(circle at top right,rgba(52,124,232,.19),transparent 34%),linear-gradient(180deg,var(--gcm-navy-900),var(--gcm-navy-950));color:#fff;overflow-y:auto}
-    .brand{display:flex;align-items:center;gap:12px;padding:2px 8px 22px;border-bottom:1px solid rgba(255,255,255,.12)}
-    .brand-mark{width:42px;height:42px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.22);border-radius:13px;background:rgba(255,255,255,.08);color:var(--gcm-gold-500);font-weight:900}
-    .brand-copy strong,.brand-copy span{display:block}.brand-copy strong{font-size:.95rem}.brand-copy span{margin-top:2px;color:rgba(255,255,255,.58);font-size:.75rem;text-transform:uppercase;letter-spacing:.12em}
-    .nav-label{margin:24px 10px 10px;color:rgba(255,255,255,.42);font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.14em}
-    .primary-nav{display:grid;gap:6px}.nav-link{display:flex;align-items:center;gap:12px;min-height:46px;padding:0 13px;border-radius:12px;color:rgba(255,255,255,.72);font-size:.92rem;font-weight:700}
-    .nav-link:hover,.nav-link:focus-visible{background:rgba(255,255,255,.08);color:#fff;outline:none}.nav-link[aria-current="page"]{background:rgba(52,124,232,.2);color:#fff;box-shadow:inset 3px 0 0 var(--gcm-gold-500)}
-    .nav-icon{width:22px;text-align:center}.sidebar-footer{margin-top:auto;padding:18px 8px 2px;border-top:1px solid rgba(255,255,255,.12)}
-    .sidebar-status{display:flex;align-items:center;gap:9px;color:rgba(255,255,255,.67);font-size:.78rem}.status-dot{width:8px;height:8px;border-radius:50%;background:#5fd397;box-shadow:0 0 0 4px rgba(95,211,151,.12)}
-    .main{min-width:0;padding:28px 32px 48px}.main-inner{width:min(100%,var(--content-width));margin:0 auto}
-    .topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:22px}.eyebrow{margin:0 0 6px;color:var(--gcm-blue-600);font-size:.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.14em}
-    .page-title{margin:0;color:var(--gcm-navy-950);font-size:clamp(2rem,4vw,3.15rem);line-height:1;letter-spacing:-.045em}.page-subtitle{margin:10px 0 0;color:var(--text-muted);font-size:1rem}
-    .topbar-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.date-chip,.select-wrap{min-height:42px;border:1px solid var(--border);border-radius:11px;background:var(--surface);box-shadow:var(--shadow-sm)}
-    .date-chip{display:inline-flex;align-items:center;padding:0 14px;color:var(--text-muted);font-size:.84rem;font-weight:800}.select-wrap{padding:0 10px}.select-wrap select{height:40px;border:0;background:transparent;color:var(--gcm-navy-900);font-weight:800;outline:none;min-width:190px}
-    .summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}.summary-card{padding:18px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);box-shadow:var(--shadow-sm)}
-    .summary-label{margin:0;color:var(--text-muted);font-size:.74rem;font-weight:850;text-transform:uppercase;letter-spacing:.08em}.summary-value{margin:8px 0 2px;color:var(--gcm-navy-950);font-size:2rem;font-weight:900;line-height:1}.summary-note{margin:8px 0 0;color:var(--text-soft);font-size:.78rem}
-    .panel{margin-bottom:18px;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--surface);box-shadow:var(--shadow-sm);overflow:hidden}.panel-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:20px 22px 16px;border-bottom:1px solid var(--border)}
-    .panel-title{margin:0;color:var(--gcm-navy-950);font-size:1rem;font-weight:900}.panel-description{margin:5px 0 0;color:var(--text-muted);font-size:.82rem}.count-pill{display:inline-flex;align-items:center;min-height:28px;padding:0 10px;border-radius:999px;background:var(--info-soft);color:var(--info);font-size:.7rem;font-weight:900}
-    .attention-panel{border-color:#efd9aa}.attention-panel .panel-header{background:linear-gradient(180deg,#fffaf0,#fff)}.attention-list{display:grid;gap:10px;padding:16px 18px}.attention-card{padding:15px 16px;border:1px solid #ecd7aa;border-radius:13px;background:var(--warning-soft)}
-    .attention-card{cursor:pointer}.attention-card:hover{border-color:var(--gcm-gold-500)}
-    .attention-card.is-queued{border-color:#b9d7c8;background:var(--success-soft);opacity:.82}
-    .attention-card.is-queued:hover{border-color:var(--success)}
-    .queued-band{display:inline-flex;align-items:center;min-height:22px;padding:0 8px;margin-left:6px;border-radius:999px;background:#d9f0e5;color:var(--success);font-size:.66rem;font-weight:900;text-transform:uppercase}
-    .attention-card strong{display:block;color:var(--gcm-navy-950);font-size:.9rem}
-    .action-panel{display:none}.action-panel.is-open{display:block}.action-body{padding:20px 22px}
-    .action-record{padding:14px 16px;border:1px solid var(--border);border-radius:13px;background:var(--surface-soft);margin-bottom:16px}
-    .action-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}
-    .action-button{min-height:44px;padding:0 12px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--gcm-navy-900);font-weight:900;cursor:pointer}
-    .action-button.is-selected{border-color:var(--gcm-blue-500);background:var(--gcm-blue-100);color:var(--gcm-blue-600)}
-    .communication-box{padding:16px;border:1px solid var(--border);border-radius:13px}
-    .build-button{margin-top:12px;min-height:42px;padding:0 14px;border:0;border-radius:10px;background:var(--gcm-blue-600);color:#fff;font-weight:900;cursor:pointer}
-    .build-button:disabled{opacity:.45;cursor:not-allowed}
-    .draft-actions{display:none;gap:10px;flex-wrap:wrap;margin-top:12px}
-    .draft-actions.is-open{display:flex}
-    .sent-button{min-height:42px;padding:0 14px;border:0;border-radius:10px;background:var(--success);color:#fff;font-weight:900;cursor:pointer}
-    .sent-button:disabled{opacity:.45;cursor:not-allowed}
-    .copy-status{margin-top:8px;color:var(--success);font-size:.76rem;font-weight:850}
-    .awaiting-summary{margin-top:12px;padding:12px 14px;border:1px solid #b9d7c8;border-radius:10px;background:var(--success-soft);color:var(--success);font-size:.8rem;font-weight:850}.attention-card p{margin:5px 0 0;color:var(--text-muted);font-size:.78rem}
-    /* Market identity stays separate from yellow operational warning status. */
-    .market-melbourne{border-left:6px solid #347ce8}
-    .market-orlando{border-left:6px solid #8b5cf6}
-    .market-other{border-left:6px solid #8290a3}
-    .market-band{display:inline-flex;align-items:center;min-height:22px;padding:0 8px;border-radius:999px;font-size:.66rem;font-weight:900;letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px}
-    .market-band.market-melbourne{border-left:0;background:#eaf2ff;color:#1f68d8}
-    .market-band.market-orlando{border-left:0;background:#f2ecff;color:#6d4bc3}
-    .market-band.market-other{border-left:0;background:#edf1f7;color:#637083}
-    .action-section{margin-top:16px;padding-top:16px;border-top:1px solid var(--border)}
-    .action-section h3{margin:0 0 6px;color:var(--gcm-navy-950);font-size:.86rem}
-    .action-section p{margin:0 0 10px;color:var(--text-muted);font-size:.78rem}
-    .verify-row{display:flex;align-items:center;gap:9px;margin:4px 0 14px;font-weight:850;color:var(--gcm-navy-900)}
-    .station-landscape{display:grid;gap:10px}.landscape-card{padding:12px 14px;border:1px solid var(--border);border-radius:10px;background:var(--surface-soft)}
-    .landscape-card strong{display:block;color:var(--gcm-navy-950);font-size:.82rem}.landscape-meta{margin-top:4px;color:var(--text-muted);font-size:.74rem}
-    .landscape-empty{padding:12px 14px;border:1px dashed var(--border);border-radius:10px;color:var(--text-muted);font-size:.78rem}
-    .replacement-row{display:grid;grid-template-columns:1fr 180px;gap:10px;margin-top:10px}
-    .replacement-row input,.instruction-field input,.instruction-field textarea{min-height:42px;padding:9px 10px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--text)}
-    .instruction-field textarea{width:100%;min-height:90px;resize:vertical}
-    .instruction-fields{display:none;margin:0 0 16px;padding:14px;border:1px solid var(--border);border-radius:12px;background:var(--surface-soft)}
-    .instruction-fields.is-open{display:block}
-    .instruction-field label{display:block;margin-bottom:6px;color:var(--gcm-navy-900);font-size:.78rem;font-weight:850}
-    .instruction-field input{width:100%}
-    .instruction-help{margin-top:6px;color:var(--text-soft);font-size:.72rem}
-    .queue-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
-    .secondary-button{min-height:42px;padding:0 14px;border:1px solid var(--gcm-blue-500);border-radius:10px;background:#fff;color:var(--gcm-blue-600);font-weight:900;cursor:pointer}
-    .secondary-button:disabled{opacity:.45;cursor:not-allowed}
-    .instruction-queue{display:grid;gap:10px;margin-top:12px}
-    .queue-item{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:10px;background:var(--surface-soft)}
-    .queue-item strong{display:block;color:var(--gcm-navy-950);font-size:.82rem}
-    .queue-item p{margin:4px 0 0;color:var(--text-muted);font-size:.74rem}
-    .queue-remove{border:0;background:transparent;color:var(--critical);font-weight:850;cursor:pointer}
-    .draft-wrap{display:none;margin-top:16px}.draft-wrap.is-open{display:block}
-    .draft-subject{margin-bottom:8px;padding:11px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface-soft);font-size:.8rem}
-    .draft-body{width:100%;min-height:320px;padding:14px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--text);font:inherit;font-size:.82rem;line-height:1.55;resize:vertical}
-    @media(max-width:640px){.replacement-row{grid-template-columns:1fr}.action-grid{grid-template-columns:1fr}}
-    .table-wrap{overflow-x:auto}.media-table{width:100%;border-collapse:collapse;min-width:1120px}.media-table th{padding:11px 14px;background:#fbfcfe;border-bottom:1px solid var(--border);color:var(--text-soft);font-size:.67rem;text-align:left;text-transform:uppercase;letter-spacing:.07em;white-space:nowrap}
-    .media-table td{padding:13px 14px;border-bottom:1px solid var(--border);font-size:.79rem;vertical-align:top}.media-table tbody tr:last-child td{border-bottom:0}.record-title{font-weight:900;color:var(--gcm-navy-950)}.muted{color:var(--text-muted)}.small{font-size:.72rem;color:var(--text-soft);margin-top:3px}
-    .badge{display:inline-flex;align-items:center;min-height:25px;padding:0 8px;border-radius:999px;font-size:.66rem;font-weight:900;text-transform:uppercase;white-space:nowrap}.badge-active{background:var(--success-soft);color:var(--success)}.badge-pending{background:var(--info-soft);color:var(--info)}.badge-expired{background:var(--surface-muted);color:var(--text-muted)}.badge-attention{background:var(--warning-soft);color:var(--warning)}.badge-unknown{background:var(--surface-muted);color:var(--text-muted)}
-    details{margin-top:7px}summary{cursor:pointer;color:var(--gcm-blue-600);font-size:.72rem;font-weight:850}.script{max-width:650px;margin:8px 0 0;padding:10px;border-radius:9px;background:var(--surface-soft);white-space:pre-wrap;color:var(--text-muted);font-size:.73rem}
-    .empty,.error,.loading{padding:28px 22px;color:var(--text-muted);font-size:.86rem}.error{color:var(--critical);background:var(--critical-soft)}
-    .mobile-menu-button{display:none;min-height:42px;padding:0 14px;border:1px solid var(--border);border-radius:11px;background:#fff;font-weight:800}
-
-    .review-panel{border-color:#c8d9f2}.review-panel .panel-header{background:linear-gradient(180deg,#f4f8ff,#fff)}
-    .review-list{display:grid;gap:12px;padding:16px 18px}.review-card{padding:16px;border:1px solid var(--border);border-radius:14px;background:#fff}
-    .review-card.pending{border-color:#c8d9f2;background:var(--info-soft)}.review-card.deferred{border-color:#ecd7aa;background:var(--warning-soft)}
-    .review-top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.review-title{font-weight:900;color:var(--gcm-navy-950)}
-    .review-meta,.review-evidence{margin-top:6px;color:var(--text-muted);font-size:.78rem;line-height:1.45}.review-action{margin-top:10px;font-weight:850;color:var(--gcm-navy-900)}
-    .review-buttons{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.review-button{min-height:38px;padding:0 13px;border:1px solid var(--border);border-radius:9px;background:#fff;font-weight:850;cursor:pointer}
-    .review-button.approve{border-color:var(--success);background:var(--success);color:#fff}.review-button.reject{border-color:#efcccc;color:var(--critical)}.review-button.defer{border-color:#ecd7aa;color:var(--warning)}
-    .review-empty{padding:18px;color:var(--text-muted);font-size:.82rem}
-    @media(max-width:1000px){.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    @media(max-width:860px){.app-shell{grid-template-columns:1fr}.sidebar{position:fixed;inset:0 auto 0 0;z-index:100;width:250px;transform:translateX(-100%);transition:transform .18s ease}.sidebar.is-open{transform:translateX(0)}.mobile-menu-button{display:inline-flex;align-items:center}.main{padding:20px}.topbar{align-items:center}}
-    @media(max-width:640px){.main{padding:16px}.topbar{flex-direction:column;align-items:flex-start}.topbar-actions{width:100%}.summary-grid{grid-template-columns:1fr}.select-wrap{width:100%}.select-wrap select{width:100%}}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--soft);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5}
+    button,select{font:inherit}
+    .shell{min-height:100vh;display:grid;grid-template-columns:250px 1fr}
+    aside{position:sticky;top:0;height:100vh;padding:24px 18px;background:linear-gradient(180deg,var(--navy2),var(--navy));color:#fff}
+    .brand{display:flex;gap:12px;align-items:center;padding:0 8px 22px;border-bottom:1px solid rgba(255,255,255,.12)}
+    .mark{width:42px;height:42px;display:grid;place-items:center;border-radius:13px;background:rgba(255,255,255,.08);color:var(--gold);font-weight:900}
+    .brand strong,.brand span{display:block}.brand span{font-size:.72rem;color:rgba(255,255,255,.6);letter-spacing:.12em;text-transform:uppercase}
+    nav{display:grid;gap:6px;margin-top:24px}
+    nav a{padding:12px 13px;border-radius:11px;color:rgba(255,255,255,.72);font-weight:750;text-decoration:none}
+    nav a.active{background:rgba(52,124,232,.2);color:#fff;box-shadow:inset 3px 0 0 var(--gold)}
+    main{padding:30px}
+    .page{max-width:1480px;margin:auto}
+    header{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:20px}
+    .eyebrow{margin:0 0 6px;color:var(--blue);font-size:.72rem;font-weight:900;letter-spacing:.14em;text-transform:uppercase}
+    h1{margin:0;color:var(--navy);font-size:clamp(2rem,4vw,3rem);line-height:1}
+    .subtitle{margin:10px 0 0;color:var(--muted)}
+    .controls{display:flex;gap:10px;flex-wrap:wrap}
+    select,.button{min-height:42px;padding:0 13px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--navy2);font-weight:800}
+    .button{cursor:pointer}
+    .version{display:inline-flex;align-items:center;min-height:42px;padding:0 13px;border-radius:10px;background:var(--navy);color:#fff;font-size:.78rem;font-weight:900}
+    .panel{margin-bottom:18px;border:1px solid var(--border);border-radius:var(--radius);background:#fff;box-shadow:var(--shadow);overflow:hidden}
+    .panel-head{display:flex;justify-content:space-between;gap:16px;padding:20px 22px 16px;border-bottom:1px solid var(--border)}
+    .panel-head h2{margin:0;font-size:1rem;color:var(--navy)}
+    .panel-head p{margin:5px 0 0;color:var(--muted);font-size:.82rem}
+    .priority{border-color:#b9cfee}
+    .priority .panel-head{background:linear-gradient(180deg,#edf5ff,#fff)}
+    .priority-body{padding:22px}
+    .decision-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+    .decision{padding:15px;border:1px solid var(--border);border-radius:13px;background:var(--soft)}
+    .decision span{display:block;margin-bottom:6px;color:var(--blue);font-size:.68rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase}
+    .decision strong{display:block;color:var(--navy);font-size:.9rem}
+    .next{grid-column:1/-1;background:var(--navy);color:#fff;border-color:var(--navy)}
+    .next span{color:#8fb8ff}.next strong{color:#fff;font-size:1rem}
+    .queue-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;padding:18px}
+    .lane{min-width:0;border:1px solid var(--border);border-radius:14px;background:var(--soft);overflow:hidden}
+    .lane-head{padding:14px 15px;border-bottom:1px solid var(--border);background:#fff}
+    .lane-head strong{display:block;color:var(--navy)}.lane-head span{font-size:.72rem;color:var(--muted)}
+    .lane-list{display:grid;gap:10px;padding:12px}
+    .card{padding:14px;border:1px solid var(--border);border-radius:12px;background:#fff}
+    .card strong{display:block;color:var(--navy);font-size:.86rem}
+    .meta{margin-top:5px;color:var(--muted);font-size:.75rem}
+    .action{margin-top:9px;padding-top:9px;border-top:1px solid var(--border);color:var(--navy2);font-size:.76rem;font-weight:850}
+    .badge{display:inline-flex;align-items:center;min-height:23px;padding:0 8px;margin-bottom:8px;border-radius:999px;font-size:.64rem;font-weight:900;text-transform:uppercase}
+    .b-critical{background:var(--critical-soft);color:var(--critical)}
+    .b-warning{background:var(--warning-soft);color:var(--warning)}
+    .b-success{background:var(--success-soft);color:var(--success)}
+    .b-info{background:var(--info-soft);color:var(--info)}
+    .summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
+    .summary article{padding:17px;border:1px solid var(--border);border-radius:14px;background:#fff;box-shadow:var(--shadow)}
+    .summary span{display:block;color:var(--muted);font-size:.7rem;font-weight:900;text-transform:uppercase}
+    .summary strong{display:block;margin-top:7px;color:var(--navy);font-size:1.8rem}
+    .empty,.loading,.error{padding:22px;color:var(--muted);font-size:.84rem}
+    .error{color:var(--critical);background:var(--critical-soft)}
+    .table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:900px}
+    .table th,.table td{padding:12px 14px;border-bottom:1px solid var(--border);text-align:left;font-size:.76rem;vertical-align:top}
+    .table th{background:#fbfcfe;color:var(--muted);font-size:.66rem;text-transform:uppercase;letter-spacing:.07em}
+    @media(max-width:1100px){.decision-grid{grid-template-columns:repeat(2,1fr)}.queue-grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:800px){.shell{grid-template-columns:1fr}aside{display:none}main{padding:18px}.summary,.queue-grid,.decision-grid{grid-template-columns:1fr}header{flex-direction:column}.next{grid-column:auto}}
   </style>
 </head>
 <body>
-  <div class="app-shell">
-    <aside id="sidebar" data-gcm-shell-sidebar aria-label="Primary navigation"></aside>
-
-    <main class="main">
-      <div class="main-inner">
-        <header class="topbar">
-          <div>
-            <p class="eyebrow">Media Operations</p>
-            <h1 class="page-title">Media</h1>
-            <p class="page-subtitle">Know what is running, what needs attention, what is coming next, and what ran before.</p>
-          </div>
-          <div class="topbar-actions">
-            <button class="mobile-menu-button" id="mobile-menu-button" type="button">Menu</button>
-            <div class="date-chip" id="current-date"></div>
-            <label class="select-wrap">
-              <select id="client-select" aria-label="Select client">
-                <option value="">All clients</option>
-              </select>
-            </label>
-
-            <label class="select-wrap">
-              <select id="view-select" aria-label="Select media view">
-                <option value="attention">Needs Attention</option>
-                <option value="active">Running Now</option>
-                <option value="upcoming">Upcoming</option>
-                <option value="history">History</option>
-                <option value="all">All Media</option>
-              </select>
-            </label>
-          </div>
-        </header>
-
-        <section class="summary-grid" aria-label="Media summary">
-          <article class="summary-card"><p class="summary-label">Needs Attention</p><p class="summary-value" id="attention-count">—</p><p class="summary-note">Calculated traffic deadlines and stored review flags.</p></article>
-          <article class="summary-card"><p class="summary-label">Running Now</p><p class="summary-value" id="active-count">—</p><p class="summary-note">Active media placements.</p></article>
-          <article class="summary-card"><p class="summary-label">Upcoming</p><p class="summary-value" id="upcoming-count">—</p><p class="summary-note">Pending or planned placements.</p></article>
-          <article class="summary-card"><p class="summary-label">History</p><p class="summary-value" id="history-count">—</p><p class="summary-note">Expired media retained for proof and reference.</p></article>
-        </section>
-
-        <section class="panel review-panel" id="panel-reviews">
-          <div class="panel-header">
-            <div><h2 class="panel-title">Pending Station Confirmations</h2><p class="panel-description">Inbound Communications matched to sent Media instructions. Review the evidence before approved changes update live Media records.</p></div>
-            <span class="count-pill" id="review-pill">0 pending</span>
-          </div>
-          <div id="review-list" class="review-list"><div class="loading">Loading station confirmation reviews…</div></div>
-        </section>
-
-        <section class="panel attention-panel" id="panel-attention">
-          <div class="panel-header">
-            <div><h2 class="panel-title">Needs Attention</h2><p class="panel-description">Automatically calculated from the three-working-day traffic rule, plus any stored D1 attention flags.</p></div>
-            <span class="count-pill" id="attention-pill">0 items</span>
-          </div>
-          <div id="attention-list" class="attention-list"><div class="loading">Loading media attention…</div></div>
-        </section>
-
-        <section class="panel action-panel" id="media-action-panel">
-          <div class="panel-header">
-            <div><h2 class="panel-title">Media Action</h2><p class="panel-description">Choose the operational instruction for this placement before building station communication.</p></div>
-            <button class="action-button" id="close-action-panel" type="button">Close</button>
-          </div>
-          <div class="action-body">
-            <div class="action-record" id="selected-media-record">Select a media record.</div>
-            <div class="action-section">
-              <h3>Primary instruction</h3>
-              <p>Choose one. A placement cannot be extended and ended at the same time.</p>
-              <div class="action-grid">
-                <button class="action-button primary-action" data-action="EXTEND" type="button">EXTEND</button>
-                <button class="action-button primary-action" data-action="CHANGE" type="button">CHANGE</button>
-                <button class="action-button primary-action" data-action="END" type="button">END</button>
-              </div>
-
-              <div class="instruction-fields" id="extend-fields">
-                <div class="instruction-field">
-                  <label for="extend-through-date">Extend Through</label>
-                  <input id="extend-through-date" type="date" />
-                  <div class="instruction-help">Required for EXTEND. This is the new requested placement end date.</div>
-                </div>
-              </div>
-
-              <div class="instruction-fields" id="change-fields">
-                <div class="instruction-field">
-                  <label for="change-instructions">Change Instructions</label>
-                  <textarea id="change-instructions" placeholder="Describe exactly what should change for this placement."></textarea>
-                </div>
-              </div>
-
-              <div class="instruction-fields" id="end-fields">
-                <div class="instruction-field">
-                  <label for="end-date">End On</label>
-                  <input id="end-date" type="date" />
-                  <div class="instruction-help">Defaults to the current scheduled end date. Change it only if the station should stop the placement on a different date.</div>
-                </div>
-              </div>
-
-              <label class="verify-row"><input id="verify-current-copy" type="checkbox" /> VERIFY CURRENT COPY</label>
-
-              <div class="queue-actions">
-                <button class="secondary-button" id="add-instruction" type="button" disabled>Add This Instruction</button>
-              </div>
-            </div>
-
-            <div class="action-section">
-              <h3>Station Landscape</h3>
-              <p>Automatically found from D1 for this client, market, and station. No manual related-media selection is required.</p>
-              <div class="station-landscape" id="station-landscape"><div class="landscape-empty">Select a media record to load the station landscape.</div></div>
-            </div>
-
-            <div class="action-section">
-              <h3>Replacement creative coming</h3>
-              <p>Use this when replacement production is underway but the finished file is not ready yet.</p>
-              <div class="replacement-row">
-                <input id="replacement-description" type="text" placeholder="Example: New Pre-Loved Safes creative" />
-                <input id="replacement-ready-date" type="text" placeholder="Expected Wednesday" />
-              </div>
-            </div>
-
-            <div class="action-section">
-              <h3>Pending Station Communication</h3>
-              <p>Add each placement instruction here. You can then select another placement and add it to the same email.</p>
-              <div class="instruction-queue" id="instruction-queue">
-                <div class="landscape-empty">No placement instructions added yet.</div>
-              </div>
-            </div>
-
-            <div class="communication-box">
-              <strong>Station Communication</strong>
-              <p id="communication-status">Choose an instruction, add it to the pending communication, then add any other placement changes that belong in the same station email.</p>
-              <button class="build-button" id="build-station-communication" type="button" disabled>Build Combined Station Communication</button>
-
-              <div class="draft-wrap" id="draft-wrap">
-                <div class="draft-subject"><strong>Subject:</strong> <span id="draft-subject"></span></div>
-                <textarea class="draft-body" id="draft-body" aria-label="Generated station communication"></textarea>
-                <div class="draft-actions" id="draft-actions">
-                  <button class="secondary-button" id="copy-email-gmail" type="button">Copy Email for Gmail</button>
-                  <button class="sent-button" id="mark-sent-awaiting" type="button">Mark Sent — Awaiting Confirmation</button>
-                </div>
-                <div class="copy-status" id="copy-status" aria-live="polite"></div>
-                <div id="awaiting-summary"></div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section class="panel" id="panel-active">
-          <div class="panel-header"><div><h2 class="panel-title">Running Now</h2><p class="panel-description">Current placements and the exact creative tied to each run.</p></div><span class="count-pill" id="active-pill">0 items</span></div>
-          <div id="active-content" class="loading">Loading current media…</div>
-        </section>
-
-        <section class="panel" id="panel-upcoming">
-          <div class="panel-header"><div><h2 class="panel-title">Upcoming</h2><p class="panel-description">Pending and planned media that must be prepared, trafficked, confirmed, and later proved.</p></div><span class="count-pill" id="upcoming-pill">0 items</span></div>
-          <div id="upcoming-content" class="loading">Loading upcoming media…</div>
-        </section>
-
-        <section class="panel" id="panel-history">
-          <div class="panel-header"><div><h2 class="panel-title">History</h2><p class="panel-description">Past placements preserved as operational history.</p></div><span class="count-pill" id="history-pill">0 items</span></div>
-          <div id="history-content" class="loading">Loading media history…</div>
-        </section>
-      </div>
-    </main>
-  </div>
-
-  <script src="shared/gcm-shell.js"></script>
-  <script>
-    window.GCMOShell?.mount({
-      currentPage: "media",
-      statusText: "Media Operations live"
-    });
-  </script>
-
-  <script>
-    (() => {
-      "use strict";
-
-      const WORKER_ENDPOINT = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
-      const clientSelect = document.getElementById("client-select");
-      const viewSelect = document.getElementById("view-select");
-      const sidebar = document.getElementById("sidebar");
-      const mobileMenuButton = document.getElementById("mobile-menu-button");
-      const actionPanel = document.getElementById("media-action-panel");
-      const selectedMediaRecord = document.getElementById("selected-media-record");
-      const communicationStatus = document.getElementById("communication-status");
-      const buildStationCommunication = document.getElementById("build-station-communication");
-      const verifyCurrentCopy = document.getElementById("verify-current-copy");
-      const stationLandscape = document.getElementById("station-landscape");
-      const replacementDescription = document.getElementById("replacement-description");
-      const replacementReadyDate = document.getElementById("replacement-ready-date");
-      const extendThroughDate = document.getElementById("extend-through-date");
-      const changeInstructions = document.getElementById("change-instructions");
-      const endDate = document.getElementById("end-date");
-      const extendFields = document.getElementById("extend-fields");
-      const changeFields = document.getElementById("change-fields");
-      const endFields = document.getElementById("end-fields");
-      const addInstructionButton = document.getElementById("add-instruction");
-      const instructionQueueEl = document.getElementById("instruction-queue");
-      const draftWrap = document.getElementById("draft-wrap");
-      const draftSubject = document.getElementById("draft-subject");
-      const draftBody = document.getElementById("draft-body");
-      const draftActions = document.getElementById("draft-actions");
-      const copyEmailGmail = document.getElementById("copy-email-gmail");
-      const markSentAwaiting = document.getElementById("mark-sent-awaiting");
-      const copyStatus = document.getElementById("copy-status");
-      const awaitingSummary = document.getElementById("awaiting-summary");
-      const reviewList = document.getElementById("review-list");
-      const reviewPill = document.getElementById("review-pill");
-      let currentRecords = [];
-      let selectedRecord = null;
-      let primaryAction = "";
-      let landscapeRecords = [];
-      let instructionQueue = [];
-      let awaitingConfirmation = [];
-
-      const els = {
-        attentionCount: document.getElementById("attention-count"),
-        activeCount: document.getElementById("active-count"),
-        upcomingCount: document.getElementById("upcoming-count"),
-        historyCount: document.getElementById("history-count"),
-        attentionPill: document.getElementById("attention-pill"),
-        activePill: document.getElementById("active-pill"),
-        upcomingPill: document.getElementById("upcoming-pill"),
-        historyPill: document.getElementById("history-pill"),
-        attentionList: document.getElementById("attention-list"),
-        activeContent: document.getElementById("active-content"),
-        upcomingContent: document.getElementById("upcoming-content"),
-        historyContent: document.getElementById("history-content")
-      };
-
-      document.getElementById("current-date").textContent =
-        new Intl.DateTimeFormat("en-US", { weekday:"long", month:"long", day:"numeric" }).format(new Date());
-
-      function escapeHtml(value) {
-        return String(value ?? "")
-          .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
-          .replaceAll('"',"&quot;").replaceAll("'","&#039;");
-      }
-
-      function formatDate(value) {
-        if (!value) return "—";
-        const parts = String(value).slice(0,10).split("-");
-        if (parts.length !== 3) return escapeHtml(value);
-        const d = new Date(Number(parts[0]), Number(parts[1])-1, Number(parts[2]));
-        return new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric",year:"numeric"}).format(d);
-      }
-
-
-      function marketClass(value) {
-        const market = String(value || "").trim().toLowerCase();
-        if (market.includes("melbourne")) return "market-melbourne";
-        if (market.includes("orlando")) return "market-orlando";
-        return "market-other";
-      }
-
-      function marketLabel(value) {
-        const label = value || "—";
-        const cls = marketClass(value);
-        return `<span class="market-label ${cls}"><span class="market-dot"></span>${escapeHtml(label)}</span>`;
-      }
-
-
-      function marketBand(value, outletName = "") {
-        const market = value || "Market";
-        const station = outletName ? ` / ${outletName}` : "";
-        const cls = marketClass(value);
-        return `<span class="market-band ${cls}">${escapeHtml(market + station)}</span>`;
-      }
-
-
-      function stationDeadline(referenceDate) {
-        if (!referenceDate) return null;
-
-        const parts = String(referenceDate).slice(0,10).split("-").map(Number);
-        if (parts.length !== 3 || parts.some(Number.isNaN)) return null;
-
-        const date = new Date(parts[0], parts[1] - 1, parts[2]);
-        let workingDays = 0;
-
-        while (workingDays < 3) {
-          date.setDate(date.getDate() - 1);
-          const day = date.getDay();
-
-          if (day !== 0 && day !== 6) {
-            workingDays += 1;
-          }
-        }
-
-        return date;
-      }
-
-      function deadlineReferenceDate(record) {
-        const status = String(record?.status || "").toLowerCase();
-        return ["pending","planned"].includes(status)
-          ? record?.startDate
-          : record?.endDate;
-      }
-
-      function recordStationDeadline(record) {
-        return stationDeadline(deadlineReferenceDate(record));
-      }
-
-      function previousWorkingDay(date) {
-        const result = new Date(date);
-        result.setHours(0, 0, 0, 0);
-
-        do {
-          result.setDate(result.getDate() - 1);
-        } while (result.getDay() === 0 || result.getDay() === 6);
-
-        return result;
-      }
-
-      function isDeadlineDue(record) {
-        const deadline = recordStationDeadline(record);
-        if (!deadline) return false;
-
-        const warningStart = previousWorkingDay(deadline);
-        const now = new Date();
-
-        return now >= warningStart;
-      }
-
-      function calculatedAttentionReason(record) {
-        const status = String(record?.status || "").toLowerCase();
-
-        if (status === "active" && isDeadlineDue(record)) {
-          return "CURRENT PLACEMENT TRAFFIC DEADLINE";
-        }
-
-        if (["pending","planned"].includes(status) && isDeadlineDue(record)) {
-          return "UPCOMING PLACEMENT TRAFFIC DEADLINE";
-        }
-
-        return "";
-      }
-
-      function needsAttention(record) {
-        return String(record?.attentionStatus || "").toLowerCase() === "attention" ||
-          Boolean(calculatedAttentionReason(record));
-      }
-
-      function attentionReason(record) {
-        return calculatedAttentionReason(record) ||
-          record?.attentionReason ||
-          "Review required.";
-      }
-
-      function stationDeadlineHtml(endDate, status) {
-        const normalizedStatus = String(status || "").toLowerCase();
-
-        if (normalizedStatus === "expired") {
-          return `<span class="muted">Historical</span>`;
-        }
-
-        const deadline = stationDeadline(endDate);
-        if (!deadline) return "—";
-
-        const label = new Intl.DateTimeFormat("en-US", {
-          weekday:"short",
-          month:"short",
-          day:"numeric",
-          year:"numeric"
-        }).format(deadline);
-
-        return `<div class="record-title">${escapeHtml(label)}</div><div class="small">Due by 12:00 noon</div>`;
-      }
-
-      function badge(value, type) {
-        const label = value || "Unknown";
-        const normalized = String(type || value || "").toLowerCase();
-        const cls = normalized === "active" || normalized === "sent" || normalized === "confirmed"
-          ? "badge-active"
-          : normalized === "pending" || normalized === "planned"
-          ? "badge-pending"
-          : normalized === "expired"
-          ? "badge-expired"
-          : normalized === "attention"
-          ? "badge-attention"
-          : "badge-unknown";
-        return `<span class="badge ${cls}">${escapeHtml(label)}</span>`;
-      }
-
-      function table(records) {
-        if (!records.length) return `<div class="empty">No media records in this section.</div>`;
-        return `
-          <div class="table-wrap">
-            <table class="media-table">
-              <thead><tr>
-                <th>Market / Outlet</th><th>Campaign / Creative</th><th>Co-op</th>
-                <th>Run Dates</th><th>Station Deadline</th><th>Status</th><th>Action</th>
-                <th>Traffic</th><th>Confirmation</th><th>File / Script</th>
-              </tr></thead>
-              <tbody>
-                ${records.map(r => `
-                  <tr class="${marketClass(r.market)}">
-                    <td><div class="record-title">${marketLabel(r.market)}</div><div class="small">${escapeHtml(r.outletName || "—")} · ${escapeHtml(r.mediaType || "Media")}</div></td>
-                    <td><div class="record-title">${escapeHtml(r.campaignName || r.creativeName || "Untitled")}</div><div class="small">${escapeHtml(r.creativeVersion || r.creativeName || "—")}</div></td>
-                    <td>${escapeHtml(r.coopPartner || "—")}</td>
-                    <td><div>${formatDate(r.startDate)}</div><div class="small">through ${formatDate(r.endDate)}</div></td>
-                    <td>${stationDeadlineHtml(deadlineReferenceDate(r), r.status)}</td>
-                    <td>${badge(r.status)}</td>
-                    <td>${escapeHtml(r.actionType || "—")}</td>
-                    <td>${badge(r.trafficStatus)}</td>
-                    <td>${badge(r.confirmationStatus)}</td>
-                    <td>
-                      <div>${escapeHtml(r.fileName || "No file recorded")}</div>
-                      ${r.scriptText ? `<details><summary>View script</summary><div class="script">${escapeHtml(r.scriptText)}</div></details>` : `<div class="small">No script recorded</div>`}
-                    </td>
-                  </tr>`).join("")}
-              </tbody>
-            </table>
-          </div>`;
-      }
-
-      function queuedInstructionForRecord(record) {
-        return instructionQueue.find(item => String(item.recordId) === String(record?.id)) || null;
-      }
-
-      function queuedInstructionLabel(item) {
-        if (!item) return "";
-        if (item.action === "EXTEND") return `Queued — EXTEND through ${formatInputDate(item.extendThroughDate)}`;
-        if (item.action === "CHANGE") return "Queued — CHANGE";
-        if (item.action === "END") return `Queued — END on ${formatInputDate(item.endDate)}`;
-        return `Queued — ${item.action || "Instruction"}`;
-      }
-
-      function renderAttention(records) {
-        const flagged = records.filter(needsAttention);
-
-        els.attentionCount.textContent = String(flagged.length);
-        els.attentionPill.textContent = `${flagged.length} ${flagged.length === 1 ? "item" : "items"}`;
-
-        els.attentionList.innerHTML = flagged.length
-          ? flagged.map(r => {
-              const deadline = recordStationDeadline(r);
-              const status = String(r.status || "").toLowerCase();
-              const dateLabel = ["pending","planned"].includes(status)
-                ? `Starts ${formatDate(r.startDate)}`
-                : `Run ends ${formatDate(r.endDate)}`;
-
-              const deadlineLabel = deadline
-                ? escapeHtml(new Intl.DateTimeFormat("en-US", {
-                    weekday:"short", month:"short", day:"numeric", year:"numeric"
-                  }).format(deadline)) + " by 12:00 noon"
-                : "—";
-
-              const queued = queuedInstructionForRecord(r);
-              return `
-                <article class="attention-card ${marketClass(r.market)}${queued ? " is-queued" : ""}" data-record-id="${escapeHtml(r.id ?? "")}" tabindex="0">
-                  ${marketBand(r.market, r.outletName)}${queued ? `<span class="queued-band">✓ ${escapeHtml(queuedInstructionLabel(queued))}</span>` : ""}
-                  <strong>${escapeHtml(r.clientName)} — ${escapeHtml(r.campaignName || r.creativeName || "Placement")}</strong>
-                  <p>${queued ? escapeHtml(queuedInstructionLabel(queued)) + " · " : ""}${escapeHtml(attentionReason(r))} · ${dateLabel} · Station deadline: ${deadlineLabel} · Action: ${escapeHtml(r.actionType || "—")}</p>
-                </article>`;
-            }).join("")
-          : `<div class="empty">No media records currently require attention under the three-working-day traffic rule.</div>`;
-
-        els.attentionList.querySelectorAll(".attention-card").forEach((card, index) => {
-          card.addEventListener("click", () => openMediaAction(flagged[index]));
-          card.addEventListener("keydown", event => {
-            if (event.key === "Enter" || event.key === " ") {
-              event.preventDefault();
-              openMediaAction(flagged[index]);
-            }
-          });
-        });
-      }
-
-      function openMediaAction(record) {
-        selectedRecord = record;
-        primaryAction = "";
-        document.querySelectorAll(".primary-action").forEach(b => b.classList.remove("is-selected"));
-        verifyCurrentCopy.checked = false;
-        replacementDescription.value = "";
-        replacementReadyDate.value = "";
-        extendThroughDate.value = "";
-        changeInstructions.value = "";
-        endDate.value = String(record.endDate || "").slice(0,10);
-        extendFields.classList.remove("is-open");
-        changeFields.classList.remove("is-open");
-        endFields.classList.remove("is-open");
-        draftWrap.classList.remove("is-open");
-        draftActions.classList.remove("is-open");
-        copyStatus.textContent = "";
-        awaitingSummary.innerHTML = "";
-        draftSubject.textContent = "";
-        draftBody.value = "";
-
-        selectedMediaRecord.innerHTML = `
-          <div class="record-title">${escapeHtml(record.clientName)} — ${escapeHtml(record.market || "Media")} / ${escapeHtml(record.outletName || "Outlet")}</div>
-          <div>${escapeHtml(record.campaignName || record.creativeName || "Placement")}</div>
-          <div class="small">${["pending","planned"].includes(String(record.status || "").toLowerCase()) ? "Starts " + formatDate(record.startDate) : "Run ends " + formatDate(record.endDate)} · Station deadline ${recordStationDeadline(record) ? escapeHtml(new Intl.DateTimeFormat("en-US",{weekday:"short",month:"short",day:"numeric",year:"numeric"}).format(recordStationDeadline(record))) + " by 12:00 noon" : "—"}</div>`;
-
-        populateStationLandscape(record);
-        updateCommunicationState();
-        actionPanel.classList.add("is-open");
-        actionPanel.scrollIntoView({behavior:"smooth",block:"start"});
-      }
-
-      function populateStationLandscape(record) {
-        const clientId = Number(record.clientId);
-        const market = String(record.market || "").trim().toLowerCase();
-        const station = String(record.outletName || "").trim().toLowerCase();
-
-        const otherRecords = currentRecords.filter(r =>
-          r !== record &&
-          Number(r.clientId) === clientId &&
-          String(r.market || "").trim().toLowerCase() === market &&
-          String(r.outletName || "").trim().toLowerCase() === station &&
-          ["active","pending","planned"].includes(String(r.status || "").toLowerCase())
-        );
-
-        landscapeRecords = [record, ...otherRecords];
-
-        stationLandscape.innerHTML = landscapeRecords.map(r => {
-          const status = String(r.status || "unknown");
-          const normalizedStatus = status.toLowerCase();
-          const isSelected = r === record;
-          const requiresAttention = needsAttention(r);
-          const timing = requiresAttention
-            ? "Needs Attention"
-            : ["pending","planned"].includes(normalizedStatus)
-            ? "Upcoming"
-            : "Running Now";
-
-          const attention = requiresAttention
-            ? ` · ${escapeHtml(attentionReason(r))}`
-            : "";
-
-          return `<div class="landscape-card ${marketClass(r.market)}">
-            ${marketBand(r.market, r.outletName)}
-            <strong>${requiresAttention ? "⚠ " : ""}${escapeHtml(timing)} — ${escapeHtml(r.campaignName || r.creativeName || "Placement")}</strong>
-            <div class="landscape-meta">
-              ${escapeHtml(r.market || "—")} / ${escapeHtml(r.outletName || "—")} ·
-              ${formatDate(r.startDate)} – ${formatDate(r.endDate)} ·
-              ${escapeHtml(status)}${attention}${r.fileName ? ` · ${escapeHtml(r.fileName)}` : ""}
-            </div>
-          </div>`;
-        }).join("");
-      }
-
-      function formatInputDate(value) {
-        if (!value) return "—";
-        return formatDate(value);
-      }
-
-      function instructionIsValid() {
-        if (!selectedRecord || !primaryAction) return false;
-        if (primaryAction === "EXTEND") return Boolean(extendThroughDate.value);
-        if (primaryAction === "CHANGE") return Boolean(changeInstructions.value.trim());
-        if (primaryAction === "END") return Boolean(endDate.value);
-        return false;
-      }
-
-      function showInstructionFields() {
-        extendFields.classList.toggle("is-open", primaryAction === "EXTEND");
-        changeFields.classList.toggle("is-open", primaryAction === "CHANGE");
-        endFields.classList.toggle("is-open", primaryAction === "END");
-      }
-
-      function updateCommunicationState() {
-        showInstructionFields();
-
-        addInstructionButton.disabled = !instructionIsValid();
-        buildStationCommunication.disabled = instructionQueue.length === 0;
-
-        const parts = [];
-        if (primaryAction) parts.push(primaryAction);
-        if (primaryAction === "EXTEND" && extendThroughDate.value) parts.push(`THROUGH ${formatInputDate(extendThroughDate.value)}`);
-        if (verifyCurrentCopy.checked) parts.push("VERIFY CURRENT COPY");
-        if (replacementDescription.value.trim() || replacementReadyDate.value.trim()) parts.push("REPLACEMENT COMING");
-
-        if (instructionQueue.length) {
-          communicationStatus.textContent = `${instructionQueue.length} placement instruction${instructionQueue.length === 1 ? "" : "s"} ready for one station email${parts.length ? `. Current selection: ${parts.join(" + ")}` : "."}`;
-        } else {
-          communicationStatus.textContent = parts.length
-            ? `Current selection: ${parts.join(" + ")}. Add this instruction to the pending station communication.`
-            : "Choose an instruction, add it to the pending communication, then add any other placement changes that belong in the same station email.";
-        }
-      }
-
-      function renderInstructionQueue() {
-        if (!instructionQueue.length) {
-          instructionQueueEl.innerHTML = `<div class="landscape-empty">No placement instructions added yet.</div>`;
-          updateCommunicationState();
-          return;
-        }
-
-        instructionQueueEl.innerHTML = instructionQueue.map((item, index) => {
-          let instruction = item.action;
-          if (item.action === "EXTEND") instruction += ` through ${formatInputDate(item.extendThroughDate)}`;
-          if (item.action === "CHANGE") instruction += ` — ${escapeHtml(item.changeInstructions)}`;
-          if (item.action === "END") instruction += ` on ${formatInputDate(item.endDate)}`;
-
-          const extras = [];
-          if (item.verifyCurrentCopy) extras.push("Verify current copy");
-          if (item.replacementDescription) extras.push(`Replacement: ${escapeHtml(item.replacementDescription)}`);
-          if (item.replacementReadyDate) extras.push(`Expected: ${escapeHtml(item.replacementReadyDate)}`);
-
-          return `<div class="queue-item">
-            <div>
-              <strong>${escapeHtml(item.clientName)} — ${escapeHtml(item.market)} / ${escapeHtml(item.outletName)} — ${escapeHtml(item.campaignName)}</strong>
-              <p>${instruction}${extras.length ? ` · ${extras.join(" · ")}` : ""}</p>
-            </div>
-            <button class="queue-remove" type="button" data-queue-index="${index}">Remove</button>
-          </div>`;
-        }).join("");
-
-        instructionQueueEl.querySelectorAll(".queue-remove").forEach(button => {
-          button.addEventListener("click", () => {
-            instructionQueue.splice(Number(button.dataset.queueIndex), 1);
-            renderInstructionQueue();
-            renderAttention(currentRecords);
-          });
-        });
-
-        updateCommunicationState();
-      }
-
-      function addCurrentInstruction() {
-        if (!instructionIsValid() || !selectedRecord) return;
-
-        const existingQueueIndex = instructionQueue.findIndex(
-          item => String(item.recordId) === String(selectedRecord.id)
-        );
-
-        const queuedInstruction = {
-          recordId: selectedRecord.id,
-          clientId: selectedRecord.clientId,
-          clientName: selectedRecord.clientName || "Client",
-          market: selectedRecord.market || "Market",
-          outletName: selectedRecord.outletName || "Station",
-          campaignName: selectedRecord.campaignName || selectedRecord.creativeName || "Placement",
-          currentStartDate: selectedRecord.startDate || "",
-          currentEndDate: selectedRecord.endDate || "",
-          fileName: selectedRecord.fileName || "",
-          action: primaryAction,
-          extendThroughDate: primaryAction === "EXTEND" ? extendThroughDate.value : "",
-          changeInstructions: primaryAction === "CHANGE" ? changeInstructions.value.trim() : "",
-          endDate: primaryAction === "END" ? endDate.value : "",
-          verifyCurrentCopy: verifyCurrentCopy.checked,
-          replacementDescription: replacementDescription.value.trim(),
-          replacementReadyDate: replacementReadyDate.value.trim()
-        };
-
-        if (existingQueueIndex >= 0) {
-          instructionQueue[existingQueueIndex] = queuedInstruction;
-        } else {
-          instructionQueue.push(queuedInstruction);
-        }
-
-        primaryAction = "";
-        document.querySelectorAll(".primary-action").forEach(b => b.classList.remove("is-selected"));
-        verifyCurrentCopy.checked = false;
-        replacementDescription.value = "";
-        replacementReadyDate.value = "";
-        extendThroughDate.value = "";
-        changeInstructions.value = "";
-        endDate.value = selectedRecord?.endDate ? String(selectedRecord.endDate).slice(0,10) : "";
-        showInstructionFields();
-        draftWrap.classList.remove("is-open");
-        draftActions.classList.remove("is-open");
-        copyStatus.textContent = "";
-        awaitingSummary.innerHTML = "";
-        renderInstructionQueue();
-        renderAttention(currentRecords);
-
-        communicationStatus.textContent = `${instructionQueue.length} placement instruction${instructionQueue.length === 1 ? "" : "s"} added. Select another Needs Attention placement to add it to this same email, or build the combined communication now.`;
-      }
-
-      function buildCommunicationDraft() {
-        if (!instructionQueue.length) return;
-
-        const client = instructionQueue[0].clientName || "Client";
-        const markets = [...new Set(instructionQueue.map(i => i.market).filter(Boolean))];
-        const stations = [...new Set(instructionQueue.map(i => i.outletName).filter(Boolean))];
-        const subject = `${client} – Radio Traffic Instructions – ${markets.join(" / ") || "Media Update"}`;
-        const lines = ["Hi Stephanie,", "", `Here are the current ${client} radio traffic instructions:`, ""];
-
-        const grouped = new Map();
-        instructionQueue.forEach(item => {
-          const key = `${item.market}|||${item.outletName}`;
-          if (!grouped.has(key)) grouped.set(key, []);
-          grouped.get(key).push(item);
-        });
-
-        grouped.forEach((items, key) => {
-          const [market, station] = key.split("|||");
-          lines.push(`${market} / ${station}`);
-          items.forEach(item => {
-            if (item.action === "EXTEND") {
-              lines.push(`- Please extend "${item.campaignName}" through ${formatInputDate(item.extendThroughDate)}.`);
-            } else if (item.action === "CHANGE") {
-              lines.push(`- Please change "${item.campaignName}": ${item.changeInstructions}`);
-            } else if (item.action === "END") {
-              lines.push(`- Please end "${item.campaignName}" on ${formatInputDate(item.endDate)}.`);
-            }
-
-            if (item.verifyCurrentCopy) {
-              lines.push(`  Please also confirm the current copy/creative you have running for "${item.campaignName}".`);
-            }
-            if (item.replacementDescription || item.replacementReadyDate) {
-              const replacementParts = [];
-              if (item.replacementDescription) replacementParts.push(item.replacementDescription);
-              if (item.replacementReadyDate) replacementParts.push(`expected ${item.replacementReadyDate}`);
-              lines.push(`  Replacement creative: ${replacementParts.join(" — ")}.`);
-            }
-          });
-          lines.push("");
-        });
-
-        lines.push("Please confirm these updates for both markets/stations shown above.", "", "Thank you,", "Andy", "Global Concepts Media Agency");
-
-        draftSubject.textContent = subject;
-        draftBody.value = lines.join("\n");
-        draftWrap.classList.add("is-open");
-        draftActions.classList.add("is-open");
-        copyStatus.textContent = "";
-        awaitingSummary.innerHTML = "";
-        communicationStatus.textContent = "Combined draft built. Review it, copy it into Gmail, send it, then mark it Sent — Awaiting Confirmation.";
-      }
-
-      async function copyDraftForGmail() {
-        const subject = draftSubject.textContent.trim();
-        const body = draftBody.value.trim();
-        if (!subject || !body) return;
-
-        const copyText = `Subject: ${subject}\n\n${body}`;
-
-        try {
-          await navigator.clipboard.writeText(copyText);
-          copyStatus.textContent = "Copied. Paste into Gmail, review the recipient, and send.";
-        } catch (error) {
-          console.error("Clipboard copy failed.", error);
-          draftBody.focus();
-          draftBody.select();
-          copyStatus.textContent = "Automatic copy was unavailable. The email body is selected so you can copy it manually.";
-        }
-      }
-
-      async function markDraftSentAwaitingConfirmation() {
-        if (!instructionQueue.length || markSentAwaiting.disabled) return;
-
-        const itemsToCommit = instructionQueue.map(item => ({...item}));
-        const count = itemsToCommit.length;
-
-        markSentAwaiting.disabled = true;
-        copyStatus.textContent = "Saving sent instructions to GCM OS…";
-
-        try {
-          const response = await fetch(WORKER_ENDPOINT, {
-            method:"POST",
-            headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({
-              action:"get-media-operations",
-              operation:"mark_sent_awaiting_confirmation",
-              sentTo:"Stephanie / iHeart",
-              instructions:itemsToCommit.map(item => ({
-                mediaRecordId:Number(item.recordId),
-                clientId:Number(item.clientId),
-                instructionType:item.action,
-                requestedStartDate:null,
-                requestedEndDate:item.action === "EXTEND"
-                  ? item.extendThroughDate
-                  : item.action === "END"
-                  ? item.endDate
-                  : null,
-                requestedChange:item.action === "CHANGE"
-                  ? item.changeInstructions
-                  : null,
-                originalStartDate:item.currentStartDate || null,
-                originalEndDate:item.currentEndDate || null,
-                notes:[
-                  item.verifyCurrentCopy ? "VERIFY CURRENT COPY" : "",
-                  item.replacementDescription ? `Replacement creative: ${item.replacementDescription}` : "",
-                  item.replacementReadyDate ? `Replacement expected: ${item.replacementReadyDate}` : ""
-                ].filter(Boolean).join(" | ") || null
-              }))
-            })
-          });
-
-          const payload = await response.json();
-
-          if (!response.ok || payload?.ok !== true) {
-            throw new Error(payload?.error || payload?.details || "The sent instructions could not be saved.");
-          }
-
-          const sentAt = new Date();
-          awaitingConfirmation = itemsToCommit.map(item => ({
-            ...item,
-            sentAt:sentAt.toISOString(),
-            confirmationStatus:"awaiting"
-          }));
-
-          instructionQueue = [];
-          renderInstructionQueue();
-
-          draftActions.classList.remove("is-open");
-          buildStationCommunication.disabled = true;
-          copyStatus.textContent = "Sent instructions saved to D1.";
-          awaitingSummary.innerHTML = `<div class="awaiting-summary">✓ ${count} placement instruction${count === 1 ? "" : "s"} saved as Sent — Awaiting Station Confirmation.</div>`;
-          communicationStatus.textContent = `${count} placement instruction${count === 1 ? "" : "s"} sent and durably recorded. Process Stephanie's station confirmation through Communications when it arrives.`;
-
-          await loadMedia(clientSelect.value);
-        } catch (error) {
-          console.error("Could not save sent media instructions.", error);
-          copyStatus.textContent = `Not marked sent: ${error?.message || "D1 save failed."} The instruction list has been kept so you can try again.`;
-          markSentAwaiting.disabled = false;
-        }
-      }
-
-      async function loadOperationalReviews(clientId = "") {
-        reviewList.innerHTML = '<div class="loading">Loading station confirmation reviews…</div>';
-        try {
-          const body = { action:"operational-reviews", operation:"list" };
-          if (clientId) body.clientId = Number(clientId);
-          const response = await fetch(WORKER_ENDPOINT, {
-            method:"POST",
-            headers:{"Content-Type":"application/json"},
-            body:JSON.stringify(body)
-          });
-          const payload = await response.json().catch(() => ({}));
-          if (!response.ok || payload?.ok !== true) throw new Error(payload?.error || "Review request failed.");
-          renderOperationalReviews(payload?.operationalReviews?.reviews || []);
-        } catch (error) {
-          reviewPill.textContent = "Unavailable";
-          reviewList.innerHTML = `<div class="error">${escapeHtml(error?.message || "Operational Reviews could not be loaded.")}</div>`;
-        }
-      }
-
-      function renderOperationalReviews(reviews) {
-        const open = reviews.filter(r => ["pending","deferred"].includes(String(r.status || "").toLowerCase()));
-        reviewPill.textContent = `${open.length} pending`;
-        if (!open.length) {
-          reviewList.innerHTML = '<div class="review-empty">No station confirmations are waiting for review.</div>';
-          return;
-        }
-        reviewList.innerHTML = open.map(r => `
-          <article class="review-card ${escapeHtml(r.status || "pending")}">
-            <div class="review-top">
-              <div>
-                <div class="review-title">${escapeHtml(r.outletName || "Station")} · ${escapeHtml(r.market || "Market")}</div>
-                <div class="review-meta">Communication #${escapeHtml(r.communicationId)} · Instruction #${escapeHtml(r.matchedRecordId)} · ${escapeHtml(String(r.instructionType || "change").toUpperCase())}</div>
-              </div>
-              ${badge(r.status || "pending")}
-            </div>
-            <div class="review-action">${escapeHtml(r.recommendedAction || "Review the proposed Media update.")}</div>
-            <div class="review-evidence">${escapeHtml(r.evidenceSummary || "No evidence summary was stored.")}</div>
-            <div class="review-meta">Current: ${formatDate(r.currentStartDate)} – ${formatDate(r.currentEndDate)}${r.requestedEndDate ? ` · Requested through ${formatDate(r.requestedEndDate)}` : ""}</div>
-            <div class="review-buttons">
-              <button class="review-button approve" type="button" data-review-id="${r.id}" data-review-decision="approve">Approve & Update Media</button>
-              <button class="review-button defer" type="button" data-review-id="${r.id}" data-review-decision="defer">Await More Proof</button>
-              <button class="review-button reject" type="button" data-review-id="${r.id}" data-review-decision="reject">Reject Match</button>
-            </div>
-          </article>
-        `).join("");
-      }
-
-      async function decideOperationalReview(reviewId, decision) {
-        const label = decision === "approve" ? "approve and update Media" : decision;
-        if (!window.confirm(`Confirm ${label} for Operational Review #${reviewId}?`)) return;
-        reviewList.querySelectorAll("button").forEach(button => button.disabled = true);
-        try {
-          const response = await fetch(WORKER_ENDPOINT, {
-            method:"POST",
-            headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({ action:"operational-reviews", operation:decision, reviewId:Number(reviewId) })
-          });
-          const payload = await response.json().catch(() => ({}));
-          if (!response.ok || payload?.ok !== true) throw new Error(payload?.error || "Review decision failed.");
-          await Promise.all([loadOperationalReviews(clientSelect.value), loadMedia(clientSelect.value)]);
-        } catch (error) {
-          window.alert(error?.message || "The review decision could not be saved.");
-          await loadOperationalReviews(clientSelect.value);
-        }
-      }
-
-      function applyView(view) {
-        const selected = view || "attention";
-        const panels = {
-          attention: document.getElementById("panel-attention"),
-          active: document.getElementById("panel-active"),
-          upcoming: document.getElementById("panel-upcoming"),
-          history: document.getElementById("panel-history")
-        };
-
-        Object.entries(panels).forEach(([key, panel]) => {
-          panel.hidden = selected !== "all" && selected !== key;
-        });
-      }
-
-      function render(payload) {
-        const records = Array.isArray(payload?.mediaOperations?.records) ? payload.mediaOperations.records : [];
-        currentRecords = records;
-        const active = records.filter(r => String(r.status || "").toLowerCase() === "active");
-        const upcoming = records.filter(r => ["pending","planned"].includes(String(r.status || "").toLowerCase()));
-        const history = records.filter(r => String(r.status || "").toLowerCase() === "expired");
-
-        renderAttention(records);
-        els.activeCount.textContent = String(active.length);
-        els.upcomingCount.textContent = String(upcoming.length);
-        els.historyCount.textContent = String(history.length);
-        els.activePill.textContent = `${active.length} ${active.length === 1 ? "item" : "items"}`;
-        els.upcomingPill.textContent = `${upcoming.length} ${upcoming.length === 1 ? "item" : "items"}`;
-        els.historyPill.textContent = `${history.length} ${history.length === 1 ? "item" : "items"}`;
-        els.activeContent.innerHTML = table(active);
-        els.upcomingContent.innerHTML = table(upcoming);
-        els.historyContent.innerHTML = table(history);
-        applyView(viewSelect.value);
-      }
-
-      function populateClients(clients, selectedValue) {
-        const safeClients = Array.isArray(clients) ? clients : [];
-        clientSelect.innerHTML = `<option value="">All clients</option>` +
-          safeClients.map(c => `<option value="${escapeHtml(c.clientId)}">${escapeHtml(c.clientName)}</option>`).join("");
-        clientSelect.value = selectedValue || "";
-      }
-
-      function renderError(message) {
-        const text = escapeHtml(message || "Media Operations could not be loaded.");
-        els.attentionList.innerHTML = `<div class="error">${text}</div>`;
-        els.activeContent.innerHTML = `<div class="error">${text}</div>`;
-        els.upcomingContent.innerHTML = `<div class="error">${text}</div>`;
-        els.historyContent.innerHTML = `<div class="error">${text}</div>`;
-        ["attentionCount","activeCount","upcomingCount","historyCount"].forEach(k => els[k].textContent = "—");
-      }
-
-      async function loadMedia(clientId = "") {
-        try {
-          const body = { action:"get-media-operations" };
-          if (clientId) body.clientId = Number(clientId);
-
-          const response = await fetch(WORKER_ENDPOINT, {
-            method:"POST",
-            headers:{"Content-Type":"application/json"},
-            body:JSON.stringify(body)
-          });
-          const payload = await response.json();
-
-          if (!response.ok || payload?.ok !== true) {
-            throw new Error(payload?.error || payload?.details || "Media request failed.");
-          }
-
-          populateClients(payload?.mediaOperations?.clients, clientId);
-          render(payload);
-          await loadOperationalReviews(clientId);
-        } catch (error) {
-          console.error("Could not load Media Operations.", error);
-          renderError(error?.message);
-        }
-      }
-
-      document.querySelectorAll(".primary-action").forEach(button => {
-        button.addEventListener("click", () => {
-          const action = button.dataset.action || "";
-          primaryAction = primaryAction === action ? "" : action;
-          if (primaryAction === "END" && selectedRecord?.endDate) {
-            endDate.value = String(selectedRecord.endDate).slice(0,10);
-          }
-          document.querySelectorAll(".primary-action").forEach(b => {
-            b.classList.toggle("is-selected", b.dataset.action === primaryAction);
-          });
-          updateCommunicationState();
-        });
-      });
-
-      verifyCurrentCopy.addEventListener("change", updateCommunicationState);
-      replacementDescription.addEventListener("input", updateCommunicationState);
-      replacementReadyDate.addEventListener("input", updateCommunicationState);
-      extendThroughDate.addEventListener("change", updateCommunicationState);
-      changeInstructions.addEventListener("input", updateCommunicationState);
-      endDate.addEventListener("change", updateCommunicationState);
-      addInstructionButton.addEventListener("click", addCurrentInstruction);
-      copyEmailGmail.addEventListener("click", copyDraftForGmail);
-      markSentAwaiting.addEventListener("click", markDraftSentAwaitingConfirmation);
-
-      document.getElementById("close-action-panel").addEventListener("click", () => {
-        actionPanel.classList.remove("is-open");
-      });
-
-      buildStationCommunication.addEventListener("click", buildCommunicationDraft);
-
-      clientSelect.addEventListener("change", () => loadMedia(clientSelect.value));
-      viewSelect.addEventListener("change", () => applyView(viewSelect.value));
-
-      mobileMenuButton.addEventListener("click", () => {
-        const open = sidebar.classList.toggle("is-open");
-        mobileMenuButton.setAttribute("aria-expanded", String(open));
-      });
-
-      reviewList.addEventListener("click", event => {
-        const button = event.target.closest("[data-review-id][data-review-decision]");
-        if (!button) return;
-        decideOperationalReview(button.dataset.reviewId, button.dataset.reviewDecision);
-      });
-
-      renderInstructionQueue();
-      applyView("attention");
-      loadMedia();
-    })();
-  </script>
+<div class="shell">
+  <aside>
+    <div class="brand"><div class="mark">G</div><div><strong>GCM OS</strong><span>Agency Infrastructure</span></div></div>
+    <nav>
+      <a href="today.html">Today</a>
+      <a href="clients.html">Clients</a>
+      <a href="communications.html">Communications</a>
+      <a href="work.html">Work</a>
+      <a href="proof.html">Proof</a>
+      <a class="active" href="media.html">Media</a>
+      <a href="client-pre-research.html">Prospects</a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="page">
+      <header>
+        <div>
+          <p class="eyebrow">Media Operations Road Test</p>
+          <h1>Operator Workspace</h1>
+          <p class="subtitle">What needs to be prepared, launched, confirmed, or monitored next?</p>
+        </div>
+        <div class="controls">
+          <select id="client"><option value="">All clients</option></select>
+          <button class="button" id="refresh" type="button">Refresh</button>
+          <span class="version">media-v2-roadtest · v2.0.0</span>
+        </div>
+      </header>
+
+      <section class="summary">
+        <article><span>Needs Action</span><strong id="count-action">—</strong></article>
+        <article><span>Preparing</span><strong id="count-preparing">—</strong></article>
+        <article><span>Running</span><strong id="count-running">—</strong></article>
+        <article><span>History</span><strong id="count-history">—</strong></article>
+      </section>
+
+      <section class="panel priority">
+        <div class="panel-head">
+          <div><h2>Highest-Priority Media Action</h2><p>Derived from confirmed placement dates, traffic deadlines, attention state, and confirmation state.</p></div>
+        </div>
+        <div class="priority-body" id="priority"><div class="loading">Loading operational decision…</div></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div><h2>Campaign Preparation Queue</h2><p>This first road test organises existing placement records. It does not create campaign or asset records yet.</p></div>
+        </div>
+        <div class="queue-grid">
+          <section class="lane"><div class="lane-head"><strong>Preparing</strong><span>Upcoming placements requiring readiness</span></div><div class="lane-list" id="lane-preparing"></div></section>
+          <section class="lane"><div class="lane-head"><strong>Ready to Launch</strong><span>Upcoming with no current blocker</span></div><div class="lane-list" id="lane-ready"></div></section>
+          <section class="lane"><div class="lane-head"><strong>Running</strong><span>Active placements and next operating step</span></div><div class="lane-list" id="lane-running"></div></section>
+          <section class="lane"><div class="lane-head"><strong>Awaiting Confirmation</strong><span>Sent instructions waiting for station proof</span></div><div class="lane-list" id="lane-awaiting"></div></section>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><div><h2>Placement Detail</h2><p>Existing production data retained for verification and history.</p></div></div>
+        <div id="records"><div class="loading">Loading media records…</div></div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const ENDPOINT = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+  const $ = id => document.getElementById(id);
+  let records = [];
+
+  const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+  }[c]));
+
+  const dateText = value => {
+    if (!value) return "Not set";
+    const d = new Date(String(value).slice(0,10) + "T12:00:00");
+    return Number.isNaN(d.getTime()) ? esc(value) : d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
+  };
+
+  const lower = value => String(value || "").trim().toLowerCase();
+  const isAwaiting = r => ["awaiting","awaiting_confirmation","pending_confirmation"].includes(lower(r.confirmationStatus))
+    || lower(r.trafficStatus).includes("awaiting");
+  const needsAttention = r => r.needsAttention === true
+    || ["attention","needs_attention"].includes(lower(r.attentionStatus))
+    || Boolean(r.attentionReason);
+
+  function urgency(r) {
+    if (isAwaiting(r)) return 100;
+    if (needsAttention(r)) return 90;
+    if (lower(r.status) === "pending" || lower(r.status) === "planned") return 60;
+    if (lower(r.status) === "active") return 40;
+    return 0;
+  }
+
+  function nextAction(r) {
+    if (isAwaiting(r)) return "Review the expected station response and process confirmation evidence when it arrives.";
+    if (needsAttention(r)) return r.attentionReason || "Open the production Media page and complete the required traffic action.";
+    if (["pending","planned"].includes(lower(r.status))) return "Confirm creative, dates, website banner, and social support before traffic is due.";
+    if (lower(r.status) === "active") return "Monitor the placement and prepare the next station instruction before the traffic deadline.";
+    return "Retain as completed operational history.";
+  }
+
+  function card(r, badgeClass, badgeText) {
+    return `<article class="card">
+      <span class="badge ${badgeClass}">${esc(badgeText)}</span>
+      <strong>${esc(r.clientName || r.clientCode || "Client")} · ${esc(r.campaignName || r.creativeName || r.outletName || "Media placement")}</strong>
+      <div class="meta">${esc(r.market || "Market not set")} · ${esc(r.outletName || "Outlet not set")}</div>
+      <div class="meta">${dateText(r.startDate)} – ${dateText(r.endDate)}</div>
+      <div class="action">${esc(nextAction(r))}</div>
+    </article>`;
+  }
+
+  function renderLane(id, items, badgeClass, badgeText) {
+    $(id).innerHTML = items.length ? items.map(r => card(r,badgeClass,badgeText)).join("") : `<div class="empty">No records in this stage.</div>`;
+  }
+
+  function renderPriority() {
+    const chosen = [...records].sort((a,b) => urgency(b) - urgency(a))[0];
+    if (!chosen) {
+      $("priority").innerHTML = `<div class="empty">No media records are available.</div>`;
+      return;
+    }
+    let when = chosen.stationDeadline ? `Traffic deadline ${dateText(chosen.stationDeadline)}` :
+      chosen.startDate ? `Starts ${dateText(chosen.startDate)}` :
+      chosen.endDate ? `Ends ${dateText(chosen.endDate)}` : "No date established";
+    let why = isAwaiting(chosen) ? "A station instruction was sent and authoritative placement data must not change until confirmation is reviewed." :
+      needsAttention(chosen) ? (chosen.attentionReason || "The placement is inside its operating attention window.") :
+      ["pending","planned"].includes(lower(chosen.status)) ? "The placement is approaching launch and campaign readiness must be confirmed." :
+      "The placement is active and requires ongoing operating control.";
+
+    $("priority").innerHTML = `<div class="decision-grid">
+      <div class="decision"><span>Who</span><strong>${esc(chosen.clientName || chosen.clientCode || "Client")}</strong></div>
+      <div class="decision"><span>What</span><strong>${esc(chosen.campaignName || chosen.creativeName || "Media placement")} · ${esc(chosen.outletName || "Outlet not set")}</strong></div>
+      <div class="decision"><span>When</span><strong>${esc(when)}</strong></div>
+      <div class="decision"><span>Why</span><strong>${esc(why)}</strong></div>
+      <div class="decision"><span>Evidence</span><strong>Media Record #${esc(chosen.id)} · ${esc(chosen.status || "status unknown")}</strong></div>
+      <div class="decision next"><span>Next Action</span><strong>${esc(nextAction(chosen))}</strong></div>
+    </div>`;
+  }
+
+  function renderTable() {
+    const rows = records.map(r => `<tr>
+      <td><strong>${esc(r.clientName || r.clientCode || "")}</strong><br><span class="meta">#${esc(r.id)}</span></td>
+      <td>${esc(r.campaignName || "—")}<br><span class="meta">${esc(r.creativeName || r.fileName || "")}</span></td>
+      <td>${esc(r.market || "—")}<br><span class="meta">${esc(r.outletName || "—")}</span></td>
+      <td>${dateText(r.startDate)}<br>${dateText(r.endDate)}</td>
+      <td>${esc(r.status || "—")}</td>
+      <td>${esc(r.trafficStatus || "—")}<br><span class="meta">${esc(r.confirmationStatus || "")}</span></td>
+      <td>${esc(nextAction(r))}</td>
+    </tr>`).join("");
+    $("records").innerHTML = records.length ? `<div class="table-wrap"><table class="table"><thead><tr>
+      <th>Client</th><th>Campaign / Creative</th><th>Market / Outlet</th><th>Dates</th><th>Status</th><th>Traffic / Confirmation</th><th>Operating Next Action</th>
+    </tr></thead><tbody>${rows}</tbody></table></div>` : `<div class="empty">No records found.</div>`;
+  }
+
+  function render() {
+    const preparing = records.filter(r => ["pending","planned"].includes(lower(r.status)) && needsAttention(r));
+    const ready = records.filter(r => ["pending","planned"].includes(lower(r.status)) && !needsAttention(r) && !isAwaiting(r));
+    const running = records.filter(r => lower(r.status) === "active" && !isAwaiting(r));
+    const awaiting = records.filter(isAwaiting);
+    const history = records.filter(r => lower(r.status) === "expired");
+    const actionCount = records.filter(r => needsAttention(r) || isAwaiting(r)).length;
+
+    $("count-action").textContent = actionCount;
+    $("count-preparing").textContent = preparing.length + ready.length;
+    $("count-running").textContent = running.length;
+    $("count-history").textContent = history.length;
+
+    renderPriority();
+    renderLane("lane-preparing", preparing, "b-warning", "Preparing");
+    renderLane("lane-ready", ready, "b-success", "Ready");
+    renderLane("lane-running", running, "b-info", "Running");
+    renderLane("lane-awaiting", awaiting, "b-critical", "Awaiting");
+    renderTable();
+  }
+
+  async function load() {
+    $("priority").innerHTML = `<div class="loading">Loading operational decision…</div>`;
+    try {
+      const body = {action:"get-media-operations"};
+      if ($("client").value) body.clientId = Number($("client").value);
+      const response = await fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || payload?.ok !== true) throw new Error(payload?.error || payload?.details || "Media Operations could not load.");
+      records = Array.isArray(payload?.mediaOperations?.records) ? payload.mediaOperations.records : [];
+      const clients = Array.isArray(payload?.mediaOperations?.clients) ? payload.mediaOperations.clients : [];
+      const selected = $("client").value;
+      $("client").innerHTML = `<option value="">All clients</option>` + clients.map(c => `<option value="${esc(c.clientId)}">${esc(c.clientName)}</option>`).join("");
+      $("client").value = selected;
+      render();
+    } catch (error) {
+      const message = esc(error?.message || "Media Operations could not load.");
+      $("priority").innerHTML = `<div class="error">${message}</div>`;
+      ["lane-preparing","lane-ready","lane-running","lane-awaiting"].forEach(id => $(id).innerHTML = `<div class="error">${message}</div>`);
+      $("records").innerHTML = `<div class="error">${message}</div>`;
+    }
+  }
+
+  $("client").addEventListener("change", load);
+  $("refresh").addEventListener("click", load);
+  load();
+})();
+</script>
 </body>
 </html>
