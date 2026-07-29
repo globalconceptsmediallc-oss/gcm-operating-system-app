@@ -1,0 +1,399 @@
+<!-- =========================================================
+   Global Concepts Media Operating System
+   File: media-insertion.html
+   Version: 1.0.0
+   Status: Production Candidate — Remote-Control Road Test
+   Source: Current GCM OS Media Operations architecture
+   Sprint: Media Campaign Insertion — Melbourne Gun Show Pilot
+   Purpose: Create and review a real media campaign package before
+            it enters Media Operations. This first road-test version
+            preserves the existing D1 Media source of truth and does
+            not use localStorage.
+
+   Pilot:
+   - Client: Southeast Safes
+   - Market / Station: Melbourne / WMMB
+   - Event: Melbourne Scratch & Dent Gun Show, August 22–23, 2026
+   - Flight: August 17–22, 2026
+   - Asset: SESL2601_Liberty_GunShow_30.mp3
+   - Agency traffic preparation rule: 17 calendar days before first air
+   - Critical station-confirmation rule: 3 business days before air, noon
+   ========================================================= -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Media Insertion | GCM OS</title>
+  <meta name="description" content="Media campaign insertion for the Global Concepts Media Agency Operating System." />
+  <style>
+    :root{
+      --navy-950:#071426;--navy-900:#0b1d33;--navy-800:#112a47;
+      --blue-600:#1f68d8;--blue-500:#347ce8;--blue-100:#eaf2ff;
+      --gold:#d6a94a;--surface:#fff;--soft:#f5f7fb;--muted:#edf1f7;
+      --border:#dbe2ec;--text:#132238;--text-muted:#637083;
+      --success:#1f7a4f;--success-soft:#e9f7f0;--warning:#9a6414;
+      --warning-soft:#fff4dd;--critical:#b33a3a;--critical-soft:#fff0f0;
+      --shadow:0 8px 24px rgba(7,20,38,.07);--radius:16px;
+    }
+    *{box-sizing:border-box}body{margin:0;background:var(--soft);color:var(--text);
+      font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5}
+    button,input,select,textarea{font:inherit}a{color:inherit;text-decoration:none}
+    .shell{min-height:100vh;display:grid;grid-template-columns:250px minmax(0,1fr)}
+    .sidebar{position:sticky;top:0;height:100vh;padding:24px 18px;display:flex;flex-direction:column;
+      color:#fff;background:radial-gradient(circle at top right,rgba(52,124,232,.19),transparent 34%),
+      linear-gradient(180deg,var(--navy-900),var(--navy-950))}
+    .brand{display:flex;gap:12px;align-items:center;padding:2px 8px 22px;border-bottom:1px solid rgba(255,255,255,.12)}
+    .mark{width:42px;height:42px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.22);
+      border-radius:13px;background:rgba(255,255,255,.08);color:var(--gold);font-weight:900}
+    .brand strong,.brand span{display:block}.brand span{font-size:.72rem;color:rgba(255,255,255,.58);text-transform:uppercase;letter-spacing:.1em}
+    .nav-label{margin:24px 10px 10px;color:rgba(255,255,255,.42);font-size:.68rem;font-weight:900;text-transform:uppercase;letter-spacing:.14em}
+    nav{display:grid;gap:6px}.nav-link{min-height:46px;padding:0 13px;display:flex;align-items:center;gap:12px;border-radius:12px;color:rgba(255,255,255,.72);font-weight:750}
+    .nav-link:hover{background:rgba(255,255,255,.08);color:#fff}.nav-link.current{background:rgba(52,124,232,.2);color:#fff;box-shadow:inset 3px 0 0 var(--gold)}
+    .footer{margin-top:auto;padding:18px 8px 2px;border-top:1px solid rgba(255,255,255,.12);font-size:.78rem;color:rgba(255,255,255,.67)}
+    main{min-width:0;padding:28px 32px 48px}.inner{max-width:1480px;margin:auto}
+    .topbar{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:20px}
+    .eyebrow{margin:0 0 6px;color:var(--blue-600);font-size:.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.14em}
+    h1{margin:0;color:var(--navy-950);font-size:clamp(2rem,4vw,3.1rem);line-height:1;letter-spacing:-.045em}
+    .subtitle{margin:10px 0 0;color:var(--text-muted)}.version{padding:10px 12px;border:1px solid var(--border);border-radius:11px;background:#fff;font-size:.78rem;font-weight:850}
+    .summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
+    .summary article,.panel{background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+    .summary article{padding:17px}.summary span{display:block;color:var(--text-muted);font-size:.7rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em}
+    .summary strong{display:block;margin-top:7px;color:var(--navy-950);font-size:1.15rem}
+    .panel{margin-bottom:18px;overflow:hidden}.panel-head{display:flex;justify-content:space-between;gap:15px;padding:19px 21px 15px;border-bottom:1px solid var(--border)}
+    .panel h2{margin:0;font-size:1rem;color:var(--navy-950)}.panel-head p{margin:5px 0 0;color:var(--text-muted);font-size:.82rem}
+    .body{padding:20px 21px}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+    .span-2{grid-column:span 2}.span-3{grid-column:1/-1}
+    label{display:block;color:var(--navy-900);font-size:.76rem;font-weight:850}
+    input,select,textarea{width:100%;margin-top:6px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--text);padding:10px 11px}
+    input,select{min-height:43px}textarea{min-height:126px;resize:vertical}.script{min-height:230px}
+    .readonly{background:var(--soft)}.help{margin:6px 0 0;color:var(--text-muted);font-size:.72rem}
+    .asset-card{display:grid;grid-template-columns:1fr 260px;gap:16px;padding:16px;border:1px solid var(--border);border-radius:13px;background:var(--soft)}
+    audio{width:100%;margin-top:10px}.badge{display:inline-flex;align-items:center;min-height:25px;padding:0 9px;border-radius:999px;font-size:.67rem;font-weight:900;text-transform:uppercase}
+    .good{background:var(--success-soft);color:var(--success)}.warn{background:var(--warning-soft);color:var(--warning)}
+    .timeline{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+    .milestone{padding:13px;border:1px solid var(--border);border-radius:11px;background:var(--soft)}
+    .milestone span{display:block;color:var(--text-muted);font-size:.69rem;font-weight:900;text-transform:uppercase}.milestone strong{display:block;margin-top:5px;font-size:.87rem}
+    .actions{display:flex;gap:10px;flex-wrap:wrap}.button{min-height:43px;padding:0 15px;border-radius:10px;border:1px solid var(--border);font-weight:900;cursor:pointer}
+    .primary{background:var(--blue-600);border-color:var(--blue-600);color:#fff}.secondary{background:#fff;color:var(--blue-600);border-color:var(--blue-500)}
+    .button:disabled{opacity:.45;cursor:not-allowed}.status{margin-top:13px;padding:12px 14px;border-radius:10px;background:var(--muted);color:var(--text-muted);font-size:.8rem;font-weight:800}
+    .status.ok{background:var(--success-soft);color:var(--success)}.status.error{background:var(--critical-soft);color:var(--critical)}
+    .draft{min-height:260px;font-family:inherit}.review{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    @media(max-width:1000px){.shell{grid-template-columns:1fr}.sidebar{position:relative;height:auto}.summary,.grid,.timeline,.review{grid-template-columns:1fr 1fr}.span-2,.span-3{grid-column:1/-1}}
+    @media(max-width:680px){main{padding:20px 15px}.topbar{flex-direction:column}.summary,.grid,.timeline,.review,.asset-card{grid-template-columns:1fr}.span-2,.span-3{grid-column:auto}}
+  </style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <a class="brand" href="today.html"><span class="mark">G</span><span><strong>Global Concepts Media</strong><span>Agency Operating System</span></span></a>
+    <p class="nav-label">Workspace</p>
+    <nav>
+      <a class="nav-link" href="today.html">⌂ <span>Home</span></a>
+      <a class="nav-link" href="clients.html">◫ <span>Clients</span></a>
+      <a class="nav-link" href="communications.html">✉ <span>Communications</span></a>
+      <a class="nav-link" href="work.html">✓ <span>Work</span></a>
+      <a class="nav-link" href="proof.html">↗ <span>Proof</span></a>
+      <a class="nav-link" href="media.html">◉ <span>Media</span></a>
+      <a class="nav-link current" href="media-insertion.html">＋ <span>Media Insertion</span></a>
+      <a class="nav-link" href="prospects.html">◎ <span>Prospects</span></a>
+    </nav>
+    <div class="footer">Remote-control road test ready</div>
+  </aside>
+
+  <main>
+    <div class="inner">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Media Operations</p>
+          <h1>Media Insertion</h1>
+          <p class="subtitle">Create the campaign package that Media will operate, confirm, complete, and reuse.</p>
+        </div>
+        <div class="version">Installed version 1.0.0</div>
+      </header>
+
+      <section class="summary">
+        <article><span>Client</span><strong>Southeast Safes</strong></article>
+        <article><span>Market / Station</span><strong>Melbourne / WMMB</strong></article>
+        <article><span>Show</span><strong>Aug 22–23, 2026</strong></article>
+        <article><span>GCM ISCI</span><strong>SESL2601</strong></article>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><div><h2>1. Campaign Identity</h2><p>This is the real Melbourne gun-show campaign, not a mock record.</p></div><span class="badge good">Pilot loaded</span></div>
+        <div class="body grid">
+          <label>Client<input id="client" class="readonly" value="Southeast Safes" readonly></label>
+          <label>Campaign Type<select id="campaignType"><option selected>Gun Show</option><option>Sale</option><option>Co-op Promotion</option></select></label>
+          <label>Co-op Partner<input id="coop" value="Liberty"></label>
+          <label>Market<input id="market" value="Melbourne"></label>
+          <label>Station / Outlet<input id="station" value="WMMB"></label>
+          <label>Campaign Name<input id="campaignName" value="Liberty Co-op — Melbourne Scratch & Dent Gun Show"></label>
+          <label>Show Start<input id="showStart" type="date" value="2026-08-22"></label>
+          <label>Show End<input id="showEnd" type="date" value="2026-08-23"></label>
+          <label>Campaign Status<select id="status"><option selected>planned</option><option>preparing</option><option>ready_to_send</option></select></label>
+          <label>First Air Date<input id="airStart" type="date" value="2026-08-17"></label>
+          <label>Last Air Date<input id="airEnd" type="date" value="2026-08-22"></label>
+          <label>Owner<input id="owner" value="Andy"></label>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><div><h2>2. Creative Asset</h2><p>The campaign reuses the approved production and its permanent identifier.</p></div><span class="badge good">Reusable</span></div>
+        <div class="body">
+          <div class="asset-card">
+            <div>
+              <div class="grid">
+                <label>Asset Title<input id="assetTitle" value="Melbourne Gun Show V1"></label>
+                <label>GCM ISCI<input id="isci" value="SESL2601"></label>
+                <label>Length<input id="length" value=":30"></label>
+                <label class="span-2">Production Filename<input id="filename" value="SESL2601_Liberty_GunShow_30.mp3"></label>
+                <label>Asset Decision<select id="assetDecision"><option selected>Reuse exact approved production</option><option>Create revised production</option></select></label>
+              </div>
+              <p class="help">The same ISCI remains attached while the exact audio is reused. A materially revised spot requires a new identifier.</p>
+            </div>
+            <div>
+              <label>Road-test audio file<input id="audioFile" type="file" accept="audio/*"></label>
+              <audio id="audio" controls preload="metadata" src="SESL2601_Liberty_GunShow_30.mp3"></audio>
+              <p class="help" id="audioStatus">Expected repository file: SESL2601_Liberty_GunShow_30.mp3</p>
+            </div>
+          </div>
+          <label style="margin-top:16px">Final Script<textarea id="script" class="script">This weekend at the Melbourne Gun Show, Southeast Safes is hosting a massive Liberty Safe scratch-and-dent sale. We have a huge selection of Liberty Safes in all shapes, colours and sizes, including used, closeout and scratch-and-dent models at unbeatable discounts. Made in the USA, Liberty Safes come with one of the best warranties in the industry. Delivery is available, or bring your truck and trailer to save on fees. Don’t miss out—this Saturday and Sunday only at the Melbourne Auditorium, 625 East Hibiscus Boulevard, Melbourne.</textarea></label>
+          <label style="margin-top:12px">Original Notes / Script Screenshot<input id="scriptScreenshot" type="file" accept="image/*,.pdf"></label>
+          <p class="help">Version 1 accepts the original note or screenshot as supporting creative evidence. It is not uploaded until the D1/Images commit route is approved.</p>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><div><h2>3. Operating Timeline</h2><p>Dates are derived from the first air date using the rules already agreed.</p></div><span class="badge warn">17-day margin</span></div>
+        <div class="body">
+          <div class="timeline">
+            <div class="milestone"><span>Prepare & Send</span><strong id="prepareDate">—</strong></div>
+            <div class="milestone"><span>First Confirmation Check</span><strong id="checkDate">—</strong></div>
+            <div class="milestone"><span>Critical Noon Deadline</span><strong id="criticalDate">—</strong></div>
+            <div class="milestone"><span>First Air</span><strong id="firstAir">—</strong></div>
+          </div>
+          <div class="grid" style="margin-top:14px">
+            <label>Traffic Lead Time<input id="leadDays" type="number" min="1" value="17"></label>
+            <label>First Confirmation Check<input id="checkDays" type="number" min="1" value="10"></label>
+            <label>Critical Rule<input class="readonly" value="3 business days before first air — due by noon" readonly></label>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><div><h2>4. Communications Generated</h2><p>One station traffic communication and one internal Facebook reminder.</p></div></div>
+        <div class="body review">
+          <div>
+            <label>Station Email Subject<input id="stationSubject"></label>
+            <label style="margin-top:10px">Station Traffic Email<textarea id="stationDraft" class="draft"></textarea></label>
+          </div>
+          <div>
+            <label>Kristie Reminder Subject<input id="kristieSubject"></label>
+            <label style="margin-top:10px">Kristie Facebook Reminder<textarea id="kristieDraft" class="draft"></textarea></label>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><div><h2>5. Review and Insert</h2><p>Review the package before allowing it into the live Media workflow.</p></div></div>
+        <div class="body">
+          <div class="actions">
+            <button class="button secondary" id="refresh" type="button">Refresh Package</button>
+            <button class="button secondary" id="copyStation" type="button">Copy Station Email</button>
+            <button class="button secondary" id="copyKristie" type="button">Copy Kristie Reminder</button>
+            <button class="button primary" id="insert" type="button">Insert Campaign into GCM OS</button>
+          </div>
+          <div class="status" id="saveStatus">Ready for the remote-control page test. The insert button will verify the Worker operation and will not pretend a record was saved if the production route is not yet installed.</div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script>
+(() => {
+  const WORKER_ENDPOINT = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev";
+  const $ = id => document.getElementById(id);
+
+  function localDate(value){
+    if(!value) return "Not set";
+    const [y,m,d] = value.split("-").map(Number);
+    return new Date(y,m-1,d).toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric",year:"numeric"});
+  }
+  function addDays(value, amount){
+    const [y,m,d] = value.split("-").map(Number);
+    const date = new Date(y,m-1,d);
+    date.setDate(date.getDate()+amount);
+    return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+  }
+  function subtractBusinessDays(value, days){
+    const [y,m,d] = value.split("-").map(Number);
+    const date = new Date(y,m-1,d);
+    let remaining = days;
+    while(remaining>0){
+      date.setDate(date.getDate()-1);
+      const day=date.getDay();
+      if(day!==0 && day!==6) remaining--;
+    }
+    return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+  }
+  function escapePayload(){
+    return {
+      clientId:1,
+      campaign:{
+        campaignName:$("campaignName").value.trim(),
+        campaignType:$("campaignType").value,
+        coopPartner:$("coop").value.trim(),
+        market:$("market").value.trim(),
+        outletName:$("station").value.trim(),
+        showStartDate:$("showStart").value,
+        showEndDate:$("showEnd").value,
+        startDate:$("airStart").value,
+        endDate:$("airEnd").value,
+        status:$("status").value,
+        owner:$("owner").value.trim(),
+        trafficLeadDays:Number($("leadDays").value||17),
+        confirmationCheckDays:Number($("checkDays").value||10),
+        criticalBusinessDays:3,
+        criticalCutoff:"12:00"
+      },
+      asset:{
+        creativeName:$("assetTitle").value.trim(),
+        isci:$("isci").value.trim(),
+        duration:$("length").value.trim(),
+        fileName:$("filename").value.trim(),
+        reuseDecision:$("assetDecision").value,
+        scriptText:$("script").value.trim()
+      },
+      assignments:{
+        radioOwner:"Andy",
+        facebookOwner:"Kristie"
+      }
+    };
+  }
+  function refresh(){
+    const firstAir=$("airStart").value;
+    const lead=Number($("leadDays").value||17);
+    const check=Number($("checkDays").value||10);
+    const prepare=addDays(firstAir,-lead);
+    const checkDate=addDays(firstAir,-check);
+    const critical=subtractBusinessDays(firstAir,3);
+    $("prepareDate").textContent=localDate(prepare);
+    $("checkDate").textContent=localDate(checkDate);
+    $("criticalDate").textContent=`${localDate(critical)} by noon`;
+    $("firstAir").textContent=localDate(firstAir);
+
+    const campaign=$("campaignName").value.trim();
+    const station=$("station").value.trim();
+    const show=`${localDate($("showStart").value)}–${localDate($("showEnd").value)}`;
+    const flight=`${localDate($("airStart").value)} through ${localDate($("airEnd").value)}`;
+    const file=$("filename").value.trim();
+    const isci=$("isci").value.trim();
+    const script=$("script").value.trim();
+
+    $("stationSubject").value=`Southeast Safes | Melbourne Gun Show Traffic | ${flight}`;
+    $("stationDraft").value=
+`Hi,
+
+Please add the following Southeast Safes campaign to the ${station} rotation.
+
+CAMPAIGN
+${campaign}
+
+EVENT
+Melbourne Scratch & Dent Gun Show
+Show Dates: ${show}
+
+RADIO FLIGHT
+${flight}
+
+PRODUCTION
+Spot Title: ${$("assetTitle").value.trim()}
+Length: ${$("length").value.trim()}
+ISCI: ${isci}
+Audio File: ${file}
+
+SCRIPT
+${script}
+
+Please confirm by reply email that you received the traffic, audio file, and flight instructions and that the campaign is scheduled.
+
+Thank you,
+Andy
+Global Concepts Media`;
+
+    $("kristieSubject").value=`Upcoming Melbourne Gun Show — Facebook preparation`;
+    $("kristieDraft").value=
+`Hi Kristie,
+
+The next Melbourne Scratch & Dent Gun Show is ${show}.
+
+Please prepare and schedule the Southeast Safes Facebook posts for this show.
+
+Campaign: ${campaign}
+Market: Melbourne
+Show Dates: ${show}
+Radio Flight: ${flight}
+
+Please reply when the Facebook posts are scheduled so the campaign can be marked ready.
+
+Thank you,
+Andy`;
+  }
+
+  async function copyText(text,statusMessage){
+    try{
+      await navigator.clipboard.writeText(text);
+      $("saveStatus").className="status ok";
+      $("saveStatus").textContent=statusMessage;
+    }catch{
+      $("saveStatus").className="status error";
+      $("saveStatus").textContent="Copy was blocked by the browser. Select the text and copy it manually.";
+    }
+  }
+
+  $("audioFile").addEventListener("change",event=>{
+    const file=event.target.files?.[0];
+    if(!file)return;
+    $("audio").src=URL.createObjectURL(file);
+    $("audioStatus").textContent=`Loaded for this page test: ${file.name}`;
+  });
+  ["campaignName","campaignType","coop","market","station","showStart","showEnd","airStart","airEnd","assetTitle","isci","length","filename","script","leadDays","checkDays"]
+    .forEach(id=>$(id).addEventListener("input",refresh));
+  $("refresh").addEventListener("click",refresh);
+  $("copyStation").addEventListener("click",()=>copyText($("stationDraft").value,"Station traffic email copied."));
+  $("copyKristie").addEventListener("click",()=>copyText($("kristieDraft").value,"Kristie reminder copied."));
+
+  $("insert").addEventListener("click",async()=>{
+    $("insert").disabled=true;
+    $("saveStatus").className="status";
+    $("saveStatus").textContent="Checking the production Worker and attempting the controlled campaign insertion…";
+    try{
+      const response=await fetch(WORKER_ENDPOINT,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          action:"get-media-operations",
+          operation:"create_campaign",
+          ...escapePayload()
+        })
+      });
+      const payload=await response.json().catch(()=>({}));
+      if(!response.ok || payload?.ok!==true){
+        throw new Error(payload?.error || payload?.details || `Worker returned ${response.status}.`);
+      }
+      $("saveStatus").className="status ok";
+      $("saveStatus").textContent=`Campaign inserted successfully. Media record ${payload?.mediaRecordId || payload?.campaignId || "created"}. Open Media to verify it.`;
+    }catch(error){
+      $("saveStatus").className="status error";
+      $("saveStatus").textContent=`No record was falsely claimed as saved. The page reached the production Worker, but the create_campaign operation is not installed or did not accept the package: ${error.message}`;
+    }finally{
+      $("insert").disabled=false;
+    }
+  });
+
+  refresh();
+})();
+</script>
+</body>
+</html>
