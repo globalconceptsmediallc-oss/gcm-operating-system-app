@@ -1,10 +1,10 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media.html
-   Version: 2.0.1
+   Version: 2.1.0
    Status: Production Candidate
    Source: Production media.html 1.9.0
-   Sprint: Media Operations — Operator Workspace
+   Sprint: Media Operations — Expandable & Filterable Workspace
    Purpose: Add a read-only operational decision layer above the
             existing Media workflow without changing D1, station
             instruction, confirmation, or placement records.
@@ -87,8 +87,103 @@
     .table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:900px}
     .table th,.table td{padding:12px 14px;border-bottom:1px solid var(--border);text-align:left;font-size:.76rem;vertical-align:top}
     .table th{background:#fbfcfe;color:var(--muted);font-size:.66rem;text-transform:uppercase;letter-spacing:.07em}
-    @media(max-width:1100px){.decision-grid{grid-template-columns:repeat(2,1fr)}.queue-grid{grid-template-columns:repeat(2,1fr)}}
-    @media(max-width:800px){.shell{grid-template-columns:1fr}aside{display:none}main{padding:18px}.summary,.queue-grid,.decision-grid{grid-template-columns:1fr}header{flex-direction:column}.next{grid-column:auto}}
+
+    .filter-bar{
+      display:grid;
+      grid-template-columns:repeat(6,minmax(0,1fr));
+      gap:10px;
+      padding:16px 18px;
+      border-bottom:1px solid var(--border);
+      background:#fbfcfe
+    }
+    .filter-group{display:grid;gap:5px}
+    .filter-group label{
+      color:var(--muted);
+      font-size:.64rem;
+      font-weight:900;
+      letter-spacing:.07em;
+      text-transform:uppercase
+    }
+    .filter-group input,.filter-group select{
+      width:100%;
+      min-height:40px;
+      padding:0 11px;
+      border:1px solid var(--border);
+      border-radius:9px;
+      background:#fff;
+      color:var(--navy2);
+      font:inherit
+    }
+    .filter-check{
+      display:flex;
+      align-items:end;
+      gap:8px;
+      padding-bottom:8px;
+      color:var(--navy2);
+      font-size:.76rem;
+      font-weight:850
+    }
+    .filter-check input{width:17px;height:17px}
+    .section-toggle{
+      width:100%;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:14px;
+      padding:20px 22px 16px;
+      border:0;
+      border-bottom:1px solid var(--border);
+      background:#fff;
+      color:inherit;
+      text-align:left;
+      cursor:pointer
+    }
+    .section-toggle:hover{background:#fbfcfe}
+    .section-toggle .title-wrap h2{margin:0;font-size:1rem;color:var(--navy)}
+    .section-toggle .title-wrap p{margin:5px 0 0;color:var(--muted);font-size:.82rem}
+    .chevron{
+      flex:0 0 auto;
+      width:30px;height:30px;
+      display:grid;place-items:center;
+      border:1px solid var(--border);
+      border-radius:9px;
+      color:var(--navy);
+      background:#fff;
+      font-weight:900;
+      transition:transform .18s ease
+    }
+    .section-toggle[aria-expanded="false"] .chevron{transform:rotate(-90deg)}
+    .collapsible[hidden]{display:none!important}
+    .lane-toggle{
+      width:100%;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:14px 15px;
+      border:0;
+      border-bottom:1px solid var(--border);
+      background:#fff;
+      text-align:left;
+      cursor:pointer
+    }
+    .lane-toggle strong{display:block;color:var(--navy)}
+    .lane-toggle span{font-size:.72rem;color:var(--muted)}
+    .lane-count{
+      display:inline-grid!important;
+      place-items:center;
+      min-width:25px;height:25px;
+      padding:0 7px;
+      border-radius:999px;
+      background:var(--blue-soft);
+      color:var(--blue)!important;
+      font-size:.66rem!important;
+      font-weight:900
+    }
+    .queue-grid{align-items:start}
+
+    @media(max-width:1100px){.decision-grid{grid-template-columns:repeat(2,1fr)}.queue-grid{grid-template-columns:repeat(2,1fr)}.filter-bar{grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:800px){.shell{grid-template-columns:1fr}aside{display:none}main{padding:18px}.summary,.queue-grid,.decision-grid,.filter-bar{grid-template-columns:1fr}header{flex-direction:column}.next{grid-column:auto}}
   </style>
 </head>
 <body>
@@ -115,9 +210,10 @@
           <p class="subtitle">What needs to be prepared, launched, confirmed, or monitored next?</p>
         </div>
         <div class="controls">
-          <select id="client"><option value="">All clients</option></select>
+          <button class="button" id="expand-all" type="button">Expand All</button>
+          <button class="button" id="collapse-all" type="button">Collapse All</button>
           <button class="button" id="refresh" type="button">Refresh</button>
-          <span class="version">media.html · v2.0.1</span>
+          <span class="version">media.html · v2.1.0</span>
         </div>
       </header>
 
@@ -128,28 +224,53 @@
         <article><span>History</span><strong id="count-history">—</strong></article>
       </section>
 
+
+      <section class="panel">
+        <button class="section-toggle" type="button" aria-expanded="true" data-target="filters-body">
+          <span class="title-wrap"><h2>Filters</h2><p>Limit every queue, count, priority decision, and detail record together.</p></span>
+          <span class="chevron">⌄</span>
+        </button>
+        <div class="collapsible" id="filters-body">
+          <div class="filter-bar">
+            <div class="filter-group"><label for="client">Client</label><select id="client"><option value="">All clients</option></select></div>
+            <div class="filter-group"><label for="status-filter">Status</label><select id="status-filter"><option value="">All statuses</option></select></div>
+            <div class="filter-group"><label for="market-filter">Market</label><select id="market-filter"><option value="">All markets</option></select></div>
+            <div class="filter-group"><label for="outlet-filter">Station / Outlet</label><select id="outlet-filter"><option value="">All stations</option></select></div>
+            <div class="filter-group"><label for="date-filter">Date View</label><select id="date-filter"><option value="">All dates</option><option value="upcoming">Upcoming</option><option value="running">Running now</option><option value="history">History</option></select></div>
+            <div class="filter-group"><label for="search-filter">Search</label><input id="search-filter" type="search" placeholder="Campaign, creative, station…" /></div>
+            <label class="filter-check"><input id="needs-action-filter" type="checkbox" /> Needs action only</label>
+            <button class="button" id="clear-filters" type="button">Clear Filters</button>
+          </div>
+        </div>
+      </section>
+
       <section class="panel priority">
-        <div class="panel-head">
-          <div><h2>Highest-Priority Media Action</h2><p>Derived from confirmed placement dates, traffic deadlines, attention state, and confirmation state.</p></div>
-        </div>
-        <div class="priority-body" id="priority"><div class="loading">Loading operational decision…</div></div>
+        <button class="section-toggle" type="button" aria-expanded="true" data-target="priority-body">
+          <span class="title-wrap"><h2>Highest-Priority Media Action</h2><p>Derived from confirmed placement dates, traffic deadlines, attention state, and confirmation state.</p></span>
+          <span class="chevron">⌄</span>
+        </button>
+        <div class="priority-body collapsible" id="priority-body"><div id="priority"><div class="loading">Loading operational decision…</div></div></div>
       </section>
 
       <section class="panel">
-        <div class="panel-head">
-          <div><h2>Campaign Preparation Queue</h2><p>This first road test organises existing placement records. It does not create campaign or asset records yet.</p></div>
-        </div>
-        <div class="queue-grid">
-          <section class="lane"><div class="lane-head"><strong>Preparing</strong><span>Upcoming placements requiring readiness</span></div><div class="lane-list" id="lane-preparing"></div></section>
-          <section class="lane"><div class="lane-head"><strong>Ready to Launch</strong><span>Upcoming with no current blocker</span></div><div class="lane-list" id="lane-ready"></div></section>
-          <section class="lane"><div class="lane-head"><strong>Running</strong><span>Active placements and next operating step</span></div><div class="lane-list" id="lane-running"></div></section>
-          <section class="lane"><div class="lane-head"><strong>Awaiting Confirmation</strong><span>Sent instructions waiting for station proof</span></div><div class="lane-list" id="lane-awaiting"></div></section>
+        <button class="section-toggle" type="button" aria-expanded="true" data-target="queue-body">
+          <span class="title-wrap"><h2>Campaign Preparation Queue</h2><p>Existing placement records organised by operational stage.</p></span>
+          <span class="chevron">⌄</span>
+        </button>
+        <div class="queue-grid collapsible" id="queue-body">
+          <section class="lane"><button class="lane-toggle" type="button" aria-expanded="true" data-target="lane-preparing"><span><strong>Preparing</strong><span>Upcoming placements requiring readiness</span></span><span class="lane-count" id="lane-preparing-count">0</span></button><div class="lane-list collapsible" id="lane-preparing"></div></section>
+          <section class="lane"><button class="lane-toggle" type="button" aria-expanded="true" data-target="lane-ready"><span><strong>Ready to Launch</strong><span>Upcoming with no current blocker</span></span><span class="lane-count" id="lane-ready-count">0</span></button><div class="lane-list collapsible" id="lane-ready"></div></section>
+          <section class="lane"><button class="lane-toggle" type="button" aria-expanded="false" data-target="lane-running"><span><strong>Running</strong><span>Active placements and next operating step</span></span><span class="lane-count" id="lane-running-count">0</span></button><div class="lane-list collapsible" id="lane-running" hidden></div></section>
+          <section class="lane"><button class="lane-toggle" type="button" aria-expanded="true" data-target="lane-awaiting"><span><strong>Awaiting Confirmation</strong><span>Sent instructions waiting for station proof</span></span><span class="lane-count" id="lane-awaiting-count">0</span></button><div class="lane-list collapsible" id="lane-awaiting"></div></section>
         </div>
       </section>
 
       <section class="panel">
-        <div class="panel-head"><div><h2>Placement Detail</h2><p>Existing production data retained for verification and history.</p></div></div>
-        <div id="records"><div class="loading">Loading media records…</div></div>
+        <button class="section-toggle" type="button" aria-expanded="false" data-target="records">
+          <span class="title-wrap"><h2>Placement Detail</h2><p>Existing production data retained for verification and history.</p></span>
+          <span class="chevron">⌄</span>
+        </button>
+        <div id="records" class="collapsible" hidden><div class="loading">Loading media records…</div></div>
       </section>
     </div>
   </main>
@@ -160,6 +281,7 @@
   "use strict";
   const ENDPOINT = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const $ = id => document.getElementById(id);
+  let rawRecords = [];
   let records = [];
 
   const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({
@@ -178,6 +300,62 @@
   const needsAttention = r => r.needsAttention === true
     || ["attention","needs_attention"].includes(lower(r.attentionStatus))
     || Boolean(r.attentionReason);
+
+
+  const uniqueSorted = values => [...new Set(values.filter(Boolean).map(v => String(v).trim()))].sort((a,b) => a.localeCompare(b));
+  const optionHtml = (values, emptyLabel) => `<option value="">${esc(emptyLabel)}</option>` + values.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join("");
+
+  function dateRelation(r) {
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const start = r.startDate ? new Date(String(r.startDate).slice(0,10) + "T00:00:00") : null;
+    const end = r.endDate ? new Date(String(r.endDate).slice(0,10) + "T23:59:59") : null;
+    if (end && end < today) return "history";
+    if (start && start > today) return "upcoming";
+    if ((!start || start <= today) && (!end || end >= today)) return "running";
+    return "";
+  }
+
+  function applyFilters() {
+    const status = lower($("status-filter").value);
+    const market = lower($("market-filter").value);
+    const outlet = lower($("outlet-filter").value);
+    const dateView = $("date-filter").value;
+    const search = lower($("search-filter").value);
+    const actionOnly = $("needs-action-filter").checked;
+
+    records = rawRecords.filter(r => {
+      if (status && lower(r.status) !== status) return false;
+      if (market && lower(r.market) !== market) return false;
+      if (outlet && lower(r.outletName) !== outlet) return false;
+      if (dateView && dateRelation(r) !== dateView) return false;
+      if (actionOnly && !(needsAttention(r) || isAwaiting(r))) return false;
+      if (search) {
+        const haystack = [
+          r.clientName,r.clientCode,r.campaignName,r.creativeName,r.fileName,
+          r.market,r.outletName,r.status,r.trafficStatus,r.confirmationStatus,
+          r.attentionReason
+        ].map(lower).join(" ");
+        if (!haystack.includes(search)) return false;
+      }
+      return true;
+    });
+    render();
+  }
+
+  function populateFilterOptions() {
+    const preserve = {
+      status:$("status-filter").value,
+      market:$("market-filter").value,
+      outlet:$("outlet-filter").value
+    };
+    $("status-filter").innerHTML = optionHtml(uniqueSorted(rawRecords.map(r => r.status)), "All statuses");
+    $("market-filter").innerHTML = optionHtml(uniqueSorted(rawRecords.map(r => r.market)), "All markets");
+    $("outlet-filter").innerHTML = optionHtml(uniqueSorted(rawRecords.map(r => r.outletName)), "All stations");
+    $("status-filter").value = preserve.status;
+    $("market-filter").value = preserve.market;
+    $("outlet-filter").value = preserve.outlet;
+  }
 
   function urgency(r) {
     if (isAwaiting(r)) return 100;
@@ -260,6 +438,10 @@
     $("count-preparing").textContent = preparing.length + ready.length;
     $("count-running").textContent = running.length;
     $("count-history").textContent = history.length;
+    $("lane-preparing-count").textContent = preparing.length;
+    $("lane-ready-count").textContent = ready.length;
+    $("lane-running-count").textContent = running.length;
+    $("lane-awaiting-count").textContent = awaiting.length;
 
     renderPriority();
     renderLane("lane-preparing", preparing, "b-warning", "Preparing");
@@ -277,12 +459,13 @@
       const response = await fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || payload?.ok !== true) throw new Error(payload?.error || payload?.details || "Media Operations could not load.");
-      records = Array.isArray(payload?.mediaOperations?.records) ? payload.mediaOperations.records : [];
+      rawRecords = Array.isArray(payload?.mediaOperations?.records) ? payload.mediaOperations.records : [];
       const clients = Array.isArray(payload?.mediaOperations?.clients) ? payload.mediaOperations.clients : [];
       const selected = $("client").value;
       $("client").innerHTML = `<option value="">All clients</option>` + clients.map(c => `<option value="${esc(c.clientId)}">${esc(c.clientName)}</option>`).join("");
       $("client").value = selected;
-      render();
+      populateFilterOptions();
+      applyFilters();
     } catch (error) {
       const message = esc(error?.message || "Media Operations could not load.");
       $("priority").innerHTML = `<div class="error">${message}</div>`;
@@ -291,8 +474,49 @@
     }
   }
 
+  document.addEventListener("click", event => {
+    const toggle = event.target.closest("[data-target]");
+    if (!toggle) return;
+    const target = $(toggle.dataset.target);
+    if (!target) return;
+    const expanded = toggle.getAttribute("aria-expanded") !== "false";
+    toggle.setAttribute("aria-expanded", String(!expanded));
+    target.hidden = expanded;
+  });
+
   $("client").addEventListener("change", load);
   $("refresh").addEventListener("click", load);
+  ["status-filter","market-filter","outlet-filter","date-filter","needs-action-filter"].forEach(id => $(id).addEventListener("change", applyFilters));
+  $("search-filter").addEventListener("input", applyFilters);
+
+  $("clear-filters").addEventListener("click", () => {
+    $("status-filter").value = "";
+    $("market-filter").value = "";
+    $("outlet-filter").value = "";
+    $("date-filter").value = "";
+    $("search-filter").value = "";
+    $("needs-action-filter").checked = false;
+    applyFilters();
+  });
+
+  $("expand-all").addEventListener("click", () => {
+    document.querySelectorAll("[data-target]").forEach(toggle => {
+      const target = $(toggle.dataset.target);
+      if (!target) return;
+      toggle.setAttribute("aria-expanded","true");
+      target.hidden = false;
+    });
+  });
+
+  $("collapse-all").addEventListener("click", () => {
+    document.querySelectorAll("[data-target]").forEach(toggle => {
+      const target = $(toggle.dataset.target);
+      if (!target) return;
+      toggle.setAttribute("aria-expanded","false");
+      target.hidden = true;
+    });
+  });
+
   load();
 })();
 </script>
