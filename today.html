@@ -1,8 +1,9 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 2.0.0
-   Change: Mission Control rebuilt as the GCM Agency Command Center
+   Version: 2.0.1
+   Status: Production Candidate
+   Change: Highest-Value Next Action proof of concept — WHO, WHAT, WHEN, WHY, EVIDENCE, NEXT ACTION
    Source: Production today.html 1.2.0
    ========================================================= -->
 <!DOCTYPE html>
@@ -601,6 +602,87 @@
       font-weight: 800;
     }
 
+    .priority-brief-body {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 22px;
+      align-items: stretch;
+    }
+
+    .decision-client {
+      padding-bottom: 18px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .decision-client .priority-name {
+      max-width: 920px;
+    }
+
+    .decision-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .decision-field {
+      min-height: 104px;
+      padding: 15px 16px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 13px;
+      background: rgba(255, 255, 255, 0.055);
+    }
+
+    .decision-field-wide {
+      grid-column: 1 / -1;
+    }
+
+    .decision-label {
+      display: block;
+      margin-bottom: 7px;
+      color: #a8c9ff;
+      font-size: 0.68rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .decision-value {
+      margin: 0;
+      color: #ffffff;
+      font-size: 0.9rem;
+      font-weight: 760;
+      line-height: 1.48;
+    }
+
+    .decision-value-secondary {
+      margin-top: 5px;
+      color: rgba(255, 255, 255, 0.66);
+      font-size: 0.76rem;
+      font-weight: 700;
+    }
+
+    .decision-action-row {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 20px;
+      padding-top: 2px;
+    }
+
+    .decision-action-copy {
+      min-width: 0;
+    }
+
+    .decision-action-copy .decision-label {
+      margin-bottom: 5px;
+    }
+
+    .decision-action-copy p {
+      margin: 0;
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 0.8rem;
+    }
+
     .priority-actions {
       display: flex;
       gap: 10px;
@@ -993,6 +1075,27 @@
         padding: 20px;
       }
 
+      .decision-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .decision-field-wide {
+        grid-column: auto;
+      }
+
+      .decision-action-row {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .priority-actions {
+        width: 100%;
+      }
+
+      .priority-actions .button {
+        flex: 1 1 auto;
+      }
+
       .panel-header {
         padding: 18px;
       }
@@ -1060,16 +1163,50 @@
                 </div>
                 <span class="priority-badge" id="priority-badge">Decision</span>
               </div>
-              <div class="priority-body">
-                <div>
+              <div class="priority-body priority-brief-body">
+                <div class="decision-client">
                   <p class="priority-type" id="priority-type">Agency Review</p>
-                  <h2 class="priority-name" id="priority-name">Review the clients currently requiring attention</h2>
-                  <p class="priority-reason" id="priority-reason">Mission Control is loading live operational records and will direct you to the strongest available decision.</p>
-                  <div class="priority-meta" id="priority-meta"><span>Evidence-based</span><span>Cross-agency priority</span></div>
+                  <h2 class="priority-name" id="priority-name">Mission Control is loading the highest-value decision.</h2>
                 </div>
-                <div class="priority-actions">
-                  <a class="button button-primary" id="priority-primary-action" href="clients.html">Open Clients</a>
-                  <a class="button button-secondary" id="priority-secondary-action" href="work.html">Open Work</a>
+
+                <div class="decision-grid" aria-label="Highest-value decision briefing">
+                  <section class="decision-field">
+                    <span class="decision-label">Who</span>
+                    <p class="decision-value" id="priority-who">Checking the responsible client and owner…</p>
+                  </section>
+
+                  <section class="decision-field">
+                    <span class="decision-label">What</span>
+                    <p class="decision-value" id="priority-what">Checking the specific operational issue…</p>
+                  </section>
+
+                  <section class="decision-field">
+                    <span class="decision-label">When</span>
+                    <p class="decision-value" id="priority-when">Checking priority and operating status…</p>
+                  </section>
+
+                  <section class="decision-field">
+                    <span class="decision-label">Why</span>
+                    <p class="decision-value" id="priority-why">Checking the recorded business reason…</p>
+                  </section>
+
+                  <section class="decision-field decision-field-wide">
+                    <span class="decision-label">Evidence</span>
+                    <p class="decision-value" id="priority-evidence">Checking source records and verified findings…</p>
+                    <p class="decision-value-secondary" id="priority-evidence-references"></p>
+                  </section>
+                </div>
+
+                <div class="decision-action-row">
+                  <div class="decision-action-copy">
+                    <span class="decision-label">Next Action</span>
+                    <p id="priority-action-guidance">Open the authoritative record before committing work.</p>
+                  </div>
+
+                  <div class="priority-actions">
+                    <a class="button button-primary" id="priority-primary-action" href="clients.html">Open Record</a>
+                    <a class="button button-secondary" id="priority-secondary-action" href="clients.html">Open Client</a>
+                  </div>
                 </div>
               </div>
             </article>
@@ -1178,11 +1315,17 @@
       const priorityBadge = document.getElementById("priority-badge");
       const priorityType = document.getElementById("priority-type");
       const priorityName = document.getElementById("priority-name");
-      const priorityReason = document.getElementById("priority-reason");
-      const priorityMeta = document.getElementById("priority-meta");
+      const priorityWho = document.getElementById("priority-who");
+      const priorityWhat = document.getElementById("priority-what");
+      const priorityWhen = document.getElementById("priority-when");
+      const priorityWhy = document.getElementById("priority-why");
+      const priorityEvidence = document.getElementById("priority-evidence");
+      const priorityEvidenceReferences = document.getElementById("priority-evidence-references");
+      const priorityActionGuidance = document.getElementById("priority-action-guidance");
       const priorityPrimaryAction = document.getElementById("priority-primary-action");
       const prioritySecondaryAction = document.getElementById("priority-secondary-action");
       let attentionClientsState = [];
+      let highestPriorityDecisionState = null;
       let mediaAttentionState = 0;
 
       const cloneDefaults = () => JSON.parse(JSON.stringify(DEFAULT_DATA));
@@ -1241,6 +1384,119 @@
         if (normalized.includes("ready") || normalized.includes("complete")) return "status-success";
         if (normalized.includes("review")) return "status-info";
         return "status-warning";
+      }
+
+      function cleanDisplay(value, fallback = "") {
+        const text = String(value ?? "").trim();
+        return text || fallback;
+      }
+
+      function titleCase(value) {
+        return cleanDisplay(value)
+          .replaceAll("_", " ")
+          .replaceAll("-", " ")
+          .replace(/\b\w/g, (character) => character.toUpperCase());
+      }
+
+      function formatDecisionDate(value) {
+        const raw = cleanDisplay(value);
+        if (!raw) return "";
+
+        const date = new Date(raw);
+        if (Number.isNaN(date.getTime())) return raw;
+
+        return new Intl.DateTimeFormat("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric"
+        }).format(date);
+      }
+
+      function setDecisionBrief({
+        badge,
+        type,
+        client,
+        who,
+        what,
+        when,
+        why,
+        evidence,
+        evidenceReferences,
+        actionGuidance,
+        primaryLabel,
+        primaryHref,
+        secondaryLabel,
+        secondaryHref
+      }) {
+        priorityBadge.textContent = cleanDisplay(badge, "Decide");
+        priorityType.textContent = cleanDisplay(type, "Operational Decision");
+        priorityName.textContent = cleanDisplay(client, "Agency Decision");
+        priorityWho.textContent = cleanDisplay(who, "Owner not recorded.");
+        priorityWhat.textContent = cleanDisplay(what, "Review the authoritative operational record.");
+        priorityWhen.textContent = cleanDisplay(when, "Priority and timing are not recorded.");
+        priorityWhy.textContent = cleanDisplay(why, "Review the record before deciding what happens next.");
+        priorityEvidence.textContent = cleanDisplay(evidence, "No separate evidence summary has been recorded yet.");
+        priorityEvidenceReferences.textContent = cleanDisplay(evidenceReferences);
+        priorityActionGuidance.textContent = cleanDisplay(actionGuidance, "Open the authoritative record before committing work.");
+        priorityPrimaryAction.textContent = cleanDisplay(primaryLabel, "Open Record");
+        priorityPrimaryAction.href = cleanDisplay(primaryHref, "clients.html");
+        prioritySecondaryAction.textContent = cleanDisplay(secondaryLabel, "Open Client");
+        prioritySecondaryAction.href = cleanDisplay(secondaryHref, "clients.html");
+      }
+
+      function buildClientWorkspaceHref(clientCode) {
+        const code = cleanDisplay(clientCode);
+        return code
+          ? `clients.html?client=${encodeURIComponent(code)}`
+          : "clients.html";
+      }
+
+      function renderHighestPriorityDecision(decision) {
+        const clientName = cleanDisplay(decision?.clientName, "Unknown Client");
+        const owner = cleanDisplay(decision?.who?.owner, "Unassigned");
+        const priority = titleCase(decision?.when?.priority || "normal");
+        const status = titleCase(decision?.when?.status || "open");
+        const attentionDate = formatDecisionDate(decision?.when?.attentionAt);
+        const whenParts = [`${priority} priority`, status];
+
+        if (attentionDate) {
+          whenParts.push(`Recorded ${attentionDate}`);
+        }
+
+        const references = Array.isArray(decision?.evidence?.sourceReferences)
+          ? decision.evidence.sourceReferences.filter(Boolean)
+          : [];
+
+        const recordType =
+          decision?.recordType === "work_item"
+            ? "Committed Work"
+            : "Investigation";
+
+        setDecisionBrief({
+          badge: decision?.recordType === "work_item" ? "Deliver" : "Decide",
+          type: recordType,
+          client: clientName,
+          who: `Client: ${clientName} · Owner: ${owner}`,
+          what: decision?.what,
+          when: whenParts.join(" · "),
+          why: decision?.why,
+          evidence: decision?.evidence?.summary,
+          evidenceReferences: references.join(" · "),
+          actionGuidance:
+            decision?.recordType === "work_item"
+              ? "Open the committed work item and complete the next verified step."
+              : "Open the investigation, review the evidence, and decide the specific work required.",
+          primaryLabel: decision?.nextAction?.label,
+          primaryHref: decision?.nextAction?.href,
+          secondaryLabel: `Open ${clientName}`,
+          secondaryHref: buildClientWorkspaceHref(decision?.clientCode)
+        });
+
+        commandBriefTitle.textContent = `${clientName} requires the first operating decision.`;
+        commandBriefCopy.textContent = cleanDisplay(
+          decision?.what,
+          "Review the highest-priority operational record before adding more work."
+        );
       }
 
       function renderWorkQueue(data) {
@@ -1335,9 +1591,13 @@
             ? payload.missionControl.clientsRequiringAttention
             : [];
 
+          highestPriorityDecisionState =
+            payload?.missionControl?.highestPriorityDecision || null;
+
           renderAttentionClients(clients);
         } catch (error) {
           console.error("Could not load Mission Control attention records.", error);
+          highestPriorityDecisionState = null;
           renderAttentionError(error?.message);
         }
       }
@@ -1454,21 +1714,162 @@
 
       function updatePriority() {
         const data = loadData();
-        const openWork = data.workItems.filter((item) => !["complete", "completed", "archived"].includes(String(item.status || "").toLowerCase())).sort((a,b) => ({highest:0,high:1,normal:2}[a.priority] ?? 3) - ({highest:0,high:1,normal:2}[b.priority] ?? 3));
-        const proofWaiting = data.proofItems.filter((item) => !["complete","completed","published","archived"].includes(String(item.status || "").toLowerCase()));
+        const openWork = data.workItems
+          .filter((item) =>
+            !["complete", "completed", "archived"].includes(
+              String(item.status || "").toLowerCase()
+            )
+          )
+          .sort(
+            (a, b) =>
+              ({ highest: 0, high: 1, normal: 2 }[a.priority] ?? 3) -
+              ({ highest: 0, high: 1, normal: 2 }[b.priority] ?? 3)
+          );
+
+        const proofWaiting = data.proofItems.filter(
+          (item) =>
+            !["complete", "completed", "published", "archived"].includes(
+              String(item.status || "").toLowerCase()
+            )
+        );
+
         if (mediaAttentionState > 0) {
-          priorityBadge.textContent = "Protect"; priorityType.textContent = "Media Deadline"; priorityName.textContent = mediaAttentionState === 1 ? "Review the active media deadline" : `Review the ${mediaAttentionState} active media deadlines`; priorityReason.textContent = "Media deadlines can create immediate execution risk. Confirm required station actions before lower-priority work."; priorityMeta.innerHTML = "<span>Live Media record</span><span>Deadline-sensitive</span><span>Protect client delivery</span>"; priorityPrimaryAction.href = "media.html"; priorityPrimaryAction.textContent = "Open Media"; prioritySecondaryAction.href = "work.html"; prioritySecondaryAction.textContent = "Open Work"; commandBriefTitle.textContent = "Media requires the first operating decision today."; commandBriefCopy.textContent = "Mission Control found an active media deadline. Protecting client delivery takes priority before routine production work."; return;
+          setDecisionBrief({
+            badge: "Protect",
+            type: "Media Deadline",
+            client:
+              mediaAttentionState === 1
+                ? "One Media Placement"
+                : `${mediaAttentionState} Media Placements`,
+            who: "Client delivery · Media Operations",
+            what:
+              mediaAttentionState === 1
+                ? "Review the active media deadline."
+                : `Review the ${mediaAttentionState} active media deadlines.`,
+            when: "Deadline-sensitive · Review first",
+            why: "An active station deadline can create immediate execution risk for client delivery.",
+            evidence: "Live Media Operations records currently require attention.",
+            evidenceReferences: "Media Operations",
+            actionGuidance: "Open Media and resolve the deadline before lower-priority work.",
+            primaryLabel: "Open Media",
+            primaryHref: "media.html",
+            secondaryLabel: "Open Work",
+            secondaryHref: "work.html"
+          });
+
+          commandBriefTitle.textContent = "Media requires the first operating decision today.";
+          commandBriefCopy.textContent = "Protect client delivery by resolving the active station deadline before routine production work.";
+          return;
         }
+
+        if (highestPriorityDecisionState) {
+          renderHighestPriorityDecision(highestPriorityDecisionState);
+          return;
+        }
+
         if (attentionClientsState.length > 0) {
-          const client = attentionClientsState[0]; priorityBadge.textContent = "Decide"; priorityType.textContent = "Client Attention"; priorityName.textContent = attentionClientsState.length === 1 ? `Review ${client.clientName || "the client requiring attention"}` : "Review the highest-priority client decision"; priorityReason.textContent = client.reason || client.detail || client.attentionReason || "A live client decision is waiting. Review the evidence before committing work."; priorityMeta.innerHTML = `<span>${attentionClientsState.length} ${attentionClientsState.length === 1 ? "client" : "clients"} requiring attention</span><span>Evidence before action</span><span>Investigation does not automatically become work</span>`; priorityPrimaryAction.href = client.href || "clients.html"; priorityPrimaryAction.textContent = client.clientName ? `Open ${client.clientName}` : "Open Clients"; prioritySecondaryAction.href = "communications-v2.html"; prioritySecondaryAction.textContent = "Open Communications"; commandBriefTitle.textContent = attentionClientsState.length === 1 ? "One client decision requires your attention." : `${attentionClientsState.length} client decisions require your attention.`; commandBriefCopy.textContent = "Resolve the strongest live client decision before adding more work."; return;
+          const client = attentionClientsState[0];
+          const clientName = cleanDisplay(client?.clientName, "Client");
+
+          setDecisionBrief({
+            badge: "Decide",
+            type: "Client Attention",
+            client: clientName,
+            who: `Client: ${clientName} · Owner not recorded`,
+            what: "Review the live client decision requiring attention.",
+            when: `${attentionClientsState.length} ${
+              attentionClientsState.length === 1 ? "client requires" : "clients require"
+            } review`,
+            why: cleanDisplay(
+              client?.reason || client?.detail || client?.attentionReason,
+              "A live client decision is waiting. Review the evidence before committing work."
+            ),
+            evidence: "The client has an unresolved Investigation or Work Item.",
+            evidenceReferences: "Mission Control attention record",
+            actionGuidance: "Open the client workspace and identify the authoritative decision record.",
+            primaryLabel: `Open ${clientName}`,
+            primaryHref: client?.href || "clients.html",
+            secondaryLabel: "Open Communications",
+            secondaryHref: "communications-v2.html"
+          });
+
+          commandBriefTitle.textContent =
+            attentionClientsState.length === 1
+              ? "One client decision requires your attention."
+              : `${attentionClientsState.length} client decisions require your attention.`;
+          commandBriefCopy.textContent = "Resolve the strongest live client decision before adding more work.";
+          return;
         }
+
         if (openWork.length > 0) {
-          const item = openWork[0]; priorityBadge.textContent = "Deliver"; priorityType.textContent = item.area || "Open Work"; priorityName.textContent = item.title || "Complete the highest-priority open work item"; priorityReason.textContent = item.detail || item.client || "No urgent media or client decision is waiting, so committed work becomes the next action."; priorityMeta.innerHTML = `<span>${openWork.length} open ${openWork.length === 1 ? "item" : "items"}</span><span>${priorityLabel(item.priority)} priority</span><span>Committed work</span>`; priorityPrimaryAction.href = item.href || "work.html"; priorityPrimaryAction.textContent = "Open Work Item"; prioritySecondaryAction.href = "work.html"; prioritySecondaryAction.textContent = "Open Work Queue"; commandBriefTitle.textContent = "The agency is clear of urgent decisions. Execute the strongest committed work."; commandBriefCopy.textContent = "No live media deadline or client attention record outranks the current work queue."; return;
+          const item = openWork[0];
+
+          setDecisionBrief({
+            badge: "Deliver",
+            type: item.area || "Open Work",
+            client: item.client || "Committed Work",
+            who: cleanDisplay(item.client, "Client not recorded"),
+            what: item.title || "Complete the highest-priority open work item.",
+            when: `${priorityLabel(item.priority)} priority · Open`,
+            why: item.detail || "No urgent media or client decision outranks this committed work.",
+            evidence: "This item is already recorded in the active work queue.",
+            evidenceReferences: cleanDisplay(item.id) ? `Work Item #${item.id}` : "Work queue",
+            actionGuidance: "Open the work item and complete the next verified step.",
+            primaryLabel: "Open Work Item",
+            primaryHref: item.href || "work.html",
+            secondaryLabel: "Open Work Queue",
+            secondaryHref: "work.html"
+          });
+
+          commandBriefTitle.textContent = "The agency is clear of urgent decisions. Execute the strongest committed work.";
+          commandBriefCopy.textContent = "No live media deadline or client attention record outranks the current work queue.";
+          return;
         }
+
         if (proofWaiting.length > 0) {
-          priorityBadge.textContent = "Prove"; priorityType.textContent = "Client Value"; priorityName.textContent = "Turn completed work into client-facing proof"; priorityReason.textContent = "Completed work is waiting to become proof. Documenting value supports reporting, retention, and future sales."; priorityMeta.innerHTML = `<span>${proofWaiting.length} proof ${proofWaiting.length === 1 ? "item" : "items"} waiting</span><span>Retention support</span><span>Source records only</span>`; priorityPrimaryAction.href = "proof.html"; priorityPrimaryAction.textContent = "Build Proof"; prioritySecondaryAction.href = "clients.html"; prioritySecondaryAction.textContent = "Open Clients"; commandBriefTitle.textContent = "Operations are clear. Convert completed work into proof."; commandBriefCopy.textContent = "No stronger operational issue is visible. Document completed work so clients can see the value already delivered."; return;
+          setDecisionBrief({
+            badge: "Prove",
+            type: "Client Value",
+            client: "Proof of Work",
+            who: "Completed client work",
+            what: "Turn completed work into client-facing proof.",
+            when: `${proofWaiting.length} ${
+              proofWaiting.length === 1 ? "proof item is" : "proof items are"
+            } waiting`,
+            why: "Documented proof supports client reporting, retention, and future sales.",
+            evidence: "Completed work exists without finished client-facing proof.",
+            evidenceReferences: "Proof queue",
+            actionGuidance: "Open Proof and document the completed work from its source records.",
+            primaryLabel: "Build Proof",
+            primaryHref: "proof.html",
+            secondaryLabel: "Open Clients",
+            secondaryHref: "clients.html"
+          });
+
+          commandBriefTitle.textContent = "Operations are clear. Convert completed work into proof.";
+          commandBriefCopy.textContent = "No stronger operational issue is visible. Document completed work so clients can see the value delivered.";
+          return;
         }
-        priorityBadge.textContent = "Acquire"; priorityType.textContent = "Agency Growth"; priorityName.textContent = "Use the clear operating window to advance the strongest prospect"; priorityReason.textContent = "No urgent client, media, work, or proof obligation is visible. Use available capacity to create new revenue instead of inventing internal work."; priorityMeta.innerHTML = "<span>Operating queues clear</span><span>Revenue growth</span><span>Personalized outreach</span>"; priorityPrimaryAction.href = "client-pre-research.html"; priorityPrimaryAction.textContent = "Research Prospect"; prioritySecondaryAction.href = "clients.html"; prioritySecondaryAction.textContent = "Open Clients"; commandBriefTitle.textContent = "The agency is operationally clear. Use the window to create new revenue."; commandBriefCopy.textContent = "Mission Control found no stronger delivery or client-risk signal. The highest-value action shifts to qualified prospecting.";
+
+        setDecisionBrief({
+          badge: "Acquire",
+          type: "Agency Growth",
+          client: "Qualified Prospecting",
+          who: "Global Concepts Media",
+          what: "Use the clear operating window to advance the strongest prospect.",
+          when: "Operating queues clear",
+          why: "No urgent client, media, work, or proof obligation is visible. Available capacity should create revenue rather than invented internal work.",
+          evidence: "Mission Control found no stronger delivery or client-risk signal.",
+          evidenceReferences: "Agency operating state",
+          actionGuidance: "Research one qualified prospect and prepare personalized outreach.",
+          primaryLabel: "Research Prospect",
+          primaryHref: "client-pre-research.html",
+          secondaryLabel: "Open Clients",
+          secondaryHref: "clients.html"
+        });
+
+        commandBriefTitle.textContent = "The agency is operationally clear. Use the window to create new revenue.";
+        commandBriefCopy.textContent = "Mission Control found no stronger delivery or client-risk signal. The highest-value action shifts to qualified prospecting.";
       }
 
       function renderDashboard(data) {
@@ -1490,11 +1891,11 @@
       });
 
       if (!window.GCMOShell) {
-        console.error("Today 2.0.0: shared/gcm-shell.js did not load.");
+        console.error("Today 2.0.1: shared/gcm-shell.js did not load.");
       } else {
         window.GCMOShell.mount({
           currentPage: "today",
-          statusText: "Agency Command Center operational · Today v2.0.0"
+          statusText: "Agency Command Center operational · Today v2.0.1"
         });
       }
 
