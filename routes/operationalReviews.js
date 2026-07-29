@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/operationalReviews.js
-   Version: 7.7.0
+   Version: 7.7.1
    Status: Production Candidate
    Sprint: Media Confirmation — Operational Review
    Purpose: Match saved inbound Communications to pending Media
@@ -145,7 +145,7 @@ async function decideReview(body, db, requestId, decision) {
   const mediaUpdate = buildMediaUpdate(review, db);
   const statements = [
     mediaUpdate,
-    db.prepare(`UPDATE media_instructions SET status='confirmed',confirmed_at=CURRENT_TIMESTAMP,confirmation_communication_id=?,notes=CASE WHEN ?='' THEN notes ELSE COALESCE(notes || '\n','') || ? END,updated_at=CURRENT_TIMESTAMP WHERE id=?`).bind(review.communication_id,notes,notes,review.matched_record_id),
+    db.prepare(`UPDATE media_instructions SET status='confirmed',confirmation_received_at=CURRENT_TIMESTAMP,confirmation_communication_id=?,notes=CASE WHEN ?='' THEN notes ELSE COALESCE(notes || '\n','') || ? END,updated_at=CURRENT_TIMESTAMP WHERE id=?`).bind(review.communication_id,notes,notes,review.matched_record_id),
     db.prepare(`UPDATE operational_reviews SET status='approved',operator_decision='approved',decision_notes=?,decided_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=?`).bind(notes,reviewId)
   ];
   if (typeof db.batch === "function") await db.batch(statements); else for (const stmt of statements) await stmt.run();
