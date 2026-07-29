@@ -1,210 +1,278 @@
 <!-- =========================================================
    Global Concepts Media Operating System
-   File: media-insertion.html
-   Version: 1.0.0
-   Status: Production Candidate — Remote-Control Road Test
-   Source: Current GCM OS Media Operations architecture
-   Sprint: Media Campaign Insertion — Melbourne Gun Show Pilot
-   Purpose: Create and review a real media campaign package before
-            it enters Media Operations. This first road-test version
-            preserves the existing D1 Media source of truth and does
-            not use localStorage.
+   File: media.html
+   Version: 2.2.0
+   Status: Production Candidate
+   Source: Production media.html 1.9.0
+   Sprint: Media Operations — Connected Campaign Insertion
+   Purpose: Preserve the working Media operator workspace and add a
+            controlled entry into Media Insertion so newly created
+            campaigns return to this same D1-driven workflow.
 
-   Pilot:
-   - Client: Southeast Safes
-   - Market / Station: Melbourne / WMMB
-   - Event: Melbourne Scratch & Dent Gun Show, August 22–23, 2026
-   - Flight: August 17–22, 2026
-   - Asset: SESL2601_Liberty_GunShow_30.mp3
-   - Agency traffic preparation rule: 17 calendar days before first air
-   - Critical station-confirmation rule: 3 business days before air, noon
+   Production rules:
+   - D1 media_records remains authoritative.
+   - No campaign records are invented or written.
+   - Queue stages are derived from current placement state.
+   - The page answers: What media work should be done next?
    ========================================================= -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Media Insertion | GCM OS</title>
-  <meta name="description" content="Media campaign insertion for the Global Concepts Media Agency Operating System." />
+  <title>Media | GCM OS</title>
   <style>
     :root{
-      --navy-950:#071426;--navy-900:#0b1d33;--navy-800:#112a47;
-      --blue-600:#1f68d8;--blue-500:#347ce8;--blue-100:#eaf2ff;
-      --gold:#d6a94a;--surface:#fff;--soft:#f5f7fb;--muted:#edf1f7;
-      --border:#dbe2ec;--text:#132238;--text-muted:#637083;
-      --success:#1f7a4f;--success-soft:#e9f7f0;--warning:#9a6414;
-      --warning-soft:#fff4dd;--critical:#b33a3a;--critical-soft:#fff0f0;
-      --shadow:0 8px 24px rgba(7,20,38,.07);--radius:16px;
+      --navy:#071426;--navy2:#0b1d33;--blue:#1f68d8;--blue-soft:#eaf2ff;
+      --gold:#d6a94a;--surface:#fff;--soft:#f5f7fb;--muted:#637083;
+      --border:#dbe2ec;--text:#132238;--success:#1f7a4f;--success-soft:#e9f7f0;
+      --warning:#9a6414;--warning-soft:#fff4dd;--critical:#b33a3a;
+      --critical-soft:#fff0f0;--info:#245fae;--info-soft:#edf5ff;
+      --shadow:0 8px 24px rgba(7,20,38,.07);--radius:18px;
     }
-    *{box-sizing:border-box}body{margin:0;background:var(--soft);color:var(--text);
-      font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5}
-    button,input,select,textarea{font:inherit}a{color:inherit;text-decoration:none}
-    .shell{min-height:100vh;display:grid;grid-template-columns:250px minmax(0,1fr)}
-    .sidebar{position:sticky;top:0;height:100vh;padding:24px 18px;display:flex;flex-direction:column;
-      color:#fff;background:radial-gradient(circle at top right,rgba(52,124,232,.19),transparent 34%),
-      linear-gradient(180deg,var(--navy-900),var(--navy-950))}
-    .brand{display:flex;gap:12px;align-items:center;padding:2px 8px 22px;border-bottom:1px solid rgba(255,255,255,.12)}
-    .mark{width:42px;height:42px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.22);
-      border-radius:13px;background:rgba(255,255,255,.08);color:var(--gold);font-weight:900}
-    .brand strong,.brand span{display:block}.brand span{font-size:.72rem;color:rgba(255,255,255,.58);text-transform:uppercase;letter-spacing:.1em}
-    .nav-label{margin:24px 10px 10px;color:rgba(255,255,255,.42);font-size:.68rem;font-weight:900;text-transform:uppercase;letter-spacing:.14em}
-    nav{display:grid;gap:6px}.nav-link{min-height:46px;padding:0 13px;display:flex;align-items:center;gap:12px;border-radius:12px;color:rgba(255,255,255,.72);font-weight:750}
-    .nav-link:hover{background:rgba(255,255,255,.08);color:#fff}.nav-link.current{background:rgba(52,124,232,.2);color:#fff;box-shadow:inset 3px 0 0 var(--gold)}
-    .footer{margin-top:auto;padding:18px 8px 2px;border-top:1px solid rgba(255,255,255,.12);font-size:.78rem;color:rgba(255,255,255,.67)}
-    main{min-width:0;padding:28px 32px 48px}.inner{max-width:1480px;margin:auto}
-    .topbar{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:20px}
-    .eyebrow{margin:0 0 6px;color:var(--blue-600);font-size:.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.14em}
-    h1{margin:0;color:var(--navy-950);font-size:clamp(2rem,4vw,3.1rem);line-height:1;letter-spacing:-.045em}
-    .subtitle{margin:10px 0 0;color:var(--text-muted)}.version{padding:10px 12px;border:1px solid var(--border);border-radius:11px;background:#fff;font-size:.78rem;font-weight:850}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--soft);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5}
+    button,select{font:inherit}
+    .shell{min-height:100vh;display:grid;grid-template-columns:250px 1fr}
+    aside{position:sticky;top:0;height:100vh;padding:24px 18px;background:linear-gradient(180deg,var(--navy2),var(--navy));color:#fff}
+    .brand{display:flex;gap:12px;align-items:center;padding:0 8px 22px;border-bottom:1px solid rgba(255,255,255,.12)}
+    .mark{width:42px;height:42px;display:grid;place-items:center;border-radius:13px;background:rgba(255,255,255,.08);color:var(--gold);font-weight:900}
+    .brand strong,.brand span{display:block}.brand span{font-size:.72rem;color:rgba(255,255,255,.6);letter-spacing:.12em;text-transform:uppercase}
+    nav{display:grid;gap:6px;margin-top:24px}
+    nav a{padding:12px 13px;border-radius:11px;color:rgba(255,255,255,.72);font-weight:750;text-decoration:none}
+    nav a.active{background:rgba(52,124,232,.2);color:#fff;box-shadow:inset 3px 0 0 var(--gold)}
+    main{padding:30px}
+    .page{max-width:1480px;margin:auto}
+    header{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:20px}
+    .eyebrow{margin:0 0 6px;color:var(--blue);font-size:.72rem;font-weight:900;letter-spacing:.14em;text-transform:uppercase}
+    h1{margin:0;color:var(--navy);font-size:clamp(2rem,4vw,3rem);line-height:1}
+    .subtitle{margin:10px 0 0;color:var(--muted)}
+    .controls{display:flex;gap:10px;flex-wrap:wrap}
+    select,.button{min-height:42px;padding:0 13px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--navy2);font-weight:800}
+    .button{cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+    .button-primary{background:var(--blue);border-color:var(--blue);color:#fff}
+    .version{display:inline-flex;align-items:center;min-height:42px;padding:0 13px;border-radius:10px;background:var(--navy);color:#fff;font-size:.78rem;font-weight:900}
+    .panel{margin-bottom:18px;border:1px solid var(--border);border-radius:var(--radius);background:#fff;box-shadow:var(--shadow);overflow:hidden}
+    .panel-head{display:flex;justify-content:space-between;gap:16px;padding:20px 22px 16px;border-bottom:1px solid var(--border)}
+    .panel-head h2{margin:0;font-size:1rem;color:var(--navy)}
+    .panel-head p{margin:5px 0 0;color:var(--muted);font-size:.82rem}
+    .priority{border-color:#b9cfee}
+    .priority .panel-head{background:linear-gradient(180deg,#edf5ff,#fff)}
+    .priority-body{padding:22px}
+    .decision-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+    .decision{padding:15px;border:1px solid var(--border);border-radius:13px;background:var(--soft)}
+    .decision span{display:block;margin-bottom:6px;color:var(--blue);font-size:.68rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase}
+    .decision strong{display:block;color:var(--navy);font-size:.9rem}
+    .next{grid-column:1/-1;background:var(--navy);color:#fff;border-color:var(--navy)}
+    .next span{color:#8fb8ff}.next strong{color:#fff;font-size:1rem}
+    .queue-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;padding:18px}
+    .lane{min-width:0;border:1px solid var(--border);border-radius:14px;background:var(--soft);overflow:hidden}
+    .lane-head{padding:14px 15px;border-bottom:1px solid var(--border);background:#fff}
+    .lane-head strong{display:block;color:var(--navy)}.lane-head span{font-size:.72rem;color:var(--muted)}
+    .lane-list{display:grid;gap:10px;padding:12px}
+    .card{padding:14px;border:1px solid var(--border);border-radius:12px;background:#fff}
+    .card strong{display:block;color:var(--navy);font-size:.86rem}
+    .meta{margin-top:5px;color:var(--muted);font-size:.75rem}
+    .action{margin-top:9px;padding-top:9px;border-top:1px solid var(--border);color:var(--navy2);font-size:.76rem;font-weight:850}
+    .badge{display:inline-flex;align-items:center;min-height:23px;padding:0 8px;margin-bottom:8px;border-radius:999px;font-size:.64rem;font-weight:900;text-transform:uppercase}
+    .b-critical{background:var(--critical-soft);color:var(--critical)}
+    .b-warning{background:var(--warning-soft);color:var(--warning)}
+    .b-success{background:var(--success-soft);color:var(--success)}
+    .b-info{background:var(--info-soft);color:var(--info)}
     .summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
-    .summary article,.panel{background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
-    .summary article{padding:17px}.summary span{display:block;color:var(--text-muted);font-size:.7rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em}
-    .summary strong{display:block;margin-top:7px;color:var(--navy-950);font-size:1.15rem}
-    .panel{margin-bottom:18px;overflow:hidden}.panel-head{display:flex;justify-content:space-between;gap:15px;padding:19px 21px 15px;border-bottom:1px solid var(--border)}
-    .panel h2{margin:0;font-size:1rem;color:var(--navy-950)}.panel-head p{margin:5px 0 0;color:var(--text-muted);font-size:.82rem}
-    .body{padding:20px 21px}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
-    .span-2{grid-column:span 2}.span-3{grid-column:1/-1}
-    label{display:block;color:var(--navy-900);font-size:.76rem;font-weight:850}
-    input,select,textarea{width:100%;margin-top:6px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--text);padding:10px 11px}
-    input,select{min-height:43px}textarea{min-height:126px;resize:vertical}.script{min-height:230px}
-    .readonly{background:var(--soft)}.help{margin:6px 0 0;color:var(--text-muted);font-size:.72rem}
-    .asset-card{display:grid;grid-template-columns:1fr 260px;gap:16px;padding:16px;border:1px solid var(--border);border-radius:13px;background:var(--soft)}
-    audio{width:100%;margin-top:10px}.badge{display:inline-flex;align-items:center;min-height:25px;padding:0 9px;border-radius:999px;font-size:.67rem;font-weight:900;text-transform:uppercase}
-    .good{background:var(--success-soft);color:var(--success)}.warn{background:var(--warning-soft);color:var(--warning)}
-    .timeline{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-    .milestone{padding:13px;border:1px solid var(--border);border-radius:11px;background:var(--soft)}
-    .milestone span{display:block;color:var(--text-muted);font-size:.69rem;font-weight:900;text-transform:uppercase}.milestone strong{display:block;margin-top:5px;font-size:.87rem}
-    .actions{display:flex;gap:10px;flex-wrap:wrap}.button{min-height:43px;padding:0 15px;border-radius:10px;border:1px solid var(--border);font-weight:900;cursor:pointer}
-    .primary{background:var(--blue-600);border-color:var(--blue-600);color:#fff}.secondary{background:#fff;color:var(--blue-600);border-color:var(--blue-500)}
-    .button:disabled{opacity:.45;cursor:not-allowed}.status{margin-top:13px;padding:12px 14px;border-radius:10px;background:var(--muted);color:var(--text-muted);font-size:.8rem;font-weight:800}
-    .status.ok{background:var(--success-soft);color:var(--success)}.status.error{background:var(--critical-soft);color:var(--critical)}
-    .draft{min-height:260px;font-family:inherit}.review{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-    @media(max-width:1000px){.shell{grid-template-columns:1fr}.sidebar{position:relative;height:auto}.summary,.grid,.timeline,.review{grid-template-columns:1fr 1fr}.span-2,.span-3{grid-column:1/-1}}
-    @media(max-width:680px){main{padding:20px 15px}.topbar{flex-direction:column}.summary,.grid,.timeline,.review,.asset-card{grid-template-columns:1fr}.span-2,.span-3{grid-column:auto}}
+    .summary article{padding:17px;border:1px solid var(--border);border-radius:14px;background:#fff;box-shadow:var(--shadow)}
+    .summary span{display:block;color:var(--muted);font-size:.7rem;font-weight:900;text-transform:uppercase}
+    .summary strong{display:block;margin-top:7px;color:var(--navy);font-size:1.8rem}
+    .empty,.loading,.error{padding:22px;color:var(--muted);font-size:.84rem}
+    .error{color:var(--critical);background:var(--critical-soft)}
+    .table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:900px}
+    .table th,.table td{padding:12px 14px;border-bottom:1px solid var(--border);text-align:left;font-size:.76rem;vertical-align:top}
+    .table th{background:#fbfcfe;color:var(--muted);font-size:.66rem;text-transform:uppercase;letter-spacing:.07em}
+
+    .filter-bar{
+      display:grid;
+      grid-template-columns:repeat(6,minmax(0,1fr));
+      gap:10px;
+      padding:16px 18px;
+      border-bottom:1px solid var(--border);
+      background:#fbfcfe
+    }
+    .filter-group{display:grid;gap:5px}
+    .filter-group label{
+      color:var(--muted);
+      font-size:.64rem;
+      font-weight:900;
+      letter-spacing:.07em;
+      text-transform:uppercase
+    }
+    .filter-group input,.filter-group select{
+      width:100%;
+      min-height:40px;
+      padding:0 11px;
+      border:1px solid var(--border);
+      border-radius:9px;
+      background:#fff;
+      color:var(--navy2);
+      font:inherit
+    }
+    .filter-check{
+      display:flex;
+      align-items:end;
+      gap:8px;
+      padding-bottom:8px;
+      color:var(--navy2);
+      font-size:.76rem;
+      font-weight:850
+    }
+    .filter-check input{width:17px;height:17px}
+    .section-toggle{
+      width:100%;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:14px;
+      padding:20px 22px 16px;
+      border:0;
+      border-bottom:1px solid var(--border);
+      background:#fff;
+      color:inherit;
+      text-align:left;
+      cursor:pointer
+    }
+    .section-toggle:hover{background:#fbfcfe}
+    .section-toggle .title-wrap h2{margin:0;font-size:1rem;color:var(--navy)}
+    .section-toggle .title-wrap p{margin:5px 0 0;color:var(--muted);font-size:.82rem}
+    .chevron{
+      flex:0 0 auto;
+      width:30px;height:30px;
+      display:grid;place-items:center;
+      border:1px solid var(--border);
+      border-radius:9px;
+      color:var(--navy);
+      background:#fff;
+      font-weight:900;
+      transition:transform .18s ease
+    }
+    .section-toggle[aria-expanded="false"] .chevron{transform:rotate(-90deg)}
+    .collapsible[hidden]{display:none!important}
+    .lane-toggle{
+      width:100%;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:14px 15px;
+      border:0;
+      border-bottom:1px solid var(--border);
+      background:#fff;
+      text-align:left;
+      cursor:pointer
+    }
+    .lane-toggle strong{display:block;color:var(--navy)}
+    .lane-toggle span{font-size:.72rem;color:var(--muted)}
+    .lane-count{
+      display:inline-grid!important;
+      place-items:center;
+      min-width:25px;height:25px;
+      padding:0 7px;
+      border-radius:999px;
+      background:var(--blue-soft);
+      color:var(--blue)!important;
+      font-size:.66rem!important;
+      font-weight:900
+    }
+    .queue-grid{align-items:start}
+
+    @media(max-width:1100px){.decision-grid{grid-template-columns:repeat(2,1fr)}.queue-grid{grid-template-columns:repeat(2,1fr)}.filter-bar{grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:800px){.shell{grid-template-columns:1fr}aside{display:none}main{padding:18px}.summary,.queue-grid,.decision-grid,.filter-bar{grid-template-columns:1fr}header{flex-direction:column}.next{grid-column:auto}}
   </style>
 </head>
 <body>
 <div class="shell">
-  <aside class="sidebar">
-    <a class="brand" href="today.html"><span class="mark">G</span><span><strong>Global Concepts Media</strong><span>Agency Operating System</span></span></a>
-    <p class="nav-label">Workspace</p>
+  <aside>
+    <div class="brand"><div class="mark">G</div><div><strong>GCM OS</strong><span>Agency Infrastructure</span></div></div>
     <nav>
-      <a class="nav-link" href="today.html">⌂ <span>Home</span></a>
-      <a class="nav-link" href="clients.html">◫ <span>Clients</span></a>
-      <a class="nav-link" href="communications.html">✉ <span>Communications</span></a>
-      <a class="nav-link" href="work.html">✓ <span>Work</span></a>
-      <a class="nav-link" href="proof.html">↗ <span>Proof</span></a>
-      <a class="nav-link" href="media.html">◉ <span>Media</span></a>
-      <a class="nav-link current" href="media-insertion.html">＋ <span>Media Insertion</span></a>
-      <a class="nav-link" href="prospects.html">◎ <span>Prospects</span></a>
+      <a href="today.html">Today</a>
+      <a href="clients.html">Clients</a>
+      <a href="communications.html">Communications</a>
+      <a href="work.html">Work</a>
+      <a href="proof.html">Proof</a>
+      <a class="active" href="media.html">Media</a>
+      <a href="client-pre-research.html">Prospects</a>
     </nav>
-    <div class="footer">Remote-control road test ready</div>
   </aside>
 
   <main>
-    <div class="inner">
-      <header class="topbar">
+    <div class="page">
+      <header>
         <div>
           <p class="eyebrow">Media Operations</p>
-          <h1>Media Insertion</h1>
-          <p class="subtitle">Create the campaign package that Media will operate, confirm, complete, and reuse.</p>
+          <h1>Operator Workspace</h1>
+          <p class="subtitle">What needs to be prepared, launched, confirmed, or monitored next?</p>
         </div>
-        <div class="version">Installed version 1.0.0</div>
+        <div class="controls">
+          <a class="button button-primary" href="media-insertion.html">Create Media Campaign</a>
+          <button class="button" id="expand-all" type="button">Expand All</button>
+          <button class="button" id="collapse-all" type="button">Collapse All</button>
+          <button class="button" id="refresh" type="button">Refresh</button>
+          <span class="version">media.html · v2.2.0</span>
+        </div>
       </header>
 
       <section class="summary">
-        <article><span>Client</span><strong>Southeast Safes</strong></article>
-        <article><span>Market / Station</span><strong>Melbourne / WMMB</strong></article>
-        <article><span>Show</span><strong>Aug 22–23, 2026</strong></article>
-        <article><span>GCM ISCI</span><strong>SESL2601</strong></article>
+        <article><span>Needs Action</span><strong id="count-action">—</strong></article>
+        <article><span>Preparing</span><strong id="count-preparing">—</strong></article>
+        <article><span>Running</span><strong id="count-running">—</strong></article>
+        <article><span>History</span><strong id="count-history">—</strong></article>
       </section>
 
-      <section class="panel">
-        <div class="panel-head"><div><h2>1. Campaign Identity</h2><p>This is the real Melbourne gun-show campaign, not a mock record.</p></div><span class="badge good">Pilot loaded</span></div>
-        <div class="body grid">
-          <label>Client<input id="client" class="readonly" value="Southeast Safes" readonly></label>
-          <label>Campaign Type<select id="campaignType"><option selected>Gun Show</option><option>Sale</option><option>Co-op Promotion</option></select></label>
-          <label>Co-op Partner<input id="coop" value="Liberty"></label>
-          <label>Market<input id="market" value="Melbourne"></label>
-          <label>Station / Outlet<input id="station" value="WMMB"></label>
-          <label>Campaign Name<input id="campaignName" value="Liberty Co-op — Melbourne Scratch & Dent Gun Show"></label>
-          <label>Show Start<input id="showStart" type="date" value="2026-08-22"></label>
-          <label>Show End<input id="showEnd" type="date" value="2026-08-23"></label>
-          <label>Campaign Status<select id="status"><option selected>planned</option><option>preparing</option><option>ready_to_send</option></select></label>
-          <label>First Air Date<input id="airStart" type="date" value="2026-08-17"></label>
-          <label>Last Air Date<input id="airEnd" type="date" value="2026-08-22"></label>
-          <label>Owner<input id="owner" value="Andy"></label>
-        </div>
-      </section>
 
       <section class="panel">
-        <div class="panel-head"><div><h2>2. Creative Asset</h2><p>The campaign reuses the approved production and its permanent identifier.</p></div><span class="badge good">Reusable</span></div>
-        <div class="body">
-          <div class="asset-card">
-            <div>
-              <div class="grid">
-                <label>Asset Title<input id="assetTitle" value="Melbourne Gun Show V1"></label>
-                <label>GCM ISCI<input id="isci" value="SESL2601"></label>
-                <label>Length<input id="length" value=":30"></label>
-                <label class="span-2">Production Filename<input id="filename" value="SESL2601_Liberty_GunShow_30.mp3"></label>
-                <label>Asset Decision<select id="assetDecision"><option selected>Reuse exact approved production</option><option>Create revised production</option></select></label>
-              </div>
-              <p class="help">The same ISCI remains attached while the exact audio is reused. A materially revised spot requires a new identifier.</p>
-            </div>
-            <div>
-              <label>Road-test audio file<input id="audioFile" type="file" accept="audio/*"></label>
-              <audio id="audio" controls preload="metadata" src="SESL2601_Liberty_GunShow_30.mp3"></audio>
-              <p class="help" id="audioStatus">Expected repository file: SESL2601_Liberty_GunShow_30.mp3</p>
-            </div>
-          </div>
-          <label style="margin-top:16px">Final Script<textarea id="script" class="script">This weekend at the Melbourne Gun Show, Southeast Safes is hosting a massive Liberty Safe scratch-and-dent sale. We have a huge selection of Liberty Safes in all shapes, colours and sizes, including used, closeout and scratch-and-dent models at unbeatable discounts. Made in the USA, Liberty Safes come with one of the best warranties in the industry. Delivery is available, or bring your truck and trailer to save on fees. Don’t miss out—this Saturday and Sunday only at the Melbourne Auditorium, 625 East Hibiscus Boulevard, Melbourne.</textarea></label>
-          <label style="margin-top:12px">Original Notes / Script Screenshot<input id="scriptScreenshot" type="file" accept="image/*,.pdf"></label>
-          <p class="help">Version 1 accepts the original note or screenshot as supporting creative evidence. It is not uploaded until the D1/Images commit route is approved.</p>
-        </div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-head"><div><h2>3. Operating Timeline</h2><p>Dates are derived from the first air date using the rules already agreed.</p></div><span class="badge warn">17-day margin</span></div>
-        <div class="body">
-          <div class="timeline">
-            <div class="milestone"><span>Prepare & Send</span><strong id="prepareDate">—</strong></div>
-            <div class="milestone"><span>First Confirmation Check</span><strong id="checkDate">—</strong></div>
-            <div class="milestone"><span>Critical Noon Deadline</span><strong id="criticalDate">—</strong></div>
-            <div class="milestone"><span>First Air</span><strong id="firstAir">—</strong></div>
-          </div>
-          <div class="grid" style="margin-top:14px">
-            <label>Traffic Lead Time<input id="leadDays" type="number" min="1" value="17"></label>
-            <label>First Confirmation Check<input id="checkDays" type="number" min="1" value="10"></label>
-            <label>Critical Rule<input class="readonly" value="3 business days before first air — due by noon" readonly></label>
+        <button class="section-toggle" type="button" aria-expanded="true" data-target="filters-body">
+          <span class="title-wrap"><h2>Filters</h2><p>Limit every queue, count, priority decision, and detail record together.</p></span>
+          <span class="chevron">⌄</span>
+        </button>
+        <div class="collapsible" id="filters-body">
+          <div class="filter-bar">
+            <div class="filter-group"><label for="client">Client</label><select id="client"><option value="">All clients</option></select></div>
+            <div class="filter-group"><label for="status-filter">Status</label><select id="status-filter"><option value="">All statuses</option></select></div>
+            <div class="filter-group"><label for="market-filter">Market</label><select id="market-filter"><option value="">All markets</option></select></div>
+            <div class="filter-group"><label for="outlet-filter">Station / Outlet</label><select id="outlet-filter"><option value="">All stations</option></select></div>
+            <div class="filter-group"><label for="date-filter">Date View</label><select id="date-filter"><option value="">All dates</option><option value="upcoming">Upcoming</option><option value="running">Running now</option><option value="history">History</option></select></div>
+            <div class="filter-group"><label for="search-filter">Search</label><input id="search-filter" type="search" placeholder="Campaign, creative, station…" /></div>
+            <label class="filter-check"><input id="needs-action-filter" type="checkbox" /> Needs action only</label>
+            <button class="button" id="clear-filters" type="button">Clear Filters</button>
           </div>
         </div>
       </section>
 
+      <section class="panel priority">
+        <button class="section-toggle" type="button" aria-expanded="true" data-target="priority-body">
+          <span class="title-wrap"><h2>Highest-Priority Media Action</h2><p>Derived from confirmed placement dates, traffic deadlines, attention state, and confirmation state.</p></span>
+          <span class="chevron">⌄</span>
+        </button>
+        <div class="priority-body collapsible" id="priority-body"><div id="priority"><div class="loading">Loading operational decision…</div></div></div>
+      </section>
+
       <section class="panel">
-        <div class="panel-head"><div><h2>4. Communications Generated</h2><p>One station traffic communication and one internal Facebook reminder.</p></div></div>
-        <div class="body review">
-          <div>
-            <label>Station Email Subject<input id="stationSubject"></label>
-            <label style="margin-top:10px">Station Traffic Email<textarea id="stationDraft" class="draft"></textarea></label>
-          </div>
-          <div>
-            <label>Kristie Reminder Subject<input id="kristieSubject"></label>
-            <label style="margin-top:10px">Kristie Facebook Reminder<textarea id="kristieDraft" class="draft"></textarea></label>
-          </div>
+        <button class="section-toggle" type="button" aria-expanded="true" data-target="queue-body">
+          <span class="title-wrap"><h2>Campaign Preparation Queue</h2><p>Existing placement records organised by operational stage.</p></span>
+          <span class="chevron">⌄</span>
+        </button>
+        <div class="queue-grid collapsible" id="queue-body">
+          <section class="lane"><button class="lane-toggle" type="button" aria-expanded="true" data-target="lane-preparing"><span><strong>Preparing</strong><span>Upcoming placements requiring readiness</span></span><span class="lane-count" id="lane-preparing-count">0</span></button><div class="lane-list collapsible" id="lane-preparing"></div></section>
+          <section class="lane"><button class="lane-toggle" type="button" aria-expanded="true" data-target="lane-ready"><span><strong>Ready to Launch</strong><span>Upcoming with no current blocker</span></span><span class="lane-count" id="lane-ready-count">0</span></button><div class="lane-list collapsible" id="lane-ready"></div></section>
+          <section class="lane"><button class="lane-toggle" type="button" aria-expanded="false" data-target="lane-running"><span><strong>Running</strong><span>Active placements and next operating step</span></span><span class="lane-count" id="lane-running-count">0</span></button><div class="lane-list collapsible" id="lane-running" hidden></div></section>
+          <section class="lane"><button class="lane-toggle" type="button" aria-expanded="true" data-target="lane-awaiting"><span><strong>Awaiting Confirmation</strong><span>Sent instructions waiting for station proof</span></span><span class="lane-count" id="lane-awaiting-count">0</span></button><div class="lane-list collapsible" id="lane-awaiting"></div></section>
         </div>
       </section>
 
       <section class="panel">
-        <div class="panel-head"><div><h2>5. Review and Insert</h2><p>Review the package before allowing it into the live Media workflow.</p></div></div>
-        <div class="body">
-          <div class="actions">
-            <button class="button secondary" id="refresh" type="button">Refresh Package</button>
-            <button class="button secondary" id="copyStation" type="button">Copy Station Email</button>
-            <button class="button secondary" id="copyKristie" type="button">Copy Kristie Reminder</button>
-            <button class="button primary" id="insert" type="button">Insert Campaign into GCM OS</button>
-          </div>
-          <div class="status" id="saveStatus">Ready for the remote-control page test. The insert button will verify the Worker operation and will not pretend a record was saved if the production route is not yet installed.</div>
-        </div>
+        <button class="section-toggle" type="button" aria-expanded="false" data-target="records">
+          <span class="title-wrap"><h2>Placement Detail</h2><p>Existing production data retained for verification and history.</p></span>
+          <span class="chevron">⌄</span>
+        </button>
+        <div id="records" class="collapsible" hidden><div class="loading">Loading media records…</div></div>
       </section>
     </div>
   </main>
@@ -212,187 +280,295 @@
 
 <script>
 (() => {
-  const WORKER_ENDPOINT = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev";
+  "use strict";
+  const ENDPOINT = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const $ = id => document.getElementById(id);
+  let rawRecords = [];
+  let records = [];
 
-  function localDate(value){
-    if(!value) return "Not set";
-    const [y,m,d] = value.split("-").map(Number);
-    return new Date(y,m-1,d).toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric",year:"numeric"});
+  const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+  }[c]));
+
+  const dateText = value => {
+    if (!value) return "Not set";
+    const d = new Date(String(value).slice(0,10) + "T12:00:00");
+    return Number.isNaN(d.getTime()) ? esc(value) : d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
+  };
+
+  const lower = value => String(value || "").trim().toLowerCase();
+  const isAwaiting = r => ["awaiting","awaiting_confirmation","pending_confirmation"].includes(lower(r.confirmationStatus))
+    || lower(r.trafficStatus).includes("awaiting");
+  const needsAttention = r => r.needsAttention === true
+    || ["attention","needs_attention"].includes(lower(r.attentionStatus))
+    || Boolean(r.attentionReason);
+
+
+  const uniqueSorted = values => [...new Set(values.filter(Boolean).map(v => String(v).trim()))].sort((a,b) => a.localeCompare(b));
+  const optionHtml = (values, emptyLabel) => `<option value="">${esc(emptyLabel)}</option>` + values.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join("");
+
+  function dateRelation(r) {
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const start = r.startDate ? new Date(String(r.startDate).slice(0,10) + "T00:00:00") : null;
+    const end = r.endDate ? new Date(String(r.endDate).slice(0,10) + "T23:59:59") : null;
+    if (end && end < today) return "history";
+    if (start && start > today) return "upcoming";
+    if ((!start || start <= today) && (!end || end >= today)) return "running";
+    return "";
   }
-  function addDays(value, amount){
-    const [y,m,d] = value.split("-").map(Number);
-    const date = new Date(y,m-1,d);
-    date.setDate(date.getDate()+amount);
-    return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
-  }
-  function subtractBusinessDays(value, days){
-    const [y,m,d] = value.split("-").map(Number);
-    const date = new Date(y,m-1,d);
-    let remaining = days;
-    while(remaining>0){
-      date.setDate(date.getDate()-1);
-      const day=date.getDay();
-      if(day!==0 && day!==6) remaining--;
-    }
-    return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
-  }
-  function escapePayload(){
-    return {
-      clientId:1,
-      campaign:{
-        campaignName:$("campaignName").value.trim(),
-        campaignType:$("campaignType").value,
-        coopPartner:$("coop").value.trim(),
-        market:$("market").value.trim(),
-        outletName:$("station").value.trim(),
-        showStartDate:$("showStart").value,
-        showEndDate:$("showEnd").value,
-        startDate:$("airStart").value,
-        endDate:$("airEnd").value,
-        status:$("status").value,
-        owner:$("owner").value.trim(),
-        trafficLeadDays:Number($("leadDays").value||17),
-        confirmationCheckDays:Number($("checkDays").value||10),
-        criticalBusinessDays:3,
-        criticalCutoff:"12:00"
-      },
-      asset:{
-        creativeName:$("assetTitle").value.trim(),
-        isci:$("isci").value.trim(),
-        duration:$("length").value.trim(),
-        fileName:$("filename").value.trim(),
-        reuseDecision:$("assetDecision").value,
-        scriptText:$("script").value.trim()
-      },
-      assignments:{
-        radioOwner:"Andy",
-        facebookOwner:"Kristie"
+
+  function applyFilters() {
+    const status = lower($("status-filter").value);
+    const market = lower($("market-filter").value);
+    const outlet = lower($("outlet-filter").value);
+    const dateView = $("date-filter").value;
+    const search = lower($("search-filter").value);
+    const actionOnly = $("needs-action-filter").checked;
+
+    records = rawRecords.filter(r => {
+      if (status && lower(r.status) !== status) return false;
+      if (market && lower(r.market) !== market) return false;
+      if (outlet && lower(r.outletName) !== outlet) return false;
+      if (dateView && dateRelation(r) !== dateView) return false;
+      if (actionOnly && !(needsAttention(r) || isAwaiting(r))) return false;
+      if (search) {
+        const haystack = [
+          r.clientName,r.clientCode,r.campaignName,r.creativeName,r.fileName,
+          r.market,r.outletName,r.status,r.trafficStatus,r.confirmationStatus,
+          r.attentionReason
+        ].map(lower).join(" ");
+        if (!haystack.includes(search)) return false;
       }
+      return true;
+    });
+    render();
+  }
+
+  function populateFilterOptions() {
+    const preserve = {
+      status:$("status-filter").value,
+      market:$("market-filter").value,
+      outlet:$("outlet-filter").value
     };
-  }
-  function refresh(){
-    const firstAir=$("airStart").value;
-    const lead=Number($("leadDays").value||17);
-    const check=Number($("checkDays").value||10);
-    const prepare=addDays(firstAir,-lead);
-    const checkDate=addDays(firstAir,-check);
-    const critical=subtractBusinessDays(firstAir,3);
-    $("prepareDate").textContent=localDate(prepare);
-    $("checkDate").textContent=localDate(checkDate);
-    $("criticalDate").textContent=`${localDate(critical)} by noon`;
-    $("firstAir").textContent=localDate(firstAir);
-
-    const campaign=$("campaignName").value.trim();
-    const station=$("station").value.trim();
-    const show=`${localDate($("showStart").value)}–${localDate($("showEnd").value)}`;
-    const flight=`${localDate($("airStart").value)} through ${localDate($("airEnd").value)}`;
-    const file=$("filename").value.trim();
-    const isci=$("isci").value.trim();
-    const script=$("script").value.trim();
-
-    $("stationSubject").value=`Southeast Safes | Melbourne Gun Show Traffic | ${flight}`;
-    $("stationDraft").value=
-`Hi,
-
-Please add the following Southeast Safes campaign to the ${station} rotation.
-
-CAMPAIGN
-${campaign}
-
-EVENT
-Melbourne Scratch & Dent Gun Show
-Show Dates: ${show}
-
-RADIO FLIGHT
-${flight}
-
-PRODUCTION
-Spot Title: ${$("assetTitle").value.trim()}
-Length: ${$("length").value.trim()}
-ISCI: ${isci}
-Audio File: ${file}
-
-SCRIPT
-${script}
-
-Please confirm by reply email that you received the traffic, audio file, and flight instructions and that the campaign is scheduled.
-
-Thank you,
-Andy
-Global Concepts Media`;
-
-    $("kristieSubject").value=`Upcoming Melbourne Gun Show — Facebook preparation`;
-    $("kristieDraft").value=
-`Hi Kristie,
-
-The next Melbourne Scratch & Dent Gun Show is ${show}.
-
-Please prepare and schedule the Southeast Safes Facebook posts for this show.
-
-Campaign: ${campaign}
-Market: Melbourne
-Show Dates: ${show}
-Radio Flight: ${flight}
-
-Please reply when the Facebook posts are scheduled so the campaign can be marked ready.
-
-Thank you,
-Andy`;
+    $("status-filter").innerHTML = optionHtml(uniqueSorted(rawRecords.map(r => r.status)), "All statuses");
+    $("market-filter").innerHTML = optionHtml(uniqueSorted(rawRecords.map(r => r.market)), "All markets");
+    $("outlet-filter").innerHTML = optionHtml(uniqueSorted(rawRecords.map(r => r.outletName)), "All stations");
+    $("status-filter").value = preserve.status;
+    $("market-filter").value = preserve.market;
+    $("outlet-filter").value = preserve.outlet;
   }
 
-  async function copyText(text,statusMessage){
-    try{
-      await navigator.clipboard.writeText(text);
-      $("saveStatus").className="status ok";
-      $("saveStatus").textContent=statusMessage;
-    }catch{
-      $("saveStatus").className="status error";
-      $("saveStatus").textContent="Copy was blocked by the browser. Select the text and copy it manually.";
+  function daysSince(value) {
+    if (!value) return null;
+    const date = new Date(`${String(value).slice(0,10)}T12:00:00`);
+    if (Number.isNaN(date.getTime())) return null;
+    return Math.max(0, Math.floor((Date.now() - date.getTime()) / 86400000));
+  }
+
+  function creativeFreshness(r) {
+    if (lower(r.status) !== "active") return null;
+    const age = daysSince(r.startDate);
+    if (age === null) return {level:"unknown",label:"Freshness unknown",days:null,className:"b-info",recommendation:"No creative start date is available for a freshness review."};
+    if (age <= 60) return {level:"fresh",label:"Creative fresh",days:age,className:"b-success",recommendation:"No creative refresh is currently suggested."};
+    if (age <= 120) return {level:"aging",label:"Creative aging",days:age,className:"b-warning",recommendation:"Consider reviewing the spot for a fresh version before it becomes stale."};
+    if (age <= 180) return {level:"stale",label:"Creative stale",days:age,className:"b-warning",recommendation:"Recommend planning refreshed creative while the placement continues to run."};
+    return {level:"very-stale",label:"Creative very stale",days:age,className:"b-critical",recommendation:"Prioritize a creative review unless this spot is intentionally evergreen."};
+  }
+
+  function urgency(r) {
+    if (isAwaiting(r)) return 100;
+    if (needsAttention(r)) return 90;
+    if (lower(r.status) === "pending" || lower(r.status) === "planned") return 60;
+    return 0;
+  }
+
+  function nextAction(r) {
+    if (isAwaiting(r)) return "Review the expected station response and process confirmation evidence when it arrives.";
+    if (needsAttention(r)) return r.attentionReason || "Open the production Media page and complete the required traffic action.";
+    if (["pending","planned"].includes(lower(r.status))) return "Confirm creative, dates, website banner, and social support before traffic is due.";
+    if (lower(r.status) === "active") {
+      const freshness = creativeFreshness(r);
+      if (freshness && ["aging","stale","very-stale"].includes(freshness.level)) return freshness.recommendation;
+      return "No immediate media action required. Placement is confirmed and running normally.";
     }
+    return "Retain as completed operational history.";
   }
 
-  $("audioFile").addEventListener("change",event=>{
-    const file=event.target.files?.[0];
-    if(!file)return;
-    $("audio").src=URL.createObjectURL(file);
-    $("audioStatus").textContent=`Loaded for this page test: ${file.name}`;
-  });
-  ["campaignName","campaignType","coop","market","station","showStart","showEnd","airStart","airEnd","assetTitle","isci","length","filename","script","leadDays","checkDays"]
-    .forEach(id=>$(id).addEventListener("input",refresh));
-  $("refresh").addEventListener("click",refresh);
-  $("copyStation").addEventListener("click",()=>copyText($("stationDraft").value,"Station traffic email copied."));
-  $("copyKristie").addEventListener("click",()=>copyText($("kristieDraft").value,"Kristie reminder copied."));
+  function card(r, badgeClass, badgeText) {
+    const freshness = creativeFreshness(r);
+    const freshnessHtml = freshness ? `<div class="meta"><span class="badge ${freshness.className}">${esc(freshness.label)}</span>${freshness.days === null ? "" : ` ${esc(freshness.days)} days since placement start`}</div>` : "";
+    return `<article class="card">
+      <span class="badge ${badgeClass}">${esc(badgeText)}</span>
+      <strong>${esc(r.clientName || r.clientCode || "Client")} · ${esc(r.campaignName || r.creativeName || r.outletName || "Media placement")}</strong>
+      <div class="meta">${esc(r.market || "Market not set")} · ${esc(r.outletName || "Outlet not set")}</div>
+      <div class="meta">${dateText(r.startDate)} – ${dateText(r.endDate)}</div>
+      ${freshnessHtml}
+      <div class="action">${esc(nextAction(r))}</div>
+    </article>`;
+  }
 
-  $("insert").addEventListener("click",async()=>{
-    $("insert").disabled=true;
-    $("saveStatus").className="status";
-    $("saveStatus").textContent="Checking the production Worker and attempting the controlled campaign insertion…";
-    try{
-      const response=await fetch(WORKER_ENDPOINT,{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({
-          action:"get-media-operations",
-          operation:"create_campaign",
-          ...escapePayload()
-        })
-      });
-      const payload=await response.json().catch(()=>({}));
-      if(!response.ok || payload?.ok!==true){
-        throw new Error(payload?.error || payload?.details || `Worker returned ${response.status}.`);
+  function renderLane(id, items, badgeClass, badgeText) {
+    $(id).innerHTML = items.length ? items.map(r => card(r,badgeClass,badgeText)).join("") : `<div class="empty">No records in this stage.</div>`;
+  }
+
+  function renderPriority() {
+    const operational = records.filter(r => urgency(r) > 0).sort((a,b) => urgency(b) - urgency(a));
+    const chosen = operational[0];
+
+    if (!chosen) {
+      const optimization = records
+        .filter(r => lower(r.status) === "active")
+        .map(r => ({record:r,freshness:creativeFreshness(r)}))
+        .filter(item => item.freshness && ["aging","stale","very-stale"].includes(item.freshness.level))
+        .sort((a,b) => (b.freshness.days || 0) - (a.freshness.days || 0))[0];
+
+      if (optimization) {
+        const r = optimization.record;
+        const f = optimization.freshness;
+        $("priority").innerHTML = `<div class="decision-grid">
+          <div class="decision"><span>Status</span><strong>No immediate media action required</strong></div>
+          <div class="decision"><span>Optimization Opportunity</span><strong>${esc(r.clientName || r.clientCode || "Client")} · ${esc(r.campaignName || r.creativeName || "Media placement")}</strong></div>
+          <div class="decision"><span>Creative Freshness</span><strong>${esc(f.label)}${f.days === null ? "" : ` · ${esc(f.days)} days since placement start`}</strong></div>
+          <div class="decision"><span>Why</span><strong>The placement is confirmed and running normally, but the current creative may be getting stale.</strong></div>
+          <div class="decision"><span>Evidence</span><strong>Media Record #${esc(r.id)} · ${esc(r.trafficStatus || "traffic status unknown")} · ${esc(r.confirmationStatus || "confirmation status unknown")}</strong></div>
+          <div class="decision next"><span>Recommended Review</span><strong>${esc(f.recommendation)}</strong></div>
+        </div>`;
+        return;
       }
-      $("saveStatus").className="status ok";
-      $("saveStatus").textContent=`Campaign inserted successfully. Media record ${payload?.mediaRecordId || payload?.campaignId || "created"}. Open Media to verify it.`;
-    }catch(error){
-      $("saveStatus").className="status error";
-      $("saveStatus").textContent=`No record was falsely claimed as saved. The page reached the production Worker, but the create_campaign operation is not installed or did not accept the package: ${error.message}`;
-    }finally{
-      $("insert").disabled=false;
+
+      $("priority").innerHTML = `<div class="decision-grid">
+        <div class="decision"><span>Status</span><strong>No immediate media action required</strong></div>
+        <div class="decision"><span>Why</span><strong>All visible active placements are confirmed and running normally.</strong></div>
+        <div class="decision next"><span>Next Review</span><strong>Review the campaign preparation queue for upcoming work.</strong></div>
+      </div>`;
+      return;
     }
+
+    let when = chosen.stationDeadline ? `Traffic deadline ${dateText(chosen.stationDeadline)}` :
+      chosen.startDate ? `Starts ${dateText(chosen.startDate)}` :
+      chosen.endDate ? `Ends ${dateText(chosen.endDate)}` : "No date established";
+    let why = isAwaiting(chosen) ? "A station instruction was sent and authoritative placement data must not change until confirmation is reviewed." :
+      needsAttention(chosen) ? (chosen.attentionReason || "The placement is inside its operating attention window.") :
+      "The placement is approaching launch and campaign readiness must be confirmed.";
+
+    $("priority").innerHTML = `<div class="decision-grid">
+      <div class="decision"><span>Who</span><strong>${esc(chosen.clientName || chosen.clientCode || "Client")}</strong></div>
+      <div class="decision"><span>What</span><strong>${esc(chosen.campaignName || chosen.creativeName || "Media placement")} · ${esc(chosen.outletName || "Outlet not set")}</strong></div>
+      <div class="decision"><span>When</span><strong>${esc(when)}</strong></div>
+      <div class="decision"><span>Why</span><strong>${esc(why)}</strong></div>
+      <div class="decision"><span>Evidence</span><strong>Media Record #${esc(chosen.id)} · ${esc(chosen.status || "status unknown")}</strong></div>
+      <div class="decision next"><span>Next Action</span><strong>${esc(nextAction(chosen))}</strong></div>
+    </div>`;
+  }
+
+  function renderTable() {
+    const rows = records.map(r => `<tr>
+      <td><strong>${esc(r.clientName || r.clientCode || "")}</strong><br><span class="meta">#${esc(r.id)}</span></td>
+      <td>${esc(r.campaignName || "—")}<br><span class="meta">${esc(r.creativeName || r.fileName || "")}</span></td>
+      <td>${esc(r.market || "—")}<br><span class="meta">${esc(r.outletName || "—")}</span></td>
+      <td>${dateText(r.startDate)}<br>${dateText(r.endDate)}</td>
+      <td>${esc(r.status || "—")}</td>
+      <td>${esc(r.trafficStatus || "—")}<br><span class="meta">${esc(r.confirmationStatus || "")}</span></td>
+      <td>${esc(nextAction(r))}</td>
+    </tr>`).join("");
+    $("records").innerHTML = records.length ? `<div class="table-wrap"><table class="table"><thead><tr>
+      <th>Client</th><th>Campaign / Creative</th><th>Market / Outlet</th><th>Dates</th><th>Status</th><th>Traffic / Confirmation</th><th>Operating Next Action</th>
+    </tr></thead><tbody>${rows}</tbody></table></div>` : `<div class="empty">No records found.</div>`;
+  }
+
+  function render() {
+    const preparing = records.filter(r => ["pending","planned"].includes(lower(r.status)) && needsAttention(r));
+    const ready = records.filter(r => ["pending","planned"].includes(lower(r.status)) && !needsAttention(r) && !isAwaiting(r));
+    const running = records.filter(r => lower(r.status) === "active" && !isAwaiting(r));
+    const awaiting = records.filter(isAwaiting);
+    const history = records.filter(r => lower(r.status) === "expired");
+    const actionCount = records.filter(r => needsAttention(r) || isAwaiting(r)).length;
+
+    $("count-action").textContent = actionCount;
+    $("count-preparing").textContent = preparing.length + ready.length;
+    $("count-running").textContent = running.length;
+    $("count-history").textContent = history.length;
+    $("lane-preparing-count").textContent = preparing.length;
+    $("lane-ready-count").textContent = ready.length;
+    $("lane-running-count").textContent = running.length;
+    $("lane-awaiting-count").textContent = awaiting.length;
+
+    renderPriority();
+    renderLane("lane-preparing", preparing, "b-warning", "Preparing");
+    renderLane("lane-ready", ready, "b-success", "Ready");
+    renderLane("lane-running", running, "b-info", "Running");
+    renderLane("lane-awaiting", awaiting, "b-critical", "Awaiting");
+    renderTable();
+  }
+
+  async function load() {
+    $("priority").innerHTML = `<div class="loading">Loading operational decision…</div>`;
+    try {
+      const body = {action:"get-media-operations"};
+      if ($("client").value) body.clientId = Number($("client").value);
+      const response = await fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || payload?.ok !== true) throw new Error(payload?.error || payload?.details || "Media Operations could not load.");
+      rawRecords = Array.isArray(payload?.mediaOperations?.records) ? payload.mediaOperations.records : [];
+      const clients = Array.isArray(payload?.mediaOperations?.clients) ? payload.mediaOperations.clients : [];
+      const selected = $("client").value;
+      $("client").innerHTML = `<option value="">All clients</option>` + clients.map(c => `<option value="${esc(c.clientId)}">${esc(c.clientName)}</option>`).join("");
+      $("client").value = selected;
+      populateFilterOptions();
+      applyFilters();
+    } catch (error) {
+      const message = esc(error?.message || "Media Operations could not load.");
+      $("priority").innerHTML = `<div class="error">${message}</div>`;
+      ["lane-preparing","lane-ready","lane-running","lane-awaiting"].forEach(id => $(id).innerHTML = `<div class="error">${message}</div>`);
+      $("records").innerHTML = `<div class="error">${message}</div>`;
+    }
+  }
+
+  document.addEventListener("click", event => {
+    const toggle = event.target.closest("[data-target]");
+    if (!toggle) return;
+    const target = $(toggle.dataset.target);
+    if (!target) return;
+    const expanded = toggle.getAttribute("aria-expanded") !== "false";
+    toggle.setAttribute("aria-expanded", String(!expanded));
+    target.hidden = expanded;
   });
 
-  refresh();
+  $("client").addEventListener("change", load);
+  $("refresh").addEventListener("click", load);
+  ["status-filter","market-filter","outlet-filter","date-filter","needs-action-filter"].forEach(id => $(id).addEventListener("change", applyFilters));
+  $("search-filter").addEventListener("input", applyFilters);
+
+  $("clear-filters").addEventListener("click", () => {
+    $("status-filter").value = "";
+    $("market-filter").value = "";
+    $("outlet-filter").value = "";
+    $("date-filter").value = "";
+    $("search-filter").value = "";
+    $("needs-action-filter").checked = false;
+    applyFilters();
+  });
+
+  $("expand-all").addEventListener("click", () => {
+    document.querySelectorAll("[data-target]").forEach(toggle => {
+      const target = $(toggle.dataset.target);
+      if (!target) return;
+      toggle.setAttribute("aria-expanded","true");
+      target.hidden = false;
+    });
+  });
+
+  $("collapse-all").addEventListener("click", () => {
+    document.querySelectorAll("[data-target]").forEach(toggle => {
+      const target = $(toggle.dataset.target);
+      if (!target) return;
+      toggle.setAttribute("aria-expanded","false");
+      target.hidden = true;
+    });
+  });
+
+  load();
 })();
 </script>
 </body>
