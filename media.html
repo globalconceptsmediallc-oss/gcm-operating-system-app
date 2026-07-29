@@ -1,16 +1,15 @@
 <!-- =========================================================
    Global Concepts Media Operating System
-   File: media-v2-roadtest.html
-   Version: 2.0.0
-   Status: Production Road Test
+   File: media.html
+   Version: 2.0.1
+   Status: Production Candidate
    Source: Production media.html 1.9.0
    Sprint: Media Operations — Operator Workspace
    Purpose: Add a read-only operational decision layer above the
             existing Media workflow without changing D1, station
             instruction, confirmation, or placement records.
 
-   Road-test rules:
-   - Existing media.html remains untouched during this proof.
+   Production rules:
    - D1 media_records remains authoritative.
    - No campaign records are invented or written.
    - Queue stages are derived from current placement state.
@@ -21,7 +20,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Media Operator Road Test | GCM OS</title>
+  <title>Media | GCM OS</title>
   <style>
     :root{
       --navy:#071426;--navy2:#0b1d33;--blue:#1f68d8;--blue-soft:#eaf2ff;
@@ -111,14 +110,14 @@
     <div class="page">
       <header>
         <div>
-          <p class="eyebrow">Media Operations Road Test</p>
+          <p class="eyebrow">Media Operations</p>
           <h1>Operator Workspace</h1>
           <p class="subtitle">What needs to be prepared, launched, confirmed, or monitored next?</p>
         </div>
         <div class="controls">
           <select id="client"><option value="">All clients</option></select>
           <button class="button" id="refresh" type="button">Refresh</button>
-          <span class="version">media-v2-roadtest · v2.0.0</span>
+          <span class="version">media.html · v2.0.1</span>
         </div>
       </header>
 
