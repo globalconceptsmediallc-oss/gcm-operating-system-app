@@ -1,18 +1,16 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/config.js
-   Version: 7.6.1
+   Version: 7.7.0
    Status: Production
    Source: Production Worker 7.6.1
-   Sprint: Guided Investigation Engine
+   Sprint: Media Confirmation — Operational Review
    Purpose: Shared production constants and configuration.
-            Adds Guided Investigation retrieval while preserving
-            existing Communications, Mission Control, Client
-            Directory, Investigation, Work Item, Client Workspace,
-            and Media Operations behavior.
+            Adds Operational Reviews while preserving all
+            existing production functionality.
    ========================================================= */
 
-export const VERSION = "7.6.1";
+export const VERSION = "7.7.0";
 export const API_CONTRACT_VERSION = "communications-operational-decision-v3";
 export const COMMUNICATION_ANALYSIS_ENGINE_VERSION = "3.4.1";
 
@@ -34,7 +32,10 @@ export const ACTIONS = Object.freeze({
   GET_GUIDED_INVESTIGATION: "get-guided-investigation",
   PROCESS_INVESTIGATION: "process-investigation",
   PROCESS_WORK_ITEM: "process-work-item",
-  GET_MEDIA_OPERATIONS: "get-media-operations"
+  GET_MEDIA_OPERATIONS: "get-media-operations",
+
+  // NEW
+  OPERATIONAL_REVIEWS: "operational-reviews"
 });
 
 export const STAGE_STATUS = Object.freeze({
