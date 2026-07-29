@@ -1,12 +1,12 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.6.1
+   Version: 7.7.0
    Status: Production Candidate
    Source: Production Worker 7.5.0
-   Sprint: Guided Investigation Engine — Phase 1
-   Purpose: Preserve all production routes and add live guided
-            Investigation reasoning for one current next step.
+   Sprint: Media Confirmation — Operational Review
+   Purpose: Preserve all production routes and add the durable
+            Communications-to-Media review and approval bridge.
    ========================================================= */
 
 import { VERSION, API_CONTRACT_VERSION, ACTIONS, corsHeaders } from "./shared/config.js";
@@ -20,6 +20,7 @@ import { handleProcessInvestigation } from "./routes/investigationProcessing.js"
 import { handleGuidedInvestigation } from "./routes/guidedInvestigation.js";
 import { handleProcessWorkItem } from "./routes/workItemProcessing.js";
 import { handleMediaOperations } from "./routes/mediaOperations.js";
+import { handleOperationalReviews } from "./routes/operationalReviews.js";
 
 export default {
   async fetch(request, env) {
@@ -37,7 +38,7 @@ export default {
         system: "GCM OS Operational Worker",
         version: VERSION,
         contractVersion: API_CONTRACT_VERSION,
-        sprint: "Guided Investigation Engine — Phase 1",
+        sprint: "Media Confirmation — Operational Review",
         architecture: "Modular production router with guided Investigation reasoning.",
         actions: Object.values(ACTIONS),
         engines: [
@@ -119,6 +120,9 @@ export default {
           return await handleProcessWorkItem(body, env, requestId);
         case ACTIONS.GET_MEDIA_OPERATIONS:
           return await handleMediaOperations(body, env, requestId);
+
+        case ACTIONS.OPERATIONAL_REVIEWS:
+          return await handleOperationalReviews(body, env, requestId);
         default:
           return jsonResponse({
             ok: false,
