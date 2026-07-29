@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: communications.html
-   Version: 2.6.0
+   Version: 2.7.0
    Source: Production Frontend
    Purpose: Client Communications intake and operational routing.
    ========================================================= -->
@@ -699,6 +699,18 @@ Backlink Audit update
       el.accept.textContent = "Saved ✓";
       await loadClientWorkspace();
 
+      // A saved inbound Communication is evidence only. Ask the operational
+      // review engine whether it matches a Media instruction awaiting confirmation.
+      const mediaReview = await createMediaConfirmationReviews({
+        communicationId: result.communicationId,
+        clientCode,
+        evidenceText: el.sourceText.value.trim() || reviewedDecision.operationalSummary || reviewedDecision.evidenceSummary || ""
+      });
+
+      if (mediaReview?.created > 0) {
+        setStatus(`Saved ✓ ${created.join(", ")}. ${mediaReview.created} Media confirmation review${mediaReview.created === 1 ? "" : "s"} ready in Media.`, "ready");
+      }
+
       // Prepare the same client for the next communication.
       const selectedClient = el.client.value || reviewedDecision.clientName || reviewedDecision.client || "";
       imageDataUrl = "";
@@ -719,6 +731,31 @@ Backlink Audit update
       el.reject.disabled = false;
       el.accept.textContent = "Execute Operational Decision";
       setStatus(error.message || "The D1 save failed.", "error");
+    }
+  }
+
+  async function createMediaConfirmationReviews({ communicationId, clientCode, evidenceText }) {
+    try {
+      const response = await fetch(ENDPOINT, {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          action:"operational-reviews",
+          operation:"match_media_confirmation",
+          communicationId,
+          clientCode,
+          evidenceText
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || payload?.ok !== true) {
+        console.warn("Media confirmation matching did not complete.", payload);
+        return null;
+      }
+      return payload;
+    } catch (error) {
+      console.warn("Media confirmation matching was unavailable.", error);
+      return null;
     }
   }
 
