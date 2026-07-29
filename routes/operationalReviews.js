@@ -1,9 +1,9 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/operationalReviews.js
-   Version: 7.7.1
+   Version: 7.7.2
    Status: Production Candidate
-   Sprint: Media Confirmation — Operational Review
+   Sprint: Investigation #22 — Media Confirmation Matching Hardening
    Purpose: Match saved inbound Communications to pending Media
             instructions and require operator approval before
             authoritative media_records are changed.
@@ -84,8 +84,8 @@ async function matchMediaConfirmation(body, db, requestId) {
     return jsonResponse({ ok:true, requestId, action:ACTIONS.OPERATIONAL_REVIEWS, version:VERSION, matched:0, message:"No media instructions are awaiting confirmation for this client." });
   }
 
-  const normalized = evidenceText.toLowerCase();
-  const candidates = pending.filter(item => matchesEvidence(item, normalized));
+  const normalized = normalizeMatchText(evidenceText);
+  const candidates = pending.filter(item => matchEvidenceScore(item, normalized) >= 6);
   const selected = candidates.length ? candidates : (pending.length === 1 ? pending : []);
 
   let created = 0;
@@ -167,11 +167,31 @@ function buildMediaUpdate(review, db) {
   return db.prepare(`UPDATE media_records SET confirmation_status='confirmed',attention_status='clear',attention_reason=NULL,notes=CASE WHEN ?='' THEN notes ELSE COALESCE(notes || '\n','') || ? END,updated_at=CURRENT_TIMESTAMP WHERE id=?`).bind(clean(review.requested_change),clean(review.requested_change),review.media_record_id);
 }
 
-function matchesEvidence(item, text) {
-  if (!text) return false;
-  const tokens = [item.outlet_name,item.market,item.campaign_name,item.creative_name,item.requested_end_date,item.requested_start_date]
-    .map(v => clean(v).toLowerCase()).filter(v => v.length >= 3);
-  return tokens.some(token => text.includes(token));
+function matchEvidenceScore(item, normalizedEvidence) {
+  if (!normalizedEvidence) return 0;
+
+  const fields = [
+    { value:item.outlet_name, weight:4 },
+    { value:item.creative_name, weight:4 },
+    { value:item.campaign_name, weight:3 },
+    { value:item.market, weight:2 },
+    { value:item.requested_end_date, weight:2 },
+    { value:item.requested_start_date, weight:1 }
+  ];
+
+  return fields.reduce((score, field) => {
+    const token = normalizeMatchText(field.value);
+    if (!token || token.length < 3) return score;
+    return normalizedEvidence.includes(token) ? score + field.weight : score;
+  },0);
+}
+
+function normalizeMatchText(value) {
+  return clean(value)
+    .toLowerCase()
+    .replace(/[-_/.,()]+/g," ")
+    .replace(/\s+/g," ")
+    .trim();
 }
 function buildEvidenceSummary(item, evidenceText) {
   const target = [item.outlet_name,item.market].filter(Boolean).join(" — ") || `Media instruction #${item.id}`;
