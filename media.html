@@ -1,13 +1,14 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media.html
-   Version: 2.1.0
+   Version: 2.1.1
    Status: Production Candidate
    Source: Production media.html 1.9.0
-   Sprint: Media Operations — Expandable & Filterable Workspace
-   Purpose: Add a read-only operational decision layer above the
-            existing Media workflow without changing D1, station
-            instruction, confirmation, or placement records.
+   Sprint: Media Operations — Priority Accuracy & Creative Freshness
+   Purpose: Refine the read-only Media decision layer so healthy,
+            confirmed running placements do not create false actions,
+            while aging creative is surfaced as a cautionary
+            optimization opportunity.
 
    Production rules:
    - D1 media_records remains authoritative.
@@ -357,11 +358,27 @@
     $("outlet-filter").value = preserve.outlet;
   }
 
+  function daysSince(value) {
+    if (!value) return null;
+    const date = new Date(`${String(value).slice(0,10)}T12:00:00`);
+    if (Number.isNaN(date.getTime())) return null;
+    return Math.max(0, Math.floor((Date.now() - date.getTime()) / 86400000));
+  }
+
+  function creativeFreshness(r) {
+    if (lower(r.status) !== "active") return null;
+    const age = daysSince(r.startDate);
+    if (age === null) return {level:"unknown",label:"Freshness unknown",days:null,className:"b-info",recommendation:"No creative start date is available for a freshness review."};
+    if (age <= 60) return {level:"fresh",label:"Creative fresh",days:age,className:"b-success",recommendation:"No creative refresh is currently suggested."};
+    if (age <= 120) return {level:"aging",label:"Creative aging",days:age,className:"b-warning",recommendation:"Consider reviewing the spot for a fresh version before it becomes stale."};
+    if (age <= 180) return {level:"stale",label:"Creative stale",days:age,className:"b-warning",recommendation:"Recommend planning refreshed creative while the placement continues to run."};
+    return {level:"very-stale",label:"Creative very stale",days:age,className:"b-critical",recommendation:"Prioritize a creative review unless this spot is intentionally evergreen."};
+  }
+
   function urgency(r) {
     if (isAwaiting(r)) return 100;
     if (needsAttention(r)) return 90;
     if (lower(r.status) === "pending" || lower(r.status) === "planned") return 60;
-    if (lower(r.status) === "active") return 40;
     return 0;
   }
 
@@ -369,16 +386,23 @@
     if (isAwaiting(r)) return "Review the expected station response and process confirmation evidence when it arrives.";
     if (needsAttention(r)) return r.attentionReason || "Open the production Media page and complete the required traffic action.";
     if (["pending","planned"].includes(lower(r.status))) return "Confirm creative, dates, website banner, and social support before traffic is due.";
-    if (lower(r.status) === "active") return "Monitor the placement and prepare the next station instruction before the traffic deadline.";
+    if (lower(r.status) === "active") {
+      const freshness = creativeFreshness(r);
+      if (freshness && ["aging","stale","very-stale"].includes(freshness.level)) return freshness.recommendation;
+      return "No immediate media action required. Placement is confirmed and running normally.";
+    }
     return "Retain as completed operational history.";
   }
 
   function card(r, badgeClass, badgeText) {
+    const freshness = creativeFreshness(r);
+    const freshnessHtml = freshness ? `<div class="meta"><span class="badge ${freshness.className}">${esc(freshness.label)}</span>${freshness.days === null ? "" : ` ${esc(freshness.days)} days since placement start`}</div>` : "";
     return `<article class="card">
       <span class="badge ${badgeClass}">${esc(badgeText)}</span>
       <strong>${esc(r.clientName || r.clientCode || "Client")} · ${esc(r.campaignName || r.creativeName || r.outletName || "Media placement")}</strong>
       <div class="meta">${esc(r.market || "Market not set")} · ${esc(r.outletName || "Outlet not set")}</div>
       <div class="meta">${dateText(r.startDate)} – ${dateText(r.endDate)}</div>
+      ${freshnessHtml}
       <div class="action">${esc(nextAction(r))}</div>
     </article>`;
   }
@@ -388,18 +412,44 @@
   }
 
   function renderPriority() {
-    const chosen = [...records].sort((a,b) => urgency(b) - urgency(a))[0];
+    const operational = records.filter(r => urgency(r) > 0).sort((a,b) => urgency(b) - urgency(a));
+    const chosen = operational[0];
+
     if (!chosen) {
-      $("priority").innerHTML = `<div class="empty">No media records are available.</div>`;
+      const optimization = records
+        .filter(r => lower(r.status) === "active")
+        .map(r => ({record:r,freshness:creativeFreshness(r)}))
+        .filter(item => item.freshness && ["aging","stale","very-stale"].includes(item.freshness.level))
+        .sort((a,b) => (b.freshness.days || 0) - (a.freshness.days || 0))[0];
+
+      if (optimization) {
+        const r = optimization.record;
+        const f = optimization.freshness;
+        $("priority").innerHTML = `<div class="decision-grid">
+          <div class="decision"><span>Status</span><strong>No immediate media action required</strong></div>
+          <div class="decision"><span>Optimization Opportunity</span><strong>${esc(r.clientName || r.clientCode || "Client")} · ${esc(r.campaignName || r.creativeName || "Media placement")}</strong></div>
+          <div class="decision"><span>Creative Freshness</span><strong>${esc(f.label)}${f.days === null ? "" : ` · ${esc(f.days)} days since placement start`}</strong></div>
+          <div class="decision"><span>Why</span><strong>The placement is confirmed and running normally, but the current creative may be getting stale.</strong></div>
+          <div class="decision"><span>Evidence</span><strong>Media Record #${esc(r.id)} · ${esc(r.trafficStatus || "traffic status unknown")} · ${esc(r.confirmationStatus || "confirmation status unknown")}</strong></div>
+          <div class="decision next"><span>Recommended Review</span><strong>${esc(f.recommendation)}</strong></div>
+        </div>`;
+        return;
+      }
+
+      $("priority").innerHTML = `<div class="decision-grid">
+        <div class="decision"><span>Status</span><strong>No immediate media action required</strong></div>
+        <div class="decision"><span>Why</span><strong>All visible active placements are confirmed and running normally.</strong></div>
+        <div class="decision next"><span>Next Review</span><strong>Review the campaign preparation queue for upcoming work.</strong></div>
+      </div>`;
       return;
     }
+
     let when = chosen.stationDeadline ? `Traffic deadline ${dateText(chosen.stationDeadline)}` :
       chosen.startDate ? `Starts ${dateText(chosen.startDate)}` :
       chosen.endDate ? `Ends ${dateText(chosen.endDate)}` : "No date established";
     let why = isAwaiting(chosen) ? "A station instruction was sent and authoritative placement data must not change until confirmation is reviewed." :
       needsAttention(chosen) ? (chosen.attentionReason || "The placement is inside its operating attention window.") :
-      ["pending","planned"].includes(lower(chosen.status)) ? "The placement is approaching launch and campaign readiness must be confirmed." :
-      "The placement is active and requires ongoing operating control.";
+      "The placement is approaching launch and campaign readiness must be confirmed.";
 
     $("priority").innerHTML = `<div class="decision-grid">
       <div class="decision"><span>Who</span><strong>${esc(chosen.clientName || chosen.clientCode || "Client")}</strong></div>
