@@ -1,20 +1,20 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media-insertion.html
-   Version: 1.1.0
-   Status: Production Candidate — Connected Remote-Control Road Test
+   Version: 1.3.0
+   Status: Production Candidate — Agency Asset Naming Standard
    Source: Current GCM OS Media Operations architecture
-   Sprint: Connected Media Campaign Insertion — Melbourne Gun Show Pilot
-   Purpose: Create and review the real Melbourne gun-show campaign,
-            insert it into the existing D1 media_records workflow, and
-            return directly to the connected Media operator workspace.
+   Sprint: Media Asset Identity — Market-Specific ISCI and Filename
+   Purpose: Create or load the exact Media campaign selected from the dashboard,
+            enforce market-specific GCM ISCI and production filenames, update
+            the selected D1 record, and return to the operator workspace.
 
    Pilot:
    - Client: Southeast Safes
    - Market / Station: Melbourne / WMMB
    - Event: Melbourne Scratch & Dent Gun Show, August 22–23, 2026
    - Flight: August 17–22, 2026
-   - Asset: SESL2601_Liberty_GunShow_30.mp3
+   - Asset: SESLM2601_Liberty_GunShow_30_V1.mp3
    - Agency traffic preparation rule: 17 calendar days before first air
    - Critical station-confirmation rule: 3 business days before air, noon
    ========================================================= -->
@@ -105,26 +105,27 @@
       <header class="topbar">
         <div>
           <p class="eyebrow">Media Operations</p>
-          <h1>Media Insertion</h1>
-          <p class="subtitle">Create the campaign package that Media will operate, confirm, complete, and reuse.</p>
+          <h1 id="pageTitle">Media Insertion</h1>
+          <p class="subtitle" id="pageSubtitle">Create the campaign package that Media will operate, confirm, complete, and reuse.</p>
         </div>
-        <div class="version">Installed version 1.1.0</div>
+        <div class="version">Installed version 1.3.0</div>
       </header>
 
       <section class="summary">
-        <article><span>Client</span><strong>Southeast Safes</strong></article>
-        <article><span>Market / Station</span><strong>Melbourne / WMMB</strong></article>
-        <article><span>Show</span><strong>Aug 22–23, 2026</strong></article>
-        <article><span>GCM ISCI</span><strong>SESL2601</strong></article>
+        <article><span>Client</span><strong id="summaryClient">Southeast Safes</strong></article>
+        <article><span>Market / Station</span><strong id="summaryMarketStation">Melbourne / WMMB</strong></article>
+        <article><span>Show</span><strong id="summaryShow">Aug 22–23, 2026</strong></article>
+        <article><span>GCM ISCI</span><strong id="summaryIsci">SESLM2601</strong></article>
       </section>
 
       <section class="panel">
-        <div class="panel-head"><div><h2>1. Campaign Identity</h2><p>This is the real Melbourne gun-show campaign, not a mock record.</p></div><span class="badge good">Pilot loaded</span></div>
+        <div class="panel-head"><div><h2>1. Campaign Identity</h2><p>This is the real Melbourne gun-show campaign, not a mock record.</p></div><span class="badge good" id="recordBadge">New campaign</span></div>
         <div class="body grid">
           <label>Client<input id="client" class="readonly" value="Southeast Safes" readonly></label>
           <label>Campaign Type<select id="campaignType"><option selected>Gun Show</option><option>Sale</option><option>Co-op Promotion</option></select></label>
           <label>Co-op Partner<input id="coop" value="Liberty"></label>
           <label>Market<input id="market" value="Melbourne"></label>
+          <label>Market Code<input id="marketCode" value="LM" maxlength="2"></label>
           <label>Station / Outlet<input id="station" value="WMMB"></label>
           <label>Campaign Name<input id="campaignName" value="Liberty Co-op — Melbourne Scratch & Dent Gun Show"></label>
           <label>Show Start<input id="showStart" type="date" value="2026-08-22"></label>
@@ -143,17 +144,19 @@
             <div>
               <div class="grid">
                 <label>Asset Title<input id="assetTitle" value="Melbourne Gun Show V1"></label>
-                <label>GCM ISCI<input id="isci" value="SESL2601"></label>
+                <label>GCM ISCI<input id="isci" class="readonly" value="SESLM2601" readonly></label>
                 <label>Length<input id="length" value=":30"></label>
-                <label class="span-2">Production Filename<input id="filename" value="SESL2601_Liberty_GunShow_30.mp3"></label>
+                <label>Campaign Number<input id="campaignNumber" value="2601" maxlength="4"></label>
+                <label>Asset Version<input id="assetVersion" type="number" min="1" value="1"></label>
+                <label class="span-2">Production Filename<input id="filename" class="readonly" value="SESLM2601_Liberty_GunShow_30_V1.mp3" readonly></label>
                 <label>Asset Decision<select id="assetDecision"><option selected>Reuse exact approved production</option><option>Create revised production</option></select></label>
               </div>
               <p class="help">The same ISCI remains attached while the exact audio is reused. A materially revised spot requires a new identifier.</p>
             </div>
             <div>
               <label>Road-test audio file<input id="audioFile" type="file" accept="audio/*"></label>
-              <audio id="audio" controls preload="metadata" src="SESL2601_Liberty_GunShow_30.mp3"></audio>
-              <p class="help" id="audioStatus">Expected repository file: SESL2601_Liberty_GunShow_30.mp3</p>
+              <audio id="audio" controls preload="metadata" src="SESLM2601_Liberty_GunShow_30_V1.mp3"></audio>
+              <p class="help" id="audioStatus">Expected repository file: SESLM2601_Liberty_GunShow_30_V1.mp3</p>
             </div>
           </div>
           <label style="margin-top:16px">Final Script<textarea id="script" class="script">This weekend at the Melbourne Gun Show, Southeast Safes is hosting a massive Liberty Safe scratch-and-dent sale. We have a huge selection of Liberty Safes in all shapes, colours and sizes, including used, closeout and scratch-and-dent models at unbeatable discounts. Made in the USA, Liberty Safes come with one of the best warranties in the industry. Delivery is available, or bring your truck and trailer to save on fees. Don’t miss out—this Saturday and Sunday only at the Melbourne Auditorium, 625 East Hibiscus Boulevard, Melbourne.</textarea></label>
@@ -214,6 +217,24 @@
 (() => {
   const WORKER_ENDPOINT = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev";
   const $ = id => document.getElementById(id);
+  const requestedRecordId = Number(new URLSearchParams(window.location.search).get("mediaRecordId") || 0);
+  let existingRecord = null;
+
+  function parseNoteValue(notes, label){
+    const line = String(notes || "").split(/\r?\n/).find(item => item.toLowerCase().startsWith(label.toLowerCase()));
+    return line ? line.slice(label.length).trim() : "";
+  }
+
+  function parseShowDates(notes){
+    const value = parseNoteValue(notes, "Show dates:");
+    const match = value.match(/(\d{4}-\d{2}-\d{2})(?:\s+through\s+(\d{4}-\d{2}-\d{2}))?/i);
+    return {start: match?.[1] || "", end: match?.[2] || match?.[1] || ""};
+  }
+
+  function parseLeadingNumber(value, fallback){
+    const match = String(value || "").match(/\d+/);
+    return match ? Number(match[0]) : fallback;
+  }
 
   function localDate(value){
     if(!value) return "Not set";
@@ -237,6 +258,44 @@
     }
     return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
   }
+  function safeAssetToken(value){
+    return String(value || "")
+      .trim()
+      .replace(/[^A-Za-z0-9]+/g,"_")
+      .replace(/^_+|_+$/g,"") || "Campaign";
+  }
+
+  function deriveMarketCode(market, station){
+    const marketText=String(market||"").trim().toLowerCase();
+    const stationText=String(station||"").trim().toUpperCase();
+    if(marketText.includes("melbourne") || stationText==="WMMB") return "LM";
+    if(marketText.includes("orlando") || stationText==="WFLA") return "LO";
+    const letters=marketText.replace(/[^a-z]/g,"").toUpperCase();
+    return (letters.slice(0,2) || "XX").padEnd(2,"X");
+  }
+
+  function applyAssetNamingStandard(){
+    const marketCode=deriveMarketCode($("market").value,$("station").value);
+    const campaignNumber=String($("campaignNumber").value||"2601").replace(/\D/g,"").slice(0,4).padStart(4,"0");
+    const version=Math.max(1,Number($("assetVersion").value||1));
+    const isci=`SES${marketCode}${campaignNumber}`;
+    let descriptor=safeAssetToken($("assetTitle").value.replace(/\bV\d+\b/gi,"").trim());
+
+    if(marketCode==="LM") descriptor="Liberty_GunShow_30";
+    else if(marketCode==="LO") descriptor="GunShow_30";
+    else {
+      const length=String($("length").value||":30").replace(/\D/g,"")||"30";
+      descriptor=`${descriptor}_${length}`;
+    }
+
+    $("marketCode").value=marketCode;
+    $("campaignNumber").value=campaignNumber;
+    $("isci").value=isci;
+    $("filename").value=`${isci}_${descriptor}_V${version}.mp3`;
+    $("audio").src=$("filename").value;
+    $("audioStatus").textContent=`Expected repository file: ${$("filename").value}`;
+  }
+
   function escapePayload(){
     return {
       clientId:1,
@@ -272,6 +331,7 @@
     };
   }
   function refresh(){
+    applyAssetNamingStandard();
     const firstAir=$("airStart").value;
     const lead=Number($("leadDays").value||17);
     const check=Number($("checkDays").value||10);
@@ -291,17 +351,22 @@
     const isci=$("isci").value.trim();
     const script=$("script").value.trim();
 
-    $("stationSubject").value=`Southeast Safes | Melbourne Gun Show Traffic | ${flight}`;
+    $("summaryClient").textContent=$("client").value.trim() || "Not set";
+    $("summaryMarketStation").textContent=`${$("market").value.trim() || "Not set"} / ${station || "Not set"}`;
+    $("summaryShow").textContent=`${localDate($("showStart").value)}–${localDate($("showEnd").value)}`;
+    $("summaryIsci").textContent=isci || "Not set";
+
+    $("stationSubject").value=`${$("client").value.trim()} | ${$("market").value.trim()} Gun Show Traffic | ${flight}`;
     $("stationDraft").value=
 `Hi,
 
-Please add the following Southeast Safes campaign to the ${station} rotation.
+Please add the following ${$("client").value.trim()} campaign to the ${station} rotation.
 
 CAMPAIGN
 ${campaign}
 
 EVENT
-Melbourne Scratch & Dent Gun Show
+${campaign}
 Show Dates: ${show}
 
 RADIO FLIGHT
@@ -322,16 +387,16 @@ Thank you,
 Andy
 Global Concepts Media`;
 
-    $("kristieSubject").value=`Upcoming Melbourne Gun Show — Facebook preparation`;
+    $("kristieSubject").value=`Upcoming ${$("market").value.trim()} Gun Show — Facebook preparation`;
     $("kristieDraft").value=
 `Hi Kristie,
 
-The next Melbourne Scratch & Dent Gun Show is ${show}.
+The next ${campaign} is ${show}.
 
-Please prepare and schedule the Southeast Safes Facebook posts for this show.
+Please prepare and schedule the ${$("client").value.trim()} Facebook posts for this show.
 
 Campaign: ${campaign}
-Market: Melbourne
+Market: ${$("market").value.trim()}
 Show Dates: ${show}
 Radio Flight: ${flight}
 
@@ -352,13 +417,78 @@ Andy`;
     }
   }
 
+  async function loadRequestedRecord(){
+    if(!requestedRecordId){
+      refresh();
+      return;
+    }
+
+    $("insert").disabled=true;
+    $("saveStatus").className="status";
+    $("saveStatus").textContent=`Loading Media record ${requestedRecordId} from D1…`;
+
+    try{
+      const response=await fetch(WORKER_ENDPOINT,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({action:"get-media-operations",operation:"get"})
+      });
+      const payload=await response.json().catch(()=>({}));
+      if(!response.ok || payload?.ok!==true){
+        throw new Error(payload?.error || payload?.details || `Worker returned ${response.status}.`);
+      }
+
+      const record=(payload?.mediaOperations?.records || []).find(item=>Number(item.id)===requestedRecordId);
+      if(!record) throw new Error(`Media record ${requestedRecordId} was not returned by the Worker.`);
+      existingRecord=record;
+
+      const showDates=parseShowDates(record.notes);
+      $("client").value=record.clientName || record.clientCode || "Unknown Client";
+      $("campaignType").value=[...$("campaignType").options].some(o=>o.value===record.mediaType) ? record.mediaType : "Gun Show";
+      $("coop").value=record.coopPartner || "";
+      $("market").value=record.market || "";
+      $("station").value=record.outletName || "";
+      $("campaignName").value=record.campaignName || "";
+      $("showStart").value=showDates.start;
+      $("showEnd").value=showDates.end;
+      $("status").value=[...$("status").options].some(o=>o.value===record.status) ? record.status : "planned";
+      $("airStart").value=record.startDate || "";
+      $("airEnd").value=record.endDate || "";
+      $("owner").value=parseNoteValue(record.notes,"Radio owner:") || "Andy";
+      $("assetTitle").value=record.creativeName || "";
+      $("campaignNumber").value=String(record.creativeVersion || "").match(/(\d{4})$/)?.[1] || "2601";
+      $("assetVersion").value=String(record.fileName || "").match(/_V(\d+)\.mp3$/i)?.[1] || "1";
+      $("marketCode").value=deriveMarketCode(record.market,record.outletName);
+      $("isci").value=record.creativeVersion || "";
+      $("filename").value=record.fileName || "";
+      $("script").value=record.scriptText || "";
+      $("leadDays").value=parseLeadingNumber(parseNoteValue(record.notes,"Agency traffic preparation:"),17);
+      $("checkDays").value=parseLeadingNumber(parseNoteValue(record.notes,"First confirmation check:"),10);
+
+      applyAssetNamingStandard();
+
+      $("pageTitle").textContent="Media Campaign Record";
+      $("pageSubtitle").textContent=`Operate and update the exact campaign selected from Media — record ${record.id}.`;
+      $("recordBadge").textContent=`Record #${record.id}`;
+      $("insert").textContent="Update Campaign in GCM OS";
+      $("saveStatus").className="status ok";
+      $("saveStatus").textContent=`Loaded Media record ${record.id}: ${record.clientName} — ${record.campaignName || record.outletName || "campaign"}.`;
+      refresh();
+    }catch(error){
+      $("saveStatus").className="status error";
+      $("saveStatus").textContent=`The selected campaign could not be loaded: ${error.message}`;
+    }finally{
+      $("insert").disabled=false;
+    }
+  }
+
   $("audioFile").addEventListener("change",event=>{
     const file=event.target.files?.[0];
     if(!file)return;
     $("audio").src=URL.createObjectURL(file);
     $("audioStatus").textContent=`Loaded for this page test: ${file.name}`;
   });
-  ["campaignName","campaignType","coop","market","station","showStart","showEnd","airStart","airEnd","assetTitle","isci","length","filename","script","leadDays","checkDays"]
+  ["campaignName","campaignType","coop","market","marketCode","station","showStart","showEnd","airStart","airEnd","assetTitle","length","campaignNumber","assetVersion","script","leadDays","checkDays"]
     .forEach(id=>$(id).addEventListener("input",refresh));
   $("refresh").addEventListener("click",refresh);
   $("copyStation").addEventListener("click",()=>copyText($("stationDraft").value,"Station traffic email copied."));
@@ -374,7 +504,8 @@ Andy`;
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           action:"get-media-operations",
-          operation:"create_campaign",
+          operation:existingRecord ? "update_campaign" : "create_campaign",
+          mediaRecordId:existingRecord?.id || null,
           ...escapePayload()
         })
       });
@@ -383,17 +514,19 @@ Andy`;
         throw new Error(payload?.error || payload?.details || `Worker returned ${response.status}.`);
       }
       $("saveStatus").className="status ok";
-      $("saveStatus").textContent=`Campaign inserted successfully as Media record ${payload?.mediaRecordId || "created"}. Returning to Media for verification…`;
+      $("saveStatus").textContent=existingRecord
+        ? `Media record ${payload?.mediaRecordId || existingRecord.id} updated successfully. Returning to Media…`
+        : `Campaign inserted successfully as Media record ${payload?.mediaRecordId || "created"}. Returning to Media for verification…`;
       window.setTimeout(() => { window.location.href = "media.html"; }, 1200);
     }catch(error){
       $("saveStatus").className="status error";
-      $("saveStatus").textContent=`The campaign was not inserted: ${error.message}`;
+      $("saveStatus").textContent=`The campaign was not saved: ${error.message}`;
     }finally{
       $("insert").disabled=false;
     }
   });
 
-  refresh();
+  loadRequestedRecord();
 })();
 </script>
 </body>
