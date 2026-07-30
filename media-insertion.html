@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media-insertion.html
-   Version: 1.5.5
+   Version: 1.5.7
    Status: Production Candidate — Simplified Station Traffic Package
    Source: Current GCM OS Media Operations architecture
    Sprint: Media Traffic Package — Simplified Station Email
@@ -109,7 +109,7 @@
           <h1 id="pageTitle">Media Insertion</h1>
           <p class="subtitle" id="pageSubtitle">Create the campaign package that Media will operate, confirm, complete, and reuse.</p>
         </div>
-        <div class="version">Installed version 1.5.5</div>
+        <div class="version">Installed version 1.5.7</div>
       </header>
 
       <section class="summary">
@@ -155,9 +155,9 @@
               <p class="help">The same ISCI remains attached while the exact audio is reused. A materially revised spot requires a new identifier.</p>
             </div>
             <div>
-              <label>Road-test audio file<input id="audioFile" type="file" accept="audio/*"></label>
+              <label>Repository Audio File<input id="repositoryAudioFile" class="readonly" value="SESLM2601_Liberty_GunShow_30_V1.mp3" readonly></label>
               <audio id="audio" controls preload="metadata" src="SESLM2601_Liberty_GunShow_30_V1.mp3"></audio>
-              <p class="help" id="audioStatus">Expected repository file: SESLM2601_Liberty_GunShow_30_V1.mp3</p>
+              <p class="help" id="audioStatus">Loaded automatically from the repository.</p>
             </div>
           </div>
           <label style="margin-top:16px">Final Script<textarea id="script" class="script">This weekend at the Melbourne Gun Show, Southeast Safes is hosting a massive Liberty Safe scratch-and-dent sale. We have a huge selection of Liberty Safes in all shapes, colours and sizes, including used, closeout and scratch-and-dent models at unbeatable discounts. Made in the USA, Liberty Safes come with one of the best warranties in the industry. Delivery is available, or bring your truck and trailer to save on fees. Don’t miss out—this Saturday and Sunday only at the Melbourne Auditorium, 625 East Hibiscus Boulevard, Melbourne.</textarea></label>
@@ -294,7 +294,8 @@
     $("isci").value=isci;
     $("filename").value=`${isci}_${descriptor}_V${version}.mp3`;
     $("audio").src=$("filename").value;
-    $("audioStatus").textContent=`Expected repository file: ${$("filename").value}`;
+    if($("repositoryAudioFile")) $("repositoryAudioFile").value=$("filename").value;
+    $("audioStatus").textContent=`Loaded automatically from the repository: ${$("filename").value}`;
   }
 
   function escapePayload(){
@@ -354,7 +355,7 @@
 
     $("summaryClient").textContent=$("client").value.trim() || "Not set";
     $("summaryMarketStation").textContent=`${$("market").value.trim() || "Not set"} / ${station || "Not set"}`;
-    $("summaryShow").textContent=`${localDate($("showStart").value)}–${localDate($("showEnd").value)}`;
+    $("summaryShow").textContent=$("campaignName").value.trim() || "Not set";
     $("summaryIsci").textContent=isci || "Not set";
 
     $("stationSubject").value=`Traffic Instructions — ${$("client").value.trim()} ${$("campaignName").value.trim()} — ${$("isci").value.trim()}`;
@@ -452,7 +453,10 @@ Andy`;
       $("coop").value=record.coopPartner || "";
       $("market").value=record.market || "";
       $("station").value=record.outletName || "";
-      $("campaignName").value=record.campaignName || "";
+      const loadedCampaignName=String(record.campaignName || "").trim();
+      $("campaignName").value=/^gun show$/i.test(loadedCampaignName)
+        ? `${record.market || "Market"} Gun Show`
+        : loadedCampaignName;
       $("showStart").value=showDates.start;
       $("showEnd").value=showDates.end;
       $("status").value=[...$("status").options].some(o=>o.value===record.status) ? record.status : "planned";
@@ -486,12 +490,6 @@ Andy`;
     }
   }
 
-  $("audioFile").addEventListener("change",event=>{
-    const file=event.target.files?.[0];
-    if(!file)return;
-    $("audio").src=URL.createObjectURL(file);
-    $("audioStatus").textContent=`Loaded for this page test: ${file.name}`;
-  });
   ["campaignName","campaignType","coop","market","marketCode","station","showStart","showEnd","airStart","airEnd","assetTitle","length","campaignNumber","assetVersion","script","leadDays","checkDays"]
     .forEach(id=>$(id).addEventListener("input",refresh));
   $("refresh").addEventListener("click",refresh);
@@ -499,10 +497,24 @@ Andy`;
     const url="https://mail.google.com/mail/?view=cm&fs=1&su="+encodeURIComponent(subject)+"&body="+encodeURIComponent(body);
     window.open(url,"_blank");
   }
+  function downloadRepositoryAsset(){
+    const fileName=$("filename").value.trim();
+    if(!fileName) return;
+    const link=document.createElement("a");
+    link.href=fileName;
+    link.download=fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
+
   $("copyStation").addEventListener("click",()=>{
-    openGmail($("stationSubject").value,$("stationDraft").value);
+    downloadRepositoryAsset();
+    window.setTimeout(()=>{
+      openGmail($("stationSubject").value,$("stationDraft").value);
+    },350);
     $("saveStatus").className="status ok";
-    $("saveStatus").textContent="Station package opened in Gmail.";
+    $("saveStatus").textContent="The correct production file was downloaded and the station email opened in Gmail. Attach the downloaded MP3 before sending.";
   });
   $("copyKristie").addEventListener("click",()=>{
     openGmail($("kristieSubject").value,$("kristieDraft").value);
