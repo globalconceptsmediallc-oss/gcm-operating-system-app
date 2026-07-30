@@ -1,13 +1,14 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media-insertion.html
-   Version: 1.3.0
-   Status: Production Candidate — Agency Asset Naming Standard
+   Version: 1.4.0
+   Status: Production Candidate — Professional Agency Traffic Instructions
    Source: Current GCM OS Media Operations architecture
-   Sprint: Media Asset Identity — Market-Specific ISCI and Filename
+   Sprint: Media Traffic Package — Professional Station Instructions
    Purpose: Create or load the exact Media campaign selected from the dashboard,
-            enforce market-specific GCM ISCI and production filenames, update
-            the selected D1 record, and return to the operator workspace.
+            enforce market-specific GCM ISCI and production filenames, generate
+            professional station traffic instructions, update the selected D1
+            record, and return to the operator workspace.
 
    Pilot:
    - Client: Southeast Safes
@@ -108,7 +109,7 @@
           <h1 id="pageTitle">Media Insertion</h1>
           <p class="subtitle" id="pageSubtitle">Create the campaign package that Media will operate, confirm, complete, and reuse.</p>
         </div>
-        <div class="version">Installed version 1.3.0</div>
+        <div class="version">Installed version 1.4.0</div>
       </header>
 
       <section class="summary">
@@ -356,35 +357,63 @@
     $("summaryShow").textContent=`${localDate($("showStart").value)}–${localDate($("showEnd").value)}`;
     $("summaryIsci").textContent=isci || "Not set";
 
-    $("stationSubject").value=`${$("client").value.trim()} | ${$("market").value.trim()} Gun Show Traffic | ${flight}`;
+    $("stationSubject").value=`TRAFFIC INSTRUCTIONS — ${$("client").value.trim()} — ${station} — ${localDate($("airStart").value)}–${localDate($("airEnd").value)} Flight`;
     $("stationDraft").value=
 `Hi,
 
-Please add the following ${$("client").value.trim()} campaign to the ${station} rotation.
+Please schedule the following ${$("client").value.trim()} campaign on ${station} using the attached approved audio.
+
+TRAFFIC INSTRUCTIONS
+
+CLIENT
+${$("client").value.trim()}
 
 CAMPAIGN
 ${campaign}
 
-EVENT
-${campaign}
-Show Dates: ${show}
+MARKET / STATION
+${$("market").value.trim()} / ${station}
+
+EVENT DATES
+${show}
 
 RADIO FLIGHT
-${flight}
+First Air: ${localDate($("airStart").value)}
+Last Air: ${localDate($("airEnd").value)}
+Full Flight: ${flight}
+
+TRAFFIC AND CONFIRMATION TIMELINE
+Traffic Preparation Date: ${localDate(prepare)}
+First Confirmation Check: ${localDate(checkDate)}
+Critical Confirmation Deadline: ${localDate(critical)} by noon
 
 PRODUCTION
 Spot Title: ${$("assetTitle").value.trim()}
 Length: ${$("length").value.trim()}
 ISCI: ${isci}
-Audio File: ${file}
+Audio Filename: ${file}
+Audio Delivery: Attached to this email
+
+SCHEDULING REQUEST
+Please enter the campaign for the complete flight shown above and use the attached audio file identified by the ISCI and filename listed above.
+
+Please notify Global Concepts Media immediately if there are any inventory limitations, scheduling conflicts, audio problems, missing instructions, or other issues that could prevent the campaign from beginning on the first air date.
+
+CONFIRMATION REQUEST
+Please reply confirming:
+- The traffic instructions were received.
+- The audio file was received and opens correctly.
+- The ISCI and filename were verified.
+- The complete flight was entered into the station schedule.
+- The first air date is confirmed.
+- Any issue requiring attention has been reported.
 
 SCRIPT
 ${script}
 
-Please confirm by reply email that you received the traffic, audio file, and flight instructions and that the campaign is scheduled.
-
 Thank you,
-Andy
+
+Andy Belcher
 Global Concepts Media`;
 
     $("kristieSubject").value=`Upcoming ${$("market").value.trim()} Gun Show — Facebook preparation`;
