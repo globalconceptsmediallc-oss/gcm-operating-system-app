@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media-insertion.html
-   Version: 1.5.2
+   Version: 1.5.3
    Status: Production Candidate — Simplified Station Traffic Package
    Source: Current GCM OS Media Operations architecture
    Sprint: Media Traffic Package — Simplified Station Email
@@ -109,7 +109,7 @@
           <h1 id="pageTitle">Media Insertion</h1>
           <p class="subtitle" id="pageSubtitle">Create the campaign package that Media will operate, confirm, complete, and reuse.</p>
         </div>
-        <div class="version">Installed version 1.5.2</div>
+        <div class="version">Installed version 1.5.3</div>
       </header>
 
       <section class="summary">
@@ -203,8 +203,8 @@
           <div class="actions">
             <a class="button secondary" href="media.html">Back to Media</a>
             <button class="button secondary" id="refresh" type="button">Refresh Package</button>
-            <button class="button secondary" id="copyStation" type="button">Copy Station Email</button>
-            <button class="button secondary" id="copyKristie" type="button">Copy Kristie Reminder</button>
+            <button class="button secondary" id="copyStation" type="button">Generate Station Package</button>
+            <button class="button secondary" id="copyKristie" type="button">Send Kristie Reminder</button>
             <button class="button primary" id="insert" type="button">Insert Campaign into GCM OS</button>
           </div>
           <div class="status" id="saveStatus">Ready for the connected road test. Insert creates the campaign in D1, then returns you to the existing Media workspace for verification.</div>
@@ -399,14 +399,12 @@ Global Concepts Media`;
 
 The next ${campaign} is ${show}.
 
-Please prepare and schedule the ${$("client").value.trim()} Facebook posts for this show.
+This is a reminder to prepare and schedule the ${$("client").value.trim()} Facebook posts for this show.
 
 Campaign: ${campaign}
 Market: ${$("market").value.trim()}
 Show Dates: ${show}
 Radio Flight: ${flight}
-
-Please reply when the Facebook posts are scheduled so the campaign can be marked ready.
 
 Thank you,
 Andy`;
@@ -497,8 +495,20 @@ Andy`;
   ["campaignName","campaignType","coop","market","marketCode","station","showStart","showEnd","airStart","airEnd","assetTitle","length","campaignNumber","assetVersion","script","leadDays","checkDays"]
     .forEach(id=>$(id).addEventListener("input",refresh));
   $("refresh").addEventListener("click",refresh);
-  $("copyStation").addEventListener("click",()=>copyText($("stationDraft").value,"Station traffic email copied."));
-  $("copyKristie").addEventListener("click",()=>copyText($("kristieDraft").value,"Kristie reminder copied."));
+  function openGmail(subject,body){
+    const url="https://mail.google.com/mail/?view=cm&fs=1&su="+encodeURIComponent(subject)+"&body="+encodeURIComponent(body);
+    window.open(url,"_blank");
+  }
+  $("copyStation").addEventListener("click",()=>{
+    openGmail($("stationSubject").value,$("stationDraft").value);
+    $("saveStatus").className="status ok";
+    $("saveStatus").textContent="Station package opened in Gmail.";
+  });
+  $("copyKristie").addEventListener("click",()=>{
+    openGmail($("kristieSubject").value,$("kristieDraft").value);
+    $("saveStatus").className="status ok";
+    $("saveStatus").textContent="Kristie reminder opened in Gmail.";
+  });
 
   $("insert").addEventListener("click",async()=>{
     $("insert").disabled=true;
