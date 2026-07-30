@@ -1,20 +1,20 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media.html
-   Version: 2.3.0
+   Version: 2.3.1
    Status: Production Candidate
    Source: Production media.html 1.9.0
-   Sprint: Media Operations — Queue Truth and Expired Separation
+   Sprint: Media Operations — Placement Detail Filtering
    Purpose: Preserve the working Media operator workspace and add a
             controlled entry into Media Insertion, truthful stage queues,
-            clickable campaign records, and a separate expired archive.
+            clickable campaign records, and a compact Placement Detail filter.
 
    Production rules:
    - D1 media_records remains authoritative.
    - No campaign records are invented or written.
    - Queue stages are derived conservatively from explicit state.
    - Pending/planned records remain Preparing until readiness is explicit.
-   - Expired records are removed from active queues and shown separately.
+   - Expired records are removed from active queues and available through Placement Detail filtering.
    - Priority and campaign cards open the existing insertion order.
    - The page answers: What media work should be done next?
    ========================================================= -->
@@ -190,6 +190,8 @@
       font-weight:900
     }
     .queue-grid{align-items:start}
+    .placement-filter-bar{grid-template-columns:minmax(220px,320px) 1fr;align-items:end}
+    .placement-filter-summary{padding:10px 0;color:var(--muted);font-size:.78rem;font-weight:800}
 
     @media(max-width:1100px){.decision-grid{grid-template-columns:repeat(2,1fr)}.queue-grid{grid-template-columns:repeat(2,1fr)}.filter-bar{grid-template-columns:repeat(3,1fr)}}
     @media(max-width:800px){.shell{grid-template-columns:1fr}aside{display:none}main{padding:18px}.summary,.queue-grid,.decision-grid,.filter-bar{grid-template-columns:1fr}header{flex-direction:column}.next{grid-column:auto}}
@@ -223,7 +225,7 @@
           <button class="button" id="expand-all" type="button">Expand All</button>
           <button class="button" id="collapse-all" type="button">Collapse All</button>
           <button class="button" id="refresh" type="button">Refresh</button>
-          <span class="version">media.html · v2.3.0</span>
+          <span class="version">media.html · v2.3.1</span>
         </div>
       </header>
 
@@ -277,21 +279,25 @@
 
 
       <section class="panel">
-        <button class="section-toggle" type="button" aria-expanded="false" data-target="expired-body">
-          <span class="title-wrap"><h2>Expired Placements</h2><p>Past placements removed from all active operating queues.</p></span>
+        <button class="section-toggle" type="button" aria-expanded="false" data-target="placement-detail-body">
+          <span class="title-wrap"><h2>Placement Detail</h2><p>Active records by default, with Pending, Expired, and All available when needed.</p></span>
           <span class="chevron">⌄</span>
         </button>
-        <div class="collapsible" id="expired-body" hidden>
-          <div class="lane-list" id="lane-expired"><div class="loading">Loading expired placements…</div></div>
+        <div id="placement-detail-body" class="collapsible" hidden>
+          <div class="filter-bar placement-filter-bar">
+            <div class="filter-group">
+              <label for="placement-view-filter">Placement View</label>
+              <select id="placement-view-filter">
+                <option value="active" selected>Active</option>
+                <option value="pending">Pending</option>
+                <option value="expired">Expired</option>
+                <option value="all">All</option>
+              </select>
+            </div>
+            <div class="placement-filter-summary" id="placement-filter-summary">Active placements shown.</div>
+          </div>
+          <div id="records"><div class="loading">Loading media records…</div></div>
         </div>
-      </section>
-
-      <section class="panel">
-        <button class="section-toggle" type="button" aria-expanded="false" data-target="records">
-          <span class="title-wrap"><h2>Placement Detail</h2><p>Existing production data retained for verification and history.</p></span>
-          <span class="chevron">⌄</span>
-        </button>
-        <div id="records" class="collapsible" hidden><div class="loading">Loading media records…</div></div>
       </section>
     </div>
   </main>
@@ -324,6 +330,15 @@
   const isExpired = r => lower(r.status) === "expired" || dateRelation(r) === "history";
   const isExplicitlyReady = r => ["ready","ready_to_launch","ready-to-launch"].includes(lower(r.status))
     || ["ready","ready_to_launch","ready-to-launch"].includes(lower(r.trafficStatus));
+  const isPendingPlacement = r => !isExpired(r) && (
+    isAwaiting(r) ||
+    ["pending","planned","preparing"].includes(lower(r.status)) ||
+    isExplicitlyReady(r)
+  );
+  const isActivePlacement = r => !isExpired(r) && !isPendingPlacement(r) && (
+    ["active","running","confirmed"].includes(lower(r.status)) ||
+    ["confirmed","active","running"].includes(lower(r.confirmationStatus))
+  );
   const recordUrl = r => `media-insertion.html?mediaRecordId=${encodeURIComponent(r.id)}`;
   const openRecord = r => { if (r?.id) window.location.href = recordUrl(r); };
 
@@ -491,7 +506,20 @@
   }
 
   function renderTable() {
-    const rows = records.map(r => `<tr class="clickable-record" data-record-id="${esc(r.id)}" tabindex="0" role="link">
+    const view = $("placement-view-filter").value || "active";
+    let detailRecords = records;
+
+    if (view === "active") detailRecords = records.filter(isActivePlacement);
+    if (view === "pending") detailRecords = records.filter(isPendingPlacement);
+    if (view === "expired") detailRecords = records.filter(isExpired);
+
+    const activeCount = records.filter(isActivePlacement).length;
+    const pendingCount = records.filter(isPendingPlacement).length;
+    const expiredCount = records.filter(isExpired).length;
+    const labels = {active:"Active",pending:"Pending",expired:"Expired",all:"All"};
+    $("placement-filter-summary").textContent = `${labels[view]}: ${detailRecords.length} shown · Active ${activeCount} · Pending ${pendingCount} · Expired ${expiredCount}`;
+
+    const rows = detailRecords.map(r => `<tr class="clickable-record" data-record-id="${esc(r.id)}" tabindex="0" role="link">
       <td><strong>${esc(r.clientName || r.clientCode || "")}</strong><br><span class="meta">#${esc(r.id)}</span></td>
       <td>${esc(r.campaignName || "—")}<br><span class="meta">${esc(r.creativeName || r.fileName || "")}</span></td>
       <td>${esc(r.market || "—")}<br><span class="meta">${esc(r.outletName || "—")}</span></td>
@@ -500,9 +528,9 @@
       <td>${esc(r.trafficStatus || "—")}<br><span class="meta">${esc(r.confirmationStatus || "")}</span></td>
       <td>${esc(nextAction(r))}</td>
     </tr>`).join("");
-    $("records").innerHTML = records.length ? `<div class="table-wrap"><table class="table"><thead><tr>
+    $("records").innerHTML = detailRecords.length ? `<div class="table-wrap"><table class="table"><thead><tr>
       <th>Client</th><th>Campaign / Creative</th><th>Market / Outlet</th><th>Dates</th><th>Status</th><th>Traffic / Confirmation</th><th>Operating Next Action</th>
-    </tr></thead><tbody>${rows}</tbody></table></div>` : `<div class="empty">No records found.</div>`;
+    </tr></thead><tbody>${rows}</tbody></table></div>` : `<div class="empty">No ${labels[view].toLowerCase()} placement records found.</div>`;
   }
 
   function render() {
@@ -537,7 +565,6 @@
     renderLane("lane-ready", ready, "b-success", "Ready");
     renderLane("lane-running", running, "b-info", "Running");
     renderLane("lane-awaiting", awaiting, "b-critical", "Awaiting");
-    renderLane("lane-expired", expired, "b-info", "Expired");
     renderTable();
   }
 
@@ -559,7 +586,7 @@
     } catch (error) {
       const message = esc(error?.message || "Media Operations could not load.");
       $("priority").innerHTML = `<div class="error">${message}</div>`;
-      ["lane-preparing","lane-ready","lane-running","lane-awaiting","lane-expired"].forEach(id => $(id).innerHTML = `<div class="error">${message}</div>`);
+      ["lane-preparing","lane-ready","lane-running","lane-awaiting"].forEach(id => $(id).innerHTML = `<div class="error">${message}</div>`);
       $("records").innerHTML = `<div class="error">${message}</div>`;
     }
   }
@@ -593,6 +620,7 @@
   $("refresh").addEventListener("click", load);
   ["status-filter","market-filter","outlet-filter","date-filter","needs-action-filter"].forEach(id => $(id).addEventListener("change", applyFilters));
   $("search-filter").addEventListener("input", applyFilters);
+  $("placement-view-filter").addEventListener("change", renderTable);
 
   $("clear-filters").addEventListener("click", () => {
     $("status-filter").value = "";
