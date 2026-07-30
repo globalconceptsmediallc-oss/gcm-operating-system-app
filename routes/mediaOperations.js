@@ -1,19 +1,20 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/mediaOperations.js
-   Version: 7.8.2
+   Version: 7.8.3
    Status: Production Candidate
    Source: Production routes/mediaOperations.js 7.4.2
-   Sprint: Connected Media Campaign Insertion — Syntax-Correct Production Replacement
+   Sprint: Exact Media Record Loading and Update
    Purpose: Preserve authoritative Media retrieval and attention logic,
-            while adding a controlled create_campaign operation that
-            inserts a reviewed campaign into the existing media_records
-            workflow so it immediately appears on media.html.
+            while adding controlled create_campaign and update_campaign
+            operations so the dashboard opens and updates the exact D1
+            media record selected by the operator.
 
    Production rules:
    - media_records remains the source of truth for Media Operations.
    - Existing retrieval and Investigation #22 attention correction remain intact.
    - create_campaign validates the client and prevents duplicate campaign flights.
+   - update_campaign changes only the selected existing media record.
    - Existing mark_sent_awaiting_confirmation behavior remains available.
    - The audio file remains a repository asset referenced by file_name.
    - ISCI and gun-show operational details are retained in durable notes.
@@ -34,6 +35,10 @@ export async function handleMediaOperations(body, env, requestId) {
 
   if (operation === "create_campaign") {
     return handleCreateCampaign(body, db, requestId);
+  }
+
+  if (operation === "update_campaign") {
+    return handleUpdateCampaign(body, db, requestId);
   }
 
   if (operation === "mark_sent_awaiting_confirmation") {
@@ -178,6 +183,129 @@ async function handleCreateCampaign(body, db, requestId) {
   } catch (error) {
     logWorkerError({requestId,route:ACTIONS.GET_MEDIA_OPERATIONS,stage:"media_campaign_insertion",error});
     return jsonResponse({ok:false,requestId,action:ACTIONS.GET_MEDIA_OPERATIONS,version:VERSION,error:"The Media campaign could not be inserted.",details:safeErrorMessage(error)},500);
+  }
+}
+
+
+async function handleUpdateCampaign(body, db, requestId) {
+  const mediaRecordId = normalizePositiveInteger(body?.mediaRecordId ?? body?.recordId ?? body?.id);
+  const campaign = body?.campaign || {};
+  const asset = body?.asset || {};
+
+  if (!mediaRecordId) {
+    return jsonResponse({ok:false,requestId,action:ACTIONS.GET_MEDIA_OPERATIONS,version:VERSION,error:"mediaRecordId must be a positive integer."},400);
+  }
+
+  const campaignName = cleanRequired(campaign?.campaignName);
+  const mediaType = cleanRequired(campaign?.campaignType) || "Radio";
+  const market = cleanRequired(campaign?.market);
+  const outletName = cleanRequired(campaign?.outletName);
+  const startDate = normalizeDateOnly(campaign?.startDate);
+  const endDate = normalizeDateOnly(campaign?.endDate);
+  const showStartDate = normalizeDateOnly(campaign?.showStartDate);
+  const showEndDate = normalizeDateOnly(campaign?.showEndDate);
+  const requestedStatus = cleanOptional(campaign?.status) || "planned";
+  const allowedStatuses = new Set(["planned","pending","preparing","ready_to_send","active","completed","expired"]);
+  const status = allowedStatuses.has(requestedStatus.toLowerCase()) ? requestedStatus.toLowerCase() : "planned";
+  const creativeName = cleanRequired(asset?.creativeName);
+  const creativeVersion = cleanRequired(asset?.isci);
+  const fileName = cleanRequired(asset?.fileName);
+  const coopPartner = cleanOptional(campaign?.coopPartner);
+  const scriptText = cleanOptional(asset?.scriptText);
+  const owner = cleanOptional(campaign?.owner) || "Andy";
+  const trafficLeadDays = normalizePositiveInteger(campaign?.trafficLeadDays) || 17;
+  const confirmationCheckDays = normalizePositiveInteger(campaign?.confirmationCheckDays) || 10;
+  const criticalBusinessDays = normalizePositiveInteger(campaign?.criticalBusinessDays) || 3;
+  const criticalCutoff = cleanOptional(campaign?.criticalCutoff) || "12:00";
+
+  const missing = [];
+  if (!campaignName) missing.push("campaignName");
+  if (!market) missing.push("market");
+  if (!outletName) missing.push("outletName");
+  if (!startDate) missing.push("startDate");
+  if (!endDate) missing.push("endDate");
+  if (!creativeName) missing.push("creativeName");
+  if (!creativeVersion) missing.push("ISCI");
+  if (!fileName) missing.push("fileName");
+
+  if (missing.length) {
+    return jsonResponse({ok:false,requestId,action:ACTIONS.GET_MEDIA_OPERATIONS,version:VERSION,error:`Campaign update requires: ${missing.join(", ")}.`},400);
+  }
+
+  if (endDate < startDate) {
+    return jsonResponse({ok:false,requestId,action:ACTIONS.GET_MEDIA_OPERATIONS,version:VERSION,error:"The last air date cannot be earlier than the first air date."},400);
+  }
+
+  try {
+    const existingResult = await db.prepare(`
+      SELECT id, client_id, traffic_status, confirmation_status, attention_status, attention_reason
+      FROM media_records
+      WHERE id = ?
+      LIMIT 1
+    `).bind(mediaRecordId).all();
+
+    const existing = rowsOf(existingResult)[0];
+    if (!existing) {
+      return jsonResponse({ok:false,requestId,action:ACTIONS.GET_MEDIA_OPERATIONS,version:VERSION,error:`Media record ${mediaRecordId} was not found.`},404);
+    }
+
+    const duplicateResult = await db.prepare(`
+      SELECT id
+      FROM media_records
+      WHERE id <> ?
+        AND client_id = ?
+        AND LOWER(COALESCE(campaign_name,'')) = LOWER(?)
+        AND LOWER(COALESCE(outlet_name,'')) = LOWER(?)
+        AND COALESCE(start_date,'') = ?
+        AND COALESCE(end_date,'') = ?
+      LIMIT 1
+    `).bind(mediaRecordId,Number(existing.client_id),campaignName,outletName,startDate,endDate).all();
+
+    const duplicate = rowsOf(duplicateResult)[0];
+    if (duplicate) {
+      return jsonResponse({ok:false,requestId,action:ACTIONS.GET_MEDIA_OPERATIONS,version:VERSION,error:`These campaign dates already exist as Media record ${duplicate.id}.`,mediaRecordId:Number(duplicate.id)},409);
+    }
+
+    const notes = [
+      `GCM ISCI: ${creativeVersion}`,
+      `Show dates: ${showStartDate || "not set"}${showEndDate ? ` through ${showEndDate}` : ""}`,
+      `Agency traffic preparation: ${trafficLeadDays} calendar days before first air`,
+      `First confirmation check: ${confirmationCheckDays} calendar days before first air`,
+      `Critical confirmation rule: ${criticalBusinessDays} business days before first air by ${criticalCutoff}`,
+      `Radio owner: ${owner}`,
+      `Facebook owner: ${cleanOptional(body?.assignments?.facebookOwner) || "Kristie"}`,
+      `Asset decision: ${cleanOptional(asset?.reuseDecision) || "Reuse exact approved production"}`
+    ].join("\n");
+
+    await db.prepare(`
+      UPDATE media_records
+      SET media_type = ?, market = ?, outlet_name = ?, campaign_name = ?,
+          creative_name = ?, creative_version = ?, file_name = ?, coop_partner = ?,
+          start_date = ?, end_date = ?, status = ?, script_text = ?, notes = ?,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).bind(
+      mediaType,market,outletName,campaignName,
+      creativeName,creativeVersion,fileName,coopPartner,
+      startDate,endDate,status,scriptText,notes,
+      mediaRecordId
+    ).run();
+
+    return jsonResponse({
+      ok:true,
+      requestId,
+      action:ACTIONS.GET_MEDIA_OPERATIONS,
+      version:VERSION,
+      operation:"update_campaign",
+      mediaRecordId,
+      campaign:{
+        campaignName,market,outletName,startDate,endDate,status,
+        creativeName,isci:creativeVersion,fileName
+      }
+    });
+  } catch (error) {
+    logWorkerError({requestId,route:ACTIONS.GET_MEDIA_OPERATIONS,stage:"media_campaign_update",error});
+    return jsonResponse({ok:false,requestId,action:ACTIONS.GET_MEDIA_OPERATIONS,version:VERSION,error:"The Media campaign could not be updated.",details:safeErrorMessage(error)},500);
   }
 }
 
