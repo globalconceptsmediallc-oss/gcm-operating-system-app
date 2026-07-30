@@ -1,10 +1,10 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media-insertion.html
-   Version: 1.5.7
-   Status: Production Candidate — Simplified Station Traffic Package
+   Version: 1.5.9
+   Status: Production Candidate — Attached RFC 822 Station Package
    Source: Current GCM OS Media Operations architecture
-   Sprint: Media Traffic Package — Simplified Station Email
+   Sprint: Media Traffic Package — Attached Email Draft
    Purpose: Create or load the exact Media campaign selected from the dashboard,
             enforce market-specific GCM ISCI and production filenames, generate
             professional station traffic instructions, update the selected D1
@@ -109,7 +109,7 @@
           <h1 id="pageTitle">Media Insertion</h1>
           <p class="subtitle" id="pageSubtitle">Create the campaign package that Media will operate, confirm, complete, and reuse.</p>
         </div>
-        <div class="version">Installed version 1.5.7</div>
+        <div class="version">Installed version 1.5.9</div>
       </header>
 
       <section class="summary">
@@ -203,7 +203,7 @@
           <div class="actions">
             <a class="button secondary" href="media.html">Back to Media</a>
             <button class="button secondary" id="refresh" type="button">Refresh Package</button>
-            <button class="button secondary" id="copyStation" type="button">Generate Station Package</button>
+            <button class="button secondary" id="copyStation" type="button">Generate Attached Station Draft</button>
             <button class="button secondary" id="copyKristie" type="button">Send Kristie Reminder</button>
             <button class="button primary" id="insert" type="button">Insert Campaign into GCM OS</button>
           </div>
@@ -497,24 +497,103 @@ Andy`;
     const url="https://mail.google.com/mail/?view=cm&fs=1&su="+encodeURIComponent(subject)+"&body="+encodeURIComponent(body);
     window.open(url,"_blank");
   }
-  function downloadRepositoryAsset(){
+  async function loadRepositoryAsset(){
     const fileName=$("filename").value.trim();
-    if(!fileName) return;
+    if(!fileName) throw new Error("No production filename is available.");
+    const response=await fetch(encodeURI(fileName),{cache:"no-store"});
+    if(!response.ok) throw new Error(`Production file could not be loaded (${response.status}).`);
+    return {
+      fileName,
+      blob:await response.blob()
+    };
+  }
+
+  function bytesToBase64(bytes){
+    let binary="";
+    const chunkSize=0x8000;
+    for(let offset=0;offset<bytes.length;offset+=chunkSize){
+      binary+=String.fromCharCode(...bytes.subarray(offset,offset+chunkSize));
+    }
+    return btoa(binary);
+  }
+
+  function wrapBase64(value){
+    return value.match(/.{1,76}/g)?.join("\r\n") || "";
+  }
+
+  function encodeHeader(value){
+    const bytes=new TextEncoder().encode(String(value || ""));
+    return `=?UTF-8?B?${bytesToBase64(bytes)}?=`;
+  }
+
+  function safePackageName(){
+    const campaign=$("campaignName").value.trim() || "Station Campaign";
+    return campaign
+      .replace(/[<>:"/\\|?*\u0000-\u001F]/g,"")
+      .replace(/\s+/g," ")
+      .trim() || "Station Campaign";
+  }
+
+  async function createAttachedEmailPackage(){
+    const {fileName,blob}=await loadRepositoryAsset();
+    const audioBytes=new Uint8Array(await blob.arrayBuffer());
+    const audioBase64=wrapBase64(bytesToBase64(audioBytes));
+    const subject=$("stationSubject").value.trim();
+    const body=$("stationDraft").value.replace(/\r?\n/g,"\r\n");
+    const boundary=`GCM_OS_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+
+    const eml=[
+      "MIME-Version: 1.0",
+      `Subject: ${encodeHeader(subject)}`,
+      "X-Unsent: 1",
+      `Content-Type: multipart/mixed; boundary="${boundary}"`,
+      "",
+      `--${boundary}`,
+      'Content-Type: text/plain; charset="UTF-8"',
+      "Content-Transfer-Encoding: 8bit",
+      "",
+      body,
+      "",
+      `--${boundary}`,
+      `Content-Type: audio/mpeg; name="${fileName}"`,
+      "Content-Transfer-Encoding: base64",
+      `Content-Disposition: attachment; filename="${fileName}"`,
+      "",
+      audioBase64,
+      "",
+      `--${boundary}--`,
+      ""
+    ].join("\r\n");
+
+    const packageBlob=new Blob([eml],{type:"message/rfc822"});
+    const packageUrl=URL.createObjectURL(packageBlob);
     const link=document.createElement("a");
-    link.href=fileName;
-    link.download=fileName;
+    link.href=packageUrl;
+    link.download=`${safePackageName()} - Station Package.eml`;
     document.body.appendChild(link);
     link.click();
     link.remove();
+    window.setTimeout(()=>URL.revokeObjectURL(packageUrl),60000);
+
+    return fileName;
   }
 
-  $("copyStation").addEventListener("click",()=>{
-    downloadRepositoryAsset();
-    window.setTimeout(()=>{
-      openGmail($("stationSubject").value,$("stationDraft").value);
-    },350);
-    $("saveStatus").className="status ok";
-    $("saveStatus").textContent="The correct production file was downloaded and the station email opened in Gmail. Attach the downloaded MP3 before sending.";
+  $("copyStation").addEventListener("click",async()=>{
+    refresh();
+    $("copyStation").disabled=true;
+    $("saveStatus").className="status";
+    $("saveStatus").textContent="Building the complete station email draft with the repository MP3 attached…";
+
+    try{
+      const fileName=await createAttachedEmailPackage();
+      $("saveStatus").className="status ok";
+      $("saveStatus").textContent=`Station email package created with ${fileName} physically attached. Open the downloaded .eml package to review and send the draft.`;
+    }catch(error){
+      $("saveStatus").className="status error";
+      $("saveStatus").textContent=`Station package could not be created: ${error.message}`;
+    }finally{
+      $("copyStation").disabled=false;
+    }
   });
   $("copyKristie").addEventListener("click",()=>{
     openGmail($("kristieSubject").value,$("kristieDraft").value);
@@ -558,4 +637,3 @@ Andy`;
 })();
 </script>
 </body>
-</html>
