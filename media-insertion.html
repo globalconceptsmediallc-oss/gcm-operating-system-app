@@ -1,13 +1,13 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media-insertion.html
-   Version: 1.4.0
-   Status: Production Candidate — Professional Agency Traffic Instructions
+   Version: 1.5.0
+   Status: Production Candidate — Gmail Draft Generation
    Source: Current GCM OS Media Operations architecture
-   Sprint: Media Traffic Package — Professional Station Instructions
+   Sprint: Media Traffic Package — Generate Gmail Draft
    Purpose: Create or load the exact Media campaign selected from the dashboard,
             enforce market-specific GCM ISCI and production filenames, generate
-            professional station traffic instructions, update the selected D1
+            professional station traffic instructions, generate a Gmail draft, update the selected D1
             record, and return to the operator workspace.
 
    Pilot:
@@ -109,7 +109,7 @@
           <h1 id="pageTitle">Media Insertion</h1>
           <p class="subtitle" id="pageSubtitle">Create the campaign package that Media will operate, confirm, complete, and reuse.</p>
         </div>
-        <div class="version">Installed version 1.4.0</div>
+        <div class="version">Installed version 1.5.0</div>
       </header>
 
       <section class="summary">
@@ -128,6 +128,7 @@
           <label>Market<input id="market" value="Melbourne"></label>
           <label>Market Code<input id="marketCode" value="LM" maxlength="2"></label>
           <label>Station / Outlet<input id="station" value="WMMB"></label>
+          <label>Station Traffic Email<input id="trafficEmail" type="email" placeholder="Enter the station traffic email"></label>
           <label>Campaign Name<input id="campaignName" value="Liberty Co-op — Melbourne Scratch & Dent Gun Show"></label>
           <label>Show Start<input id="showStart" type="date" value="2026-08-22"></label>
           <label>Show End<input id="showEnd" type="date" value="2026-08-23"></label>
@@ -203,11 +204,11 @@
           <div class="actions">
             <a class="button secondary" href="media.html">Back to Media</a>
             <button class="button secondary" id="refresh" type="button">Refresh Package</button>
-            <button class="button secondary" id="copyStation" type="button">Copy Station Email</button>
+            <button class="button secondary" id="gmailDraft" type="button">Generate Gmail Draft</button>
             <button class="button secondary" id="copyKristie" type="button">Copy Kristie Reminder</button>
             <button class="button primary" id="insert" type="button">Insert Campaign into GCM OS</button>
           </div>
-          <div class="status" id="saveStatus">Ready for the connected road test. Insert creates the campaign in D1, then returns you to the existing Media workspace for verification.</div>
+          <div class="status" id="saveStatus">Ready for the connected road test. Generate Gmail Draft opens a completed Gmail compose window for review. Insert creates or updates the campaign in D1.</div>
         </div>
       </section>
     </div>
@@ -306,6 +307,7 @@
         coopPartner:$("coop").value.trim(),
         market:$("market").value.trim(),
         outletName:$("station").value.trim(),
+        trafficEmail:$("trafficEmail").value.trim(),
         showStartDate:$("showStart").value,
         showEndDate:$("showEnd").value,
         startDate:$("airStart").value,
@@ -477,6 +479,7 @@ Andy`;
       $("coop").value=record.coopPartner || "";
       $("market").value=record.market || "";
       $("station").value=record.outletName || "";
+      $("trafficEmail").value=parseNoteValue(record.notes,"Traffic email:") || "";
       $("campaignName").value=record.campaignName || "";
       $("showStart").value=showDates.start;
       $("showEnd").value=showDates.end;
@@ -517,10 +520,39 @@ Andy`;
     $("audio").src=URL.createObjectURL(file);
     $("audioStatus").textContent=`Loaded for this page test: ${file.name}`;
   });
-  ["campaignName","campaignType","coop","market","marketCode","station","showStart","showEnd","airStart","airEnd","assetTitle","length","campaignNumber","assetVersion","script","leadDays","checkDays"]
+  ["campaignName","campaignType","coop","market","marketCode","station","trafficEmail","showStart","showEnd","airStart","airEnd","assetTitle","length","campaignNumber","assetVersion","script","leadDays","checkDays"]
     .forEach(id=>$(id).addEventListener("input",refresh));
   $("refresh").addEventListener("click",refresh);
-  $("copyStation").addEventListener("click",()=>copyText($("stationDraft").value,"Station traffic email copied."));
+  function openGmailDraft(){
+    refresh();
+
+    const to=$("trafficEmail").value.trim();
+    const subject=$("stationSubject").value.trim();
+    const body=$("stationDraft").value;
+
+    const params=new URLSearchParams({
+      view:"cm",
+      fs:"1",
+      su:subject,
+      body:body
+    });
+    if(to) params.set("to",to);
+
+    const gmailUrl=`https://mail.google.com/mail/?${params.toString()}`;
+    const draftWindow=window.open(gmailUrl,"_blank","noopener");
+
+    if(draftWindow){
+      $("saveStatus").className="status ok";
+      $("saveStatus").textContent=to
+        ? `Gmail draft opened for ${to}. Review the message, attach ${$("filename").value.trim()}, and send when approved.`
+        : `Gmail draft opened with the subject and traffic package completed. Add the station recipient, attach ${$("filename").value.trim()}, and review before sending.`;
+    }else{
+      $("saveStatus").className="status error";
+      $("saveStatus").textContent="The browser blocked the Gmail compose window. Allow pop-ups for this page and select Generate Gmail Draft again.";
+    }
+  }
+
+  $("gmailDraft").addEventListener("click",openGmailDraft);
   $("copyKristie").addEventListener("click",()=>copyText($("kristieDraft").value,"Kristie reminder copied."));
 
   $("insert").addEventListener("click",async()=>{
