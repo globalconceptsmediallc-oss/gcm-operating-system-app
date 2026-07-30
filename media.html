@@ -1,18 +1,21 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media.html
-   Version: 2.2.0
+   Version: 2.3.0
    Status: Production Candidate
    Source: Production media.html 1.9.0
-   Sprint: Media Operations — Connected Campaign Insertion
+   Sprint: Media Operations — Queue Truth and Expired Separation
    Purpose: Preserve the working Media operator workspace and add a
-            controlled entry into Media Insertion so newly created
-            campaigns return to this same D1-driven workflow.
+            controlled entry into Media Insertion, truthful stage queues,
+            clickable campaign records, and a separate expired archive.
 
    Production rules:
    - D1 media_records remains authoritative.
    - No campaign records are invented or written.
-   - Queue stages are derived from current placement state.
+   - Queue stages are derived conservatively from explicit state.
+   - Pending/planned records remain Preparing until readiness is explicit.
+   - Expired records are removed from active queues and shown separately.
+   - Priority and campaign cards open the existing insertion order.
    - The page answers: What media work should be done next?
    ========================================================= -->
 <!DOCTYPE html>
@@ -83,6 +86,11 @@
     .summary article{padding:17px;border:1px solid var(--border);border-radius:14px;background:#fff;box-shadow:var(--shadow)}
     .summary span{display:block;color:var(--muted);font-size:.7rem;font-weight:900;text-transform:uppercase}
     .summary strong{display:block;margin-top:7px;color:var(--navy);font-size:1.8rem}
+    .summary-detail{margin-top:7px;color:var(--muted);font-size:.74rem;line-height:1.35;text-transform:none!important;font-weight:700!important}
+    .clickable-record{cursor:pointer;transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease}
+    .clickable-record:hover{transform:translateY(-1px);border-color:#aac4eb;box-shadow:0 10px 22px rgba(31,104,216,.1)}
+    .clickable-record:focus-visible{outline:3px solid rgba(31,104,216,.24);outline-offset:2px}
+    .open-record{margin-top:8px;color:var(--blue);font-size:.7rem;font-weight:900;text-transform:uppercase;letter-spacing:.05em}
     .empty,.loading,.error{padding:22px;color:var(--muted);font-size:.84rem}
     .error{color:var(--critical);background:var(--critical-soft)}
     .table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:900px}
@@ -215,15 +223,15 @@
           <button class="button" id="expand-all" type="button">Expand All</button>
           <button class="button" id="collapse-all" type="button">Collapse All</button>
           <button class="button" id="refresh" type="button">Refresh</button>
-          <span class="version">media.html · v2.2.0</span>
+          <span class="version">media.html · v2.3.0</span>
         </div>
       </header>
 
       <section class="summary">
-        <article><span>Needs Action</span><strong id="count-action">—</strong></article>
-        <article><span>Preparing</span><strong id="count-preparing">—</strong></article>
-        <article><span>Running</span><strong id="count-running">—</strong></article>
-        <article><span>History</span><strong id="count-history">—</strong></article>
+        <article><span>Needs Action</span><strong id="count-action">—</strong><span class="summary-detail" id="detail-action">Records requiring an operating decision.</span></article>
+        <article><span>Upcoming Campaigns</span><strong id="count-preparing">—</strong><span class="summary-detail" id="detail-preparing">Preparing and explicitly ready campaigns.</span></article>
+        <article><span>Running</span><strong id="count-running">—</strong><span class="summary-detail" id="detail-running">Confirmed placements currently active.</span></article>
+        <article><span>Expired</span><strong id="count-history">—</strong><span class="summary-detail" id="detail-history">Past placements kept outside active queues.</span></article>
       </section>
 
 
@@ -261,9 +269,20 @@
         </button>
         <div class="queue-grid collapsible" id="queue-body">
           <section class="lane"><button class="lane-toggle" type="button" aria-expanded="true" data-target="lane-preparing"><span><strong>Preparing</strong><span>Upcoming placements requiring readiness</span></span><span class="lane-count" id="lane-preparing-count">0</span></button><div class="lane-list collapsible" id="lane-preparing"></div></section>
-          <section class="lane"><button class="lane-toggle" type="button" aria-expanded="true" data-target="lane-ready"><span><strong>Ready to Launch</strong><span>Upcoming with no current blocker</span></span><span class="lane-count" id="lane-ready-count">0</span></button><div class="lane-list collapsible" id="lane-ready"></div></section>
+          <section class="lane"><button class="lane-toggle" type="button" aria-expanded="true" data-target="lane-ready"><span><strong>Ready to Launch</strong><span>Only records explicitly marked ready</span></span><span class="lane-count" id="lane-ready-count">0</span></button><div class="lane-list collapsible" id="lane-ready"></div></section>
           <section class="lane"><button class="lane-toggle" type="button" aria-expanded="false" data-target="lane-running"><span><strong>Running</strong><span>Active placements and next operating step</span></span><span class="lane-count" id="lane-running-count">0</span></button><div class="lane-list collapsible" id="lane-running" hidden></div></section>
           <section class="lane"><button class="lane-toggle" type="button" aria-expanded="true" data-target="lane-awaiting"><span><strong>Awaiting Confirmation</strong><span>Sent instructions waiting for station proof</span></span><span class="lane-count" id="lane-awaiting-count">0</span></button><div class="lane-list collapsible" id="lane-awaiting"></div></section>
+        </div>
+      </section>
+
+
+      <section class="panel">
+        <button class="section-toggle" type="button" aria-expanded="false" data-target="expired-body">
+          <span class="title-wrap"><h2>Expired Placements</h2><p>Past placements removed from all active operating queues.</p></span>
+          <span class="chevron">⌄</span>
+        </button>
+        <div class="collapsible" id="expired-body" hidden>
+          <div class="lane-list" id="lane-expired"><div class="loading">Loading expired placements…</div></div>
         </div>
       </section>
 
@@ -302,6 +321,11 @@
   const needsAttention = r => r.needsAttention === true
     || ["attention","needs_attention"].includes(lower(r.attentionStatus))
     || Boolean(r.attentionReason);
+  const isExpired = r => lower(r.status) === "expired" || dateRelation(r) === "history";
+  const isExplicitlyReady = r => ["ready","ready_to_launch","ready-to-launch"].includes(lower(r.status))
+    || ["ready","ready_to_launch","ready-to-launch"].includes(lower(r.trafficStatus));
+  const recordUrl = r => `media-insertion.html?mediaRecordId=${encodeURIComponent(r.id)}`;
+  const openRecord = r => { if (r?.id) window.location.href = recordUrl(r); };
 
 
   const uniqueSorted = values => [...new Set(values.filter(Boolean).map(v => String(v).trim()))].sort((a,b) => a.localeCompare(b));
@@ -377,16 +401,18 @@
   }
 
   function urgency(r) {
+    if (isExpired(r)) return 0;
     if (isAwaiting(r)) return 100;
     if (needsAttention(r)) return 90;
-    if (lower(r.status) === "pending" || lower(r.status) === "planned") return 60;
+    if (["pending","planned","preparing"].includes(lower(r.status))) return 60;
     return 0;
   }
 
   function nextAction(r) {
     if (isAwaiting(r)) return "Review the expected station response and process confirmation evidence when it arrives.";
     if (needsAttention(r)) return r.attentionReason || "Open the production Media page and complete the required traffic action.";
-    if (["pending","planned"].includes(lower(r.status))) return "Confirm creative, dates, website banner, and social support before traffic is due.";
+    if (["pending","planned","preparing"].includes(lower(r.status))) return "Confirm creative, dates, website banner, and social support before traffic is due.";
+    if (isExplicitlyReady(r)) return "Launch package is explicitly ready. Send traffic or complete the next confirmed launch step.";
     if (lower(r.status) === "active") {
       const freshness = creativeFreshness(r);
       if (freshness && ["aging","stale","very-stale"].includes(freshness.level)) return freshness.recommendation;
@@ -398,13 +424,15 @@
   function card(r, badgeClass, badgeText) {
     const freshness = creativeFreshness(r);
     const freshnessHtml = freshness ? `<div class="meta"><span class="badge ${freshness.className}">${esc(freshness.label)}</span>${freshness.days === null ? "" : ` ${esc(freshness.days)} days since placement start`}</div>` : "";
-    return `<article class="card">
+    return `<article class="card clickable-record" role="link" tabindex="0" data-record-id="${esc(r.id)}" aria-label="Open media record ${esc(r.id)}">
       <span class="badge ${badgeClass}">${esc(badgeText)}</span>
       <strong>${esc(r.clientName || r.clientCode || "Client")} · ${esc(r.campaignName || r.creativeName || r.outletName || "Media placement")}</strong>
       <div class="meta">${esc(r.market || "Market not set")} · ${esc(r.outletName || "Outlet not set")}</div>
       <div class="meta">${dateText(r.startDate)} – ${dateText(r.endDate)}</div>
+      ${r.stationDeadline ? `<div class="meta"><strong>Traffic deadline:</strong> ${dateText(r.stationDeadline)}</div>` : ""}
       ${freshnessHtml}
       <div class="action">${esc(nextAction(r))}</div>
+      <div class="open-record">Open insertion order →</div>
     </article>`;
   }
 
@@ -426,7 +454,7 @@
       if (optimization) {
         const r = optimization.record;
         const f = optimization.freshness;
-        $("priority").innerHTML = `<div class="decision-grid">
+        $("priority").innerHTML = `<div class="decision-grid clickable-record" role="link" tabindex="0" data-record-id="${esc(r.id)}" aria-label="Open media record ${esc(r.id)}">
           <div class="decision"><span>Status</span><strong>No immediate media action required</strong></div>
           <div class="decision"><span>Optimization Opportunity</span><strong>${esc(r.clientName || r.clientCode || "Client")} · ${esc(r.campaignName || r.creativeName || "Media placement")}</strong></div>
           <div class="decision"><span>Creative Freshness</span><strong>${esc(f.label)}${f.days === null ? "" : ` · ${esc(f.days)} days since placement start`}</strong></div>
@@ -452,18 +480,18 @@
       needsAttention(chosen) ? (chosen.attentionReason || "The placement is inside its operating attention window.") :
       "The placement is approaching launch and campaign readiness must be confirmed.";
 
-    $("priority").innerHTML = `<div class="decision-grid">
+    $("priority").innerHTML = `<div class="decision-grid clickable-record" role="link" tabindex="0" data-record-id="${esc(chosen.id)}" aria-label="Open media record ${esc(chosen.id)}">
       <div class="decision"><span>Who</span><strong>${esc(chosen.clientName || chosen.clientCode || "Client")}</strong></div>
       <div class="decision"><span>What</span><strong>${esc(chosen.campaignName || chosen.creativeName || "Media placement")} · ${esc(chosen.outletName || "Outlet not set")}</strong></div>
       <div class="decision"><span>When</span><strong>${esc(when)}</strong></div>
       <div class="decision"><span>Why</span><strong>${esc(why)}</strong></div>
       <div class="decision"><span>Evidence</span><strong>Media Record #${esc(chosen.id)} · ${esc(chosen.status || "status unknown")}</strong></div>
-      <div class="decision next"><span>Next Action</span><strong>${esc(nextAction(chosen))}</strong></div>
+      <div class="decision next"><span>Next Action</span><strong>${esc(nextAction(chosen))}</strong><div class="open-record">Open insertion order →</div></div>
     </div>`;
   }
 
   function renderTable() {
-    const rows = records.map(r => `<tr>
+    const rows = records.map(r => `<tr class="clickable-record" data-record-id="${esc(r.id)}" tabindex="0" role="link">
       <td><strong>${esc(r.clientName || r.clientCode || "")}</strong><br><span class="meta">#${esc(r.id)}</span></td>
       <td>${esc(r.campaignName || "—")}<br><span class="meta">${esc(r.creativeName || r.fileName || "")}</span></td>
       <td>${esc(r.market || "—")}<br><span class="meta">${esc(r.outletName || "—")}</span></td>
@@ -478,27 +506,38 @@
   }
 
   function render() {
-    const preparing = records.filter(r => ["pending","planned"].includes(lower(r.status)) && needsAttention(r));
-    const ready = records.filter(r => ["pending","planned"].includes(lower(r.status)) && !needsAttention(r) && !isAwaiting(r));
-    const running = records.filter(r => lower(r.status) === "active" && !isAwaiting(r));
-    const awaiting = records.filter(isAwaiting);
-    const history = records.filter(r => lower(r.status) === "expired");
-    const actionCount = records.filter(r => needsAttention(r) || isAwaiting(r)).length;
+    const expired = records.filter(isExpired);
+    const activeRecords = records.filter(r => !isExpired(r));
+    const awaiting = activeRecords.filter(isAwaiting);
+    const ready = activeRecords.filter(r => isExplicitlyReady(r) && !isAwaiting(r));
+    const preparing = activeRecords.filter(r => !isAwaiting(r) && !isExplicitlyReady(r) && ["pending","planned","preparing"].includes(lower(r.status)));
+    const running = activeRecords.filter(r => lower(r.status) === "active" && !isAwaiting(r));
+    const actionCount = activeRecords.filter(r => needsAttention(r) || isAwaiting(r) || preparing.includes(r)).length;
+    const upcoming = [...preparing, ...ready];
 
     $("count-action").textContent = actionCount;
-    $("count-preparing").textContent = preparing.length + ready.length;
+    $("count-preparing").textContent = upcoming.length;
     $("count-running").textContent = running.length;
-    $("count-history").textContent = history.length;
+    $("count-history").textContent = expired.length;
     $("lane-preparing-count").textContent = preparing.length;
     $("lane-ready-count").textContent = ready.length;
     $("lane-running-count").textContent = running.length;
     $("lane-awaiting-count").textContent = awaiting.length;
+
+    const nextUpcoming = [...upcoming].sort((a,b) => String(a.stationDeadline || a.startDate || "9999").localeCompare(String(b.stationDeadline || b.startDate || "9999")))[0];
+    $("detail-preparing").textContent = nextUpcoming
+      ? `${nextUpcoming.clientName || nextUpcoming.clientCode || "Client"} · ${nextUpcoming.campaignName || nextUpcoming.creativeName || "Campaign"} · ${nextUpcoming.outletName || "Outlet not set"}${nextUpcoming.stationDeadline ? ` · traffic ${dateText(nextUpcoming.stationDeadline)}` : ""}`
+      : "No upcoming campaigns in the current view.";
+    $("detail-action").textContent = actionCount ? `${actionCount} record${actionCount === 1 ? "" : "s"} require preparation, attention, or confirmation.` : "No immediate operating action in the current view.";
+    $("detail-running").textContent = running.length ? `${running.length} confirmed placement${running.length === 1 ? " is" : "s are"} currently active.` : "No confirmed placements are currently running.";
+    $("detail-history").textContent = expired.length ? `${expired.length} past placement${expired.length === 1 ? "" : "s"} kept outside active queues.` : "No expired placements in the current view.";
 
     renderPriority();
     renderLane("lane-preparing", preparing, "b-warning", "Preparing");
     renderLane("lane-ready", ready, "b-success", "Ready");
     renderLane("lane-running", running, "b-info", "Running");
     renderLane("lane-awaiting", awaiting, "b-critical", "Awaiting");
+    renderLane("lane-expired", expired, "b-info", "Expired");
     renderTable();
   }
 
@@ -520,12 +559,18 @@
     } catch (error) {
       const message = esc(error?.message || "Media Operations could not load.");
       $("priority").innerHTML = `<div class="error">${message}</div>`;
-      ["lane-preparing","lane-ready","lane-running","lane-awaiting"].forEach(id => $(id).innerHTML = `<div class="error">${message}</div>`);
+      ["lane-preparing","lane-ready","lane-running","lane-awaiting","lane-expired"].forEach(id => $(id).innerHTML = `<div class="error">${message}</div>`);
       $("records").innerHTML = `<div class="error">${message}</div>`;
     }
   }
 
   document.addEventListener("click", event => {
+    const record = event.target.closest("[data-record-id]");
+    if (record) {
+      const found = rawRecords.find(r => String(r.id) === String(record.dataset.recordId));
+      if (found) openRecord(found);
+      return;
+    }
     const toggle = event.target.closest("[data-target]");
     if (!toggle) return;
     const target = $(toggle.dataset.target);
@@ -533,6 +578,15 @@
     const expanded = toggle.getAttribute("aria-expanded") !== "false";
     toggle.setAttribute("aria-expanded", String(!expanded));
     target.hidden = expanded;
+  });
+
+  document.addEventListener("keydown", event => {
+    if (!['Enter',' '].includes(event.key)) return;
+    const record = event.target.closest("[data-record-id]");
+    if (!record) return;
+    event.preventDefault();
+    const found = rawRecords.find(r => String(r.id) === String(record.dataset.recordId));
+    if (found) openRecord(found);
   });
 
   $("client").addEventListener("change", load);
