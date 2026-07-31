@@ -1,16 +1,29 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.7.0
+   Version: 7.7.1
    Status: Production Candidate
-   Source: Production Worker 7.5.0
-   Sprint: Media Confirmation — Operational Review
-   Purpose: Preserve all production routes and add the durable
-            Communications-to-Media review and approval bridge.
+   Source: worker.js 7.7.0
+   Sprint: Calendar — D1 Operations Integration
+   Purpose: Preserve all production routes and connect the
+            Calendar D1 operations handler for appointments,
+            reminders, appointment types, and availability rules.
    ========================================================= */
 
-import { VERSION, API_CONTRACT_VERSION, ACTIONS, corsHeaders } from "./shared/config.js";
-import { clean, safeErrorMessage, logWorkerError, jsonResponse } from "./shared/http.js";
+import {
+  VERSION,
+  API_CONTRACT_VERSION,
+  ACTIONS,
+  corsHeaders
+} from "./shared/config.js";
+
+import {
+  clean,
+  safeErrorMessage,
+  logWorkerError,
+  jsonResponse
+} from "./shared/http.js";
+
 import { handleCommunicationAnalysis } from "./routes/communicationAnalysis.js";
 import { handleClientWorkspace } from "./routes/clientWorkspace.js";
 import { handleClientDirectory } from "./routes/clientDirectory.js";
@@ -21,6 +34,26 @@ import { handleGuidedInvestigation } from "./routes/guidedInvestigation.js";
 import { handleProcessWorkItem } from "./routes/workItemProcessing.js";
 import { handleMediaOperations } from "./routes/mediaOperations.js";
 import { handleOperationalReviews } from "./routes/operationalReviews.js";
+import { handleCalendarOperations } from "./routes/calendarOperations.js";
+
+const CALENDAR_ACTIONS = new Set([
+  ACTIONS.GET_CALENDAR_APPOINTMENTS,
+  ACTIONS.CREATE_CALENDAR_APPOINTMENT,
+  ACTIONS.UPDATE_CALENDAR_APPOINTMENT,
+  ACTIONS.DELETE_CALENDAR_APPOINTMENT,
+
+  ACTIONS.GET_CALENDAR_REMINDERS,
+  ACTIONS.CREATE_CALENDAR_REMINDER,
+  ACTIONS.UPDATE_CALENDAR_REMINDER,
+  ACTIONS.DELETE_CALENDAR_REMINDER,
+
+  ACTIONS.GET_CALENDAR_APPOINTMENT_TYPES,
+  ACTIONS.CREATE_CALENDAR_APPOINTMENT_TYPE,
+  ACTIONS.UPDATE_CALENDAR_APPOINTMENT_TYPE,
+
+  ACTIONS.GET_CALENDAR_AVAILABILITY_RULES,
+  ACTIONS.UPDATE_CALENDAR_AVAILABILITY_RULES
+]);
 
 export default {
   async fetch(request, env) {
@@ -38,8 +71,9 @@ export default {
         system: "GCM OS Operational Worker",
         version: VERSION,
         contractVersion: API_CONTRACT_VERSION,
-        sprint: "Media Confirmation — Operational Review",
-        architecture: "Modular production router with guided Investigation reasoning.",
+        sprint: "Calendar — D1 Operations Integration",
+        architecture:
+          "Modular production router with guided Investigation reasoning and durable Calendar operations.",
         actions: Object.values(ACTIONS),
         engines: [
           "notification-detection",
@@ -54,7 +88,8 @@ export default {
           "guided-investigation",
           "investigation-processing",
           "work-item-processing",
-          "media-operations"
+          "media-operations",
+          "calendar-operations"
         ],
         modules: {
           shared: ["config", "http", "database", "ai"],
@@ -67,7 +102,9 @@ export default {
             "guided-investigation",
             "investigation-processing",
             "work-item-processing",
-            "media-operations"
+            "media-operations",
+            "operational-reviews",
+            "calendar-operations"
           ]
         },
         removedLegacyPipelines: [
@@ -82,14 +119,25 @@ export default {
     }
 
     if (request.method !== "POST") {
-      return jsonResponse({ ok: false, requestId, error: "Method not allowed." }, 405);
+      return jsonResponse({
+        ok: false,
+        requestId,
+        error: "Method not allowed."
+      }, 405);
     }
 
     let body;
+
     try {
       body = await request.json();
     } catch (error) {
-      logWorkerError({ requestId, route: "request-parser", stage: "request_validation", error });
+      logWorkerError({
+        requestId,
+        route: "request-parser",
+        stage: "request_validation",
+        error
+      });
+
       return jsonResponse({
         ok: false,
         requestId,
@@ -101,39 +149,60 @@ export default {
     const action = clean(body?.action);
 
     try {
+      if (CALENDAR_ACTIONS.has(action)) {
+        return await handleCalendarOperations(body, env, requestId);
+      }
+
       switch (action) {
         case ACTIONS.ANALYZE_COMMUNICATION:
           return await handleCommunicationAnalysis(body, env, requestId);
+
         case ACTIONS.GET_CLIENT_WORKSPACE:
           return await handleClientWorkspace(body, env, requestId);
+
         case ACTIONS.GET_CLIENT_DIRECTORY:
           return await handleClientDirectory(body, env, requestId);
+
         case ACTIONS.COMMIT_OPERATIONAL_DECISION:
           return await handleCommitOperationalDecision(body, env, requestId);
+
         case ACTIONS.GET_MISSION_CONTROL:
           return await handleMissionControl(body, env, requestId);
+
         case ACTIONS.GET_GUIDED_INVESTIGATION:
           return await handleGuidedInvestigation(body, env, requestId);
+
         case ACTIONS.PROCESS_INVESTIGATION:
           return await handleProcessInvestigation(body, env, requestId);
+
         case ACTIONS.PROCESS_WORK_ITEM:
           return await handleProcessWorkItem(body, env, requestId);
+
         case ACTIONS.GET_MEDIA_OPERATIONS:
           return await handleMediaOperations(body, env, requestId);
 
         case ACTIONS.OPERATIONAL_REVIEWS:
           return await handleOperationalReviews(body, env, requestId);
+
         default:
           return jsonResponse({
             ok: false,
             requestId,
             version: VERSION,
-            error: action ? `Unsupported action: ${action}` : "An action is required.",
+            error: action
+              ? `Unsupported action: ${action}`
+              : "An action is required.",
             supportedActions: Object.values(ACTIONS)
           }, 400);
       }
     } catch (error) {
-      logWorkerError({ requestId, route: action || "unknown", stage: "request_handler", error });
+      logWorkerError({
+        requestId,
+        route: action || "unknown",
+        stage: "request_handler",
+        error
+      });
+
       return jsonResponse({
         ok: false,
         requestId,
