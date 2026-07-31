@@ -1,16 +1,16 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/config.js
-   Version: 7.7.0
-   Status: Production
-   Source: Production Worker 7.6.1
-   Sprint: Media Confirmation — Operational Review
-   Purpose: Shared production constants and configuration.
-            Adds Operational Reviews while preserving all
-            existing production functionality.
+   Version: 7.7.1
+   Status: Production Candidate
+   Source: shared/config.js 7.7.0
+   Sprint: Calendar — D1 Operations Integration
+   Purpose: Preserve all existing production constants and add
+            Calendar appointment, reminder, appointment-type,
+            and availability-rule action contracts.
    ========================================================= */
 
-export const VERSION = "7.7.0";
+export const VERSION = "7.7.1";
 export const API_CONTRACT_VERSION = "communications-operational-decision-v3";
 export const COMMUNICATION_ANALYSIS_ENGINE_VERSION = "3.4.1";
 
@@ -33,9 +33,24 @@ export const ACTIONS = Object.freeze({
   PROCESS_INVESTIGATION: "process-investigation",
   PROCESS_WORK_ITEM: "process-work-item",
   GET_MEDIA_OPERATIONS: "get-media-operations",
+  OPERATIONAL_REVIEWS: "operational-reviews",
 
-  // NEW
-  OPERATIONAL_REVIEWS: "operational-reviews"
+  GET_CALENDAR_APPOINTMENTS: "get-calendar-appointments",
+  CREATE_CALENDAR_APPOINTMENT: "create-calendar-appointment",
+  UPDATE_CALENDAR_APPOINTMENT: "update-calendar-appointment",
+  DELETE_CALENDAR_APPOINTMENT: "delete-calendar-appointment",
+
+  GET_CALENDAR_REMINDERS: "get-calendar-reminders",
+  CREATE_CALENDAR_REMINDER: "create-calendar-reminder",
+  UPDATE_CALENDAR_REMINDER: "update-calendar-reminder",
+  DELETE_CALENDAR_REMINDER: "delete-calendar-reminder",
+
+  GET_CALENDAR_APPOINTMENT_TYPES: "get-calendar-appointment-types",
+  CREATE_CALENDAR_APPOINTMENT_TYPE: "create-calendar-appointment-type",
+  UPDATE_CALENDAR_APPOINTMENT_TYPE: "update-calendar-appointment-type",
+
+  GET_CALENDAR_AVAILABILITY_RULES: "get-calendar-availability-rules",
+  UPDATE_CALENDAR_AVAILABILITY_RULES: "update-calendar-availability-rules"
 });
 
 export const STAGE_STATUS = Object.freeze({
