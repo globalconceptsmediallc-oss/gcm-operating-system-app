@@ -1,14 +1,15 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: finance.html
-   Version: 1.4.0
-   Status: Production Candidate — Billing Account Management
-   Source: finance.html 1.3.0
+   Version: 1.5.0
+   Status: Production Candidate — Invoice PDF, Statements & Agency Branding
+   Source: finance.html 1.4.0
    Sprint: Finance / Scalable Billing Profiles
-   Purpose: Manage billing accounts, create fixed-package or
-            additional-service invoices, apply account-specific
-            invoice language, display website branding, email
-            invoices, record Check/ACH payments, and close cycles.
+   Purpose: Manage billing accounts, create fixed-package or additional-service invoices,
+            generate downloadable invoice PDFs, prepare Gmail drafts,
+            print account statements, apply account-specific invoice
+            language, display agency branding, record Check/ACH
+            payments, and close cycles.
    Production Contract: window.GCMOShell
    ========================================================= -->
 <!DOCTYPE html>
@@ -171,7 +172,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
     <button class="mobile btn" data-gcm-shell-menu-button type="button">Menu</button>
     <header class="top">
       <div><p class="eyebrow">Agency Finance</p><h1>Billing Workspace</h1><p class="sub">Manage billing profiles, create invoices, email them, and record Check or ACH payments.</p></div>
-      <div class="version">Installed version 1.4.0</div>
+      <div class="version">Installed version 1.5.0</div>
     </header>
 
     <section class="shell">
@@ -196,10 +197,12 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
 
         <div class="actions">
           <button class="btn primary" id="createInvoice">Create Invoice</button>
-          <button class="btn" id="reviewInvoice">Review Invoice</button>
-          <button class="btn" id="emailInvoice">Email Invoice</button>
+          <button class="btn" id="reviewInvoice">Invoice Preview</button>
+          <button class="btn" id="emailInvoice">Prepare Gmail Draft</button>
           <button class="btn success" id="recordPayment">Record Payment</button>
           <button class="btn" id="closeCycle">Close Billing Cycle</button>
+          <button class="btn" id="printStatement">Print Statement</button>
+          <button class="btn" id="agencyBranding">Agency Branding</button>
           <button class="btn" id="editAccount">Edit Billing Account</button>
         </div>
 
@@ -207,8 +210,8 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
           <div class="invoice-toolbar">
             <div class="left"><strong id="reviewLabel">Invoice Review</strong><span class="pill" id="invoiceStatus">draft</span></div>
             <div class="right">
-              <button class="btn" id="printInvoice" type="button">Print / Save PDF</button>
-              <button class="btn primary" id="emailFromReview" type="button">Email Invoice</button>
+              <button class="btn" id="printInvoice" type="button">Generate Invoice PDF</button>
+              <button class="btn primary" id="emailFromReview" type="button">Prepare Gmail Draft</button>
               <button class="btn" id="hideReview" type="button">Return to History</button>
             </div>
           </div>
@@ -218,7 +221,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
               <div class="invoice-top">
                 <div class="brand">
                   <div class="brand-logo" id="paperLogo">GCM</div>
-                  <div><h2>Global Concepts Media Agency</h2><p>Marketing • Website • SEO • Social Media • Content</p></div>
+                  <div><h2 id="paperAgencyName">Global Concepts Media Agency</h2><p>Marketing • Website • SEO • Social Media • Content</p></div>
                 </div>
                 <div class="invoice-title"><h2>INVOICE</h2><strong id="paperInvoiceNumber">#2238</strong></div>
               </div>
@@ -255,6 +258,54 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
               </div>
 
               <div class="invoice-note" id="paperNote">Payment method: Check or ACH. Thank you for your business.</div>
+            </div>
+          </article>
+        </section>
+
+        <section class="invoice-stage hidden" id="statementStage">
+          <div class="invoice-toolbar">
+            <div class="left"><strong id="statementReviewLabel">Account Statement</strong></div>
+            <div class="right">
+              <button class="btn primary" id="printStatementNow" type="button">Print / Save Statement PDF</button>
+              <button class="btn" id="hideStatement" type="button">Return to History</button>
+            </div>
+          </div>
+          <article class="invoice-paper">
+            <div class="invoice" id="statementPaper">
+              <div class="invoice-top">
+                <div class="brand">
+                  <div class="brand-logo" id="statementLogo">GCM</div>
+                  <div><h2>Global Concepts Media Agency</h2><p>Client Account Statement</p></div>
+                </div>
+                <div class="invoice-title"><h2>STATEMENT</h2><strong id="statementDate">—</strong></div>
+              </div>
+              <div class="invoice-meta">
+                <div class="billto">
+                  <span class="label">Statement For</span>
+                  <strong id="statementAccountName">—</strong>
+                  <span id="statementContact"></span>
+                  <span id="statementEmail"></span>
+                  <span id="statementAddress"></span>
+                </div>
+                <div class="meta-grid">
+                  <div class="meta-box"><span class="label">Total Invoiced</span><strong id="statementBilled">$0.00</strong></div>
+                  <div class="meta-box"><span class="label">Total Payments</span><strong id="statementPaid">$0.00</strong></div>
+                  <div class="meta-box"><span class="label">Current Balance</span><strong id="statementBalance">$0.00</strong></div>
+                  <div class="meta-box"><span class="label">Account Status</span><strong id="statementStatus">Current</strong></div>
+                </div>
+              </div>
+              <div style="overflow:auto">
+                <table class="invoice-table">
+                  <thead><tr><th>Date</th><th>Type</th><th>Reference</th><th>Description</th><th class="money">Charge</th><th class="money">Payment</th><th class="money">Balance</th></tr></thead>
+                  <tbody id="statementRows"></tbody>
+                </table>
+              </div>
+              <div class="invoice-total">
+                <table><tbody>
+                  <tr><td>Statement Balance</td><td class="money" id="statementGrandBalance">$0.00</td></tr>
+                </tbody></table>
+              </div>
+              <div class="invoice-note">This statement summarizes invoice and payment history recorded in GCM OS.</div>
             </div>
           </article>
         </section>
@@ -363,12 +414,31 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
   </form>
 </dialog>
 
+<dialog id="brandingDialog">
+  <form id="brandingForm">
+    <div class="dhead"><div><h2>Agency Branding</h2><p>This branding appears on every invoice and statement.</p></div><button class="close" id="closeBrandingDialog" type="button">×</button></div>
+    <div class="dbody">
+      <div class="grid">
+        <div class="field"><label>Agency Name</label><input id="agencyName" required></div>
+        <div class="field"><label>Agency Website</label><input id="agencyWebsite" type="url"></div>
+        <div class="field full"><label>Direct Agency Logo URL (optional)</label><input id="agencyLogoUrl" type="url" placeholder="https://yourwebsite.com/logo.png"></div>
+      </div>
+      <div class="callout"><strong>Important:</strong> The agency logo—not the client logo—appears on invoices and statements. A direct logo image URL gives the best result. Otherwise the website icon is used.</div>
+      <div class="logo-preview"><div class="logo-preview-box" id="agencyLogoPreview">GCM</div><button class="btn" id="previewAgencyLogo" type="button">Preview Agency Logo</button></div>
+    </div>
+    <div class="dactions"><button class="btn" id="cancelBranding" type="button">Cancel</button><button class="btn primary" type="submit">Save Agency Branding</button></div>
+  </form>
+</dialog>
+
 <div class="toast" id="toast"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
 <script src="shared/gcm-shell.js?v=1.0.2"></script>
 <script>
 (()=>{"use strict";
-const VERSION="1.4.0",KEY="gcm_finance_workspace_v1_4",$=id=>document.getElementById(id);
+const VERSION="1.5.0",KEY="gcm_finance_workspace_v1_5",$=id=>document.getElementById(id);
 const seed={
+  agency:{name:"Global Concepts Media Agency",website:"https://globalconceptsmediallc.com",logoUrl:""},
   selectedAccountId:1,selectedInvoiceId:null,nextInvoiceNumber:2238,nextAccountId:3,
   accounts:[
     {
@@ -395,7 +465,10 @@ const seed={
         {name:"Website • SEO",values:[400,400]},
         {name:"Social Media • Content",values:[400,400]}
       ],
-      transactions:[]
+      transactions:[
+        {id:301,date:"2026-07-01",dueDate:"2026-07-31",type:"invoice",reference:"2235",description:"Monthly Billing Package",invoiceType:"monthly",baseAmount:1600,extras:[],amount:1600,paidAmount:1600,status:"closed",email:""},
+        {id:302,date:"2026-07-15",type:"payment",reference:"ACH-JULY",description:"ACH",amount:1600,status:"closed",invoiceId:301}
+      ]
     }
   ]
 };
@@ -404,6 +477,7 @@ let state=load();
 function clone(v){return JSON.parse(JSON.stringify(v))}
 function migrate(v){
   if(!v||!Array.isArray(v.accounts))return clone(seed);
+  v.agency=v.agency||clone(seed.agency);
   v.nextAccountId=v.nextAccountId||Math.max(0,...v.accounts.map(a=>Number(a.id)||0))+1;
   v.accounts=v.accounts.map(a=>({
     contact:"",phone:"",address:"",website:"",logoUrl:"",termsDays:30,
@@ -415,7 +489,7 @@ function load(){
   try{
     const current=JSON.parse(localStorage.getItem(KEY));
     if(current)return migrate(current);
-    const old=JSON.parse(localStorage.getItem("gcm_finance_workspace_v1_3"));
+    const old=JSON.parse(localStorage.getItem("gcm_finance_workspace_v1_4"))||JSON.parse(localStorage.getItem("gcm_finance_workspace_v1_3"));
     if(old){
       const migrated=migrate(old);
       migrated.accounts=migrated.accounts.map(a=>{
@@ -448,6 +522,14 @@ function faviconUrl(website){
   try{return `https://www.google.com/s2/favicons?domain_url=${encodeURIComponent(new URL(website).origin)}&sz=128`}catch{return""}
 }
 function brandUrl(a){return a.logoUrl||faviconUrl(a.website)}
+function agency(){return state.agency||seed.agency}
+function agencyBrandUrl(){const a=agency();return a.logoUrl||faviconUrl(a.website)}
+function agencyImageBox(el){
+  const a=agency(),src=agencyBrandUrl();el.innerHTML="";
+  if(!src){el.textContent=initials(a.name||"GCM");return}
+  const img=document.createElement("img");img.src=src;img.alt=a.name||"Global Concepts Media Agency";
+  img.onerror=()=>{el.innerHTML="";el.textContent=initials(a.name||"GCM")};el.appendChild(img);
+}
 function imageBox(el,a,text){
   const src=brandUrl(a);el.innerHTML="";
   if(!src){el.textContent=text||initials(a.name);return}
@@ -471,7 +553,7 @@ function renderAccounts(){
     </button>`).join("");
   state.accounts.forEach(a=>{const el=document.querySelector(`[data-logo-for="${a.id}"]`);if(el)imageBox(el,a)});
   document.querySelectorAll("[data-account]").forEach(b=>b.onclick=()=>{
-    state.selectedAccountId=Number(b.dataset.account);state.selectedInvoiceId=null;save();hideInvoice();renderAll();
+    state.selectedAccountId=Number(b.dataset.account);state.selectedInvoiceId=null;save();hideInvoice();hideStatement();renderAll();
   });
 }
 function renderSummary(){
@@ -599,7 +681,8 @@ function paperRows(a,i){
 function showInvoice(){
   const a=account(),i=invoice();if(!i){toast("No invoice is available to review.");return}
   const source=i.accountSnapshot||a;state.selectedInvoiceId=i.id;save();
-  imageBox($("paperLogo"),source,"GCM");
+  agencyImageBox($("paperLogo"));
+  $("paperAgencyName").textContent=agency().name||"Global Concepts Media Agency";
   $("paperInvoiceNumber").textContent=`#${i.reference}`;$("paperBillTo").textContent=source.name||a.name;
   $("paperContact").textContent=source.contact||"";$("paperEmail").textContent=i.email||a.email||"Billing email not set";
   $("paperAddress").textContent=source.address||"";$("paperDate").textContent=date(i.date);$("paperDueDate").textContent=date(i.dueDate);
@@ -614,11 +697,35 @@ function showInvoice(){
   $("invoiceStage").classList.remove("hidden");$("invoiceStage").scrollIntoView({behavior:"smooth",block:"start"});
 }
 function hideInvoice(){$("invoiceStage").classList.add("hidden")}
-function emailCurrent(){
+async function createPdfBlob(element,filename){
+  if(!window.html2canvas||!window.jspdf?.jsPDF)throw new Error("PDF libraries did not load.");
+  const canvas=await window.html2canvas(element,{scale:2,useCORS:true,backgroundColor:"#ffffff"});
+  const img=canvas.toDataURL("image/jpeg",0.95),{jsPDF}=window.jspdf;
+  const pdf=new jsPDF({orientation:"portrait",unit:"pt",format:"letter"});
+  const pageW=pdf.internal.pageSize.getWidth(),pageH=pdf.internal.pageSize.getHeight(),margin=24;
+  const ratio=Math.min((pageW-margin*2)/canvas.width,(pageH-margin*2)/canvas.height);
+  pdf.addImage(img,"JPEG",margin,margin,canvas.width*ratio,canvas.height*ratio);
+  return {blob:pdf.output("blob"),filename};
+}
+function downloadBlob(blob,filename){
+  const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=filename;
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
+async function generateInvoicePdf(download=true){
+  const a=account(),i=invoice();if(!i){toast("No invoice is available.");return null}
+  showInvoice();
+  const result=await createPdfBlob(document.querySelector("#invoiceStage .invoice-paper"),`GCM-Invoice-${i.reference}-${a.name.replace(/[^a-z0-9]+/gi,"-")}.pdf`);
+  if(download)downloadBlob(result.blob,result.filename);
+  toast(`Invoice PDF ${download?"downloaded":"generated"}.`);
+  return result;
+}
+async function emailCurrent(){
   const a=account(),i=invoice();if(!i){toast("No invoice is available to email.");return}
   const recipient=i.email||a.email;if(!recipient){toast("A billing email has not been set for this account.");return}
-  const subject=encodeURIComponent(`Invoice #${i.reference} from Global Concepts Media Agency`);
-  const body=encodeURIComponent(`Hello${a.contact?` ${a.contact}`:""},
+  try{
+    await generateInvoicePdf(true);
+    const subject=encodeURIComponent(`Invoice #${i.reference} from ${agency().name||"Global Concepts Media Agency"}`);
+    const body=encodeURIComponent(`Hello${a.contact?` ${a.contact}`:""},
 
 Attached is invoice #${i.reference} for ${money(i.amount)}.
 
@@ -626,11 +733,57 @@ Invoice date: ${date(i.date)}
 Due date: ${date(i.dueDate)}
 Bill to: ${a.name}
 
+The invoice PDF has been downloaded. Please attach it to this Gmail draft before sending.
+
 Thank you,
-Global Concepts Media Agency`);
-  i.status="sent";save();renderAll();showInvoice();window.location.href=`mailto:${encodeURIComponent(recipient)}?subject=${subject}&body=${body}`;
-  toast(`Email prepared for ${recipient}. Attach the printed PDF before sending.`);
+${agency().name||"Global Concepts Media Agency"}`);
+    i.status="sent";save();renderAll();showInvoice();
+    window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(recipient)}&su=${subject}&body=${body}`,"_blank");
+    toast("Invoice PDF downloaded and Gmail draft opened. Attach the downloaded PDF before sending.");
+  }catch(err){console.error(err);toast(err.message||"Invoice PDF could not be generated.");}
 }
+function renderStatement(){
+  const a=account(),agencyData=agency();agencyImageBox($("statementLogo"));
+  $("statementAccountName").textContent=a.name;$("statementContact").textContent=a.contact||"";
+  $("statementEmail").textContent=a.email||"";$("statementAddress").textContent=a.address||"";
+  $("statementDate").textContent=date(today());$("statementReviewLabel").textContent=`${a.name} Account Statement`;
+  const tx=[...(a.transactions||[])].sort((x,y)=>String(x.date).localeCompare(String(y.date))||Number(x.id)-Number(y.id));
+  let running=0,billed=0,paid=0;
+  $("statementRows").innerHTML=tx.length?tx.map(t=>{
+    const charge=t.type==="invoice"?Number(t.amount||0):0,payment=t.type==="payment"?Number(t.amount||0):0;
+    billed+=charge;paid+=payment;running+=charge-payment;
+    return `<tr><td>${date(t.date)}</td><td>${t.type==="invoice"?"Invoice":"Payment"}</td><td>${esc(t.reference||"—")}</td><td>${esc(t.description||"—")}</td><td class="money">${charge?money(charge):"—"}</td><td class="money">${payment?money(payment):"—"}</td><td class="money">${money(running)}</td></tr>`;
+  }).join(""):`<tr><td colspan="7" class="empty">No financial history has been recorded.</td></tr>`;
+  const current=accountBalance(a);
+  $("statementBilled").textContent=money(billed);$("statementPaid").textContent=money(paid);
+  $("statementBalance").textContent=money(current);$("statementGrandBalance").textContent=money(current);
+  $("statementStatus").textContent=current>0?"Balance Due":"Current";
+}
+function showStatement(){
+  hideInvoice();renderStatement();$("statementStage").classList.remove("hidden");
+  $("statementStage").scrollIntoView({behavior:"smooth",block:"start"});
+}
+function hideStatement(){$("statementStage").classList.add("hidden")}
+async function generateStatementPdf(){
+  try{
+    renderStatement();
+    const a=account(),result=await createPdfBlob($("statementPaper"),`GCM-Statement-${a.name.replace(/[^a-z0-9]+/gi,"-")}-${today()}.pdf`);
+    downloadBlob(result.blob,result.filename);toast("Statement PDF downloaded.");
+  }catch(err){console.error(err);toast(err.message||"Statement PDF could not be generated.");}
+}
+function previewAgencyLogo(){
+  const test={name:$("agencyName").value||"Global Concepts Media Agency",website:$("agencyWebsite").value,logoUrl:$("agencyLogoUrl").value};
+  const old=state.agency;state.agency=test;agencyImageBox($("agencyLogoPreview"));state.agency=old;
+}
+function openBranding(){
+  const a=agency();$("agencyName").value=a.name||"Global Concepts Media Agency";$("agencyWebsite").value=a.website||"";
+  $("agencyLogoUrl").value=a.logoUrl||"";previewAgencyLogo();$("brandingDialog").showModal();
+}
+function saveBranding(e){
+  e.preventDefault();state.agency={name:$("agencyName").value.trim()||"Global Concepts Media Agency",website:$("agencyWebsite").value.trim(),logoUrl:$("agencyLogoUrl").value.trim()};
+  save();$("brandingDialog").close();renderAll();if(!$("invoiceStage").classList.contains("hidden"))showInvoice();toast("Agency branding updated.");
+}
+
 function openPayment(){
   const a=account(),i=openInvoice(a);if(!i){toast("There is no open invoice to pay.");return}
   state.selectedInvoiceId=i.id;save();$("paymentAccount").textContent=`Record payment for invoice #${i.reference} — ${a.name}.`;
@@ -656,7 +809,11 @@ $("deleteAccount").onclick=deleteAccount;$("addLocation").onclick=()=>addLocatio
 $("previewLogo").onclick=previewAccountLogo;$("accountWebsite").onchange=previewAccountLogo;$("accountLogoUrl").onchange=previewAccountLogo;
 
 $("createInvoice").onclick=openCreate;$("reviewInvoice").onclick=showInvoice;$("emailInvoice").onclick=emailCurrent;
-$("emailFromReview").onclick=emailCurrent;$("printInvoice").onclick=()=>window.print();$("hideReview").onclick=hideInvoice;
+$("emailFromReview").onclick=emailCurrent;$("printInvoice").onclick=()=>generateInvoicePdf(true);$("hideReview").onclick=hideInvoice;
+$("printStatement").onclick=showStatement;$("printStatementNow").onclick=generateStatementPdf;$("hideStatement").onclick=hideStatement;
+$("agencyBranding").onclick=openBranding;$("brandingForm").onsubmit=saveBranding;
+$("closeBrandingDialog").onclick=$("cancelBranding").onclick=()=>$("brandingDialog").close();
+$("previewAgencyLogo").onclick=previewAgencyLogo;$("agencyWebsite").onchange=previewAgencyLogo;$("agencyLogoUrl").onchange=previewAgencyLogo;
 $("recordPayment").onclick=openPayment;$("closeCycle").onclick=closeCycle;
 $("addExtraRow").onclick=()=>addExtraRow();$("invoiceForm").onsubmit=createInvoice;$("paymentForm").onsubmit=recordPayment;
 $("closeInvoiceDialog").onclick=$("cancelInvoice").onclick=()=>$("invoiceDialog").close();
