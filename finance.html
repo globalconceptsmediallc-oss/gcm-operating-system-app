@@ -1,1 +1,271 @@
+<!-- =========================================================
+   Global Concepts Media Operating System
+   File: finance.html
+   Version: 1.0.0
+   Status: Production Candidate — Road Test Ready
+   Source: GCM OS production navigation and agency billing workflow
+   Sprint: Finance / Billing Control Center
+   Purpose: Track invoice, statement, payment and balance status while
+            QuickBooks remains the accounting and invoicing system.
+   ========================================================= -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Finance | GCM OS</title>
+  <meta name="description" content="GCM OS Finance and Billing Control Center." />
+  <style>
+    :root{
+      --navy-950:#071426;--navy-900:#0b1d33;--navy-800:#112a47;
+      --blue-600:#1f68d8;--blue-500:#347ce8;--blue-100:#eaf2ff;
+      --gold:#d6a94a;--surface:#fff;--soft:#f5f7fb;--muted:#edf1f7;
+      --border:#dbe2ec;--text:#132238;--text-muted:#637083;
+      --success:#1f7a4f;--success-soft:#e9f7f0;--warning:#9a6414;
+      --warning-soft:#fff4dd;--critical:#b33a3a;--critical-soft:#fff0f0;
+      --shadow:0 8px 24px rgba(7,20,38,.07);--radius:16px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--soft);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5}
+    button,input,select,textarea{font:inherit}a{color:inherit;text-decoration:none}
+    .shell{min-height:100vh;display:grid;grid-template-columns:250px minmax(0,1fr)}
+    .sidebar{position:sticky;top:0;height:100vh;padding:24px 18px;display:flex;flex-direction:column;color:#fff;background:radial-gradient(circle at top right,rgba(52,124,232,.19),transparent 34%),linear-gradient(180deg,var(--navy-900),var(--navy-950));overflow-y:auto}
+    .brand{display:flex;gap:12px;align-items:center;padding:2px 8px 22px;border-bottom:1px solid rgba(255,255,255,.12)}
+    .mark{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;background:linear-gradient(135deg,var(--blue-500),#69a0ef);font-size:1.25rem;font-weight:800;box-shadow:0 8px 20px rgba(0,0,0,.22)}
+    .brand strong,.brand span{display:block}.brand strong{font-size:.94rem}.brand span span{margin-top:2px;color:#aebbd0;font-size:.72rem}
+    .nav-label{margin:22px 10px 8px;color:#7f91ab;font-size:.69rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+    nav{display:grid;gap:5px}.nav-link{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:10px;color:#c7d3e3;font-size:.88rem;font-weight:650}.nav-link:hover{background:rgba(255,255,255,.07);color:#fff}.nav-link.current{background:rgba(52,124,232,.2);color:#fff;box-shadow:inset 3px 0 0 var(--gold)}
+    .sidebar-footer{margin-top:auto;padding:18px 10px 0;border-top:1px solid rgba(255,255,255,.1);color:#8fa0b8;font-size:.72rem;line-height:1.6}
+    main{min-width:0;padding:30px}.inner{max-width:1500px;margin:0 auto}
+    .topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:24px}.eyebrow{margin:0 0 4px;color:var(--blue-600);font-size:.72rem;font-weight:850;letter-spacing:.12em;text-transform:uppercase}.topbar h1{margin:0;font-size:clamp(1.8rem,3vw,2.45rem);letter-spacing:-.04em}.subtitle{max-width:760px;margin:7px 0 0;color:var(--text-muted);font-size:.95rem}.version{white-space:nowrap;padding:9px 12px;border:1px solid var(--border);border-radius:999px;background:#fff;color:var(--text-muted);font-size:.75rem;font-weight:700}
+    .summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}.metric{padding:18px;border:1px solid var(--border);border-radius:var(--radius);background:#fff;box-shadow:var(--shadow)}.metric span{display:block;color:var(--text-muted);font-size:.76rem;font-weight:750;text-transform:uppercase;letter-spacing:.06em}.metric strong{display:block;margin-top:8px;font-size:1.7rem;letter-spacing:-.04em}.metric small{display:block;margin-top:5px;color:var(--text-muted);font-size:.75rem}
+    .panel{border:1px solid var(--border);border-radius:var(--radius);background:#fff;box-shadow:var(--shadow);overflow:hidden;margin-bottom:18px}.panel-head{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px 20px;border-bottom:1px solid var(--border)}.panel-head h2{margin:0;font-size:1.05rem}.panel-head p{margin:4px 0 0;color:var(--text-muted);font-size:.82rem}.panel-body{padding:18px 20px}
+    .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.toolbar input,.toolbar select{min-height:40px;padding:8px 10px;border:1px solid var(--border);border-radius:9px;background:#fff;color:var(--text)}.toolbar input{min-width:250px}.button{min-height:40px;padding:9px 14px;border:0;border-radius:9px;cursor:pointer;font-weight:800}.button.primary{background:var(--blue-600);color:#fff}.button.secondary{background:var(--muted);color:var(--text)}.button.danger{background:var(--critical-soft);color:var(--critical)}.button:disabled{cursor:not-allowed;opacity:.5}
+    .table-wrap{overflow:auto}.billing-table{width:100%;border-collapse:collapse;min-width:1080px}.billing-table th{padding:12px 11px;border-bottom:1px solid var(--border);color:var(--text-muted);font-size:.69rem;letter-spacing:.07em;text-align:left;text-transform:uppercase;background:#fbfcfe}.billing-table td{padding:13px 11px;border-bottom:1px solid var(--border);font-size:.84rem;vertical-align:middle}.billing-table tbody tr{cursor:pointer}.billing-table tbody tr:hover{background:#f8fbff}.billing-table tbody tr.selected{background:var(--blue-100)}.client-name{font-weight:800}.money{font-variant-numeric:tabular-nums;font-weight:750}.pill{display:inline-flex;align-items:center;min-height:26px;padding:4px 9px;border-radius:999px;font-size:.7rem;font-weight:850;white-space:nowrap}.pill.good{background:var(--success-soft);color:var(--success)}.pill.warn{background:var(--warning-soft);color:var(--warning)}.pill.bad{background:var(--critical-soft);color:var(--critical)}.pill.neutral{background:var(--muted);color:var(--text-muted)}
+    .workspace{display:grid;grid-template-columns:1.2fr .8fr;gap:18px}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.field{display:grid;gap:6px}.field.full{grid-column:1/-1}.field label{color:var(--text-muted);font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em}.field input,.field select,.field textarea{width:100%;padding:10px 11px;border:1px solid var(--border);border-radius:9px;background:#fff;color:var(--text)}.field textarea{min-height:112px;resize:vertical}.workspace-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}.activity-list{display:grid;gap:10px}.activity{padding:12px;border:1px solid var(--border);border-radius:10px;background:#fbfcfe}.activity strong{display:block;font-size:.83rem}.activity span{display:block;margin-top:3px;color:var(--text-muted);font-size:.75rem}.empty{padding:24px;border:1px dashed var(--border);border-radius:12px;color:var(--text-muted);text-align:center}
+    .status-message{display:none;margin-bottom:16px;padding:12px 14px;border-radius:10px;font-size:.82rem;font-weight:750}.status-message.show{display:block}.status-message.good{background:var(--success-soft);color:var(--success)}.status-message.bad{background:var(--critical-soft);color:var(--critical)}
+    @media(max-width:1100px){.summary{grid-template-columns:repeat(2,minmax(0,1fr))}.workspace{grid-template-columns:1fr}}
+    @media(max-width:820px){.shell{display:block}.sidebar{position:relative;height:auto}.sidebar-footer{display:none}main{padding:20px}.topbar{flex-direction:column}.summary{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.toolbar input{min-width:100%;width:100%}}
+  </style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <a class="brand" href="today.html"><span class="mark">G</span><span><strong>Global Concepts Media</strong><span>Agency Operating System</span></span></a>
+    <p class="nav-label">Workspace</p>
+    <nav>
+      <a class="nav-link" href="today.html">⌂ <span>Today</span></a>
+      <a class="nav-link" href="prospects.html">◎ <span>Prospects</span></a>
+      <a class="nav-link" href="clients.html">◫ <span>Clients</span></a>
+      <a class="nav-link" href="communications.html">✉ <span>Communications</span></a>
+      <a class="nav-link" href="work.html">✓ <span>Work</span></a>
+      <a class="nav-link" href="proof.html">↗ <span>Proof</span></a>
+      <a class="nav-link" href="media.html">◉ <span>Media</span></a>
+      <a class="nav-link current" href="finance.html">$ <span>Finance</span></a>
+      <a class="nav-link" href="#">★ <span>Case Studies</span></a>
+      <a class="nav-link" href="#">⚙ <span>Settings</span></a>
+    </nav>
+    <div class="sidebar-footer">Mission Control operational<br>Finance v1.0.0</div>
+  </aside>
 
+  <main>
+    <div class="inner">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Agency Finance</p>
+          <h1>Billing Control Center</h1>
+          <p class="subtitle">Track what must be invoiced, what has been sent through QuickBooks, and what money is still outstanding.</p>
+        </div>
+        <div class="version">Installed version 1.0.0</div>
+      </header>
+
+      <div id="statusMessage" class="status-message"></div>
+
+      <section class="summary" aria-label="Finance summary">
+        <article class="metric"><span>Monthly Recurring Revenue</span><strong id="mrr">$0</strong><small>Active client retainers</small></article>
+        <article class="metric"><span>Outstanding Receivables</span><strong id="outstanding">$0</strong><small>Open balances</small></article>
+        <article class="metric"><span>Ready to Invoice</span><strong id="readyCount">0</strong><small>Billing records needing QuickBooks invoices</small></article>
+        <article class="metric"><span>Payments Received</span><strong id="paidThisMonth">$0</strong><small>Recorded this billing cycle</small></article>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div><h2>Billing Queue</h2><p>Every active client appears once for the current billing cycle.</p></div>
+          <button class="button primary" id="newRecordBtn" type="button">Add Billing Record</button>
+        </div>
+        <div class="panel-body">
+          <div class="toolbar">
+            <input id="searchInput" type="search" placeholder="Search client or next action" />
+            <select id="statusFilter" aria-label="Filter billing status">
+              <option value="all">All statuses</option>
+              <option value="ready_to_invoice">Ready to invoice</option>
+              <option value="invoice_sent">Invoice sent</option>
+              <option value="statement_sent">Statement sent</option>
+              <option value="paid">Paid</option>
+              <option value="overdue">Overdue</option>
+            </select>
+            <button class="button secondary" id="resetBtn" type="button">Reset Demo Data</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="billing-table">
+            <thead><tr><th>Client</th><th>Retainer</th><th>Extra</th><th>Media</th><th>Invoice</th><th>Statement</th><th>Payment</th><th>Balance</th><th>Next Action</th></tr></thead>
+            <tbody id="billingRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <article class="panel">
+          <div class="panel-head"><div><h2>Client Billing Workspace</h2><p>Edit the selected client's operational billing record.</p></div><span id="selectedBadge" class="pill neutral">No client selected</span></div>
+          <div class="panel-body">
+            <div id="emptyWorkspace" class="empty">Select a client from the Billing Queue.</div>
+            <form id="billingForm" hidden>
+              <input id="recordId" type="hidden" />
+              <div class="form-grid">
+                <div class="field"><label for="clientName">Client</label><input id="clientName" required /></div>
+                <div class="field"><label for="billingMonth">Billing Month</label><input id="billingMonth" type="month" required /></div>
+                <div class="field"><label for="retainer">Monthly Retainer</label><input id="retainer" type="number" min="0" step="0.01" /></div>
+                <div class="field"><label for="extraWork">Additional Work</label><input id="extraWork" type="number" min="0" step="0.01" /></div>
+                <div class="field"><label for="mediaCharges">Media Charges</label><input id="mediaCharges" type="number" min="0" step="0.01" /></div>
+                <div class="field"><label for="amountPaid">Amount Paid</label><input id="amountPaid" type="number" min="0" step="0.01" /></div>
+                <div class="field"><label for="invoiceStatus">Invoice Status</label><select id="invoiceStatus"><option value="not_created">Not created</option><option value="ready">Ready</option><option value="sent">Sent</option></select></div>
+                <div class="field"><label for="statementStatus">Statement Status</label><select id="statementStatus"><option value="not_needed">Not needed</option><option value="not_sent">Not sent</option><option value="sent">Sent</option></select></div>
+                <div class="field"><label for="paymentStatus">Payment Status</label><select id="paymentStatus"><option value="unpaid">Unpaid</option><option value="partial">Partial</option><option value="paid">Paid</option><option value="overdue">Overdue</option></select></div>
+                <div class="field"><label for="invoiceNumber">QuickBooks Invoice Number</label><input id="invoiceNumber" placeholder="Optional" /></div>
+                <div class="field full"><label for="notes">Billing Notes</label><textarea id="notes" placeholder="Statement sent, payment arrangement, extra work explanation, or other billing note."></textarea></div>
+              </div>
+              <div class="workspace-actions">
+                <button class="button primary" type="submit">Save Billing Record</button>
+                <button class="button secondary" id="markInvoiceBtn" type="button">Mark Invoice Sent</button>
+                <button class="button secondary" id="markStatementBtn" type="button">Mark Statement Sent</button>
+                <button class="button secondary" id="markPaidBtn" type="button">Mark Paid</button>
+                <button class="button danger" id="deleteBtn" type="button">Delete</button>
+              </div>
+            </form>
+          </div>
+        </article>
+
+        <aside class="panel">
+          <div class="panel-head"><div><h2>QuickBooks Activity</h2><p>Operational history only. QuickBooks remains the accounting system.</p></div></div>
+          <div class="panel-body"><div id="activityList" class="activity-list"><div class="empty">Select a billing record to view its activity.</div></div></div>
+        </aside>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const STORAGE_KEY = "gcm_finance_records_v1";
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
+  const seed = [
+    {id:1,client:"Southeast Safes",month:currentMonth,retainer:3050,extra:0,media:0,paid:3050,invoice:"sent",statement:"not_needed",payment:"paid",invoiceNumber:"",notes:"",activity:["Payment recorded for current billing cycle.","QuickBooks invoice marked sent."]},
+    {id:2,client:"A1 Action Safe & Lock",month:currentMonth,retainer:0,extra:0,media:0,paid:0,invoice:"ready",statement:"not_needed",payment:"unpaid",invoiceNumber:"",notes:"Confirm current monthly billing amount before invoicing.",activity:["Billing record opened for current cycle."]},
+    {id:3,client:"HB Guns",month:currentMonth,retainer:0,extra:0,media:0,paid:0,invoice:"ready",statement:"not_needed",payment:"unpaid",invoiceNumber:"",notes:"",activity:["Billing record opened for current cycle."]},
+    {id:4,client:"North Florida Safes",month:currentMonth,retainer:0,extra:0,media:0,paid:0,invoice:"ready",statement:"not_needed",payment:"unpaid",invoiceNumber:"",notes:"",activity:["Billing record opened for current cycle."]},
+    {id:5,client:"Pickett Weaponry",month:currentMonth,retainer:0,extra:0,media:0,paid:0,invoice:"ready",statement:"not_needed",payment:"unpaid",invoiceNumber:"",notes:"",activity:["Billing record opened for current cycle."]},
+    {id:6,client:"Move A Safe",month:currentMonth,retainer:0,extra:0,media:0,paid:0,invoice:"ready",statement:"not_needed",payment:"unpaid",invoiceNumber:"",notes:"",activity:["Billing record opened for current cycle."]},
+    {id:7,client:"South Florida Safes",month:currentMonth,retainer:0,extra:0,media:0,paid:0,invoice:"sent",statement:"sent",payment:"overdue",invoiceNumber:"",notes:"Statement sent through QuickBooks.",activity:["Statement marked sent.","QuickBooks invoice marked sent."]},
+    {id:8,client:"Lumi Studio",month:currentMonth,retainer:0,extra:0,media:0,paid:0,invoice:"not_created",statement:"not_needed",payment:"unpaid",invoiceNumber:"",notes:"Internal IP; no invoice required unless activated.",activity:["Billing record created."]},
+    {id:9,client:"Global Concepts Media",month:currentMonth,retainer:0,extra:0,media:0,paid:0,invoice:"not_created",statement:"not_needed",payment:"unpaid",invoiceNumber:"",notes:"Internal company record.",activity:["Billing record created."]}
+  ];
+
+  const $ = id => document.getElementById(id);
+  let records = load();
+  let selectedId = null;
+
+  function load(){
+    try{return JSON.parse(localStorage.getItem(STORAGE_KEY)) || structuredClone(seed)}catch{return structuredClone(seed)}
+  }
+  function persist(){localStorage.setItem(STORAGE_KEY,JSON.stringify(records))}
+  function money(value){return new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:2}).format(Number(value)||0)}
+  function total(r){return Number(r.retainer||0)+Number(r.extra||0)+Number(r.media||0)}
+  function balance(r){return Math.max(0,total(r)-Number(r.paid||0))}
+  function nextAction(r){
+    if(r.payment==="paid" || balance(r)===0 && total(r)>0) return "None";
+    if(r.payment==="overdue") return "Follow up on payment";
+    if(r.invoice==="not_created" || r.invoice==="ready") return "Create invoice in QuickBooks";
+    if(r.invoice==="sent" && r.statement!=="sent") return "Monitor payment";
+    if(r.statement==="sent") return "Await payment";
+    return "Review billing record";
+  }
+  function workflowStatus(r){
+    if(r.payment==="overdue") return "overdue";
+    if(r.payment==="paid" || balance(r)===0 && total(r)>0) return "paid";
+    if(r.statement==="sent") return "statement_sent";
+    if(r.invoice==="sent") return "invoice_sent";
+    return "ready_to_invoice";
+  }
+  function pill(value,type){
+    const labels={not_created:"Not created",ready:"Ready",sent:"Sent",not_needed:"Not needed",not_sent:"Not sent",unpaid:"Unpaid",partial:"Partial",paid:"Paid",overdue:"Overdue"};
+    let cls="neutral";
+    if(value==="sent"||value==="paid") cls="good";
+    if(value==="ready"||value==="partial"||value==="not_sent") cls="warn";
+    if(value==="overdue") cls="bad";
+    return `<span class="pill ${cls}">${labels[value]||value}</span>`;
+  }
+  function render(){
+    const query=$("searchInput").value.trim().toLowerCase();
+    const filter=$("statusFilter").value;
+    const visible=records.filter(r=>{
+      const matches=!query || `${r.client} ${nextAction(r)}`.toLowerCase().includes(query);
+      const status=workflowStatus(r);
+      return matches && (filter==="all" || status===filter);
+    });
+    $("billingRows").innerHTML=visible.map(r=>`<tr data-id="${r.id}" class="${r.id===selectedId?"selected":""}"><td><span class="client-name">${escapeHtml(r.client)}</span></td><td class="money">${money(r.retainer)}</td><td class="money">${money(r.extra)}</td><td class="money">${money(r.media)}</td><td>${pill(r.invoice)}</td><td>${pill(r.statement)}</td><td>${pill(r.payment)}</td><td class="money">${money(balance(r))}</td><td>${escapeHtml(nextAction(r))}</td></tr>`).join("") || `<tr><td colspan="9"><div class="empty">No billing records match the current filters.</div></td></tr>`;
+    document.querySelectorAll("#billingRows tr[data-id]").forEach(row=>row.addEventListener("click",()=>selectRecord(Number(row.dataset.id))));
+    const active=records.filter(r=>r.client!=="Lumi Studio"&&r.client!=="Global Concepts Media");
+    $("mrr").textContent=money(active.reduce((s,r)=>s+Number(r.retainer||0),0));
+    $("outstanding").textContent=money(records.reduce((s,r)=>s+balance(r),0));
+    $("readyCount").textContent=records.filter(r=>workflowStatus(r)==="ready_to_invoice").length;
+    $("paidThisMonth").textContent=money(records.reduce((s,r)=>s+Number(r.paid||0),0));
+  }
+  function selectRecord(id){
+    selectedId=id; const r=records.find(x=>x.id===id); if(!r)return;
+    $("emptyWorkspace").hidden=true; $("billingForm").hidden=false;
+    $("recordId").value=r.id; $("clientName").value=r.client; $("billingMonth").value=r.month;
+    $("retainer").value=r.retainer; $("extraWork").value=r.extra; $("mediaCharges").value=r.media; $("amountPaid").value=r.paid;
+    $("invoiceStatus").value=r.invoice; $("statementStatus").value=r.statement; $("paymentStatus").value=r.payment; $("invoiceNumber").value=r.invoiceNumber||""; $("notes").value=r.notes||"";
+    $("selectedBadge").className=`pill ${r.payment==="overdue"?"bad":r.payment==="paid"?"good":"warn"}`; $("selectedBadge").textContent=r.client;
+    $("activityList").innerHTML=(r.activity||[]).map((a,i)=>`<div class="activity"><strong>${escapeHtml(a)}</strong><span>Entry ${i+1} · ${new Date().toLocaleDateString()}</span></div>`).join("") || `<div class="empty">No activity recorded.</div>`;
+    render();
+  }
+  function saveForm(){
+    const id=Number($("recordId").value); const r=records.find(x=>x.id===id); if(!r)return;
+    Object.assign(r,{client:$("clientName").value.trim(),month:$("billingMonth").value,retainer:Number($("retainer").value||0),extra:Number($("extraWork").value||0),media:Number($("mediaCharges").value||0),paid:Number($("amountPaid").value||0),invoice:$("invoiceStatus").value,statement:$("statementStatus").value,payment:$("paymentStatus").value,invoiceNumber:$("invoiceNumber").value.trim(),notes:$("notes").value.trim()});
+    r.activity=r.activity||[]; r.activity.unshift("Billing record updated."); persist(); render(); selectRecord(id); flash("Billing record saved.","good");
+  }
+  function quickUpdate(kind){
+    const r=records.find(x=>x.id===selectedId); if(!r)return;
+    r.activity=r.activity||[];
+    if(kind==="invoice"){r.invoice="sent";r.activity.unshift("QuickBooks invoice marked sent.")}
+    if(kind==="statement"){r.statement="sent";r.activity.unshift("Statement marked sent.")}
+    if(kind==="paid"){r.payment="paid";r.paid=total(r);r.activity.unshift("Payment marked received in full.")}
+    persist();render();selectRecord(r.id);flash("Billing status updated.","good");
+  }
+  function addRecord(){
+    const id=Math.max(0,...records.map(r=>r.id))+1;
+    const r={id,client:"New Client",month:currentMonth,retainer:0,extra:0,media:0,paid:0,invoice:"not_created",statement:"not_needed",payment:"unpaid",invoiceNumber:"",notes:"",activity:["Billing record created."]};
+    records.push(r);persist();render();selectRecord(id);flash("New billing record created.","good");
+  }
+  function deleteRecord(){
+    if(!selectedId)return; const r=records.find(x=>x.id===selectedId); if(!r)return;
+    if(!confirm(`Delete the billing record for ${r.client}?`))return;
+    records=records.filter(x=>x.id!==selectedId);selectedId=null;persist();render();$("billingForm").hidden=true;$("emptyWorkspace").hidden=false;$("selectedBadge").className="pill neutral";$("selectedBadge").textContent="No client selected";$("activityList").innerHTML='<div class="empty">Select a billing record to view its activity.</div>';flash("Billing record deleted.","good");
+  }
+  function reset(){if(!confirm("Reset Finance to the original road-test data?"))return;records=structuredClone(seed);selectedId=null;persist();render();location.reload()}
+  function flash(text,type){const el=$("statusMessage");el.textContent=text;el.className=`status-message show ${type}`;setTimeout(()=>el.className="status-message",3000)}
+  function escapeHtml(v){return String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]))}
+
+  $("billingForm").addEventListener("submit",e=>{e.preventDefault();saveForm()});
+  $("searchInput").addEventListener("input",render); $("statusFilter").addEventListener("change",render);
+  $("newRecordBtn").addEventListener("click",addRecord); $("resetBtn").addEventListener("click",reset); $("deleteBtn").addEventListener("click",deleteRecord);
+  $("markInvoiceBtn").addEventListener("click",()=>quickUpdate("invoice")); $("markStatementBtn").addEventListener("click",()=>quickUpdate("statement")); $("markPaidBtn").addEventListener("click",()=>quickUpdate("paid"));
+  render();
+})();
+</script>
+</body>
+</html>
