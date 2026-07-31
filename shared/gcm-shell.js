@@ -1,18 +1,18 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gcm-shell.js
-   Version: 1.0.1
+   Version: 1.0.2
    Status: Production Candidate
    Purpose: Shared internal GCM OS application shell foundation.
    Source: gcm-shell.js 1.0.0 production navigation
    Sprint: Finance Navigation Integration
-   Change: Adds Finance as an active shared-shell destination.
+   Change: Restores production window.GCMOShell contract and preserves Finance navigation.
    ========================================================= */
 
 (() => {
   "use strict";
 
-  const SHELL_VERSION = "1.0.1";
+  const SHELL_VERSION = "1.0.2";
 
   const PAGE_MAP = {
     today: {
@@ -412,7 +412,7 @@
     return true;
   }
 
-  window.GCMOSShell = Object.freeze({
+  window.GCMOShell = Object.freeze({
     version: SHELL_VERSION,
     mount
   });
