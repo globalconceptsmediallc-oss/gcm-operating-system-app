@@ -1,10 +1,17 @@
+Library
+/
+gcm-shell.txt
+
+
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gcm-shell.js
    Version: 1.0.1
    Status: Production Candidate
    Purpose: Shared internal GCM OS application shell foundation.
-   Source: today.html 1.4.0 + clients.html 1.0.1 production audit
+   Source: gcm-shell.js 1.0.0 production navigation
+   Sprint: Finance Navigation Integration
+   Change: Adds Finance as an active shared-shell destination.
    ========================================================= */
 
 (() => {
@@ -20,7 +27,7 @@
     },
     prospects: {
       label: "Prospects",
-      href: "prospects.html",
+      href: "client-pre-research.html",
       icon: "◎"
     },
     clients: {
@@ -47,6 +54,11 @@
       label: "Media",
       href: "media.html",
       icon: "◉"
+    },
+    finance: {
+      label: "Finance",
+      href: "finance.html",
+      icon: "$"
     }
   };
 
@@ -370,7 +382,8 @@
   function mount(options = {}) {
     injectStyles();
 
-    const sidebarSelector = options.sidebarSelector || "[data-gcm-shell-sidebar]";
+    const sidebarSelector =
+      options.sidebarSelector || "[data-gcm-shell-sidebar]";
     const mobileMenuSelector =
       options.mobileMenuSelector || "[data-gcm-shell-menu-button]";
 
@@ -383,7 +396,10 @@
       return false;
     }
 
-    const currentPage = String(options.currentPage || "").trim().toLowerCase();
+    const currentPage = String(options.currentPage || "")
+      .trim()
+      .toLowerCase();
+
     const statusText =
       String(options.statusText || "GCM OS operational").trim() ||
       "GCM OS operational";
@@ -401,7 +417,7 @@
     return true;
   }
 
-  window.GCMOShell = Object.freeze({
+  window.GCMOSShell = Object.freeze({
     version: SHELL_VERSION,
     mount
   });
