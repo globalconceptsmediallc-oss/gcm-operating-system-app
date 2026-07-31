@@ -1,524 +1,2071 @@
--- =========================================================
--- Global Concepts Media Operating System
--- File: migrations/0014_calendar_foundation.sql
--- Version: 1.0.0
--- Status: Production Candidate
--- Source: New Calendar D1 foundation
--- Sprint: Calendar / Durable Records
--- Purpose: Create production D1 tables for appointments,
---          reminders, appointment types, and availability rules.
---          Seeds configuration only; creates no fake appointments.
--- =========================================================
-
-PRAGMA foreign_keys = ON;
-
-BEGIN TRANSACTION;
-
--- ---------------------------------------------------------
--- 1. Appointment Types
--- Reusable meeting definitions shown inside GCM OS and,
--- later, on the public Global Concepts Media booking page.
--- ---------------------------------------------------------
-CREATE TABLE IF NOT EXISTS calendar_appointment_types (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-    name TEXT NOT NULL,
-    slug TEXT NOT NULL UNIQUE,
-
-    description TEXT,
-
-    duration_minutes INTEGER NOT NULL DEFAULT 60
-        CHECK (duration_minutes > 0),
-
-    maximum_per_day INTEGER
-        CHECK (maximum_per_day IS NULL OR maximum_per_day > 0),
-
-    preparation_required INTEGER NOT NULL DEFAULT 0
-        CHECK (preparation_required IN (0, 1)),
-
-    allow_google_meet INTEGER NOT NULL DEFAULT 1
-        CHECK (allow_google_meet IN (0, 1)),
-
-    allow_phone INTEGER NOT NULL DEFAULT 1
-        CHECK (allow_phone IN (0, 1)),
-
-    allow_in_person INTEGER NOT NULL DEFAULT 0
-        CHECK (allow_in_person IN (0, 1)),
-
-    is_public INTEGER NOT NULL DEFAULT 0
-        CHECK (is_public IN (0, 1)),
-
-    is_active INTEGER NOT NULL DEFAULT 1
-        CHECK (is_active IN (0, 1)),
-
-    display_order INTEGER NOT NULL DEFAULT 0,
-
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_calendar_appointment_types_active
-    ON calendar_appointment_types (is_active, display_order, name);
-
-CREATE INDEX IF NOT EXISTS idx_calendar_appointment_types_public
-    ON calendar_appointment_types (is_public, is_active, display_order);
-
-
--- ---------------------------------------------------------
--- 2. Availability Rules
--- One active agency-wide row is seeded for the first release.
--- The schema supports future owner/user-specific rule sets.
--- Days are stored as JSON integers:
--- Sunday=0 through Saturday=6.
--- ---------------------------------------------------------
-CREATE TABLE IF NOT EXISTS calendar_availability_rules (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-    owner_key TEXT NOT NULL DEFAULT 'andy'
-        UNIQUE,
-
-    timezone TEXT NOT NULL DEFAULT 'America/New_York',
-
-    available_days_json TEXT NOT NULL DEFAULT '[1,2,3,4,5]',
-
-    start_time TEXT NOT NULL DEFAULT '09:00',
-    end_time TEXT NOT NULL DEFAULT '17:00',
-
-    minimum_advance_notice_hours INTEGER NOT NULL DEFAULT 24
-        CHECK (minimum_advance_notice_hours >= 0),
-
-    maximum_booking_window_days INTEGER NOT NULL DEFAULT 90
-        CHECK (maximum_booking_window_days > 0),
-
-    buffer_before_minutes INTEGER NOT NULL DEFAULT 15
-        CHECK (buffer_before_minutes >= 0),
-
-    buffer_after_minutes INTEGER NOT NULL DEFAULT 15
-        CHECK (buffer_after_minutes >= 0),
-
-    travel_buffer_minutes INTEGER NOT NULL DEFAULT 60
-        CHECK (travel_buffer_minutes >= 0),
-
-    maximum_meetings_per_day INTEGER NOT NULL DEFAULT 4
-        CHECK (maximum_meetings_per_day > 0),
-
-    booking_enabled INTEGER NOT NULL DEFAULT 0
-        CHECK (booking_enabled IN (0, 1)),
-
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-
--- ---------------------------------------------------------
--- 3. Calendar Appointments
--- Durable source of truth for:
---   - appointments created in GCM OS
---   - future website bookings
---   - future Google Calendar synchronization
--- No sample or fake appointment rows are inserted.
--- ---------------------------------------------------------
-CREATE TABLE IF NOT EXISTS calendar_appointments (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-    appointment_type_id INTEGER,
-
-    client_id INTEGER,
-    prospect_id INTEGER,
-
-    title TEXT NOT NULL,
-
-    contact_name TEXT,
-    company_name TEXT,
-    contact_email TEXT,
-    contact_phone TEXT,
-
-    appointment_date TEXT NOT NULL,
-    start_time TEXT NOT NULL,
-    end_time TEXT,
-
-    timezone TEXT NOT NULL DEFAULT 'America/New_York',
-
-    location_type TEXT NOT NULL DEFAULT 'phone'
-        CHECK (
-            location_type IN (
-                'google_meet',
-                'phone',
-                'in_person'
-            )
-        ),
-
-    location_name TEXT,
-    location_address TEXT,
-    meeting_url TEXT,
-
-    status TEXT NOT NULL DEFAULT 'scheduled'
-        CHECK (
-            status IN (
-                'requested',
-                'scheduled',
-                'confirmation_sent',
-                'confirmed',
-                'rescheduled',
-                'completed',
-                'cancelled',
-                'no_show'
-            )
-        ),
-
-    source_type TEXT NOT NULL DEFAULT 'internal'
-        CHECK (
-            source_type IN (
-                'internal',
-                'public_booking',
-                'google_calendar',
-                'import'
-            )
-        ),
-
-    public_booking_reference TEXT UNIQUE,
-
-    confirmation_sent_at TEXT,
-    confirmed_at TEXT,
-    cancelled_at TEXT,
-    completed_at TEXT,
-
-    preparation_required INTEGER NOT NULL DEFAULT 0
-        CHECK (preparation_required IN (0, 1)),
-
-    follow_up_required INTEGER NOT NULL DEFAULT 0
-        CHECK (follow_up_required IN (0, 1)),
-
-    notes TEXT,
-
-    google_calendar_event_id TEXT UNIQUE,
-
-    created_by TEXT,
-    updated_by TEXT,
-
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    FOREIGN KEY (appointment_type_id)
-        REFERENCES calendar_appointment_types (id)
-        ON DELETE SET NULL,
-
-    FOREIGN KEY (client_id)
-        REFERENCES clients (id)
-        ON DELETE SET NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_calendar_appointments_date
-    ON calendar_appointments (appointment_date, start_time);
-
-CREATE INDEX IF NOT EXISTS idx_calendar_appointments_status_date
-    ON calendar_appointments (status, appointment_date, start_time);
-
-CREATE INDEX IF NOT EXISTS idx_calendar_appointments_client
-    ON calendar_appointments (client_id, appointment_date);
-
-CREATE INDEX IF NOT EXISTS idx_calendar_appointments_type
-    ON calendar_appointments (appointment_type_id, appointment_date);
-
-CREATE INDEX IF NOT EXISTS idx_calendar_appointments_source
-    ON calendar_appointments (source_type, appointment_date);
-
-
--- ---------------------------------------------------------
--- 4. Calendar Reminders
--- Standalone day-to-day reminders created directly in Calendar.
--- Operational records from Media, Work, Finance, Investigations,
--- and Proof remain in their own tables and will later be exposed
--- through a combined calendar-feed endpoint.
--- ---------------------------------------------------------
-CREATE TABLE IF NOT EXISTS calendar_reminders (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-    client_id INTEGER,
-
-    title TEXT NOT NULL,
-    description TEXT,
-
-    reminder_date TEXT NOT NULL,
-    reminder_time TEXT,
-
-    timezone TEXT NOT NULL DEFAULT 'America/New_York',
-
-    priority TEXT NOT NULL DEFAULT 'normal'
-        CHECK (
-            priority IN (
-                'low',
-                'normal',
-                'high',
-                'urgent'
-            )
-        ),
-
-    status TEXT NOT NULL DEFAULT 'open'
-        CHECK (
-            status IN (
-                'open',
-                'completed',
-                'dismissed',
-                'cancelled'
-            )
-        ),
-
-    recurrence_rule TEXT,
-
-    source_type TEXT NOT NULL DEFAULT 'calendar'
-        CHECK (
-            source_type IN (
-                'calendar',
-                'communication',
-                'investigation',
-                'work_item',
-                'media',
-                'finance',
-                'proof',
-                'system'
-            )
-        ),
-
-    source_record_id INTEGER,
-    source_url TEXT,
-
-    completed_at TEXT,
-    dismissed_at TEXT,
-
-    created_by TEXT,
-    updated_by TEXT,
-
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    FOREIGN KEY (client_id)
-        REFERENCES clients (id)
-        ON DELETE SET NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_calendar_reminders_date
-    ON calendar_reminders (reminder_date, reminder_time);
-
-CREATE INDEX IF NOT EXISTS idx_calendar_reminders_status_date
-    ON calendar_reminders (status, reminder_date, reminder_time);
-
-CREATE INDEX IF NOT EXISTS idx_calendar_reminders_client
-    ON calendar_reminders (client_id, reminder_date);
-
-CREATE INDEX IF NOT EXISTS idx_calendar_reminders_source
-    ON calendar_reminders (source_type, source_record_id);
-
-
--- ---------------------------------------------------------
--- 5. Seed real configuration only
--- These rows define available appointment types.
--- They do NOT create calendar events.
--- ---------------------------------------------------------
-INSERT INTO calendar_appointment_types (
-    name,
-    slug,
-    description,
-    duration_minutes,
-    maximum_per_day,
-    preparation_required,
-    allow_google_meet,
-    allow_phone,
-    allow_in_person,
-    is_public,
-    is_active,
-    display_order
-)
-SELECT
-    'Growth Review',
-    'growth-review',
-    'Review current marketing performance, priorities, opportunities, and next actions.',
-    45,
-    3,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    10
-WHERE NOT EXISTS (
-    SELECT 1
-    FROM calendar_appointment_types
-    WHERE slug = 'growth-review'
-);
-
-INSERT INTO calendar_appointment_types (
-    name,
-    slug,
-    description,
-    duration_minutes,
-    maximum_per_day,
-    preparation_required,
-    allow_google_meet,
-    allow_phone,
-    allow_in_person,
-    is_public,
-    is_active,
-    display_order
-)
-SELECT
-    'Initial Consultation',
-    'initial-consultation',
-    'Initial discussion with a prospective client about business needs and potential agency services.',
-    60,
-    3,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    20
-WHERE NOT EXISTS (
-    SELECT 1
-    FROM calendar_appointment_types
-    WHERE slug = 'initial-consultation'
-);
-
-INSERT INTO calendar_appointment_types (
-    name,
-    slug,
-    description,
-    duration_minutes,
-    maximum_per_day,
-    preparation_required,
-    allow_google_meet,
-    allow_phone,
-    allow_in_person,
-    is_public,
-    is_active,
-    display_order
-)
-SELECT
-    'Client Meeting',
-    'client-meeting',
-    'General meeting with an existing client.',
-    60,
-    4,
-    1,
-    1,
-    1,
-    1,
-    0,
-    1,
-    30
-WHERE NOT EXISTS (
-    SELECT 1
-    FROM calendar_appointment_types
-    WHERE slug = 'client-meeting'
-);
-
-INSERT INTO calendar_appointment_types (
-    name,
-    slug,
-    description,
-    duration_minutes,
-    maximum_per_day,
-    preparation_required,
-    allow_google_meet,
-    allow_phone,
-    allow_in_person,
-    is_public,
-    is_active,
-    display_order
-)
-SELECT
-    'Media Review',
-    'media-review',
-    'Review media schedules, placements, instructions, confirmations, or campaign status.',
-    30,
-    5,
-    0,
-    1,
-    1,
-    1,
-    0,
-    1,
-    40
-WHERE NOT EXISTS (
-    SELECT 1
-    FROM calendar_appointment_types
-    WHERE slug = 'media-review'
-);
-
-
-INSERT INTO calendar_availability_rules (
-    owner_key,
-    timezone,
-    available_days_json,
-    start_time,
-    end_time,
-    minimum_advance_notice_hours,
-    maximum_booking_window_days,
-    buffer_before_minutes,
-    buffer_after_minutes,
-    travel_buffer_minutes,
-    maximum_meetings_per_day,
-    booking_enabled
-)
-SELECT
-    'andy',
-    'America/New_York',
-    '[1,2,3,4,5]',
-    '09:00',
-    '17:00',
-    24,
-    90,
-    15,
-    15,
-    60,
-    4,
-    0
-WHERE NOT EXISTS (
-    SELECT 1
+/* =========================================================
+   Global Concepts Media Operating System
+   File: routes/calendarOperations.js
+   Version: 7.7.0
+   Status: Production Candidate
+   Source: Calendar D1 Foundation 1.0.0 + production route pattern
+   Sprint: Calendar — D1 Operations API
+   Purpose: Production D1 CRUD for Calendar appointments,
+            reminders, appointment types, and availability rules.
+            No sample records, localStorage, Google Calendar sync,
+            public booking, or cross-module date-feed behavior.
+   ========================================================= */
+
+import {
+  VERSION,
+  ACTIONS
+} from "../shared/config.js";
+
+import {
+  clean,
+  safeErrorMessage,
+  logWorkerError,
+  jsonResponse
+} from "../shared/http.js";
+
+import {
+  getDatabase,
+  rowsOf
+} from "../shared/database.js";
+
+/* =========================================================
+   Calendar Operations — Public Handler
+   ========================================================= */
+
+export async function handleCalendarOperations(body, env, requestId) {
+  const db = getDatabase(env);
+  const action = clean(body?.action);
+
+  if (!db || typeof db.prepare !== "function") {
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action,
+      error:
+        "The D1 binding is unavailable. Bind the production database as DB, GCM_OS_DB, or DATABASE."
+    }, 503);
+  }
+
+  try {
+    switch (action) {
+      case ACTIONS.GET_CALENDAR_APPOINTMENTS:
+        return await getAppointments(body, db, requestId);
+
+      case ACTIONS.CREATE_CALENDAR_APPOINTMENT:
+        return await createAppointment(body, db, requestId);
+
+      case ACTIONS.UPDATE_CALENDAR_APPOINTMENT:
+        return await updateAppointment(body, db, requestId);
+
+      case ACTIONS.DELETE_CALENDAR_APPOINTMENT:
+        return await deleteAppointment(body, db, requestId);
+
+      case ACTIONS.GET_CALENDAR_REMINDERS:
+        return await getReminders(body, db, requestId);
+
+      case ACTIONS.CREATE_CALENDAR_REMINDER:
+        return await createReminder(body, db, requestId);
+
+      case ACTIONS.UPDATE_CALENDAR_REMINDER:
+        return await updateReminder(body, db, requestId);
+
+      case ACTIONS.DELETE_CALENDAR_REMINDER:
+        return await deleteReminder(body, db, requestId);
+
+      case ACTIONS.GET_CALENDAR_APPOINTMENT_TYPES:
+        return await getAppointmentTypes(body, db, requestId);
+
+      case ACTIONS.CREATE_CALENDAR_APPOINTMENT_TYPE:
+        return await createAppointmentType(body, db, requestId);
+
+      case ACTIONS.UPDATE_CALENDAR_APPOINTMENT_TYPE:
+        return await updateAppointmentType(body, db, requestId);
+
+      case ACTIONS.GET_CALENDAR_AVAILABILITY_RULES:
+        return await getAvailabilityRules(body, db, requestId);
+
+      case ACTIONS.UPDATE_CALENDAR_AVAILABILITY_RULES:
+        return await updateAvailabilityRules(body, db, requestId);
+
+      default:
+        return jsonResponse({
+          ok: false,
+          requestId,
+          action,
+          error: action
+            ? `Unsupported Calendar action: ${action}`
+            : "A Calendar action is required."
+        }, 400);
+    }
+  } catch (error) {
+    logWorkerError({
+      requestId,
+      route: action || "calendar-operations",
+      stage: "calendar_d1_operation",
+      error
+    });
+
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action,
+      version: VERSION,
+      error: safeErrorMessage(error)
+    }, 500);
+  }
+}
+
+/* =========================================================
+   Appointments — Read
+   ========================================================= */
+
+async function getAppointments(body, db, requestId) {
+  const startDate = normalizeIsoDate(body?.startDate || body?.dateFrom);
+  const endDate = normalizeIsoDate(body?.endDate || body?.dateTo);
+  const clientId = normalizeOptionalInteger(body?.clientId);
+  const status = normalizeAppointmentStatus(body?.status, true);
+
+  const where = [];
+  const values = [];
+
+  if (startDate) {
+    where.push("a.appointment_date >= ?");
+    values.push(startDate);
+  }
+
+  if (endDate) {
+    where.push("a.appointment_date <= ?");
+    values.push(endDate);
+  }
+
+  if (clientId) {
+    where.push("a.client_id = ?");
+    values.push(clientId);
+  }
+
+  if (status) {
+    where.push("a.status = ?");
+    values.push(status);
+  }
+
+  const result = await bindAll(
+    db.prepare(`
+      SELECT
+        a.id,
+        a.appointment_type_id,
+        t.name AS appointment_type_name,
+        t.slug AS appointment_type_slug,
+        t.duration_minutes,
+        a.client_id,
+        c.name AS client_name,
+        a.prospect_id,
+        a.title,
+        a.contact_name,
+        a.company_name,
+        a.contact_email,
+        a.contact_phone,
+        a.appointment_date,
+        a.start_time,
+        a.end_time,
+        a.timezone,
+        a.location_type,
+        a.location_name,
+        a.location_address,
+        a.meeting_url,
+        a.status,
+        a.source_type,
+        a.public_booking_reference,
+        a.confirmation_sent_at,
+        a.confirmed_at,
+        a.cancelled_at,
+        a.completed_at,
+        a.preparation_required,
+        a.follow_up_required,
+        a.notes,
+        a.google_calendar_event_id,
+        a.created_by,
+        a.updated_by,
+        a.created_at,
+        a.updated_at
+      FROM calendar_appointments a
+      LEFT JOIN calendar_appointment_types t
+        ON t.id = a.appointment_type_id
+      LEFT JOIN clients c
+        ON c.id = a.client_id
+      ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+      ORDER BY
+        a.appointment_date,
+        a.start_time,
+        a.id
+    `),
+    values
+  ).all();
+
+  const appointments = rowsOf(result).map(mapAppointment);
+
+  return jsonResponse({
+    ok: true,
+    requestId,
+    action: ACTIONS.GET_CALENDAR_APPOINTMENTS,
+    version: VERSION,
+    source: "D1",
+    generatedAt: new Date().toISOString(),
+    filters: {
+      startDate: startDate || null,
+      endDate: endDate || null,
+      clientId: clientId || null,
+      status: status || null
+    },
+    count: appointments.length,
+    appointments
+  });
+}
+
+/* =========================================================
+   Appointments — Create
+   ========================================================= */
+
+async function createAppointment(body, db, requestId) {
+  const record = normalizeAppointmentPayload(body);
+
+  const validationError = validateAppointment(record);
+  if (validationError) {
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action: ACTIONS.CREATE_CALENDAR_APPOINTMENT,
+      error: validationError
+    }, 400);
+  }
+
+  const appointmentType = record.appointmentTypeId
+    ? await getAppointmentTypeById(db, record.appointmentTypeId)
+    : null;
+
+  if (record.appointmentTypeId && !appointmentType) {
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action: ACTIONS.CREATE_CALENDAR_APPOINTMENT,
+      error: `Appointment type ${record.appointmentTypeId} was not found.`
+    }, 404);
+  }
+
+  const durationMinutes = appointmentType?.durationMinutes || record.durationMinutes || 60;
+  const endTime = record.endTime || addMinutesToTime(record.startTime, durationMinutes);
+
+  const conflict = await findAppointmentConflict(db, {
+    appointmentDate: record.appointmentDate,
+    startTime: record.startTime,
+    endTime,
+    excludeId: null
+  });
+
+  if (conflict) {
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action: ACTIONS.CREATE_CALENDAR_APPOINTMENT,
+      error: "The requested appointment overlaps an existing active appointment.",
+      conflict
+    }, 409);
+  }
+
+  const result = await db.prepare(`
+    INSERT INTO calendar_appointments (
+      appointment_type_id,
+      client_id,
+      prospect_id,
+      title,
+      contact_name,
+      company_name,
+      contact_email,
+      contact_phone,
+      appointment_date,
+      start_time,
+      end_time,
+      timezone,
+      location_type,
+      location_name,
+      location_address,
+      meeting_url,
+      status,
+      source_type,
+      public_booking_reference,
+      preparation_required,
+      follow_up_required,
+      notes,
+      google_calendar_event_id,
+      created_by,
+      updated_by,
+      created_at,
+      updated_at
+    )
+    VALUES (
+      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+      CURRENT_TIMESTAMP,
+      CURRENT_TIMESTAMP
+    )
+  `).bind(
+    record.appointmentTypeId,
+    record.clientId,
+    record.prospectId,
+    record.title,
+    record.contactName,
+    record.companyName,
+    record.contactEmail,
+    record.contactPhone,
+    record.appointmentDate,
+    record.startTime,
+    endTime,
+    record.timezone,
+    record.locationType,
+    record.locationName,
+    record.locationAddress,
+    record.meetingUrl,
+    record.status,
+    record.sourceType,
+    record.publicBookingReference,
+    appointmentType
+      ? booleanToInteger(appointmentType.preparationRequired)
+      : booleanToInteger(record.preparationRequired),
+    booleanToInteger(record.followUpRequired),
+    record.notes,
+    record.googleCalendarEventId,
+    record.createdBy,
+    record.createdBy
+  ).run();
+
+  const id = insertedId(result);
+  const appointment = await getAppointmentById(db, id);
+
+  return jsonResponse({
+    ok: true,
+    requestId,
+    action: ACTIONS.CREATE_CALENDAR_APPOINTMENT,
+    version: VERSION,
+    source: "D1",
+    created: true,
+    appointment
+  }, 201);
+}
+
+/* =========================================================
+   Appointments — Update
+   ========================================================= */
+
+async function updateAppointment(body, db, requestId) {
+  const id = normalizeRequiredInteger(body?.id || body?.appointmentId);
+
+  if (!id) {
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action: ACTIONS.UPDATE_CALENDAR_APPOINTMENT,
+      error: "A valid appointment id is required."
+    }, 400);
+  }
+
+  const existing = await getAppointmentById(db, id);
+
+  if (!existing) {
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action: ACTIONS.UPDATE_CALENDAR_APPOINTMENT,
+      error: `Appointment ${id} was not found.`
+    }, 404);
+  }
+
+  const incoming = normalizeAppointmentPayload(body);
+  const merged = {
+    ...existing,
+    ...removeUndefined(incoming),
+    id
+  };
+
+  const validationError = validateAppointment(merged);
+  if (validationError) {
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action: ACTIONS.UPDATE_CALENDAR_APPOINTMENT,
+      error: validationError
+    }, 400);
+  }
+
+  const appointmentType = merged.appointmentTypeId
+    ? await getAppointmentTypeById(db, merged.appointmentTypeId)
+    : null;
+
+  if (merged.appointmentTypeId && !appointmentType) {
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action: ACTIONS.UPDATE_CALENDAR_APPOINTMENT,
+      error: `Appointment type ${merged.appointmentTypeId} was not found.`
+    }, 404);
+  }
+
+  const durationMinutes = appointmentType?.durationMinutes || merged.durationMinutes || 60;
+  const endTime = merged.endTime || addMinutesToTime(merged.startTime, durationMinutes);
+
+  const conflict = await findAppointmentConflict(db, {
+    appointmentDate: merged.appointmentDate,
+    startTime: merged.startTime,
+    endTime,
+    excludeId: id
+  });
+
+  if (conflict) {
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action: ACTIONS.UPDATE_CALENDAR_APPOINTMENT,
+      error: "The updated appointment overlaps an existing active appointment.",
+      conflict
+    }, 409);
+  }
+
+  const lifecycle = lifecycleTimestamps({
+    existing,
+    nextStatus: merged.status
+  });
+
+  await db.prepare(`
+    UPDATE calendar_appointments
+    SET
+      appointment_type_id = ?,
+      client_id = ?,
+      prospect_id = ?,
+      title = ?,
+      contact_name = ?,
+      company_name = ?,
+      contact_email = ?,
+      contact_phone = ?,
+      appointment_date = ?,
+      start_time = ?,
+      end_time = ?,
+      timezone = ?,
+      location_type = ?,
+      location_name = ?,
+      location_address = ?,
+      meeting_url = ?,
+      status = ?,
+      source_type = ?,
+      public_booking_reference = ?,
+      confirmation_sent_at = ?,
+      confirmed_at = ?,
+      cancelled_at = ?,
+      completed_at = ?,
+      preparation_required = ?,
+      follow_up_required = ?,
+      notes = ?,
+      google_calendar_event_id = ?,
+      updated_by = ?,
+      updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `).bind(
+    merged.appointmentTypeId,
+    merged.clientId,
+    merged.prospectId,
+    merged.title,
+    merged.contactName,
+    merged.companyName,
+    merged.contactEmail,
+    merged.contactPhone,
+    merged.appointmentDate,
+    merged.startTime,
+    endTime,
+    merged.timezone,
+    merged.locationType,
+    merged.locationName,
+    merged.locationAddress,
+    merged.meetingUrl,
+    merged.status,
+    merged.sourceType,
+    merged.publicBookingReference,
+    lifecycle.confirmationSentAt,
+    lifecycle.confirmedAt,
+    lifecycle.cancelledAt,
+    lifecycle.completedAt,
+    appointmentType
+      ? booleanToInteger(appointmentType.preparationRequired)
+      : booleanToInteger(merged.preparationRequired),
+    booleanToInteger(merged.followUpRequired),
+    merged.notes,
+    merged.googleCalendarEventId,
+    clean(body?.updatedBy || body?.actor || existing.updatedBy),
+    id
+  ).run();
+
+  const appointment = await getAppointmentById(db, id);
+
+  return jsonResponse({
+    ok: true,
+    requestId,
+    action: ACTIONS.UPDATE_CALENDAR_APPOINTMENT,
+    version: VERSION,
+    source: "D1",
+    updated: true,
+    appointment
+  });
+}
+
+/* =========================================================
+   Appointments — Delete
+   ========================================================= */
+
+async function deleteAppointment(body, db, requestId) {
+  const id = normalizeRequiredInteger(body?.id || body?.appointmentId);
+
+  if (!id) {
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action: ACTIONS.DELETE_CALENDAR_APPOINTMENT,
+      error: "A valid appointment id is required."
+    }, 400);
+  }
+
+  const existing = await getAppointmentById(db, id);
+
+  if (!existing) {
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action: ACTIONS.DELETE_CALENDAR_APPOINTMENT,
+      error: `Appointment ${id} was not found.`
+    }, 404);
+  }
+
+  await db.prepare(`
+    DELETE FROM calendar_appointments
+    WHERE id = ?
+  `).bind(id).run();
+
+  return jsonResponse({
+    ok: true,
+    requestId,
+    action: ACTIONS.DELETE_CALENDAR_APPOINTMENT,
+    version: VERSION,
+    source: "D1",
+    deleted: true,
+    appointment: existing
+  });
+}
+
+/* =========================================================
+   Reminders — Read
+   ========================================================= */
+
+async function getReminders(body, db, requestId) {
+  const startDate = normalizeIsoDate(body?.startDate || body?.dateFrom);
+  const endDate = normalizeIsoDate(body?.endDate || body?.dateTo);
+  const clientId = normalizeOptionalInteger(body?.clientId);
+  const status = normalizeReminderStatus(body?.status, true);
+
+  const where = [];
+  const values = [];
+
+  if (startDate) {
+    where.push("r.reminder_date >= ?");
+    values.push(startDate);
+  }
+
+  if (endDate) {
+    where.push("r.reminder_date <= ?");
+    values.push(endDate);
+  }
+
+  if (clientId) {
+    where.push("r.client_id = ?");
+    values.push(clientId);
+  }
+
+  if (status) {
+    where.push("r.status = ?");
+    values.push(status);
+  }
+
+  const result = await bindAll(
+    db.prepare(`
+      SELECT
+        r.id,
+        r.client_id,
+        c.name AS client_name,
+        r.title,
+        r.description,
+        r.reminder_date,
+        r.reminder_time,
+        r.timezone,
+        r.priority,
+        r.status,
+        r.recurrence_rule,
+        r.source_type,
+        r.source_record_id,
+        r.source_url,
+        r.completed_at,
+        r.dismissed_at,
+        r.created_by,
+        r.updated_by,
+        r.created_at,
+        r.updated_at
+      FROM calendar_reminders r
+      LEFT JOIN clients c
+        ON c.id = r.client_id
+      ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+      ORDER BY
+        r.reminder_date,
+        COALESCE(r.reminder_time, '23:59'),
+        r.id
+    `),
+    values
+  ).all();
+
+  const reminders = rowsOf(result).map(mapReminder);
+
+  return jsonResponse({
+    ok: true,
+    requestId,
+    action: ACTIONS.GET_CALENDAR_REMINDERS,
+    version: VERSION,
+    source: "D1",
+    generatedAt: new Date().toISOString(),
+    filters: {
+      startDate: startDate || null,
+      endDate: endDate || null,
+      clientId: clientId || null,
+      status: status || null
+    },
+    count: reminders.length,
+    reminders
+  });
+}
+
+/* =========================================================
+   Reminders — Create
+   ========================================================= */
+
+async function createReminder(body, db, requestId) {
+  const record = normalizeReminderPayload(body);
+  const validationError = validateReminder(record);
+
+  if (validationError) {
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action: ACTIONS.CREATE_CALENDAR_REMINDER,
+      error: validationError
+    }, 400);
+  }
+
+  const result = await db.prepare(`
+    INSERT INTO calendar_reminders (
+      client_id,
+      title,
+      description,
+      reminder_date,
+      reminder_time,
+      timezone,
+      priority,
+      status,
+      recurrence_rule,
+      source_type,
+      source_record_id,
+      source_url,
+      created_by,
+      updated_by,
+      created_at,
+      updated_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+  `).bind(
+    record.clientId,
+    record.title,
+    record.description,
+    record.reminderDate,
+    record.reminderTime,
+    record.timezone,
+    record.priority,
+    record.status,
+    record.recurrenceRule,
+    record.sourceType,
+    record.sourceRecordId,
+    record.sourceUrl,
+    record.createdBy,
+    record.createdBy
+  ).run();
+
+  const id = insertedId(result);
+  const reminder = await getReminderById(db, id);
+
+  return jsonResponse({
+    ok: true,
+    requestId,
+    action: ACTIONS.CREATE_CALENDAR_REMINDER,
+    version: VERSION,
+    source: "D1",
+    created: true,
+    reminder
+  }, 201);
+}
+
+/* =========================================================
+   Reminders — Update
+   ========================================================= */
+
+async function updateReminder(body, db, requestId) {
+  const id = normalizeRequiredInteger(body?.id || body?.reminderId);
+
+  if (!id) {
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action: ACTIONS.UPDATE_CALENDAR_REMINDER,
+      error: "A valid reminder id is required."
+    }, 400);
+  }
+
+  const existing = await getReminderById(db, id);
+
+  if (!existing) {
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action: ACTIONS.UPDATE_CALENDAR_REMINDER,
+      error: `Reminder ${id} was not found.`
+    }, 404);
+  }
+
+  const incoming = normalizeReminderPayload(body);
+  const merged = {
+    ...existing,
+    ...removeUndefined(incoming),
+    id
+  };
+
+  const validationError = validateReminder(merged);
+  if (validationError) {
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action: ACTIONS.UPDATE_CALENDAR_REMINDER,
+      error: validationError
+    }, 400);
+  }
+
+  const lifecycle = reminderLifecycleTimestamps({
+    existing,
+    nextStatus: merged.status
+  });
+
+  await db.prepare(`
+    UPDATE calendar_reminders
+    SET
+      client_id = ?,
+      title = ?,
+      description = ?,
+      reminder_date = ?,
+      reminder_time = ?,
+      timezone = ?,
+      priority = ?,
+      status = ?,
+      recurrence_rule = ?,
+      source_type = ?,
+      source_record_id = ?,
+      source_url = ?,
+      completed_at = ?,
+      dismissed_at = ?,
+      updated_by = ?,
+      updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `).bind(
+    merged.clientId,
+    merged.title,
+    merged.description,
+    merged.reminderDate,
+    merged.reminderTime,
+    merged.timezone,
+    merged.priority,
+    merged.status,
+    merged.recurrenceRule,
+    merged.sourceType,
+    merged.sourceRecordId,
+    merged.sourceUrl,
+    lifecycle.completedAt,
+    lifecycle.dismissedAt,
+    clean(body?.updatedBy || body?.actor || existing.updatedBy),
+    id
+  ).run();
+
+  const reminder = await getReminderById(db, id);
+
+  return jsonResponse({
+    ok: true,
+    requestId,
+    action: ACTIONS.UPDATE_CALENDAR_REMINDER,
+    version: VERSION,
+    source: "D1",
+    updated: true,
+    reminder
+  });
+}
+
+/* =========================================================
+   Reminders — Delete
+   ========================================================= */
+
+async function deleteReminder(body, db, requestId) {
+  const id = normalizeRequiredInteger(body?.id || body?.reminderId);
+
+  if (!id) {
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action: ACTIONS.DELETE_CALENDAR_REMINDER,
+      error: "A valid reminder id is required."
+    }, 400);
+  }
+
+  const existing = await getReminderById(db, id);
+
+  if (!existing) {
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action: ACTIONS.DELETE_CALENDAR_REMINDER,
+      error: `Reminder ${id} was not found.`
+    }, 404);
+  }
+
+  await db.prepare(`
+    DELETE FROM calendar_reminders
+    WHERE id = ?
+  `).bind(id).run();
+
+  return jsonResponse({
+    ok: true,
+    requestId,
+    action: ACTIONS.DELETE_CALENDAR_REMINDER,
+    version: VERSION,
+    source: "D1",
+    deleted: true,
+    reminder: existing
+  });
+}
+
+/* =========================================================
+   Appointment Types — Read / Create / Update
+   ========================================================= */
+
+async function getAppointmentTypes(body, db, requestId) {
+  const includeInactive = normalizeBoolean(body?.includeInactive, false);
+  const publicOnly = normalizeBoolean(body?.publicOnly, false);
+
+  const where = [];
+  const values = [];
+
+  if (!includeInactive) {
+    where.push("is_active = 1");
+  }
+
+  if (publicOnly) {
+    where.push("is_public = 1");
+  }
+
+  const result = await bindAll(
+    db.prepare(`
+      SELECT
+        id,
+        name,
+        slug,
+        description,
+        duration_minutes,
+        maximum_per_day,
+        preparation_required,
+        allow_google_meet,
+        allow_phone,
+        allow_in_person,
+        is_public,
+        is_active,
+        display_order,
+        created_at,
+        updated_at
+      FROM calendar_appointment_types
+      ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+      ORDER BY display_order, LOWER(name), id
+    `),
+    values
+  ).all();
+
+  const appointmentTypes = rowsOf(result).map(mapAppointmentType);
+
+  return jsonResponse({
+    ok: true,
+    requestId,
+    action: ACTIONS.GET_CALENDAR_APPOINTMENT_TYPES,
+    version: VERSION,
+    source: "D1",
+    count: appointmentTypes.length,
+    appointmentTypes
+  });
+}
+
+async function createAppointmentType(body, db, requestId) {
+  const record = normalizeAppointmentTypePayload(body);
+  const validationError = validateAppointmentType(record);
+
+  if (validationError) {
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action: ACTIONS.CREATE_CALENDAR_APPOINTMENT_TYPE,
+      error: validationError
+    }, 400);
+  }
+
+  const result = await db.prepare(`
+    INSERT INTO calendar_appointment_types (
+      name,
+      slug,
+      description,
+      duration_minutes,
+      maximum_per_day,
+      preparation_required,
+      allow_google_meet,
+      allow_phone,
+      allow_in_person,
+      is_public,
+      is_active,
+      display_order,
+      created_at,
+      updated_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+  `).bind(
+    record.name,
+    record.slug,
+    record.description,
+    record.durationMinutes,
+    record.maximumPerDay,
+    booleanToInteger(record.preparationRequired),
+    booleanToInteger(record.allowGoogleMeet),
+    booleanToInteger(record.allowPhone),
+    booleanToInteger(record.allowInPerson),
+    booleanToInteger(record.isPublic),
+    booleanToInteger(record.isActive),
+    record.displayOrder
+  ).run();
+
+  const id = insertedId(result);
+  const appointmentType = await getAppointmentTypeById(db, id);
+
+  return jsonResponse({
+    ok: true,
+    requestId,
+    action: ACTIONS.CREATE_CALENDAR_APPOINTMENT_TYPE,
+    version: VERSION,
+    source: "D1",
+    created: true,
+    appointmentType
+  }, 201);
+}
+
+async function updateAppointmentType(body, db, requestId) {
+  const id = normalizeRequiredInteger(body?.id || body?.appointmentTypeId);
+
+  if (!id) {
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action: ACTIONS.UPDATE_CALENDAR_APPOINTMENT_TYPE,
+      error: "A valid appointment type id is required."
+    }, 400);
+  }
+
+  const existing = await getAppointmentTypeById(db, id);
+
+  if (!existing) {
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action: ACTIONS.UPDATE_CALENDAR_APPOINTMENT_TYPE,
+      error: `Appointment type ${id} was not found.`
+    }, 404);
+  }
+
+  const incoming = normalizeAppointmentTypePayload(body);
+  const merged = {
+    ...existing,
+    ...removeUndefined(incoming),
+    id
+  };
+
+  const validationError = validateAppointmentType(merged);
+  if (validationError) {
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action: ACTIONS.UPDATE_CALENDAR_APPOINTMENT_TYPE,
+      error: validationError
+    }, 400);
+  }
+
+  await db.prepare(`
+    UPDATE calendar_appointment_types
+    SET
+      name = ?,
+      slug = ?,
+      description = ?,
+      duration_minutes = ?,
+      maximum_per_day = ?,
+      preparation_required = ?,
+      allow_google_meet = ?,
+      allow_phone = ?,
+      allow_in_person = ?,
+      is_public = ?,
+      is_active = ?,
+      display_order = ?,
+      updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `).bind(
+    merged.name,
+    merged.slug,
+    merged.description,
+    merged.durationMinutes,
+    merged.maximumPerDay,
+    booleanToInteger(merged.preparationRequired),
+    booleanToInteger(merged.allowGoogleMeet),
+    booleanToInteger(merged.allowPhone),
+    booleanToInteger(merged.allowInPerson),
+    booleanToInteger(merged.isPublic),
+    booleanToInteger(merged.isActive),
+    merged.displayOrder,
+    id
+  ).run();
+
+  const appointmentType = await getAppointmentTypeById(db, id);
+
+  return jsonResponse({
+    ok: true,
+    requestId,
+    action: ACTIONS.UPDATE_CALENDAR_APPOINTMENT_TYPE,
+    version: VERSION,
+    source: "D1",
+    updated: true,
+    appointmentType
+  });
+}
+
+/* =========================================================
+   Availability Rules — Read / Update
+   ========================================================= */
+
+async function getAvailabilityRules(body, db, requestId) {
+  const ownerKey = clean(body?.ownerKey || "andy");
+
+  const row = await db.prepare(`
+    SELECT
+      id,
+      owner_key,
+      timezone,
+      available_days_json,
+      start_time,
+      end_time,
+      minimum_advance_notice_hours,
+      maximum_booking_window_days,
+      buffer_before_minutes,
+      buffer_after_minutes,
+      travel_buffer_minutes,
+      maximum_meetings_per_day,
+      booking_enabled,
+      created_at,
+      updated_at
     FROM calendar_availability_rules
-    WHERE owner_key = 'andy'
-);
+    WHERE owner_key = ?
+    LIMIT 1
+  `).bind(ownerKey).first();
 
-COMMIT;
+  if (!row) {
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action: ACTIONS.GET_CALENDAR_AVAILABILITY_RULES,
+      error: `Availability rules for owner "${ownerKey}" were not found.`
+    }, 404);
+  }
 
+  return jsonResponse({
+    ok: true,
+    requestId,
+    action: ACTIONS.GET_CALENDAR_AVAILABILITY_RULES,
+    version: VERSION,
+    source: "D1",
+    availabilityRules: mapAvailabilityRules(row)
+  });
+}
 
--- =========================================================
--- Verification Queries
--- Run after deployment.
--- =========================================================
+async function updateAvailabilityRules(body, db, requestId) {
+  const ownerKey = clean(body?.ownerKey || "andy");
+  const existingRow = await db.prepare(`
+    SELECT *
+    FROM calendar_availability_rules
+    WHERE owner_key = ?
+    LIMIT 1
+  `).bind(ownerKey).first();
 
--- Expected: 4
-SELECT COUNT(*) AS appointment_type_count
-FROM calendar_appointment_types;
+  if (!existingRow) {
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action: ACTIONS.UPDATE_CALENDAR_AVAILABILITY_RULES,
+      error: `Availability rules for owner "${ownerKey}" were not found.`
+    }, 404);
+  }
 
--- Expected: 1
-SELECT COUNT(*) AS availability_rule_count
-FROM calendar_availability_rules;
+  const existing = mapAvailabilityRules(existingRow);
+  const incoming = normalizeAvailabilityPayload(body);
+  const merged = {
+    ...existing,
+    ...removeUndefined(incoming),
+    ownerKey
+  };
 
--- Expected: 0
-SELECT COUNT(*) AS appointment_count
-FROM calendar_appointments;
+  const validationError = validateAvailabilityRules(merged);
+  if (validationError) {
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action: ACTIONS.UPDATE_CALENDAR_AVAILABILITY_RULES,
+      error: validationError
+    }, 400);
+  }
 
--- Expected: 0
-SELECT COUNT(*) AS reminder_count
-FROM calendar_reminders;
+  await db.prepare(`
+    UPDATE calendar_availability_rules
+    SET
+      timezone = ?,
+      available_days_json = ?,
+      start_time = ?,
+      end_time = ?,
+      minimum_advance_notice_hours = ?,
+      maximum_booking_window_days = ?,
+      buffer_before_minutes = ?,
+      buffer_after_minutes = ?,
+      travel_buffer_minutes = ?,
+      maximum_meetings_per_day = ?,
+      booking_enabled = ?,
+      updated_at = CURRENT_TIMESTAMP
+    WHERE owner_key = ?
+  `).bind(
+    merged.timezone,
+    JSON.stringify(merged.availableDays),
+    merged.startTime,
+    merged.endTime,
+    merged.minimumAdvanceNoticeHours,
+    merged.maximumBookingWindowDays,
+    merged.bufferBeforeMinutes,
+    merged.bufferAfterMinutes,
+    merged.travelBufferMinutes,
+    merged.maximumMeetingsPerDay,
+    booleanToInteger(merged.bookingEnabled),
+    ownerKey
+  ).run();
 
--- Inspect seeded configuration.
-SELECT
-    id,
+  const updatedRow = await db.prepare(`
+    SELECT *
+    FROM calendar_availability_rules
+    WHERE owner_key = ?
+    LIMIT 1
+  `).bind(ownerKey).first();
+
+  return jsonResponse({
+    ok: true,
+    requestId,
+    action: ACTIONS.UPDATE_CALENDAR_AVAILABILITY_RULES,
+    version: VERSION,
+    source: "D1",
+    updated: true,
+    availabilityRules: mapAvailabilityRules(updatedRow)
+  });
+}
+
+/* =========================================================
+   Record Retrieval Helpers
+   ========================================================= */
+
+async function getAppointmentById(db, id) {
+  if (!id) return null;
+
+  const row = await db.prepare(`
+    SELECT
+      a.id,
+      a.appointment_type_id,
+      t.name AS appointment_type_name,
+      t.slug AS appointment_type_slug,
+      t.duration_minutes,
+      a.client_id,
+      c.name AS client_name,
+      a.prospect_id,
+      a.title,
+      a.contact_name,
+      a.company_name,
+      a.contact_email,
+      a.contact_phone,
+      a.appointment_date,
+      a.start_time,
+      a.end_time,
+      a.timezone,
+      a.location_type,
+      a.location_name,
+      a.location_address,
+      a.meeting_url,
+      a.status,
+      a.source_type,
+      a.public_booking_reference,
+      a.confirmation_sent_at,
+      a.confirmed_at,
+      a.cancelled_at,
+      a.completed_at,
+      a.preparation_required,
+      a.follow_up_required,
+      a.notes,
+      a.google_calendar_event_id,
+      a.created_by,
+      a.updated_by,
+      a.created_at,
+      a.updated_at
+    FROM calendar_appointments a
+    LEFT JOIN calendar_appointment_types t
+      ON t.id = a.appointment_type_id
+    LEFT JOIN clients c
+      ON c.id = a.client_id
+    WHERE a.id = ?
+    LIMIT 1
+  `).bind(id).first();
+
+  return row ? mapAppointment(row) : null;
+}
+
+async function getReminderById(db, id) {
+  if (!id) return null;
+
+  const row = await db.prepare(`
+    SELECT
+      r.id,
+      r.client_id,
+      c.name AS client_name,
+      r.title,
+      r.description,
+      r.reminder_date,
+      r.reminder_time,
+      r.timezone,
+      r.priority,
+      r.status,
+      r.recurrence_rule,
+      r.source_type,
+      r.source_record_id,
+      r.source_url,
+      r.completed_at,
+      r.dismissed_at,
+      r.created_by,
+      r.updated_by,
+      r.created_at,
+      r.updated_at
+    FROM calendar_reminders r
+    LEFT JOIN clients c
+      ON c.id = r.client_id
+    WHERE r.id = ?
+    LIMIT 1
+  `).bind(id).first();
+
+  return row ? mapReminder(row) : null;
+}
+
+async function getAppointmentTypeById(db, id) {
+  if (!id) return null;
+
+  const row = await db.prepare(`
+    SELECT
+      id,
+      name,
+      slug,
+      description,
+      duration_minutes,
+      maximum_per_day,
+      preparation_required,
+      allow_google_meet,
+      allow_phone,
+      allow_in_person,
+      is_public,
+      is_active,
+      display_order,
+      created_at,
+      updated_at
+    FROM calendar_appointment_types
+    WHERE id = ?
+    LIMIT 1
+  `).bind(id).first();
+
+  return row ? mapAppointmentType(row) : null;
+}
+
+async function findAppointmentConflict(db, {
+  appointmentDate,
+  startTime,
+  endTime,
+  excludeId
+}) {
+  const row = await db.prepare(`
+    SELECT
+      id,
+      title,
+      appointment_date,
+      start_time,
+      end_time,
+      status
+    FROM calendar_appointments
+    WHERE appointment_date = ?
+      AND status NOT IN ('cancelled', 'completed', 'no_show')
+      AND (? IS NULL OR id <> ?)
+      AND start_time < ?
+      AND COALESCE(end_time, start_time) > ?
+    ORDER BY start_time
+    LIMIT 1
+  `).bind(
+    appointmentDate,
+    excludeId,
+    excludeId,
+    endTime,
+    startTime
+  ).first();
+
+  return row
+    ? {
+        id: Number(row.id),
+        title: clean(row.title),
+        appointmentDate: clean(row.appointment_date),
+        startTime: clean(row.start_time),
+        endTime: clean(row.end_time),
+        status: clean(row.status)
+      }
+    : null;
+}
+
+/* =========================================================
+   Payload Normalization
+   ========================================================= */
+
+function normalizeAppointmentPayload(body) {
+  const source = body?.appointment || body;
+
+  return removeUndefined({
+    appointmentTypeId: optionalIntegerValue(
+      source?.appointmentTypeId ?? source?.appointment_type_id
+    ),
+    clientId: optionalIntegerValue(source?.clientId ?? source?.client_id),
+    prospectId: optionalIntegerValue(source?.prospectId ?? source?.prospect_id),
+    title: optionalClean(source?.title),
+    contactName: optionalClean(source?.contactName ?? source?.contact_name),
+    companyName: optionalClean(source?.companyName ?? source?.company_name),
+    contactEmail: optionalClean(source?.contactEmail ?? source?.contact_email),
+    contactPhone: optionalClean(source?.contactPhone ?? source?.contact_phone),
+    appointmentDate: optionalIsoDate(
+      source?.appointmentDate ?? source?.appointment_date ?? source?.date
+    ),
+    startTime: optionalTime(source?.startTime ?? source?.start_time ?? source?.time),
+    endTime: optionalTime(source?.endTime ?? source?.end_time),
+    durationMinutes: optionalIntegerValue(source?.durationMinutes),
+    timezone: optionalClean(source?.timezone) || "America/New_York",
+    locationType: optionalLocationType(
+      source?.locationType ?? source?.location_type ?? source?.location
+    ),
+    locationName: optionalClean(source?.locationName ?? source?.location_name),
+    locationAddress: optionalClean(
+      source?.locationAddress ?? source?.location_address ?? source?.address
+    ),
+    meetingUrl: optionalClean(source?.meetingUrl ?? source?.meeting_url),
+    status: optionalAppointmentStatus(source?.status),
+    sourceType: optionalAppointmentSourceType(
+      source?.sourceType ?? source?.source_type
+    ),
+    publicBookingReference: optionalClean(
+      source?.publicBookingReference ?? source?.public_booking_reference
+    ),
+    preparationRequired: optionalBoolean(source?.preparationRequired),
+    followUpRequired: optionalBoolean(source?.followUpRequired),
+    notes: optionalClean(source?.notes),
+    googleCalendarEventId: optionalClean(
+      source?.googleCalendarEventId ?? source?.google_calendar_event_id
+    ),
+    createdBy: optionalClean(source?.createdBy ?? source?.actor)
+  });
+}
+
+function normalizeReminderPayload(body) {
+  const source = body?.reminder || body;
+
+  return removeUndefined({
+    clientId: optionalIntegerValue(source?.clientId ?? source?.client_id),
+    title: optionalClean(source?.title),
+    description: optionalClean(source?.description ?? source?.notes),
+    reminderDate: optionalIsoDate(
+      source?.reminderDate ?? source?.reminder_date ?? source?.date
+    ),
+    reminderTime: optionalTime(
+      source?.reminderTime ?? source?.reminder_time ?? source?.time
+    ),
+    timezone: optionalClean(source?.timezone) || "America/New_York",
+    priority: optionalReminderPriority(source?.priority),
+    status: optionalReminderStatus(source?.status),
+    recurrenceRule: optionalClean(
+      source?.recurrenceRule ?? source?.recurrence_rule
+    ),
+    sourceType: optionalReminderSourceType(
+      source?.sourceType ?? source?.source_type
+    ),
+    sourceRecordId: optionalIntegerValue(
+      source?.sourceRecordId ?? source?.source_record_id
+    ),
+    sourceUrl: optionalClean(source?.sourceUrl ?? source?.source_url),
+    createdBy: optionalClean(source?.createdBy ?? source?.actor)
+  });
+}
+
+function normalizeAppointmentTypePayload(body) {
+  const source = body?.appointmentType || body;
+  const name = optionalClean(source?.name);
+
+  return removeUndefined({
     name,
-    slug,
-    duration_minutes,
-    allow_google_meet,
-    allow_phone,
-    allow_in_person,
-    is_public,
-    is_active
-FROM calendar_appointment_types
-ORDER BY display_order, id;
+    slug: optionalClean(source?.slug) || (name ? slugify(name) : undefined),
+    description: optionalClean(source?.description),
+    durationMinutes: optionalIntegerValue(
+      source?.durationMinutes ?? source?.duration_minutes
+    ),
+    maximumPerDay: optionalIntegerValue(
+      source?.maximumPerDay ?? source?.maximum_per_day
+    ),
+    preparationRequired: optionalBoolean(
+      source?.preparationRequired ?? source?.preparation_required
+    ),
+    allowGoogleMeet: optionalBoolean(
+      source?.allowGoogleMeet ?? source?.allow_google_meet
+    ),
+    allowPhone: optionalBoolean(source?.allowPhone ?? source?.allow_phone),
+    allowInPerson: optionalBoolean(
+      source?.allowInPerson ?? source?.allow_in_person
+    ),
+    isPublic: optionalBoolean(source?.isPublic ?? source?.is_public),
+    isActive: optionalBoolean(source?.isActive ?? source?.is_active),
+    displayOrder: optionalIntegerValue(
+      source?.displayOrder ?? source?.display_order
+    )
+  });
+}
 
-SELECT *
-FROM calendar_availability_rules
-ORDER BY id;
+function normalizeAvailabilityPayload(body) {
+  const source = body?.availabilityRules || body;
+
+  return removeUndefined({
+    timezone: optionalClean(source?.timezone),
+    availableDays: optionalDays(
+      source?.availableDays ?? source?.available_days
+    ),
+    startTime: optionalTime(source?.startTime ?? source?.start_time),
+    endTime: optionalTime(source?.endTime ?? source?.end_time),
+    minimumAdvanceNoticeHours: optionalNonNegativeInteger(
+      source?.minimumAdvanceNoticeHours ??
+      source?.minimum_advance_notice_hours
+    ),
+    maximumBookingWindowDays: optionalPositiveInteger(
+      source?.maximumBookingWindowDays ??
+      source?.maximum_booking_window_days
+    ),
+    bufferBeforeMinutes: optionalNonNegativeInteger(
+      source?.bufferBeforeMinutes ?? source?.buffer_before_minutes
+    ),
+    bufferAfterMinutes: optionalNonNegativeInteger(
+      source?.bufferAfterMinutes ?? source?.buffer_after_minutes
+    ),
+    travelBufferMinutes: optionalNonNegativeInteger(
+      source?.travelBufferMinutes ?? source?.travel_buffer_minutes
+    ),
+    maximumMeetingsPerDay: optionalPositiveInteger(
+      source?.maximumMeetingsPerDay ?? source?.maximum_meetings_per_day
+    ),
+    bookingEnabled: optionalBoolean(
+      source?.bookingEnabled ?? source?.booking_enabled
+    )
+  });
+}
+
+/* =========================================================
+   Validation
+   ========================================================= */
+
+function validateAppointment(value) {
+  if (!clean(value?.title)) return "An appointment title is required.";
+  if (!normalizeIsoDate(value?.appointmentDate)) {
+    return "A valid appointment date in YYYY-MM-DD format is required.";
+  }
+  if (!normalizeTime(value?.startTime)) {
+    return "A valid appointment start time in HH:MM format is required.";
+  }
+  if (value?.endTime && !normalizeTime(value.endTime)) {
+    return "The appointment end time must use HH:MM format.";
+  }
+  if (
+    value?.endTime &&
+    minutesFromTime(value.endTime) <= minutesFromTime(value.startTime)
+  ) {
+    return "The appointment end time must be later than the start time.";
+  }
+  if (!normalizeAppointmentStatus(value?.status)) {
+    return "The appointment status is invalid.";
+  }
+  if (!normalizeAppointmentSourceType(value?.sourceType)) {
+    return "The appointment source type is invalid.";
+  }
+  if (!normalizeLocationType(value?.locationType)) {
+    return "The appointment location type is invalid.";
+  }
+  if (
+    value?.locationType === "in_person" &&
+    !clean(value?.locationAddress) &&
+    !clean(value?.locationName)
+  ) {
+    return "An in-person appointment requires a location name or address.";
+  }
+  if (
+    value?.locationType === "google_meet" &&
+    value?.meetingUrl &&
+    !/^https?:\/\//i.test(value.meetingUrl)
+  ) {
+    return "The meeting URL must begin with http:// or https://.";
+  }
+  return "";
+}
+
+function validateReminder(value) {
+  if (!clean(value?.title)) return "A reminder title is required.";
+  if (!normalizeIsoDate(value?.reminderDate)) {
+    return "A valid reminder date in YYYY-MM-DD format is required.";
+  }
+  if (value?.reminderTime && !normalizeTime(value.reminderTime)) {
+    return "The reminder time must use HH:MM format.";
+  }
+  if (!normalizeReminderPriority(value?.priority)) {
+    return "The reminder priority is invalid.";
+  }
+  if (!normalizeReminderStatus(value?.status)) {
+    return "The reminder status is invalid.";
+  }
+  if (!normalizeReminderSourceType(value?.sourceType)) {
+    return "The reminder source type is invalid.";
+  }
+  return "";
+}
+
+function validateAppointmentType(value) {
+  if (!clean(value?.name)) return "An appointment type name is required.";
+  if (!clean(value?.slug)) return "An appointment type slug is required.";
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value.slug)) {
+    return "The appointment type slug may contain lowercase letters, numbers, and hyphens only.";
+  }
+  if (!Number.isInteger(Number(value?.durationMinutes)) || Number(value.durationMinutes) <= 0) {
+    return "Appointment duration must be a positive number of minutes.";
+  }
+  if (
+    value?.maximumPerDay !== null &&
+    value?.maximumPerDay !== undefined &&
+    (!Number.isInteger(Number(value.maximumPerDay)) || Number(value.maximumPerDay) <= 0)
+  ) {
+    return "Maximum appointments per day must be a positive integer.";
+  }
+  if (
+    !value?.allowGoogleMeet &&
+    !value?.allowPhone &&
+    !value?.allowInPerson
+  ) {
+    return "At least one appointment location must be allowed.";
+  }
+  return "";
+}
+
+function validateAvailabilityRules(value) {
+  if (!Array.isArray(value?.availableDays) || !value.availableDays.length) {
+    return "At least one available day is required.";
+  }
+  if (value.availableDays.some(day => !Number.isInteger(day) || day < 0 || day > 6)) {
+    return "Available days must use integers from 0 through 6.";
+  }
+  if (!normalizeTime(value?.startTime) || !normalizeTime(value?.endTime)) {
+    return "Availability start and end times must use HH:MM format.";
+  }
+  if (minutesFromTime(value.endTime) <= minutesFromTime(value.startTime)) {
+    return "Availability end time must be later than the start time.";
+  }
+  if (Number(value.maximumBookingWindowDays) <= 0) {
+    return "Maximum booking window must be greater than zero.";
+  }
+  if (Number(value.maximumMeetingsPerDay) <= 0) {
+    return "Maximum meetings per day must be greater than zero.";
+  }
+  return "";
+}
+
+/* =========================================================
+   Mapping
+   ========================================================= */
+
+function mapAppointment(row) {
+  return {
+    id: Number(row.id),
+    appointmentTypeId: numberOrNull(row.appointment_type_id),
+    appointmentTypeName: clean(row.appointment_type_name),
+    appointmentTypeSlug: clean(row.appointment_type_slug),
+    durationMinutes: numberOrNull(row.duration_minutes),
+    clientId: numberOrNull(row.client_id),
+    clientName: clean(row.client_name),
+    prospectId: numberOrNull(row.prospect_id),
+    title: clean(row.title),
+    contactName: clean(row.contact_name),
+    companyName: clean(row.company_name),
+    contactEmail: clean(row.contact_email),
+    contactPhone: clean(row.contact_phone),
+    appointmentDate: clean(row.appointment_date),
+    startTime: clean(row.start_time),
+    endTime: clean(row.end_time),
+    timezone: clean(row.timezone),
+    locationType: clean(row.location_type),
+    locationName: clean(row.location_name),
+    locationAddress: clean(row.location_address),
+    meetingUrl: clean(row.meeting_url),
+    status: clean(row.status),
+    sourceType: clean(row.source_type),
+    publicBookingReference: clean(row.public_booking_reference),
+    confirmationSentAt: clean(row.confirmation_sent_at),
+    confirmedAt: clean(row.confirmed_at),
+    cancelledAt: clean(row.cancelled_at),
+    completedAt: clean(row.completed_at),
+    preparationRequired: integerToBoolean(row.preparation_required),
+    followUpRequired: integerToBoolean(row.follow_up_required),
+    notes: clean(row.notes),
+    googleCalendarEventId: clean(row.google_calendar_event_id),
+    createdBy: clean(row.created_by),
+    updatedBy: clean(row.updated_by),
+    createdAt: clean(row.created_at),
+    updatedAt: clean(row.updated_at)
+  };
+}
+
+function mapReminder(row) {
+  return {
+    id: Number(row.id),
+    clientId: numberOrNull(row.client_id),
+    clientName: clean(row.client_name),
+    title: clean(row.title),
+    description: clean(row.description),
+    reminderDate: clean(row.reminder_date),
+    reminderTime: clean(row.reminder_time),
+    timezone: clean(row.timezone),
+    priority: clean(row.priority),
+    status: clean(row.status),
+    recurrenceRule: clean(row.recurrence_rule),
+    sourceType: clean(row.source_type),
+    sourceRecordId: numberOrNull(row.source_record_id),
+    sourceUrl: clean(row.source_url),
+    completedAt: clean(row.completed_at),
+    dismissedAt: clean(row.dismissed_at),
+    createdBy: clean(row.created_by),
+    updatedBy: clean(row.updated_by),
+    createdAt: clean(row.created_at),
+    updatedAt: clean(row.updated_at)
+  };
+}
+
+function mapAppointmentType(row) {
+  return {
+    id: Number(row.id),
+    name: clean(row.name),
+    slug: clean(row.slug),
+    description: clean(row.description),
+    durationMinutes: Number(row.duration_minutes),
+    maximumPerDay: numberOrNull(row.maximum_per_day),
+    preparationRequired: integerToBoolean(row.preparation_required),
+    allowGoogleMeet: integerToBoolean(row.allow_google_meet),
+    allowPhone: integerToBoolean(row.allow_phone),
+    allowInPerson: integerToBoolean(row.allow_in_person),
+    isPublic: integerToBoolean(row.is_public),
+    isActive: integerToBoolean(row.is_active),
+    displayOrder: Number(row.display_order || 0),
+    createdAt: clean(row.created_at),
+    updatedAt: clean(row.updated_at)
+  };
+}
+
+function mapAvailabilityRules(row) {
+  return {
+    id: Number(row.id),
+    ownerKey: clean(row.owner_key),
+    timezone: clean(row.timezone),
+    availableDays: parseDays(row.available_days_json),
+    startTime: clean(row.start_time),
+    endTime: clean(row.end_time),
+    minimumAdvanceNoticeHours: Number(row.minimum_advance_notice_hours),
+    maximumBookingWindowDays: Number(row.maximum_booking_window_days),
+    bufferBeforeMinutes: Number(row.buffer_before_minutes),
+    bufferAfterMinutes: Number(row.buffer_after_minutes),
+    travelBufferMinutes: Number(row.travel_buffer_minutes),
+    maximumMeetingsPerDay: Number(row.maximum_meetings_per_day),
+    bookingEnabled: integerToBoolean(row.booking_enabled),
+    createdAt: clean(row.created_at),
+    updatedAt: clean(row.updated_at)
+  };
+}
+
+/* =========================================================
+   Lifecycle Helpers
+   ========================================================= */
+
+function lifecycleTimestamps({ existing, nextStatus }) {
+  const now = new Date().toISOString();
+
+  return {
+    confirmationSentAt:
+      nextStatus === "confirmation_sent"
+        ? existing.confirmationSentAt || now
+        : existing.confirmationSentAt || null,
+
+    confirmedAt:
+      nextStatus === "confirmed"
+        ? existing.confirmedAt || now
+        : existing.confirmedAt || null,
+
+    cancelledAt:
+      nextStatus === "cancelled"
+        ? existing.cancelledAt || now
+        : nextStatus !== "cancelled"
+          ? null
+          : existing.cancelledAt || null,
+
+    completedAt:
+      nextStatus === "completed"
+        ? existing.completedAt || now
+        : nextStatus !== "completed"
+          ? null
+          : existing.completedAt || null
+  };
+}
+
+function reminderLifecycleTimestamps({ existing, nextStatus }) {
+  const now = new Date().toISOString();
+
+  return {
+    completedAt:
+      nextStatus === "completed"
+        ? existing.completedAt || now
+        : nextStatus !== "completed"
+          ? null
+          : existing.completedAt || null,
+
+    dismissedAt:
+      nextStatus === "dismissed"
+        ? existing.dismissedAt || now
+        : nextStatus !== "dismissed"
+          ? null
+          : existing.dismissedAt || null
+  };
+}
+
+/* =========================================================
+   General Helpers
+   ========================================================= */
+
+function bindAll(statement, values) {
+  return values.length ? statement.bind(...values) : statement;
+}
+
+function insertedId(result) {
+  const id =
+    result?.meta?.last_row_id ??
+    result?.meta?.lastRowId ??
+    result?.last_row_id ??
+    result?.lastRowId;
+
+  return Number(id || 0);
+}
+
+function removeUndefined(value) {
+  return Object.fromEntries(
+    Object.entries(value || {}).filter(([, item]) => item !== undefined)
+  );
+}
+
+function optionalClean(value) {
+  if (value === undefined) return undefined;
+  const normalized = clean(value);
+  return normalized || null;
+}
+
+function optionalIsoDate(value) {
+  if (value === undefined) return undefined;
+  return normalizeIsoDate(value) || null;
+}
+
+function optionalTime(value) {
+  if (value === undefined) return undefined;
+  return normalizeTime(value) || null;
+}
+
+function optionalIntegerValue(value) {
+  if (value === undefined) return undefined;
+  return normalizeOptionalInteger(value);
+}
+
+function optionalPositiveInteger(value) {
+  if (value === undefined) return undefined;
+  const number = Number(value);
+  return Number.isInteger(number) && number > 0 ? number : null;
+}
+
+function optionalNonNegativeInteger(value) {
+  if (value === undefined) return undefined;
+  const number = Number(value);
+  return Number.isInteger(number) && number >= 0 ? number : null;
+}
+
+function optionalBoolean(value) {
+  if (value === undefined) return undefined;
+  return normalizeBoolean(value, false);
+}
+
+function optionalDays(value) {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value)) return null;
+
+  return [...new Set(
+    value
+      .map(Number)
+      .filter(day => Number.isInteger(day) && day >= 0 && day <= 6)
+  )].sort((a, b) => a - b);
+}
+
+function optionalLocationType(value) {
+  if (value === undefined) return undefined;
+  return normalizeLocationType(value);
+}
+
+function optionalAppointmentStatus(value) {
+  if (value === undefined) return undefined;
+  return normalizeAppointmentStatus(value);
+}
+
+function optionalAppointmentSourceType(value) {
+  if (value === undefined) return undefined;
+  return normalizeAppointmentSourceType(value);
+}
+
+function optionalReminderPriority(value) {
+  if (value === undefined) return undefined;
+  return normalizeReminderPriority(value);
+}
+
+function optionalReminderStatus(value) {
+  if (value === undefined) return undefined;
+  return normalizeReminderStatus(value);
+}
+
+function optionalReminderSourceType(value) {
+  if (value === undefined) return undefined;
+  return normalizeReminderSourceType(value);
+}
+
+function normalizeIsoDate(value) {
+  const normalized = clean(value);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) return "";
+
+  const [year, month, day] = normalized.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  )
+    ? normalized
+    : "";
+}
+
+function normalizeTime(value) {
+  const normalized = clean(value);
+  if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(normalized)) return "";
+  return normalized;
+}
+
+function normalizeRequiredInteger(value) {
+  const number = Number(value);
+  return Number.isInteger(number) && number > 0 ? number : null;
+}
+
+function normalizeOptionalInteger(value) {
+  if (value === null || value === undefined || value === "") return null;
+  return normalizeRequiredInteger(value);
+}
+
+function normalizeLocationType(value) {
+  const normalized = clean(value).toLowerCase().replace(/[\s-]+/g, "_");
+
+  const aliases = {
+    google_meet: "google_meet",
+    googlemeet: "google_meet",
+    meet: "google_meet",
+    phone: "phone",
+    telephone: "phone",
+    in_person: "in_person",
+    inperson: "in_person"
+  };
+
+  return aliases[normalized] || "";
+}
+
+function normalizeAppointmentStatus(value, optional = false) {
+  const normalized = clean(value).toLowerCase().replace(/[\s-]+/g, "_");
+
+  if (optional && !normalized) return "";
+
+  const allowed = new Set([
+    "requested",
+    "scheduled",
+    "confirmation_sent",
+    "confirmed",
+    "rescheduled",
+    "completed",
+    "cancelled",
+    "no_show"
+  ]);
+
+  return allowed.has(normalized) ? normalized : "";
+}
+
+function normalizeAppointmentSourceType(value) {
+  const normalized =
+    clean(value || "internal").toLowerCase().replace(/[\s-]+/g, "_");
+
+  const allowed = new Set([
+    "internal",
+    "public_booking",
+    "google_calendar",
+    "import"
+  ]);
+
+  return allowed.has(normalized) ? normalized : "";
+}
+
+function normalizeReminderPriority(value) {
+  const normalized = clean(value || "normal").toLowerCase();
+  return ["low", "normal", "high", "urgent"].includes(normalized)
+    ? normalized
+    : "";
+}
+
+function normalizeReminderStatus(value, optional = false) {
+  const normalized = clean(value).toLowerCase().replace(/[\s-]+/g, "_");
+
+  if (optional && !normalized) return "";
+
+  return ["open", "completed", "dismissed", "cancelled"].includes(normalized)
+    ? normalized
+    : "";
+}
+
+function normalizeReminderSourceType(value) {
+  const normalized =
+    clean(value || "calendar").toLowerCase().replace(/[\s-]+/g, "_");
+
+  const allowed = new Set([
+    "calendar",
+    "communication",
+    "investigation",
+    "work_item",
+    "media",
+    "finance",
+    "proof",
+    "system"
+  ]);
+
+  return allowed.has(normalized) ? normalized : "";
+}
+
+function normalizeBoolean(value, fallback = false) {
+  if (typeof value === "boolean") return value;
+  if (value === 1 || value === "1") return true;
+  if (value === 0 || value === "0") return false;
+
+  const normalized = clean(value).toLowerCase();
+
+  if (["true", "yes", "on"].includes(normalized)) return true;
+  if (["false", "no", "off"].includes(normalized)) return false;
+
+  return fallback;
+}
+
+function booleanToInteger(value) {
+  return value ? 1 : 0;
+}
+
+function integerToBoolean(value) {
+  return Number(value) === 1;
+}
+
+function numberOrNull(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function parseDays(value) {
+  try {
+    const days = JSON.parse(String(value || "[]"));
+    return Array.isArray(days)
+      ? days
+          .map(Number)
+          .filter(day => Number.isInteger(day) && day >= 0 && day <= 6)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function slugify(value) {
+  return clean(value)
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function minutesFromTime(value) {
+  const normalized = normalizeTime(value);
+  if (!normalized) return NaN;
+
+  const [hours, minutes] = normalized.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+function addMinutesToTime(value, minutesToAdd) {
+  const start = minutesFromTime(value);
+  const duration = Number(minutesToAdd);
+
+  if (!Number.isFinite(start) || !Number.isFinite(duration)) return "";
+
+  const total = start + duration;
+  const hours = Math.floor(total / 60);
+  const minutes = total % 60;
+
+  if (hours > 23) return "23:59";
+
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}
