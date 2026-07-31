@@ -1,8 +1,3 @@
-Library
-/
-gcm-shell.txt
-
-
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gcm-shell.js
