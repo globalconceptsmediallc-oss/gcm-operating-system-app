@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: finance.html
-   Version: 1.5.0
+   Version: 1.6.0
    Status: Production Candidate — Invoice PDF, Statements & Agency Branding
    Source: finance.html 1.4.0
    Sprint: Finance / Scalable Billing Profiles
@@ -163,6 +163,9 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
   .app,.shell{display:block;border:0;box-shadow:none;min-height:0}.page,.invoice-stage{padding:0;background:#fff}
   .invoice-paper{max-width:none;border:0;box-shadow:none}.invoice{padding:20px}
 }
+
+.brand-logo,#statementLogo,.logo-preview,.logo-preview-box{display:none!important;}
+.brand{display:block!important;}
 </style>
 </head>
 <body>
@@ -172,7 +175,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
     <button class="mobile btn" data-gcm-shell-menu-button type="button">Menu</button>
     <header class="top">
       <div><p class="eyebrow">Agency Finance</p><h1>Billing Workspace</h1><p class="sub">Manage billing profiles, create invoices, email them, and record Check or ACH payments.</p></div>
-      <div class="version">Installed version 1.5.0</div>
+      <div class="version">Installed version 1.6.0</div>
     </header>
 
     <section class="shell">
@@ -198,7 +201,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
         <div class="actions">
           <button class="btn primary" id="createInvoice">Create Invoice</button>
           <button class="btn" id="reviewInvoice">Invoice Preview</button>
-          <button class="btn" id="emailInvoice">Prepare Gmail Draft</button>
+          <button class="btn" id="emailInvoice">Email Invoice</button>
           <button class="btn success" id="recordPayment">Record Payment</button>
           <button class="btn" id="closeCycle">Close Billing Cycle</button>
           <button class="btn" id="printStatement">Print Statement</button>
@@ -211,7 +214,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
             <div class="left"><strong id="reviewLabel">Invoice Review</strong><span class="pill" id="invoiceStatus">draft</span></div>
             <div class="right">
               <button class="btn" id="printInvoice" type="button">Generate Invoice PDF</button>
-              <button class="btn primary" id="emailFromReview" type="button">Prepare Gmail Draft</button>
+              <button class="btn primary" id="emailFromReview" type="button">Email Invoice</button>
               <button class="btn" id="hideReview" type="button">Return to History</button>
             </div>
           </div>
@@ -221,7 +224,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
               <div class="invoice-top">
                 <div class="brand">
                   <div class="brand-logo" id="paperLogo">GCM</div>
-                  <div><h2 id="paperAgencyName">Global Concepts Media Agency</h2><p>Marketing • Website • SEO • Social Media • Content</p></div>
+                  <div><h2 id="paperAgencyName">Global Concepts Media Agency LLC</h2><p>Marketing • Website • SEO • Social Media • Content</p></div>
                 </div>
                 <div class="invoice-title"><h2>INVOICE</h2><strong id="paperInvoiceNumber">#2238</strong></div>
               </div>
@@ -275,7 +278,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
               <div class="invoice-top">
                 <div class="brand">
                   <div class="brand-logo" id="statementLogo">GCM</div>
-                  <div><h2>Global Concepts Media Agency</h2><p>Client Account Statement</p></div>
+                  <div><h2>Global Concepts Media Agency LLC</h2><p>Client Account Statement</p></div>
                 </div>
                 <div class="invoice-title"><h2>STATEMENT</h2><strong id="statementDate">—</strong></div>
               </div>
@@ -436,9 +439,9 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
 <script src="shared/gcm-shell.js?v=1.0.2"></script>
 <script>
 (()=>{"use strict";
-const VERSION="1.5.0",KEY="gcm_finance_workspace_v1_5",$=id=>document.getElementById(id);
+const VERSION="1.6.0",KEY="gcm_finance_workspace_v1_6",$=id=>document.getElementById(id);
 const seed={
-  agency:{name:"Global Concepts Media Agency",website:"https://globalconceptsmediallc.com",logoUrl:""},
+  agency:{name:"Global Concepts Media Agency LLC",website:"https://globalconceptsmediallc.com",logoUrl:""},
   selectedAccountId:1,selectedInvoiceId:null,nextInvoiceNumber:2238,nextAccountId:3,
   accounts:[
     {
@@ -527,7 +530,7 @@ function agencyBrandUrl(){const a=agency();return a.logoUrl||faviconUrl(a.websit
 function agencyImageBox(el){
   const a=agency(),src=agencyBrandUrl();el.innerHTML="";
   if(!src){el.textContent=initials(a.name||"GCM");return}
-  const img=document.createElement("img");img.src=src;img.alt=a.name||"Global Concepts Media Agency";
+  const img=document.createElement("img");img.src=src;img.alt=a.name||"Global Concepts Media Agency LLC";
   img.onerror=()=>{el.innerHTML="";el.textContent=initials(a.name||"GCM")};el.appendChild(img);
 }
 function imageBox(el,a,text){
@@ -682,7 +685,7 @@ function showInvoice(){
   const a=account(),i=invoice();if(!i){toast("No invoice is available to review.");return}
   const source=i.accountSnapshot||a;state.selectedInvoiceId=i.id;save();
   agencyImageBox($("paperLogo"));
-  $("paperAgencyName").textContent=agency().name||"Global Concepts Media Agency";
+  $("paperAgencyName").textContent=agency().name||"Global Concepts Media Agency LLC";
   $("paperInvoiceNumber").textContent=`#${i.reference}`;$("paperBillTo").textContent=source.name||a.name;
   $("paperContact").textContent=source.contact||"";$("paperEmail").textContent=i.email||a.email||"Billing email not set";
   $("paperAddress").textContent=source.address||"";$("paperDate").textContent=date(i.date);$("paperDueDate").textContent=date(i.dueDate);
@@ -724,7 +727,7 @@ async function emailCurrent(){
   const recipient=i.email||a.email;if(!recipient){toast("A billing email has not been set for this account.");return}
   try{
     await generateInvoicePdf(true);
-    const subject=encodeURIComponent(`Invoice #${i.reference} from ${agency().name||"Global Concepts Media Agency"}`);
+    const subject=encodeURIComponent(`Invoice #${i.reference} from ${agency().name||"Global Concepts Media Agency LLC"}`);
     const body=encodeURIComponent(`Hello${a.contact?` ${a.contact}`:""},
 
 Attached is invoice #${i.reference} for ${money(i.amount)}.
@@ -736,7 +739,7 @@ Bill to: ${a.name}
 The invoice PDF has been downloaded. Please attach it to this Gmail draft before sending.
 
 Thank you,
-${agency().name||"Global Concepts Media Agency"}`);
+${agency().name||"Global Concepts Media Agency LLC"}`);
     i.status="sent";save();renderAll();showInvoice();
     window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(recipient)}&su=${subject}&body=${body}`,"_blank");
     toast("Invoice PDF downloaded and Gmail draft opened. Attach the downloaded PDF before sending.");
@@ -772,15 +775,15 @@ async function generateStatementPdf(){
   }catch(err){console.error(err);toast(err.message||"Statement PDF could not be generated.");}
 }
 function previewAgencyLogo(){
-  const test={name:$("agencyName").value||"Global Concepts Media Agency",website:$("agencyWebsite").value,logoUrl:$("agencyLogoUrl").value};
+  const test={name:$("agencyName").value||"Global Concepts Media Agency LLC",website:$("agencyWebsite").value,logoUrl:$("agencyLogoUrl").value};
   const old=state.agency;state.agency=test;agencyImageBox($("agencyLogoPreview"));state.agency=old;
 }
 function openBranding(){
-  const a=agency();$("agencyName").value=a.name||"Global Concepts Media Agency";$("agencyWebsite").value=a.website||"";
+  const a=agency();$("agencyName").value=a.name||"Global Concepts Media Agency LLC";$("agencyWebsite").value=a.website||"";
   $("agencyLogoUrl").value=a.logoUrl||"";previewAgencyLogo();$("brandingDialog").showModal();
 }
 function saveBranding(e){
-  e.preventDefault();state.agency={name:$("agencyName").value.trim()||"Global Concepts Media Agency",website:$("agencyWebsite").value.trim(),logoUrl:$("agencyLogoUrl").value.trim()};
+  e.preventDefault();state.agency={name:$("agencyName").value.trim()||"Global Concepts Media Agency LLC",website:$("agencyWebsite").value.trim(),logoUrl:$("agencyLogoUrl").value.trim()};
   save();$("brandingDialog").close();renderAll();if(!$("invoiceStage").classList.contains("hidden"))showInvoice();toast("Agency branding updated.");
 }
 
