@@ -1,12 +1,14 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: finance.html
-   Version: 1.2.0
-   Status: Production Candidate — Fixed Billing Road Test
-   Source: finance.html 1.1.0
-   Sprint: Finance / Billing Accounts
-   Purpose: Fixed monthly invoice and Check/ACH payment tracking.
-            Proof of Work and operational work are excluded from this task.
+   Version: 1.3.0
+   Status: Production Candidate — Invoice Road Test
+   Source: finance.html 1.2.0
+   Sprint: Finance / Invoice Creation and Delivery
+   Purpose: Create fixed monthly or additional-service invoices,
+            auto-generate invoice numbers, review a client-facing
+            invoice, open a pre-addressed email, record Check/ACH
+            payments, and close billing cycles.
    Production Contract: window.GCMOShell
    ========================================================= -->
 <!DOCTYPE html>
@@ -16,91 +18,469 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Finance | GCM OS</title>
 <style>
-:root{--navy:#0b1d33;--blue:#1f68d8;--soft:#f4f7fb;--border:#d8e0eb;--text:#132238;--muted:#667489;--green:#16714a;--green-soft:#e8f7ef;--warn:#97620f;--warn-soft:#fff4dd;--blue-soft:#eaf2ff}
-*{box-sizing:border-box}body{margin:0;background:var(--soft);color:var(--text);font-family:Inter,system-ui,sans-serif}button,input,select{font:inherit}.app{min-height:100vh;display:grid;grid-template-columns:250px 1fr}.page{padding:26px;max-width:1500px;width:100%;margin:auto}.mobile{display:none}.top{display:flex;justify-content:space-between;gap:20px;margin-bottom:18px}.eyebrow{margin:0;color:var(--blue);font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.12em}h1{margin:4px 0;font-size:38px}.sub{margin:0;color:var(--muted)}.version{align-self:flex-start;border:1px solid var(--border);background:white;border-radius:999px;padding:9px 12px;font-size:12px;font-weight:800;color:var(--muted)}
-.shell{display:grid;grid-template-columns:270px 1fr;background:white;border:1px solid var(--border);border-radius:18px;overflow:hidden;min-height:700px}.rail{border-right:1px solid var(--border);background:#fbfcfe}.rail-head{padding:18px;border-bottom:1px solid var(--border)}.rail-head h2{margin:0 0 12px;font-size:16px}.rail input{width:100%;padding:10px;border:1px solid var(--border);border-radius:9px}.acct{width:100%;border:0;border-bottom:1px solid #e7ecf3;background:transparent;padding:16px;text-align:left}.acct.active{background:var(--blue-soft);box-shadow:inset 3px 0 var(--blue)}.acct strong,.acct span{display:block}.acct span{margin-top:4px;color:var(--muted);font-size:12px}
-.summary{display:grid;grid-template-columns:1.3fr repeat(3,.7fr);gap:18px;padding:22px 24px;border-bottom:1px solid var(--border)}.identity{display:flex;gap:14px;align-items:center}.avatar{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;background:#eef3f9;font-weight:900}.identity h2{margin:0}.identity p{margin:4px 0 0;color:var(--muted);font-size:13px}.stat{padding-left:18px;border-left:1px solid var(--border)}.stat span{display:block;color:var(--muted);font-size:11px;font-weight:900;text-transform:uppercase}.stat strong{display:block;margin-top:7px;font-size:19px}.stat small{display:block;margin-top:3px;color:var(--muted)}
-.actions{display:flex;flex-wrap:wrap;gap:9px;padding:14px 24px;border-bottom:1px solid var(--border)}.btn{padding:9px 13px;border:1px solid var(--border);border-radius:9px;background:white;font-weight:800}.btn.primary{background:var(--blue);color:white;border-color:var(--blue)}.btn.success{background:var(--green);color:white;border-color:var(--green)}.btn:disabled{opacity:.45;cursor:not-allowed}
-.section{padding:22px 24px}.head{display:flex;justify-content:space-between;gap:14px;margin-bottom:14px}.head h3{margin:0}.head p{margin:4px 0 0;color:var(--muted);font-size:13px}.pill{padding:5px 9px;border-radius:999px;background:var(--warn-soft);color:var(--warn);font-size:12px;font-weight:900;text-transform:capitalize}.pill.sent{background:var(--blue-soft);color:var(--blue)}.pill.paid,.pill.closed{background:var(--green-soft);color:var(--green)}
-.table{overflow:auto;border:1px solid var(--border);border-radius:12px}table{width:100%;min-width:750px;border-collapse:collapse}th,td{padding:13px 14px;border-bottom:1px solid var(--border);text-align:left}th{background:#fbfcfe;color:var(--muted);font-size:11px;text-transform:uppercase}.money{text-align:right;font-weight:800}.total td{font-weight:900;background:#fbfcfe}tbody tr:last-child td{border-bottom:0}.tools{display:flex;gap:10px;margin-bottom:12px}.tools input,.tools select{padding:9px 10px;border:1px solid var(--border);border-radius:9px}.status{padding:4px 8px;border-radius:999px;font-size:12px;font-weight:850;background:var(--warn-soft);color:var(--warn)}.status.sent{background:var(--blue-soft);color:var(--blue)}.status.paid,.status.closed{background:var(--green-soft);color:var(--green)}.empty{text-align:center;color:var(--muted);padding:30px}
-dialog{width:min(700px,calc(100vw - 30px));border:0;border-radius:16px;padding:0;box-shadow:0 24px 70px #07142655}dialog::backdrop{background:#07142688}.dhead,.dactions{display:flex;justify-content:space-between;gap:12px;padding:18px 20px;border-bottom:1px solid var(--border)}.dhead h2{margin:0}.dhead p{margin:4px 0 0;color:var(--muted)}.close{width:34px;height:34px;border:1px solid var(--border);border-radius:8px;background:white}.dbody{padding:20px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.field{display:grid;gap:6px}.field.full{grid-column:1/-1}.field label{font-size:11px;font-weight:900;color:var(--muted);text-transform:uppercase}.field input,.field select{padding:10px;border:1px solid var(--border);border-radius:9px}.dactions{justify-content:flex-end;border-top:1px solid var(--border);border-bottom:0;background:#fbfcfe}.toast{position:fixed;right:22px;bottom:22px;background:var(--navy);color:white;padding:13px 15px;border-radius:10px;opacity:0;transform:translateY(10px);transition:.2s}.toast.show{opacity:1;transform:none}
-@media(max-width:900px){.app{display:block}.mobile{display:inline-block;margin-bottom:12px}.shell{grid-template-columns:1fr}.rail{border-right:0;border-bottom:1px solid var(--border)}.summary{grid-template-columns:1fr}.stat{border-left:0;padding-left:0}.top{flex-direction:column}.grid{grid-template-columns:1fr}.field.full{grid-column:auto}}
+:root{
+  --navy:#0b1d33;--navy2:#132a49;--blue:#1f68d8;--blue2:#1756b8;
+  --soft:#f4f7fb;--soft2:#eef3f9;--border:#d8e0eb;--text:#132238;
+  --muted:#667489;--green:#16714a;--green-soft:#e8f7ef;
+  --warn:#97620f;--warn-soft:#fff4dd;--blue-soft:#eaf2ff;--red:#b33a3a
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--soft);color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+.app{min-height:100vh;display:grid;grid-template-columns:250px 1fr}
+.page{padding:26px;max-width:1540px;width:100%;margin:auto}
+.mobile{display:none}
+.top{display:flex;justify-content:space-between;gap:20px;margin-bottom:18px}
+.eyebrow{margin:0;color:var(--blue);font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.12em}
+h1{margin:4px 0;font-size:38px;letter-spacing:-.04em}
+.sub{margin:0;color:var(--muted)}
+.version{align-self:flex-start;border:1px solid var(--border);background:#fff;border-radius:999px;padding:9px 12px;font-size:12px;font-weight:800;color:var(--muted)}
+.shell{display:grid;grid-template-columns:270px minmax(0,1fr);background:#fff;border:1px solid var(--border);border-radius:18px;overflow:hidden;min-height:760px;box-shadow:0 12px 34px rgba(11,29,51,.07)}
+.rail{border-right:1px solid var(--border);background:#fbfcfe}
+.rail-head{padding:18px;border-bottom:1px solid var(--border)}
+.rail-head h2{margin:0 0 12px;font-size:16px}
+.rail input{width:100%;padding:10px;border:1px solid var(--border);border-radius:9px}
+.acct{width:100%;border:0;border-bottom:1px solid #e7ecf3;background:transparent;padding:16px;text-align:left}
+.acct:hover{background:#f3f7fc}
+.acct.active{background:var(--blue-soft);box-shadow:inset 3px 0 var(--blue)}
+.acct strong,.acct span{display:block}
+.acct span{margin-top:4px;color:var(--muted);font-size:12px}
+.summary{display:grid;grid-template-columns:1.35fr repeat(3,.7fr);gap:18px;padding:22px 24px;border-bottom:1px solid var(--border)}
+.identity{display:flex;gap:14px;align-items:center}
+.avatar{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;background:var(--soft2);font-weight:900}
+.identity h2{margin:0}
+.identity p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.stat{padding-left:18px;border-left:1px solid var(--border)}
+.stat span{display:block;color:var(--muted);font-size:11px;font-weight:900;text-transform:uppercase}
+.stat strong{display:block;margin-top:7px;font-size:19px}
+.stat small{display:block;margin-top:3px;color:var(--muted)}
+.actions{display:flex;flex-wrap:wrap;gap:9px;padding:14px 24px;border-bottom:1px solid var(--border)}
+.btn{padding:9px 13px;border:1px solid var(--border);border-radius:9px;background:#fff;color:var(--text);font-weight:800}
+.btn:hover{background:#f7f9fc}
+.btn.primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn.primary:hover{background:var(--blue2)}
+.btn.success{background:var(--green);color:#fff;border-color:var(--green)}
+.btn.danger{color:var(--red)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.section{padding:22px 24px}
+.head{display:flex;justify-content:space-between;gap:14px;margin-bottom:14px}
+.head h3{margin:0}
+.head p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.pill{padding:5px 9px;border-radius:999px;background:var(--warn-soft);color:var(--warn);font-size:12px;font-weight:900;text-transform:capitalize}
+.pill.sent{background:var(--blue-soft);color:var(--blue)}
+.pill.paid,.pill.closed{background:var(--green-soft);color:var(--green)}
+.table{overflow:auto;border:1px solid var(--border);border-radius:12px}
+table{width:100%;min-width:740px;border-collapse:collapse}
+th,td{padding:13px 14px;border-bottom:1px solid var(--border);text-align:left}
+th{background:#fbfcfe;color:var(--muted);font-size:11px;text-transform:uppercase}
+.money{text-align:right;font-weight:800}
+tbody tr:last-child td{border-bottom:0}
+.tools{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+.tools input,.tools select{padding:9px 10px;border:1px solid var(--border);border-radius:9px}
+.status{padding:4px 8px;border-radius:999px;font-size:12px;font-weight:850;background:var(--warn-soft);color:var(--warn)}
+.status.sent{background:var(--blue-soft);color:var(--blue)}
+.status.paid,.status.closed{background:var(--green-soft);color:var(--green)}
+.empty{text-align:center;color:var(--muted);padding:30px}
+.invoice-stage{padding:22px 24px;background:#eef2f7;border-bottom:1px solid var(--border)}
+.invoice-paper{max-width:980px;margin:0 auto;background:#fff;border:1px solid #cfd8e5;box-shadow:0 8px 24px rgba(11,29,51,.11)}
+.invoice-toolbar{max-width:980px;margin:0 auto 12px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.invoice-toolbar .left,.invoice-toolbar .right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.invoice{padding:42px 46px 36px}
+.invoice-top{display:flex;justify-content:space-between;gap:30px;border-bottom:2px solid var(--navy);padding-bottom:24px}
+.brand h2{margin:0;color:var(--navy);font-size:25px}
+.brand p{margin:5px 0 0;color:var(--muted);font-size:13px}
+.invoice-title{text-align:right}
+.invoice-title h2{margin:0;color:var(--navy);font-size:36px;letter-spacing:.08em}
+.invoice-title strong{display:block;margin-top:8px;font-size:16px}
+.invoice-meta{display:grid;grid-template-columns:1.2fr 1fr;gap:32px;padding:25px 0}
+.label{display:block;color:var(--muted);font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+.billto strong{display:block;margin-top:6px;font-size:17px}
+.billto span{display:block;margin-top:4px;color:var(--muted)}
+.meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.meta-box{border-bottom:1px solid var(--border);padding-bottom:7px}
+.meta-box strong{display:block;margin-top:5px}
+.invoice-table{width:100%;min-width:0;border-collapse:collapse}
+.invoice-table th{background:var(--navy);color:#fff}
+.invoice-table td,.invoice-table th{padding:12px 11px}
+.invoice-table .desc{width:52%}
+.invoice-table .subtotal-row td{background:#fbfcfe;font-weight:800}
+.invoice-total{display:flex;justify-content:flex-end;padding-top:20px}
+.invoice-total table{width:350px;min-width:0}
+.invoice-total td{padding:9px 12px}
+.invoice-total tr:last-child td{border-top:2px solid var(--navy);font-size:17px;font-weight:900}
+.invoice-note{margin-top:30px;border-top:1px solid var(--border);padding-top:18px;color:var(--muted);font-size:12px}
+dialog{width:min(780px,calc(100vw - 30px));border:0;border-radius:16px;padding:0;box-shadow:0 24px 70px rgba(7,20,38,.35)}
+dialog::backdrop{background:rgba(7,20,38,.55)}
+.dhead,.dactions{display:flex;justify-content:space-between;gap:12px;padding:18px 20px;border-bottom:1px solid var(--border)}
+.dhead h2{margin:0}
+.dhead p{margin:4px 0 0;color:var(--muted)}
+.close{width:34px;height:34px;border:1px solid var(--border);border-radius:8px;background:#fff}
+.dbody{padding:20px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.field{display:grid;gap:6px}
+.field.full{grid-column:1/-1}
+.field label{font-size:11px;font-weight:900;color:var(--muted);text-transform:uppercase}
+.field input,.field select,.field textarea{padding:10px;border:1px solid var(--border);border-radius:9px;width:100%}
+.field textarea{min-height:80px;resize:vertical}
+.dactions{justify-content:flex-end;border-top:1px solid var(--border);border-bottom:0;background:#fbfcfe}
+.extra-editor{margin-top:15px;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.extra-head,.extra-row{display:grid;grid-template-columns:minmax(0,1fr) 140px 42px;gap:8px;align-items:center;padding:9px}
+.extra-head{background:#fbfcfe;color:var(--muted);font-size:11px;font-weight:900;text-transform:uppercase}
+.extra-row{border-top:1px solid var(--border)}
+.extra-row input{padding:9px;border:1px solid var(--border);border-radius:8px;width:100%}
+.icon-btn{width:36px;height:36px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--red);font-weight:900}
+.helper{color:var(--muted);font-size:12px;margin-top:6px}
+.toast{position:fixed;right:22px;bottom:22px;z-index:1000;background:var(--navy);color:#fff;padding:13px 15px;border-radius:10px;opacity:0;transform:translateY(10px);transition:.2s;max-width:440px}
+.toast.show{opacity:1;transform:none}
+.hidden{display:none!important}
+@media(max-width:1050px){.summary{grid-template-columns:1fr 1fr}.stat:nth-child(2){border-left:0;padding-left:0}}
+@media(max-width:900px){
+  .app{display:block}.mobile{display:inline-block;margin-bottom:12px}.shell{grid-template-columns:1fr}
+  .rail{border-right:0;border-bottom:1px solid var(--border)}.summary{grid-template-columns:1fr}
+  .stat{border-left:0;padding-left:0}.top{flex-direction:column}.grid{grid-template-columns:1fr}
+  .field.full{grid-column:auto}.invoice{padding:28px 22px}.invoice-top,.invoice-meta{display:block}
+  .invoice-title{text-align:left;margin-top:24px}.meta-grid{margin-top:20px}.invoice-table{min-width:700px}
+  .invoice-paper{overflow:auto}
+}
+@media print{
+  body{background:#fff}.app>[data-gcm-shell-sidebar],.top,.rail,.summary,.actions,.section,.invoice-toolbar,.mobile{display:none!important}
+  .app,.shell{display:block;border:0;box-shadow:none;min-height:0}.page,.invoice-stage{padding:0;background:#fff}
+  .invoice-paper{max-width:none;border:0;box-shadow:none}.invoice{padding:20px}
+}
 </style>
 </head>
 <body>
 <div class="app">
-<aside data-gcm-shell-sidebar></aside>
-<main class="page">
-<button class="mobile btn" data-gcm-shell-menu-button type="button">Menu</button>
-<header class="top"><div><p class="eyebrow">Agency Finance</p><h1>Billing Workspace</h1><p class="sub">Generate fixed monthly invoices, mark them sent, record Check or ACH payments, and close each billing cycle.</p></div><div class="version">Installed version 1.2.0</div></header>
-<section class="shell">
-<aside class="rail"><div class="rail-head"><h2>Billing Accounts</h2><input id="accountSearch" placeholder="Search billing accounts"></div><div id="accountList"></div></aside>
-<section>
-<div class="summary">
-<div class="identity"><div class="avatar" id="initials">SS</div><div><h2 id="name">Southeast Safes</h2><p id="detail">Fixed monthly billing account</p></div></div>
-<div class="stat"><span>Billing Package</span><strong id="package">$1,600.00</strong><small>Fixed monthly amount</small></div>
-<div class="stat"><span>Current Balance</span><strong id="balance">$0.00</strong><small id="balanceNote">No open invoice</small></div>
-<div class="stat"><span>Last Payment</span><strong id="lastPayment">$0.00</strong><small id="lastPaymentDate">No payment recorded</small></div>
+  <aside data-gcm-shell-sidebar></aside>
+  <main class="page">
+    <button class="mobile btn" data-gcm-shell-menu-button type="button">Menu</button>
+    <header class="top">
+      <div><p class="eyebrow">Agency Finance</p><h1>Billing Workspace</h1><p class="sub">Create monthly or additional-service invoices, email them, and record Check or ACH payments.</p></div>
+      <div class="version">Installed version 1.3.0</div>
+    </header>
+
+    <section class="shell">
+      <aside class="rail">
+        <div class="rail-head"><h2>Billing Accounts</h2><input id="accountSearch" placeholder="Search billing accounts"></div>
+        <div id="accountList"></div>
+      </aside>
+
+      <section>
+        <div class="summary">
+          <div class="identity"><div class="avatar" id="initials">SS</div><div><h2 id="name">Southeast Safes</h2><p id="detail">Fixed monthly billing account</p></div></div>
+          <div class="stat"><span>Billing Package</span><strong id="package">$1,600.00</strong><small>Fixed monthly amount</small></div>
+          <div class="stat"><span>Current Balance</span><strong id="balance">$0.00</strong><small id="balanceNote">No open invoice</small></div>
+          <div class="stat"><span>Billing Email</span><strong id="billingEmail" style="font-size:14px">Adrianne@sesafes.com</strong><small>Default invoice recipient</small></div>
+        </div>
+
+        <div class="actions">
+          <button class="btn primary" id="createInvoice">Create Invoice</button>
+          <button class="btn" id="reviewInvoice">Review Invoice</button>
+          <button class="btn" id="emailInvoice">Email Invoice</button>
+          <button class="btn success" id="recordPayment">Record Payment</button>
+          <button class="btn" id="closeCycle">Close Billing Cycle</button>
+        </div>
+
+        <section class="invoice-stage hidden" id="invoiceStage">
+          <div class="invoice-toolbar">
+            <div class="left"><strong id="reviewLabel">Invoice Review</strong><span class="pill" id="invoiceStatus">draft</span></div>
+            <div class="right">
+              <button class="btn" id="printInvoice" type="button">Print / Save PDF</button>
+              <button class="btn primary" id="emailFromReview" type="button">Email Invoice</button>
+              <button class="btn" id="hideReview" type="button">Return to History</button>
+            </div>
+          </div>
+
+          <article class="invoice-paper" id="invoicePaper">
+            <div class="invoice">
+              <div class="invoice-top">
+                <div class="brand">
+                  <h2>Global Concepts Media Agency</h2>
+                  <p>Marketing • Website • SEO • Social Media • Content</p>
+                </div>
+                <div class="invoice-title"><h2>INVOICE</h2><strong id="paperInvoiceNumber">#2238</strong></div>
+              </div>
+
+              <div class="invoice-meta">
+                <div class="billto">
+                  <span class="label">Bill To</span>
+                  <strong id="paperBillTo">Southeast Safes</strong>
+                  <span id="paperEmail">Adrianne@sesafes.com</span>
+                </div>
+                <div class="meta-grid">
+                  <div class="meta-box"><span class="label">Invoice Date</span><strong id="paperDate">—</strong></div>
+                  <div class="meta-box"><span class="label">Due Date</span><strong id="paperDueDate">—</strong></div>
+                  <div class="meta-box"><span class="label">Invoice Type</span><strong id="paperType">Monthly Billing</strong></div>
+                  <div class="meta-box"><span class="label">Status</span><strong id="paperStatus">Draft</strong></div>
+                </div>
+              </div>
+
+              <div style="overflow:auto">
+                <table class="invoice-table">
+                  <thead><tr><th class="desc">Service</th><th id="paperLoc1">Southeast Safes</th><th id="paperLoc2">A1 Action Safe & Lock</th><th class="money">Amount</th></tr></thead>
+                  <tbody id="paperRows"></tbody>
+                </table>
+              </div>
+
+              <div class="invoice-total">
+                <table><tbody>
+                  <tr><td>Monthly Services</td><td class="money" id="paperBaseTotal">$0.00</td></tr>
+                  <tr><td>Additional Services</td><td class="money" id="paperExtraTotal">$0.00</td></tr>
+                  <tr><td>Invoice Total</td><td class="money" id="paperGrandTotal">$0.00</td></tr>
+                </tbody></table>
+              </div>
+
+              <div class="invoice-note">Payment method: Check or ACH. Thank you for your business.</div>
+            </div>
+          </article>
+        </section>
+
+        <section class="section">
+          <div class="head"><div><h3>Financial History</h3><p>Invoices and payments for the selected billing account.</p></div></div>
+          <div class="tools">
+            <input id="txSearch" placeholder="Find invoice or payment">
+            <select id="typeFilter"><option value="all">All transactions</option><option value="invoice">Invoices</option><option value="payment">Payments</option></select>
+          </div>
+          <div class="table"><table>
+            <thead><tr><th>Date</th><th>Type</th><th>Reference</th><th>Description / Method</th><th class="money">Amount</th><th>Status</th><th></th></tr></thead>
+            <tbody id="txRows"></tbody>
+          </table></div>
+        </section>
+      </section>
+    </section>
+  </main>
 </div>
-<div class="actions"><button class="btn primary" id="generate">Generate Invoice</button><button class="btn" id="sent">Mark as Sent</button><button class="btn success" id="payment">Record Payment</button><button class="btn" id="closeCycle">Close Billing Cycle</button></div>
-<section class="section"><div class="head"><div><h3 id="period">July 2026 Billing Package</h3><p>Fixed services by covered location.</p></div><span class="pill" id="cycleStatus">draft</span></div>
-<div class="table"><table><thead><tr><th>Service</th><th id="loc1">Southeast Safes</th><th id="loc2">A1 Action Safe &amp; Lock</th><th class="money">Total</th></tr></thead><tbody id="packageRows"></tbody></table></div></section>
-<section class="section"><div class="head"><div><h3>Financial History</h3><p>Invoice and payment records for the selected billing account.</p></div></div>
-<div class="tools"><input id="txSearch" placeholder="Find invoice or payment"><select id="type"><option value="all">All transactions</option><option value="invoice">Invoices</option><option value="payment">Payments</option></select></div>
-<div class="table"><table><thead><tr><th>Date</th><th>Type</th><th>Reference</th><th>Description / Method</th><th class="money">Amount</th><th>Status</th></tr></thead><tbody id="txRows"></tbody></table></div></section>
-</section></section></main></div>
 
-<dialog id="invoiceDialog"><form id="invoiceForm"><div class="dhead"><div><h2>Generate Invoice</h2><p id="invoiceAccount"></p></div><button class="close" id="closeInvoice" type="button">×</button></div><div class="dbody"><div class="grid">
-<div class="field"><label>Invoice Date</label><input id="invoiceDate" type="date" required></div><div class="field"><label>Due Date</label><input id="dueDate" type="date" required></div>
-<div class="field"><label>Invoice Number</label><input id="invoiceNumber" required></div><div class="field"><label>Invoice Amount</label><input id="invoiceAmount" readonly></div>
-<div class="field full"><label>Description</label><input id="invoiceDescription" readonly></div></div></div><div class="dactions"><button class="btn" id="cancelInvoice" type="button">Cancel</button><button class="btn primary">Generate Invoice</button></div></form></dialog>
+<dialog id="invoiceDialog">
+  <form id="invoiceForm">
+    <div class="dhead"><div><h2>Create Invoice</h2><p id="invoiceAccount"></p></div><button class="close" id="closeInvoiceDialog" type="button">×</button></div>
+    <div class="dbody">
+      <div class="grid">
+        <div class="field"><label>Invoice Number</label><input id="invoiceNumber" readonly></div>
+        <div class="field"><label>Invoice Type</label><select id="invoiceType"><option value="monthly">Monthly Billing Package</option><option value="additional">Additional Services Only</option></select></div>
+        <div class="field"><label>Invoice Date</label><input id="invoiceDate" type="date" required></div>
+        <div class="field"><label>Due Date</label><input id="invoiceDueDate" type="date" required></div>
+        <div class="field full"><label>Email Invoice To</label><input id="invoiceEmail" type="email"></div>
+      </div>
 
-<dialog id="paymentDialog"><form id="paymentForm"><div class="dhead"><div><h2>Record Payment</h2><p id="paymentAccount"></p></div><button class="close" id="closePayment" type="button">×</button></div><div class="dbody"><div class="grid">
-<div class="field"><label>Payment Date</label><input id="paymentDate" type="date" required></div><div class="field"><label>Payment Method</label><select id="method"><option>Check</option><option>ACH</option></select></div>
-<div class="field"><label>Check / ACH Reference</label><input id="paymentRef" required></div><div class="field"><label>Amount Received</label><input id="paymentAmount" type="number" step=".01" min=".01" required></div></div></div>
-<div class="dactions"><button class="btn" id="cancelPayment" type="button">Cancel</button><button class="btn success">Record Payment</button></div></form></dialog>
+      <div style="margin-top:18px">
+        <div class="head" style="margin-bottom:8px"><div><h3>Additional Services</h3><p>Optional one-time services. Leave empty for the standard monthly invoice.</p></div><button class="btn" id="addExtraRow" type="button">Add Service</button></div>
+        <div class="extra-editor">
+          <div class="extra-head"><span>Description</span><span>Amount</span><span></span></div>
+          <div id="extraRows"></div>
+        </div>
+      </div>
+    </div>
+    <div class="dactions"><button class="btn" id="cancelInvoice" type="button">Cancel</button><button class="btn primary" type="submit">Create & Review Invoice</button></div>
+  </form>
+</dialog>
+
+<dialog id="paymentDialog">
+  <form id="paymentForm">
+    <div class="dhead"><div><h2>Record Payment</h2><p id="paymentAccount"></p></div><button class="close" id="closePaymentDialog" type="button">×</button></div>
+    <div class="dbody"><div class="grid">
+      <div class="field"><label>Payment Date</label><input id="paymentDate" type="date" required></div>
+      <div class="field"><label>Payment Method</label><select id="paymentMethod"><option>Check</option><option>ACH</option></select></div>
+      <div class="field"><label>Check / ACH Reference</label><input id="paymentReference" required></div>
+      <div class="field"><label>Amount Received</label><input id="paymentAmount" type="number" min=".01" step=".01" required></div>
+    </div></div>
+    <div class="dactions"><button class="btn" id="cancelPayment" type="button">Cancel</button><button class="btn success" type="submit">Record Payment</button></div>
+  </form>
+</dialog>
+
 <div class="toast" id="toast"></div>
 <script src="shared/gcm-shell.js?v=1.0.2"></script>
 <script>
 (()=>{"use strict";
-const VERSION="1.2.0",KEY="gcm_finance_workspace_v1_2",$=id=>document.getElementById(id);
-const seed={selected:1,period:"July 2026",accounts:[
-{id:1,name:"Southeast Safes",initials:"SS",billingOnly:false,amount:1600,locations:["Southeast Safes","A1 Action Safe & Lock"],services:[["Website • SEO",400,400],["Social Media • Content",400,400]],cycle:"draft",transactions:[
-{id:101,date:"2026-07-30",type:"payment",reference:"4466",description:"Check",amount:1475,status:"closed"},
-{id:201,date:"2026-06-30",type:"invoice",reference:"2237",description:"SEMrush Audit Tool",amount:200,paidAmount:200,status:"paid"},
-{id:202,date:"2026-06-30",type:"invoice",reference:"2236",description:"BirdEye",amount:175,paidAmount:175,status:"paid"},
-{id:203,date:"2026-06-30",type:"invoice",reference:"2233",description:"Monthly Marketing Services",amount:1100,paidAmount:1100,status:"paid"}]},
-{id:2,name:"Shade River Outfitters, INC",initials:"SR",billingOnly:true,amount:1600,locations:["HB Guns","Pickett Weaponry"],services:[["Website • SEO",400,400],["Social Media • Content",400,400]],cycle:"draft",transactions:[]}
-]};
+const VERSION="1.3.0",KEY="gcm_finance_workspace_v1_3",$=id=>document.getElementById(id);
+const seed={
+  selectedAccountId:1,
+  selectedInvoiceId:null,
+  nextInvoiceNumber:2238,
+  accounts:[
+    {
+      id:1,name:"Southeast Safes",initials:"SS",billingOnly:false,email:"Adrianne@sesafes.com",
+      locations:["Southeast Safes","A1 Action Safe & Lock"],
+      services:[{name:"Website • SEO",values:[400,400]},{name:"Social Media • Content",values:[400,400]}],
+      transactions:[
+        {id:101,date:"2026-07-30",type:"payment",reference:"4466",description:"Check",amount:1475,status:"closed"},
+        {id:201,date:"2026-06-30",dueDate:"2026-06-30",type:"invoice",reference:"2237",description:"SEMrush Audit Tool",invoiceType:"additional",baseAmount:0,extras:[{description:"SEMrush Audit Tool",amount:200}],amount:200,paidAmount:200,status:"paid",email:"Adrianne@sesafes.com"},
+        {id:202,date:"2026-06-30",dueDate:"2026-06-30",type:"invoice",reference:"2236",description:"BirdEye",invoiceType:"additional",baseAmount:0,extras:[{description:"BirdEye",amount:175}],amount:175,paidAmount:175,status:"paid",email:"Adrianne@sesafes.com"},
+        {id:203,date:"2026-06-30",dueDate:"2026-06-30",type:"invoice",reference:"2233",description:"Monthly Marketing Services",invoiceType:"monthly",baseAmount:1100,extras:[],amount:1100,paidAmount:1100,status:"paid",email:"Adrianne@sesafes.com"}
+      ]
+    },
+    {
+      id:2,name:"Shade River Outfitters, INC",initials:"SR",billingOnly:true,email:"",
+      locations:["HB Guns","Pickett Weaponry"],
+      services:[{name:"Website • SEO",values:[400,400]},{name:"Social Media • Content",values:[400,400]}],
+      transactions:[]
+    }
+  ]
+};
 let state=load();
+
 function clone(v){return JSON.parse(JSON.stringify(v))}
 function load(){try{const v=JSON.parse(localStorage.getItem(KEY));return v&&Array.isArray(v.accounts)?v:clone(seed)}catch{return clone(seed)}}
 function save(){localStorage.setItem(KEY,JSON.stringify(state))}
-function acct(){return state.accounts.find(a=>a.id===state.selected)||state.accounts[0]}
+function account(){return state.accounts.find(a=>a.id===state.selectedAccountId)||state.accounts[0]}
+function invoice(){const a=account();return a.transactions.find(t=>t.id===state.selectedInvoiceId&&t.type==="invoice")||latestInvoice(a)}
 function money(v){return new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(Number(v)||0)}
 function today(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
-function addDays(v,n){const [y,m,d]=v.split("-").map(Number),x=new Date(y,m-1,d);x.setDate(x.getDate()+n);return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,"0")}-${String(x.getDate()).padStart(2,"0")}`}
-function date(v){if(!v)return"—";const[y,m,d]=v.split("-").map(Number);return new Date(y,m-1,d).toLocaleDateString("en-US",{month:"numeric",day:"numeric",year:"2-digit"})}
+function addDays(v,n){const[y,m,d]=v.split("-").map(Number),x=new Date(y,m-1,d);x.setDate(x.getDate()+n);return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,"0")}-${String(x.getDate()).padStart(2,"0")}`}
+function date(v){if(!v)return"—";const[y,m,d]=String(v).split("-").map(Number);return new Date(y,m-1,d).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})}
 function esc(v){return String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]))}
-function invBal(t){return t.type==="invoice"?Math.max(0,t.amount-(t.paidAmount||0)):0}
-function balance(a){return a.transactions.reduce((s,t)=>s+invBal(t),0)}
-function openInv(a){return [...a.transactions].filter(t=>t.type==="invoice"&&invBal(t)>0).sort((a,b)=>b.date.localeCompare(a.date))[0]||null}
-function lastPay(a){return [...a.transactions].filter(t=>t.type==="payment").sort((a,b)=>b.date.localeCompare(a.date))[0]||null}
-function nextId(){return Math.max(0,...state.accounts.flatMap(a=>a.transactions.map(t=>t.id)))+1}
-function toast(m){$("toast").textContent=m;$("toast").classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>$("toast").classList.remove("show"),2500)}
-function renderAccounts(){const q=$("accountSearch").value.toLowerCase();$("accountList").innerHTML=state.accounts.filter(a=>!q||a.name.toLowerCase().includes(q)).map(a=>`<button class="acct ${a.id===state.selected?"active":""}" data-id="${a.id}"><strong>${esc(a.name)}</strong><span>${a.billingOnly?"Billing account only":"Client billing account"} · ${money(a.amount)} monthly</span></button>`).join("");document.querySelectorAll(".acct").forEach(b=>b.onclick=()=>{state.selected=Number(b.dataset.id);save();render()})}
-function render(){const a=acct(),i=openInv(a),p=lastPay(a);renderAccounts();$("initials").textContent=a.initials;$("name").textContent=a.name;$("detail").textContent=a.billingOnly?"Billing account only — no operational client workspace":"Fixed monthly billing account";$("package").textContent=money(a.amount);$("balance").textContent=money(balance(a));$("balanceNote").textContent=i?`Open invoice #${i.reference}`:"No open invoice";$("lastPayment").textContent=p?money(p.amount):"$0.00";$("lastPaymentDate").textContent=p?`${p.description} · ${date(p.date)}`:"No payment recorded";$("period").textContent=`${state.period} Billing Package`;$("cycleStatus").textContent=a.cycle;$("cycleStatus").className=`pill ${a.cycle}`;$("loc1").textContent=a.locations[0];$("loc2").textContent=a.locations[1];$("packageRows").innerHTML=a.services.map(s=>`<tr><td><strong>${esc(s[0])}</strong></td><td class="money">${money(s[1])}</td><td class="money">${money(s[2])}</td><td class="money">${money(s[1]+s[2])}</td></tr>`).join("")+`<tr class="total"><td>Invoice Total</td><td class="money">$800.00</td><td class="money">$800.00</td><td class="money">${money(a.amount)}</td></tr>`;$("sent").disabled=!i||["sent","paid","closed"].includes(a.cycle);$("payment").disabled=!i;$("closeCycle").disabled=a.cycle!=="paid";renderTx()}
-function renderTx(){const a=acct(),q=$("txSearch").value.toLowerCase(),type=$("type").value,rows=[...a.transactions].filter(t=>(!q||`${t.reference} ${t.description} ${t.type}`.toLowerCase().includes(q))&&(type==="all"||t.type===type)).sort((a,b)=>b.date.localeCompare(a.date));$("txRows").innerHTML=rows.length?rows.map(t=>`<tr><td>${date(t.date)}</td><td>${t.type==="invoice"?"Invoice":"Payment"}</td><td>${esc(t.reference)}</td><td>${esc(t.description)}</td><td class="money">${money(t.amount)}</td><td><span class="status ${t.status}">${esc(t.status)}</span></td></tr>`).join(""):`<tr><td colspan="6" class="empty">No financial history has been recorded for this billing account.</td></tr>`}
-$("generate").onclick=()=>{const a=acct();if(openInv(a)){toast(`${a.name} already has an open invoice.`);return}$("invoiceAccount").textContent=`Create the ${state.period} invoice for ${a.name}.`;$("invoiceDate").value=today();$("dueDate").value=addDays(today(),30);$("invoiceNumber").value="";$("invoiceAmount").value=a.amount.toFixed(2);$("invoiceDescription").value=`${state.period} Marketing Services`;$("invoiceDialog").showModal()}
-$("invoiceForm").onsubmit=e=>{e.preventDefault();const a=acct(),ref=$("invoiceNumber").value.trim();if(!ref)return toast("Enter the invoice number.");a.transactions.push({id:nextId(),date:$("invoiceDate").value,dueDate:$("dueDate").value,type:"invoice",reference:ref,description:$("invoiceDescription").value,amount:a.amount,paidAmount:0,status:"open"});a.cycle="draft";save();$("invoiceDialog").close();render();toast(`Invoice #${ref} generated.`)}
-$("sent").onclick=()=>{const a=acct(),i=openInv(a);if(!i)return toast("No open invoice.");i.status="sent";a.cycle="sent";save();render();toast(`Invoice #${i.reference} marked sent.`)}
-$("payment").onclick=()=>{const a=acct(),i=openInv(a);if(!i)return toast("No open invoice.");$("paymentAccount").textContent=`Record payment for invoice #${i.reference} — ${a.name}.`;$("paymentDate").value=today();$("method").value="Check";$("paymentRef").value="";$("paymentAmount").value=invBal(i).toFixed(2);$("paymentDialog").showModal()}
-$("paymentForm").onsubmit=e=>{e.preventDefault();const a=acct(),i=openInv(a),amt=Number($("paymentAmount").value);if(!i||amt<=0)return toast("Enter a valid payment.");i.paidAmount=Math.min(i.amount,(i.paidAmount||0)+amt);i.status=invBal(i)<=0?"paid":"sent";a.transactions.push({id:nextId(),date:$("paymentDate").value,type:"payment",reference:$("paymentRef").value.trim(),description:$("method").value,amount:amt,status:"closed"});a.cycle=invBal(i)<=0?"paid":"sent";save();$("paymentDialog").close();render();toast(`${money(amt)} payment recorded.`)}
-$("closeCycle").onclick=()=>{const a=acct();if(a.cycle!=="paid")return toast("Full payment is required before closing.");a.cycle="closed";save();render();toast(`${a.name} billing cycle closed.`)}
-$("accountSearch").oninput=renderAccounts;$("txSearch").oninput=renderTx;$("type").onchange=renderTx;
-$("closeInvoice").onclick=$("cancelInvoice").onclick=()=>$("invoiceDialog").close();$("closePayment").onclick=$("cancelPayment").onclick=()=>$("paymentDialog").close();
-if(window.GCMOShell)window.GCMOShell.mount({currentPage:"finance",statusText:`Agency Finance operational · Finance v${VERSION}`});else console.error(`Finance ${VERSION}: shared shell failed to load.`);
-render();
+function nextId(){return Math.max(0,...state.accounts.flatMap(a=>a.transactions.map(t=>Number(t.id)||0)))+1}
+function baseAmount(a){return a.services.reduce((s,x)=>s+x.values.reduce((p,n)=>p+Number(n||0),0),0)}
+function invoiceBalance(i){return i?Math.max(0,Number(i.amount||0)-Number(i.paidAmount||0)):0}
+function accountBalance(a){return a.transactions.filter(t=>t.type==="invoice").reduce((s,t)=>s+invoiceBalance(t),0)}
+function latestInvoice(a){return [...a.transactions].filter(t=>t.type==="invoice").sort((x,y)=>String(y.date).localeCompare(String(x.date))||Number(y.id)-Number(x.id))[0]||null}
+function openInvoice(a){return [...a.transactions].filter(t=>t.type==="invoice"&&invoiceBalance(t)>0).sort((x,y)=>String(y.date).localeCompare(String(x.date))||Number(y.id)-Number(x.id))[0]||null}
+function toast(m){$("toast").textContent=m;$("toast").classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>$("toast").classList.remove("show"),2800)}
+
+function renderAccounts(){
+  const q=$("accountSearch").value.trim().toLowerCase();
+  $("accountList").innerHTML=state.accounts.filter(a=>!q||a.name.toLowerCase().includes(q)).map(a=>`
+    <button class="acct ${a.id===state.selectedAccountId?"active":""}" data-account="${a.id}" type="button">
+      <strong>${esc(a.name)}</strong>
+      <span>${a.billingOnly?"Billing account only":"Client billing account"} · ${money(baseAmount(a))} monthly</span>
+    </button>`).join("");
+  document.querySelectorAll("[data-account]").forEach(b=>b.onclick=()=>{
+    state.selectedAccountId=Number(b.dataset.account);state.selectedInvoiceId=null;save();hideInvoice();renderAll();
+  });
+}
+function renderSummary(){
+  const a=account(),i=openInvoice(a);
+  $("initials").textContent=a.initials;$("name").textContent=a.name;
+  $("detail").textContent=a.billingOnly?"Billing account only — no operational client workspace":"Fixed monthly billing account";
+  $("package").textContent=money(baseAmount(a));$("balance").textContent=money(accountBalance(a));
+  $("balanceNote").textContent=i?`Open invoice #${i.reference}`:"No open invoice";
+  $("billingEmail").textContent=a.email||"Not set";
+  $("reviewInvoice").disabled=!latestInvoice(a);$("emailInvoice").disabled=!latestInvoice(a);
+  $("recordPayment").disabled=!i;$("closeCycle").disabled=!i||i.status!=="paid";
+}
+function renderHistory(){
+  const a=account(),q=$("txSearch").value.trim().toLowerCase(),type=$("typeFilter").value;
+  const rows=[...a.transactions].filter(t=>(!q||`${t.reference} ${t.description} ${t.type}`.toLowerCase().includes(q))&&(type==="all"||t.type===type))
+    .sort((x,y)=>String(y.date).localeCompare(String(x.date))||Number(y.id)-Number(x.id));
+  $("txRows").innerHTML=rows.length?rows.map(t=>`
+    <tr>
+      <td>${date(t.date)}</td><td>${t.type==="invoice"?"Invoice":"Payment"}</td>
+      <td>${esc(t.reference||"—")}</td><td>${esc(t.description||"—")}</td>
+      <td class="money">${money(t.amount)}</td><td><span class="status ${esc(t.status)}">${esc(t.status)}</span></td>
+      <td>${t.type==="invoice"?`<button class="btn" data-review="${t.id}" type="button">Review</button>`:""}</td>
+    </tr>`).join(""):`<tr><td colspan="7" class="empty">No financial history has been recorded for this billing account.</td></tr>`;
+  document.querySelectorAll("[data-review]").forEach(b=>b.onclick=()=>{state.selectedInvoiceId=Number(b.dataset.review);save();showInvoice()});
+}
+function renderAll(){renderAccounts();renderSummary();renderHistory()}
+
+function addExtraRow(description="",amount=""){
+  const row=document.createElement("div");row.className="extra-row";
+  row.innerHTML=`<input class="extra-description" placeholder="Service description" value="${esc(description)}"><input class="extra-amount" type="number" min="0" step=".01" placeholder="0.00" value="${esc(amount)}"><button class="icon-btn" type="button" aria-label="Remove">×</button>`;
+  row.querySelector("button").onclick=()=>row.remove();$("extraRows").appendChild(row);
+}
+function collectExtras(){
+  return [...document.querySelectorAll("#extraRows .extra-row")].map(r=>({
+    description:r.querySelector(".extra-description").value.trim(),
+    amount:Number(r.querySelector(".extra-amount").value||0)
+  })).filter(x=>x.description&&x.amount>0);
+}
+function openCreate(){
+  const a=account();
+  $("invoiceAccount").textContent=`Create an invoice for ${a.name}.`;
+  $("invoiceNumber").value=state.nextInvoiceNumber;
+  $("invoiceType").value="monthly";$("invoiceDate").value=today();$("invoiceDueDate").value=addDays(today(),30);
+  $("invoiceEmail").value=a.email||"";$("extraRows").innerHTML="";addExtraRow();
+  $("invoiceDialog").showModal();
+}
+function createInvoice(e){
+  e.preventDefault();const a=account(),type=$("invoiceType").value,extras=collectExtras(),base=type==="monthly"?baseAmount(a):0;
+  if(type==="additional"&&!extras.length){toast("Add at least one additional service.");return}
+  const total=base+extras.reduce((s,x)=>s+x.amount,0),ref=String(state.nextInvoiceNumber);
+  const record={
+    id:nextId(),date:$("invoiceDate").value,dueDate:$("invoiceDueDate").value,type:"invoice",reference:ref,
+    description:type==="monthly"?"Monthly Marketing Services":"Additional Services",
+    invoiceType:type,baseAmount:base,extras,amount:total,paidAmount:0,status:"draft",
+    email:$("invoiceEmail").value.trim()
+  };
+  a.transactions.push(record);if(record.email)a.email=record.email;
+  state.selectedInvoiceId=record.id;state.nextInvoiceNumber+=1;save();$("invoiceDialog").close();renderAll();showInvoice();toast(`Invoice #${ref} created.`);
+}
+function paperRows(a,i){
+  const rows=[];
+  if(i.invoiceType==="monthly"){
+    a.services.forEach(s=>rows.push(`<tr><td>${esc(s.name)}</td><td class="money">${money(s.values[0])}</td><td class="money">${money(s.values[1])}</td><td class="money">${money(s.values[0]+s.values[1])}</td></tr>`));
+  }
+  (i.extras||[]).forEach(x=>rows.push(`<tr><td>${esc(x.description)}</td><td>Additional service</td><td>—</td><td class="money">${money(x.amount)}</td></tr>`));
+  return rows.join("");
+}
+function showInvoice(){
+  const a=account(),i=invoice();if(!i){toast("No invoice is available to review.");return}
+  state.selectedInvoiceId=i.id;save();
+  $("paperInvoiceNumber").textContent=`#${i.reference}`;$("paperBillTo").textContent=a.name;$("paperEmail").textContent=i.email||a.email||"Billing email not set";
+  $("paperDate").textContent=date(i.date);$("paperDueDate").textContent=date(i.dueDate);
+  $("paperType").textContent=i.invoiceType==="monthly"?"Monthly Billing":"Additional Services";
+  $("paperStatus").textContent=i.status.charAt(0).toUpperCase()+i.status.slice(1);
+  $("paperLoc1").textContent=a.locations[0];$("paperLoc2").textContent=a.locations[1];
+  $("paperRows").innerHTML=paperRows(a,i);
+  const extra=(i.extras||[]).reduce((s,x)=>s+Number(x.amount||0),0);
+  $("paperBaseTotal").textContent=money(i.baseAmount||0);$("paperExtraTotal").textContent=money(extra);$("paperGrandTotal").textContent=money(i.amount);
+  $("invoiceStatus").textContent=i.status;$("invoiceStatus").className=`pill ${i.status}`;
+  $("reviewLabel").textContent=`Invoice #${i.reference} Review`;
+  $("invoiceStage").classList.remove("hidden");$("invoiceStage").scrollIntoView({behavior:"smooth",block:"start"});
+}
+function hideInvoice(){$("invoiceStage").classList.add("hidden")}
+function emailCurrent(){
+  const a=account(),i=invoice();if(!i){toast("No invoice is available to email.");return}
+  const recipient=i.email||a.email;if(!recipient){toast("A billing email has not been set for this account.");return}
+  const subject=encodeURIComponent(`Invoice #${i.reference} from Global Concepts Media Agency`);
+  const body=encodeURIComponent(
+`Hello,
+
+Attached is invoice #${i.reference} for ${money(i.amount)}.
+
+Invoice date: ${date(i.date)}
+Due date: ${date(i.dueDate)}
+Bill to: ${a.name}
+
+Thank you,
+Global Concepts Media Agency`
+  );
+  i.status="sent";save();renderAll();showInvoice();
+  window.location.href=`mailto:${encodeURIComponent(recipient)}?subject=${subject}&body=${body}`;
+  toast(`Email prepared for ${recipient}. Attach the printed PDF before sending.`);
+}
+function openPayment(){
+  const a=account(),i=openInvoice(a);if(!i){toast("There is no open invoice to pay.");return}
+  state.selectedInvoiceId=i.id;save();$("paymentAccount").textContent=`Record payment for invoice #${i.reference} — ${a.name}.`;
+  $("paymentDate").value=today();$("paymentMethod").value="Check";$("paymentReference").value="";$("paymentAmount").value=invoiceBalance(i).toFixed(2);
+  $("paymentDialog").showModal();
+}
+function recordPayment(e){
+  e.preventDefault();const a=account(),i=openInvoice(a),amount=Number($("paymentAmount").value||0);
+  if(!i||amount<=0){toast("Enter a valid payment amount.");return}
+  i.paidAmount=Math.min(i.amount,Number(i.paidAmount||0)+amount);i.status=invoiceBalance(i)<=0?"paid":"sent";
+  a.transactions.push({id:nextId(),date:$("paymentDate").value,type:"payment",reference:$("paymentReference").value.trim(),description:$("paymentMethod").value,amount,status:"closed",invoiceId:i.id});
+  save();$("paymentDialog").close();renderAll();showInvoice();toast(`${money(amount)} payment recorded.`);
+}
+function closeCycle(){
+  const a=account(),i=openInvoice(a)||invoice();if(!i||i.status!=="paid"){toast("The invoice must be paid before closing.");return}
+  i.status="closed";save();renderAll();showInvoice();toast(`Invoice #${i.reference} billing cycle closed.`);
+}
+
+$("accountSearch").oninput=renderAccounts;$("txSearch").oninput=renderHistory;$("typeFilter").onchange=renderHistory;
+$("createInvoice").onclick=openCreate;$("reviewInvoice").onclick=showInvoice;$("emailInvoice").onclick=emailCurrent;
+$("emailFromReview").onclick=emailCurrent;$("printInvoice").onclick=()=>window.print();$("hideReview").onclick=hideInvoice;
+$("recordPayment").onclick=openPayment;$("closeCycle").onclick=closeCycle;
+$("addExtraRow").onclick=()=>addExtraRow();$("invoiceForm").onsubmit=createInvoice;$("paymentForm").onsubmit=recordPayment;
+$("closeInvoiceDialog").onclick=$("cancelInvoice").onclick=()=>$("invoiceDialog").close();
+$("closePaymentDialog").onclick=$("cancelPayment").onclick=()=>$("paymentDialog").close();
+$("invoiceType").onchange=()=>{if($("invoiceType").value==="additional"&&!document.querySelector("#extraRows .extra-row"))addExtraRow()};
+
+if(window.GCMOShell)window.GCMOShell.mount({currentPage:"finance",statusText:`Agency Finance operational · Finance v${VERSION}`});
+else console.error(`Finance ${VERSION}: shared/gcm-shell.js failed to load.`);
+
+renderAll();
 })();
 </script>
 </body>
