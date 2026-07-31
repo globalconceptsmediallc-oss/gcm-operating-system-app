@@ -1,18 +1,18 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gcm-shell.js
-   Version: 1.0.2
+   Version: 1.0.3
    Status: Production Candidate
    Purpose: Shared internal GCM OS application shell foundation.
-   Source: gcm-shell.js 1.0.0 production navigation
-   Sprint: Finance Navigation Integration
-   Change: Restores production window.GCMOShell contract and preserves Finance navigation.
+   Source: gcm-shell.js 1.0.2 production navigation
+   Sprint: Calendar Navigation Integration
+   Change: Adds Calendar to production navigation while preserving the existing window.GCMOShell contract and all current links.
    ========================================================= */
 
 (() => {
   "use strict";
 
-  const SHELL_VERSION = "1.0.2";
+  const SHELL_VERSION = "1.0.3";
 
   const PAGE_MAP = {
     today: {
@@ -54,6 +54,11 @@
       label: "Finance",
       href: "finance.html",
       icon: "$"
+    },
+    calendar: {
+      label: "Calendar",
+      href: "calendar.html",
+      icon: "▦"
     }
   };
 
