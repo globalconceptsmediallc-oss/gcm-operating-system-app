@@ -1,15 +1,15 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: calendar.html
-   Version: 1.0.0
-   Status: Production Candidate — Calendar & Booking Rules
-   Source: New production module
+   Version: 1.1.0
+   Status: Production Candidate — Today Agenda & Confirmations
+   Source: calendar.html 1.0.0
    Sprint: Calendar / Availability / Appointment Booking
-   Purpose: Define appointment types, availability rules, locations,
-            buffers, advance notice, booking windows, and internal
-            appointments. Provides month and quarter-ahead views.
-            Google Calendar sync is represented as an integration
-            boundary and requires Worker/OAuth wiring before live use.
+   Purpose: Define appointment types and availability rules, manage
+            appointments, open an expanded Today agenda, support
+            Google Meet, Phone, and In Person meetings, prepare Gmail
+            confirmation drafts, and provide month and quarter views.
+            Google Calendar free/busy still requires Worker/OAuth wiring.
    Production Contract: window.GCMOShell
    ========================================================= -->
 <!DOCTYPE html>
@@ -109,10 +109,24 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
 .dactions{justify-content:flex-end;border-top:1px solid var(--border);border-bottom:0;background:#fbfcfe}
 .toast{position:fixed;right:22px;bottom:22px;z-index:1000;background:var(--navy);color:#fff;padding:13px 15px;border-radius:10px;opacity:0;transform:translateY(10px);transition:.2s;max-width:440px}
 .toast.show{opacity:1;transform:none}
-@media(max-width:1100px){.quarter-grid,.settings-grid{grid-template-columns:1fr}.calendar-grid{overflow:auto}}
+
+.today-agenda{padding:18px}
+.agenda-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.agenda-card{border:1px solid var(--border);border-radius:12px;padding:14px;background:#fff}
+.agenda-card span{display:block;color:var(--muted);font-size:11px;font-weight:900;text-transform:uppercase}
+.agenda-card strong{display:block;margin-top:6px;font-size:22px}
+.agenda-list{display:grid;gap:10px}
+.agenda-item{display:grid;grid-template-columns:90px minmax(0,1fr) auto;gap:14px;align-items:center;padding:14px;border:1px solid var(--border);border-radius:12px;background:#fff}
+.agenda-time{font-weight:900;color:var(--blue)}
+.agenda-main strong{display:block}
+.agenda-main span{display:block;margin-top:4px;color:var(--muted);font-size:12px}
+.agenda-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.status-select{padding:7px 9px;border:1px solid var(--border);border-radius:8px;background:#fff}
+
+@media(max-width:1100px){.quarter-grid,.settings-grid,.agenda-summary{grid-template-columns:1fr}.calendar-grid{overflow:auto}}
 @media(max-width:900px){
  .app{display:block}.mobile{display:inline-block;margin-bottom:12px}.page{padding:18px}.top{flex-direction:column}
- .day{min-height:105px}.form-grid{grid-template-columns:1fr}.full{grid-column:auto}.days{grid-template-columns:repeat(4,1fr)}
+ .day{min-height:105px}.form-grid{grid-template-columns:1fr}.agenda-item{grid-template-columns:1fr}.agenda-actions{justify-content:flex-start}.full{grid-column:auto}.days{grid-template-columns:repeat(4,1fr)}
 }
 </style>
 </head>
@@ -127,7 +141,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
         <h1>Calendar & Booking</h1>
         <p class="sub">Manage appointments, define booking rules, and see the month or quarter ahead. Google Calendar can become the conflict-checking source once Worker/OAuth integration is connected.</p>
       </div>
-      <div class="version">Installed version 1.0.0</div>
+      <div class="version">Installed version 1.1.0</div>
     </header>
 
     <div class="toolbar">
@@ -141,6 +155,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
     </div>
 
     <div class="tabs">
+      <button class="tab" data-view="today" type="button">Today</button>
       <button class="tab active" data-view="month" type="button">Month</button>
       <button class="tab" data-view="quarter" type="button">Quarter Ahead</button>
       <button class="tab" data-view="types" type="button">Appointment Types</button>
@@ -148,6 +163,24 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
     </div>
 
     <section class="calendar-shell">
+
+      <div class="view" id="todayView">
+        <div class="calendar-head">
+          <div>
+            <h2 id="todayTitle">Today's Agenda</h2>
+          </div>
+          <button class="btn primary" id="newTodayAppointment" type="button">New Appointment</button>
+        </div>
+        <div class="today-agenda">
+          <div class="agenda-summary">
+            <div class="agenda-card"><span>Appointments</span><strong id="todayCount">0</strong></div>
+            <div class="agenda-card"><span>Confirmed</span><strong id="todayConfirmed">0</strong></div>
+            <div class="agenda-card"><span>Open Time</span><strong id="todayOpenTime">Available</strong></div>
+          </div>
+          <div class="agenda-list" id="todayAgendaList"></div>
+        </div>
+      </div>
+
       <div class="view active" id="monthView">
         <div class="calendar-head">
           <div class="actions">
@@ -227,7 +260,9 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
         <div class="field"><label>Date</label><input id="appointmentDate" type="date" required></div>
         <div class="field"><label>Start Time</label><input id="appointmentTime" type="time" required></div>
         <div class="field"><label>Location</label><select id="appointmentLocation" required></select></div>
+        <div class="field"><label>Status</label><select id="appointmentStatus"><option value="scheduled">Scheduled</option><option value="confirmation_sent">Confirmation Sent</option><option value="confirmed">Confirmed</option><option value="rescheduled">Rescheduled</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></div>
         <div class="field"><label>Client / Prospect</label><input id="appointmentClient"></div>
+        <div class="field"><label>In-Person Address</label><input id="appointmentAddress" placeholder="Required when In Person is selected"></div>
         <div class="field full"><label>Contact Email</label><input id="appointmentEmail" type="email"></div>
         <div class="field full"><label>Purpose / Notes</label><textarea id="appointmentNotes"></textarea></div>
       </div>
@@ -254,8 +289,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
           <div class="days">
             <label class="day-toggle"><input class="locationCheck" type="checkbox" value="Google Meet"> Google Meet</label>
             <label class="day-toggle"><input class="locationCheck" type="checkbox" value="Phone"> Phone</label>
-            <label class="day-toggle"><input class="locationCheck" type="checkbox" value="GCM Office"> GCM Office</label>
-            <label class="day-toggle"><input class="locationCheck" type="checkbox" value="Client Location"> Client Location</label>
+            <label class="day-toggle"><input class="locationCheck" type="checkbox" value="In Person"> In Person</label>
           </div>
         </div>
       </div>
@@ -268,26 +302,37 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
 <script src="shared/gcm-shell.js?v=1.0.2"></script>
 <script>
 (()=>{"use strict";
-const VERSION="1.0.0",KEY="gcm_calendar_v1_0",$=id=>document.getElementById(id);
+const VERSION="1.1.0",KEY="gcm_calendar_v1_1",$=id=>document.getElementById(id);
 const seed={
  currentMonth:new Date().toISOString().slice(0,7),
  nextAppointmentId:4,nextTypeId:5,
  rules:{days:[1,2,3,4,5],start:"09:00",end:"17:00",minNotice:24,maxWindow:90,bufferBefore:15,bufferAfter:15,maxPerDay:4,travelBuffer:60},
  types:[
-  {id:1,name:"Growth Review",duration:45,maxPerDay:3,prep:true,locations:["Google Meet","Phone","GCM Office"]},
+  {id:1,name:"Growth Review",duration:45,maxPerDay:3,prep:true,locations:["Google Meet","Phone","In Person"]},
   {id:2,name:"Initial Consultation",duration:60,maxPerDay:3,prep:true,locations:["Google Meet","Phone"]},
-  {id:3,name:"Client Meeting",duration:60,maxPerDay:4,prep:true,locations:["Google Meet","Phone","GCM Office","Client Location"]},
+  {id:3,name:"Client Meeting",duration:60,maxPerDay:4,prep:true,locations:["Google Meet","Phone","In Person"]},
   {id:4,name:"Media Review",duration:30,maxPerDay:5,prep:false,locations:["Google Meet","Phone"]}
  ],
  appointments:[
-  {id:1,title:"Southeast Safes Growth Review",typeId:1,date:"2026-08-05",time:"10:00",location:"Google Meet",client:"Southeast Safes",email:"",notes:"Monthly growth review."},
-  {id:2,title:"Media Schedule Review",typeId:4,date:"2026-08-12",time:"14:00",location:"Phone",client:"Southeast Safes",email:"",notes:"Review upcoming media placements."},
-  {id:3,title:"Pickett Weaponry Site Audit Follow-up",typeId:3,date:"2026-08-20",time:"11:00",location:"Google Meet",client:"Pickett Weaponry",email:"",notes:"Review investigation and follow-up audit."}
+  {id:1,title:"Southeast Safes Growth Review",typeId:1,date:"2026-08-05",time:"10:00",location:"Google Meet",client:"Southeast Safes",email:"",notes:"Monthly growth review.",status:"scheduled",address:""},
+  {id:2,title:"Media Schedule Review",typeId:4,date:"2026-08-12",time:"14:00",location:"Phone",client:"Southeast Safes",email:"",notes:"Review upcoming media placements.",status:"scheduled",address:""},
+  {id:3,title:"Pickett Weaponry Site Audit Follow-up",typeId:3,date:"2026-08-20",time:"11:00",location:"Google Meet",client:"Pickett Weaponry",email:"",notes:"Review investigation and follow-up audit.",status:"scheduled",address:""}
  ]
 };
 let state=load(),cursor=new Date(`${state.currentMonth}-01T12:00:00`);
 function clone(v){return JSON.parse(JSON.stringify(v))}
-function load(){try{const v=JSON.parse(localStorage.getItem(KEY));return v&&v.rules&&Array.isArray(v.types)?v:clone(seed)}catch{return clone(seed)}}
+function load(){
+ try{
+  const current=JSON.parse(localStorage.getItem(KEY));
+  const prior=current||JSON.parse(localStorage.getItem("gcm_calendar_v1_0"));
+  if(prior&&prior.rules&&Array.isArray(prior.types)){
+   prior.appointments=(prior.appointments||[]).map(a=>({status:"scheduled",address:"",...a}));
+   prior.types=(prior.types||[]).map(t=>({...t,locations:(t.locations||[]).map(x=>["GCM Office","Client Location"].includes(x)?"In Person":x).filter((x,i,arr)=>arr.indexOf(x)===i)}));
+   return prior;
+  }
+ }catch{}
+ return clone(seed);
+}
 function save(){state.currentMonth=`${cursor.getFullYear()}-${String(cursor.getMonth()+1).padStart(2,"0")}`;localStorage.setItem(KEY,JSON.stringify(state))}
 function esc(v){return String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]))}
 function isoDate(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
@@ -295,6 +340,65 @@ function fmtMonth(d){return d.toLocaleDateString("en-US",{month:"long",year:"num
 function fmtShort(v){const[y,m,d]=v.split("-").map(Number);return new Date(y,m-1,d).toLocaleDateString("en-US",{month:"short",day:"numeric"})}
 function typeById(id){return state.types.find(t=>t.id===Number(id))}
 function toast(m){$("toast").textContent=m;$("toast").classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>$("toast").classList.remove("show"),2500)}
+
+function setActiveView(name){
+ document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.view===name));
+ document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id===`${name}View`));
+}
+function formatTime(value){
+ if(!value)return"";
+ const [h,m]=value.split(":").map(Number),d=new Date();d.setHours(h,m,0,0);
+ return d.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"});
+}
+function statusLabel(value){
+ return ({scheduled:"Scheduled",confirmation_sent:"Confirmation Sent",confirmed:"Confirmed",rescheduled:"Rescheduled",completed:"Completed",cancelled:"Cancelled"})[value]||"Scheduled";
+}
+function renderToday(){
+ const today=isoDate(new Date()),items=state.appointments.filter(a=>a.date===today).sort((a,b)=>a.time.localeCompare(b.time));
+ $("todayTitle").textContent=new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"});
+ $("todayCount").textContent=items.length;
+ $("todayConfirmed").textContent=items.filter(a=>a.status==="confirmed").length;
+ $("todayOpenTime").textContent=items.length>=state.rules.maxPerDay?"Full":"Available";
+ $("todayAgendaList").innerHTML=items.length?items.map(a=>`
+  <div class="agenda-item">
+   <div class="agenda-time">${esc(formatTime(a.time))}</div>
+   <div class="agenda-main">
+    <strong>${esc(a.title)}</strong>
+    <span>${esc(typeById(a.typeId)?.name||"Appointment")} · ${esc(a.location)}${a.address?` · ${esc(a.address)}`:""}${a.client?` · ${esc(a.client)}`:""}</span>
+   </div>
+   <div class="agenda-actions">
+    <select class="status-select" data-status-id="${a.id}">
+     ${["scheduled","confirmation_sent","confirmed","rescheduled","completed","cancelled"].map(s=>`<option value="${s}" ${a.status===s?"selected":""}>${statusLabel(s)}</option>`).join("")}
+    </select>
+    <button class="btn" data-confirm-id="${a.id}" type="button">Email Confirmation</button>
+    <button class="btn" data-event="${a.id}" type="button">Edit</button>
+   </div>
+  </div>`).join(""):`<div class="empty">No appointments scheduled for today.</div>`;
+ document.querySelectorAll("[data-event]").forEach(b=>b.onclick=()=>openAppointment(state.appointments.find(a=>a.id===Number(b.dataset.event))));
+ document.querySelectorAll("[data-status-id]").forEach(s=>s.onchange=()=>{const a=state.appointments.find(x=>x.id===Number(s.dataset.statusId));a.status=s.value;save();renderAll();});
+ document.querySelectorAll("[data-confirm-id]").forEach(b=>b.onclick=()=>prepareConfirmation(state.appointments.find(a=>a.id===Number(b.dataset.confirmId))));
+}
+function prepareConfirmation(a){
+ if(!a?.email){toast("Add a contact email before preparing a confirmation.");return}
+ const t=typeById(a.typeId),subject=encodeURIComponent(`Appointment Confirmation — ${a.title}`);
+ const body=encodeURIComponent(`Hello${a.client?` ${a.client}`:""},
+
+This email confirms our upcoming appointment.
+
+Appointment: ${a.title}
+Date: ${new Date(a.date+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"})}
+Time: ${formatTime(a.time)}
+Location: ${a.location}${a.address?`\nAddress: ${a.address}`:""}
+
+If you need to reschedule, please reply to this email.
+
+Thank you,
+Andy Belcher
+Global Concepts Media Agency LLC`);
+ a.status="confirmation_sent";save();renderAll();
+ window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(a.email)}&su=${subject}&body=${body}`,"_blank");
+ toast("Gmail confirmation draft opened.");
+}
 
 function renderMonth(){
  $("monthTitle").textContent=fmtMonth(cursor);
@@ -349,7 +453,7 @@ function renderRules(){
   ["Daily limit",`${state.rules.maxPerDay} meetings`]
  ].map(x=>`<div class="rule-row"><div><strong>${x[0]}</strong><span>${x[1]}</span></div><span class="badge">Active</span></div>`).join("");
 }
-function renderAll(){renderMonth();renderQuarter();renderTypes();renderRules()}
+function renderAll(){renderToday();renderMonth();renderQuarter();renderTypes();renderRules()}
 
 function populateAppointmentSelects(){
  $("appointmentType").innerHTML=state.types.map(t=>`<option value="${t.id}">${esc(t.name)}</option>`).join("");
@@ -363,13 +467,14 @@ function openAppointment(a=null,dateValue=""){
  populateAppointmentSelects();$("appointmentDialogTitle").textContent=a?"Edit Appointment":"New Appointment";$("appointmentId").value=a?.id||"";
  $("appointmentTitle").value=a?.title||"";$("appointmentType").value=a?.typeId||state.types[0]?.id||"";
  updateAppointmentLocations();$("appointmentDate").value=a?.date||dateValue||isoDate(new Date());$("appointmentTime").value=a?.time||"10:00";
- $("appointmentLocation").value=a?.location||$("appointmentLocation").options[0]?.value||"";$("appointmentClient").value=a?.client||"";
- $("appointmentEmail").value=a?.email||"";$("appointmentNotes").value=a?.notes||"";$("deleteAppointment").style.visibility=a?"visible":"hidden";
- $("appointmentDialog").showModal();
+ $("appointmentLocation").value=a?.location||$("appointmentLocation").options[0]?.value||"";$("appointmentStatus").value=a?.status||"scheduled";$("appointmentClient").value=a?.client||"";
+ $("appointmentAddress").value=a?.address||"";$("appointmentEmail").value=a?.email||"";$("appointmentNotes").value=a?.notes||"";$("deleteAppointment").style.visibility=a?"visible":"hidden";
+ $("appointmentAddress").disabled=$("appointmentLocation").value!=="In Person";$("appointmentDialog").showModal();
 }
 function saveAppointment(e){
- e.preventDefault();const id=Number($("appointmentId").value||0),record={title:$("appointmentTitle").value.trim(),typeId:Number($("appointmentType").value),date:$("appointmentDate").value,time:$("appointmentTime").value,location:$("appointmentLocation").value,client:$("appointmentClient").value.trim(),email:$("appointmentEmail").value.trim(),notes:$("appointmentNotes").value.trim()};
+ e.preventDefault();const id=Number($("appointmentId").value||0),record={title:$("appointmentTitle").value.trim(),typeId:Number($("appointmentType").value),date:$("appointmentDate").value,time:$("appointmentTime").value,location:$("appointmentLocation").value,status:$("appointmentStatus").value,address:$("appointmentAddress").value.trim(),client:$("appointmentClient").value.trim(),email:$("appointmentEmail").value.trim(),notes:$("appointmentNotes").value.trim()};
  if(!record.title||!record.date||!record.time){toast("Complete the appointment title, date, and time.");return}
+ if(record.location==="In Person"&&!record.address){toast("Enter the in-person meeting address.");return}
  if(id){Object.assign(state.appointments.find(a=>a.id===id),record)}else state.appointments.push({id:state.nextAppointmentId++,...record});
  save();$("appointmentDialog").close();renderAll();toast(id?"Appointment updated.":"Appointment created.");
 }
@@ -379,7 +484,7 @@ function deleteAppointment(){
 }
 function openType(t=null){
  $("typeId").value=t?.id||"";$("typeName").value=t?.name||"";$("typeDuration").value=t?.duration||60;$("typeMaxPerDay").value=t?.maxPerDay||4;$("typePrep").value=t?.prep?"yes":"no";
- document.querySelectorAll(".locationCheck").forEach(c=>c.checked=t?t.locations.includes(c.value):["Google Meet","Phone"].includes(c.value));
+ document.querySelectorAll(".locationCheck").forEach(c=>c.checked=t?t.locations.includes(c.value):["Google Meet","Phone","In Person"].includes(c.value));
  $("deleteType").style.visibility=t?"visible":"hidden";$("typeDialog").showModal();
 }
 function saveType(e){
@@ -400,10 +505,12 @@ function saveRules(){
  save();renderRules();renderBookingPreview();toast("Availability rules saved.");
 }
 
-document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x===t));document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));$(`${t.dataset.view}View`).classList.add("active")});
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>setActiveView(t.dataset.view));
 $("prevMonth").onclick=()=>{cursor.setMonth(cursor.getMonth()-1);save();renderAll()};$("nextMonth").onclick=()=>{cursor.setMonth(cursor.getMonth()+1);save();renderAll()};
-$("todayButton").onclick=()=>{cursor=new Date();save();renderAll()};$("newAppointment").onclick=()=>openAppointment();
-$("appointmentType").onchange=updateAppointmentLocations;$("appointmentForm").onsubmit=saveAppointment;$("deleteAppointment").onclick=deleteAppointment;
+$("todayButton").onclick=()=>{cursor=new Date();save();renderAll();setActiveView("today")};$("newAppointment").onclick=()=>openAppointment();
+$("newTodayAppointment").onclick=()=>openAppointment(null,isoDate(new Date()));
+$("appointmentType").onchange=()=>{updateAppointmentLocations();$("appointmentAddress").disabled=$("appointmentLocation").value!=="In Person"};
+$("appointmentLocation").onchange=()=>$("appointmentAddress").disabled=$("appointmentLocation").value!=="In Person";$("appointmentForm").onsubmit=saveAppointment;$("deleteAppointment").onclick=deleteAppointment;
 $("closeAppointment").onclick=$("cancelAppointment").onclick=()=>$("appointmentDialog").close();
 $("addType").onclick=()=>openType();$("typeForm").onsubmit=saveType;$("deleteType").onclick=deleteType;
 $("closeType").onclick=$("cancelType").onclick=()=>$("typeDialog").close();
