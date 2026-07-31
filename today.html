@@ -1,9 +1,9 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 2.0.1
+   Version: 2.0.2
    Status: Production Candidate
-   Change: Highest-Value Next Action proof of concept — WHO, WHAT, WHEN, WHY, EVIDENCE, NEXT ACTION
+   Change: Cache-busted shared shell loading to restore production navigation and expose Finance.
    Source: Production today.html 1.2.0
    ========================================================= -->
 <!DOCTYPE html>
@@ -1273,7 +1273,7 @@
     </main>
   </div>
 
-  <script src="shared/gcm-shell.js"></script>
+  <script src="shared/gcm-shell.js?v=1.0.1"></script>
   <script>
     (() => {
       "use strict";
@@ -1891,11 +1891,11 @@
       });
 
       if (!window.GCMOShell) {
-        console.error("Today 2.0.1: shared/gcm-shell.js did not load.");
+        console.error("Today 2.0.2: shared/gcm-shell.js did not load.");
       } else {
         window.GCMOShell.mount({
           currentPage: "today",
-          statusText: "Agency Command Center operational · Today v2.0.1"
+          statusText: "Agency Command Center operational · Today v2.0.2"
         });
       }
 
