@@ -1,12 +1,14 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.4.28
-   Source: Production route 7.4.27
+   Version: 7.5.0
+   Source: Production route 7.4.28
+   Status: Production Candidate — WWPOWD Intelligence Expansion
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
-            notification classification, business meaning,
-            operational routing, and consultant summary.
+            evidence reconciliation, notification classification,
+            WWPOWD interpretation, proof-readiness evaluation,
+            business meaning, operational routing, and consultant summary.
    ========================================================= */
 
 import {
@@ -70,7 +72,10 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
 
   let visibleEvidence = null;
   let classification = null;
+  let evidenceReconciliation = null;
+  let wwPowdAnalysis = null;
   let businessMeaning = null;
+  let proofReadiness = null;
   let operationalDecision = null;
   let consultantSummary = null;
 
@@ -185,6 +190,62 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
     }));
   }
 
+  /* Stage 2A: reconcile extracted evidence before interpretation. */
+  {
+    const stageStartedAt = Date.now();
+    evidenceReconciliation = reconcileCommunicationEvidence({
+      visibleEvidence,
+      classification
+    });
+    visibleEvidence = evidenceReconciliation.evidence;
+
+    const reconciledClassification = deterministicNotificationClassification(visibleEvidence);
+    if (
+      reconciledClassification.notificationType !== "unknown" &&
+      (
+        classification.notificationType === "unknown" ||
+        reconciledClassification.confidence > classification.confidence
+      )
+    ) {
+      classification = reconciledClassification;
+    }
+
+    stages.push(createStageResult({
+      stageName: "evidence_reconciliation",
+      status: evidenceReconciliation.conflictCount
+        ? STAGE_STATUS.PARTIAL
+        : STAGE_STATUS.SUCCESS,
+      engine: "evidence-reconciliation-v1",
+      model: "deterministic",
+      startedAt: stageStartedAt,
+      confidence: confidenceToNumber(visibleEvidence.confidence),
+      fallbackUsed: false,
+      data: evidenceReconciliation
+    }));
+  }
+
+  /* Stage 2B: WWPOWD translates evidence into the legacy Proof-of-Work lens. */
+  {
+    const stageStartedAt = Date.now();
+    wwPowdAnalysis = buildWwPowdAnalysis({
+      visibleEvidence,
+      classification
+    });
+
+    stages.push(createStageResult({
+      stageName: "wwpowd_interpretation",
+      status: wwPowdAnalysis.manualReviewRequired
+        ? STAGE_STATUS.PARTIAL
+        : STAGE_STATUS.SUCCESS,
+      engine: "wwpowd-engine-v1",
+      model: "deterministic",
+      startedAt: stageStartedAt,
+      confidence: confidenceToNumber(wwPowdAnalysis.confidence),
+      fallbackUsed: false,
+      data: wwPowdAnalysis
+    }));
+  }
+
   /* Stage 3: AI business interpretation; failure retains evidence/classification. */
   {
     const meaningResult = await executeBusinessMeaningStage({
@@ -193,6 +254,7 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
       fileName,
       visibleEvidence,
       classification,
+      wwPowdAnalysis,
       env,
       requestId
     });
@@ -201,13 +263,37 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
     businessMeaning = meaningResult.data;
   }
 
+  /* Stage 3B: determine whether the evidence is ready to become Proof of Work. */
+  {
+    const stageStartedAt = Date.now();
+    proofReadiness = buildProofReadiness({
+      visibleEvidence,
+      classification,
+      wwPowdAnalysis,
+      businessMeaning
+    });
+
+    stages.push(createStageResult({
+      stageName: "proof_readiness",
+      status: STAGE_STATUS.SUCCESS,
+      engine: "proof-readiness-v1",
+      model: "deterministic",
+      startedAt: stageStartedAt,
+      confidence: confidenceToNumber(proofReadiness.confidence),
+      fallbackUsed: false,
+      data: proofReadiness
+    }));
+  }
+
   /* Stage 4: deterministic routing with guarded AI meaning. */
   {
     const stageStartedAt = Date.now();
     operationalDecision = buildOperationalDecision({
       visibleEvidence,
       classification,
-      businessMeaning
+      businessMeaning,
+      wwPowdAnalysis,
+      proofReadiness
     });
 
     stages.push(createStageResult({
@@ -231,6 +317,8 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
       classification,
       visibleEvidence,
       businessMeaning,
+      wwPowdAnalysis,
+      proofReadiness,
       operationalDecision
     });
 
@@ -289,7 +377,10 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
     },
     classification,
     evidence: visibleEvidence,
+    evidenceReconciliation,
+    wwPowdAnalysis,
     businessMeaning,
+    proofReadiness,
     operationalDecision,
     consultantSummary,
     analysis: operationalDecision,
@@ -711,7 +802,8 @@ async function executeVisionExtractionStage({
    */
   const positionTrackingAnchored = /\bposition tracking\b/i.test(clean(sourceText));
   const siteAuditAnchored =
-    deterministicNotificationClassification(evidence).notificationType === "site_audit";
+    deterministicNotificationClassification(evidence).notificationType === "site_audit" ||
+    hasStrongSiteAuditSignature(evidence);
 
   let tableResult = null;
   let tableEvidence = null;
@@ -1985,12 +2077,287 @@ function mergeUncertainty(first, second) {
   return values.length ? uniqueTextValues(values).join("; ") : "None";
 }
 
+
+/* =========================================================
+   v7.5.0 Evidence Reconciliation, WWPOWD, and Proof Readiness
+   ========================================================= */
+
+function communicationEvidenceText(evidence) {
+  return [
+    evidence?.visibleSource,
+    evidence?.visibleSubject,
+    evidence?.visibleText,
+    ...(evidence?.visibleFacts || []),
+    ...(evidence?.visibleMetrics || [])
+  ].filter(Boolean).join(" ");
+}
+
+function hasStrongSiteAuditSignature(evidence) {
+  const text = communicationEvidenceText(evidence);
+  const signals = [
+    /\bsite audit\b/i,
+    /\bsite health\b/i,
+    /\bcrawled pages?\b/i,
+    /\berrors?\b/i,
+    /\bwarnings?\b/i,
+    /\bnotices?\b/i,
+    /\b(?:new|fixed|resolved|no longer detected)\b.{0,80}\b(?:issues?|errors?|warnings?)\b/i
+  ];
+
+  const score = signals.reduce(
+    (total, pattern) => total + (pattern.test(text) ? 1 : 0),
+    0
+  );
+
+  return /\bsite audit\b/i.test(text) || score >= 3;
+}
+
+function reconcileCommunicationEvidence({ visibleEvidence, classification }) {
+  const evidence = normalizeVisibleEvidence(visibleEvidence || {});
+  const originalItems = [
+    ...(evidence.visibleFacts || []),
+    ...(evidence.visibleMetrics || [])
+  ];
+  const reconciledItems = uniqueTextValues(originalItems);
+  const conflicts = [];
+
+  if (
+    (classification?.notificationType === "site_audit" || hasStrongSiteAuditSignature(evidence)) &&
+    hasSiteAuditPositiveAdverseDelta(evidence) &&
+    /\b(?:no change|unchanged)\b/i.test(communicationEvidenceText(evidence))
+  ) {
+    conflicts.push("Site Audit contains both adverse positive deltas and stability wording; metric-local evidence controls the decision.");
+  }
+
+  const reconciledEvidence = normalizeVisibleEvidence({
+    ...evidence,
+    visibleFacts: reconciledItems.filter(item => !(evidence.visibleMetrics || []).includes(item)),
+    visibleMetrics: uniqueTextValues(evidence.visibleMetrics || []),
+    confidence: evidence.confidence
+  });
+
+  return {
+    evidence: reconciledEvidence,
+    conflictCount: conflicts.length,
+    conflicts,
+    rulesApplied: [
+      "Deduplicated evidence",
+      "Preserved metric-local labels and deltas",
+      "Retained positive and adverse evidence together",
+      "Prevented global stability wording from hiding metric-local deterioration"
+    ]
+  };
+}
+
+function parseLabeledMetric(items, labelPattern) {
+  for (const rawItem of items || []) {
+    const item = clean(rawItem);
+    if (!labelPattern.test(item)) continue;
+
+    const valueMatch = item.match(/:\s*([+-]?\d[\d,]*(?:\.\d+)?%?)/i);
+    const changeMatch = item.match(/\bchange\s*:\s*([+-]?\d[\d,]*(?:\.\d+)?%?|no change|unchanged)/i);
+    return {
+      raw: item,
+      value: valueMatch ? valueMatch[1] : null,
+      change: changeMatch ? changeMatch[1] : null
+    };
+  }
+  return null;
+}
+
+function extractCountFromEvidence(text, patterns) {
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) return match[1].replace(/,/g, "");
+  }
+  return null;
+}
+
+function signedChangeDirection(change) {
+  const value = clean(change).toLowerCase();
+  if (!value || /no change|unchanged/.test(value)) return "stable";
+  if (/^\+/.test(value)) return "increase";
+  if (/^-/.test(value)) return "decrease";
+  return "unknown";
+}
+
+function buildWwPowdAnalysis({ visibleEvidence, classification }) {
+  const evidence = normalizeVisibleEvidence(visibleEvidence || {});
+  const text = communicationEvidenceText(evidence);
+  const type = classification?.notificationType || "unknown";
+  const siteAudit = type === "site_audit" || hasStrongSiteAuditSignature(evidence);
+
+  if (siteAudit) {
+    const metrics = evidence.visibleMetrics || [];
+    const siteHealth = parseLabeledMetric(metrics, /\bsite health\b/i);
+    const errors = parseLabeledMetric(metrics, /\berrors?\b/i);
+    const warnings = parseLabeledMetric(metrics, /\bwarnings?\b/i);
+    const notices = parseLabeledMetric(metrics, /\bnotices?\b/i);
+    const resolvedCount = extractCountFromEvidence(text, [
+      /\b(\d[\d,]*)\s+(?:previous\s+)?(?:issues?|errors?\s+and\s+warnings?)\s+(?:were\s+)?(?:fixed|resolved|no longer detected)/i,
+      /\b(?:fixed|resolved)\s+(\d[\d,]*)\s+(?:issues?|errors?|warnings?)/i
+    ]);
+    const newCount = extractCountFromEvidence(text, [
+      /\b(\d[\d,]*)\s+new\s+(?:issues?|errors?\s+and\s+warnings?)/i,
+      /\b(?:discovered|detected)\s+(\d[\d,]*)\s+new\s+(?:issues?|errors?|warnings?)/i
+    ]);
+
+    const adverseMetrics = [errors, warnings]
+      .filter(Boolean)
+      .filter(metric => signedChangeDirection(metric.change) === "increase");
+    const improvingMetrics = [errors, warnings]
+      .filter(Boolean)
+      .filter(metric => signedChangeDirection(metric.change) === "decrease");
+    const mixed = Boolean(
+      (resolvedCount && newCount) ||
+      (adverseMetrics.length && improvingMetrics.length)
+    );
+    const adverse = Boolean(newCount || adverseMetrics.length);
+    const eventDirection = mixed ? "Mixed" : adverse ? "Negative" : "Neutral";
+    const decisionState = adverse ? "investigation_required" : "monitoring_only";
+
+    const resolvedEvidence = uniqueTextValues([
+      resolvedCount ? `${resolvedCount} prior issues were fixed, resolved, or no longer detected` : "",
+      ...improvingMetrics.map(metric => metric.raw)
+    ]);
+    const openEvidence = uniqueTextValues([
+      newCount ? `${newCount} new issues were discovered` : "",
+      ...adverseMetrics.map(metric => metric.raw)
+    ]);
+    const metricSummary = uniqueTextValues([
+      siteHealth?.raw,
+      errors?.raw,
+      warnings?.raw,
+      notices?.raw
+    ]).filter(Boolean);
+
+    const whatHappened = uniqueTextValues([
+      ...resolvedEvidence,
+      ...openEvidence,
+      ...metricSummary
+    ]).join("; ") || buildEvidenceSummary(evidence, classification);
+
+    return {
+      supportedByEvidence: true,
+      framework: "WWPOWD",
+      notificationType: "site_audit",
+      whatHappened,
+      eventDirection,
+      resolvedEvidence,
+      openEvidence,
+      measuredEvidence: metricSummary,
+      proofGap: adverse
+        ? "The communication identifies unresolved or newly discovered technical issues, but does not prove that those issues were diagnosed, corrected, and verified."
+        : "The communication is monitoring evidence and does not by itself prove completed corrective work.",
+      decisionState,
+      operationalSummary: whatHappened,
+      businessImpact: adverse
+        ? "The audit shows technical progress and/or current site-health status, but unresolved deterioration or newly discovered issues could affect crawlability, indexation, user experience, or organic performance until reviewed."
+        : "The audit records current technical SEO condition and should be retained for comparison with future audits.",
+      nextAction: adverse
+        ? "Create an Investigation to review the new or increasing Site Audit issues, identify the priority causes, establish specific corrective work, and require a follow-up audit as proof."
+        : "Save the communication as technical monitoring evidence and continue comparing future Site Audit results.",
+      reasoning: adverse
+        ? "WWPOWD treats resolved evidence as progress, but it does not treat a mixed audit as completed Proof of Work while new or increasing adverse issues remain unresolved."
+        : "WWPOWD records the audit as monitoring evidence because no new adverse condition requiring investigation is established.",
+      legacyTsvInterpretation: {
+        category: "SEO",
+        activity: adverse
+          ? "SEMrush Site Audit reviewed; progress and unresolved technical issues identified"
+          : "SEMrush Site Audit monitoring review",
+        status: adverse ? "investigation_open" : "monitoring",
+        evidenceType: "SEMrush Site Audit",
+        expectedImpact: adverse
+          ? "Resolve priority technical issues and verify improvement through a follow-up audit"
+          : "Maintain technical SEO visibility through continued monitoring",
+        actualImpact: adverse ? "Awaiting investigation and follow-up proof" : "Monitoring evidence retained"
+      },
+      confidence: evidence.confidence === "Low" ? "Medium" : evidence.confidence,
+      manualReviewRequired: evidence.confidence === "Low"
+    };
+  }
+
+  const hasAdverseWords = /\b(?:declined?|decreased?|dropped?|lost|failed|error|warning|issue|broken|invalid|toxic|down)\b/i.test(text);
+  return {
+    supportedByEvidence: type !== "unknown" && evidence.confidence !== "Low",
+    framework: "WWPOWD",
+    notificationType: type,
+    whatHappened: buildEvidenceSummary(evidence, classification),
+    eventDirection: hasAdverseWords ? "Negative" : "Neutral",
+    resolvedEvidence: [],
+    openEvidence: hasAdverseWords ? uniqueTextValues(evidence.visibleMetrics || []) : [],
+    measuredEvidence: uniqueTextValues(evidence.visibleMetrics || []),
+    proofGap: "The communication is evidence intake. Completed work and verified results require separate operational records.",
+    decisionState: hasAdverseWords ? "investigation_required" : "monitoring_only",
+    operationalSummary: buildEvidenceSummary(evidence, classification),
+    businessImpact: "The communication should be retained and evaluated through the established GCM operating workflow.",
+    nextAction: hasAdverseWords
+      ? "Create an Investigation when the adverse evidence is specific and unresolved."
+      : "Save the communication and continue monitoring.",
+    reasoning: "WWPOWD separates evidence intake from completed work and chooses the smallest evidence-supported next step.",
+    legacyTsvInterpretation: {
+      category: "Communication",
+      activity: classification?.notificationFamily || "Communication review",
+      status: hasAdverseWords ? "investigation_open" : "monitoring",
+      evidenceType: classification?.notificationFamily || "Communication",
+      expectedImpact: "Preserve evidence and determine the correct next operational step",
+      actualImpact: "Not yet established"
+    },
+    confidence: evidence.confidence,
+    manualReviewRequired: type === "unknown" || evidence.confidence === "Low"
+  };
+}
+
+function buildProofReadiness({
+  visibleEvidence,
+  classification,
+  wwPowdAnalysis,
+  businessMeaning
+}) {
+  const actionRequested = Boolean(visibleEvidence?.explicitActionRequested);
+  const decisionState = wwPowdAnalysis?.decisionState || "manual_review";
+
+  let proofState = "evidence_intake";
+  if (decisionState === "investigation_required") proofState = "partial_progress";
+  if (decisionState === "work_required" || actionRequested) proofState = "work_not_completed";
+  if (decisionState === "monitoring_only") proofState = "monitoring_evidence";
+
+  return {
+    proofState,
+    readyForClientProof: proofState === "completed_proof",
+    communicationIsProofOfWork: false,
+    resolvedEvidence: wwPowdAnalysis?.resolvedEvidence || [],
+    unresolvedEvidence: wwPowdAnalysis?.openEvidence || [],
+    requiredBeforeProof: proofState === "partial_progress"
+      ? [
+          "Investigation findings",
+          "Specific work required",
+          "Completed corrective work",
+          "Immediate or follow-up verification",
+          "Measured result or documented awaiting-proof state"
+        ]
+      : [
+          "A completed activity or work record",
+          "Evidence that the work occurred",
+          "Verification or result appropriate to the work"
+        ],
+    recommendedRecord: decisionState === "investigation_required"
+      ? "Communication + Investigation"
+      : decisionState === "work_required"
+        ? "Communication + Work Item"
+        : "Communication",
+    reasoning: businessMeaning?.reasoning || wwPowdAnalysis?.reasoning || "Proof readiness is based on the current operational state.",
+    confidence: wwPowdAnalysis?.confidence || visibleEvidence?.confidence || "Low"
+  };
+}
+
 async function executeBusinessMeaningStage({
   client,
   clientId,
   fileName,
   visibleEvidence,
   classification,
+  wwPowdAnalysis,
   env,
   requestId
 }) {
@@ -1999,7 +2366,8 @@ async function executeBusinessMeaningStage({
 
   const deterministicMeaning = buildDeterministicBusinessMeaning({
     visibleEvidence,
-    classification
+    classification,
+    wwPowdAnalysis
   });
 
   if (deterministicMeaning) {
@@ -2086,6 +2454,9 @@ async function executeBusinessMeaningStage({
     "",
     "VISIBLE EVIDENCE",
     JSON.stringify(visibleEvidence, null, 2),
+    "",
+    "WWPOWD INTERPRETATION",
+    JSON.stringify(wwPowdAnalysis, null, 2),
     "",
     "Return only valid JSON matching this contract:",
     JSON.stringify({
@@ -2356,7 +2727,13 @@ function deterministicNotificationClassification(evidence) {
   };
 }
 
-function buildOperationalDecision({ visibleEvidence, classification, businessMeaning }) {
+function buildOperationalDecision({
+  visibleEvidence,
+  classification,
+  businessMeaning,
+  wwPowdAnalysis,
+  proofReadiness
+}) {
   const direction = normalizeEventDirection(businessMeaning?.eventDirection);
   const confidence = Math.min(
     classification?.confidence ?? 0.35,
@@ -2371,6 +2748,22 @@ function buildOperationalDecision({ visibleEvidence, classification, businessMea
   };
 
   let importance = normalizeCommunicationImportance(businessMeaning?.importance);
+
+  /* v7.5.0 WWPOWD / PROOF-READINESS ROUTING AUTHORITY */
+  if (wwPowdAnalysis?.decisionState === "investigation_required") {
+    routes.createInvestigation = true;
+    routes.createWorkItem = false;
+  }
+
+  if (wwPowdAnalysis?.decisionState === "work_required") {
+    routes.createWorkItem = Boolean(visibleEvidence?.explicitActionRequested);
+    routes.createInvestigation = !routes.createWorkItem;
+  }
+
+  if (proofReadiness?.proofState === "completed_proof") {
+    routes.createInvestigation = false;
+    routes.createWorkItem = false;
+  }
 
   const automatedPlatforms = new Set([
     "semrush",
@@ -2405,7 +2798,13 @@ function buildOperationalDecision({ visibleEvidence, classification, businessMea
     }
 }
 
-  if (visibleEvidence?.confidence === "Low" || classification.notificationType === "unknown") {
+  if (
+    visibleEvidence?.confidence === "Low" ||
+    (
+      classification.notificationType === "unknown" &&
+      !wwPowdAnalysis?.supportedByEvidence
+    )
+  ) {
     routes = {
       saveCommunication: true,
       createInvestigation: false,
@@ -2446,9 +2845,13 @@ function buildOperationalDecision({ visibleEvidence, classification, businessMea
   const recordPurpose = clean(businessMeaning?.recordPurpose)
     || recordPurposeForNotificationType(classification?.notificationType);
   const title = buildCommunicationTitle({ source, classification, direction, operationalLabel });
-  const operationalSummary = clean(businessMeaning?.operationalSummary) || buildEvidenceSummary(visibleEvidence, classification);
+  const operationalSummary = clean(wwPowdAnalysis?.operationalSummary)
+    || clean(businessMeaning?.operationalSummary)
+    || buildEvidenceSummary(visibleEvidence, classification);
   const businessImpact = clean(businessMeaning?.businessImpact) || "The communication should be retained in the client history and reviewed according to the visible evidence.";
-  const recommendedAction = clean(businessMeaning?.recommendedAction) || defaultOperationalAction({ routes, visibleEvidence });
+  const recommendedAction = clean(wwPowdAnalysis?.nextAction)
+    || clean(businessMeaning?.recommendedAction)
+    || defaultOperationalAction({ routes, visibleEvidence });
   const reasoning = clean(businessMeaning?.reasoning) || `Routing is based on deterministic ${classification.notificationFamily} classification and the visible evidence confidence.`;
 
   /*
@@ -2519,6 +2922,8 @@ function buildOperationalDecision({ visibleEvidence, classification, businessMea
     reasoning,
     classificationConfidence: confidence,
     notificationFamily: classification.notificationFamily,
+    wwPowdAnalysis,
+    proofReadiness,
     classification: {
       ...classification,
       eventDirection: direction,
@@ -2530,7 +2935,14 @@ function buildOperationalDecision({ visibleEvidence, classification, businessMea
   };
 }
 
-function buildConsultantSummary({ classification, visibleEvidence, businessMeaning, operationalDecision }) {
+function buildConsultantSummary({
+  classification,
+  visibleEvidence,
+  businessMeaning,
+  wwPowdAnalysis,
+  proofReadiness,
+  operationalDecision
+}) {
   const fallbackUsed = Boolean(businessMeaning?.fallbackUsed);
   const summary = fallbackUsed
     ? `${operationalDecision.operationalSummary} Automated business interpretation was unavailable, so deterministic classification and conservative routing were preserved.`
@@ -2542,6 +2954,8 @@ function buildConsultantSummary({ classification, visibleEvidence, businessMeani
     route: operationalDecision.proposedRoute,
     importance: operationalDecision.importance,
     nextAction: operationalDecision.recommendedAction,
+    proofState: proofReadiness?.proofState || "not_evaluated",
+    wwPowdDecision: wwPowdAnalysis?.decisionState || "manual_review",
     manualReviewRequired: fallbackUsed || visibleEvidence?.confidence === "Low" || classification.notificationType === "unknown",
     fallbackUsed
   };
@@ -2576,7 +2990,7 @@ function fallbackVisibleEvidence(reason) {
   });
 }
 
-function buildDeterministicBusinessMeaning({ visibleEvidence, classification }) {
+function buildDeterministicBusinessMeaning({ visibleEvidence, classification, wwPowdAnalysis }) {
   const platform = classification?.platform || "unknown";
   const type = classification?.notificationType || "unknown";
 
@@ -2598,6 +3012,34 @@ function buildDeterministicBusinessMeaning({ visibleEvidence, classification }) 
   ]);
 
   if (!supportedTypes.has(type)) return null;
+
+  if (type === "site_audit" && wwPowdAnalysis?.supportedByEvidence) {
+    const adverse = wwPowdAnalysis.decisionState === "investigation_required";
+    return {
+      eventDirection: wwPowdAnalysis.eventDirection,
+      operationalSummary: wwPowdAnalysis.operationalSummary,
+      businessImpact: wwPowdAnalysis.businessImpact,
+      importance: adverse ? "High" : "Low",
+      recommendedAction: wwPowdAnalysis.nextAction,
+      investigationSuggested: adverse,
+      workItemSuggested: false,
+      replySuggested: false,
+      reasoning: wwPowdAnalysis.reasoning,
+      recordPurpose: "Technical SEO Monitoring Evidence",
+      operationalLabel: adverse ? "Review Required" : "Technical Monitoring Update",
+      confidence: wwPowdAnalysis.confidence,
+      fallbackUsed: false,
+      intelligenceTrace: {
+        engine: "communication-intelligence-v2",
+        path: "wwpowd-deterministic",
+        definition: "site-audit-wwpowd",
+        platform,
+        notificationType: type,
+        aiUsed: false,
+        fallbackUsed: false
+      }
+    };
+  }
 
   /*
    * v7.4.22 HUMAN COMMUNICATION DETERMINISTIC MEANING
