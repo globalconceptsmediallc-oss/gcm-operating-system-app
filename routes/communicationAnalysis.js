@@ -1,11 +1,12 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.5.0
-   Source: Production route 7.4.28
-   Status: Production Candidate — WWPOWD Intelligence Expansion
+   Version: 7.6.0
+   Source: Production route 7.5.0
+   Status: Production Candidate — Report Recognition Hardening
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
+            independent report-signature recognition, specialized extraction,
             evidence reconciliation, notification classification,
             WWPOWD interpretation, proof-readiness evaluation,
             business meaning, operational routing, and consultant summary.
@@ -72,6 +73,7 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
 
   let visibleEvidence = null;
   let classification = null;
+  let reportRecognition = null;
   let evidenceReconciliation = null;
   let wwPowdAnalysis = null;
   let businessMeaning = null;
@@ -109,6 +111,7 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
 
     if (textExtractionResult.error) errors.push(textExtractionResult.error);
     if (visionExtractionResult.error) errors.push(visionExtractionResult.error);
+    reportRecognition = visionExtractionResult.reportRecognition || null;
 
     /*
      * Hybrid evidence rule:
@@ -154,6 +157,7 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
 
     if (extractionResult.error) errors.push(extractionResult.error);
     visibleEvidence = extractionResult.data;
+    reportRecognition = recognizeReportSignatureFromEvidence(visibleEvidence);
   } else {
     const extractionResult = await executeVisionExtractionStage({
       imageDataUrl,
@@ -167,6 +171,30 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
 
     if (extractionResult.error) errors.push(extractionResult.error);
     visibleEvidence = extractionResult.data;
+    reportRecognition = extractionResult.reportRecognition || null;
+  }
+
+  /* Stage 1A: authoritative report-family recognition.
+     This stage is independent of broad OCR confidence. A strong visual/report
+     signature may anchor specialized extraction and final classification even
+     when the broad transcription is incomplete. */
+  {
+    const stageStartedAt = Date.now();
+    reportRecognition = reportRecognition || recognizeReportSignatureFromEvidence(visibleEvidence);
+    visibleEvidence = applyReportRecognitionToEvidence(visibleEvidence, reportRecognition);
+
+    stages.push(createStageResult({
+      stageName: "report_signature_recognition",
+      status: reportRecognition?.reportType && reportRecognition.reportType !== "unknown"
+        ? STAGE_STATUS.SUCCESS
+        : STAGE_STATUS.PARTIAL,
+      engine: reportRecognition?.recognitionMethod || "report-signature-rules",
+      model: reportRecognition?.model || "deterministic",
+      startedAt: stageStartedAt,
+      confidence: confidenceToNumber(reportRecognition?.confidence || "Low"),
+      fallbackUsed: false,
+      data: reportRecognition
+    }));
   }
 
   const detectedClient = detectClientFromEvidence(visibleEvidence);
@@ -376,6 +404,7 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
       fileName
     },
     classification,
+    reportRecognition,
     evidence: visibleEvidence,
     evidenceReconciliation,
     wwPowdAnalysis,
@@ -659,12 +688,7 @@ async function executeVisionExtractionStage({
         confidence: 0,
         rawAiError: error.message,
         fallbackUsed: true,
-        data: null,
-        debug: {
-          preprocessingApplied: preparedImage.transformed === true,
-          preprocessingReason: preparedImage.reason || "",
-          processedImageDataUrl: visionImageDataUrl
-        }
+        data: null
       })
     };
   }
@@ -707,6 +731,25 @@ async function executeVisionExtractionStage({
   });
 
   const visionImageDataUrl = preparedImage.dataUrl;
+
+  /*
+   * v7.6.0 INDEPENDENT REPORT-SIGNATURE RECOGNITION
+   *
+   * This pass runs before broad evidence is trusted. It identifies recurring
+   * report families from headings, branding, and characteristic metric groups.
+   * Its narrow contract prevents a weak broad extraction from blocking the
+   * specialized extractor that is capable of recovering the report.
+   */
+  const reportRecognitionResult = await executeReportSignatureRecognition({
+    imageDataUrl: visionImageDataUrl,
+    sourceText,
+    client,
+    clientId,
+    fileName,
+    env,
+    requestId
+  });
+  const reportRecognition = reportRecognitionResult.data;
 
   const primaryPrompt = buildVisionEvidencePrompt({
     sourceText,
@@ -790,6 +833,7 @@ async function executeVisionExtractionStage({
   }
 
   let evidence = mergeVisibleEvidence(primaryEvidence, recoveryEvidence);
+  evidence = applyReportRecognitionToEvidence(evidence, reportRecognition);
 
   /*
    * Position Tracking screenshots often contain small metric and keyword tables
@@ -802,6 +846,7 @@ async function executeVisionExtractionStage({
    */
   const positionTrackingAnchored = /\bposition tracking\b/i.test(clean(sourceText));
   const siteAuditAnchored =
+    reportRecognition?.reportType === "site_audit" ||
     deterministicNotificationClassification(evidence).notificationType === "site_audit" ||
     hasStrongSiteAuditSignature(evidence);
 
@@ -1023,9 +1068,12 @@ async function executeVisionExtractionStage({
      * stable observation exists for that metric.
      */
     evidence = reconcileFinalSiteAuditNoChangeEvidence(evidence);
+    evidence = applyReportRecognitionToEvidence(evidence, reportRecognition);
   }
 
-  if (!evidence || isWeakVisibleEvidence(evidence)) {
+  const strongReportRecognition = hasStrongReportRecognition(reportRecognition);
+
+  if ((!evidence || isWeakVisibleEvidence(evidence)) && !strongReportRecognition) {
     const primaryMessage = primaryResult.ok ? "Primary vision extraction returned insufficient readable evidence." : primaryResult.error.message;
     const recoveryMessage = recoveryResult
       ? (recoveryResult.ok ? "Focused recovery returned insufficient readable evidence." : recoveryResult.error.message)
@@ -1039,7 +1087,8 @@ async function executeVisionExtractionStage({
     });
 
     return {
-      data: fallbackVisibleEvidence(message),
+      data: preservePartialVisibleEvidence(evidence, message),
+      reportRecognition,
       error: operationalError,
       stage: createStageResult({
         stageName,
@@ -1057,10 +1106,19 @@ async function executeVisionExtractionStage({
     };
   }
 
+  if (strongReportRecognition && (!evidence || isWeakVisibleEvidence(evidence))) {
+    evidence = applyReportRecognitionToEvidence(
+      preservePartialVisibleEvidence(evidence, "Broad transcription was incomplete; strong report signature retained."),
+      reportRecognition
+    );
+    evidence.confidence = reportRecognition.confidence || "Medium";
+  }
+
   const usedRecovery = Boolean(recoveryEvidence && !isWeakVisibleEvidence(recoveryEvidence));
 
   return {
     data: evidence,
+    reportRecognition,
     error: null,
     stage: createStageResult({
       stageName,
@@ -1076,8 +1134,11 @@ async function executeVisionExtractionStage({
         + (recoveryResult?.retryCount || 0)
         + (tableResult?.retryCount || 0)
         + (siteAuditResult?.retryCount || 0)
-        + (siteAuditChangeVerificationResult?.retryCount || 0),
-      retryStatus: siteAuditChangeVerification
+        + (siteAuditChangeVerificationResult?.retryCount || 0)
+        + (reportRecognitionResult?.retryCount || 0),
+      retryStatus: strongReportRecognition && isWeakVisibleEvidence(mergeVisibleEvidence(primaryEvidence, recoveryEvidence))
+        ? "strong_report_signature_retained_partial_evidence"
+        : siteAuditChangeVerification
         ? "site_audit_authoritative_evidence_change_verification_succeeded"
         : siteAuditEvidence
           ? "site_audit_authoritative_evidence_succeeded"
@@ -1094,7 +1155,8 @@ async function executeVisionExtractionStage({
         processedImageDataUrl: visionImageDataUrl,
         siteAuditPreprocessingApplied: siteAuditPreparedImage?.transformed === true,
         siteAuditPreprocessingReason: siteAuditPreparedImage?.reason || "",
-        siteAuditProcessedImageDataUrl: siteAuditPreparedImage?.dataUrl || ""
+        siteAuditProcessedImageDataUrl: siteAuditPreparedImage?.dataUrl || "",
+        reportRecognition
       }
     })
   };
@@ -1283,6 +1345,273 @@ function byteArrayToDataUrl(bytes, mimeType = "image/png") {
  * deterioration without guessing which detached number belongs to which label.
  * No database, UI, save, or Work Item behavior is changed.
  */
+
+/*
+ * v7.6.0 REPORT-SIGNATURE RECOGNITION ENGINE
+ *
+ * The recognizer has a narrow identity-only contract. It does not interpret
+ * business meaning and does not transcribe report metrics. It exists so known
+ * report structures can select the correct specialized evidence extractor even
+ * when general-purpose vision returns low-confidence prose.
+ */
+async function executeReportSignatureRecognition({
+  imageDataUrl,
+  sourceText = "",
+  client,
+  clientId,
+  fileName,
+  env,
+  requestId
+}) {
+  const deterministic = recognizeReportSignatureFromEvidence(
+    deterministicTextEvidenceExtraction(sourceText)
+  );
+
+  if (!env?.AI || typeof env.AI.run !== "function") {
+    return { data: deterministic, retryCount: 0, retryStatus: "deterministic_only" };
+  }
+
+  const prompt = buildReportSignaturePrompt({ sourceText, client, clientId, fileName });
+  const result = await runAiJsonWithRetry({
+    env,
+    model: COMMUNICATION_VISION_MODEL,
+    input: {
+      messages: [
+        {
+          role: "system",
+          content: "Identify only the visible business-report family and its matched visual/text signals. Return one valid JSON object only."
+        },
+        { role: "user", content: prompt }
+      ],
+      image: imageDataUrl,
+      max_tokens: 900,
+      temperature: 0
+    },
+    stageName: "report_signature_recognition",
+    requestId,
+    route: ACTIONS.ANALYZE_COMMUNICATION,
+    timeoutMs: 30000,
+    maxRetries: 1
+  });
+
+  if (!result.ok) {
+    return {
+      data: deterministic,
+      retryCount: result.retryCount || 0,
+      retryStatus: "ai_failed_deterministic_retained"
+    };
+  }
+
+  const aiRecognition = normalizeReportRecognition(result.data, {
+    recognitionMethod: "visual-signature-ai",
+    model: COMMUNICATION_VISION_MODEL
+  });
+
+  return {
+    data: chooseReportRecognition(deterministic, aiRecognition),
+    retryCount: result.retryCount || 0,
+    retryStatus: result.retryStatus || "succeeded"
+  };
+}
+
+function buildReportSignaturePrompt({ sourceText = "", client, clientId, fileName }) {
+  return [
+    "You are the Report Signature Recognition Engine for the Global Concepts Media Operating System.",
+    "Identify the report family from visible branding, report headings, section labels, and characteristic metric groups.",
+    "Do not interpret results. Do not recommend work. Do not transcribe metric values.",
+    "Prefer Unknown over guessing, but a coherent combination of characteristic labels may establish the family even when some text is small.",
+    "Gmail or a browser is only the container and must never be returned as the business platform.",
+    "",
+    "KNOWN SIGNATURES",
+    "SEMrush Site Audit: Site Audit heading and/or a coherent group including Site Health, Crawled Pages, Errors, Warnings, Notices, Healthy, Broken, Has Issues, Redirects, Blocked, or Top Issues.",
+    "SEMrush Position Tracking: Position Tracking heading and/or Visibility, Traffic, Top Keywords, keyword Position/Change/Volume, or landing-page ranking sections.",
+    "SEMrush Backlink Audit: Backlink Audit heading and/or referring domains, backlinks, toxic score, lost/new domains, or anchor text.",
+    "Google Search Console: Search Console branding and/or page indexing, search performance, clicks, impressions, average position, validation, or coverage language.",
+    "Google Analytics: Google Analytics/GA4 branding and/or Active Users, New Users, Engagement Time, Events, Views, Page/Screen, or Bounce Rate.",
+    "Google Business Profile: Business Profile branding and/or profile views, calls, directions, searches, messages, or reviews.",
+    "",
+    "STRICT RULES",
+    "1. Return only one report family.",
+    "2. matchedSignals must contain only labels or branding actually visible or explicitly present in supplied text.",
+    "3. Set confidence High only when the heading/branding is readable or at least three mutually consistent characteristic signals are visible.",
+    "4. Do not use the selected client as evidence of report family.",
+    "5. Return valid JSON only. No markdown.",
+    "",
+    `Selected client context: ${client || clientId || "Unknown"}`,
+    `Temporary filename: ${fileName}`,
+    `Optional pasted-text anchor: ${clean(sourceText) || "None"}`,
+    "",
+    "Return only this JSON contract:",
+    JSON.stringify({
+      platform: "semrush | google_search_console | google_analytics | google_business_profile | unknown",
+      reportType: "site_audit | position_tracking | backlink_audit | search_console | analytics | business_profile | unknown",
+      reportFamily: "Human-readable family name or Unknown",
+      matchedSignals: ["Visible heading, branding, or characteristic label"],
+      confidence: "High | Medium | Low",
+      uncertainty: "What prevented stronger identification; otherwise None"
+    }, null, 2)
+  ].join("\n");
+}
+
+function normalizeReportRecognition(value, defaults = {}) {
+  const allowedPlatforms = new Set([
+    "semrush", "google_search_console", "google_analytics",
+    "google_business_profile", "unknown"
+  ]);
+  const allowedTypes = new Set([
+    "site_audit", "position_tracking", "backlink_audit",
+    "search_console", "analytics", "business_profile", "unknown"
+  ]);
+
+  const platform = clean(value?.platform).toLowerCase().replace(/[\s-]+/g, "_");
+  const reportType = clean(value?.reportType).toLowerCase().replace(/[\s-]+/g, "_");
+  const confidence = normalizeConfidence(value?.confidence);
+
+  return {
+    platform: allowedPlatforms.has(platform) ? platform : "unknown",
+    reportType: allowedTypes.has(reportType) ? reportType : "unknown",
+    reportFamily: clean(value?.reportFamily) || reportFamilyForType(reportType),
+    matchedSignals: uniqueTextValues(Array.isArray(value?.matchedSignals) ? value.matchedSignals : []),
+    confidence,
+    uncertainty: clean(value?.uncertainty) || "None",
+    recognitionMethod: defaults.recognitionMethod || value?.recognitionMethod || "report-signature-rules",
+    model: defaults.model || value?.model || "deterministic"
+  };
+}
+
+function recognizeReportSignatureFromEvidence(evidence) {
+  const searchable = [
+    evidence?.visibleSource,
+    evidence?.visibleSubject,
+    evidence?.visibleText,
+    ...(evidence?.visibleFacts || []),
+    ...(evidence?.visibleMetrics || [])
+  ].filter(Boolean).join(" ");
+
+  const signatures = [
+    {
+      platform: "semrush",
+      reportType: "site_audit",
+      reportFamily: "SEMrush Site Audit",
+      signals: [
+        ["SEMrush", /\bsemrush\b/i], ["Site Audit", /\bsite\s*audit\b/i],
+        ["Site Health", /\bsite\s*health\b/i], ["Crawled Pages", /\bcrawled\s*pages?\b/i],
+        ["Errors", /\berrors?\b/i], ["Warnings", /\bwarnings?\b/i],
+        ["Notices", /\bnotices?\b/i], ["Top Issues", /\btop\s*issues\b/i]
+      ]
+    },
+    {
+      platform: "semrush", reportType: "position_tracking", reportFamily: "SEMrush Position Tracking",
+      signals: [["SEMrush", /\bsemrush\b/i], ["Position Tracking", /\bposition\s*tracking\b/i], ["Visibility", /\bvisibility\b/i], ["Top Keywords", /\btop\s*keywords\b/i], ["Position/Change/Volume", /\bposition\b.*\bchange\b.*\bvolume\b/i]]
+    },
+    {
+      platform: "semrush", reportType: "backlink_audit", reportFamily: "SEMrush Backlink Audit",
+      signals: [["SEMrush", /\bsemrush\b/i], ["Backlink Audit", /\bbacklink\s*audit\b/i], ["Referring Domains", /\breferring\s*domains?\b/i], ["Toxic Score", /\btoxic(?:ity)?\s*score\b/i], ["Backlinks", /\bbacklinks?\b/i]]
+    },
+    {
+      platform: "google_search_console", reportType: "search_console", reportFamily: "Google Search Console",
+      signals: [["Search Console", /\bsearch\s*console\b/i], ["Page Indexing", /\bpage\s*indexing\b/i], ["Clicks", /\bclicks?\b/i], ["Impressions", /\bimpressions?\b/i], ["Average Position", /\baverage\s*position\b/i]]
+    },
+    {
+      platform: "google_analytics", reportType: "analytics", reportFamily: "Google Analytics",
+      signals: [["Google Analytics/GA4", /google\s*analytics|\bga4\b/i], ["Active Users", /\bactive\s*users?\b/i], ["New Users", /\bnew\s*users?\b/i], ["Engagement Time", /\bengagement\s*time\b/i], ["Bounce Rate", /\bbounce\s*rate\b/i]]
+    }
+  ];
+
+  let best = null;
+  for (const signature of signatures) {
+    const matchedSignals = signature.signals.filter(([, pattern]) => pattern.test(searchable)).map(([label]) => label);
+    const headingMatched = matchedSignals.some(value => /site audit|position tracking|backlink audit|search console|google analytics|ga4/i.test(value));
+    const score = matchedSignals.length + (headingMatched ? 2 : 0);
+    if (!best || score > best.score) best = { ...signature, matchedSignals, score, headingMatched };
+  }
+
+  if (!best || best.score < 2) {
+    return normalizeReportRecognition({ platform: "unknown", reportType: "unknown", reportFamily: "Unknown", matchedSignals: [], confidence: "Low", uncertainty: "No dependable report signature was established." });
+  }
+
+  return normalizeReportRecognition({
+    platform: best.platform,
+    reportType: best.reportType,
+    reportFamily: best.reportFamily,
+    matchedSignals: best.matchedSignals,
+    confidence: best.headingMatched || best.matchedSignals.length >= 4 ? "High" : "Medium",
+    uncertainty: "None"
+  });
+}
+
+function chooseReportRecognition(first, second) {
+  const a = normalizeReportRecognition(first || {});
+  const b = normalizeReportRecognition(second || {});
+  const score = item => confidenceToNumber(item.confidence) + Math.min(item.matchedSignals.length * 0.05, 0.2) + (item.reportType !== "unknown" ? 0.2 : 0);
+  return score(b) > score(a) ? b : a;
+}
+
+function hasStrongReportRecognition(recognition) {
+  return Boolean(
+    recognition &&
+    recognition.reportType &&
+    recognition.reportType !== "unknown" &&
+    (recognition.confidence === "High" || (recognition.confidence === "Medium" && (recognition.matchedSignals || []).length >= 3))
+  );
+}
+
+function reportFamilyForType(reportType) {
+  const families = {
+    site_audit: "SEMrush Site Audit",
+    position_tracking: "SEMrush Position Tracking",
+    backlink_audit: "SEMrush Backlink Audit",
+    search_console: "Google Search Console",
+    analytics: "Google Analytics",
+    business_profile: "Google Business Profile"
+  };
+  return families[reportType] || "Unknown";
+}
+
+function applyReportRecognitionToEvidence(evidence, recognition) {
+  const normalized = normalizeVisibleEvidence(evidence || {});
+  const recognized = normalizeReportRecognition(recognition || {});
+  if (recognized.reportType === "unknown") return normalized;
+
+  const sourceMap = {
+    semrush: "SEMrush",
+    google_search_console: "Google Search Console",
+    google_analytics: "Google Analytics",
+    google_business_profile: "Google Business Profile"
+  };
+
+  return normalizeVisibleEvidence({
+    ...normalized,
+    visibleSource: clean(normalized.visibleSource) && normalized.visibleSource !== "Unknown"
+      ? normalized.visibleSource
+      : sourceMap[recognized.platform] || "Unknown",
+    visibleSubject: clean(normalized.visibleSubject) && normalized.visibleSubject !== "Unknown"
+      ? normalized.visibleSubject
+      : recognized.reportFamily,
+    visibleFacts: uniqueTextValues([
+      ...(normalized.visibleFacts || []),
+      `Recognized report family: ${recognized.reportFamily}`
+    ]),
+    confidence: confidenceToNumber(recognized.confidence) > confidenceToNumber(normalized.confidence)
+      ? recognized.confidence
+      : normalized.confidence
+  });
+}
+
+function preservePartialVisibleEvidence(evidence, reason) {
+  const normalized = normalizeVisibleEvidence(evidence || {});
+  return normalizeVisibleEvidence({
+    ...normalized,
+    visibleText: clean(normalized.visibleText) || "Partial screenshot evidence was retained for review.",
+    visibleFacts: uniqueTextValues([
+      ...(normalized.visibleFacts || []),
+      `Evidence limitation: ${clean(reason) || "Incomplete transcription"}`
+    ]),
+    uncertainty: clean(reason) || normalized.uncertainty || "Incomplete transcription",
+    confidence: normalized.confidence === "High" ? "Medium" : normalized.confidence
+  });
+}
+
 function buildVisionEvidencePrompt({ sourceText = "", client, clientId, fileName, focusedRecovery }) {
   const pastedText = clean(sourceText);
   const pastedTextIsPositionTracking = /\bposition tracking\b/i.test(pastedText);
