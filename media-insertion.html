@@ -1,14 +1,15 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media-insertion.html
-   Version: 1.5.9
-   Status: Production Candidate — Attached RFC 822 Station Package
+   Version: 1.6.0
+   Status: Production Candidate — Sent / Awaiting Confirmation State Commit
    Source: Current GCM OS Media Operations architecture
-   Sprint: Media Traffic Package — Attached Email Draft
+   Sprint: Media Traffic Package — Operational State Commit
    Purpose: Create or load the exact Media campaign selected from the dashboard,
             enforce market-specific GCM ISCI and production filenames, generate
             professional station traffic instructions, update the selected D1
-            record, and return to the operator workspace.
+            record, mark sent traffic as awaiting station confirmation, and return
+            to the operator workspace.
 
    Pilot:
    - Client: Southeast Safes
@@ -109,7 +110,7 @@
           <h1 id="pageTitle">Media Insertion</h1>
           <p class="subtitle" id="pageSubtitle">Create the campaign package that Media will operate, confirm, complete, and reuse.</p>
         </div>
-        <div class="version">Installed version 1.5.9</div>
+        <div class="version">Installed version 1.6.0</div>
       </header>
 
       <section class="summary">
@@ -620,10 +621,28 @@ Andy`;
       if(!response.ok || payload?.ok!==true){
         throw new Error(payload?.error || payload?.details || `Worker returned ${response.status}.`);
       }
+      const savedMediaRecordId=Number(payload?.mediaRecordId || existingRecord?.id || 0);
+
+      if(existingRecord && savedMediaRecordId){
+        const stateResponse=await fetch(WORKER_ENDPOINT,{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({
+            action:"get-media-operations",
+            operation:"mark_sent_awaiting_confirmation",
+            mediaRecordId:savedMediaRecordId
+          })
+        });
+        const statePayload=await stateResponse.json().catch(()=>({}));
+        if(!stateResponse.ok || statePayload?.ok!==true){
+          throw new Error(statePayload?.error || statePayload?.details || `Campaign updated, but sent status could not be recorded (${stateResponse.status}).`);
+        }
+      }
+
       $("saveStatus").className="status ok";
       $("saveStatus").textContent=existingRecord
-        ? `Media record ${payload?.mediaRecordId || existingRecord.id} updated successfully. Returning to Media…`
-        : `Campaign inserted successfully as Media record ${payload?.mediaRecordId || "created"}. Returning to Media for verification…`;
+        ? `Media record ${savedMediaRecordId || existingRecord.id} updated and marked Sent — Awaiting Station Confirmation. Returning to Media…`
+        : `Campaign inserted successfully as Media record ${savedMediaRecordId || "created"}. Returning to Media for verification…`;
       window.setTimeout(() => { window.location.href = "media.html"; }, 1200);
     }catch(error){
       $("saveStatus").className="status error";
@@ -637,3 +656,4 @@ Andy`;
 })();
 </script>
 </body>
+</html>
