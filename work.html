@@ -1,13 +1,13 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.8.0
+   Version: 1.8.1
    Status: Production Candidate
-   Source: Production work.html 1.7.1
-   Sprint: Guided Investigation Evidence Workflow
-   Purpose: Preserve authoritative navigation, evidence capture, and production
-            processing while guiding the operator through each evidence step
-            in a visible checklist that advances during the road-tested workflow.
+   Source: Production work.html 1.8.0
+   Sprint: Task-Specific SEMrush Issues Navigation
+   Purpose: Preserve the guided evidence workflow while replacing manual URL
+            entry with a one-click clipboard capture for the exact client
+            SEMrush Issues page.
 
    Production changes:
    - Adds Capture Evidence Screenshot inside Guided Investigation.
@@ -22,6 +22,9 @@
    - Checklist advances when SEMrush is opened, a screenshot is chosen,
      Workers AI completes analysis, findings are reviewed, and work is created.
    - Checklist state is stored locally by client and Investigation for road testing.
+   - Removes the manual SEMrush URL text-entry field from the Investigation.
+   - Adds Save Copied Issues Link for one-time client setup.
+   - Saved links change the action to Open <Client> Issues.
 
    Supported URLs:
    - work.html?investigation=36&client=PW
@@ -112,7 +115,7 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Investigate one evidence step at a time. Create specific work only after the evidence proves what must be done.</p></div>
-        <span class="classification">Evidence Workflow · v1.8.0</span>
+        <span class="classification">Task-Specific Issues · v1.8.1</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -132,14 +135,14 @@
 <script>
 (() => {
   "use strict";
-  const VERSION="1.8.0";
+  const VERSION="1.8.1";
   const WORKER_URL="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const params=new URLSearchParams(location.search);
   const requestedInvestigationId=positiveInt(params.get("investigation"));
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Guided evidence workflow · Work v1.8.0"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Task-specific evidence links · Work v1.8.1"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),target:byId("target-banner")};
   let activeClients=[],investigations=[],workItems=[],selectedKey="",processing=false,processingWorkItem=false;
 
@@ -242,7 +245,7 @@
   }
 
   const EVIDENCE_STEPS=[
-    {id:"open_semrush",title:"Open SEMrush",detail:"Open the correct client Site Audit project."},
+    {id:"open_semrush",title:"Open Client Site Audit",detail:"Open the correct client project or saved Issues page."},
     {id:"review_issues",title:"Review Issues",detail:"Open the Issues screen and identify the highest-value issue."},
     {id:"capture_screenshot",title:"Capture Screenshot",detail:"Choose the current evidence screenshot."},
     {id:"analyze_evidence",title:"Analyze Evidence",detail:"Use Workers AI to extract visible facts and metrics."},
@@ -298,8 +301,8 @@
     if(isSemrushSiteAudit(item)){
       actions.push({
         label:savedSemrushUrl
-          ? `Open ${item.clientName} Site Audit`
-          : "Open SEMrush Site Audit",
+          ? `Open ${item.clientName} Issues`
+          : `Open ${item.clientName} Site Audit`,
         href:savedSemrushUrl||"https://www.semrush.com/siteaudit/",
         primary:true,
         tool:"semrush"
@@ -338,22 +341,19 @@
 
     return `
       <div class="tool-link-setup" id="semrush-link-setup">
-        <strong>${saved?"Update":"Set"} ${esc(item.clientName)} SEMrush project link</strong>
-        <p>Copy the URL from the open ${esc(item.clientName)} Site Audit project and save it once. Future investigations will open that exact project.</p>
-        <div class="tool-link-input-row">
-          <input
-            id="semrush-project-url"
-            type="text"
-            value="${esc(saved)}"
-            placeholder="https://www.semrush.com/siteaudit/..."
-            aria-label="${esc(item.clientName)} SEMrush Site Audit project URL"
-          />
-          <button class="button primary" id="save-semrush-project-url">Save Direct Link</button>
+        <strong>${saved?`${esc(item.clientName)} Issues link saved`:`One-time ${esc(item.clientName)} Issues setup`}</strong>
+        <p>${saved
+          ? `The blue action now opens the saved ${esc(item.clientName)} SEMrush Issues page directly.`
+          : `On the exact ${esc(item.clientName)} SEMrush Issues tab, copy the browser URL. Return here and click Save Copied Issues Link. This is required only once for this browser.`}
+        </p>
+        <div class="tool-link-setup-actions">
+          ${saved
+            ? `<button class="button" id="clear-semrush-project-url" type="button">Clear Saved Link</button>`
+            : `<button class="button primary" id="save-semrush-project-url" type="button">Save Copied Issues Link</button>`}
         </div>
         <div class="tool-link-status" id="semrush-link-status">
-          ${saved?"Direct project link saved for this browser.":"No direct project link saved yet."}
+          ${saved?"Direct Issues link ready.":"No direct Issues link saved yet."}
         </div>
-        ${saved?'<button class="button" id="clear-semrush-project-url" style="margin-top:8px">Clear Saved Link</button>':""}
       </div>
     `;
   }
@@ -362,42 +362,54 @@
     if(!isSemrushSiteAudit(item))return;
 
     const saveButton=byId("save-semrush-project-url");
-    const input=byId("semrush-project-url");
     const status=byId("semrush-link-status");
     const clearButton=byId("clear-semrush-project-url");
 
-    saveButton?.addEventListener("click",()=>{
-      const value=String(input?.value||"").trim();
+    saveButton?.addEventListener("click",async()=>{
+      status.textContent="Reading the copied browser URL…";
+      status.style.color="var(--muted)";
 
-      if(!validSemrushUrl(value)){
-        status.textContent="Paste a valid semrush.com project URL.";
+      try{
+        const value=String(await navigator.clipboard.readText()).trim();
+
+        if(!validSemrushUrl(value)){
+          status.textContent="The clipboard does not contain a valid semrush.com URL. Open the exact Issues tab, copy its browser URL, then try again.";
+          status.style.color="var(--red)";
+          return;
+        }
+
+        saveSemrushUrl(item.clientCode,value);
+        status.textContent=`Direct ${item.clientName} Issues link saved.`;
+        status.style.color="var(--green)";
+
+        const link=document.querySelector('[data-evidence-tool="semrush"]');
+        if(link){
+          link.href=value;
+          link.textContent=`Open ${item.clientName} Issues ↗`;
+        }
+
+        saveButton.textContent="Issues Link Saved";
+        saveButton.disabled=true;
+      }catch(error){
+        console.error(error);
+        status.textContent="The browser could not read the clipboard. Copy the Issues URL and allow clipboard access when prompted.";
         status.style.color="var(--red)";
-        return;
-      }
-
-      saveSemrushUrl(item.clientCode,value);
-      status.textContent=`Direct SEMrush project link saved for ${item.clientName}.`;
-      status.style.color="var(--green)";
-
-      const link=document.querySelector('[data-evidence-tool="semrush"]');
-      if(link){
-        link.href=value;
-        link.textContent=`Open ${item.clientName} Site Audit ↗`;
       }
     });
 
     clearButton?.addEventListener("click",()=>{
       removeSemrushUrl(item.clientCode);
-      input.value="";
       status.textContent="Saved direct link cleared. The generic SEMrush Site Audit page will open.";
       status.style.color="var(--muted)";
 
       const link=document.querySelector('[data-evidence-tool="semrush"]');
       if(link){
         link.href="https://www.semrush.com/siteaudit/";
-        link.textContent="Open SEMrush Site Audit ↗";
+        link.textContent=`Open ${item.clientName} Site Audit ↗`;
       }
-      clearButton.remove();
+
+      clearButton.disabled=true;
+      clearButton.textContent="Link Cleared";
     });
   }
 
