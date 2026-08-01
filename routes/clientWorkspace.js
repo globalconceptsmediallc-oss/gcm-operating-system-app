@@ -1,13 +1,20 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/clientWorkspace.js
-   Version: 7.1.0
+   Version: 7.1.1
    Status: Production Candidate
-   Source: Production routes/clientWorkspace.js 7.0.0
-   Sprint: Client Tool Router
-   Purpose: Preserve the complete live D1 client workspace while
-            returning each client's authoritative external tool
-            destinations from client_tools.
+   Source: Production routes/clientWorkspace.js 7.1.0
+   Sprint: Client Tool Router Response Hardening
+   Purpose: Preserve the complete live D1 client workspace while returning
+            the authoritative client_tools records in every supported response
+            location used by current and future GCM OS pages.
+
+   Production changes:
+   - Returns active tools as top-level clientTools.
+   - Preserves operational.clientTools.
+   - Preserves record.tools.
+   - Adds clientToolRouter keyed by tool_key for deterministic lookup.
+   - Adds explicit tool-router diagnostics without changing production data.
    ========================================================= */
 
 import {
@@ -165,6 +172,7 @@ export async function handleClientWorkspace(body, env, requestId) {
     const alerts = rowsOf(alertsResult);
     const proofOfWork = rowsOf(proofResult);
     const clientTools = rowsOf(clientToolsResult);
+    const clientToolRouter = buildClientToolRouter(clientTools);
 
     const record = buildClientWorkspaceRecord({
       client,
@@ -184,7 +192,12 @@ export async function handleClientWorkspace(body, env, requestId) {
       version: VERSION,
       source: "D1",
       generatedAt: new Date().toISOString(),
+
+      clientTools,
+      clientToolRouter,
+
       record,
+
       operational: {
         client,
         communications,
@@ -193,7 +206,8 @@ export async function handleClientWorkspace(body, env, requestId) {
         evidence,
         alerts,
         proofOfWork,
-        clientTools
+        clientTools,
+        clientToolRouter
       },
       counts: {
         communications: communications.length,
@@ -217,6 +231,17 @@ export async function handleClientWorkspace(body, env, requestId) {
         ).length,
         evidence: evidence.length,
         clientTools: clientTools.length
+      },
+
+      diagnostics: {
+        clientToolRouter: {
+          clientCode: client.client_code,
+          activeToolCount: clientTools.length,
+          toolKeys: Object.keys(clientToolRouter),
+          semrushSiteAuditIssuesConfigured: Boolean(
+            clientToolRouter.semrush_site_audit_issues?.url
+          )
+        }
       }
     });
   } catch (error) {
@@ -432,6 +457,39 @@ function buildClientWorkspaceRecord({
       dataQuality: "Live operational records"
     }
   };
+}
+
+function buildClientToolRouter(clientTools) {
+  return clientTools.reduce((router, item) => {
+    const key = normalizeToolKey(item.tool_key);
+
+    if (!key || !item.url) {
+      return router;
+    }
+
+    router[key] = {
+      id: item.id,
+      clientId: item.client_id,
+      family: item.tool_family,
+      key,
+      label: item.label,
+      url: item.url,
+      status: item.status,
+      notes: item.notes || "",
+      createdAt: item.created_at,
+      updatedAt: item.updated_at
+    };
+
+    return router;
+  }, {});
+}
+
+function normalizeToolKey(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
 }
 
 function mapClientTool(item) {
