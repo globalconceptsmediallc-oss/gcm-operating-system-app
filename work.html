@@ -1,13 +1,19 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.6.1
+   Version: 1.6.2
    Status: Production Candidate
-   Source: Production work.html 1.6.0
-   Sprint: Authoritative Mission Control Navigation
-   Purpose: Preserve live Guided Investigation and Work Item processing while
-            allowing Mission Control to open the exact client, Investigation,
-            or Work Item requested through URL parameters.
+   Source: Production work.html 1.6.1
+   Sprint: Guided Investigation Evidence Actions
+   Purpose: Preserve authoritative navigation and processing while placing
+            the external evidence tools required for the current investigation
+            one click away from the operator.
+
+   Production changes:
+   - Adds an Evidence Actions bar beneath Current Next Step.
+   - SEMrush Site Audit investigations receive an Open SEMrush button.
+   - Every investigation receives an Open Client Website button when available.
+   - External evidence opens in a new tab so the Investigation remains open.
 
    Supported URLs:
    - work.html?investigation=36&client=PW
@@ -37,7 +43,15 @@
     .investigation-list{display:grid;gap:9px;max-height:720px;overflow:auto}.investigation{width:100%;padding:13px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);text-align:left}.investigation:hover{border-color:#abc5eb}.investigation.active{border:2px solid var(--blue);background:var(--blue-soft);box-shadow:0 0 0 3px rgba(31,111,214,.12)}
     .investigation-title{display:block;color:var(--navy);font-size:.87rem;font-weight:850;line-height:1.4}.meta-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;color:var(--muted);font-size:.7rem}.badge{display:inline-flex;padding:4px 7px;border-radius:999px;background:#eef2f7;font-size:.65rem;font-weight:850;text-transform:uppercase}.badge.high,.badge.urgent{background:var(--red-soft);color:var(--red)}.badge.normal,.badge.medium{background:var(--yellow-soft);color:var(--yellow)}
     .detail-empty,.empty{padding:32px 18px;border:1px dashed var(--border);border-radius:9px;color:var(--muted);text-align:center}.detail-title{margin:0;color:var(--navy);font-size:1.4rem}.detail-subtitle{margin:7px 0 0;color:var(--muted);font-size:.79rem}.detail-section{margin-top:17px;padding-top:15px;border-top:1px solid var(--border)}.detail-section h3{margin:0 0 7px;color:var(--navy);font-size:.72rem;font-weight:900;letter-spacing:.06em;text-transform:uppercase}.detail-section p{margin:0;font-size:.88rem;line-height:1.55;white-space:pre-wrap}
-    .guided-box,.processing-box{margin-top:18px;padding:16px;border:1px solid #cbdcf4;border-radius:11px;background:#f8fbff}.guided-box{border:2px solid var(--blue)}.guided-label{margin:0 0 7px;color:var(--blue);font-size:.68rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase}.guided-step{font-size:1rem;font-weight:750;line-height:1.55;white-space:pre-wrap}.processing-box label{display:block;margin:12px 0 7px;font-size:.78rem;font-weight:850}.processing-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px}.work-card{padding:16px;border:1px solid var(--border);border-radius:10px;background:#fff;margin-bottom:12px}.target-banner{margin-bottom:16px;padding:13px;border:1px solid #aac7ed;border-radius:10px;background:var(--blue-soft);color:#205c9f;font-size:.82rem;font-weight:800}
+    .guided-box,.processing-box{margin-top:18px;padding:16px;border:1px solid #cbdcf4;border-radius:11px;background:#f8fbff}.guided-box{border:2px solid var(--blue)}.guided-label{margin:0 0 7px;color:var(--blue);font-size:.68rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase}.guided-step{font-size:1rem;font-weight:750;line-height:1.55;white-space:pre-wrap}.processing-box label{display:block;margin:12px 0 7px;font-size:.78rem;font-weight:850}
+    .evidence-actions{margin-top:14px;padding-top:14px;border-top:1px solid #cbdcf4}
+    .evidence-actions-label{display:block;margin-bottom:9px;color:var(--navy);font-size:.68rem;font-weight:900;letter-spacing:.09em;text-transform:uppercase}
+    .evidence-actions-row{display:flex;flex-wrap:wrap;gap:9px}
+    .evidence-link{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;padding:0 13px;border:1px solid #aac7ed;border-radius:9px;background:#fff;color:#185fae;font-size:.78rem;font-weight:850}
+    .evidence-link:hover,.evidence-link:focus-visible{border-color:var(--blue);background:var(--blue-soft);outline:none}
+    .evidence-link-primary{border-color:var(--blue);background:var(--blue);color:#fff}
+    .evidence-link-primary:hover,.evidence-link-primary:focus-visible{background:var(--blue-dark);color:#fff}
+.processing-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px}.work-card{padding:16px;border:1px solid var(--border);border-radius:10px;background:#fff;margin-bottom:12px}.target-banner{margin-bottom:16px;padding:13px;border:1px solid #aac7ed;border-radius:10px;background:var(--blue-soft);color:#205c9f;font-size:.82rem;font-weight:800}
     @media(max-width:1100px){.workspace-grid{grid-template-columns:1fr}.investigation-list{max-height:none}}@media(max-width:860px){.app-shell{display:block}main{padding:18px 14px 32px}.summary-grid{grid-template-columns:1fr}}
   </style>
 </head>
@@ -48,7 +62,7 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Investigate one evidence step at a time. Create specific work only after the evidence proves what must be done.</p></div>
-        <span class="classification">Authoritative Navigation · v1.6.1</span>
+        <span class="classification">Evidence Actions · v1.6.2</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -68,14 +82,14 @@
 <script>
 (() => {
   "use strict";
-  const VERSION="1.6.1";
+  const VERSION="1.6.2";
   const WORKER_URL="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const params=new URLSearchParams(location.search);
   const requestedInvestigationId=positiveInt(params.get("investigation"));
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Authoritative navigation · Work v1.6.1"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Guided evidence actions · Work v1.6.2"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),target:byId("target-banner")};
   let activeClients=[],investigations=[],workItems=[],selectedKey="",processing=false,processingWorkItem=false;
 
@@ -96,8 +110,15 @@
         const client=activeClients[index],op=result.value.operational||{};
         const communications=Array.isArray(op.communications)?op.communications:[];
         const communicationById=new Map(communications.map(c=>[Number(c.id),c]));
-        (Array.isArray(op.investigations)?op.investigations:[]).filter(i=>!closed(i)).forEach(i=>investigations.push({...i,clientCode:op.client?.client_code||client.code,clientName:op.client?.name||client.name,communication:communicationById.get(Number(i.communication_id))||null}));
-        (Array.isArray(op.workItems)?op.workItems:[]).filter(i=>!completed(i)).forEach(i=>workItems.push({...i,clientCode:op.client?.client_code||client.code,clientName:op.client?.name||client.name}));
+        const clientWebsite=normalizeWebsite(
+          op.client?.website_url ||
+          op.client?.website ||
+          op.client?.domain ||
+          op.client?.primary_domain ||
+          client.website
+        );
+        (Array.isArray(op.investigations)?op.investigations:[]).filter(i=>!closed(i)).forEach(i=>investigations.push({...i,clientCode:op.client?.client_code||client.code,clientName:op.client?.name||client.name,clientWebsite,communication:communicationById.get(Number(i.communication_id))||null}));
+        (Array.isArray(op.workItems)?op.workItems:[]).filter(i=>!completed(i)).forEach(i=>workItems.push({...i,clientCode:op.client?.client_code||client.code,clientName:op.client?.name||client.name,clientWebsite}));
       });
       investigations.sort(sortInvestigations);
       renderSummary();renderWorkItems();applyRequestedTarget();
@@ -147,11 +168,76 @@
   function showTarget(message){el.target.hidden=false;el.target.textContent=message;}
   function selectInvestigation(item,scroll=false){if(!item)return;selectedKey=key(item);renderList();renderDetail(item);if(scroll)byId("guided-investigation-panel").scrollIntoView({behavior:"smooth",block:"start"});loadGuidance(item);}
   async function loadGuidance(item){try{const payload=await post({action:"get-guided-investigation",clientCode:item.clientCode,investigationId:Number(item.id)});if(selectedKey===key(item))renderDetail(item,payload.guidance||null);}catch(error){console.error(error);}}
+  function investigationFamily(item){
+    return norm(
+      item?.communication?.communication_family ||
+      item?.communication?.family ||
+      item?.communication?.source ||
+      item?.communication?.sender ||
+      item?.title
+    );
+  }
+
+  function isSemrushSiteAudit(item){
+    const combined=[
+      item?.title,
+      item?.description,
+      item?.communication?.subject,
+      item?.communication?.notification_type,
+      item?.communication?.communication_family
+    ].map(value=>norm(value)).join(" ");
+
+    return combined.includes("semrush") &&
+      (combined.includes("site_audit") || combined.includes("site audit"));
+  }
+
+  function buildEvidenceActions(item){
+    const actions=[];
+
+    if(isSemrushSiteAudit(item)){
+      actions.push({
+        label:"Open SEMrush Site Audit",
+        href:"https://www.semrush.com/siteaudit/",
+        primary:true
+      });
+    }
+
+    if(item.clientWebsite){
+      actions.push({
+        label:`Open ${item.clientName} Website`,
+        href:item.clientWebsite,
+        primary:false
+      });
+    }
+
+    actions.push({
+      label:"Open Client Workspace",
+      href:`business-workspace.html?business=${encodeURIComponent(item.clientCode)}`,
+      primary:false,
+      internal:true
+    });
+
+    return actions.map(action=>`
+      <a
+        class="evidence-link${action.primary?" evidence-link-primary":""}"
+        href="${esc(action.href)}"
+        ${action.internal?"":'target="_blank" rel="noopener noreferrer"'}
+      >${esc(action.label)}${action.internal?"":" ↗"}</a>
+    `).join("");
+  }
+
   function renderDetail(item,guidance=null){
     const communication=item.communication;
     el.detail.innerHTML=`<h2 class="detail-title">${esc(item.title||"Investigation")}</h2><p class="detail-subtitle"><a href="business-workspace.html?business=${encodeURIComponent(item.clientCode)}" style="color:#1f6fd6;font-weight:800">${esc(item.clientName)}</a> · Investigation #${esc(item.id)}${item.communication_id?` · Communication #${esc(item.communication_id)}`:""}</p>
     <section class="detail-section"><h3>Investigation Objective</h3><p>${esc(guidance?.current_objective||item.description||"Determine what the evidence proves.")}</p></section>
-    <div class="guided-box"><p class="guided-label">Current Next Step</p><div class="guided-step">${esc(guidance?.current_next_step||item.recommendation||"Review the originating evidence and establish the next fact required.")}</div></div>
+    <div class="guided-box">
+      <p class="guided-label">Current Next Step</p>
+      <div class="guided-step">${esc(guidance?.current_next_step||item.recommendation||"Review the originating evidence and establish the next fact required.")}</div>
+      <div class="evidence-actions">
+        <span class="evidence-actions-label">Evidence Actions</span>
+        <div class="evidence-actions-row">${buildEvidenceActions(item)}</div>
+      </div>
+    </div>
     <section class="detail-section"><h3>Current Understanding</h3><p>${esc(guidance?.current_understanding||communication?.ai_summary||communication?.raw_content||item.description||"No summary stored.")}</p></section>
     <section class="detail-section"><h3>Final Resolution</h3><div class="processing-box"><label>Investigation Finding</label><textarea id="finding-summary">${esc(item.finding_summary||"")}</textarea><label>Specific Work Required</label><textarea id="work-title"></textarea><label>Specific Action</label><textarea id="work-description"></textarea><div class="processing-actions"><button id="close-button" class="button">Close — No Work Required</button><button id="create-button" class="button primary">Create Specific Work</button></div><div id="process-message"></div></div></section>`;
     byId("close-button").addEventListener("click",()=>processInvestigation(item,"no_work_required"));
@@ -251,7 +337,14 @@
   function sortInvestigations(a,b){const p={urgent:0,high:1,normal:2,medium:2,low:3};return (p[norm(a.priority)]??4)-(p[norm(b.priority)]??4)||((Date.parse(b.opened_at||b.created_at||"")||0)-(Date.parse(a.opened_at||a.created_at||"")||0));}
   function closed(i){return ["complete","completed","closed","resolved","cancelled","canceled","archived","ignored","no_action"].includes(norm(i.status));}
   function completed(i){return ["complete","completed","closed","resolved","cancelled","canceled"].includes(norm(i.status));}
-  function key(i){return `${i.clientCode}:${i.id}`;} function norm(v){return String(v||"").trim().toLowerCase().replace(/\s+/g,"_");}
+  function key(i){return `${i.clientCode}:${i.id}`;}
+  function norm(v){return String(v||"").trim().toLowerCase().replace(/\s+/g,"_");}
+  function normalizeWebsite(value){
+    const raw=String(value||"").trim();
+    if(!raw)return "";
+    if(/^https?:\/\//i.test(raw))return raw;
+    return `https://${raw.replace(/^\/+/, "")}`;
+  }
   function setStatus(type,text){el.status.className=`status ${type}`;el.status.textContent=text;} function positiveInt(v){const n=Number(v);return Number.isInteger(n)&&n>0?n:null;} function byId(id){return document.getElementById(id);}
   function esc(v){return String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");}
 })();
