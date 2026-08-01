@@ -1,10 +1,14 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 2.0.2
+   Version: 2.0.3
    Status: Production Candidate
-   Change: Cache-busted shared shell loading to restore production navigation and expose Finance.
-   Source: Production today.html 1.2.0
+   Change: Authoritative operational briefing and Media attention consistency.
+   Source: Production today.html 2.0.2
+   Sprint: Production Consolidation — Mission Control
+   Purpose: Preserve the verified Mission Control page while making the
+            Command Brief reflect the complete current operating state and
+            ensuring Media attention uses only the authoritative Worker result.
    ========================================================= -->
 <!DOCTYPE html>
 <html lang="en">
@@ -1327,6 +1331,10 @@
       let attentionClientsState = [];
       let highestPriorityDecisionState = null;
       let mediaAttentionState = 0;
+      let missionControlLoaded = false;
+      let missionControlUnavailable = false;
+      let mediaLoaded = false;
+      let mediaUnavailable = false;
 
       const cloneDefaults = () => JSON.parse(JSON.stringify(DEFAULT_DATA));
 
@@ -1451,6 +1459,108 @@
           : "clients.html";
       }
 
+      function getLocalOperatingState() {
+        const data = loadData();
+
+        const openWork = data.workItems.filter(
+          (item) =>
+            !["complete", "completed", "archived"].includes(
+              String(item.status || "").toLowerCase()
+            )
+        );
+
+        const proofWaiting = data.proofItems.filter(
+          (item) =>
+            !["complete", "completed", "published", "archived"].includes(
+              String(item.status || "").toLowerCase()
+            )
+        );
+
+        return {
+          openWorkCount: openWork.length,
+          proofWaitingCount: proofWaiting.length,
+          prospectCount: data.prospects.length
+        };
+      }
+
+      function pluralize(count, singular, plural = `${singular}s`) {
+        return `${count} ${count === 1 ? singular : plural}`;
+      }
+
+      function renderOperationalBriefing() {
+        const localState = getLocalOperatingState();
+
+        if (!missionControlLoaded || !mediaLoaded) {
+          commandBriefTitle.textContent =
+            "Mission Control is assembling today's live operating brief.";
+          commandBriefCopy.textContent =
+            "Client decisions, Media deadlines, committed work, and proof are being checked before the OS recommends the first action.";
+          return;
+        }
+
+        const statusParts = [];
+
+        if (missionControlUnavailable) {
+          statusParts.push("Client decision records are temporarily unavailable");
+        } else {
+          statusParts.push(
+            attentionClientsState.length
+              ? `${pluralize(attentionClientsState.length, "client decision")} waiting`
+              : "No client decisions waiting"
+          );
+        }
+
+        if (mediaUnavailable) {
+          statusParts.push("Media records are temporarily unavailable");
+        } else {
+          statusParts.push(
+            mediaAttentionState
+              ? `${pluralize(mediaAttentionState, "Media deadline")} requiring review`
+              : "No Media deadlines requiring review"
+          );
+        }
+
+        statusParts.push(
+          localState.openWorkCount
+            ? `${pluralize(localState.openWorkCount, "open work item")}`
+            : "No open work"
+        );
+
+        statusParts.push(
+          localState.proofWaitingCount
+            ? `${pluralize(localState.proofWaitingCount, "proof item")} waiting`
+            : "No proof waiting"
+        );
+
+        if (mediaAttentionState > 0) {
+          commandBriefTitle.textContent =
+            "Protect client delivery first: Media requires the first operating decision.";
+        } else if (highestPriorityDecisionState) {
+          const clientName = cleanDisplay(
+            highestPriorityDecisionState?.clientName,
+            "A client"
+          );
+          commandBriefTitle.textContent =
+            `${clientName} holds today's highest-value operational decision.`;
+        } else if (attentionClientsState.length > 0) {
+          commandBriefTitle.textContent =
+            attentionClientsState.length === 1
+              ? "One client decision requires review before more work is added."
+              : `${attentionClientsState.length} client decisions require review before more work is added.`;
+        } else if (localState.openWorkCount > 0) {
+          commandBriefTitle.textContent =
+            "The urgent queues are clear. Execute the strongest committed work.";
+        } else if (localState.proofWaitingCount > 0) {
+          commandBriefTitle.textContent =
+            "Operations are clear. Convert completed work into client-facing proof.";
+        } else {
+          commandBriefTitle.textContent =
+            "The agency is operationally clear. Use the available window to create revenue.";
+        }
+
+        commandBriefCopy.textContent = `${statusParts.join(" · ")}.`;
+      }
+
       function renderHighestPriorityDecision(decision) {
         const clientName = cleanDisplay(decision?.clientName, "Unknown Client");
         const owner = cleanDisplay(decision?.who?.owner, "Unassigned");
@@ -1530,7 +1640,13 @@
             </li>
           `;
           attentionCount.textContent = "0";
-          attentionNote.textContent = "No clients currently require attention."; briefAttention.textContent = "No client decisions waiting"; attentionClientsState = []; updatePriority();
+          attentionNote.textContent = "No clients currently require attention.";
+          briefAttention.textContent = "No client decisions waiting";
+          attentionClientsState = [];
+          missionControlLoaded = true;
+          missionControlUnavailable = false;
+          updatePriority();
+          renderOperationalBriefing();
           return;
         }
 
@@ -1547,7 +1663,16 @@
         `).join("");
 
         attentionCount.textContent = String(clients.length);
-        attentionNote.textContent = "Open the client record to review the decision."; attentionClientsState = clients; briefAttention.textContent = clients.length === 1 ? "1 client decision waiting" : `${clients.length} client decisions waiting`; updatePriority();
+        attentionNote.textContent = "Open the client record to review the decision.";
+        attentionClientsState = clients;
+        missionControlLoaded = true;
+        missionControlUnavailable = false;
+        briefAttention.textContent =
+          clients.length === 1
+            ? "1 client decision waiting"
+            : `${clients.length} client decisions waiting`;
+        updatePriority();
+        renderOperationalBriefing();
       }
 
       function renderAttentionError(message) {
@@ -1558,7 +1683,13 @@
           </li>
         `;
         attentionCount.textContent = "—";
-        attentionNote.textContent = "Live attention records are unavailable."; briefAttention.textContent = "Live records unavailable"; attentionClientsState = []; updatePriority();
+        attentionNote.textContent = "Live attention records are unavailable.";
+        briefAttention.textContent = "Live records unavailable";
+        attentionClientsState = [];
+        missionControlLoaded = true;
+        missionControlUnavailable = true;
+        updatePriority();
+        renderOperationalBriefing();
       }
 
       async function loadMissionControlAttention() {
@@ -1594,6 +1725,7 @@
           highestPriorityDecisionState =
             payload?.missionControl?.highestPriorityDecision || null;
 
+          missionControlUnavailable = false;
           renderAttentionClients(clients);
         } catch (error) {
           console.error("Could not load Mission Control attention records.", error);
@@ -1658,12 +1790,18 @@
             media?.counts?.needs_attention;
 
           if (Array.isArray(attention)) {
+            mediaLoaded = true;
+            mediaUnavailable = false;
             setMediaAttention(attention.length);
+            renderOperationalBriefing();
             return;
           }
 
           if (Number.isFinite(Number(attention))) {
+            mediaLoaded = true;
+            mediaUnavailable = false;
             setMediaAttention(Number(attention));
+            renderOperationalBriefing();
             return;
           }
 
@@ -1674,19 +1812,29 @@
             [];
 
           if (Array.isArray(records)) {
-            const count = records.filter((record) =>
-              record?.needsAttention === true ||
-              record?.needs_attention === true ||
-              String(record?.status || "").toLowerCase().includes("attention")
+            const count = records.filter(
+              (record) =>
+                record?.needsAttention === true ||
+                record?.needs_attention === true
             ).length;
+
+            mediaLoaded = true;
+            mediaUnavailable = false;
             setMediaAttention(count);
+            renderOperationalBriefing();
             return;
           }
 
+          mediaLoaded = true;
+          mediaUnavailable = false;
           setMediaAttention(0);
+          renderOperationalBriefing();
         } catch (error) {
           console.error("Could not load Media attention.", error);
+          mediaLoaded = true;
+          mediaUnavailable = true;
           setMediaAttention(0);
+          renderOperationalBriefing();
         }
       }
 
@@ -1876,6 +2024,7 @@
         renderWorkQueue(data);
         const proofWaiting = renderProof(data);
         renderSummary(data, proofWaiting);
+        renderOperationalBriefing();
       }
 
       taskList.addEventListener("change", (event) => {
@@ -1891,17 +2040,18 @@
       });
 
       if (!window.GCMOShell) {
-        console.error("Today 2.0.2: shared/gcm-shell.js did not load.");
+        console.error("Today 2.0.3: shared/gcm-shell.js did not load.");
       } else {
         window.GCMOShell.mount({
           currentPage: "today",
-          statusText: "Agency Command Center operational · Today v2.0.2"
+          statusText: "Agency Command Center operational · Today v2.0.3"
         });
       }
 
       setDateAndGreeting();
       renderDashboard(loadData());
       updatePriority();
+      renderOperationalBriefing();
       loadMissionControlAttention();
       loadMediaAttention();
     })();
