@@ -1,14 +1,13 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.7.0
+   Version: 1.7.1
    Status: Production Candidate
-   Source: Production work.html 1.6.2
-   Sprint: Investigation Screenshot Evidence Capture
-   Purpose: Preserve authoritative navigation, evidence actions, and production
-            processing while allowing the operator to capture a live platform
-            screenshot inside the active Investigation and use Workers AI to
-            prefill evidence-supported Investigation fields for human review.
+   Source: Production work.html 1.7.0
+   Sprint: Client-Specific SEMrush Deep Links
+   Purpose: Preserve screenshot evidence capture and production processing while
+            allowing each client to store its exact SEMrush project URL once,
+            so future investigations open the correct project directly.
 
    Production changes:
    - Adds Capture Evidence Screenshot inside Guided Investigation.
@@ -16,6 +15,9 @@
    - Displays extracted evidence before any operational decision is saved.
    - Prefills Investigation Finding, Specific Work Required, and Specific Action.
    - Human approval remains required before production processing.
+   - Adds a one-time client-specific SEMrush project URL setup.
+   - Saves the URL locally by client code without changing D1.
+   - Open SEMrush Site Audit uses the saved direct project URL when available.
 
    Supported URLs:
    - work.html?investigation=36&client=PW
@@ -66,6 +68,15 @@
     .captured-evidence ul{margin:0;padding-left:18px}
     .captured-evidence li{margin:4px 0;color:#214b37;font-size:.78rem;line-height:1.45}
     .capture-status{margin-top:10px}
+    .tool-link-setup{margin-top:12px;padding:13px;border:1px dashed #aac7ed;border-radius:9px;background:#f8fbff}
+    .tool-link-setup[hidden]{display:none}
+    .tool-link-setup strong{display:block;color:var(--navy);font-size:.78rem}
+    .tool-link-setup p{margin:4px 0 10px;color:var(--muted);font-size:.72rem;line-height:1.4}
+    .tool-link-input-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+    .tool-link-input-row input{min-height:40px}
+    .tool-link-status{margin-top:8px;color:var(--muted);font-size:.72rem;font-weight:750}
+    @media(max-width:700px){.tool-link-input-row{grid-template-columns:1fr}}
+
 
 .processing-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px}.work-card{padding:16px;border:1px solid var(--border);border-radius:10px;background:#fff;margin-bottom:12px}.target-banner{margin-bottom:16px;padding:13px;border:1px solid #aac7ed;border-radius:10px;background:var(--blue-soft);color:#205c9f;font-size:.82rem;font-weight:800}
     @media(max-width:1100px){.workspace-grid{grid-template-columns:1fr}.investigation-list{max-height:none}}@media(max-width:860px){.app-shell{display:block}main{padding:18px 14px 32px}.summary-grid{grid-template-columns:1fr}}
@@ -78,7 +89,7 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Investigate one evidence step at a time. Create specific work only after the evidence proves what must be done.</p></div>
-        <span class="classification">Evidence Capture · v1.7.0</span>
+        <span class="classification">SEMrush Direct Links · v1.7.1</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -98,14 +109,14 @@
 <script>
 (() => {
   "use strict";
-  const VERSION="1.7.0";
+  const VERSION="1.7.1";
   const WORKER_URL="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const params=new URLSearchParams(location.search);
   const requestedInvestigationId=positiveInt(params.get("investigation"));
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Investigation evidence capture · Work v1.7.0"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"SEMrush direct links · Work v1.7.1"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),target:byId("target-banner")};
   let activeClients=[],investigations=[],workItems=[],selectedKey="",processing=false,processingWorkItem=false;
 
@@ -207,14 +218,49 @@
       (combined.includes("site_audit") || combined.includes("site audit"));
   }
 
+  function semrushStorageKey(clientCode){
+    return `gcm-os-semrush-site-audit-url:${String(clientCode||"").trim().toUpperCase()}`;
+  }
+
+  function getSavedSemrushUrl(clientCode){
+    try{
+      return String(localStorage.getItem(semrushStorageKey(clientCode))||"").trim();
+    }catch(error){
+      console.warn("Could not read the saved SEMrush project URL.",error);
+      return "";
+    }
+  }
+
+  function saveSemrushUrl(clientCode,url){
+    localStorage.setItem(semrushStorageKey(clientCode),url);
+  }
+
+  function removeSemrushUrl(clientCode){
+    localStorage.removeItem(semrushStorageKey(clientCode));
+  }
+
+  function validSemrushUrl(value){
+    try{
+      const parsed=new URL(String(value||"").trim());
+      return /^https?:$/.test(parsed.protocol)&&
+        /(^|\.)semrush\.com$/i.test(parsed.hostname);
+    }catch(error){
+      return false;
+    }
+  }
+
   function buildEvidenceActions(item){
     const actions=[];
+    const savedSemrushUrl=getSavedSemrushUrl(item.clientCode);
 
     if(isSemrushSiteAudit(item)){
       actions.push({
-        label:"Open SEMrush Site Audit",
-        href:"https://www.semrush.com/siteaudit/",
-        primary:true
+        label:savedSemrushUrl
+          ? `Open ${item.clientName} Site Audit`
+          : "Open SEMrush Site Audit",
+        href:savedSemrushUrl||"https://www.semrush.com/siteaudit/",
+        primary:true,
+        tool:"semrush"
       });
     }
 
@@ -238,8 +284,79 @@
         class="evidence-link${action.primary?" evidence-link-primary":""}"
         href="${esc(action.href)}"
         ${action.internal?"":'target="_blank" rel="noopener noreferrer"'}
+        ${action.tool?`data-evidence-tool="${esc(action.tool)}"`:""}
       >${esc(action.label)}${action.internal?"":" ↗"}</a>
     `).join("");
+  }
+
+  function buildSemrushLinkSetup(item){
+    if(!isSemrushSiteAudit(item))return "";
+
+    const saved=getSavedSemrushUrl(item.clientCode);
+
+    return `
+      <div class="tool-link-setup" id="semrush-link-setup">
+        <strong>${saved?"Update":"Set"} ${esc(item.clientName)} SEMrush project link</strong>
+        <p>Copy the URL from the open ${esc(item.clientName)} Site Audit project and save it once. Future investigations will open that exact project.</p>
+        <div class="tool-link-input-row">
+          <input
+            id="semrush-project-url"
+            type="text"
+            value="${esc(saved)}"
+            placeholder="https://www.semrush.com/siteaudit/..."
+            aria-label="${esc(item.clientName)} SEMrush Site Audit project URL"
+          />
+          <button class="button primary" id="save-semrush-project-url">Save Direct Link</button>
+        </div>
+        <div class="tool-link-status" id="semrush-link-status">
+          ${saved?"Direct project link saved for this browser.":"No direct project link saved yet."}
+        </div>
+        ${saved?'<button class="button" id="clear-semrush-project-url" style="margin-top:8px">Clear Saved Link</button>':""}
+      </div>
+    `;
+  }
+
+  function bindSemrushLinkSetup(item){
+    if(!isSemrushSiteAudit(item))return;
+
+    const saveButton=byId("save-semrush-project-url");
+    const input=byId("semrush-project-url");
+    const status=byId("semrush-link-status");
+    const clearButton=byId("clear-semrush-project-url");
+
+    saveButton?.addEventListener("click",()=>{
+      const value=String(input?.value||"").trim();
+
+      if(!validSemrushUrl(value)){
+        status.textContent="Paste a valid semrush.com project URL.";
+        status.style.color="var(--red)";
+        return;
+      }
+
+      saveSemrushUrl(item.clientCode,value);
+      status.textContent=`Direct SEMrush project link saved for ${item.clientName}.`;
+      status.style.color="var(--green)";
+
+      const link=document.querySelector('[data-evidence-tool="semrush"]');
+      if(link){
+        link.href=value;
+        link.textContent=`Open ${item.clientName} Site Audit ↗`;
+      }
+    });
+
+    clearButton?.addEventListener("click",()=>{
+      removeSemrushUrl(item.clientCode);
+      input.value="";
+      status.textContent="Saved direct link cleared. The generic SEMrush Site Audit page will open.";
+      status.style.color="var(--muted)";
+
+      const link=document.querySelector('[data-evidence-tool="semrush"]');
+      if(link){
+        link.href="https://www.semrush.com/siteaudit/";
+        link.textContent="Open SEMrush Site Audit ↗";
+      }
+      clearButton.remove();
+    });
   }
 
   function renderDetail(item,guidance=null){
@@ -252,6 +369,7 @@
       <div class="evidence-actions">
         <span class="evidence-actions-label">Evidence Actions</span>
         <div class="evidence-actions-row">${buildEvidenceActions(item)}</div>
+        ${buildSemrushLinkSetup(item)}
       </div>
       <div class="evidence-capture">
         <h4>Capture Evidence Screenshot</h4>
@@ -274,6 +392,7 @@
     byId("close-button").addEventListener("click",()=>processInvestigation(item,"no_work_required"));
     byId("create-button").addEventListener("click",()=>processInvestigation(item,"specific_work_required"));
     bindEvidenceCapture(item);
+    bindSemrushLinkSetup(item);
   }
   function bindEvidenceCapture(item){
     const input=byId("investigation-evidence-file");
