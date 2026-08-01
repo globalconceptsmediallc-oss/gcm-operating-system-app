@@ -1,12 +1,17 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.6.0
+   Version: 1.6.1
    Status: Production Candidate
-   Sprint: Live Guided Investigation Connection
-   Purpose: Preserve production Work Item processing and connect each selected
-            Investigation to the live Guided Investigation Worker engine.
-   Production Baseline: work.html v1.5.0
+   Source: Production work.html 1.6.0
+   Sprint: Authoritative Mission Control Navigation
+   Purpose: Preserve live Guided Investigation and Work Item processing while
+            allowing Mission Control to open the exact client, Investigation,
+            or Work Item requested through URL parameters.
+
+   Supported URLs:
+   - work.html?investigation=36&client=PW
+   - work.html?workItem=4&client=SFS
    ========================================================= -->
 <!DOCTYPE html>
 <html lang="en">
@@ -14,1941 +19,242 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Work | GCM OS</title>
-  <meta
-    name="description"
-    content="Global Concepts Media Operating System guided investigation and work processing workspace."
-  />
-
+  <meta name="description" content="GCM OS guided investigation and work processing workspace." />
   <style>
-    :root {
-      --navy: #07192e;
-      --navy-2: #0b2746;
-      --blue: #1f6fd6;
-      --blue-dark: #1459b7;
-      --blue-soft: #edf5ff;
-      --gold: #e2b84d;
-      --background: #f2f5fa;
-      --card: #ffffff;
-      --border: #d9e1eb;
-      --text: #102039;
-      --muted: #66758a;
-      --green: #1f7a4d;
-      --green-soft: #eaf7f0;
-      --yellow: #986414;
-      --yellow-soft: #fff5df;
-      --red: #b23b3b;
-      --red-soft: #fff0f0;
-      --shadow: 0 12px 32px rgba(8, 23, 48, 0.08);
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      background: var(--background);
-      color: var(--text);
-      font-family:
-        Inter,
-        ui-sans-serif,
-        system-ui,
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        sans-serif;
-    }
-
-    button, select, textarea, input { font: inherit; }
-    button { cursor: pointer; }
-    button:disabled { cursor: not-allowed; opacity: 0.6; }
-    a { color: inherit; text-decoration: none; }
-
-    .app-shell {
-      min-height: 100vh;
-      display: grid;
-      grid-template-columns: 220px minmax(0, 1fr);
-    }
-
-    main {
-      min-width: 0;
-      width: 100%;
-      padding: 28px 34px 44px;
-    }
-
-    .page {
-      width: min(100%, 1280px);
-      margin: 0 auto;
-    }
-
-    .page-header {
-      display: flex;
-      justify-content: space-between;
-      gap: 24px;
-      align-items: flex-start;
-      margin-bottom: 18px;
-    }
-
-    .eyebrow {
-      margin: 0 0 7px;
-      color: var(--blue);
-      font-size: 0.72rem;
-      font-weight: 900;
-      letter-spacing: 0.13em;
-      text-transform: uppercase;
-    }
-
-    h1 {
-      margin: 0;
-      color: var(--navy);
-      font-size: clamp(2rem, 3vw, 2.7rem);
-      line-height: 1.02;
-    }
-
-    .subtitle {
-      max-width: 760px;
-      margin: 8px 0 0;
-      color: var(--muted);
-      font-size: 0.94rem;
-      line-height: 1.5;
-    }
-
-    .classification {
-      padding: 9px 12px;
-      border: 1px solid #c8d9f2;
-      border-radius: 999px;
-      background: var(--blue-soft);
-      color: #205c9f;
-      font-size: 0.62rem;
-      font-weight: 850;
-      white-space: nowrap;
-    }
-
-    .mobile-menu-button { display: none; }
-
-    .summary-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 14px;
-      margin-bottom: 16px;
-    }
-
-    .summary-card {
-      min-height: 96px;
-      padding: 16px 18px;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: var(--card);
-      box-shadow: 0 6px 18px rgba(8, 23, 48, 0.055);
-    }
-
-    .summary-card::after {
-      content: "Summary";
-      display: inline-block;
-      margin-top: 7px;
-      color: var(--muted);
-      font-size: 0.58rem;
-      font-weight: 800;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-    }
-
-    .summary-label {
-      display: block;
-      color: var(--muted);
-      font-size: 0.72rem;
-      font-weight: 850;
-      letter-spacing: 0.07em;
-      text-transform: uppercase;
-    }
-
-    .summary-value {
-      display: block;
-      margin-top: 5px;
-      color: var(--navy);
-      font-size: 1.85rem;
-      font-weight: 900;
-      line-height: 1;
-    }
-
-    .panel {
-      overflow: hidden;
-      border: 1px solid var(--border);
-      border-radius: 13px;
-      background: var(--card);
-      box-shadow: var(--shadow);
-    }
-
-    .panel-header {
-      padding: 14px 16px 12px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .panel-header h2 {
-      margin: 0;
-      color: var(--navy);
-      font-size: 1rem;
-    }
-
-    .panel-header p {
-      margin: 5px 0 0;
-      color: var(--muted);
-      font-size: 0.8rem;
-      line-height: 1.45;
-    }
-
-    .panel-body { padding: 14px 16px 18px; }
-
-    .workspace-grid {
-      display: grid;
-      grid-template-columns: minmax(300px, 0.82fr) minmax(0, 1.68fr);
-      gap: 16px;
-      align-items: start;
-      margin-top: 18px;
-    }
-
-    .toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 9px;
-      margin-bottom: 13px;
-    }
-
-    select, .button, textarea, input {
-      border: 1px solid var(--border);
-      border-radius: 9px;
-      background: #ffffff;
-      color: var(--text);
-    }
-
-    select, .button {
-      min-height: 40px;
-      padding: 0 12px;
-    }
-
-    select { min-width: 215px; }
-
-    .button {
-      color: var(--navy);
-      font-size: 0.8rem;
-      font-weight: 850;
-    }
-
-    .button.primary {
-      border-color: var(--blue);
-      background: var(--blue);
-      color: #ffffff;
-    }
-
-    .button.primary:hover { background: var(--blue-dark); }
-
-    .button.secondary {
-      border-color: #aac7ed;
-      background: var(--blue-soft);
-      color: #205c9f;
-    }
-
-    textarea, input[type="text"] {
-      width: 100%;
-      padding: 12px;
-    }
-
-    textarea {
-      min-height: 118px;
-      resize: vertical;
-      line-height: 1.5;
-    }
-
-    textarea:focus, input:focus {
-      outline: 2px solid rgba(31, 111, 214, 0.16);
-      border-color: var(--blue);
-    }
-
-    .status {
-      margin-bottom: 13px;
-      padding: 12px 13px;
-      border-radius: 10px;
-      font-size: 0.79rem;
-      font-weight: 750;
-      line-height: 1.45;
-    }
-
-    .status.loading {
-      border: 1px solid #cbdcf4;
-      background: var(--blue-soft);
-      color: #225e9e;
-    }
-
-    .status.ready {
-      border: 1px solid #cbe5d6;
-      background: var(--green-soft);
-      color: var(--green);
-    }
-
-    .status.error {
-      border: 1px solid #efcccc;
-      background: var(--red-soft);
-      color: var(--red);
-    }
-
-    .investigation-list {
-      display: grid;
-      gap: 9px;
-      max-height: 720px;
-      overflow: auto;
-    }
-
-    .investigation {
-      width: 100%;
-      padding: 13px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: #ffffff;
-      color: var(--text);
-      text-align: left;
-    }
-
-    .investigation:hover {
-      border-color: #abc5eb;
-      background: #fbfdff;
-    }
-
-    .investigation.active {
-      border-color: var(--blue);
-      background: var(--blue-soft);
-    }
-
-    .investigation-title {
-      display: block;
-      color: var(--navy);
-      font-size: 0.87rem;
-      font-weight: 850;
-      line-height: 1.4;
-    }
-
-    .meta-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 8px;
-      color: var(--muted);
-      font-size: 0.7rem;
-    }
-
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      padding: 4px 7px;
-      border-radius: 999px;
-      background: #eef2f7;
-      color: #59677b;
-      font-size: 0.65rem;
-      font-weight: 850;
-      text-transform: uppercase;
-    }
-
-    .badge.high, .badge.urgent {
-      background: var(--red-soft);
-      color: var(--red);
-    }
-
-    .badge.normal, .badge.medium {
-      background: var(--yellow-soft);
-      color: var(--yellow);
-    }
-
-    .badge.low {
-      background: var(--blue-soft);
-      color: #245ea3;
-    }
-
-    .detail-empty {
-      padding: 42px 20px;
-      border: 1px dashed var(--border);
-      border-radius: 9px;
-      color: var(--muted);
-      text-align: center;
-    }
-
-    .detail-title {
-      margin: 0;
-      color: var(--navy);
-      font-size: 1.4rem;
-      line-height: 1.25;
-    }
-
-    .detail-subtitle {
-      margin: 7px 0 0;
-      color: var(--muted);
-      font-size: 0.79rem;
-    }
-
-    .detail-stats {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 9px;
-      margin-top: 16px;
-    }
-
-    .detail-stat {
-      padding: 11px;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      background: #fafbfd;
-    }
-
-    .detail-stat span {
-      display: block;
-      color: var(--muted);
-      font-size: 0.64rem;
-      font-weight: 850;
-      text-transform: uppercase;
-    }
-
-    .detail-stat strong {
-      display: block;
-      margin-top: 4px;
-      color: var(--navy);
-      font-size: 0.82rem;
-    }
-
-    .detail-section {
-      margin-top: 17px;
-      padding-top: 15px;
-      border-top: 1px solid var(--border);
-    }
-
-    .detail-section h3 {
-      margin: 0 0 7px;
-      color: var(--navy);
-      font-size: 0.72rem;
-      font-weight: 900;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-    }
-
-    .detail-section p {
-      margin: 0;
-      color: var(--text);
-      font-size: 0.88rem;
-      line-height: 1.55;
-      white-space: pre-wrap;
-    }
-
-    .communication {
-      padding: 13px;
-      border: 1px solid #cbdcf4;
-      border-radius: 8px;
-      background: #f8fbff;
-    }
-
-    .communication strong {
-      display: block;
-      color: var(--navy);
-      font-size: 0.88rem;
-    }
-
-    .communication small {
-      display: block;
-      margin-top: 4px;
-      color: var(--muted);
-    }
-
-    .communication p { margin-top: 10px; }
-
-    .guided-box {
-      margin-top: 18px;
-      padding: 18px;
-      border: 2px solid var(--blue);
-      border-radius: 13px;
-      background: linear-gradient(180deg, #f8fbff, var(--blue-soft));
-      box-shadow: 0 10px 24px rgba(31, 111, 214, 0.1);
-    }
-
-    .guided-label {
-      margin: 0 0 7px;
-      color: var(--blue);
-      font-size: 0.68rem;
-      font-weight: 900;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-    }
-
-    .guided-box h3 {
-      margin: 0;
-      color: var(--navy);
-      font-size: 1.1rem;
-    }
-
-    .guided-step {
-      margin: 11px 0 0;
-      color: var(--text);
-      font-size: 1rem;
-      font-weight: 750;
-      line-height: 1.55;
-      white-space: pre-wrap;
-    }
-
-    .expected-evidence {
-      margin-top: 14px;
-      padding: 12px 13px;
-      border: 1px solid #c8d9f2;
-      border-radius: 9px;
-      background: #ffffff;
-    }
-
-    .expected-evidence strong {
-      display: block;
-      margin-bottom: 5px;
-      color: var(--navy);
-      font-size: 0.72rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .expected-evidence span {
-      color: var(--muted);
-      font-size: 0.84rem;
-      line-height: 1.5;
-    }
-
-    .workflow-note {
-      margin-top: 12px;
-      color: var(--muted);
-      font-size: 0.76rem;
-      line-height: 1.5;
-    }
-
-    .resolution-gate {
-      margin-top: 18px;
-      padding: 14px;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      background: #fafbfd;
-    }
-
-    .resolution-gate p {
-      margin: 0 0 12px;
-      color: var(--muted);
-      font-size: 0.82rem;
-      line-height: 1.5;
-    }
-
-    .final-resolution[hidden] { display: none; }
-
-    .processing-box {
-      padding: 14px;
-      border: 1px solid #cbdcf4;
-      border-radius: 10px;
-      background: #f8fbff;
-    }
-
-    .processing-box label {
-      display: block;
-      margin: 12px 0 7px;
-      color: var(--navy);
-      font-size: 0.78rem;
-      font-weight: 850;
-    }
-
-    .processing-box label:first-child { margin-top: 0; }
-
-    .processing-note {
-      margin-top: 8px;
-      color: var(--muted);
-      font-size: 0.75rem;
-      line-height: 1.45;
-    }
-
-    .processing-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 9px;
-      margin-top: 12px;
-    }
-
-    .processing-message { margin-top: 12px; }
-
-    .empty {
-      padding: 14px 16px;
-      border: 1px dashed var(--border);
-      border-radius: 8px;
-      color: var(--muted);
-      text-align: center;
-      font-size: 0.8rem;
-    }
-
-    @media (max-width: 1100px) {
-      main { padding-left: 22px; padding-right: 22px; }
-      .workspace-grid { grid-template-columns: 1fr; }
-      .investigation-list { max-height: none; }
-    }
-
-    @media (max-width: 860px) {
-      .app-shell { display: block; }
-      main { padding: 18px 14px 32px; }
-      .mobile-menu-button { display: inline-flex; }
-      .page-header { display: grid; }
-      .summary-grid, .detail-stats { grid-template-columns: 1fr; }
-    }
+    :root{--navy:#07192e;--blue:#1f6fd6;--blue-dark:#1459b7;--blue-soft:#edf5ff;--background:#f2f5fa;--card:#fff;--border:#d9e1eb;--text:#102039;--muted:#66758a;--green:#1f7a4d;--green-soft:#eaf7f0;--yellow:#986414;--yellow-soft:#fff5df;--red:#b23b3b;--red-soft:#fff0f0;--shadow:0 12px 32px rgba(8,23,48,.08)}
+    *{box-sizing:border-box} body{margin:0;min-height:100vh;background:var(--background);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    button,select,textarea,input{font:inherit} button{cursor:pointer} button:disabled{cursor:not-allowed;opacity:.6} a{color:inherit;text-decoration:none}
+    .app-shell{min-height:100vh;display:grid;grid-template-columns:220px minmax(0,1fr)} main{min-width:0;width:100%;padding:28px 34px 44px}.page{width:min(100%,1280px);margin:0 auto}
+    .page-header{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;margin-bottom:18px}.eyebrow{margin:0 0 7px;color:var(--blue);font-size:.72rem;font-weight:900;letter-spacing:.13em;text-transform:uppercase}
+    h1{margin:0;color:var(--navy);font-size:clamp(2rem,3vw,2.7rem);line-height:1.02}.subtitle{max-width:760px;margin:8px 0 0;color:var(--muted);font-size:.94rem;line-height:1.5}
+    .classification{padding:9px 12px;border:1px solid #c8d9f2;border-radius:999px;background:var(--blue-soft);color:#205c9f;font-size:.62rem;font-weight:850;white-space:nowrap}
+    .summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:16px}.summary-card{min-height:96px;padding:16px 18px;border:1px solid var(--border);border-radius:12px;background:var(--card);box-shadow:0 6px 18px rgba(8,23,48,.055)}
+    .summary-label{display:block;color:var(--muted);font-size:.72rem;font-weight:850;letter-spacing:.07em;text-transform:uppercase}.summary-value{display:block;margin-top:5px;color:var(--navy);font-size:1.85rem;font-weight:900;line-height:1}
+    .panel{overflow:hidden;border:1px solid var(--border);border-radius:13px;background:var(--card);box-shadow:var(--shadow)}.panel+.panel{margin-top:18px}.panel-header{padding:14px 16px 12px;border-bottom:1px solid var(--border)}.panel-header h2{margin:0;color:var(--navy);font-size:1rem}.panel-header p{margin:5px 0 0;color:var(--muted);font-size:.8rem;line-height:1.45}.panel-body{padding:14px 16px 18px}
+    .workspace-grid{display:grid;grid-template-columns:minmax(300px,.82fr) minmax(0,1.68fr);gap:16px;align-items:start;margin-top:18px}.toolbar{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:13px}
+    select,.button,textarea,input{border:1px solid var(--border);border-radius:9px;background:#fff;color:var(--text)}select,.button{min-height:40px;padding:0 12px}select{min-width:215px}.button{color:var(--navy);font-size:.8rem;font-weight:850}.button.primary{border-color:var(--blue);background:var(--blue);color:#fff}.button.primary:hover{background:var(--blue-dark)}
+    textarea,input[type=text]{width:100%;padding:12px}textarea{min-height:110px;resize:vertical;line-height:1.5}.status{margin-bottom:13px;padding:12px 13px;border-radius:10px;font-size:.79rem;font-weight:750;line-height:1.45}.status.loading{border:1px solid #cbdcf4;background:var(--blue-soft);color:#225e9e}.status.ready{border:1px solid #cbe5d6;background:var(--green-soft);color:var(--green)}.status.error{border:1px solid #efcccc;background:var(--red-soft);color:var(--red)}
+    .investigation-list{display:grid;gap:9px;max-height:720px;overflow:auto}.investigation{width:100%;padding:13px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);text-align:left}.investigation:hover{border-color:#abc5eb}.investigation.active{border:2px solid var(--blue);background:var(--blue-soft);box-shadow:0 0 0 3px rgba(31,111,214,.12)}
+    .investigation-title{display:block;color:var(--navy);font-size:.87rem;font-weight:850;line-height:1.4}.meta-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;color:var(--muted);font-size:.7rem}.badge{display:inline-flex;padding:4px 7px;border-radius:999px;background:#eef2f7;font-size:.65rem;font-weight:850;text-transform:uppercase}.badge.high,.badge.urgent{background:var(--red-soft);color:var(--red)}.badge.normal,.badge.medium{background:var(--yellow-soft);color:var(--yellow)}
+    .detail-empty,.empty{padding:32px 18px;border:1px dashed var(--border);border-radius:9px;color:var(--muted);text-align:center}.detail-title{margin:0;color:var(--navy);font-size:1.4rem}.detail-subtitle{margin:7px 0 0;color:var(--muted);font-size:.79rem}.detail-section{margin-top:17px;padding-top:15px;border-top:1px solid var(--border)}.detail-section h3{margin:0 0 7px;color:var(--navy);font-size:.72rem;font-weight:900;letter-spacing:.06em;text-transform:uppercase}.detail-section p{margin:0;font-size:.88rem;line-height:1.55;white-space:pre-wrap}
+    .guided-box,.processing-box{margin-top:18px;padding:16px;border:1px solid #cbdcf4;border-radius:11px;background:#f8fbff}.guided-box{border:2px solid var(--blue)}.guided-label{margin:0 0 7px;color:var(--blue);font-size:.68rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase}.guided-step{font-size:1rem;font-weight:750;line-height:1.55;white-space:pre-wrap}.processing-box label{display:block;margin:12px 0 7px;font-size:.78rem;font-weight:850}.processing-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px}.work-card{padding:16px;border:1px solid var(--border);border-radius:10px;background:#fff;margin-bottom:12px}.target-banner{margin-bottom:16px;padding:13px;border:1px solid #aac7ed;border-radius:10px;background:var(--blue-soft);color:#205c9f;font-size:.82rem;font-weight:800}
+    @media(max-width:1100px){.workspace-grid{grid-template-columns:1fr}.investigation-list{max-height:none}}@media(max-width:860px){.app-shell{display:block}main{padding:18px 14px 32px}.summary-grid{grid-template-columns:1fr}}
   </style>
 </head>
-
 <body>
-  <div class="app-shell">
-    <aside data-gcm-shell-sidebar aria-label="Primary navigation"></aside>
+<div class="app-shell">
+  <aside data-gcm-shell-sidebar aria-label="Primary navigation"></aside>
+  <main>
+    <div class="page">
+      <header class="page-header">
+        <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Investigate one evidence step at a time. Create specific work only after the evidence proves what must be done.</p></div>
+        <span class="classification">Authoritative Navigation · v1.6.1</span>
+      </header>
+      <section class="summary-grid">
+        <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
+        <article class="summary-card"><span class="summary-label">Clients With Open Work</span><strong id="clients-with-investigations" class="summary-value">—</strong></article>
+        <article class="summary-card"><span class="summary-label">Existing Work Items</span><strong id="work-items" class="summary-value">—</strong></article>
+      </section>
+      <div id="target-banner" class="target-banner" hidden></div>
+      <section id="open-work-panel" class="panel"><div class="panel-header"><h2>Open Work Items</h2><p>Confirmed specific work created from Investigation findings.</p></div><div id="open-work-list" class="panel-body"></div></section>
+      <section class="workspace-grid">
+        <article class="panel"><div class="panel-header"><h2>Investigation Queue</h2><p>Select an unresolved Investigation.</p></div><div class="panel-body"><div class="toolbar"><select id="client-filter"><option value="">All clients</option></select><button id="refresh-button" class="button">Refresh</button></div><div id="runtime-status" class="status loading">Loading production D1…</div><div id="investigation-list" class="investigation-list"></div></div></article>
+        <article id="guided-investigation-panel" class="panel"><div class="panel-header"><h2>Guided Investigation</h2><p>Evidence first. Final resolution remains secondary until the current step is complete.</p></div><div id="detail-panel" class="panel-body"><div class="detail-empty">Select an open Investigation.</div></div></article>
+      </section>
+    </div>
+  </main>
+</div>
+<script src="shared/gcm-shell.js"></script>
+<script>
+(() => {
+  "use strict";
+  const VERSION="1.6.1";
+  const WORKER_URL="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+  const params=new URLSearchParams(location.search);
+  const requestedInvestigationId=positiveInt(params.get("investigation"));
+  const requestedWorkItemId=positiveInt(params.get("workItem"));
+  const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-    <main>
-      <div class="page">
-        <header class="page-header">
-          <div>
-            <p class="eyebrow">Mission Control</p>
-            <h1>Work Queue</h1>
-            <p class="subtitle">
-              Investigate one evidence step at a time. Create specific work only after
-              the investigation proves what must be done.
-            </p>
-          </div>
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Authoritative navigation · Work v1.6.1"});}
+  const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),target:byId("target-banner")};
+  let activeClients=[],investigations=[],workItems=[],selectedKey="",processing=false,processingWorkItem=false;
 
-          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
-            <button
-              class="button mobile-menu-button"
-              data-gcm-shell-menu-button
-              type="button"
-              aria-expanded="false"
-            >Menu</button>
-            <span class="classification">Live Guided Investigation · v1.6.0</span>
-          </div>
-        </header>
+  el.filter.addEventListener("change",()=>selectVisibleDefault());
+  el.refresh.addEventListener("click",load);
+  load();
 
-        <section class="summary-grid" aria-label="Work queue summary">
-          <article class="summary-card">
-            <span class="summary-label">Open Investigations</span>
-            <strong id="open-investigations" class="summary-value">—</strong>
-          </article>
-
-          <article class="summary-card">
-            <span class="summary-label">Clients With Open Work</span>
-            <strong id="clients-with-investigations" class="summary-value">—</strong>
-          </article>
-
-          <article class="summary-card">
-            <span class="summary-label">Existing Work Items</span>
-            <strong id="work-items" class="summary-value">—</strong>
-          </article>
-        </section>
-
-        <section id="open-work-panel" class="panel">
-          <div class="panel-header">
-            <h2>Open Work Items</h2>
-            <p>
-              Confirmed specific work created from investigation findings.
-              Record completion, result, and proof here.
-            </p>
-          </div>
-          <div id="open-work-list" class="panel-body"></div>
-        </section>
-
-        <section class="workspace-grid">
-          <article class="panel">
-            <div class="panel-header">
-              <h2>Investigation Queue</h2>
-              <p>
-                Select an unresolved investigation. The OS will show the single
-                current step that reduces uncertainty.
-              </p>
-            </div>
-
-            <div class="panel-body">
-              <div class="toolbar">
-                <select id="client-filter" aria-label="Filter by client">
-                  <option value="">All clients</option>
-                </select>
-
-                <button id="refresh-button" class="button" type="button">
-                  Refresh
-                </button>
-              </div>
-
-              <div id="runtime-status" class="status loading">
-                Loading open investigations from production D1…
-              </div>
-
-              <div id="investigation-list" class="investigation-list"></div>
-            </div>
-          </article>
-
-          <article class="panel">
-            <div class="panel-header">
-              <h2>Guided Investigation</h2>
-              <p>
-                Evidence first. Finding and specific work remain secondary until
-                the current investigation step is complete.
-              </p>
-            </div>
-
-            <div id="detail-panel" class="panel-body">
-              <div class="detail-empty">
-                Select an open investigation from the list.
-              </div>
-            </div>
-          </article>
-        </section>
-      </div>
-    </main>
-  </div>
-
-  <script src="shared/gcm-shell.js"></script>
-  <script>
-    (function initializeWorkPage() {
-      "use strict";
-
-      const VERSION = "1.6.0";
-      const WORKER_URL =
-        "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
-
-      if (!window.GCMOShell) {
-        console.error("Work 1.6.0: shared/gcm-shell.js did not load.");
-      } else {
-        window.GCMOShell.mount({
-          currentPage: "work",
-          statusText: "Live guided investigation · Work v1.6.0"
-        });
-      }
-
-      const elements = {
-        openInvestigations: document.getElementById("open-investigations"),
-        clientsWithInvestigations: document.getElementById("clients-with-investigations"),
-        workItems: document.getElementById("work-items"),
-        clientFilter: document.getElementById("client-filter"),
-        refreshButton: document.getElementById("refresh-button"),
-        runtimeStatus: document.getElementById("runtime-status"),
-        investigationList: document.getElementById("investigation-list"),
-        detailPanel: document.getElementById("detail-panel"),
-        openWorkList: document.getElementById("open-work-list")
-      };
-
-      let activeClients = [];
-      let investigations = [];
-      let workItems = [];
-      let workItemCount = 0;
-      let selectedKey = "";
-      let processingInvestigation = false;
-      let processingWorkItem = false;
-      const guidedInvestigationCache = new Map();
-      let guidedRequestSequence = 0;
-
-      elements.clientFilter.addEventListener("change", () => {
-        const visible = getVisibleInvestigations();
-
-        if (
-          selectedKey &&
-          !visible.some((item) => investigationKey(item) === selectedKey)
-        ) {
-          selectedKey = visible.length ? investigationKey(visible[0]) : "";
-        }
-
-        renderInvestigationList();
-
-        if (visible.length) {
-          const selected =
-            visible.find((item) => investigationKey(item) === selectedKey) ||
-            visible[0];
-
-          selectedKey = investigationKey(selected);
-          loadAndRenderInvestigationDetail(selected);
-          renderInvestigationList();
-        } else {
-          elements.detailPanel.innerHTML =
-            '<div class="detail-empty">No open investigations match this view.</div>';
-        }
+  async function load(){
+    setStatus("loading","Loading open Investigations and Work Items from production D1…");
+    el.refresh.disabled=true;
+    try{
+      activeClients=await loadAttentionClients();
+      renderFilter(activeClients);
+      const results=await Promise.allSettled(activeClients.map(loadWorkspace));
+      investigations=[];workItems=[];
+      results.forEach((result,index)=>{
+        if(result.status!=="fulfilled")return;
+        const client=activeClients[index],op=result.value.operational||{};
+        const communications=Array.isArray(op.communications)?op.communications:[];
+        const communicationById=new Map(communications.map(c=>[Number(c.id),c]));
+        (Array.isArray(op.investigations)?op.investigations:[]).filter(i=>!closed(i)).forEach(i=>investigations.push({...i,clientCode:op.client?.client_code||client.code,clientName:op.client?.name||client.name,communication:communicationById.get(Number(i.communication_id))||null}));
+        (Array.isArray(op.workItems)?op.workItems:[]).filter(i=>!completed(i)).forEach(i=>workItems.push({...i,clientCode:op.client?.client_code||client.code,clientName:op.client?.name||client.name}));
       });
+      investigations.sort(sortInvestigations);
+      renderSummary();renderWorkItems();applyRequestedTarget();
+      setStatus("ready",`Loaded ${investigations.length} open Investigations and ${workItems.length} open Work Items.`);
+    }catch(error){
+      console.error(error);setStatus("error",error.message||"Work could not load.");el.list.innerHTML='<div class="empty">Work data unavailable.</div>';
+    }finally{el.refresh.disabled=false;}
+  }
 
-      elements.refreshButton.addEventListener("click", loadWorkPage);
-      loadWorkPage();
+  async function loadAttentionClients(){
+    const r=await post({action:"get-mission-control"});const clients=Array.isArray(r.missionControl?.clientsRequiringAttention)?r.missionControl.clientsRequiringAttention:[];
+    return clients.filter(c=>c.clientCode).map(c=>({code:String(c.clientCode),name:String(c.clientName||c.clientCode)}));
+  }
+  async function loadWorkspace(client){return post({action:"get-client-workspace",clientCode:client.code});}
+  async function post(body){const response=await fetch(WORKER_URL,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify(body)});const payload=await response.json().catch(()=>({}));if(!response.ok||payload.ok!==true)throw new Error(payload.error||payload.details||`HTTP ${response.status}`);return payload;}
 
-      async function loadWorkPage() {
-        setStatus("loading", "Loading open investigations from production D1…");
-        elements.refreshButton.disabled = true;
-        selectedKey = "";
-        elements.investigationList.innerHTML = "";
-        elements.detailPanel.innerHTML =
-          '<div class="detail-empty">Loading investigation context…</div>';
-
-        try {
-          activeClients = await loadAttentionClients();
-          renderClientFilter(activeClients);
-
-          if (!activeClients.length) {
-            investigations = [];
-            workItems = [];
-            workItemCount = 0;
-            renderSummary();
-            renderOpenWorkItems();
-            renderInvestigationList();
-            elements.detailPanel.innerHTML =
-              '<div class="detail-empty">No unresolved investigations or work items were returned by Mission Control.</div>';
-            setStatus("ready", "No open investigations were found.");
-            return;
-          }
-
-          const results = await Promise.allSettled(
-            activeClients.map((client) => loadClientWorkspace(client))
-          );
-
-          const loadedInvestigations = [];
-          workItems = [];
-          let loadedWorkItems = 0;
-          const failures = [];
-
-          results.forEach((result, index) => {
-            const client = activeClients[index];
-
-            if (result.status !== "fulfilled") {
-              failures.push(
-                `${client.name}: ${result.reason?.message || "workspace load failed"}`
-              );
-              return;
-            }
-
-            const payload = result.value;
-            const operational = payload.operational || {};
-            const communications = Array.isArray(operational.communications)
-              ? operational.communications
-              : [];
-            const clientInvestigations = Array.isArray(operational.investigations)
-              ? operational.investigations
-              : [];
-            const clientWorkItems = Array.isArray(operational.workItems)
-              ? operational.workItems
-              : [];
-
-            clientWorkItems
-              .filter((item) => !isCompletedWorkItem(item))
-              .forEach((item) => {
-                workItems.push({
-                  ...item,
-                  clientCode: operational.client?.client_code || client.code,
-                  clientName: operational.client?.name || client.name
-                });
-              });
-
-            const communicationById = new Map(
-              communications.map((communication) => [
-                Number(communication.id),
-                communication
-              ])
-            );
-
-            clientInvestigations
-              .filter((item) => !isClosedInvestigation(item))
-              .forEach((item) => {
-                loadedInvestigations.push({
-                  ...item,
-                  clientCode: operational.client?.client_code || client.code,
-                  clientName: operational.client?.name || client.name,
-                  communication:
-                    communicationById.get(Number(item.communication_id)) || null
-                });
-              });
-
-            loadedWorkItems += Number(payload.counts?.workItems || 0);
-          });
-
-          investigations = loadedInvestigations.sort(sortInvestigations);
-          workItemCount = loadedWorkItems;
-
-          renderSummary();
-          renderOpenWorkItems();
-          renderInvestigationList();
-
-          const visible = getVisibleInvestigations();
-
-          if (visible.length) {
-            selectedKey = investigationKey(visible[0]);
-            renderInvestigationList();
-            loadAndRenderInvestigationDetail(visible[0]);
-          } else {
-            elements.detailPanel.innerHTML =
-              '<div class="detail-empty">No open investigations were returned.</div>';
-          }
-
-          if (failures.length) {
-            setStatus(
-              "error",
-              `Loaded ${investigations.length} open investigations. ${failures.length} live client workspace request${failures.length === 1 ? "" : "s"} failed.`
-            );
-            console.warn("Work Page v1.6.0 workspace load failures:", failures);
-          } else {
-            setStatus(
-              "ready",
-              `Loaded ${investigations.length} open investigations across ${activeClients.length} client${activeClients.length === 1 ? "" : "s"} from production D1.`
-            );
-          }
-        } catch (error) {
-          console.error("Work Page v1.6.0 failed:", error);
-          investigations = [];
-          workItems = [];
-          workItemCount = 0;
-          renderSummary();
-          renderOpenWorkItems();
-
-          elements.investigationList.innerHTML =
-            `<div class="empty">${escapeHtml(
-              error?.message || "The investigation workspace could not be loaded."
-            )}</div>`;
-
-          elements.detailPanel.innerHTML =
-            '<div class="detail-empty">Investigation context is unavailable until the live D1 load succeeds.</div>';
-
-          setStatus(
-            "error",
-            error?.message || "The investigation workspace could not be loaded."
-          );
-        } finally {
-          elements.refreshButton.disabled = false;
-        }
+  function renderFilter(clients){
+    el.filter.innerHTML='<option value="">All clients</option>'+clients.map(c=>`<option value="${esc(c.code)}">${esc(c.name)}</option>`).join("");
+    if(requestedClientCode&&clients.some(c=>c.code.toUpperCase()===requestedClientCode))el.filter.value=clients.find(c=>c.code.toUpperCase()===requestedClientCode).code;
+  }
+  function renderSummary(){el.openInvestigations.textContent=investigations.length;el.clients.textContent=new Set(investigations.map(i=>i.clientCode)).size;el.workItems.textContent=workItems.length;}
+  function visible(){return el.filter.value?investigations.filter(i=>i.clientCode===el.filter.value):investigations;}
+  function renderList(){
+    const rows=visible();
+    el.list.innerHTML=rows.length?rows.map(i=>`<button class="investigation${key(i)===selectedKey?" active":""}" data-key="${esc(key(i))}"><span class="investigation-title">${esc(i.title||"Investigation")}</span><span class="meta-row"><span>${esc(i.clientName)}</span><span class="badge ${esc(norm(i.priority))}">${esc(i.priority||"normal")}</span><span>Investigation #${esc(i.id)}</span></span></button>`).join(""):'<div class="empty">No open Investigations match this view.</div>';
+    el.list.querySelectorAll("[data-key]").forEach(b=>b.addEventListener("click",()=>selectInvestigation(investigations.find(i=>key(i)===b.dataset.key))));
+  }
+  function selectVisibleDefault(){const rows=visible();if(!rows.length){selectedKey="";renderList();el.detail.innerHTML='<div class="detail-empty">No open Investigations match this view.</div>';return;}selectInvestigation(rows[0]);}
+  function applyRequestedTarget(){
+    renderList();
+    if(requestedWorkItemId){
+      const item=workItems.find(i=>Number(i.id)===requestedWorkItemId);
+      if(item){showTarget(`Opened Work Item #${item.id} for ${item.clientName}.`);document.querySelector(`[data-work-id="${item.id}"]`)?.scrollIntoView({behavior:"smooth",block:"center"});return;}
+    }
+    if(requestedInvestigationId){
+      const item=investigations.find(i=>Number(i.id)===requestedInvestigationId&&(!requestedClientCode||String(i.clientCode).toUpperCase()===requestedClientCode));
+      if(item){
+        el.filter.value=item.clientCode;
+        showTarget(`Opened Investigation #${item.id} for ${item.clientName}.`);
+        selectInvestigation(item,true);
+        return;
       }
+      showTarget(`Investigation #${requestedInvestigationId} is no longer open or was not returned.`);
+    }
+    selectVisibleDefault();
+  }
+  function showTarget(message){el.target.hidden=false;el.target.textContent=message;}
+  function selectInvestigation(item,scroll=false){if(!item)return;selectedKey=key(item);renderList();renderDetail(item);if(scroll)byId("guided-investigation-panel").scrollIntoView({behavior:"smooth",block:"start"});loadGuidance(item);}
+  async function loadGuidance(item){try{const payload=await post({action:"get-guided-investigation",clientCode:item.clientCode,investigationId:Number(item.id)});if(selectedKey===key(item))renderDetail(item,payload.guidance||null);}catch(error){console.error(error);}}
+  function renderDetail(item,guidance=null){
+    const communication=item.communication;
+    el.detail.innerHTML=`<h2 class="detail-title">${esc(item.title||"Investigation")}</h2><p class="detail-subtitle"><a href="business-workspace.html?business=${encodeURIComponent(item.clientCode)}" style="color:#1f6fd6;font-weight:800">${esc(item.clientName)}</a> · Investigation #${esc(item.id)}${item.communication_id?` · Communication #${esc(item.communication_id)}`:""}</p>
+    <section class="detail-section"><h3>Investigation Objective</h3><p>${esc(guidance?.current_objective||item.description||"Determine what the evidence proves.")}</p></section>
+    <div class="guided-box"><p class="guided-label">Current Next Step</p><div class="guided-step">${esc(guidance?.current_next_step||item.recommendation||"Review the originating evidence and establish the next fact required.")}</div></div>
+    <section class="detail-section"><h3>Current Understanding</h3><p>${esc(guidance?.current_understanding||communication?.ai_summary||communication?.raw_content||item.description||"No summary stored.")}</p></section>
+    <section class="detail-section"><h3>Final Resolution</h3><div class="processing-box"><label>Investigation Finding</label><textarea id="finding-summary">${esc(item.finding_summary||"")}</textarea><label>Specific Work Required</label><textarea id="work-title"></textarea><label>Specific Action</label><textarea id="work-description"></textarea><div class="processing-actions"><button id="close-button" class="button">Close — No Work Required</button><button id="create-button" class="button primary">Create Specific Work</button></div><div id="process-message"></div></div></section>`;
+    byId("close-button").addEventListener("click",()=>processInvestigation(item,"no_work_required"));
+    byId("create-button").addEventListener("click",()=>processInvestigation(item,"specific_work_required"));
+  }
+  async function processInvestigation(item,outcome){
+    if(processing)return;
+    const finding=byId("finding-summary").value.trim(),title=byId("work-title").value.trim(),description=byId("work-description").value.trim(),message=byId("process-message");
+    if(!finding){message.className="status error";message.textContent="Record the evidence-supported Investigation Finding.";return;}
+    if(outcome==="specific_work_required"&&(!title||!description)){message.className="status error";message.textContent="Specific Work Required and Specific Action are required.";return;}
+    processing=true;message.className="status loading";message.textContent="Saving production decision…";
+    try{await post({action:"process-investigation",clientCode:item.clientCode,investigationId:Number(item.id),findingSummary:finding,outcome,workTitle:title,workDescription:description});message.className="status ready";message.textContent=outcome==="no_work_required"?"Investigation closed.":"Specific Work Item created.";await load();}catch(error){message.className="status error";message.textContent=error.message;}finally{processing=false;}
+  }
+  function renderWorkItems(){
+    if(!workItems.length){
+      el.openWork.innerHTML='<div class="empty">No open Work Items were returned.</div>';
+      return;
+    }
 
-      async function loadAttentionClients() {
-        const response = await fetch(WORKER_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json"
-          },
-          body: JSON.stringify({ action: "get-mission-control" })
-        });
-
-        const payload = await response.json().catch(() => ({}));
-
-        if (!response.ok || payload?.ok !== true) {
-          throw new Error(
-            payload?.error ||
-            payload?.details ||
-            `Mission Control request failed with HTTP ${response.status}.`
-          );
-        }
-
-        const clients = Array.isArray(
-          payload?.missionControl?.clientsRequiringAttention
-        )
-          ? payload.missionControl.clientsRequiringAttention
-          : [];
-
-        return clients
-          .filter((client) => client?.clientCode)
-          .map((client) => ({
-            code: String(client.clientCode),
-            name: String(
-              client.clientName ||
-              client.clientCode ||
-              "Unknown Client"
-            )
-          }));
-      }
-
-      function renderClientFilter(clients) {
-        const previousValue = elements.clientFilter.value;
-        elements.clientFilter.innerHTML =
-          '<option value="">All clients</option>';
-
-        clients.forEach((client) => {
-          const option = document.createElement("option");
-          option.value = client.code;
-          option.textContent = client.name;
-          elements.clientFilter.appendChild(option);
-        });
-
-        if (
-          previousValue &&
-          clients.some((client) => client.code === previousValue)
-        ) {
-          elements.clientFilter.value = previousValue;
-        }
-      }
-
-      async function loadClientWorkspace(client) {
-        const response = await fetch(WORKER_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json"
-          },
-          body: JSON.stringify({
-            action: "get-client-workspace",
-            clientCode: client.code
-          })
-        });
-
-        const payload = await response.json().catch(() => ({}));
-
-        if (!response.ok || !payload?.ok) {
-          throw new Error(
-            payload?.error ||
-            `Workspace request failed with HTTP ${response.status}.`
-          );
-        }
-
-        return payload;
-      }
-
-      function renderSummary() {
-        elements.openInvestigations.textContent = investigations.length;
-        elements.clientsWithInvestigations.textContent =
-          new Set(investigations.map((item) => item.clientCode)).size;
-        elements.workItems.textContent = workItemCount;
-      }
-
-      function renderOpenWorkItems() {
-        if (!workItems.length) {
-          elements.openWorkList.innerHTML =
-            '<div class="empty">No open Work Items were returned.</div>';
-          return;
-        }
-
-        elements.openWorkList.innerHTML = workItems.map((item) => `
-          <div class="processing-box" style="margin-bottom:12px;">
-            <h3 style="margin:0;color:#07192e;">
-              Work Item #${escapeHtml(item.id)} · ${escapeHtml(item.title || "Work Item")}
-            </h3>
-
-            <p class="detail-subtitle">
-              ${escapeHtml(item.clientName)}
-              · Investigation #${escapeHtml(item.investigation_id || "—")}
-            </p>
-
-            <section class="detail-section">
-              <h3>Specific Action</h3>
-              <p>${escapeHtml(item.description || "No work description stored.")}</p>
-            </section>
-
-            <section class="detail-section">
-              <h3>Complete Work Item</h3>
-
-              <label for="work-performed-${escapeHtml(item.id)}">Work Performed</label>
-              <textarea
-                id="work-performed-${escapeHtml(item.id)}"
-                placeholder="Record what was actually done."
-              ></textarea>
-
-              <label for="work-result-${escapeHtml(item.id)}">Result</label>
-              <textarea
-                id="work-result-${escapeHtml(item.id)}"
-                placeholder="Record the verified result or actual impact."
-              ></textarea>
-
-              <label for="work-evidence-${escapeHtml(item.id)}">Completion Evidence</label>
-              <textarea
-                id="work-evidence-${escapeHtml(item.id)}"
-                placeholder="Record the evidence that proves completion."
-              ></textarea>
-
-              <div class="processing-actions">
-                <button
-                  class="button primary"
-                  type="button"
-                  data-complete-work="${escapeHtml(item.id)}"
-                >
-                  Complete Work Item
-                </button>
-              </div>
-
-              <div
-                id="work-message-${escapeHtml(item.id)}"
-                class="processing-message"
-                aria-live="polite"
-              ></div>
-            </section>
+    el.openWork.innerHTML=workItems.map(i=>`
+      <article class="work-card" data-work-id="${esc(i.id)}">
+        <h3>Work Item #${esc(i.id)} · ${esc(i.title||"Work Item")}</h3>
+        <p class="detail-subtitle">${esc(i.clientName)} · Investigation #${esc(i.investigation_id||"—")}</p>
+        <section class="detail-section">
+          <h3>Specific Action</h3>
+          <p>${esc(i.description||"No work description stored.")}</p>
+        </section>
+        <section class="detail-section">
+          <h3>Complete Work Item</h3>
+          <label>Work Performed</label>
+          <textarea id="work-performed-${esc(i.id)}" placeholder="Record what was actually done."></textarea>
+          <label>Result</label>
+          <textarea id="work-result-${esc(i.id)}" placeholder="Record the verified result or actual impact."></textarea>
+          <label>Completion Evidence</label>
+          <textarea id="work-evidence-${esc(i.id)}" placeholder="Record the evidence that proves completion."></textarea>
+          <div class="processing-actions">
+            <button class="button primary" data-complete-work="${esc(i.id)}">Complete Work Item</button>
           </div>
-        `).join("");
+          <div id="work-message-${esc(i.id)}"></div>
+        </section>
+      </article>
+    `).join("");
 
-        elements.openWorkList
-          .querySelectorAll("[data-complete-work]")
-          .forEach((button) => {
-            button.addEventListener("click", async () => {
-              const id = Number(button.dataset.completeWork);
-              const item = workItems.find((entry) => Number(entry.id) === id);
-              if (!item) return;
+    el.openWork.querySelectorAll("[data-complete-work]").forEach(button=>{
+      button.addEventListener("click",()=>{
+        const id=Number(button.dataset.completeWork);
+        const item=workItems.find(entry=>Number(entry.id)===id);
+        if(item) completeWorkItem(item);
+      });
+    });
+  }
 
-              const workPerformed =
-                document.getElementById(`work-performed-${id}`)?.value.trim() || "";
-              const actualImpact =
-                document.getElementById(`work-result-${id}`)?.value.trim() || "";
-              const evidenceDescription =
-                document.getElementById(`work-evidence-${id}`)?.value.trim() || "";
-              const message = document.getElementById(`work-message-${id}`);
+  async function completeWorkItem(item){
+    if(processingWorkItem)return;
 
-              if (!workPerformed || !actualImpact || !evidenceDescription) {
-                if (message) {
-                  message.className = "status error processing-message";
-                  message.textContent =
-                    "Work Performed, Result, and Completion Evidence are all required.";
-                }
-                return;
-              }
+    const id=Number(item.id);
+    const workPerformed=byId(`work-performed-${id}`)?.value.trim()||"";
+    const actualImpact=byId(`work-result-${id}`)?.value.trim()||"";
+    const evidenceDescription=byId(`work-evidence-${id}`)?.value.trim()||"";
+    const message=byId(`work-message-${id}`);
 
-              const confirmed = window.confirm(
-                `Complete Work Item #${id} and close its linked Investigation?`
-              );
+    if(!workPerformed||!actualImpact||!evidenceDescription){
+      message.className="status error";
+      message.textContent="Work Performed, Result, and Completion Evidence are all required.";
+      return;
+    }
 
-              if (!confirmed) return;
+    if(!window.confirm(`Complete Work Item #${id} and close its linked Investigation?`))return;
 
-              await processWorkItemCompletion(
-                item,
-                workPerformed,
-                actualImpact,
-                evidenceDescription
-              );
-            });
-          });
-      }
+    processingWorkItem=true;
+    message.className="status loading";
+    message.textContent=`Completing Work Item #${id} in production D1…`;
 
-      async function processWorkItemCompletion(
-        item,
+    try{
+      await post({
+        action:"process-work-item",
+        clientCode:item.clientCode,
+        workItemId:id,
         workPerformed,
         actualImpact,
-        evidenceDescription
-      ) {
-        if (processingWorkItem) return;
-        processingWorkItem = true;
-
-        const message = document.getElementById(`work-message-${item.id}`);
-
-        if (message) {
-          message.className = "status loading processing-message";
-          message.textContent =
-            `Completing Work Item #${item.id} in production D1…`;
-        }
-
-        try {
-          const response = await fetch(WORKER_URL, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Accept: "application/json"
-            },
-            body: JSON.stringify({
-              action: "process-work-item",
-              clientCode: item.clientCode,
-              workItemId: Number(item.id),
-              workPerformed,
-              actualImpact,
-              evidenceDescription,
-              evidenceSource: "Guided Investigation Completion Evidence",
-              evidenceType: "completion"
-            })
-          });
-
-          const payload = await response.json().catch(() => ({}));
-
-          if (!response.ok || payload?.ok !== true) {
-            throw new Error(
-              payload?.error ||
-              `Work Item processing failed with HTTP ${response.status}.`
-            );
-          }
-
-          if (message) {
-            message.className = "status ready processing-message";
-            message.textContent =
-              `Work Item #${item.id} completed and its linked Investigation closed.`;
-          }
-
-          await loadWorkPage();
-        } catch (error) {
-          console.error("Work Item completion failed:", error);
-
-          if (message) {
-            message.className = "status error processing-message";
-            message.textContent =
-              error?.message || "The Work Item could not be completed.";
-          }
-        } finally {
-          processingWorkItem = false;
-        }
-      }
-
-      function getVisibleInvestigations() {
-        const clientFilter = elements.clientFilter.value;
-
-        return clientFilter
-          ? investigations.filter((item) => item.clientCode === clientFilter)
-          : investigations;
-      }
-
-      function renderInvestigationList() {
-        const visibleInvestigations = getVisibleInvestigations();
-
-        if (!visibleInvestigations.length) {
-          elements.investigationList.innerHTML =
-            '<div class="empty">No open investigations match this view.</div>';
-          return;
-        }
-
-        elements.investigationList.innerHTML = visibleInvestigations
-          .map((item) => {
-            const key = investigationKey(item);
-            const priority = normalizeValue(item.priority || "normal");
-
-            return `
-              <button
-                class="investigation${key === selectedKey ? " active" : ""}"
-                type="button"
-                data-investigation-key="${escapeHtml(key)}"
-              >
-                <span class="investigation-title">
-                  ${escapeHtml(item.title || "Investigation")}
-                </span>
-
-                <span class="meta-row">
-                  <span>${escapeHtml(item.clientName)}</span>
-                  <span class="badge ${escapeHtml(priority)}">
-                    ${escapeHtml(item.priority || "normal")}
-                  </span>
-                  <span>${escapeHtml(item.status || "open")}</span>
-                  <span>${escapeHtml(formatDate(item.opened_at || item.created_at))}</span>
-                </span>
-              </button>
-            `;
-          })
-          .join("");
-
-        elements.investigationList
-          .querySelectorAll("[data-investigation-key]")
-          .forEach((button) => {
-            button.addEventListener("click", () => {
-              selectedKey = button.dataset.investigationKey || "";
-
-              const investigation = investigations.find(
-                (item) => investigationKey(item) === selectedKey
-              );
-
-              if (investigation) {
-                loadAndRenderInvestigationDetail(investigation);
-              }
-
-              renderInvestigationList();
-            });
-          });
-      }
-
-      async function loadAndRenderInvestigationDetail(item) {
-        const requestSequence = ++guidedRequestSequence;
-        const key = investigationKey(item);
-        const cached = guidedInvestigationCache.get(key);
-
-        renderInvestigationDetail(item, cached || null, cached ? "ready" : "loading");
-
-        if (cached) return;
-
-        try {
-          const response = await fetch(WORKER_URL, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Accept: "application/json"
-            },
-            body: JSON.stringify({
-              action: "get-guided-investigation",
-              clientCode: item.clientCode,
-              investigationId: Number(item.id)
-            })
-          });
-
-          const payload = await response.json().catch(() => ({}));
-
-          if (!response.ok || payload?.ok !== true || !payload?.guidance) {
-            throw new Error(
-              payload?.error ||
-              payload?.details ||
-              `Guided Investigation request failed with HTTP ${response.status}.`
-            );
-          }
-
-          guidedInvestigationCache.set(key, payload.guidance);
-
-          if (
-            requestSequence === guidedRequestSequence &&
-            selectedKey === key
-          ) {
-            renderInvestigationDetail(item, payload.guidance, "ready", payload);
-          }
-        } catch (error) {
-          console.error("Live Guided Investigation failed:", error);
-
-          if (
-            requestSequence === guidedRequestSequence &&
-            selectedKey === key
-          ) {
-            renderInvestigationDetail(item, null, "error", {
-              error: error?.message || "Live guidance could not be loaded."
-            });
-          }
-        }
-      }
-
-      function renderInvestigationDetail(item, guidance = null, guidanceState = "ready", meta = null) {
-        const communication = item.communication;
-        const currentObjective =
-          guidance?.current_objective ||
-          item.description ||
-          "Determine whether the originating communication requires corrective work.";
-        const currentUnderstanding =
-          guidance?.current_understanding ||
-          communication?.ai_summary ||
-          communication?.raw_content ||
-          item.description ||
-          "No supporting evidence summary was returned.";
-        const currentUnknowns = Array.isArray(guidance?.current_unknowns)
-          ? guidance.current_unknowns.filter(Boolean)
-          : [];
-        const currentUnknownsText = currentUnknowns.length
-          ? currentUnknowns.map((value) => `• ${value}`).join("\n")
-          : item.finding_summary
-            ? "A current finding exists. Verify whether the evidence is complete enough to close the investigation or create specific work."
-            : "The scope, cause, impact, and required corrective action have not yet been proven.";
-        const currentStep =
-          guidance?.current_next_step ||
-          item.recommendation ||
-          "Review the originating evidence and identify the next fact needed to determine whether corrective work is required.";
-        const expectedEvidence =
-          guidance?.expected_evidence ||
-          deriveExpectedEvidence(item, communication);
-        const confidence = Number.isFinite(Number(guidance?.confidence))
-          ? Math.max(0, Math.min(100, Math.round(Number(guidance.confidence))))
-          : null;
-        const readyForResolution = guidance?.ready_for_resolution === true;
-        const guidanceMessage = guidanceState === "loading"
-          ? "Generating the live Current Next Step from the Investigation and originating Communication…"
-          : guidanceState === "error"
-            ? `Live guidance unavailable. Showing the stored fallback. ${meta?.error || ""}`
-            : meta?.engine
-              ? `Live guidance generated by ${meta.engine}.`
-              : "Live guidance loaded.";
-
-        elements.detailPanel.innerHTML = `
-          <h2 class="detail-title">
-            ${escapeHtml(item.title || "Investigation")}
-          </h2>
-
-          <p class="detail-subtitle">
-            <a
-              href="clients.html?client=${encodeURIComponent(item.clientCode)}"
-              style="color:#1f68d8;font-weight:800;"
-            >${escapeHtml(item.clientName)}</a>
-            · Investigation #${escapeHtml(item.id)}
-            ${
-              item.communication_id
-                ? `· Communication #${escapeHtml(item.communication_id)}`
-                : ""
-            }
-          </p>
-
-          <div class="detail-stats">
-            <div class="detail-stat">
-              <span>Priority</span>
-              <strong>${escapeHtml(item.priority || "normal")}</strong>
-            </div>
-
-            <div class="detail-stat">
-              <span>Status</span>
-              <strong>${escapeHtml(item.status || "open")}</strong>
-            </div>
-
-            <div class="detail-stat">
-              <span>Assigned To</span>
-              <strong>${escapeHtml(
-                item.assigned_to ||
-                item.owner ||
-                "Unassigned"
-              )}</strong>
-            </div>
-          </div>
-
-          <section class="detail-section">
-            <h3>Current Objective</h3>
-            <p>${escapeHtml(currentObjective)}</p>
-          </section>
-
-          <section class="detail-section">
-            <h3>What We Know</h3>
-            <p>${escapeHtml(currentUnderstanding)}</p>
-          </section>
-
-          <section class="detail-section">
-            <h3>What We Still Need To Learn</h3>
-            <p>${escapeHtml(currentUnknownsText)}</p>
-          </section>
-
-          <section class="guided-box" aria-label="Current investigation step">
-            <p class="guided-label">Current Next Step</p>
-            <div class="status ${guidanceState === "error" ? "error" : guidanceState === "loading" ? "loading" : "ready"}" style="margin:0 0 12px;">
-              ${escapeHtml(guidanceMessage)}
-            </div>
-            <h3>Do this next</h3>
-            <p class="guided-step">${escapeHtml(currentStep)}</p>
-
-            <div class="expected-evidence">
-              <strong>Expected Evidence</strong>
-              <span>${escapeHtml(expectedEvidence)}</span>
-            </div>
-
-            <div class="detail-stats" style="margin-top:14px;">
-              <div class="detail-stat">
-                <span>Guidance Confidence</span>
-                <strong>${confidence === null ? "Pending" : `${confidence}%`}</strong>
-              </div>
-              <div class="detail-stat">
-                <span>Resolution Readiness</span>
-                <strong>${readyForResolution ? "Ready for review" : "More evidence required"}</strong>
-              </div>
-              <div class="detail-stat">
-                <span>Guidance Source</span>
-                <strong>${guidance ? "Live Worker" : "Stored fallback"}</strong>
-              </div>
-            </div>
-
-            ${guidance?.resolution_reason ? `
-              <p class="workflow-note"><strong>Why:</strong> ${escapeHtml(guidance.resolution_reason)}</p>
-            ` : ""}
-
-            <p class="workflow-note">
-              Perform only this step. Return with the resulting screenshot,
-              report, URL list, or verification evidence before deciding the final finding.
-            </p>
-          </section>
-
-          <section class="detail-section">
-            <h3>Originating Communication</h3>
-            ${
-              communication
-                ? `
-                  <div class="communication">
-                    <strong>
-                      ${escapeHtml(
-                        communication.subject ||
-                        communication.category ||
-                        "Communication"
-                      )}
-                    </strong>
-
-                    <small>
-                      ${escapeHtml(communication.source || "Unknown source")}
-                      · ${escapeHtml(
-                        formatDate(
-                          communication.occurred_at ||
-                          communication.created_at
-                        )
-                      )}
-                    </small>
-
-                    <p>${escapeHtml(
-                      communication.ai_summary ||
-                      communication.raw_content ||
-                      "No communication summary was stored."
-                    )}</p>
-                  </div>
-                `
-                : `
-                  <div class="communication">
-                    <strong>
-                      Communication #${escapeHtml(item.communication_id || "Unknown")}
-                    </strong>
-                    <p>
-                      The investigation has a communication link, but that
-                      communication was not returned in this workspace response.
-                    </p>
-                  </div>
-                `
-            }
-          </section>
-
-          <div class="resolution-gate">
-            <p>
-              Do not complete the finding first. Reveal Final Resolution only after
-              the current next step has been performed and the evidence supports a decision.
-            </p>
-
-            <button
-              id="reveal-resolution"
-              class="button secondary"
-              type="button"
-              aria-expanded="false"
-            >
-              Evidence Reviewed — Show Final Resolution
-            </button>
-          </div>
-
-          <section id="final-resolution" class="detail-section final-resolution" hidden>
-            <h3>Final Resolution</h3>
-
-            <div class="processing-box">
-              <label for="finding-summary">Investigation Finding</label>
-              <textarea
-                id="finding-summary"
-                placeholder="Record the finding established by the evidence."
-              >${escapeHtml(item.finding_summary || "")}</textarea>
-
-              <p class="processing-note">
-                Close with No Work Required only when the evidence proves no corrective
-                work is needed. Create Specific Work only when the evidence proves the
-                exact action required.
-              </p>
-
-              <label for="work-title">Specific Work Required</label>
-              <textarea
-                id="work-title"
-                placeholder="Example: Correct the confirmed redirect configuration."
-              ></textarea>
-
-              <label for="work-description">Specific Action</label>
-              <textarea
-                id="work-description"
-                placeholder="Record the exact action required, including scope and verification."
-              ></textarea>
-
-              <div class="processing-actions">
-                <button
-                  id="close-no-work-button"
-                  class="button"
-                  type="button"
-                >
-                  Close — No Work Required
-                </button>
-
-                <button
-                  id="create-work-button"
-                  class="button primary"
-                  type="button"
-                >
-                  Create Specific Work
-                </button>
-              </div>
-
-              <div
-                id="processing-message"
-                class="processing-message"
-                aria-live="polite"
-              ></div>
-            </div>
-          </section>
-        `;
-
-        const revealButton = document.getElementById("reveal-resolution");
-        const finalResolution = document.getElementById("final-resolution");
-
-        if (revealButton && finalResolution) {
-          revealButton.addEventListener("click", () => {
-            const isHidden = finalResolution.hidden;
-            finalResolution.hidden = !isHidden;
-            revealButton.setAttribute("aria-expanded", String(isHidden));
-            revealButton.textContent = isHidden
-              ? "Hide Final Resolution"
-              : "Evidence Reviewed — Show Final Resolution";
-
-            if (isHidden) {
-              finalResolution.scrollIntoView({
-                behavior: "smooth",
-                block: "start"
-              });
-            }
-          });
-        }
-
-        bindInvestigationActions(item);
-      }
-
-      function deriveExpectedEvidence(item, communication) {
-        const combined = normalizeValue(
-          [
-            item.title,
-            item.description,
-            item.recommendation,
-            communication?.subject,
-            communication?.category,
-            communication?.ai_summary
-          ].filter(Boolean).join(" ")
-        );
-
-        if (combined.includes("redirect")) {
-          return "A screenshot or exported list showing the affected URLs, redirect details, and whether the redirects are intentional.";
-        }
-
-        if (combined.includes("backlink")) {
-          return "A screenshot or exported domain list showing the exact backlinks, toxicity or authority signals, and the affected target pages.";
-        }
-
-        if (combined.includes("site_audit") || combined.includes("site audit")) {
-          return "A screenshot of the specific audit issue, the affected URLs, issue count, and the tool's technical explanation.";
-        }
-
-        if (
-          combined.includes("merchant") ||
-          combined.includes("structured_data") ||
-          combined.includes("structured data")
-        ) {
-          return "A screenshot of the Merchant Listings or structured-data issue showing affected items, error details, and example URLs.";
-        }
-
-        if (
-          combined.includes("position_tracking") ||
-          combined.includes("position tracking") ||
-          combined.includes("ranking")
-        ) {
-          return "A screenshot or export showing the affected keywords, previous and current positions, landing pages, and date range.";
-        }
-
-        return "A screenshot, report, or source record that proves the condition, scope, cause, and business impact.";
-      }
-
-      function bindInvestigationActions(item) {
-        const noWorkButton = document.getElementById("close-no-work-button");
-        const createWorkButton = document.getElementById("create-work-button");
-        const finding = document.getElementById("finding-summary");
-        const workTitle = document.getElementById("work-title");
-        const workDescription = document.getElementById("work-description");
-        const message = document.getElementById("processing-message");
-
-        if (noWorkButton && finding && message) {
-          noWorkButton.addEventListener("click", async () => {
-            const findingSummary = finding.value.trim();
-
-            if (!findingSummary) {
-              showProcessingError(
-                message,
-                "Record the evidence-supported Investigation Finding before closing this Investigation."
-              );
-              finding.focus();
-              return;
-            }
-
-            const confirmed = window.confirm(
-              `Close Investigation #${item.id} with no Work Item created?`
-            );
-
-            if (!confirmed) return;
-
-            await processNoWorkRequired(item, findingSummary);
-          });
-        }
-
-        if (
-          createWorkButton &&
-          finding &&
-          workTitle &&
-          workDescription &&
-          message
-        ) {
-          createWorkButton.addEventListener("click", async () => {
-            const findingSummary = finding.value.trim();
-            const title = workTitle.value.trim();
-            const description = workDescription.value.trim();
-
-            if (!findingSummary) {
-              showProcessingError(
-                message,
-                "Record the evidence-supported Investigation Finding before creating work."
-              );
-              finding.focus();
-              return;
-            }
-
-            if (!title) {
-              showProcessingError(
-                message,
-                "Record the Specific Work Required before creating the Work Item."
-              );
-              workTitle.focus();
-              return;
-            }
-
-            if (!description) {
-              showProcessingError(
-                message,
-                "Record the exact Specific Action before creating the Work Item."
-              );
-              workDescription.focus();
-              return;
-            }
-
-            const confirmed = window.confirm(
-              `Create one linked Work Item for Investigation #${item.id} and keep the Investigation open?`
-            );
-
-            if (!confirmed) return;
-
-            await processSpecificWorkRequired(
-              item,
-              findingSummary,
-              title,
-              description
-            );
-          });
-        }
-      }
-
-      function showProcessingError(message, text) {
-        message.className = "status error processing-message";
-        message.textContent = text;
-      }
-
-      async function processNoWorkRequired(item, findingSummary) {
-        if (processingInvestigation) return;
-        processingInvestigation = true;
-
-        const button = document.getElementById("close-no-work-button");
-        const textarea = document.getElementById("finding-summary");
-        const message = document.getElementById("processing-message");
-
-        if (button) {
-          button.disabled = true;
-          button.textContent = "Saving…";
-        }
-
-        if (textarea) textarea.disabled = true;
-
-        if (message) {
-          message.className = "status loading processing-message";
-          message.textContent =
-            `Saving the finding and closing Investigation #${item.id}…`;
-        }
-
-        try {
-          const response = await fetch(WORKER_URL, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Accept: "application/json"
-            },
-            body: JSON.stringify({
-              action: "process-investigation",
-              clientCode: item.clientCode,
-              investigationId: Number(item.id),
-              findingSummary,
-              outcome: "no_work_required"
-            })
-          });
-
-          const payload = await response.json().catch(() => ({}));
-
-          if (!response.ok || payload?.ok !== true) {
-            throw new Error(
-              payload?.error ||
-              `Investigation processing failed with HTTP ${response.status}.`
-            );
-          }
-
-          if (message) {
-            message.className = "status ready processing-message";
-            message.textContent =
-              `Investigation #${item.id} closed. No Work Item was created.`;
-          }
-
-          await loadWorkPage();
-        } catch (error) {
-          console.error("Investigation processing failed:", error);
-
-          if (message) {
-            message.className = "status error processing-message";
-            message.textContent =
-              error?.message || "The Investigation could not be processed.";
-          }
-
-          if (button) {
-            button.disabled = false;
-            button.textContent = "Close — No Work Required";
-          }
-
-          if (textarea) textarea.disabled = false;
-        } finally {
-          processingInvestigation = false;
-        }
-      }
-
-      async function processSpecificWorkRequired(
-        item,
-        findingSummary,
-        workTitle,
-        workDescription
-      ) {
-        if (processingInvestigation) return;
-        processingInvestigation = true;
-
-        const noWorkButton = document.getElementById("close-no-work-button");
-        const workButton = document.getElementById("create-work-button");
-        const textarea = document.getElementById("finding-summary");
-        const titleInput = document.getElementById("work-title");
-        const descriptionInput = document.getElementById("work-description");
-        const message = document.getElementById("processing-message");
-
-        [noWorkButton, workButton, textarea, titleInput, descriptionInput]
-          .filter(Boolean)
-          .forEach((element) => {
-            element.disabled = true;
-          });
-
-        if (workButton) workButton.textContent = "Creating Work…";
-
-        if (message) {
-          message.className = "status loading processing-message";
-          message.textContent =
-            `Recording the finding and creating linked work for Investigation #${item.id}…`;
-        }
-
-        try {
-          const response = await fetch(WORKER_URL, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Accept: "application/json"
-            },
-            body: JSON.stringify({
-              action: "process-investigation",
-              clientCode: item.clientCode,
-              investigationId: Number(item.id),
-              findingSummary,
-              outcome: "specific_work_required",
-              workTitle,
-              workDescription
-            })
-          });
-
-          const payload = await response.json().catch(() => ({}));
-
-          if (!response.ok || payload?.ok !== true) {
-            throw new Error(
-              payload?.error ||
-              `Investigation processing failed with HTTP ${response.status}.`
-            );
-          }
-
-          if (message) {
-            message.className = "status ready processing-message";
-            message.textContent = payload?.workItem?.id
-              ? `Work Item #${payload.workItem.id} is linked to Investigation #${item.id}.`
-              : `Investigation #${item.id} already has linked work.`;
-          }
-
-          await loadWorkPage();
-        } catch (error) {
-          console.error("Specific work processing failed:", error);
-
-          if (message) {
-            message.className = "status error processing-message";
-            message.textContent =
-              error?.message || "The linked Work Item could not be created.";
-          }
-
-          [noWorkButton, workButton, textarea, titleInput, descriptionInput]
-            .filter(Boolean)
-            .forEach((element) => {
-              element.disabled = false;
-            });
-
-          if (workButton) workButton.textContent = "Create Specific Work";
-        } finally {
-          processingInvestigation = false;
-        }
-      }
-
-      function isCompletedWorkItem(item) {
-        const status = normalizeValue(item?.status);
-
-        return [
-          "complete",
-          "completed",
-          "closed",
-          "resolved",
-          "cancelled",
-          "canceled"
-        ].includes(status);
-      }
-
-      function isClosedInvestigation(item) {
-        const status = normalizeValue(item?.status);
-
-        return [
-          "complete",
-          "completed",
-          "closed",
-          "resolved",
-          "cancelled",
-          "canceled",
-          "archived",
-          "ignored",
-          "no_action"
-        ].includes(status);
-      }
-
-      function sortInvestigations(a, b) {
-        const priorityOrder = {
-          urgent: 0,
-          high: 1,
-          normal: 2,
-          medium: 2,
-          low: 3
-        };
-
-        const firstPriority =
-          priorityOrder[normalizeValue(a.priority)] ?? 4;
-        const secondPriority =
-          priorityOrder[normalizeValue(b.priority)] ?? 4;
-
-        if (firstPriority !== secondPriority) {
-          return firstPriority - secondPriority;
-        }
-
-        const firstDate =
-          Date.parse(a.opened_at || a.created_at || "") || 0;
-        const secondDate =
-          Date.parse(b.opened_at || b.created_at || "") || 0;
-
-        return secondDate - firstDate;
-      }
-
-      function investigationKey(item) {
-        return `${item.clientCode}:${item.id}`;
-      }
-
-      function normalizeValue(value) {
-        return String(value || "")
-          .trim()
-          .toLowerCase()
-          .replace(/\s+/g, "_");
-      }
-
-      function formatDate(value) {
-        if (!value) return "Date not recorded";
-
-        const date = new Date(value);
-
-        if (Number.isNaN(date.getTime())) {
-          return String(value).slice(0, 10);
-        }
-
-        return new Intl.DateTimeFormat("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric"
-        }).format(date);
-      }
-
-      function setStatus(type, message) {
-        elements.runtimeStatus.className = `status ${type}`;
-        elements.runtimeStatus.textContent = message;
-      }
-
-      function escapeHtml(value) {
-        return String(value ?? "")
-          .replaceAll("&", "&amp;")
-          .replaceAll("<", "&lt;")
-          .replaceAll(">", "&gt;")
-          .replaceAll('"', "&quot;")
-          .replaceAll("'", "&#039;");
-      }
-
-      console.info(`GCM OS Work Page v${VERSION}`);
-    })();
-  </script>
+        evidenceDescription,
+        evidenceSource:"Guided Investigation Completion Evidence",
+        evidenceType:"completion"
+      });
+
+      message.className="status ready";
+      message.textContent=`Work Item #${id} completed and its linked Investigation closed.`;
+      await load();
+    }catch(error){
+      message.className="status error";
+      message.textContent=error.message||"The Work Item could not be completed.";
+    }finally{
+      processingWorkItem=false;
+    }
+  }
+
+  function sortInvestigations(a,b){const p={urgent:0,high:1,normal:2,medium:2,low:3};return (p[norm(a.priority)]??4)-(p[norm(b.priority)]??4)||((Date.parse(b.opened_at||b.created_at||"")||0)-(Date.parse(a.opened_at||a.created_at||"")||0));}
+  function closed(i){return ["complete","completed","closed","resolved","cancelled","canceled","archived","ignored","no_action"].includes(norm(i.status));}
+  function completed(i){return ["complete","completed","closed","resolved","cancelled","canceled"].includes(norm(i.status));}
+  function key(i){return `${i.clientCode}:${i.id}`;} function norm(v){return String(v||"").trim().toLowerCase().replace(/\s+/g,"_");}
+  function setStatus(type,text){el.status.className=`status ${type}`;el.status.textContent=text;} function positiveInt(v){const n=Number(v);return Number.isInteger(n)&&n>0?n:null;} function byId(id){return document.getElementById(id);}
+  function esc(v){return String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");}
+})();
+</script>
 </body>
 </html>
