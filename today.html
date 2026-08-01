@@ -1,14 +1,15 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 2.0.3
+   Version: 2.0.4
    Status: Production Candidate
-   Change: Authoritative operational briefing and Media attention consistency.
-   Source: Production today.html 2.0.2
-   Sprint: Production Consolidation — Mission Control
-   Purpose: Preserve the verified Mission Control page while making the
-            Command Brief reflect the complete current operating state and
-            ensuring Media attention uses only the authoritative Worker result.
+   Change: Direct decision links and ordered client-attention visibility.
+   Source: Production today.html 2.0.3
+   Sprint: Production Consolidation — Mission Control Road Test
+   Purpose: Preserve the verified Mission Control workflow while ensuring
+            every highest-value decision links to its authoritative record,
+            the Decide control is actionable, and clients requiring attention
+            are displayed in a visible review order with priority color.
    ========================================================= -->
 <!DOCTYPE html>
 <html lang="en">
@@ -553,6 +554,83 @@
       font-weight: 900;
       text-transform: uppercase;
       letter-spacing: 0.08em;
+    }
+
+    .priority-badge:hover,
+    .priority-badge:focus-visible {
+      background: rgba(214, 169, 74, 0.32);
+      color: #ffffff;
+      outline: 2px solid rgba(255, 255, 255, 0.35);
+      outline-offset: 2px;
+    }
+
+    .attention-item {
+      position: relative;
+    }
+
+    .attention-link {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 11px;
+    }
+
+    .attention-order {
+      width: 28px;
+      height: 28px;
+      display: inline-grid;
+      place-items: center;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 900;
+    }
+
+    .attention-content {
+      min-width: 0;
+    }
+
+    .attention-reason {
+      margin: 4px 0 0;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      line-height: 1.35;
+    }
+
+    .attention-action {
+      color: var(--gcm-blue-600);
+      font-size: 0.7rem;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .attention-critical {
+      border-left: 5px solid var(--critical);
+      background: var(--critical-soft);
+    }
+
+    .attention-critical .attention-order {
+      background: var(--critical);
+      color: #ffffff;
+    }
+
+    .attention-high {
+      border-left: 5px solid var(--warning);
+      background: var(--warning-soft);
+    }
+
+    .attention-high .attention-order {
+      background: var(--warning);
+      color: #ffffff;
+    }
+
+    .attention-normal {
+      border-left: 5px solid var(--info);
+      background: var(--info-soft);
+    }
+
+    .attention-normal .attention-order {
+      background: var(--info);
+      color: #ffffff;
     }
 
     .priority-body {
@@ -1165,7 +1243,7 @@
                   <h2 class="panel-title">Highest-Value Next Action</h2>
                   <p class="panel-description">The single action most likely to protect revenue, deliver client value, or advance growth.</p>
                 </div>
-                <span class="priority-badge" id="priority-badge">Decision</span>
+                <a class="priority-badge" id="priority-badge" href="clients.html">Decision</a>
               </div>
               <div class="priority-body priority-brief-body">
                 <div class="decision-client">
@@ -1437,6 +1515,11 @@
         secondaryHref
       }) {
         priorityBadge.textContent = cleanDisplay(badge, "Decide");
+        priorityBadge.href = cleanDisplay(primaryHref, "clients.html");
+        priorityBadge.setAttribute(
+          "aria-label",
+          `${cleanDisplay(badge, "Decide")}: ${cleanDisplay(what, "Open operational decision")}`
+        );
         priorityType.textContent = cleanDisplay(type, "Operational Decision");
         priorityName.textContent = cleanDisplay(client, "Agency Decision");
         priorityWho.textContent = cleanDisplay(who, "Owner not recorded.");
@@ -1632,6 +1715,85 @@
         attentionNote.textContent = "Checking live operational records."; briefAttention.textContent = "Checking…";
       }
 
+      function normalizeAttentionPriority(client, index) {
+        const explicit = cleanDisplay(
+          client?.priority ||
+          client?.attentionPriority ||
+          client?.attention_priority ||
+          client?.severity ||
+          client?.level
+        ).toLowerCase();
+
+        if (["highest", "critical", "urgent"].includes(explicit)) {
+          return { className: "attention-critical", label: "First" };
+        }
+
+        if (["high", "warning"].includes(explicit)) {
+          return { className: "attention-high", label: "Next" };
+        }
+
+        if (["normal", "medium", "info"].includes(explicit)) {
+          return { className: "attention-normal", label: "Review" };
+        }
+
+        if (index === 0) {
+          return { className: "attention-critical", label: "First" };
+        }
+
+        if (index <= 2) {
+          return { className: "attention-high", label: "Next" };
+        }
+
+        return { className: "attention-normal", label: "Review" };
+      }
+
+      function buildAttentionReason(client) {
+        const reason = cleanDisplay(
+          client?.reason ||
+          client?.detail ||
+          client?.attentionReason ||
+          client?.attention_reason ||
+          client?.what ||
+          client?.title
+        );
+
+        if (reason) return reason;
+
+        const recordType = titleCase(
+          client?.recordType ||
+          client?.record_type ||
+          client?.sourceType ||
+          client?.source_type
+        );
+
+        const recordId =
+          client?.recordId ||
+          client?.record_id ||
+          client?.investigationId ||
+          client?.investigation_id ||
+          client?.workItemId ||
+          client?.work_item_id;
+
+        if (recordType && recordId) {
+          return `${recordType} #${recordId} requires review.`;
+        }
+
+        return "An unresolved operational decision requires review.";
+      }
+
+      function buildAttentionHref(client) {
+        const directHref = cleanDisplay(
+          client?.href ||
+          client?.decisionHref ||
+          client?.decision_href ||
+          client?.nextAction?.href
+        );
+
+        if (directHref) return directHref;
+
+        return buildClientWorkspaceHref(client?.clientCode || client?.client_code);
+      }
+
       function renderAttentionClients(clients) {
         if (!clients.length) {
           attentionList.innerHTML = `
@@ -1650,17 +1812,29 @@
           return;
         }
 
-        attentionList.innerHTML = clients.map((client) => `
-          <li class="attention-item">
-            <a
-              class="attention-link"
-              href="${escapeHtml(client.href || "clients.html")}"
-              aria-label="Open ${escapeHtml(client.clientName || "client")} workspace"
-            >
-              <p class="attention-name">${escapeHtml(client.clientName || "Unknown Client")}</p>
-            </a>
-          </li>
-        `).join("");
+        attentionList.innerHTML = clients.map((client, index) => {
+          const priority = normalizeAttentionPriority(client, index);
+          const clientName = cleanDisplay(client?.clientName, "Unknown Client");
+          const reason = buildAttentionReason(client);
+          const href = buildAttentionHref(client);
+
+          return `
+            <li class="attention-item ${priority.className}">
+              <a
+                class="attention-link"
+                href="${escapeHtml(href)}"
+                aria-label="Open priority ${index + 1}: ${escapeHtml(clientName)}"
+              >
+                <span class="attention-order" aria-hidden="true">${index + 1}</span>
+                <span class="attention-content">
+                  <span class="attention-name">${escapeHtml(clientName)}</span>
+                  <span class="attention-reason">${escapeHtml(reason)}</span>
+                </span>
+                <span class="attention-action">${escapeHtml(priority.label)} →</span>
+              </a>
+            </li>
+          `;
+        }).join("");
 
         attentionCount.textContent = String(clients.length);
         attentionNote.textContent = "Open the client record to review the decision.";
@@ -2040,11 +2214,11 @@
       });
 
       if (!window.GCMOShell) {
-        console.error("Today 2.0.3: shared/gcm-shell.js did not load.");
+        console.error("Today 2.0.4: shared/gcm-shell.js did not load.");
       } else {
         window.GCMOShell.mount({
           currentPage: "today",
-          statusText: "Agency Command Center operational · Today v2.0.3"
+          statusText: "Agency Command Center operational · Today v2.0.4"
         });
       }
 
