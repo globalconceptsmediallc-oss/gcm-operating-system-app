@@ -1,20 +1,30 @@
+Library
+/
+today-3.1.2-fresh-install.txt
+
+
+<!DOCTYPE html>
+<!DOCTYPE html>
+
+<!DOCTYPE html>
+
+<!DOCTYPE html>
+
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.1.1
+   Version: 3.1.2
    Status: Production Candidate
-   Source: Production today.html 3.1.0
-   Sprint: Mission Control Final Layout Road Test
-   Purpose: Preserve the verified DECIDE workflow while placing DO,
-            COMMUNICATE, and PREPARE in one balanced three-card row
-            beneath it, with expandable detail inside each card.
+   Source: Production today.html 3.1.1
+   Sprint: Mission Control Authoritative Record Navigation
+   Purpose: Preserve the locked Mission Control layout while routing every
+            decision directly to its authoritative Investigation, Work Item,
+            Media record, Proof workflow, or client workspace.
 
    Production changes:
-   - DECIDE remains the full-width primary operating area.
-   - DO, COMMUNICATE, and PREPARE appear three across below DECIDE.
-   - Each bottom card expands within the row to reveal operational detail.
-   - Large unused white space from the previous layout is removed.
-   - Existing Worker calls, record links, shared shell, and live data remain.
+   - Investigation actions route to work.html with investigation and client.
+   - Client actions route to business-workspace.html with business code.
+   - Existing layout, live data, priority order, Media logic, and shell remain.
    ========================================================= -->
 <!DOCTYPE html>
 
@@ -2117,6 +2127,53 @@
         commandBriefCopy.textContent = `${statusParts.join(" · ")}.`;
       }
 
+      function buildAuthoritativeDecisionHref(decision) {
+        const clientCode = cleanDisplay(
+          decision?.clientCode ||
+          decision?.client_code ||
+          decision?.who?.clientCode ||
+          decision?.who?.client_code
+        );
+
+        const recordType = cleanDisplay(
+          decision?.recordType || decision?.record_type
+        ).toLowerCase();
+
+        const recordId =
+          decision?.recordId ??
+          decision?.record_id ??
+          decision?.investigationId ??
+          decision?.investigation_id ??
+          decision?.workItemId ??
+          decision?.work_item_id ??
+          decision?.id;
+
+        if (recordType === "investigation" && recordId) {
+          const params = new URLSearchParams({
+            investigation: String(recordId)
+          });
+          if (clientCode) params.set("client", clientCode);
+          return `work.html?${params.toString()}`;
+        }
+
+        if ((recordType === "work_item" || recordType === "work item") && recordId) {
+          const params = new URLSearchParams({
+            workItem: String(recordId)
+          });
+          if (clientCode) params.set("client", clientCode);
+          return `work.html?${params.toString()}`;
+        }
+
+        return cleanDisplay(decision?.nextAction?.href, "work.html");
+      }
+
+      function buildBusinessWorkspaceHref(clientCode) {
+        const code = cleanDisplay(clientCode);
+        return code
+          ? `business-workspace.html?business=${encodeURIComponent(code)}`
+          : "clients.html";
+      }
+
       function renderHighestPriorityDecision(decision) {
         const clientName = cleanDisplay(decision?.clientName, "Unknown Client");
         const owner = cleanDisplay(decision?.who?.owner, "Unassigned");
@@ -2153,9 +2210,9 @@
               ? "Open the committed work item and complete the next verified step."
               : "Open the investigation, review the evidence, and decide the specific work required.",
           primaryLabel: decision?.nextAction?.label,
-          primaryHref: decision?.nextAction?.href,
+          primaryHref: buildAuthoritativeDecisionHref(decision),
           secondaryLabel: `Open ${clientName}`,
-          secondaryHref: buildClientWorkspaceHref(decision?.clientCode)
+          secondaryHref: buildBusinessWorkspaceHref(decision?.clientCode)
         });
 
         commandBriefTitle.textContent = `${clientName} requires the first operating decision.`;
@@ -2264,7 +2321,7 @@
 
         if (directHref) return directHref;
 
-        return buildClientWorkspaceHref(client?.clientCode || client?.client_code);
+        return buildBusinessWorkspaceHref(client?.clientCode || client?.client_code);
       }
 
       function renderAttentionClients(clients) {
@@ -2689,11 +2746,11 @@
       });
 
       if (!window.GCMOShell) {
-        console.error("Today 3.1.1: shared/gcm-shell.js did not load.");
+        console.error("Today 3.1.2: shared/gcm-shell.js did not load.");
       } else {
         window.GCMOShell.mount({
           currentPage: "today",
-          statusText: "Agency Command Center operational · Today v3.1.1"
+          statusText: "Agency Command Center operational · Today v3.1.2"
         });
       }
 
