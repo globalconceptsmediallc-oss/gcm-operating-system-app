@@ -1,15 +1,13 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 2.0.4
+   Version: 2.0.5
    Status: Production Candidate
-   Change: Direct decision links and ordered client-attention visibility.
-   Source: Production today.html 2.0.3
-   Sprint: Production Consolidation — Mission Control Road Test
-   Purpose: Preserve the verified Mission Control workflow while ensuring
-            every highest-value decision links to its authoritative record,
-            the Decide control is actionable, and clients requiring attention
-            are displayed in a visible review order with priority color.
+   Change: Mission Control simplified around four operational responsibilities.
+   Source: Production today.html 2.0.4
+   Sprint: Mission Control Road Test
+   Purpose: Remove non-actionable dashboard sections and strengthen the
+            operational flow: Decide → Do → Communicate → Prepare.
    ========================================================= -->
 <!DOCTYPE html>
 <html lang="en">
@@ -1182,7 +1180,12 @@
         padding: 18px;
       }
     }
-  </style>
+  
+    .mission-control-deferred {
+      display:none !important;
+    }
+
+</style>
 </head>
 
 <body>
@@ -1575,7 +1578,7 @@
 
         if (!missionControlLoaded || !mediaLoaded) {
           commandBriefTitle.textContent =
-            "Mission Control is assembling today's live operating brief.";
+            "Mission Control is preparing today's operational briefing.";
           commandBriefCopy.textContent =
             "Client decisions, Media deadlines, committed work, and proof are being checked before the OS recommends the first action.";
           return;
@@ -2214,11 +2217,11 @@
       });
 
       if (!window.GCMOShell) {
-        console.error("Today 2.0.4: shared/gcm-shell.js did not load.");
+        console.error("Today 2.0.5: shared/gcm-shell.js did not load.");
       } else {
         window.GCMOShell.mount({
           currentPage: "today",
-          statusText: "Agency Command Center operational · Today v2.0.4"
+          statusText: "Agency Command Center operational · Today v2.0.5"
         });
       }
 
