@@ -1,13 +1,13 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.7.1
+   Version: 1.8.0
    Status: Production Candidate
-   Source: Production work.html 1.7.0
-   Sprint: Client-Specific SEMrush Deep Links
-   Purpose: Preserve screenshot evidence capture and production processing while
-            allowing each client to store its exact SEMrush project URL once,
-            so future investigations open the correct project directly.
+   Source: Production work.html 1.7.1
+   Sprint: Guided Investigation Evidence Workflow
+   Purpose: Preserve authoritative navigation, evidence capture, and production
+            processing while guiding the operator through each evidence step
+            in a visible checklist that advances during the road-tested workflow.
 
    Production changes:
    - Adds Capture Evidence Screenshot inside Guided Investigation.
@@ -18,6 +18,10 @@
    - Adds a one-time client-specific SEMrush project URL setup.
    - Saves the URL locally by client code without changing D1.
    - Open SEMrush Site Audit uses the saved direct project URL when available.
+   - Adds a live Evidence Workflow checklist to the Guided Investigation.
+   - Checklist advances when SEMrush is opened, a screenshot is chosen,
+     Workers AI completes analysis, findings are reviewed, and work is created.
+   - Checklist state is stored locally by client and Investigation for road testing.
 
    Supported URLs:
    - work.html?investigation=36&client=PW
@@ -75,7 +79,26 @@
     .tool-link-input-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
     .tool-link-input-row input{min-height:40px}
     .tool-link-status{margin-top:8px;color:var(--muted);font-size:.72rem;font-weight:750}
-    @media(max-width:700px){.tool-link-input-row{grid-template-columns:1fr}}
+    .evidence-workflow{margin-top:16px;padding:15px;border:1px solid var(--border);border-radius:10px;background:#fff}
+    .evidence-workflow-header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+    .evidence-workflow-header h4{margin:0;color:var(--navy);font-size:.86rem}
+    .evidence-workflow-header p{margin:4px 0 0;color:var(--muted);font-size:.73rem;line-height:1.4}
+    .workflow-progress{display:inline-flex;align-items:center;min-height:28px;padding:0 9px;border-radius:999px;background:var(--blue-soft);color:#205c9f;font-size:.68rem;font-weight:900;white-space:nowrap}
+    .evidence-step-list{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:8px}
+    .evidence-step{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 11px;border:1px solid var(--border);border-radius:9px;background:#fbfcfe}
+    .evidence-step-index{width:24px;height:24px;display:grid;place-items:center;border-radius:999px;background:#e9eef5;color:var(--muted);font-size:.68rem;font-weight:900}
+    .evidence-step strong,.evidence-step small{display:block}
+    .evidence-step strong{color:var(--navy);font-size:.78rem}
+    .evidence-step small{margin-top:2px;color:var(--muted);font-size:.68rem;line-height:1.35}
+    .evidence-step-status{font-size:.67rem;font-weight:900;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+    .evidence-step.complete{border-color:#b9dfc8;background:var(--green-soft)}
+    .evidence-step.complete .evidence-step-index{background:var(--green);color:#fff}
+    .evidence-step.complete .evidence-step-status{color:var(--green)}
+    .evidence-step.active{border:2px solid var(--blue);background:var(--blue-soft)}
+    .evidence-step.active .evidence-step-index{background:var(--blue);color:#fff}
+    .evidence-step.active .evidence-step-status{color:var(--blue)}
+    .evidence-workflow-actions{display:flex;justify-content:flex-end;margin-top:10px}
+    @media(max-width:700px){.tool-link-input-row{grid-template-columns:1fr}.evidence-step{grid-template-columns:28px minmax(0,1fr)}.evidence-step-status{grid-column:2}.evidence-workflow-header{flex-direction:column}}
 
 
 .processing-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px}.work-card{padding:16px;border:1px solid var(--border);border-radius:10px;background:#fff;margin-bottom:12px}.target-banner{margin-bottom:16px;padding:13px;border:1px solid #aac7ed;border-radius:10px;background:var(--blue-soft);color:#205c9f;font-size:.82rem;font-weight:800}
@@ -89,7 +112,7 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Investigate one evidence step at a time. Create specific work only after the evidence proves what must be done.</p></div>
-        <span class="classification">SEMrush Direct Links · v1.7.1</span>
+        <span class="classification">Evidence Workflow · v1.8.0</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -109,14 +132,14 @@
 <script>
 (() => {
   "use strict";
-  const VERSION="1.7.1";
+  const VERSION="1.8.0";
   const WORKER_URL="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const params=new URLSearchParams(location.search);
   const requestedInvestigationId=positiveInt(params.get("investigation"));
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"SEMrush direct links · Work v1.7.1"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Guided evidence workflow · Work v1.8.0"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),target:byId("target-banner")};
   let activeClients=[],investigations=[],workItems=[],selectedKey="",processing=false,processingWorkItem=false;
 
@@ -217,6 +240,25 @@
     return combined.includes("semrush") &&
       (combined.includes("site_audit") || combined.includes("site audit"));
   }
+
+  const EVIDENCE_STEPS=[
+    {id:"open_semrush",title:"Open SEMrush",detail:"Open the correct client Site Audit project."},
+    {id:"review_issues",title:"Review Issues",detail:"Open the Issues screen and identify the highest-value issue."},
+    {id:"capture_screenshot",title:"Capture Screenshot",detail:"Choose the current evidence screenshot."},
+    {id:"analyze_evidence",title:"Analyze Evidence",detail:"Use Workers AI to extract visible facts and metrics."},
+    {id:"review_findings",title:"Review AI Findings",detail:"Confirm the extracted evidence and prefilled fields."},
+    {id:"complete_investigation",title:"Complete Investigation",detail:"Approve the evidence-supported finding."},
+    {id:"create_work",title:"Create Work Item",detail:"Create specific work only when evidence proves it is required."}
+  ];
+  function evidenceWorkflowKey(item){return `gcm-os-evidence-workflow:${String(item.clientCode||"").toUpperCase()}:${Number(item.id)}`;}
+  function getEvidenceWorkflowState(item){try{const raw=localStorage.getItem(evidenceWorkflowKey(item));const parsed=raw?JSON.parse(raw):{};return parsed&&typeof parsed==="object"?parsed:{};}catch(error){console.warn(error);return {};}}
+  function saveEvidenceWorkflowState(item,state){try{localStorage.setItem(evidenceWorkflowKey(item),JSON.stringify(state));}catch(error){console.warn(error);}}
+  function completeEvidenceStep(item,stepId){const state=getEvidenceWorkflowState(item);state[stepId]=true;saveEvidenceWorkflowState(item,state);renderEvidenceWorkflowState(item);}
+  function resetEvidenceWorkflow(item){localStorage.removeItem(evidenceWorkflowKey(item));renderEvidenceWorkflowState(item);}
+  function nextIncompleteStep(state){return EVIDENCE_STEPS.find(step=>!state[step.id])?.id||"";}
+  function buildEvidenceWorkflow(item){const state=getEvidenceWorkflowState(item);const completed=EVIDENCE_STEPS.filter(step=>state[step.id]).length;return `<section class="evidence-workflow" id="evidence-workflow"><div class="evidence-workflow-header"><div><h4>Evidence Workflow</h4><p>Follow the investigation in order. The next required step is highlighted.</p></div><span class="workflow-progress" id="workflow-progress">${completed} of ${EVIDENCE_STEPS.length} complete</span></div><ol class="evidence-step-list" id="evidence-step-list"></ol><div class="evidence-workflow-actions"><button class="button" id="reset-evidence-workflow" type="button">Reset Checklist</button></div></section>`;}
+  function renderEvidenceWorkflowState(item){const list=byId("evidence-step-list"),progress=byId("workflow-progress");if(!list||!progress)return;const state=getEvidenceWorkflowState(item),activeId=nextIncompleteStep(state),completed=EVIDENCE_STEPS.filter(step=>state[step.id]).length;progress.textContent=`${completed} of ${EVIDENCE_STEPS.length} complete`;list.innerHTML=EVIDENCE_STEPS.map((step,index)=>{const isComplete=Boolean(state[step.id]),isActive=!isComplete&&step.id===activeId,className=isComplete?"complete":isActive?"active":"",status=isComplete?"Complete":isActive?"Current":"Waiting";return `<li class="evidence-step ${className}"><span class="evidence-step-index">${isComplete?"✓":index+1}</span><span><strong>${esc(step.title)}</strong><small>${esc(step.detail)}</small></span><span class="evidence-step-status">${status}</span></li>`;}).join("");}
+  function bindEvidenceWorkflow(item){renderEvidenceWorkflowState(item);byId("reset-evidence-workflow")?.addEventListener("click",()=>{if(window.confirm("Reset the Evidence Workflow checklist for this Investigation?"))resetEvidenceWorkflow(item);});document.querySelector('[data-evidence-tool="semrush"]')?.addEventListener("click",()=>completeEvidenceStep(item,"open_semrush"));const finding=byId("finding-summary"),title=byId("work-title"),description=byId("work-description");[finding,title,description].forEach(field=>field?.addEventListener("input",()=>{if(String(finding?.value||"").trim()&&String(title?.value||"").trim()&&String(description?.value||"").trim())completeEvidenceStep(item,"review_findings");}));}
 
   function semrushStorageKey(clientCode){
     return `gcm-os-semrush-site-audit-url:${String(clientCode||"").trim().toUpperCase()}`;
@@ -366,6 +408,7 @@
     <div class="guided-box">
       <p class="guided-label">Current Next Step</p>
       <div class="guided-step">${esc(guidance?.current_next_step||item.recommendation||"Review the originating evidence and establish the next fact required.")}</div>
+      ${buildEvidenceWorkflow(item)}
       <div class="evidence-actions">
         <span class="evidence-actions-label">Evidence Actions</span>
         <div class="evidence-actions-row">${buildEvidenceActions(item)}</div>
@@ -393,6 +436,7 @@
     byId("create-button").addEventListener("click",()=>processInvestigation(item,"specific_work_required"));
     bindEvidenceCapture(item);
     bindSemrushLinkSetup(item);
+    bindEvidenceWorkflow(item);
   }
   function bindEvidenceCapture(item){
     const input=byId("investigation-evidence-file");
@@ -430,6 +474,7 @@
         preview.src=imageDataUrl;
         preview.classList.add("visible");
         analyze.disabled=false;
+        completeEvidenceStep(item,"capture_screenshot");
         status.className="status ready capture-status";
         status.textContent="Screenshot ready. Analyze the visible evidence.";
       };
@@ -471,6 +516,8 @@
         renderCapturedEvidence(captured);
         prefillInvestigationFields(item,captured);
 
+        completeEvidenceStep(item,"review_issues");
+        completeEvidenceStep(item,"analyze_evidence");
         status.className="status ready capture-status";
         status.textContent="Evidence extracted. Review the captured facts and the prefilled Investigation fields before saving.";
       }catch(error){
@@ -599,7 +646,7 @@
     if(!finding){message.className="status error";message.textContent="Record the evidence-supported Investigation Finding.";return;}
     if(outcome==="specific_work_required"&&(!title||!description)){message.className="status error";message.textContent="Specific Work Required and Specific Action are required.";return;}
     processing=true;message.className="status loading";message.textContent="Saving production decision…";
-    try{await post({action:"process-investigation",clientCode:item.clientCode,investigationId:Number(item.id),findingSummary:finding,outcome,workTitle:title,workDescription:description});message.className="status ready";message.textContent=outcome==="no_work_required"?"Investigation closed.":"Specific Work Item created.";await load();}catch(error){message.className="status error";message.textContent=error.message;}finally{processing=false;}
+    try{await post({action:"process-investigation",clientCode:item.clientCode,investigationId:Number(item.id),findingSummary:finding,outcome,workTitle:title,workDescription:description});completeEvidenceStep(item,"complete_investigation");if(outcome==="specific_work_required")completeEvidenceStep(item,"create_work");message.className="status ready";message.textContent=outcome==="no_work_required"?"Investigation closed.":"Specific Work Item created.";await load();}catch(error){message.className="status error";message.textContent=error.message;}finally{processing=false;}
   }
   function renderWorkItems(){
     if(!workItems.length){
