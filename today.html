@@ -1,28 +1,32 @@
+<!DOCTYPE html>
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
    Version: 3.0.0
    Status: Production Candidate
-   Change: Mission Control rebuilt around Decide, Do, Communicate and Prepare.
    Source: Production today.html 2.0.4
-   Sprint: Mission Control Road Test
-   Purpose: Remove non-actionable dashboard sections and strengthen the
-            operational flow: Decide → Do → Communicate → Prepare.
+   Sprint: Mission Control Operational Simplification
+   Purpose: Preserve verified Mission Control functionality while organizing
+            the page around four operating responsibilities:
+            Decide, Do, Communicate, and Prepare.
+
+   Production changes:
+   - Removed Opportunity & Gap Intelligence placeholder.
+   - Removed Agency Intelligence placeholder.
+   - Removed duplicate Operating Pulse card.
+   - Preserved authoritative Mission Control and Media Worker calls.
+   - Preserved Investigation, Work, Proof, Client, and navigation links.
+   - Added direct Prepare links for Calendar, Media, and Finance.
    ========================================================= -->
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <title>Mission Control | GCM OS</title>
-
-  <meta
-    name="description"
-    content="Agency Command Center for the Global Concepts Media Operating System."
-  />
-
-  <style>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mission Control | GCM OS</title>
+<meta content="Agency Command Center for the Global Concepts Media Operating System." name="description"/>
+<style>
     :root {
       --gcm-navy-950: #071426;
       --gcm-navy-900: #0b1d33;
@@ -1181,45 +1185,202 @@
       }
     }
   
-    .mission-control-deferred {
-      display:none !important;
+    .operating-section-label {
+      margin: 0 0 5px;
+      color: #a8c9ff;
+      font-size: 0.66rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
     }
 
+    .operating-section-label-dark {
+      color: var(--gcm-blue-600);
+    }
+
+    .prepare-actions {
+      display: grid;
+      gap: 10px;
+      padding: 18px;
+    }
+
+    .prepare-action {
+      display: block;
+      padding: 14px 15px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface-soft);
+      transition:
+        transform 160ms ease,
+        border-color 160ms ease,
+        background 160ms ease;
+    }
+
+    .prepare-action:hover,
+    .prepare-action:focus-visible {
+      border-color: #bccbdd;
+      background: #ffffff;
+      transform: translateY(-1px);
+      outline: none;
+    }
+
+    .prepare-action strong,
+    .prepare-action span {
+      display: block;
+    }
+
+    .prepare-action strong {
+      color: var(--gcm-navy-950);
+      font-size: 0.84rem;
+    }
+
+    .prepare-action span {
+      margin-top: 3px;
+      color: var(--text-muted);
+      font-size: 0.73rem;
+    }
 </style>
 </head>
-
 <body>
-  <a class="skip-link" href="#main-content">Skip to main content</a>
-
-  <div class="app-shell">
-    <aside data-gcm-shell-sidebar aria-label="Primary navigation"></aside>
-
-    <main class="main" id="main-content">
-      <div class="main-inner">
-        <header class="topbar">
-          <div>
-            <p class="eyebrow">Agency Command Center</p>
-            <h1 class="page-title" id="greeting">Good morning, Andy.</h1>
-            <p class="page-subtitle">
+<a class="skip-link" href="#main-content">Skip to main content</a>
+<div class="app-shell">
+<aside aria-label="Primary navigation" data-gcm-shell-sidebar=""></aside>
+<main class="main" id="main-content">
+<div class="main-inner">
+<header class="topbar">
+<div>
+<p class="eyebrow">Agency Command Center</p>
+<h1 class="page-title" id="greeting">Good morning, Andy.</h1>
+<p class="page-subtitle">
               See what matters, decide what happens next, and uncover opportunities the agency may otherwise miss.
             </p>
-          </div>
+</div>
+<div class="topbar-actions">
+<div aria-label="Current date" class="date-chip" id="current-date"></div>
+<div class="date-chip">GCM OS online</div>
+</div>
+</header>
+<section aria-labelledby="command-brief-title" class="command-brief">
+<div class="brief-grid">
+<div>
+<p class="brief-kicker">Today's Command Brief</p>
+<h2 class="brief-title" id="command-brief-title">Mission Control is checking the agency's live operating state.</h2>
+<p class="brief-copy" id="command-brief-copy">Client attention, open work, proof, media deadlines, and opportunity signals are being assembled into one decision view.</p>
+</div>
+<div class="brief-status">
+<div class="brief-status-item"><span>Client attention</span><strong id="brief-attention">Checking…</strong></div>
+<div class="brief-status-item"><span>Media deadlines</span><strong id="brief-media">Checking…</strong></div>
+<div class="brief-status-item"><span>Intelligence layer</span><strong>Framework active</strong></div>
+</div>
+</div>
+</section>
+<article aria-live="polite" class="panel media-check-panel" id="media-check-panel">
+<div class="media-check-body">
+<div class="media-check-copy">
+<strong id="media-check-title">Media needs attention</strong>
+<span id="media-check-detail">Open Media to review current traffic deadlines.</span>
+</div>
+<a class="button button-primary" href="media.html">Check Media</a>
+</div>
+</article>
+<section class="workspace-grid">
+<div class="stack">
+<article class="panel priority-card">
+<div class="panel-header">
+<div><p class="operating-section-label">DECIDE</p>
+<h2 class="panel-title">Highest-Value Next Action</h2>
+<p class="panel-description">The single action most likely to protect revenue, deliver client value, or advance growth.</p>
+</div>
+<a class="priority-badge" href="clients.html" id="priority-badge">Decision</a>
+</div>
+<div class="priority-body priority-brief-body">
+<div class="decision-client">
+<p class="priority-type" id="priority-type">Agency Review</p>
+<h2 class="priority-name" id="priority-name">Mission Control is loading the highest-value decision.</h2>
+</div>
+<div aria-label="Highest-value decision briefing" class="decision-grid">
+<section class="decision-field">
+<span class="decision-label">Who</span>
+<p class="decision-value" id="priority-who">Checking the responsible client and owner…</p>
+</section>
+<section class="decision-field">
+<span class="decision-label">What</span>
+<p class="decision-value" id="priority-what">Checking the specific operational issue…</p>
+</section>
+<section class="decision-field">
+<span class="decision-label">When</span>
+<p class="decision-value" id="priority-when">Checking priority and operating status…</p>
+</section>
+<section class="decision-field">
+<span class="decision-label">Why</span>
+<p class="decision-value" id="priority-why">Checking the recorded business reason…</p>
+</section>
+<section class="decision-field decision-field-wide">
+<span class="decision-label">Evidence</span>
+<p class="decision-value" id="priority-evidence">Checking source records and verified findings…</p>
+<p class="decision-value-secondary" id="priority-evidence-references"></p>
+</section>
+</div>
+<div class="decision-action-row">
+<div class="decision-action-copy">
+<span class="decision-label">Next Action</span>
+<p id="priority-action-guidance">Open the authoritative record before committing work.</p>
+</div>
+<div class="priority-actions">
+<a class="button button-primary" href="clients.html" id="priority-primary-action">Open Record</a>
+<a class="button button-secondary" href="clients.html" id="priority-secondary-action">Open Client</a>
+</div>
+</div>
+</div>
+</article>
 
-          <div class="topbar-actions">
 
-            <div class="date-chip" id="current-date" aria-label="Current date"></div>
 
-            <div class="date-chip">GCM OS online</div>
-          </div>
-        </header>
-
-        
-      </div>
-    </main>
-  </div>
-
-  <script src="shared/gcm-shell.js?v=1.0.1"></script>
-  <script>
+</div>
+<aside aria-label="Agency attention and operating queues" class="stack">
+<article class="panel">
+<div class="panel-header"><div><p class="operating-section-label operating-section-label-dark">DECIDE</p><h2 class="panel-title">Needs Your Attention</h2><p class="panel-description">Live client decisions that require review.</p></div></div>
+<ul class="attention-list" id="attention-list"></ul>
+</article>
+<article class="panel">
+<div class="panel-header"><div><p class="operating-section-label operating-section-label-dark">DO</p><h2 class="panel-title">Open Work</h2><p class="panel-description">Committed work. Highest priority appears first.</p></div><span class="priority-pill pill-info" id="task-progress">0 open</span></div>
+<ul class="task-list" id="task-list"></ul>
+<div class="panel-footer"><a class="text-link" href="work.html">Open full work queue →</a></div>
+</article>
+<article class="panel">
+<div class="panel-header"><div><p class="operating-section-label operating-section-label-dark">COMMUNICATE</p><h2 class="panel-title">Proof Waiting</h2><p class="panel-description">Completed work that has not yet become client-facing proof.</p></div></div>
+<ul class="proof-list" id="proof-list"></ul>
+<div class="panel-footer"><a class="text-link" href="proof.html">Build Proof of Work →</a></div>
+</article><article class="panel">
+<div class="panel-header">
+<div>
+<p class="operating-section-label operating-section-label-dark">PREPARE</p>
+<h2 class="panel-title">Upcoming Agency Obligations</h2>
+<p class="panel-description">Open the operating area that requires advance preparation.</p>
+</div>
+</div>
+<div class="prepare-actions">
+<a class="prepare-action" href="calendar.html">
+<strong>Calendar</strong>
+<span>Appointments, follow-ups, and deadlines</span>
+</a>
+<a class="prepare-action" href="media.html">
+<strong>Media</strong>
+<span>Flights, traffic, and confirmation deadlines</span>
+</a>
+<a class="prepare-action" href="finance.html">
+<strong>Finance</strong>
+<span>Invoices, payments, and outstanding balances</span>
+</a>
+</div>
+</article>
+</aside>
+</section>
+<div aria-hidden="true" hidden="" id="mission-control-state-values"><span id="prospect-count">0</span><span id="attention-count">0</span><span id="open-task-count">0</span><span id="proof-count">0</span><span id="media-pulse-count">0</span></div></div>
+</main>
+</div>
+<script src="shared/gcm-shell.js?v=1.0.1"></script>
+<script>
     (() => {
       "use strict";
 
@@ -1438,7 +1599,7 @@
 
         if (!missionControlLoaded || !mediaLoaded) {
           commandBriefTitle.textContent =
-            "Mission Control is preparing today's operational briefing.";
+            "Mission Control is assembling today's live operating brief.";
           commandBriefCopy.textContent =
             "Client decisions, Media deadlines, committed work, and proof are being checked before the OS recommends the first action.";
           return;
@@ -2077,11 +2238,11 @@
       });
 
       if (!window.GCMOShell) {
-        console.error("Today 2.0.5: shared/gcm-shell.js did not load.");
+        console.error("Today 3.0.0: shared/gcm-shell.js did not load.");
       } else {
         window.GCMOShell.mount({
           currentPage: "today",
-          statusText: "Agency Command Center operational · Today v2.0.5"
+          statusText: "Agency Command Center operational · Today v3.0.0"
         });
       }
 
