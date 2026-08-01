@@ -1,19 +1,21 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.6.2
+   Version: 1.7.0
    Status: Production Candidate
-   Source: Production work.html 1.6.1
-   Sprint: Guided Investigation Evidence Actions
-   Purpose: Preserve authoritative navigation and processing while placing
-            the external evidence tools required for the current investigation
-            one click away from the operator.
+   Source: Production work.html 1.6.2
+   Sprint: Investigation Screenshot Evidence Capture
+   Purpose: Preserve authoritative navigation, evidence actions, and production
+            processing while allowing the operator to capture a live platform
+            screenshot inside the active Investigation and use Workers AI to
+            prefill evidence-supported Investigation fields for human review.
 
    Production changes:
-   - Adds an Evidence Actions bar beneath Current Next Step.
-   - SEMrush Site Audit investigations receive an Open SEMrush button.
-   - Every investigation receives an Open Client Website button when available.
-   - External evidence opens in a new tab so the Investigation remains open.
+   - Adds Capture Evidence Screenshot inside Guided Investigation.
+   - Uses the existing analyze-client-communication Workers AI pipeline.
+   - Displays extracted evidence before any operational decision is saved.
+   - Prefills Investigation Finding, Specific Work Required, and Specific Action.
+   - Human approval remains required before production processing.
 
    Supported URLs:
    - work.html?investigation=36&client=PW
@@ -51,6 +53,20 @@
     .evidence-link:hover,.evidence-link:focus-visible{border-color:var(--blue);background:var(--blue-soft);outline:none}
     .evidence-link-primary{border-color:var(--blue);background:var(--blue);color:#fff}
     .evidence-link-primary:hover,.evidence-link-primary:focus-visible{background:var(--blue-dark);color:#fff}
+    .evidence-capture{margin-top:14px;padding:14px;border:1px solid #cbdcf4;border-radius:10px;background:#fff}
+    .evidence-capture h4{margin:0;color:var(--navy);font-size:.82rem}
+    .evidence-capture p{margin:5px 0 12px;color:var(--muted);font-size:.75rem;line-height:1.45}
+    .evidence-upload-row{display:flex;flex-wrap:wrap;gap:9px;align-items:center}
+    .evidence-file{position:absolute;inline-size:1px;block-size:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+    .evidence-preview{display:none;max-width:100%;max-height:330px;margin-top:12px;border:1px solid var(--border);border-radius:9px;object-fit:contain}
+    .evidence-preview.visible{display:block}
+    .captured-evidence{margin-top:14px;padding:14px;border:1px solid #cbe5d6;border-radius:10px;background:var(--green-soft)}
+    .captured-evidence[hidden]{display:none}
+    .captured-evidence h4{margin:0 0 8px;color:var(--green);font-size:.82rem}
+    .captured-evidence ul{margin:0;padding-left:18px}
+    .captured-evidence li{margin:4px 0;color:#214b37;font-size:.78rem;line-height:1.45}
+    .capture-status{margin-top:10px}
+
 .processing-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px}.work-card{padding:16px;border:1px solid var(--border);border-radius:10px;background:#fff;margin-bottom:12px}.target-banner{margin-bottom:16px;padding:13px;border:1px solid #aac7ed;border-radius:10px;background:var(--blue-soft);color:#205c9f;font-size:.82rem;font-weight:800}
     @media(max-width:1100px){.workspace-grid{grid-template-columns:1fr}.investigation-list{max-height:none}}@media(max-width:860px){.app-shell{display:block}main{padding:18px 14px 32px}.summary-grid{grid-template-columns:1fr}}
   </style>
@@ -62,7 +78,7 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Investigate one evidence step at a time. Create specific work only after the evidence proves what must be done.</p></div>
-        <span class="classification">Evidence Actions · v1.6.2</span>
+        <span class="classification">Evidence Capture · v1.7.0</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -82,14 +98,14 @@
 <script>
 (() => {
   "use strict";
-  const VERSION="1.6.2";
+  const VERSION="1.7.0";
   const WORKER_URL="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const params=new URLSearchParams(location.search);
   const requestedInvestigationId=positiveInt(params.get("investigation"));
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Guided evidence actions · Work v1.6.2"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Investigation evidence capture · Work v1.7.0"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),target:byId("target-banner")};
   let activeClients=[],investigations=[],workItems=[],selectedKey="",processing=false,processingWorkItem=false;
 
@@ -237,12 +253,227 @@
         <span class="evidence-actions-label">Evidence Actions</span>
         <div class="evidence-actions-row">${buildEvidenceActions(item)}</div>
       </div>
+      <div class="evidence-capture">
+        <h4>Capture Evidence Screenshot</h4>
+        <p>Upload the current SEMrush screen. The OS will extract visible evidence and prefill the Investigation fields for your review.</p>
+        <div class="evidence-upload-row">
+          <label class="button" for="investigation-evidence-file">Choose Screenshot</label>
+          <input class="evidence-file" id="investigation-evidence-file" type="file" accept="image/png,image/jpeg,image/webp" />
+          <button class="button primary" id="analyze-investigation-evidence" disabled>Analyze Evidence</button>
+        </div>
+        <img class="evidence-preview" id="investigation-evidence-preview" alt="Selected Investigation evidence screenshot preview" />
+        <div class="capture-status" id="investigation-evidence-status"></div>
+        <div class="captured-evidence" id="captured-evidence-panel" hidden>
+          <h4>Evidence Captured</h4>
+          <ul id="captured-evidence-list"></ul>
+        </div>
+      </div>
     </div>
     <section class="detail-section"><h3>Current Understanding</h3><p>${esc(guidance?.current_understanding||communication?.ai_summary||communication?.raw_content||item.description||"No summary stored.")}</p></section>
     <section class="detail-section"><h3>Final Resolution</h3><div class="processing-box"><label>Investigation Finding</label><textarea id="finding-summary">${esc(item.finding_summary||"")}</textarea><label>Specific Work Required</label><textarea id="work-title"></textarea><label>Specific Action</label><textarea id="work-description"></textarea><div class="processing-actions"><button id="close-button" class="button">Close — No Work Required</button><button id="create-button" class="button primary">Create Specific Work</button></div><div id="process-message"></div></div></section>`;
     byId("close-button").addEventListener("click",()=>processInvestigation(item,"no_work_required"));
     byId("create-button").addEventListener("click",()=>processInvestigation(item,"specific_work_required"));
+    bindEvidenceCapture(item);
   }
+  function bindEvidenceCapture(item){
+    const input=byId("investigation-evidence-file");
+    const preview=byId("investigation-evidence-preview");
+    const analyze=byId("analyze-investigation-evidence");
+    const status=byId("investigation-evidence-status");
+    let imageDataUrl="";
+    let fileName="investigation-evidence";
+
+    input.addEventListener("change",event=>{
+      const [file]=event.target.files||[];
+      if(!file)return;
+
+      const allowed=new Set(["image/png","image/jpeg","image/webp"]);
+      if(!allowed.has(file.type)){
+        status.className="status error capture-status";
+        status.textContent="Choose a PNG, JPG, JPEG, or WEBP screenshot.";
+        input.value="";
+        analyze.disabled=true;
+        return;
+      }
+
+      if(file.size>10*1024*1024){
+        status.className="status error capture-status";
+        status.textContent="The screenshot is larger than 10 MB.";
+        input.value="";
+        analyze.disabled=true;
+        return;
+      }
+
+      const reader=new FileReader();
+      reader.onload=()=>{
+        imageDataUrl=String(reader.result||"");
+        fileName=file.name||"investigation-evidence";
+        preview.src=imageDataUrl;
+        preview.classList.add("visible");
+        analyze.disabled=false;
+        status.className="status ready capture-status";
+        status.textContent="Screenshot ready. Analyze the visible evidence.";
+      };
+      reader.onerror=()=>{
+        status.className="status error capture-status";
+        status.textContent="The screenshot could not be read.";
+      };
+      reader.readAsDataURL(file);
+    });
+
+    analyze.addEventListener("click",async()=>{
+      if(!imageDataUrl)return;
+      analyze.disabled=true;
+      analyze.textContent="Analyzing…";
+      status.className="status loading capture-status";
+      status.textContent="Workers AI is reading the screenshot and extracting evidence…";
+
+      try{
+        const context=[
+          `Active client: ${item.clientName}`,
+          `Client code: ${item.clientCode}`,
+          `Investigation #${item.id}: ${item.title||"Investigation"}`,
+          `Investigation objective: ${item.description||""}`,
+          "This screenshot is investigation evidence, not a new inbound communication.",
+          "Extract visible facts, metrics, issue names, issue counts, affected-page counts, and platform explanations."
+        ].join("\n");
+
+        const payload=await post({
+          action:"analyze-client-communication",
+          client:item.clientName,
+          clientId:item.clientCode,
+          sourceText:context,
+          image:imageDataUrl,
+          fileName,
+          contractVersion:"1.0"
+        });
+
+        const captured=normalizeCapturedEvidence(payload);
+        renderCapturedEvidence(captured);
+        prefillInvestigationFields(item,captured);
+
+        status.className="status ready capture-status";
+        status.textContent="Evidence extracted. Review the captured facts and the prefilled Investigation fields before saving.";
+      }catch(error){
+        console.error(error);
+        status.className="status error capture-status";
+        status.textContent=error.message||"The evidence screenshot could not be analyzed.";
+      }finally{
+        analyze.disabled=false;
+        analyze.textContent="Analyze Evidence";
+      }
+    });
+  }
+
+  function normalizeCapturedEvidence(payload){
+    const evidence=payload?.evidence||payload?.analysis?.evidence||{};
+    const analysis=payload?.analysis||payload?.operationalDecision||{};
+    const facts=Array.isArray(evidence.visibleFacts)?evidence.visibleFacts.filter(Boolean):[];
+    const metrics=Array.isArray(evidence.visibleMetrics)?evidence.visibleMetrics.filter(Boolean):[];
+    const summary=String(
+      analysis.operationalSummary ||
+      analysis.summary ||
+      payload?.consultantSummary?.summary ||
+      ""
+    ).trim();
+
+    const combined=[...facts,...metrics];
+    const unique=[...new Set(combined.map(value=>String(value).trim()).filter(Boolean))];
+
+    return {
+      facts:unique,
+      summary,
+      source:String(evidence.visibleSource||analysis.source||"Screenshot evidence").trim(),
+      subject:String(evidence.visibleSubject||analysis.title||"Investigation evidence").trim(),
+      confidence:String(evidence.confidence||analysis.classificationConfidence||"").trim(),
+      recommendation:String(
+        analysis.recommendedAction ||
+        payload?.businessMeaning?.recommendedAction ||
+        ""
+      ).trim()
+    };
+  }
+
+  function renderCapturedEvidence(captured){
+    const panel=byId("captured-evidence-panel");
+    const list=byId("captured-evidence-list");
+    const items=[
+      captured.source&&`Source: ${captured.source}`,
+      captured.subject&&`Screen/report: ${captured.subject}`,
+      ...captured.facts,
+      captured.confidence&&`Extraction confidence: ${captured.confidence}`
+    ].filter(Boolean);
+
+    list.innerHTML=items.length
+      ? items.map(item=>`<li>${esc(item)}</li>`).join("")
+      : "<li>No structured evidence was extracted. Review the screenshot manually.</li>";
+
+    panel.hidden=false;
+  }
+
+  function prefillInvestigationFields(item,captured){
+    const finding=byId("finding-summary");
+    const workTitle=byId("work-title");
+    const workDescription=byId("work-description");
+
+    const issueFacts=captured.facts.filter(value=>
+      /error|warning|issue|page|url|sitemap|canonical|redirect|4xx|broken|meta description|javascript|css/i.test(value)
+    );
+
+    const evidenceText=(issueFacts.length?issueFacts:captured.facts).slice(0,12).join("; ");
+    const findingText=[
+      captured.summary,
+      evidenceText&&`Captured evidence: ${evidenceText}`
+    ].filter(Boolean).join("\n\n");
+
+    if(!finding.value.trim()){
+      finding.value=findingText||"Screenshot evidence was captured. Review the extracted facts and record the supported finding.";
+    }
+
+    if(!workTitle.value.trim()){
+      workTitle.value=buildSpecificWorkTitle(item,captured);
+    }
+
+    if(!workDescription.value.trim()){
+      workDescription.value=buildSpecificAction(item,captured);
+    }
+  }
+
+  function buildSpecificWorkTitle(item,captured){
+    const facts=captured.facts.join(" ").toLowerCase();
+
+    if(facts.includes("sitemap")){
+      return "Review and correct the verified sitemap.xml issues identified in the SEMrush Site Audit.";
+    }
+    if(facts.includes("4xx")){
+      return "Review and correct the verified 4XX pages identified in the SEMrush Site Audit.";
+    }
+    if(facts.includes("canonical")){
+      return "Review and correct the verified canonical URL issues identified in the SEMrush Site Audit.";
+    }
+    if(facts.includes("broken internal link")||facts.includes("internal link is broken")){
+      return "Review and correct the verified broken internal link identified in the SEMrush Site Audit.";
+    }
+
+    return `Review and correct the highest-priority verified issue from Investigation #${item.id}.`;
+  }
+
+  function buildSpecificAction(item,captured){
+    const facts=captured.facts.join(" ").toLowerCase();
+
+    if(facts.includes("sitemap")){
+      return "Open the SEMrush sitemap.xml issue details, capture the affected URLs and technical explanation, verify each listed URL against the live sitemap and website, correct only the evidence-supported sitemap conditions, deploy the changes, rerun the Site Audit, and record the verified result.";
+    }
+    if(facts.includes("4xx")){
+      return "Open the SEMrush 4XX issue details, capture each affected URL and its referring source, verify the condition on the live website, repair or redirect the evidence-supported broken pages, rerun the Site Audit, and record the verified result.";
+    }
+    if(facts.includes("canonical")){
+      return "Open the SEMrush canonical issue details, capture the affected URLs and technical explanation, verify the canonical implementation on the live pages, correct only the evidence-supported canonical conditions, rerun the Site Audit, and record the verified result.";
+    }
+
+    return "Open the selected SEMrush issue details, capture the affected URLs, issue count, technical explanation, and root cause; verify the condition on the live website; complete only the evidence-supported corrective work; rerun the Site Audit; and record the verified result.";
+  }
+
   async function processInvestigation(item,outcome){
     if(processing)return;
     const finding=byId("finding-summary").value.trim(),title=byId("work-title").value.trim(),description=byId("work-description").value.trim(),message=byId("process-message");
