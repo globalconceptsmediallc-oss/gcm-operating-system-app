@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.8.6
+   Version: 1.8.7
    Status: Production Candidate
    Source: Production work.html 1.8.0
    Sprint: Task-Specific SEMrush Issues Navigation
@@ -125,7 +125,7 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Investigate one evidence step at a time. Create specific work only after the evidence proves what must be done.</p></div>
-        <span class="classification">WWPOWD Progressive Investigation · v1.8.6</span>
+        <span class="classification">WWPOWD Progressive Investigation · v1.8.7</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -145,14 +145,14 @@
 <script>
 (() => {
   "use strict";
-  const VERSION="1.8.6";
+  const VERSION="1.8.7";
   const WORKER_URL="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const params=new URLSearchParams(location.search);
   const requestedInvestigationId=positiveInt(params.get("investigation"));
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"WWPOWD progressive investigation · Work v1.8.6"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"WWPOWD progressive investigation · Work v1.8.7"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),target:byId("target-banner")};
   let activeClients=[],investigations=[],workItems=[],selectedKey="",processing=false,processingWorkItem=false;
 
@@ -664,7 +664,7 @@
 
         const captured=normalizeCapturedEvidence(payload);
         const decision=buildNextStepDecision(captured,item);
-        renderCapturedEvidence(captured);
+        renderCapturedEvidence(captured,item);
         prefillInvestigationFields(item,captured);
         appendEvidenceHistory(item,captured,decision);
 
@@ -740,7 +740,7 @@
     return isInstructionEcho(text)?"Screenshot evidence":text;
   }
 
-  function renderCapturedEvidence(captured){
+  function renderCapturedEvidence(captured,item){
     const panel=byId("captured-evidence-panel");
     const list=byId("captured-evidence-list");
     const decision=buildNextStepDecision(captured,item);
