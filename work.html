@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.8.4
+   Version: 1.8.5
    Status: Production Candidate
    Source: Production work.html 1.8.0
    Sprint: Task-Specific SEMrush Issues Navigation
@@ -74,6 +74,16 @@
     .captured-evidence h4{margin:0 0 8px;color:var(--green);font-size:.82rem}
     .captured-evidence ul{margin:0;padding-left:18px}
     .captured-evidence li{margin:4px 0;color:#214b37;font-size:.78rem;line-height:1.45}
+    .evidence-history{margin-top:14px;padding:14px;border:1px solid var(--border);border-radius:10px;background:#fff}
+    .evidence-history[hidden]{display:none}
+    .evidence-history-header{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:10px}
+    .evidence-history-header h4{margin:0;color:var(--navy);font-size:.82rem}
+    .evidence-history-header span{color:var(--muted);font-size:.7rem;font-weight:800}
+    .evidence-history-list{display:grid;gap:9px}
+    .evidence-history-step{padding:11px;border:1px solid var(--border);border-radius:9px;background:#f8fafc}
+    .evidence-history-step strong{display:block;color:var(--navy);font-size:.76rem}
+    .evidence-history-step p{margin:5px 0 0;color:var(--text);font-size:.74rem;line-height:1.45;white-space:pre-wrap}
+    .evidence-history-step .next{color:var(--blue);font-weight:800}
     .capture-status{margin-top:10px}
     .tool-link-setup{margin-top:12px;padding:13px;border:1px dashed #aac7ed;border-radius:9px;background:#f8fbff}
     .tool-link-setup[hidden]{display:none}
@@ -115,7 +125,7 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Investigate one evidence step at a time. Create specific work only after the evidence proves what must be done.</p></div>
-        <span class="classification">WWPOWD Next-Step Engine · v1.8.4</span>
+        <span class="classification">WWPOWD Evidence Loop · v1.8.5</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -135,14 +145,14 @@
 <script>
 (() => {
   "use strict";
-  const VERSION="1.8.4";
+  const VERSION="1.8.5";
   const WORKER_URL="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const params=new URLSearchParams(location.search);
   const requestedInvestigationId=positiveInt(params.get("investigation"));
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"WWPOWD next-step engine · Work v1.8.4"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"WWPOWD evidence loop · Work v1.8.5"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),target:byId("target-banner")};
   let activeClients=[],investigations=[],workItems=[],selectedKey="",processing=false,processingWorkItem=false;
 
@@ -454,8 +464,8 @@
         ${buildSemrushLinkSetup(item)}
       </div>
       <div class="evidence-capture">
-        <h4>Capture Evidence Screenshot</h4>
-        <p>Upload the current SEMrush screen. The OS will extract visible evidence and prefill the Investigation fields for your review.</p>
+        <h4>Capture the Next Evidence Screenshot</h4>
+        <p>Each screenshot advances the Investigation by one step. Analyze it, follow the recommended next action, then return with the next screenshot. Completed evidence steps are locked below.</p>
         <div class="evidence-upload-row">
           <label class="button" for="investigation-evidence-file">Choose Screenshot</label>
           <input class="evidence-file" id="investigation-evidence-file" type="file" accept="image/png,image/jpeg,image/webp" />
@@ -464,9 +474,16 @@
         <img class="evidence-preview" id="investigation-evidence-preview" alt="Selected Investigation evidence screenshot preview" />
         <div class="capture-status" id="investigation-evidence-status"></div>
         <div class="captured-evidence" id="captured-evidence-panel" hidden>
-          <h4>Evidence Captured</h4>
+          <h4>Current Evidence Step</h4>
           <ul id="captured-evidence-list"></ul>
         </div>
+        <section class="evidence-history" id="evidence-history" hidden>
+          <div class="evidence-history-header">
+            <h4>Locked Investigation Evidence</h4>
+            <span id="evidence-history-count">0 steps</span>
+          </div>
+          <div class="evidence-history-list" id="evidence-history-list"></div>
+        </section>
       </div>
     </div>
     <section class="detail-section"><h3>Current Understanding</h3><p>${esc(guidance?.current_understanding||communication?.ai_summary||communication?.raw_content||item.description||"No summary stored.")}</p></section>
@@ -476,7 +493,69 @@
     bindEvidenceCapture(item);
     bindSemrushLinkSetup(item);
     bindEvidenceWorkflow(item);
+    renderEvidenceHistory(item);
   }
+  function evidenceHistoryKey(item){
+    return `gcm-os-investigation-evidence:${String(item.clientCode||"").toUpperCase()}:${Number(item.id)}`;
+  }
+
+  function getEvidenceHistory(item){
+    try{
+      const raw=localStorage.getItem(evidenceHistoryKey(item));
+      const parsed=raw?JSON.parse(raw):[];
+      return Array.isArray(parsed)?parsed:[];
+    }catch(error){
+      console.warn(error);
+      return [];
+    }
+  }
+
+  function saveEvidenceHistory(item,history){
+    try{localStorage.setItem(evidenceHistoryKey(item),JSON.stringify(history));}
+    catch(error){console.warn(error);}
+  }
+
+  function appendEvidenceHistory(item,captured,decision){
+    const history=getEvidenceHistory(item);
+    history.push({
+      step:history.length+1,
+      capturedAt:new Date().toISOString(),
+      screen:captured.subject||"Screenshot evidence",
+      facts:captured.facts.slice(0,20),
+      finding:buildInvestigationFinding(item,captured,decision),
+      nextAction:buildSpecificAction(item,captured,decision)
+    });
+    saveEvidenceHistory(item,history);
+    renderEvidenceHistory(item);
+  }
+
+  function renderEvidenceHistory(item){
+    const panel=byId("evidence-history");
+    const list=byId("evidence-history-list");
+    const count=byId("evidence-history-count");
+    if(!panel||!list||!count)return;
+    const history=getEvidenceHistory(item);
+    panel.hidden=!history.length;
+    count.textContent=`${history.length} locked step${history.length===1?"":"s"}`;
+    list.innerHTML=history.map(entry=>`
+      <article class="evidence-history-step">
+        <strong>Step ${esc(entry.step)} · ${esc(entry.screen)}</strong>
+        <p>${esc(entry.finding)}</p>
+        <p class="next">Next: ${esc(entry.nextAction)}</p>
+      </article>
+    `).join("");
+  }
+
+  function resetEvidenceCaptureForNextStep(input,preview,analyze,status){
+    input.value="";
+    preview.removeAttribute("src");
+    preview.classList.remove("visible");
+    analyze.disabled=true;
+    analyze.textContent="Analyze Evidence";
+    status.className="status ready capture-status";
+    status.textContent="Evidence step locked. Follow the next action, then choose the next screenshot.";
+  }
+
   function bindEvidenceCapture(item){
     const input=byId("investigation-evidence-file");
     const preview=byId("investigation-evidence-preview");
@@ -484,6 +563,7 @@
     const status=byId("investigation-evidence-status");
     let imageDataUrl="";
     let fileName="investigation-evidence";
+    let analysisLocked=false;
 
     input.addEventListener("change",event=>{
       const [file]=event.target.files||[];
@@ -508,6 +588,7 @@
 
       const reader=new FileReader();
       reader.onload=()=>{
+        analysisLocked=false;
         imageDataUrl=String(reader.result||"");
         fileName=file.name||"investigation-evidence";
         preview.src=imageDataUrl;
@@ -528,9 +609,15 @@
       event.preventDefault();
       event.stopPropagation();
 
+      if(analysisLocked){
+        status.className="status error capture-status";
+        status.textContent="This screenshot is already locked. Choose the next screenshot.";
+        return;
+      }
+
       if(!imageDataUrl){
         status.className="status error capture-status";
-        status.textContent="No screenshot is loaded. Choose the screenshot again.";
+        status.textContent="No screenshot is loaded. Choose the next screenshot.";
         return;
       }
 
@@ -565,20 +652,25 @@
         });
 
         const captured=normalizeCapturedEvidence(payload);
+        const decision=buildNextStepDecision(captured);
         renderCapturedEvidence(captured);
         prefillInvestigationFields(item,captured);
+        appendEvidenceHistory(item,captured,decision);
 
+        analysisLocked=true;
+        imageDataUrl="";
         completeEvidenceStep(item,"review_issues");
         completeEvidenceStep(item,"analyze_evidence");
-        status.className="status ready capture-status";
-        status.textContent="Evidence extracted. Review the captured facts and the prefilled Investigation fields before saving.";
+        resetEvidenceCaptureForNextStep(input,preview,analyze,status);
       }catch(error){
         console.error(error);
         status.className="status error capture-status";
         status.textContent=error.message||"The evidence screenshot could not be analyzed.";
       }finally{
-        analyze.disabled=false;
-        analyze.textContent="Analyze Evidence";
+        if(!analysisLocked){
+          analyze.disabled=!imageDataUrl;
+          analyze.textContent="Analyze Evidence";
+        }
       }
     });
   }
@@ -662,7 +754,11 @@
     const workDescription=byId("work-description");
     const decision=buildNextStepDecision(captured);
 
-    finding.value=buildInvestigationFinding(item,captured,decision);
+    const history=getEvidenceHistory(item);
+    const currentFinding=buildInvestigationFinding(item,captured,decision);
+    const priorFindings=history.map(entry=>`Step ${entry.step}: ${entry.finding}`).join("\n\n");
+
+    finding.value=[priorFindings,currentFinding].filter(Boolean).join("\n\n");
     workTitle.value=buildSpecificWorkTitle(item,captured,decision);
     workDescription.value=buildSpecificAction(item,captured,decision);
   }
