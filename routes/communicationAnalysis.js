@@ -1,9 +1,9 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.7.1
-   Source: Production route 7.7.0
-   Status: Production Candidate — Modular Report Recognition
+   Version: 7.7.2
+   Source: Production route 7.7.1
+   Status: Production Candidate — Fast Two-Call Communication Analysis
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
             independent report-signature recognition, specialized extraction,
@@ -11,7 +11,8 @@
             WWPOWD interpretation, proof-readiness evaluation,
             business meaning, operational routing, consultant summary,
             shared WWPOWD operational evidence extraction,
-            and modular report-signature recognition.
+            modular report-signature recognition, and a fast screenshot path
+            limited to one vision extraction call plus one reasoning call.
    ========================================================= */
 
 import {
@@ -96,16 +97,17 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
   let consultantSummary = null;
   let operationalEvidence = null;
 
-  /* Stage 0: shared operational evidence extraction.
-     This additive integration preserves the complete v7.6.0 communication
-     extraction pipeline while allowing the new evidence-only engine to read
-     the full screenshot/text input. Its normalized facts are merged into the
-     legacy visibleEvidence contract before report recognition and WWPOWD. */
-  {
+  /* Stage 0 + Stage 1: fast evidence path.
+     Screenshot and hybrid inputs use one shared vision extraction call only.
+     Text-only inputs use deterministic text extraction and make no evidence AI
+     call. The former multi-pass vision/recovery/specialized pipeline remains in
+     this file temporarily for rollback safety, but is not invoked by this path.
+     One later reasoning call is retained for business meaning. */
+  if (imageDataUrl) {
     const stageStartedAt = Date.now();
     const operationalEvidenceResult = await extractOperationalEvidence({
       env,
-      imageDataUrl: imageDataUrl || null,
+      imageDataUrl,
       sourceText: sourceText || null,
       client: client || null,
       clientId: clientId || null,
@@ -113,10 +115,26 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
       context: clean(body?.operationalContext || body?.context) || null,
       visionModel: COMMUNICATION_VISION_MODEL,
       reasoningModel: COMMUNICATION_REASONING_MODEL,
-      timeoutMs: 45000
+      timeoutMs: 35000,
+      allowRecovery: false
     });
 
     operationalEvidence = operationalEvidenceResult?.evidence || null;
+    visibleEvidence = operationalEvidenceToVisibleEvidence(operationalEvidence);
+
+    if (sourceText) {
+      const deterministicTextEvidence = deterministicTextEvidenceExtraction(sourceText);
+      visibleEvidence = mergeVisibleEvidence(deterministicTextEvidence, visibleEvidence);
+
+      const anchoredSubject = clean(deterministicTextEvidence?.visibleSubject);
+      const anchoredSource = clean(deterministicTextEvidence?.visibleSource);
+      if (anchoredSubject && anchoredSubject !== "Unknown") {
+        visibleEvidence.visibleSubject = anchoredSubject;
+      }
+      if (anchoredSource && anchoredSource !== "Unknown") {
+        visibleEvidence.visibleSource = anchoredSource;
+      }
+    }
 
     if (operationalEvidenceResult?.error) {
       errors.push(buildOperationalError({
@@ -135,124 +153,32 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
           ? STAGE_STATUS.PARTIAL
           : STAGE_STATUS.FAILED,
       engine: `operational-evidence-v${OPERATIONAL_EVIDENCE_VERSION}`,
-      model: imageDataUrl ? COMMUNICATION_VISION_MODEL : COMMUNICATION_REASONING_MODEL,
+      model: COMMUNICATION_VISION_MODEL,
       startedAt: stageStartedAt,
       confidence: Number(operationalEvidence?.confidence || 0),
-      retryCount: Math.max(
-        0,
-        Number(operationalEvidenceResult?.diagnostics?.attempts?.length || 0) - 1
-      ),
-      retryStatus: operationalEvidenceResult?.ok
-        ? "succeeded"
-        : "partial_or_failed",
+      retryCount: 0,
+      retryStatus: operationalEvidenceResult?.ok ? "single_pass_succeeded" : "single_pass_partial",
       rawAiError: operationalEvidenceResult?.error?.message || null,
       fallbackUsed: Boolean(!operationalEvidenceResult?.ok),
       data: operationalEvidence
     }));
-  }
-
-  /* Stage 1 + 2: extract evidence without operational reasoning.
-     When both pasted text and a screenshot are supplied, use BOTH sources.
-     Pasted text preserves dependable readable text while vision contributes
-     screenshot-only evidence such as tables, metric cards, rankings, and
-     movement values. Neither source is allowed to silently replace the other. */
-  if (sourceText && imageDataUrl) {
-    const [textExtractionResult, visionExtractionResult] = await Promise.all([
-      executeTextExtractionStage({
-        sourceText,
-        client,
-        clientId,
-        fileName,
-        env,
-        requestId
-      }),
-      executeVisionExtractionStage({
-        imageDataUrl,
-        sourceText,
-        client,
-        clientId,
-        fileName,
-        env,
-        requestId
-      })
-    ]);
-
-    stages.push(textExtractionResult.stage, visionExtractionResult.stage);
-
-    if (textExtractionResult.error) errors.push(textExtractionResult.error);
-    if (visionExtractionResult.error) errors.push(visionExtractionResult.error);
-    reportRecognition = visionExtractionResult.reportRecognition || null;
-
-    /*
-     * Hybrid evidence rule:
-     * pasted email text anchors the report identity while vision contributes
-     * screenshot-only evidence such as tables, rankings, metrics, and changes.
-     * For a recognized Position Tracking email, remove obvious backlink-only
-     * hallucinations before merging.
-     */
-    const textClassification = deterministicNotificationClassification(
-      textExtractionResult.data
-    );
-
-    const visionEvidenceForMerge =
-      textClassification.notificationType === "position_tracking"
-        ? sanitizePositionTrackingVisionEvidence(visionExtractionResult.data)
-        : visionExtractionResult.data;
-
-    visibleEvidence = mergeVisibleEvidence(
-      textExtractionResult.data,
-      visionEvidenceForMerge
-    );
-
-    const anchoredSubject = clean(textExtractionResult.data?.visibleSubject);
-    const anchoredSource = clean(textExtractionResult.data?.visibleSource);
-
-    if (anchoredSubject && anchoredSubject !== "Unknown") {
-      visibleEvidence.visibleSubject = anchoredSubject;
-    }
-
-    if (anchoredSource && anchoredSource !== "Unknown") {
-      visibleEvidence.visibleSource = anchoredSource;
-    }
-  } else if (sourceText) {
-    const extractionResult = await executeTextExtractionStage({
-      sourceText,
-      client,
-      clientId,
-      fileName,
-      env,
-      requestId
-    });
-    stages.push(extractionResult.stage);
-
-    if (extractionResult.error) errors.push(extractionResult.error);
-    visibleEvidence = extractionResult.data;
-    reportRecognition = recognizeReportSignatureFromEvidence(visibleEvidence);
   } else {
-    const extractionResult = await executeVisionExtractionStage({
-      imageDataUrl,
-      client,
-      clientId,
-      fileName,
-      env,
-      requestId
-    });
-    stages.push(extractionResult.stage);
+    const stageStartedAt = Date.now();
+    visibleEvidence = deterministicTextEvidenceExtraction(sourceText);
+    reportRecognition = recognizeReportSignatureFromEvidence(visibleEvidence);
 
-    if (extractionResult.error) errors.push(extractionResult.error);
-    visibleEvidence = extractionResult.data;
-    reportRecognition = extractionResult.reportRecognition || null;
-  }
-
-  /* Stage 0B: merge normalized operational facts into the established
-     visibleEvidence contract. Existing evidence remains authoritative for
-     source identity and exact communication text; the shared engine enriches
-     metrics, trends, conditions, and candidate issue groups. */
-  if (operationalEvidence) {
-    visibleEvidence = mergeVisibleEvidence(
-      visibleEvidence,
-      operationalEvidenceToVisibleEvidence(operationalEvidence)
-    );
+    stages.push(createStageResult({
+      stageName: "evidence_extraction",
+      status: STAGE_STATUS.SUCCESS,
+      engine: "communication-text-evidence-deterministic-fast",
+      model: "deterministic",
+      startedAt: stageStartedAt,
+      confidence: confidenceToNumber(visibleEvidence.confidence),
+      retryCount: 0,
+      retryStatus: "deterministic_only",
+      fallbackUsed: false,
+      data: visibleEvidence
+    }));
   }
 
   /* Stage 1A: authoritative report-family recognition.
@@ -505,7 +431,10 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
       stageCount: stages.length,
       failedStageCount: failedStages.length,
       fallbackStageCount: fallbackStages.length,
-      partialStageCount: partialStages.length
+      partialStageCount: partialStages.length,
+      performanceMode: imageDataUrl ? "fast_two_call" : "fast_text_deterministic_plus_reasoning",
+      evidenceAiCallBudget: imageDataUrl ? 1 : 0,
+      reasoningAiCallBudget: 1
     }
   }, 200);
 }
@@ -574,7 +503,8 @@ function operationalEvidenceToVisibleEvidence(operationalEvidence) {
 
   const limitations = (Array.isArray(evidence.limitations) ? evidence.limitations : [])
     .map(value => clean(value))
-    .filter(Boolean);
+    .filter(Boolean)
+    .filter(value => !/did not return valid json|focused recovery|ai extraction attempt failed/i.test(value));
 
   return normalizeVisibleEvidence({
     visibleSource: clean(evidence.sourcePlatform) || "Unknown",
