@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.8.3
+   Version: 1.8.4
    Status: Production Candidate
    Source: Production work.html 1.8.0
    Sprint: Task-Specific SEMrush Issues Navigation
@@ -115,7 +115,7 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Investigate one evidence step at a time. Create specific work only after the evidence proves what must be done.</p></div>
-        <span class="classification">Evidence Contract Repair · v1.8.3</span>
+        <span class="classification">WWPOWD Next-Step Engine · v1.8.4</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -135,14 +135,14 @@
 <script>
 (() => {
   "use strict";
-  const VERSION="1.8.3";
+  const VERSION="1.8.4";
   const WORKER_URL="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const params=new URLSearchParams(location.search);
   const requestedInvestigationId=positiveInt(params.get("investigation"));
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Evidence contract repair · Work v1.8.3"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"WWPOWD next-step engine · Work v1.8.4"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),target:byId("target-banner")};
   let activeClients=[],investigations=[],workItems=[],selectedKey="",processing=false,processingWorkItem=false;
 
@@ -547,7 +547,11 @@
           `Investigation #${item.id}: ${item.title||"Investigation"}`,
           `Investigation objective: ${item.description||""}`,
           "This screenshot is investigation evidence, not a new inbound communication.",
-          "Extract visible facts, metrics, issue names, issue counts, affected-page counts, and platform explanations."
+          "Read the screenshot as a technical consultant deciding the next investigation step.",
+          "For every visible SEMrush issue row, return the exact issue name paired with its affected-page or issue count.",
+          "Preserve severity groups: Errors, Warnings, and Notices.",
+          "Do not repeat this instruction text, client context, or investigation objective as extracted evidence.",
+          "The operational question is: What single issue should we investigate next, why was it chosen, and what evidence must be captured before corrective work is created?"
         ].join("\n");
 
         const payload=await post({
@@ -582,8 +586,18 @@
   function normalizeCapturedEvidence(payload){
     const evidence=payload?.evidence||payload?.analysis?.evidence||{};
     const analysis=payload?.analysis||payload?.operationalDecision||{};
-    const facts=Array.isArray(evidence.visibleFacts)?evidence.visibleFacts.filter(Boolean):[];
-    const metrics=Array.isArray(evidence.visibleMetrics)?evidence.visibleMetrics.filter(Boolean):[];
+    const rawFacts=[
+      ...(Array.isArray(evidence.visibleFacts)?evidence.visibleFacts:[]),
+      ...(Array.isArray(evidence.visibleMetrics)?evidence.visibleMetrics:[])
+    ];
+
+    const facts=[...new Set(
+      rawFacts
+        .map(value=>String(value||"").trim())
+        .filter(Boolean)
+        .filter(value=>!isInstructionEcho(value))
+    )];
+
     const summary=String(
       analysis.operationalSummary ||
       analysis.summary ||
@@ -591,14 +605,11 @@
       ""
     ).trim();
 
-    const combined=[...facts,...metrics];
-    const unique=[...new Set(combined.map(value=>String(value).trim()).filter(Boolean))];
-
     return {
-      facts:unique,
-      summary,
-      source:String(evidence.visibleSource||analysis.source||"Screenshot evidence").trim(),
-      subject:String(evidence.visibleSubject||analysis.title||"Investigation evidence").trim(),
+      facts,
+      summary:isInstructionEcho(summary)?"":summary,
+      source:cleanEvidenceLabel(evidence.visibleSource||analysis.source||"Screenshot evidence"),
+      subject:cleanEvidenceLabel(evidence.visibleSubject||analysis.title||"SEMrush Site Audit"),
       confidence:String(evidence.confidence||analysis.classificationConfidence||"").trim(),
       recommendation:String(
         analysis.recommendedAction ||
@@ -608,19 +619,39 @@
     };
   }
 
+  function isInstructionEcho(value){
+    const text=String(value||"").toLowerCase();
+    return [
+      "active client:",
+      "client code:",
+      "investigation objective:",
+      "this screenshot is investigation evidence",
+      "extract visible facts",
+      "not a new inbound communication",
+      "operational question is:"
+    ].some(fragment=>text.includes(fragment));
+  }
+
+  function cleanEvidenceLabel(value){
+    const text=String(value||"").trim();
+    return isInstructionEcho(text)?"Screenshot evidence":text;
+  }
+
   function renderCapturedEvidence(captured){
     const panel=byId("captured-evidence-panel");
     const list=byId("captured-evidence-list");
+    const decision=buildNextStepDecision(captured);
     const items=[
-      captured.source&&`Source: ${captured.source}`,
       captured.subject&&`Screen/report: ${captured.subject}`,
       ...captured.facts,
+      decision.issueName&&`Recommended next issue: ${decision.issueName}${decision.count?` — ${decision.count} affected`:``}`,
+      decision.reason&&`Why chosen: ${decision.reason}`,
       captured.confidence&&`Extraction confidence: ${captured.confidence}`
     ].filter(Boolean);
 
     list.innerHTML=items.length
       ? items.map(item=>`<li>${esc(item)}</li>`).join("")
-      : "<li>No structured evidence was extracted. Review the screenshot manually.</li>";
+      : "<li>No structured issue rows were extracted. Review the screenshot manually.</li>";
 
     panel.hidden=false;
   }
@@ -629,63 +660,215 @@
     const finding=byId("finding-summary");
     const workTitle=byId("work-title");
     const workDescription=byId("work-description");
+    const decision=buildNextStepDecision(captured);
 
-    const issueFacts=captured.facts.filter(value=>
-      /error|warning|issue|page|url|sitemap|canonical|redirect|4xx|broken|meta description|javascript|css/i.test(value)
-    );
-
-    const evidenceText=(issueFacts.length?issueFacts:captured.facts).slice(0,12).join("; ");
-    const findingText=[
-      captured.summary,
-      evidenceText&&`Captured evidence: ${evidenceText}`
-    ].filter(Boolean).join("\n\n");
-
-    if(!finding.value.trim()){
-      finding.value=findingText||"Screenshot evidence was captured. Review the extracted facts and record the supported finding.";
-    }
-
-    if(!workTitle.value.trim()){
-      workTitle.value=buildSpecificWorkTitle(item,captured);
-    }
-
-    if(!workDescription.value.trim()){
-      workDescription.value=buildSpecificAction(item,captured);
-    }
+    finding.value=buildInvestigationFinding(item,captured,decision);
+    workTitle.value=buildSpecificWorkTitle(item,captured,decision);
+    workDescription.value=buildSpecificAction(item,captured,decision);
   }
 
-  function buildSpecificWorkTitle(item,captured){
-    const facts=captured.facts.join(" ").toLowerCase();
+  function buildNextStepDecision(captured){
+    const rows=extractIssueRows(captured.facts);
+    const errorRows=rows.filter(row=>row.severity==="error");
+    const warningRows=rows.filter(row=>row.severity==="warning");
+    const candidates=errorRows.length?errorRows:warningRows.length?warningRows:rows;
 
-    if(facts.includes("sitemap")){
-      return "Review and correct the verified sitemap.xml issues identified in the SEMrush Site Audit.";
-    }
-    if(facts.includes("4xx")){
-      return "Review and correct the verified 4XX pages identified in the SEMrush Site Audit.";
-    }
-    if(facts.includes("canonical")){
-      return "Review and correct the verified canonical URL issues identified in the SEMrush Site Audit.";
-    }
-    if(facts.includes("broken internal link")||facts.includes("internal link is broken")){
-      return "Review and correct the verified broken internal link identified in the SEMrush Site Audit.";
+    const selected=[...candidates].sort((a,b)=>
+      (b.count-a.count) ||
+      (issueImpactWeight(b.name)-issueImpactWeight(a.name))
+    )[0]||null;
+
+    if(selected){
+      return {
+        issueName:selected.name,
+        count:selected.count,
+        severity:selected.severity,
+        reason:`It is a visible ${selected.severity} affecting ${selected.count} page${selected.count===1?"":"s"}. We prioritize errors before warnings, then choose the issue with the broadest verified impact.`,
+        expectedImpact:`Resolving verified instances should reduce this issue count and may improve Site Health. The exact score change must be verified by rerunning the audit.`,
+        evidenceDepth:"overview"
+      };
     }
 
-    return `Review and correct the highest-priority verified issue from Investigation #${item.id}.`;
+    const totals=extractAuditTotals(captured.facts);
+    return {
+      issueName:"",
+      count:0,
+      severity:"",
+      reason:"The screenshot confirms technical issues exist, but it does not reliably pair an issue name with an affected-page count.",
+      expectedImpact:"No health-score improvement should be predicted until a specific issue and affected URLs are verified.",
+      evidenceDepth:"insufficient",
+      totals
+    };
   }
 
-  function buildSpecificAction(item,captured){
-    const facts=captured.facts.join(" ").toLowerCase();
+  function extractIssueRows(facts){
+    const rows=[];
+    let currentSeverity="";
 
-    if(facts.includes("sitemap")){
-      return "Open the SEMrush sitemap.xml issue details, capture the affected URLs and technical explanation, verify each listed URL against the live sitemap and website, correct only the evidence-supported sitemap conditions, deploy the changes, rerun the Site Audit, and record the verified result.";
-    }
-    if(facts.includes("4xx")){
-      return "Open the SEMrush 4XX issue details, capture each affected URL and its referring source, verify the condition on the live website, repair or redirect the evidence-supported broken pages, rerun the Site Audit, and record the verified result.";
-    }
-    if(facts.includes("canonical")){
-      return "Open the SEMrush canonical issue details, capture the affected URLs and technical explanation, verify the canonical implementation on the live pages, correct only the evidence-supported canonical conditions, rerun the Site Audit, and record the verified result.";
+    facts.forEach(value=>{
+      const raw=String(value||"").trim();
+      const lower=raw.toLowerCase();
+
+      if(/^errors?\b/.test(lower)){currentSeverity="error";}
+      else if(/^warnings?\b/.test(lower)){currentSeverity="warning";}
+      else if(/^notices?\b/.test(lower)){currentSeverity="notice";}
+
+      const normalized=raw
+        .replace(/^\s*[•\-–—]\s*/,"")
+        .replace(/\bnew issues?\b/ig,"")
+        .replace(/\baffected\b/ig,"")
+        .trim();
+
+      const patterns=[
+        /^(\d[\d,]*)\s+(?:pages?|issues?|links?|urls?)?\s*(?:have|has|with|returned|found|contain|are)?\s*(.+)$/i,
+        /^(.+?)\s*[:—-]\s*(\d[\d,]*)\s*(?:pages?|issues?|links?|urls?)?\s*$/i,
+        /^(.+?)\s+\((\d[\d,]*)\s*(?:pages?|issues?|links?|urls?)\)$/i
+      ];
+
+      for(const pattern of patterns){
+        const match=normalized.match(pattern);
+        if(!match)continue;
+
+        let count;
+        let name;
+
+        if(/^\d/.test(match[1])){
+          count=Number(match[1].replaceAll(",",""));
+          name=match[2];
+        }else{
+          name=match[1];
+          count=Number(match[2].replaceAll(",",""));
+        }
+
+        name=cleanIssueName(name);
+        if(
+          Number.isFinite(count) &&
+          count>0 &&
+          name &&
+          !isGenericMetric(name) &&
+          !isInstructionEcho(name)
+        ){
+          rows.push({
+            name,
+            count,
+            severity:inferSeverity(raw,currentSeverity,name)
+          });
+          break;
+        }
+      }
+    });
+
+    const unique=new Map();
+    rows.forEach(row=>{
+      const key=row.name.toLowerCase();
+      const existing=unique.get(key);
+      if(!existing||row.count>existing.count){
+        unique.set(key,row);
+      }
+    });
+
+    return [...unique.values()];
+  }
+
+  function cleanIssueName(value){
+    return String(value||"")
+      .replace(/\bhow to fix\b/ig,"")
+      .replace(/\b\d+\s+new issues?\b/ig,"")
+      .replace(/\s+/g," ")
+      .replace(/^[\s:;,\-–—]+|[\s:;,\-–—]+$/g,"")
+      .trim();
+  }
+
+  function isGenericMetric(name){
+    const lower=String(name||"").toLowerCase();
+    return [
+      "errors",
+      "warnings",
+      "notices",
+      "site health",
+      "change",
+      "new issue",
+      "new issues",
+      "pages crawled"
+    ].some(metric=>lower===metric||lower.startsWith(`${metric} `));
+  }
+
+  function inferSeverity(raw,currentSeverity,name){
+    const text=`${raw} ${name}`.toLowerCase();
+    if(/\berror\b|4xx|broken|canonical|redirect|sitemap/.test(text))return "error";
+    if(/\bwarning\b|unminified|uncompressed|low text|meta description|nofollow|low word count|underscore/.test(text))return "warning";
+    if(/\bnotice\b/.test(text))return "notice";
+    return currentSeverity||"issue";
+  }
+
+  function issueImpactWeight(name){
+    const text=String(name||"").toLowerCase();
+    if(/4xx|broken internal|broken canonical/.test(text))return 100;
+    if(/canonical|redirect|sitemap/.test(text))return 90;
+    if(/crawl|robots|blocked/.test(text))return 85;
+    if(/meta description/.test(text))return 55;
+    if(/javascript|css|unminified|uncompressed/.test(text))return 35;
+    return 10;
+  }
+
+  function extractAuditTotals(facts){
+    const joined=facts.join(" ");
+    return {
+      errors:metricValue(joined,/errors?\s*[:\-]?\s*(\d[\d,]*)/i),
+      warnings:metricValue(joined,/warnings?\s*[:\-]?\s*(\d[\d,]*)/i),
+      notices:metricValue(joined,/notices?\s*[:\-]?\s*(\d[\d,]*)/i),
+      siteHealth:metricValue(joined,/site health\s*[:\-]?\s*(\d{1,3})%?/i)
+    };
+  }
+
+  function metricValue(text,pattern){
+    const match=String(text||"").match(pattern);
+    return match?Number(match[1].replaceAll(",","")):0;
+  }
+
+  function buildInvestigationFinding(item,captured,decision){
+    const totals=decision.totals||extractAuditTotals(captured.facts);
+    const baseline=[
+      totals.siteHealth?`Site Health is ${totals.siteHealth}%.`:"",
+      totals.errors?`${totals.errors} errors are active.`:"",
+      totals.warnings?`${totals.warnings} warnings are active.`:""
+    ].filter(Boolean).join(" ");
+
+    if(decision.issueName){
+      return [
+        baseline||"The SEMrush Site Audit confirms unresolved technical issues.",
+        `The next issue to investigate is "${decision.issueName}" affecting ${decision.count} page${decision.count===1?"":"s"}.`,
+        `Why this issue: ${decision.reason}`,
+        `Expected outcome: ${decision.expectedImpact}`
+      ].filter(Boolean).join("\n\n");
     }
 
-    return "Open the selected SEMrush issue details, capture the affected URLs, issue count, technical explanation, and root cause; verify the condition on the live website; complete only the evidence-supported corrective work; rerun the Site Audit; and record the verified result.";
+    return [
+      baseline||"The screenshot confirms unresolved technical issues.",
+      "The screenshot did not provide a reliable issue-name and affected-page pair.",
+      "The next step is to open the Errors list and capture the visible issue rows before choosing corrective work."
+    ].join("\n\n");
+  }
+
+  function buildSpecificWorkTitle(item,captured,decision){
+    if(decision.issueName){
+      return `Investigate ${decision.issueName} affecting ${decision.count} page${decision.count===1?"":"s"} before creating corrective work.`;
+    }
+
+    return "Open the SEMrush Errors list and identify the highest-impact issue.";
+  }
+
+  function buildSpecificAction(item,captured,decision){
+    if(decision.issueName){
+      return [
+        `Open "${decision.issueName}" in SEMrush.`,
+        "Capture the affected URLs, the platform's technical explanation, and the verified root cause.",
+        "Do not create corrective work until that evidence proves the exact change required.",
+        "After the repair, rerun the Site Audit and record the before-and-after issue count and Site Health."
+      ].join(" ");
+    }
+
+    return "Open the SEMrush Errors list. Capture a screenshot that pairs each visible error name with its affected-page count. Then select the highest-impact verified error for detailed investigation.";
   }
 
   async function processInvestigation(item,outcome){
