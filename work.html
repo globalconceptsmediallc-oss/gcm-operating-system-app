@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.8.5
+   Version: 1.8.6
    Status: Production Candidate
    Source: Production work.html 1.8.0
    Sprint: Task-Specific SEMrush Issues Navigation
@@ -125,7 +125,7 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Investigate one evidence step at a time. Create specific work only after the evidence proves what must be done.</p></div>
-        <span class="classification">WWPOWD Evidence Loop · v1.8.5</span>
+        <span class="classification">WWPOWD Progressive Investigation · v1.8.6</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -145,14 +145,14 @@
 <script>
 (() => {
   "use strict";
-  const VERSION="1.8.5";
+  const VERSION="1.8.6";
   const WORKER_URL="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const params=new URLSearchParams(location.search);
   const requestedInvestigationId=positiveInt(params.get("investigation"));
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"WWPOWD evidence loop · Work v1.8.5"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"WWPOWD progressive investigation · Work v1.8.6"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),target:byId("target-banner")};
   let activeClients=[],investigations=[],workItems=[],selectedKey="",processing=false,processingWorkItem=false;
 
@@ -487,8 +487,11 @@
       </div>
     </div>
     <section class="detail-section"><h3>Current Understanding</h3><p>${esc(guidance?.current_understanding||communication?.ai_summary||communication?.raw_content||item.description||"No summary stored.")}</p></section>
-    <section class="detail-section"><h3>Final Resolution</h3><div class="processing-box"><label>Investigation Finding</label><textarea id="finding-summary">${esc(item.finding_summary||"")}</textarea><label>Specific Work Required</label><textarea id="work-title"></textarea><label>Specific Action</label><textarea id="work-description"></textarea><div class="processing-actions"><button id="close-button" class="button">Close — No Work Required</button><button id="create-button" class="button primary">Create Specific Work</button></div><div id="process-message"></div></div></section>`;
+    <section class="detail-section"><h3>Investigation Decision</h3><div class="processing-box"><label>What We Know</label><textarea id="finding-summary">${esc(item.finding_summary||"")}</textarea><label>Next Question to Answer</label><textarea id="work-title"></textarea><label>Next Evidence Needed</label><textarea id="work-description"></textarea><div class="processing-actions"><button id="close-button" class="button">Close — No Work Required</button><button id="create-button" class="button primary">Root Cause Proven — Create Work</button></div><div id="process-message"></div></div></section>`;
     byId("close-button").addEventListener("click",()=>processInvestigation(item,"no_work_required"));
+    byId("create-button").disabled=true;
+    byId("create-button").title="Corrective work remains locked until the root cause is proven.";
+    byId("create-button").textContent="Create Work Locked — Continue Investigation";
     byId("create-button").addEventListener("click",()=>processInvestigation(item,"specific_work_required"));
     bindEvidenceCapture(item);
     bindSemrushLinkSetup(item);
@@ -523,7 +526,12 @@
       screen:captured.subject||"Screenshot evidence",
       facts:captured.facts.slice(0,20),
       finding:buildInvestigationFinding(item,captured,decision),
-      nextAction:buildSpecificAction(item,captured,decision)
+      nextAction:buildSpecificAction(item,captured,decision),
+      evidenceType:decision.evidenceType||"unknown",
+      issueName:decision.issueName||"",
+      issueCount:Number(decision.count)||0,
+      sampleUrl:decision.sampleUrl||"",
+      rootCauseProven:Boolean(decision.rootCauseProven)
     });
     saveEvidenceHistory(item,history);
     renderEvidenceHistory(item);
@@ -638,7 +646,10 @@
           "For every visible SEMrush issue row, return the exact issue name paired with its affected-page or issue count.",
           "Preserve severity groups: Errors, Warnings, and Notices.",
           "Do not repeat this instruction text, client context, or investigation objective as extracted evidence.",
-          "The operational question is: What single issue should we investigate next, why was it chosen, and what evidence must be captured before corrective work is created?"
+          "The operational question is: What single issue should we investigate next, why was it chosen, and what evidence must be captured before corrective work is created?",
+          `Locked evidence history: ${JSON.stringify(getEvidenceHistory(item).map(entry=>({step:entry.step,finding:entry.finding,nextAction:entry.nextAction,evidenceType:entry.evidenceType,issueName:entry.issueName,issueCount:entry.issueCount,sampleUrl:entry.sampleUrl})))}`,
+          "Determine whether this screenshot is: an audit overview, an issue-category list, an issue detail page, a live URL sample, a root-cause screen, or post-fix verification.",
+          "For a live URL sample, explicitly identify the visible URL and whether it returns 404, redirects, loads successfully, or shows another behavior."
         ].join("\n");
 
         const payload=await post({
@@ -652,7 +663,7 @@
         });
 
         const captured=normalizeCapturedEvidence(payload);
-        const decision=buildNextStepDecision(captured);
+        const decision=buildNextStepDecision(captured,item);
         renderCapturedEvidence(captured);
         prefillInvestigationFields(item,captured);
         appendEvidenceHistory(item,captured,decision);
@@ -732,7 +743,7 @@
   function renderCapturedEvidence(captured){
     const panel=byId("captured-evidence-panel");
     const list=byId("captured-evidence-list");
-    const decision=buildNextStepDecision(captured);
+    const decision=buildNextStepDecision(captured,item);
     const items=[
       captured.subject&&`Screen/report: ${captured.subject}`,
       ...captured.facts,
@@ -752,7 +763,7 @@
     const finding=byId("finding-summary");
     const workTitle=byId("work-title");
     const workDescription=byId("work-description");
-    const decision=buildNextStepDecision(captured);
+    const decision=buildNextStepDecision(captured,item);
 
     const history=getEvidenceHistory(item);
     const currentFinding=buildInvestigationFinding(item,captured,decision);
@@ -761,10 +772,50 @@
     finding.value=[priorFindings,currentFinding].filter(Boolean).join("\n\n");
     workTitle.value=buildSpecificWorkTitle(item,captured,decision);
     workDescription.value=buildSpecificAction(item,captured,decision);
+    updateDecisionControls(decision);
   }
 
-  function buildNextStepDecision(captured){
-    const rows=extractIssueRows(captured.facts);
+  function buildNextStepDecision(captured,item){
+    const facts=captured.facts||[];
+    const joined=facts.join(" ").toLowerCase();
+    const history=item?getEvidenceHistory(item):[];
+
+    const sampleUrl=extractVisibleUrl(facts);
+    const is404=/\b404\b|page not found|page can.t be found|nothing was found at this location/.test(joined);
+    const isSuccess=/\b200\b|loads successfully|page loaded successfully/.test(joined);
+    const isRedirect=/\b301\b|\b302\b|redirected to|redirects to/.test(joined);
+
+    if(sampleUrl&&(is404||isSuccess||isRedirect)){
+      const behavior=is404?"returns a 404 Page Not Found":isRedirect?"redirects to another URL":"loads successfully";
+      const matchingSamples=history.filter(entry=>
+        entry.evidenceType==="live_url_sample" &&
+        String(entry.finding||"").toLowerCase().includes(is404?"404":isRedirect?"redirect":"loads successfully")
+      ).length;
+
+      const totalMatching=matchingSamples+1;
+      const rootCauseProven=totalMatching>=3;
+
+      return {
+        evidenceType:"live_url_sample",
+        sampleUrl,
+        issueName:mostRecentIssueName(history)||"the selected SEMrush issue",
+        count:mostRecentIssueCount(history),
+        severity:"error",
+        rootCauseProven,
+        reason:`The sampled URL ${behavior}. One URL proves the behavior exists, but not yet whether the same root cause explains the full issue group.`,
+        expectedImpact:rootCauseProven
+          ? `Three or more samples now show the same behavior. The repeated pattern supports defining one corrective work item, followed by a new crawl to verify the affected count and Site Health.`
+          : `Test additional URLs from the same SEMrush issue. Repeated behavior will show whether this is one shared root cause or several different problems.`,
+        nextQuestion:rootCauseProven
+          ? "What shared source, template, redirect rule, or deleted-content pattern is generating these invalid URLs?"
+          : `Do at least two more affected URLs from the same issue show the same ${is404?"404":"behavior"}?`,
+        nextEvidence:rootCauseProven
+          ? "Capture the page, template, redirect configuration, sitemap entry, or CMS source that proves the shared root cause."
+          : "Open another affected URL from the same SEMrush issue and capture the live result. Repeat until at least three samples establish whether the behavior is consistent."
+      };
+    }
+
+    const rows=extractIssueRows(facts);
     const errorRows=rows.filter(row=>row.severity==="error");
     const warningRows=rows.filter(row=>row.severity==="warning");
     const candidates=errorRows.length?errorRows:warningRows.length?warningRows:rows;
@@ -776,25 +827,45 @@
 
     if(selected){
       return {
+        evidenceType:"issue_list",
         issueName:selected.name,
         count:selected.count,
         severity:selected.severity,
-        reason:`It is a visible ${selected.severity} affecting ${selected.count} page${selected.count===1?"":"s"}. We prioritize errors before warnings, then choose the issue with the broadest verified impact.`,
-        expectedImpact:`Resolving verified instances should reduce this issue count and may improve Site Health. The exact score change must be verified by rerunning the audit.`,
-        evidenceDepth:"overview"
+        rootCauseProven:false,
+        reason:`It is a visible ${selected.severity} affecting ${selected.count} page${selected.count===1?"":"s"}. Errors are reviewed before warnings, and the broadest verified impact is investigated first.`,
+        expectedImpact:"The issue category is selected, but corrective work is not yet proven. A live sample is required to determine the real behavior and root cause.",
+        nextQuestion:`What actually happens when one affected URL from "${selected.name}" is opened on the live website?`,
+        nextEvidence:`Open the first affected URL listed under "${selected.name}" and capture the live result.`
       };
     }
 
-    const totals=extractAuditTotals(captured.facts);
+    const totals=extractAuditTotals(facts);
     return {
+      evidenceType:"overview",
       issueName:"",
       count:0,
       severity:"",
+      rootCauseProven:false,
       reason:"The screenshot confirms technical issues exist, but it does not reliably pair an issue name with an affected-page count.",
-      expectedImpact:"No health-score improvement should be predicted until a specific issue and affected URLs are verified.",
-      evidenceDepth:"insufficient",
+      expectedImpact:"No corrective work or Site Health improvement should be predicted until a specific issue and live behavior are verified.",
+      nextQuestion:"Which Error category has the highest verified impact?",
+      nextEvidence:"Open the SEMrush Errors list and capture the visible issue names with their affected-page counts.",
       totals
     };
+  }
+
+  function extractVisibleUrl(facts){
+    const joined=(facts||[]).join(" ");
+    const match=joined.match(/https?:\/\/[^\s<>"')\]]+/i);
+    return match?match[0].replace(/[.,;:!?]+$/,""):"";
+  }
+
+  function mostRecentIssueName(history){
+    return [...history].reverse().find(entry=>entry.issueName)?.issueName||"";
+  }
+
+  function mostRecentIssueCount(history){
+    return Number([...history].reverse().find(entry=>Number(entry.issueCount)>0)?.issueCount)||0;
   }
 
   function extractIssueRows(facts){
@@ -930,48 +1001,58 @@
       totals.warnings?`${totals.warnings} warnings are active.`:""
     ].filter(Boolean).join(" ");
 
+    if(decision.evidenceType==="live_url_sample"){
+      return [
+        `Live sample: ${decision.sampleUrl}.`,
+        decision.reason,
+        decision.rootCauseProven
+          ? "Decision state: repeated evidence supports advancing to root-cause proof."
+          : "Decision state: continue sampling before defining corrective work."
+      ].join("\n\n");
+    }
+
     if(decision.issueName){
       return [
-        baseline||"The SEMrush Site Audit confirms unresolved technical issues.",
-        `The next issue to investigate is "${decision.issueName}" affecting ${decision.count} page${decision.count===1?"":"s"}.`,
-        `Why this issue: ${decision.reason}`,
-        `Expected outcome: ${decision.expectedImpact}`
+        baseline||"The SEMrush issue list provides a verified issue category.",
+        `Selected issue: "${decision.issueName}" affecting ${decision.count} page${decision.count===1?"":"s"}.`,
+        `Why selected: ${decision.reason}`,
+        "Decision state: investigate one live example before creating corrective work."
       ].filter(Boolean).join("\n\n");
     }
 
     return [
       baseline||"The screenshot confirms unresolved technical issues.",
-      "The screenshot did not provide a reliable issue-name and affected-page pair.",
-      "The next step is to open the Errors list and capture the visible issue rows before choosing corrective work."
+      decision.reason,
+      "Decision state: the next evidence must identify the highest-impact Error category."
     ].join("\n\n");
   }
 
   function buildSpecificWorkTitle(item,captured,decision){
-    if(decision.issueName){
-      return `Investigate ${decision.issueName} affecting ${decision.count} page${decision.count===1?"":"s"} before creating corrective work.`;
-    }
-
-    return "Open the SEMrush Errors list and identify the highest-impact issue.";
+    return decision.nextQuestion||"What is the next fact required to advance this Investigation?";
   }
 
   function buildSpecificAction(item,captured,decision){
-    if(decision.issueName){
-      return [
-        `Open "${decision.issueName}" in SEMrush.`,
-        "Capture the affected URLs, the platform's technical explanation, and the verified root cause.",
-        "Do not create corrective work until that evidence proves the exact change required.",
-        "After the repair, rerun the Site Audit and record the before-and-after issue count and Site Health."
-      ].join(" ");
-    }
+    return decision.nextEvidence||"Capture the next evidence screenshot required to answer the current question.";
+  }
 
-    return "Open the SEMrush Errors list. Capture a screenshot that pairs each visible error name with its affected-page count. Then select the highest-impact verified error for detailed investigation.";
+  function updateDecisionControls(decision){
+    const createButton=byId("create-button");
+    if(!createButton)return;
+
+    createButton.disabled=!decision.rootCauseProven;
+    createButton.title=decision.rootCauseProven
+      ? "Repeated evidence supports creating corrective work."
+      : "Corrective work remains locked until the root cause is proven.";
+    createButton.textContent=decision.rootCauseProven
+      ? "Root Cause Proven — Create Work"
+      : "Create Work Locked — Continue Investigation";
   }
 
   async function processInvestigation(item,outcome){
     if(processing)return;
     const finding=byId("finding-summary").value.trim(),title=byId("work-title").value.trim(),description=byId("work-description").value.trim(),message=byId("process-message");
     if(!finding){message.className="status error";message.textContent="Record the evidence-supported Investigation Finding.";return;}
-    if(outcome==="specific_work_required"&&(!title||!description)){message.className="status error";message.textContent="Specific Work Required and Specific Action are required.";return;}
+    if(outcome==="specific_work_required"&&(!title||!description)){message.className="status error";message.textContent="The root cause and corrective action are required before creating work.";return;}
     processing=true;message.className="status loading";message.textContent="Saving production decision…";
     try{await post({action:"process-investigation",clientCode:item.clientCode,investigationId:Number(item.id),findingSummary:finding,outcome,workTitle:title,workDescription:description});completeEvidenceStep(item,"complete_investigation");if(outcome==="specific_work_required")completeEvidenceStep(item,"create_work");message.className="status ready";message.textContent=outcome==="no_work_required"?"Investigation closed.":"Specific Work Item created.";await load();}catch(error){message.className="status error";message.textContent=error.message;}finally{processing=false;}
   }
