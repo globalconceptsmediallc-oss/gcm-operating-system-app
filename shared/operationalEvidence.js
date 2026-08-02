@@ -1,8 +1,8 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/operationalEvidence.js
-   Version: 1.0.0
-   Status: Production Candidate
+   Version: 1.1.0
+   Status: Production Candidate — Fast Single-Pass Extraction
    Source: WWPOWD Architecture Sprint
    Sprint: Operational Evidence Engine — Stage 1
    Purpose:
@@ -17,7 +17,7 @@
    - Human and downstream reasoning remain authoritative.
    ========================================================= */
 
-export const OPERATIONAL_EVIDENCE_VERSION = "1.0.0";
+export const OPERATIONAL_EVIDENCE_VERSION = "1.1.0";
 
 const DEFAULT_VISION_MODEL = "@cf/meta/llama-3.2-11b-vision-instruct";
 const DEFAULT_REASONING_MODEL = "@cf/openai/gpt-oss-20b";
@@ -69,7 +69,8 @@ export async function extractOperationalEvidence({
   context = null,
   visionModel = DEFAULT_VISION_MODEL,
   reasoningModel = DEFAULT_REASONING_MODEL,
-  timeoutMs = DEFAULT_TIMEOUT_MS
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+  allowRecovery = false
 } = {}) {
   const startedAt = Date.now();
   const requestId = crypto.randomUUID();
@@ -175,6 +176,30 @@ export async function extractOperationalEvidence({
         error: null
       });
     }
+  }
+
+  if (!allowRecovery) {
+    const deterministic = sourceText
+      ? extractDeterministicTextEvidence(sourceText, { client, clientId })
+      : normalizeOperationalEvidence({
+          ...EMPTY_EVIDENCE,
+          client: { id: normalizeId(clientId), name: cleanString(client) || null },
+          limitations: [
+            "The single-pass screenshot extraction did not return enough structured facts for a complete assessment."
+          ],
+          confidence: 0
+        });
+
+    return buildResult({
+      ok: Boolean(sourceText && isOperationalEvidenceUsable(deterministic)),
+      evidence: deterministic,
+      diagnostics,
+      startedAt,
+      error: {
+        code: "OPERATIONAL_EVIDENCE_SINGLE_PASS_INCOMPLETE",
+        message: "The fast single-pass evidence extraction did not return a usable structured result."
+      }
+    });
   }
 
   const recoveryPrompt = buildOperationalEvidencePrompt({
