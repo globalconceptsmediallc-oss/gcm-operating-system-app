@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.8.1
+   Version: 1.8.2
    Status: Production Candidate
    Source: Production work.html 1.8.0
    Sprint: Task-Specific SEMrush Issues Navigation
@@ -115,7 +115,7 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Investigate one evidence step at a time. Create specific work only after the evidence proves what must be done.</p></div>
-        <span class="classification">Task-Specific Issues · v1.8.1</span>
+        <span class="classification">Evidence Analysis Repair · v1.8.2</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -135,14 +135,14 @@
 <script>
 (() => {
   "use strict";
-  const VERSION="1.8.1";
+  const VERSION="1.8.2";
   const WORKER_URL="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const params=new URLSearchParams(location.search);
   const requestedInvestigationId=positiveInt(params.get("investigation"));
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Task-specific evidence links · Work v1.8.1"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Evidence analysis repair · Work v1.8.2"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),target:byId("target-banner")};
   let activeClients=[],investigations=[],workItems=[],selectedKey="",processing=false,processingWorkItem=false;
 
@@ -186,7 +186,34 @@
     return clients.filter(c=>c.clientCode).map(c=>({code:String(c.clientCode),name:String(c.clientName||c.clientCode)}));
   }
   async function loadWorkspace(client){return post({action:"get-client-workspace",clientCode:client.code});}
-  async function post(body){const response=await fetch(WORKER_URL,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify(body)});const payload=await response.json().catch(()=>({}));if(!response.ok||payload.ok!==true)throw new Error(payload.error||payload.details||`HTTP ${response.status}`);return payload;}
+  async function post(body){
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),60000);
+    try{
+      const response=await fetch(WORKER_URL,{
+        method:"POST",
+        headers:{"Content-Type":"application/json",Accept:"application/json"},
+        body:JSON.stringify(body),
+        signal:controller.signal
+      });
+      const raw=await response.text();
+      let payload={};
+      try{payload=raw?JSON.parse(raw):{};}catch(error){
+        throw new Error(`Worker returned non-JSON output (HTTP ${response.status}).`);
+      }
+      if(!response.ok||payload.ok!==true){
+        throw new Error(payload.error||payload.details||`Worker request failed (HTTP ${response.status}).`);
+      }
+      return payload;
+    }catch(error){
+      if(error?.name==="AbortError"){
+        throw new Error("Evidence analysis timed out after 60 seconds.");
+      }
+      throw error;
+    }finally{
+      clearTimeout(timeout);
+    }
+  }
 
   function renderFilter(clients){
     el.filter.innerHTML='<option value="">All clients</option>'+clients.map(c=>`<option value="${esc(c.code)}">${esc(c.name)}</option>`).join("");
@@ -432,7 +459,7 @@
         <div class="evidence-upload-row">
           <label class="button" for="investigation-evidence-file">Choose Screenshot</label>
           <input class="evidence-file" id="investigation-evidence-file" type="file" accept="image/png,image/jpeg,image/webp" />
-          <button class="button primary" id="analyze-investigation-evidence" disabled>Analyze Evidence</button>
+          <button class="button primary" id="analyze-investigation-evidence" type="button" disabled>Analyze Evidence</button>
         </div>
         <img class="evidence-preview" id="investigation-evidence-preview" alt="Selected Investigation evidence screenshot preview" />
         <div class="capture-status" id="investigation-evidence-status"></div>
@@ -497,12 +524,21 @@
       reader.readAsDataURL(file);
     });
 
-    analyze.addEventListener("click",async()=>{
-      if(!imageDataUrl)return;
+    analyze.addEventListener("click",async event=>{
+      event.preventDefault();
+      event.stopPropagation();
+
+      if(!imageDataUrl){
+        status.className="status error capture-status";
+        status.textContent="No screenshot is loaded. Choose the screenshot again.";
+        return;
+      }
+
       analyze.disabled=true;
       analyze.textContent="Analyzing…";
       status.className="status loading capture-status";
-      status.textContent="Workers AI is reading the screenshot and extracting evidence…";
+      status.textContent="Analyze button confirmed. Sending screenshot to Workers AI…";
+      await new Promise(resolve=>setTimeout(resolve,50));
 
       try{
         const context=[
