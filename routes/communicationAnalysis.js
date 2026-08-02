@@ -1,15 +1,16 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.6.0
+   Version: 7.7.0
    Source: Production route 7.5.0
-   Status: Production Candidate — Report Recognition Hardening
+   Status: Production Candidate — Operational Evidence Integration
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
             independent report-signature recognition, specialized extraction,
             evidence reconciliation, notification classification,
             WWPOWD interpretation, proof-readiness evaluation,
-            business meaning, operational routing, and consultant summary.
+            business meaning, operational routing, consultant summary,
+            and shared WWPOWD operational evidence extraction.
    ========================================================= */
 
 import {
@@ -35,6 +36,11 @@ import {
   createStageResult,
   buildOperationalError
 } from "../shared/ai.js";
+
+import {
+  extractOperationalEvidence,
+  OPERATIONAL_EVIDENCE_VERSION
+} from "../shared/operationalEvidence.js";
 
 export async function handleCommunicationAnalysis(body, env, requestId) {
   const startedAt = Date.now();
@@ -80,6 +86,62 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
   let proofReadiness = null;
   let operationalDecision = null;
   let consultantSummary = null;
+  let operationalEvidence = null;
+
+  /* Stage 0: shared operational evidence extraction.
+     This additive integration preserves the complete v7.6.0 communication
+     extraction pipeline while allowing the new evidence-only engine to read
+     the full screenshot/text input. Its normalized facts are merged into the
+     legacy visibleEvidence contract before report recognition and WWPOWD. */
+  {
+    const stageStartedAt = Date.now();
+    const operationalEvidenceResult = await extractOperationalEvidence({
+      env,
+      imageDataUrl: imageDataUrl || null,
+      sourceText: sourceText || null,
+      client: client || null,
+      clientId: clientId || null,
+      fileName,
+      context: clean(body?.operationalContext || body?.context) || null,
+      visionModel: COMMUNICATION_VISION_MODEL,
+      reasoningModel: COMMUNICATION_REASONING_MODEL,
+      timeoutMs: 45000
+    });
+
+    operationalEvidence = operationalEvidenceResult?.evidence || null;
+
+    if (operationalEvidenceResult?.error) {
+      errors.push(buildOperationalError({
+        stage: "operational_evidence_extraction",
+        code: operationalEvidenceResult.error.code || "OPERATIONAL_EVIDENCE_PARTIAL",
+        message: operationalEvidenceResult.error.message || "Operational evidence extraction was incomplete.",
+        retryable: false
+      }));
+    }
+
+    stages.push(createStageResult({
+      stageName: "operational_evidence_extraction",
+      status: operationalEvidenceResult?.ok
+        ? STAGE_STATUS.SUCCESS
+        : operationalEvidence
+          ? STAGE_STATUS.PARTIAL
+          : STAGE_STATUS.FAILED,
+      engine: `operational-evidence-v${OPERATIONAL_EVIDENCE_VERSION}`,
+      model: imageDataUrl ? COMMUNICATION_VISION_MODEL : COMMUNICATION_REASONING_MODEL,
+      startedAt: stageStartedAt,
+      confidence: Number(operationalEvidence?.confidence || 0),
+      retryCount: Math.max(
+        0,
+        Number(operationalEvidenceResult?.diagnostics?.attempts?.length || 0) - 1
+      ),
+      retryStatus: operationalEvidenceResult?.ok
+        ? "succeeded"
+        : "partial_or_failed",
+      rawAiError: operationalEvidenceResult?.error?.message || null,
+      fallbackUsed: Boolean(!operationalEvidenceResult?.ok),
+      data: operationalEvidence
+    }));
+  }
 
   /* Stage 1 + 2: extract evidence without operational reasoning.
      When both pasted text and a screenshot are supplied, use BOTH sources.
@@ -172,6 +234,17 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
     if (extractionResult.error) errors.push(extractionResult.error);
     visibleEvidence = extractionResult.data;
     reportRecognition = extractionResult.reportRecognition || null;
+  }
+
+  /* Stage 0B: merge normalized operational facts into the established
+     visibleEvidence contract. Existing evidence remains authoritative for
+     source identity and exact communication text; the shared engine enriches
+     metrics, trends, conditions, and candidate issue groups. */
+  if (operationalEvidence) {
+    visibleEvidence = mergeVisibleEvidence(
+      visibleEvidence,
+      operationalEvidenceToVisibleEvidence(operationalEvidence)
+    );
   }
 
   /* Stage 1A: authoritative report-family recognition.
@@ -406,6 +479,7 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
     classification,
     reportRecognition,
     evidence: visibleEvidence,
+    operationalEvidence,
     evidenceReconciliation,
     wwPowdAnalysis,
     businessMeaning,
@@ -426,6 +500,105 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
       partialStageCount: partialStages.length
     }
   }, 200);
+}
+
+function operationalEvidenceToVisibleEvidence(operationalEvidence) {
+  const evidence = operationalEvidence && typeof operationalEvidence === "object"
+    ? operationalEvidence
+    : {};
+
+  const metricLines = (Array.isArray(evidence.metrics) ? evidence.metrics : [])
+    .map(metric => {
+      const label = clean(metric?.label || metric?.key || "Metric");
+      const displayValue = clean(
+        metric?.displayValue ??
+        metric?.display_value ??
+        metric?.value
+      );
+      const scope = clean(metric?.scope);
+      if (!label || !displayValue) return "";
+      return `${label}: ${displayValue}${scope ? `; Scope: ${scope}` : ""}`;
+    })
+    .filter(Boolean);
+
+  const trendLines = (Array.isArray(evidence.trends) ? evidence.trends : [])
+    .map(trend => {
+      const key = clean(trend?.key || "Trend").replace(/_/g, " ");
+      const direction = clean(trend?.direction || "unknown");
+      const displayChange = clean(
+        trend?.displayChange ??
+        trend?.display_change ??
+        trend?.change
+      );
+      const period = clean(trend?.period);
+      return `${key}: ${direction}${displayChange ? `; Change: ${displayChange}` : ""}${period ? `; Period: ${period}` : ""}`;
+    })
+    .filter(Boolean);
+
+  const conditionFacts = (Array.isArray(evidence.conditions) ? evidence.conditions : [])
+    .map(condition => {
+      const statement = clean(condition?.statement || condition?.condition || condition?.summary);
+      const support = clean(condition?.evidence || condition?.support);
+      if (!statement) return "";
+      return support && support.toLowerCase() !== statement.toLowerCase()
+        ? `${statement} — Evidence: ${support}`
+        : statement;
+    })
+    .filter(Boolean);
+
+  const issueFacts = (Array.isArray(evidence.candidateIssues) ? evidence.candidateIssues : [])
+    .map(issue => {
+      const label = clean(issue?.label || issue?.key || "Candidate issue");
+      const count = issue?.count === null || issue?.count === undefined
+        ? ""
+        : `; Count: ${issue.count}`;
+      const severity = clean(issue?.toolSeverity || issue?.tool_severity || "unknown");
+      const support = clean(issue?.evidence);
+      return `${label}${count}; Tool severity: ${severity}${support ? `; Evidence: ${support}` : ""}`;
+    })
+    .filter(Boolean);
+
+  const positiveSignals = (Array.isArray(evidence.positiveSignals)
+    ? evidence.positiveSignals
+    : [])
+    .map(value => clean(value))
+    .filter(Boolean);
+
+  const limitations = (Array.isArray(evidence.limitations) ? evidence.limitations : [])
+    .map(value => clean(value))
+    .filter(Boolean);
+
+  return normalizeVisibleEvidence({
+    visibleSource: clean(evidence.sourcePlatform) || "Unknown",
+    visibleSubject: clean(evidence.sourceTitle) || clean(evidence.dashboardType) || "Unknown",
+    visibleText: [
+      ...metricLines,
+      ...trendLines,
+      ...conditionFacts,
+      ...issueFacts,
+      ...positiveSignals
+    ].join("; "),
+    visibleFacts: uniqueTextValues([
+      ...conditionFacts,
+      ...issueFacts,
+      ...positiveSignals
+    ]),
+    visibleMetrics: uniqueTextValues([
+      ...metricLines,
+      ...trendLines
+    ]),
+    responseExpected: false,
+    explicitActionRequested: false,
+    confidence: confidenceLabelFromNumber(evidence.confidence),
+    uncertainty: limitations.length ? limitations.join("; ") : "None"
+  });
+}
+
+function confidenceLabelFromNumber(value) {
+  const confidence = Number(value);
+  if (Number.isFinite(confidence) && confidence >= 0.8) return "High";
+  if (Number.isFinite(confidence) && confidence >= 0.5) return "Medium";
+  return "Low";
 }
 
 async function executeTextExtractionStage({
