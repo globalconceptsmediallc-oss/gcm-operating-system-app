@@ -1,13 +1,33 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.7.1
-   Status: Production Candidate
-   Source: worker.js 7.7.0
-   Sprint: Calendar — D1 Operations Integration
-   Purpose: Preserve all production routes and connect the
-            Calendar D1 operations handler for appointments,
-            reminders, appointment types, and availability rules.
+   Version: 7.7.2
+   Status: Audited Production Candidate
+   Source: Production worker.js 7.7.1
+   Sprint: Worker Build Recovery
+   Purpose: Restore clean GitHub-to-Cloudflare deployments by preserving
+            every route module that exists in the public repository and
+            disconnecting only the unfinished Calendar handler whose route
+            file is not present.
+
+   Repository audit:
+   - Verified existing route imports:
+     communicationAnalysis.js
+     clientWorkspace.js
+     clientDirectory.js
+     operationalDecision.js
+     missionControl.js
+     investigationProcessing.js
+     guidedInvestigation.js
+     workItemProcessing.js
+     mediaOperations.js
+     operationalReviews.js
+   - Removed unresolved import:
+     routes/calendarOperations.js
+   - Removed Calendar dispatch that depended on that missing module.
+   - Calendar pages, D1 tables, action constants, and stored data are not
+     deleted by this file.
+   - Health output now reports only actions this Worker can actually route.
    ========================================================= */
 
 import {
@@ -34,26 +54,19 @@ import { handleGuidedInvestigation } from "./routes/guidedInvestigation.js";
 import { handleProcessWorkItem } from "./routes/workItemProcessing.js";
 import { handleMediaOperations } from "./routes/mediaOperations.js";
 import { handleOperationalReviews } from "./routes/operationalReviews.js";
-import { handleCalendarOperations } from "./routes/calendarOperations.js";
 
-const CALENDAR_ACTIONS = new Set([
-  ACTIONS.GET_CALENDAR_APPOINTMENTS,
-  ACTIONS.CREATE_CALENDAR_APPOINTMENT,
-  ACTIONS.UPDATE_CALENDAR_APPOINTMENT,
-  ACTIONS.DELETE_CALENDAR_APPOINTMENT,
-
-  ACTIONS.GET_CALENDAR_REMINDERS,
-  ACTIONS.CREATE_CALENDAR_REMINDER,
-  ACTIONS.UPDATE_CALENDAR_REMINDER,
-  ACTIONS.DELETE_CALENDAR_REMINDER,
-
-  ACTIONS.GET_CALENDAR_APPOINTMENT_TYPES,
-  ACTIONS.CREATE_CALENDAR_APPOINTMENT_TYPE,
-  ACTIONS.UPDATE_CALENDAR_APPOINTMENT_TYPE,
-
-  ACTIONS.GET_CALENDAR_AVAILABILITY_RULES,
-  ACTIONS.UPDATE_CALENDAR_AVAILABILITY_RULES
-]);
+const SUPPORTED_ACTIONS = [
+  ACTIONS.ANALYZE_COMMUNICATION,
+  ACTIONS.GET_CLIENT_WORKSPACE,
+  ACTIONS.GET_CLIENT_DIRECTORY,
+  ACTIONS.COMMIT_OPERATIONAL_DECISION,
+  ACTIONS.GET_MISSION_CONTROL,
+  ACTIONS.GET_GUIDED_INVESTIGATION,
+  ACTIONS.PROCESS_INVESTIGATION,
+  ACTIONS.PROCESS_WORK_ITEM,
+  ACTIONS.GET_MEDIA_OPERATIONS,
+  ACTIONS.OPERATIONAL_REVIEWS
+].filter(Boolean);
 
 export default {
   async fetch(request, env) {
@@ -71,10 +84,10 @@ export default {
         system: "GCM OS Operational Worker",
         version: VERSION,
         contractVersion: API_CONTRACT_VERSION,
-        sprint: "Calendar — D1 Operations Integration",
+        sprint: "Worker Build Recovery",
         architecture:
-          "Modular production router with guided Investigation reasoning and durable Calendar operations.",
-        actions: Object.values(ACTIONS),
+          "Modular production router with guided Investigation reasoning and verified repository-backed routes.",
+        actions: SUPPORTED_ACTIONS,
         engines: [
           "notification-detection",
           "evidence-extraction",
@@ -89,7 +102,7 @@ export default {
           "investigation-processing",
           "work-item-processing",
           "media-operations",
-          "calendar-operations"
+          "operational-reviews"
         ],
         modules: {
           shared: ["config", "http", "database", "ai"],
@@ -103,10 +116,15 @@ export default {
             "investigation-processing",
             "work-item-processing",
             "media-operations",
-            "operational-reviews",
-            "calendar-operations"
+            "operational-reviews"
           ]
         },
+        temporarilyDisconnectedModules: [
+          {
+            module: "calendar-operations",
+            reason: "routes/calendarOperations.js is not present in the repository."
+          }
+        ],
         removedLegacyPipelines: [
           "business-snapshot",
           "client-pre-research",
@@ -149,10 +167,6 @@ export default {
     const action = clean(body?.action);
 
     try {
-      if (CALENDAR_ACTIONS.has(action)) {
-        return await handleCalendarOperations(body, env, requestId);
-      }
-
       switch (action) {
         case ACTIONS.ANALYZE_COMMUNICATION:
           return await handleCommunicationAnalysis(body, env, requestId);
@@ -192,7 +206,7 @@ export default {
             error: action
               ? `Unsupported action: ${action}`
               : "An action is required.",
-            supportedActions: Object.values(ACTIONS)
+            supportedActions: SUPPORTED_ACTIONS
           }, 400);
       }
     } catch (error) {
