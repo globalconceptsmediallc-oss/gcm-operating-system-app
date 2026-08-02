@@ -1,34 +1,34 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.8.7
-   Status: Production Candidate
-   Source: Production work.html 1.8.0
-   Sprint: Task-Specific SEMrush Issues Navigation
-   Purpose: Preserve the guided evidence workflow while replacing manual URL
-            entry with a one-click clipboard capture for the exact client
-            SEMrush Issues page.
+   Version: 1.8.8
+   Status: Audited Production Candidate
+   Source: Production work.html 1.8.7
+   Sprint: WWPOWD Work Page Consolidation
+   Purpose: Preserve the proven guided Investigation workflow while removing
+            dead code, preventing duplicate evidence steps, restoring saved
+            Investigation state after reload, and aligning all Worker requests
+            with the current production API contracts.
 
-   Production changes:
-   - Adds Capture Evidence Screenshot inside Guided Investigation.
-   - Uses the existing analyze-client-communication Workers AI pipeline.
-   - Displays extracted evidence before any operational decision is saved.
-   - Prefills Investigation Finding, Specific Work Required, and Specific Action.
-   - Human approval remains required before production processing.
-   - Adds a one-time client-specific SEMrush project URL setup.
-   - Saves the URL locally by client code without changing D1.
-   - Open SEMrush Site Audit uses the saved direct project URL when available.
-   - Adds a live Evidence Workflow checklist to the Guided Investigation.
-   - Checklist advances when SEMrush is opened, a screenshot is chosen,
-     Workers AI completes analysis, findings are reviewed, and work is created.
-   - Checklist state is stored locally by client and Investigation for road testing.
-   - Removes the manual SEMrush URL text-entry field from the Investigation.
-   - Adds Save Copied Issues Link for one-time client setup.
-   - Saved links change the action to Open <Client> Issues.
+   Repository contracts verified:
+   - analyze-client-communication
+   - get-mission-control
+   - get-client-workspace
+   - get-guided-investigation
+   - process-investigation
+   - process-work-item
+   - communications-operational-decision-v3
 
-   Supported URLs:
-   - work.html?investigation=36&client=PW
-   - work.html?workItem=4&client=SFS
+   Audited changes:
+   - Removes unused investigationFamily() and unused page VERSION constant.
+   - Eliminates repeated decision calculations during one analysis cycle.
+   - Rejects duplicate/no-progress evidence instead of locking repeated steps.
+   - Uses the Investigation objective as the baseline for audit totals.
+   - Restores locked findings, next question, next evidence, and Work gating
+     after page reload.
+   - Reset Road Test clears both checklist and locked local evidence.
+   - Keeps the proven local SEMrush direct-link workflow unchanged.
+   - Does not change D1 schemas, Worker routes, or processing payload fields.
    ========================================================= -->
 <!DOCTYPE html>
 <html lang="en">
@@ -89,8 +89,6 @@
     .tool-link-setup[hidden]{display:none}
     .tool-link-setup strong{display:block;color:var(--navy);font-size:.78rem}
     .tool-link-setup p{margin:4px 0 10px;color:var(--muted);font-size:.72rem;line-height:1.4}
-    .tool-link-input-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
-    .tool-link-input-row input{min-height:40px}
     .tool-link-status{margin-top:8px;color:var(--muted);font-size:.72rem;font-weight:750}
     .evidence-workflow{margin-top:16px;padding:15px;border:1px solid var(--border);border-radius:10px;background:#fff}
     .evidence-workflow-header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
@@ -111,7 +109,7 @@
     .evidence-step.active .evidence-step-index{background:var(--blue);color:#fff}
     .evidence-step.active .evidence-step-status{color:var(--blue)}
     .evidence-workflow-actions{display:flex;justify-content:flex-end;margin-top:10px}
-    @media(max-width:700px){.tool-link-input-row{grid-template-columns:1fr}.evidence-step{grid-template-columns:28px minmax(0,1fr)}.evidence-step-status{grid-column:2}.evidence-workflow-header{flex-direction:column}}
+    @media(max-width:700px){.evidence-step{grid-template-columns:28px minmax(0,1fr)}.evidence-step-status{grid-column:2}.evidence-workflow-header{flex-direction:column}}
 
 
 .processing-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px}.work-card{padding:16px;border:1px solid var(--border);border-radius:10px;background:#fff;margin-bottom:12px}.target-banner{margin-bottom:16px;padding:13px;border:1px solid #aac7ed;border-radius:10px;background:var(--blue-soft);color:#205c9f;font-size:.82rem;font-weight:800}
@@ -125,7 +123,7 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Investigate one evidence step at a time. Create specific work only after the evidence proves what must be done.</p></div>
-        <span class="classification">WWPOWD Progressive Investigation · v1.8.7</span>
+        <span class="classification">WWPOWD Audited Investigation · v1.8.8</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -145,14 +143,13 @@
 <script>
 (() => {
   "use strict";
-  const VERSION="1.8.7";
   const WORKER_URL="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const params=new URLSearchParams(location.search);
   const requestedInvestigationId=positiveInt(params.get("investigation"));
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"WWPOWD progressive investigation · Work v1.8.7"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"WWPOWD audited investigation · Work v1.8.8"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),target:byId("target-banner")};
   let activeClients=[],investigations=[],workItems=[],selectedKey="",processing=false,processingWorkItem=false;
 
@@ -217,7 +214,7 @@
       return payload;
     }catch(error){
       if(error?.name==="AbortError"){
-        throw new Error("Evidence analysis timed out after 60 seconds.");
+        throw new Error("The Worker request timed out after 60 seconds.");
       }
       throw error;
     }finally{
@@ -258,15 +255,6 @@
   function showTarget(message){el.target.hidden=false;el.target.textContent=message;}
   function selectInvestigation(item,scroll=false){if(!item)return;selectedKey=key(item);renderList();renderDetail(item);if(scroll)byId("guided-investigation-panel").scrollIntoView({behavior:"smooth",block:"start"});loadGuidance(item);}
   async function loadGuidance(item){try{const payload=await post({action:"get-guided-investigation",clientCode:item.clientCode,investigationId:Number(item.id)});if(selectedKey===key(item))renderDetail(item,payload.guidance||null);}catch(error){console.error(error);}}
-  function investigationFamily(item){
-    return norm(
-      item?.communication?.communication_family ||
-      item?.communication?.family ||
-      item?.communication?.source ||
-      item?.communication?.sender ||
-      item?.title
-    );
-  }
 
   function isSemrushSiteAudit(item){
     const combined=[
@@ -294,11 +282,33 @@
   function getEvidenceWorkflowState(item){try{const raw=localStorage.getItem(evidenceWorkflowKey(item));const parsed=raw?JSON.parse(raw):{};return parsed&&typeof parsed==="object"?parsed:{};}catch(error){console.warn(error);return {};}}
   function saveEvidenceWorkflowState(item,state){try{localStorage.setItem(evidenceWorkflowKey(item),JSON.stringify(state));}catch(error){console.warn(error);}}
   function completeEvidenceStep(item,stepId){const state=getEvidenceWorkflowState(item);state[stepId]=true;saveEvidenceWorkflowState(item,state);renderEvidenceWorkflowState(item);}
-  function resetEvidenceWorkflow(item){localStorage.removeItem(evidenceWorkflowKey(item));renderEvidenceWorkflowState(item);}
+  function resetEvidenceWorkflow(item){
+    localStorage.removeItem(evidenceWorkflowKey(item));
+    localStorage.removeItem(evidenceHistoryKey(item));
+    renderEvidenceWorkflowState(item);
+    renderEvidenceHistory(item);
+
+    const finding=byId("finding-summary");
+    const question=byId("work-title");
+    const evidence=byId("work-description");
+    const capturedPanel=byId("captured-evidence-panel");
+    const status=byId("investigation-evidence-status");
+
+    if(finding)finding.value="";
+    if(question)question.value="";
+    if(evidence)evidence.value="";
+    if(capturedPanel)capturedPanel.hidden=true;
+    if(status){
+      status.className="status ready capture-status";
+      status.textContent="Road-test evidence cleared. Choose the first screenshot.";
+    }
+
+    updateDecisionControls({rootCauseProven:false});
+  }
   function nextIncompleteStep(state){return EVIDENCE_STEPS.find(step=>!state[step.id])?.id||"";}
-  function buildEvidenceWorkflow(item){const state=getEvidenceWorkflowState(item);const completed=EVIDENCE_STEPS.filter(step=>state[step.id]).length;return `<section class="evidence-workflow" id="evidence-workflow"><div class="evidence-workflow-header"><div><h4>Evidence Workflow</h4><p>Follow the investigation in order. The next required step is highlighted.</p></div><span class="workflow-progress" id="workflow-progress">${completed} of ${EVIDENCE_STEPS.length} complete</span></div><ol class="evidence-step-list" id="evidence-step-list"></ol><div class="evidence-workflow-actions"><button class="button" id="reset-evidence-workflow" type="button">Reset Checklist</button></div></section>`;}
+  function buildEvidenceWorkflow(item){const state=getEvidenceWorkflowState(item);const completed=EVIDENCE_STEPS.filter(step=>state[step.id]).length;return `<section class="evidence-workflow" id="evidence-workflow"><div class="evidence-workflow-header"><div><h4>Evidence Workflow</h4><p>Follow the investigation in order. The next required step is highlighted.</p></div><span class="workflow-progress" id="workflow-progress">${completed} of ${EVIDENCE_STEPS.length} complete</span></div><ol class="evidence-step-list" id="evidence-step-list"></ol><div class="evidence-workflow-actions"><button class="button" id="reset-evidence-workflow" type="button">Reset Road Test</button></div></section>`;}
   function renderEvidenceWorkflowState(item){const list=byId("evidence-step-list"),progress=byId("workflow-progress");if(!list||!progress)return;const state=getEvidenceWorkflowState(item),activeId=nextIncompleteStep(state),completed=EVIDENCE_STEPS.filter(step=>state[step.id]).length;progress.textContent=`${completed} of ${EVIDENCE_STEPS.length} complete`;list.innerHTML=EVIDENCE_STEPS.map((step,index)=>{const isComplete=Boolean(state[step.id]),isActive=!isComplete&&step.id===activeId,className=isComplete?"complete":isActive?"active":"",status=isComplete?"Complete":isActive?"Current":"Waiting";return `<li class="evidence-step ${className}"><span class="evidence-step-index">${isComplete?"✓":index+1}</span><span><strong>${esc(step.title)}</strong><small>${esc(step.detail)}</small></span><span class="evidence-step-status">${status}</span></li>`;}).join("");}
-  function bindEvidenceWorkflow(item){renderEvidenceWorkflowState(item);byId("reset-evidence-workflow")?.addEventListener("click",()=>{if(window.confirm("Reset the Evidence Workflow checklist for this Investigation?"))resetEvidenceWorkflow(item);});document.querySelector('[data-evidence-tool="semrush"]')?.addEventListener("click",()=>completeEvidenceStep(item,"open_semrush"));const finding=byId("finding-summary"),title=byId("work-title"),description=byId("work-description");[finding,title,description].forEach(field=>field?.addEventListener("input",()=>{if(String(finding?.value||"").trim()&&String(title?.value||"").trim()&&String(description?.value||"").trim())completeEvidenceStep(item,"review_findings");}));}
+  function bindEvidenceWorkflow(item){renderEvidenceWorkflowState(item);byId("reset-evidence-workflow")?.addEventListener("click",()=>{if(window.confirm("Clear the checklist and all locally locked road-test evidence for this Investigation?"))resetEvidenceWorkflow(item);});document.querySelector('[data-evidence-tool="semrush"]')?.addEventListener("click",()=>completeEvidenceStep(item,"open_semrush"));const finding=byId("finding-summary"),title=byId("work-title"),description=byId("work-description");[finding,title,description].forEach(field=>field?.addEventListener("input",()=>{if(String(finding?.value||"").trim()&&String(title?.value||"").trim()&&String(description?.value||"").trim())completeEvidenceStep(item,"review_findings");}));}
 
   function semrushStorageKey(clientCode){
     return `gcm-os-semrush-site-audit-url:${String(clientCode||"").trim().toUpperCase()}`;
@@ -497,6 +507,7 @@
     bindSemrushLinkSetup(item);
     bindEvidenceWorkflow(item);
     renderEvidenceHistory(item);
+    restoreInvestigationState(item);
   }
   function evidenceHistoryKey(item){
     return `gcm-os-investigation-evidence:${String(item.clientCode||"").toUpperCase()}:${Number(item.id)}`;
@@ -518,8 +529,26 @@
     catch(error){console.warn(error);}
   }
 
+  function evidenceDecisionFingerprint(decision){
+    return JSON.stringify({
+      evidenceType:String(decision?.evidenceType||"unknown"),
+      issueName:String(decision?.issueName||"").trim().toLowerCase(),
+      count:Number(decision?.count)||0,
+      sampleUrl:String(decision?.sampleUrl||"").trim().toLowerCase(),
+      nextQuestion:String(decision?.nextQuestion||"").trim().toLowerCase(),
+      nextEvidence:String(decision?.nextEvidence||"").trim().toLowerCase()
+    });
+  }
+
   function appendEvidenceHistory(item,captured,decision){
     const history=getEvidenceHistory(item);
+    const fingerprint=evidenceDecisionFingerprint(decision);
+    const last=history.at(-1);
+
+    if(last?.fingerprint===fingerprint){
+      return {added:false,history};
+    }
+
     history.push({
       step:history.length+1,
       capturedAt:new Date().toISOString(),
@@ -531,10 +560,14 @@
       issueName:decision.issueName||"",
       issueCount:Number(decision.count)||0,
       sampleUrl:decision.sampleUrl||"",
-      rootCauseProven:Boolean(decision.rootCauseProven)
+      rootCauseProven:Boolean(decision.rootCauseProven),
+      nextQuestion:decision.nextQuestion||"",
+      fingerprint
     });
+
     saveEvidenceHistory(item,history);
     renderEvidenceHistory(item);
+    return {added:true,history};
   }
 
   function renderEvidenceHistory(item){
@@ -552,6 +585,41 @@
         <p class="next">Next: ${esc(entry.nextAction)}</p>
       </article>
     `).join("");
+  }
+
+  function restoreInvestigationState(item){
+    const history=getEvidenceHistory(item);
+
+    if(!history.length){
+      updateDecisionControls({rootCauseProven:false});
+      return;
+    }
+
+    const finding=byId("finding-summary");
+    const question=byId("work-title");
+    const evidence=byId("work-description");
+    const latest=history.at(-1);
+
+    if(finding){
+      finding.value=history
+        .map(entry=>`Step ${entry.step}: ${entry.finding}`)
+        .join("\n\n");
+    }
+    if(question){
+      question.value=latest.nextQuestion||extractNextQuestion(latest.nextAction);
+    }
+    if(evidence){
+      evidence.value=latest.nextAction||"";
+    }
+
+    updateDecisionControls({
+      rootCauseProven:Boolean(latest.rootCauseProven)
+    });
+  }
+
+  function extractNextQuestion(value){
+    const text=String(value||"").trim();
+    return text.match(/^.*?[?](?:\s|$)/)?.[0]||text;
   }
 
   function resetEvidenceCaptureForNextStep(input,preview,analyze,status){
@@ -664,15 +732,28 @@
 
         const captured=normalizeCapturedEvidence(payload);
         const decision=buildNextStepDecision(captured,item);
-        renderCapturedEvidence(captured,item);
-        prefillInvestigationFields(item,captured);
-        appendEvidenceHistory(item,captured,decision);
+        renderCapturedEvidence(captured,decision);
+        prefillInvestigationFields(item,captured,decision);
+        const historyResult=appendEvidenceHistory(item,captured,decision);
 
-        analysisLocked=true;
         imageDataUrl="";
-        completeEvidenceStep(item,"review_issues");
-        completeEvidenceStep(item,"analyze_evidence");
-        resetEvidenceCaptureForNextStep(input,preview,analyze,status);
+        input.value="";
+        preview.removeAttribute("src");
+        preview.classList.remove("visible");
+        analyze.disabled=true;
+        analyze.textContent="Analyze Evidence";
+
+        if(historyResult.added){
+          analysisLocked=true;
+          completeEvidenceStep(item,"review_issues");
+          completeEvidenceStep(item,"analyze_evidence");
+          status.className="status ready capture-status";
+          status.textContent="Evidence step locked. Follow the next action, then choose the next screenshot.";
+        }else{
+          analysisLocked=false;
+          status.className="status error capture-status";
+          status.textContent="This screenshot did not advance the Investigation. Crop tightly around the issue names, affected counts, URL, or live result, then analyze the new screenshot.";
+        }
       }catch(error){
         console.error(error);
         status.className="status error capture-status";
@@ -740,10 +821,9 @@
     return isInstructionEcho(text)?"Screenshot evidence":text;
   }
 
-  function renderCapturedEvidence(captured,item){
+  function renderCapturedEvidence(captured,decision){
     const panel=byId("captured-evidence-panel");
     const list=byId("captured-evidence-list");
-    const decision=buildNextStepDecision(captured,item);
     const items=[
       captured.subject&&`Screen/report: ${captured.subject}`,
       ...captured.facts,
@@ -759,11 +839,10 @@
     panel.hidden=false;
   }
 
-  function prefillInvestigationFields(item,captured){
+  function prefillInvestigationFields(item,captured,decision){
     const finding=byId("finding-summary");
     const workTitle=byId("work-title");
     const workDescription=byId("work-description");
-    const decision=buildNextStepDecision(captured,item);
 
     const history=getEvidenceHistory(item);
     const currentFinding=buildInvestigationFinding(item,captured,decision);
@@ -839,7 +918,13 @@
       };
     }
 
-    const totals=extractAuditTotals(facts);
+    const baselineContext=[
+      ...facts,
+      item?.description,
+      item?.communication?.ai_summary,
+      item?.communication?.raw_content
+    ].filter(Boolean);
+    const totals=extractAuditTotals(baselineContext);
     return {
       evidenceType:"overview",
       issueName:"",
