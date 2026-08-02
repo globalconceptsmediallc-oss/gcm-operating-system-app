@@ -1,0 +1,159 @@
+<!-- =========================================================
+   Global Concepts Media Operating System
+   File: wwpowd.html
+   Version: 1.0.0
+   Status: Production Candidate — Road Test Only
+   Source: New WWPOWD Architecture Sprint
+   Sprint: WWPOWD Operational Assessment
+   Purpose: Evaluate a complete client operational report and recommend
+            one highest-value priority before an Investigation is created.
+
+   Safety boundary:
+   - Read/analyze only.
+   - Creates no Communication, Investigation, Work Item, or Proof record.
+   - Uses the existing production communication-analysis Worker action.
+   - Human acceptance is captured only in the browser for this road test.
+   ========================================================= -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WWPOWD Assessment | GCM OS</title>
+  <meta name="description" content="Determine the highest-value operational priority before opening an Investigation.">
+  <style>
+    :root{
+      --navy:#071426;--navy2:#0b1d33;--blue:#1f68d8;--gold:#d6a94a;
+      --bg:#f5f7fb;--card:#fff;--border:#dbe2ec;--text:#132238;
+      --muted:#637083;--success:#1f7a4f;--success-bg:#e9f7f0;
+      --danger:#b33a3a;--danger-bg:#fff0f0;--warning:#9a6414;
+      --warning-bg:#fff6e6;--info:#245fae;--info-bg:#eaf2ff;
+      --shadow:0 12px 34px rgba(7,20,38,.09);--radius:18px
+    }
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+    button,input,select,textarea{font:inherit} button{cursor:pointer} a{color:inherit;text-decoration:none}
+    .shell{min-height:100vh;display:grid;grid-template-columns:250px minmax(0,1fr)}
+    .sidebar{position:sticky;top:0;height:100vh;padding:24px 18px;display:flex;flex-direction:column;color:#fff;background:linear-gradient(180deg,var(--navy2),var(--navy))}
+    .brand{display:flex;align-items:center;gap:12px;padding:2px 8px 22px;border-bottom:1px solid rgba(255,255,255,.12)}
+    .brand-mark{width:42px;height:42px;display:grid;place-items:center;border-radius:13px;background:rgba(255,255,255,.08);color:var(--gold);font-weight:900}
+    .brand-copy strong,.brand-copy span{display:block}.brand-copy span{margin-top:2px;color:rgba(255,255,255,.58);font-size:.72rem;text-transform:uppercase;letter-spacing:.12em}
+    .nav-label{margin:24px 10px 10px;color:rgba(255,255,255,.42);font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.14em}
+    .nav{display:grid;gap:6px}.nav a{display:flex;align-items:center;min-height:46px;padding:0 13px;border-radius:12px;color:rgba(255,255,255,.72);font-size:.92rem;font-weight:700}
+    .nav a[aria-current="page"]{background:rgba(52,124,232,.2);color:#fff;box-shadow:inset 3px 0 0 var(--gold)}
+    .sidebar-footer{margin-top:auto;padding:18px 8px 2px;border-top:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.66);font-size:.78rem}
+    main{min-width:0;padding:28px 32px 48px}.main-inner{max-width:1500px;margin:0 auto}
+    .topbar{display:flex;justify-content:space-between;gap:24px;margin-bottom:22px}.eyebrow{margin:0 0 6px;color:var(--blue);font-size:.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.14em}
+    h1{margin:0;color:var(--navy);font-size:clamp(2rem,4vw,3.15rem);line-height:1}.subtitle{max-width:900px;margin:10px 0 0;color:var(--muted)}
+    .version{align-self:flex-start;padding:11px 14px;border:1px solid var(--border);border-radius:999px;background:#fff;color:var(--muted);font-size:.8rem;font-weight:800;white-space:nowrap}
+    .notice{margin-bottom:18px;padding:14px 16px;border:1px solid #efd9a9;border-radius:13px;background:var(--warning-bg);color:#71470c;font-size:.84rem;font-weight:700}
+    .grid{display:grid;grid-template-columns:minmax(420px,.82fr) minmax(0,1.18fr);gap:18px;align-items:start}.stack{display:grid;gap:18px}
+    .panel{border:1px solid var(--border);border-radius:var(--radius);background:var(--card);box-shadow:var(--shadow);overflow:hidden}.panel-header{padding:18px 20px 15px;border-bottom:1px solid var(--border)}
+    .panel-header h2{margin:0;color:var(--navy);font-size:1rem}.panel-header p{margin:4px 0 0;color:var(--muted);font-size:.82rem}.panel-body{padding:20px}
+    .field{display:grid;gap:7px;margin-bottom:14px}label,legend{color:var(--navy2);font-size:.78rem;font-weight:850}select,textarea{width:100%;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--text);padding:11px 12px}
+    textarea{min-height:170px;resize:vertical;line-height:1.45}.help{margin:-2px 0 0;color:var(--muted);font-size:.75rem}
+    .drop{min-height:270px;display:grid;place-items:center;padding:18px;border:2px dashed #b9c7d9;border-radius:14px;background:#fbfcfe;text-align:center}.drop.drag{border-color:var(--blue);background:var(--info-bg)}.drop.has-image{background:#0b1626;border-style:solid;padding:10px}
+    .drop strong,.drop span{display:block}.drop span{margin-top:6px;color:var(--muted);font-size:.82rem}.preview{display:none;width:100%;max-height:520px;object-fit:contain;border-radius:10px}.drop.has-image .preview{display:block}.drop.has-image .drop-copy{display:none}
+    .buttons{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}.button{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 16px;border:1px solid transparent;border-radius:11px;font-size:.86rem;font-weight:850}.primary{background:var(--blue);color:#fff}.secondary{border-color:var(--border);background:#fff;color:var(--navy2)}.button:disabled{cursor:not-allowed;opacity:.48}
+    .status{padding:14px;border-radius:12px;font-size:.82rem;font-weight:750}.status.pending{border:1px solid #cfe0f8;background:var(--info-bg);color:var(--info)}.status.ready{border:1px solid #cde7d9;background:var(--success-bg);color:var(--success)}.status.error{border:1px solid #efcccc;background:var(--danger-bg);color:var(--danger)}
+    .priority{padding:18px;border:1px solid #bcd4f7;border-radius:15px;background:#f7faff}.priority-label{margin:0 0 7px;color:var(--blue);font-size:.7rem;font-weight:900;text-transform:uppercase;letter-spacing:.12em}.priority h3{margin:0;color:var(--navy);font-size:1.25rem;line-height:1.25}.priority p{margin:9px 0 0;line-height:1.5}
+    .facts{display:grid;gap:10px;margin-top:14px}.fact{padding:13px;border:1px solid var(--border);border-radius:12px}.fact strong{display:block;margin-bottom:4px;color:var(--navy);font-size:.78rem;text-transform:uppercase;letter-spacing:.04em}.fact span{white-space:pre-wrap;line-height:1.45}
+    .candidates{display:grid;gap:9px;margin-top:12px}.candidate{padding:12px 13px;border:1px solid var(--border);border-radius:11px;background:#fff}.candidate strong{display:block;color:var(--navy)}.candidate span{display:block;margin-top:3px;color:var(--muted);font-size:.8rem}
+    .decision-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}.decision{display:grid;grid-template-columns:22px 1fr;gap:9px;align-items:start;padding:13px;border:1px solid var(--border);border-radius:12px}.decision input{width:17px;height:17px;margin-top:2px;accent-color:var(--blue)}.decision strong,.decision span{display:block}.decision span{margin-top:3px;color:var(--muted);font-size:.76rem}
+    .accepted{margin-top:14px;padding:14px;border:1px solid #cde7d9;border-radius:12px;background:var(--success-bg);color:var(--success);font-weight:800}
+    [hidden]{display:none!important}@media(max-width:1000px){.shell{grid-template-columns:1fr}.sidebar{position:relative;height:auto}.grid{grid-template-columns:1fr}.decision-grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-mark">GCM</div><div class="brand-copy"><strong>Operating System</strong><span>Agency Command</span></div></div>
+    <div class="nav-label">Operate</div>
+    <nav class="nav" aria-label="Primary">
+      <a href="today.html">Today</a><a href="clients.html">Clients</a><a href="communications.html">Communications</a><a href="wwpowd.html" aria-current="page">WWPOWD</a><a href="work.html">Work</a><a href="proof.html">Proof</a><a href="media.html">Media</a>
+    </nav>
+    <div class="sidebar-footer">Road-test surface only<br>Creates no D1 records</div>
+  </aside>
+  <main><div class="main-inner">
+    <header class="topbar"><div><p class="eyebrow">Operational Assessment</p><h1>What should we work on today?</h1><p class="subtitle">Evaluate the complete operational picture, select one highest-value priority, and decide whether it deserves Investigation, Monitoring, Deferral, or No Action.</p></div><div class="version">wwpowd.html v1.0.0</div></header>
+    <div class="notice">This first build is intentionally read-only. It tests the WWPOWD decision before we change production record creation.</div>
+    <div class="grid">
+      <section class="stack">
+        <article class="panel"><div class="panel-header"><h2>1. Complete Operational Evidence</h2><p>Use the full report—not an isolated issue screenshot.</p></div><div class="panel-body">
+          <div class="field"><label for="client">Client</label><select id="client"><option value="">Select client</option><option>Southeast Safes</option><option>A1 Action Safe & Lock</option><option>HB Guns</option><option>North Florida Safes</option><option>Pickett Weaponry</option><option>Move A Safe</option><option>South Florida Safes</option><option>1-800 4A Gun Safe</option><option>Global Concepts Media</option><option>Lumi Studio</option></select></div>
+          <div class="field"><label>Full report screenshot</label><div class="drop" id="drop"><div class="drop-copy"><strong>Drop the complete screenshot here</strong><span>PNG, JPG, or WEBP — maximum 10 MB</span></div><img class="preview" id="preview" alt="Selected evidence preview"></div><input id="file" type="file" accept="image/png,image/jpeg,image/webp" hidden><div class="buttons"><button class="button secondary" id="choose" type="button">Choose Screenshot</button><button class="button secondary" id="remove" type="button" disabled>Remove</button></div></div>
+          <div class="field"><label for="context">Additional operational context</label><textarea id="context" placeholder="Optional: current client priority, access limits, previous investigation, deadline, sales concern, or why this report matters today."></textarea><p class="help">Context is sent with the report so the assessment is not based on issue count alone.</p></div>
+          <button class="button primary" id="analyze" type="button">Run WWPOWD Assessment</button>
+        </div></article>
+        <div class="status pending" id="status">Ready for the original full Site Audit screenshot.</div>
+      </section>
+      <section class="stack" id="results" hidden>
+        <article class="panel"><div class="panel-header"><h2>2. WWPOWD Recommendation</h2><p>One operational priority—not a list of everything wrong.</p></div><div class="panel-body">
+          <div class="priority"><p class="priority-label">Highest-value opportunity</p><h3 id="priority-title"></h3><p id="priority-reason"></p></div>
+          <div class="facts"><div class="fact"><strong>Business impact</strong><span id="impact"></span></div><div class="fact"><strong>Effort and measurability</strong><span id="effort"></span></div><div class="fact"><strong>Evidence still needed</strong><span id="evidence-needed"></span></div><div class="fact"><strong>What happens to the other issues</strong><span id="other-issues"></span></div></div>
+        </div></article>
+        <article class="panel"><div class="panel-header"><h2>3. Human Operational Decision</h2><p>WWPOWD recommends. Andy decides.</p></div><div class="panel-body">
+          <div class="decision-grid">
+            <label class="decision"><input type="radio" name="decision" value="Investigate"><span><strong>Investigate</strong><span>Answer one bounded operational question with evidence.</span></span></label>
+            <label class="decision"><input type="radio" name="decision" value="Monitor"><span><strong>Monitor</strong><span>Keep the condition visible without committing work now.</span></span></label>
+            <label class="decision"><input type="radio" name="decision" value="Defer"><span><strong>Defer</strong><span>Important, but a different use of effort has higher value today.</span></span></label>
+            <label class="decision"><input type="radio" name="decision" value="No Action"><span><strong>No Action</strong><span>Evidence does not justify additional agency effort.</span></span></label>
+          </div>
+          <div class="field" style="margin-top:14px"><label for="override">Decision note or override reason</label><textarea id="override" style="min-height:100px" placeholder="Why this is the correct use of today's effort."></textarea></div>
+          <button class="button primary" id="accept" type="button" disabled>Accept Road-Test Decision</button><div class="accepted" id="accepted" hidden></div>
+        </div></article>
+        <article class="panel"><div class="panel-header"><h2>Assessment Candidates</h2><p>Supporting evidence—not simultaneous priorities.</p></div><div class="panel-body"><div class="candidates" id="candidates"></div></div></article>
+      </section>
+    </div>
+  </div></main>
+</div>
+<script>
+(() => {
+  "use strict";
+  const VERSION = "1.0.0";
+  const ENDPOINT = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+  const CONTRACT_VERSION = "communications-operational-decision-v3";
+  const MAX_FILE_SIZE = 10 * 1024 * 1024;
+  const ALLOWED_TYPES = new Set(["image/png","image/jpeg","image/webp"]);
+  const $ = id => document.getElementById(id);
+  const el = {client:$("client"),drop:$("drop"),file:$("file"),choose:$("choose"),remove:$("remove"),preview:$("preview"),context:$("context"),analyze:$("analyze"),status:$("status"),results:$("results"),priorityTitle:$("priority-title"),priorityReason:$("priority-reason"),impact:$("impact"),effort:$("effort"),evidenceNeeded:$("evidence-needed"),otherIssues:$("other-issues"),candidates:$("candidates"),override:$("override"),accept:$("accept"),accepted:$("accepted")};
+  let imageDataUrl = "";
+  let lastAssessment = null;
+  const clean = value => String(value ?? "").replace(/\s+/g," ").trim();
+  const list = value => Array.isArray(value) ? value.map(clean).filter(Boolean) : [];
+  function status(message,type="pending"){el.status.className=`status ${type}`;el.status.textContent=message;}
+  function readFile(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||""));reader.onerror=()=>reject(new Error("The screenshot could not be read."));reader.readAsDataURL(file);});}
+  async function setFile(file){if(!file)return;if(!ALLOWED_TYPES.has(file.type)){status("Use a PNG, JPG, or WEBP screenshot.","error");return;}if(file.size>MAX_FILE_SIZE){status("The screenshot is larger than 10 MB.","error");return;}imageDataUrl=await readFile(file);el.preview.src=imageDataUrl;el.drop.classList.add("has-image");el.remove.disabled=false;status("Complete screenshot loaded. Add context if needed, then run WWPOWD.","ready");}
+  function removeFile(){imageDataUrl="";el.file.value="";el.preview.removeAttribute("src");el.drop.classList.remove("has-image");el.remove.disabled=true;status("Ready for the original full Site Audit screenshot.");}
+  function textFrom(value,fallback){if(Array.isArray(value))return value.map(clean).filter(Boolean).join("\n")||fallback;return clean(value)||fallback;}
+  function buildAssessment(data){
+    const ww=data?.wwPowdAnalysis||{}; const meaning=data?.businessMeaning||{}; const decision=data?.operationalDecision||data?.analysis||{}; const evidence=data?.evidence||{}; const proof=data?.proofReadiness||{};
+    const metrics=list(evidence.visibleMetrics); const facts=list(evidence.visibleFacts); const recommendation=clean(ww.highestValueOpportunity||ww.recommendedPriority||ww.nextBestAction||decision.recommendedAction||meaning.recommendedAction||decision.title);
+    const reason=clean(ww.priorityReason||ww.reasoning||decision.reasoning||meaning.businessMeaning||meaning.interpretation||data?.consultantSummary?.summary);
+    const impact=clean(ww.businessImpact||meaning.businessImpact||meaning.whyItMatters||decision.expectedImpact);
+    const effort=clean(ww.effortAssessment||ww.effort||decision.effortRequired); const measurable=clean(ww.measurableImprovement||ww.verificationOpportunity||proof.reason);
+    const needed=list(ww.evidenceNeeded||ww.nextEvidenceNeeded||decision.evidenceNeeded); const deferred=list(ww.deferredIssues||ww.otherIssues||ww.monitorOrDefer);
+    const candidates=[...metrics,...facts].slice(0,12);
+    return {title:recommendation||"Review the strongest verified issue before selecting an Investigation.",reason:reason||"The current Worker returned evidence but did not provide a complete priority explanation. Human review is required.",impact:impact||"Business impact was not established by the current evidence.",effort:[effort,measurable].filter(Boolean).join(" — ")||"Effort and measurable improvement require human confirmation.",needed:needed.join("\n")||"Confirm the exact operational question and the evidence that would answer it.",other:deferred.join("\n")||"Keep remaining issues visible as candidates; do not open simultaneous Investigations from this assessment.",candidates};
+  }
+  function render(assessment){lastAssessment=assessment;el.priorityTitle.textContent=assessment.title;el.priorityReason.textContent=assessment.reason;el.impact.textContent=assessment.impact;el.effort.textContent=assessment.effort;el.evidenceNeeded.textContent=assessment.needed;el.otherIssues.textContent=assessment.other;el.candidates.innerHTML="";(assessment.candidates.length?assessment.candidates:["No additional candidates were extracted."]).forEach((item,index)=>{const node=document.createElement("div");node.className="candidate";const strong=document.createElement("strong");strong.textContent=index===0?"Evidence candidate":"Supporting evidence";const span=document.createElement("span");span.textContent=item;node.append(strong,span);el.candidates.appendChild(node);});el.results.hidden=false;el.results.scrollIntoView({behavior:"smooth",block:"start"});}
+  async function analyze(){
+    const client=clean(el.client.value); const context=clean(el.context.value); if(!client){status("Select the client before running WWPOWD.","error");return;} if(!imageDataUrl&&!context){status("Add the complete report screenshot or source context.","error");return;}
+    el.analyze.disabled=true; status("WWPOWD is evaluating the complete operational picture…");
+    try{
+      const sourceText=["WWPOWD OPERATIONAL CONTEXT",`Client: ${client}`,"Evaluate the complete report before selecting one priority.","Do not treat issue count or tool severity as the final priority.",context?`Additional context: ${context}`:""].filter(Boolean).join("\n");
+      const response=await fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json","X-GCM-Contract-Version":CONTRACT_VERSION},body:JSON.stringify({action:"analyze-client-communication",contractVersion:CONTRACT_VERSION,client,sourceText,image:imageDataUrl,fileName:"wwpowd-full-operational-report"})});
+      const data=await response.json().catch(()=>({})); if(!response.ok||!data?.ok)throw new Error(data?.error||`Worker request failed (${response.status}).`);
+      render(buildAssessment(data)); status(`WWPOWD assessment completed using Worker ${clean(data.version)||"current production"}. Review and make the human decision.`,"ready");
+    }catch(error){status(`Assessment failed: ${clean(error?.message)||"Unknown error"}`,"error");}
+    finally{el.analyze.disabled=false;}
+  }
+  el.choose.addEventListener("click",()=>el.file.click()); el.file.addEventListener("change",()=>setFile(el.file.files?.[0]).catch(error=>status(error.message,"error"))); el.remove.addEventListener("click",removeFile);
+  ["dragenter","dragover"].forEach(type=>el.drop.addEventListener(type,event=>{event.preventDefault();el.drop.classList.add("drag");})); ["dragleave","drop"].forEach(type=>el.drop.addEventListener(type,event=>{event.preventDefault();el.drop.classList.remove("drag");})); el.drop.addEventListener("drop",event=>setFile(event.dataTransfer?.files?.[0]).catch(error=>status(error.message,"error"))); el.drop.addEventListener("click",()=>el.file.click());
+  el.analyze.addEventListener("click",analyze); document.querySelectorAll('input[name="decision"]').forEach(input=>input.addEventListener("change",()=>{el.accept.disabled=false;el.accepted.hidden=true;}));
+  el.accept.addEventListener("click",()=>{const selected=document.querySelector('input[name="decision"]:checked');if(!selected||!lastAssessment)return;const note=clean(el.override.value);el.accepted.textContent=`Road-test decision accepted: ${selected.value}. Priority: ${lastAssessment.title}${note?` — ${note}`:""}. No production record was created.`;el.accepted.hidden=false;});
+  window.GCM_WWPOWD_TEST={version:VERSION,buildAssessment};
+})();
+</script>
+</body>
+</html>
