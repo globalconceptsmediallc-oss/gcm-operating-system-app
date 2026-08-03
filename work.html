@@ -1,13 +1,14 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.8.9
+   Version: 1.9.0
    Status: Audited Production Candidate
-   Source: Production work.html 1.8.8
-   Sprint: Investigation Context Synchronization
-   Purpose: Preserve the proven guided Investigation workflow while binding
-            the Open Work Items panel to the currently selected Investigation
-            so unrelated client work can never appear in the active context.
+   Source: Production work.html 1.8.9
+   Sprint: SEMrush Site Audit Evidence Synthesis
+   Purpose: Preserve the proven guided Investigation workflow while teaching
+            the SEMrush Site Audit investigation to extract patterns, separate
+            symptoms from root causes, request the next proof, and unlock work
+            only after the responsible implementation source is identified.
 
    Repository contracts verified:
    - analyze-client-communication
@@ -125,7 +126,7 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Investigate one evidence step at a time. Create specific work only after the evidence proves what must be done.</p></div>
-        <span class="classification">WWPOWD Audited Investigation · v1.8.9</span>
+        <span class="classification">WWPOWD Audited Investigation · v1.9.0</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -151,7 +152,7 @@
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"WWPOWD audited investigation · Work v1.8.9"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"WWPOWD audited investigation · Work v1.9.0"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),target:byId("target-banner")};
   let activeClients=[],investigations=[],workItems=[],selectedKey="",processing=false,processingWorkItem=false;
 
@@ -581,6 +582,9 @@
       issueName:String(decision?.issueName||"").trim().toLowerCase(),
       count:Number(decision?.count)||0,
       sampleUrl:String(decision?.sampleUrl||"").trim().toLowerCase(),
+      schemaType:String(decision?.schemaType||"").trim().toLowerCase(),
+      affectedField:String(decision?.affectedField||"").trim().toLowerCase(),
+      implementationSource:String(decision?.implementationSource||"").trim().toLowerCase(),
       nextQuestion:String(decision?.nextQuestion||"").trim().toLowerCase(),
       nextEvidence:String(decision?.nextEvidence||"").trim().toLowerCase()
     });
@@ -606,6 +610,10 @@
       issueName:decision.issueName||"",
       issueCount:Number(decision.count)||0,
       sampleUrl:decision.sampleUrl||"",
+      schemaType:decision.schemaType||"",
+      affectedField:decision.affectedField||"",
+      implementationSource:decision.implementationSource||"",
+      systemic:Boolean(decision.systemic),
       rootCauseProven:Boolean(decision.rootCauseProven),
       nextQuestion:decision.nextQuestion||"",
       fingerprint
@@ -874,6 +882,10 @@
       captured.subject&&`Screen/report: ${captured.subject}`,
       ...captured.facts,
       decision.issueName&&`Recommended next issue: ${decision.issueName}${decision.count?` — ${decision.count} affected`:``}`,
+      decision.schemaType&&`Shared schema type: ${decision.schemaType}`,
+      decision.affectedField&&`Affected field: ${decision.affectedField}`,
+      decision.implementationSource&&`Implementation source: ${decision.implementationSource}`,
+      decision.systemic&&"Pattern classification: Systemic/shared implementation candidate",
       decision.reason&&`Why chosen: ${decision.reason}`,
       captured.confidence&&`Extraction confidence: ${captured.confidence}`
     ].filter(Boolean);
@@ -905,6 +917,16 @@
     const joined=facts.join(" ").toLowerCase();
     const history=item?getEvidenceHistory(item):[];
 
+    if(isSemrushSiteAudit(item)){
+      const specialist=buildSemrushSiteAuditDecision({
+        facts,
+        joined,
+        history,
+        item
+      });
+      if(specialist)return specialist;
+    }
+
     const sampleUrl=extractVisibleUrl(facts);
     const is404=/\b404\b|page not found|page can.t be found|nothing was found at this location/.test(joined);
     const isSuccess=/\b200\b|loads successfully|page loaded successfully/.test(joined);
@@ -916,10 +938,7 @@
         entry.evidenceType==="live_url_sample" &&
         String(entry.finding||"").toLowerCase().includes(is404?"404":isRedirect?"redirect":"loads successfully")
       ).length;
-
-      const totalMatching=matchingSamples+1;
-      const rootCauseProven=totalMatching>=3;
-
+      const rootCauseProven=matchingSamples+1>=3;
       return {
         evidenceType:"live_url_sample",
         sampleUrl,
@@ -929,25 +948,22 @@
         rootCauseProven,
         reason:`The sampled URL ${behavior}. One URL proves the behavior exists, but not yet whether the same root cause explains the full issue group.`,
         expectedImpact:rootCauseProven
-          ? `Three or more samples now show the same behavior. The repeated pattern supports defining one corrective work item, followed by a new crawl to verify the affected count and Site Health.`
-          : `Test additional URLs from the same SEMrush issue. Repeated behavior will show whether this is one shared root cause or several different problems.`,
+          ?"Repeated samples support one corrective work item followed by a new crawl."
+          :"Test additional URLs from the same SEMrush issue.",
         nextQuestion:rootCauseProven
-          ? "What shared source, template, redirect rule, or deleted-content pattern is generating these invalid URLs?"
-          : `Do at least two more affected URLs from the same issue show the same ${is404?"404":"behavior"}?`,
+          ?"What shared source, template, redirect rule, or deleted-content pattern is generating these invalid URLs?"
+          :`Do at least two more affected URLs from the same issue show the same ${is404?"404":"behavior"}?`,
         nextEvidence:rootCauseProven
-          ? "Capture the page, template, redirect configuration, sitemap entry, or CMS source that proves the shared root cause."
-          : "Open another affected URL from the same SEMrush issue and capture the live result. Repeat until at least three samples establish whether the behavior is consistent."
+          ?"Capture the page, template, redirect configuration, sitemap entry, or CMS source that proves the shared root cause."
+          :"Open another affected URL from the same SEMrush issue and capture the live result."
       };
     }
 
     const rows=extractIssueRows(facts);
-    const errorRows=rows.filter(row=>row.severity==="error");
-    const warningRows=rows.filter(row=>row.severity==="warning");
-    const candidates=errorRows.length?errorRows:warningRows.length?warningRows:rows;
-
-    const selected=[...candidates].sort((a,b)=>
-      (b.count-a.count) ||
-      (issueImpactWeight(b.name)-issueImpactWeight(a.name))
+    const selected=[...rows].sort((a,b)=>
+      severityRank(a.severity)-severityRank(b.severity) ||
+      issueImpactWeight(b.name)-issueImpactWeight(a.name) ||
+      b.count-a.count
     )[0]||null;
 
     if(selected){
@@ -957,32 +973,160 @@
         count:selected.count,
         severity:selected.severity,
         rootCauseProven:false,
-        reason:`It is a visible ${selected.severity} affecting ${selected.count} page${selected.count===1?"":"s"}. Errors are reviewed before warnings, and the broadest verified impact is investigated first.`,
-        expectedImpact:"The issue category is selected, but corrective work is not yet proven. A live sample is required to determine the real behavior and root cause.",
+        reason:`It is a visible ${selected.severity} affecting ${selected.count} page${selected.count===1?"":"s"}.`,
+        expectedImpact:"The issue category is selected, but corrective work is not yet proven.",
         nextQuestion:`What actually happens when one affected URL from "${selected.name}" is opened on the live website?`,
         nextEvidence:`Open the first affected URL listed under "${selected.name}" and capture the live result.`
       };
     }
 
-    const baselineContext=[
+    const totals=extractAuditTotals([
       ...facts,
       item?.description,
       item?.communication?.ai_summary,
       item?.communication?.raw_content
-    ].filter(Boolean);
-    const totals=extractAuditTotals(baselineContext);
+    ].filter(Boolean));
+
     return {
       evidenceType:"overview",
       issueName:"",
       count:0,
       severity:"",
       rootCauseProven:false,
-      reason:"The screenshot confirms technical issues exist, but it does not reliably pair an issue name with an affected-page count.",
-      expectedImpact:"No corrective work or Site Health improvement should be predicted until a specific issue and live behavior are verified.",
+      reason:"The screenshot confirms technical issues exist, but does not yet identify one grouped root-cause candidate.",
+      expectedImpact:"No corrective work should be created yet.",
       nextQuestion:"Which Error category has the highest verified impact?",
       nextEvidence:"Open the SEMrush Errors list and capture the visible issue names with their affected-page counts.",
       totals
     };
+  }
+
+  function buildSemrushSiteAuditDecision({facts,joined,history,item}){
+    const implementationSource=extractImplementationSource(facts);
+    const affectedField=extractAffectedField(facts);
+    const schemaType=extractSchemaType(facts);
+    const rows=extractIssueRows(facts);
+    const structuredIssue=rows.find(row=>/structured data/i.test(row.name));
+    const count=structuredIssue?.count||extractStructuredDataCount(facts)||mostRecentIssueCount(history);
+
+    if(implementationSource){
+      return {
+        evidenceType:"implementation_proof",
+        issueName:mostRecentIssueName(history)||"invalid structured data items",
+        count,
+        severity:"error",
+        schemaType:mostRecentSchemaType(history)||schemaType||"Event",
+        affectedField:mostRecentAffectedField(history)||affectedField||"location",
+        implementationSource,
+        systemic:true,
+        rootCauseProven:true,
+        reason:`The evidence identifies ${implementationSource} as the shared source producing the invalid schema.`,
+        expectedImpact:"One implementation repair can correct the shared output across the affected records.",
+        nextQuestion:`What exact change is required in ${implementationSource}?`,
+        nextEvidence:"After implementation, capture corrected JSON-LD or validation evidence and rerun the SEMrush Site Audit."
+      };
+    }
+
+    if(affectedField||schemaType){
+      const resolvedSchema=schemaType||mostRecentSchemaType(history)||"Event";
+      const resolvedField=affectedField||mostRecentAffectedField(history)||"location";
+      return {
+        evidenceType:"affected_field",
+        issueName:mostRecentIssueName(history)||structuredIssue?.name||"invalid structured data items",
+        count,
+        severity:"error",
+        schemaType:resolvedSchema,
+        affectedField:resolvedField,
+        systemic:true,
+        rootCauseProven:false,
+        reason:`The affected records share the ${resolvedSchema} schema type and the required "${resolvedField}" field is missing or invalid. This proves a repeated systemic symptom, but not yet which implementation component is responsible.`,
+        expectedImpact:"Corrective work remains locked until the responsible plugin, template, schema generator, or configuration is identified.",
+        nextQuestion:`Which plugin, template, schema generator, or configuration is omitting "${resolvedField}" from the ${resolvedSchema} structured data?`,
+        nextEvidence:`Inspect one affected page's generated JSON-LD and the event plugin/template or schema configuration. Capture the component responsible for omitting "${resolvedField}".`
+      };
+    }
+
+    if(structuredIssue||/\bstructured data\b/.test(joined)){
+      return {
+        evidenceType:"structured_data_issue_list",
+        issueName:structuredIssue?.name||"structured data items are invalid",
+        count,
+        severity:"error",
+        schemaType:detectRepeatedSchemaType(facts),
+        systemic:true,
+        rootCauseProven:false,
+        reason:`${count||"Multiple"} structured-data failures are visible and appear to share a page or schema pattern.`,
+        expectedImpact:"No work is created from the count alone.",
+        nextQuestion:"Do the affected records share the same structured-data type and the same invalid or missing field?",
+        nextEvidence:"Expand one representative row and capture the Structured Data Type, Affected Field, and issue description."
+      };
+    }
+
+    return null;
+  }
+
+  function extractStructuredDataCount(facts){
+    const text=(facts||[]).join(" ");
+    const match=text.match(/(\d[\d,]*)\s+structured data items?\s+(?:are\s+)?invalid/i)||
+      text.match(/failed\s*[:\-]?\s*(\d[\d,]*)/i);
+    return match?Number(match[1].replaceAll(",","")):0;
+  }
+
+  function extractSchemaType(facts){
+    const text=(facts||[]).join(" ");
+    const match=text.match(/structured data type\s*[:\-]?\s*([A-Za-z][A-Za-z0-9_-]*)/i);
+    if(match)return match[1];
+    return ["Event","Product","Organization","LocalBusiness","Article","BreadcrumbList","FAQPage"]
+      .find(type=>new RegExp(`\\b${type}\\b`,"i").test(text))||"";
+  }
+
+  function detectRepeatedSchemaType(facts){
+    const values=(facts||[]).join(" ").match(/\b(Event|Product|Organization|LocalBusiness|Article|BreadcrumbList|FAQPage)\b/gi)||[];
+    const counts=new Map();
+    values.forEach(value=>counts.set(value.toLowerCase(),(counts.get(value.toLowerCase())||0)+1));
+    const top=[...counts.entries()].sort((a,b)=>b[1]-a[1])[0];
+    return top?top[0].replace(/\b\w/g,char=>char.toUpperCase()):"";
+  }
+
+  function extractAffectedField(facts){
+    const text=(facts||[]).join(" ");
+    const patterns=[
+      /affected fields?\s*[:\-]?\s*([A-Za-z][A-Za-z0-9_.-]*)/i,
+      /value for the\s+([A-Za-z][A-Za-z0-9_.-]*)\s+field is required/i,
+      /\b(location|startDate|endDate|offers|organizer|performer|image|name|url)\b\s+field/i
+    ];
+    for(const pattern of patterns){
+      const match=text.match(pattern);
+      if(match)return match[1];
+    }
+    return "";
+  }
+
+  function extractImplementationSource(facts){
+    const text=(facts||[]).join(" ");
+    const patterns=[
+      /(?:plugin|template|schema generator|configuration|theme|module|component)\s*[:\-]\s*([^.;\n]{3,120})/i,
+      /generated by\s+([^.;\n]{3,120})/i,
+      /source(?: component)?\s*[:\-]\s*([^.;\n]{3,120})/i
+    ];
+    for(const pattern of patterns){
+      const match=text.match(pattern);
+      if(match)return String(match[1]||"").replace(/\s+/g," ").trim();
+    }
+    return "";
+  }
+
+  function mostRecentAffectedField(history){
+    return [...history].reverse().find(entry=>entry.affectedField)?.affectedField||"";
+  }
+
+  function mostRecentSchemaType(history){
+    return [...history].reverse().find(entry=>entry.schemaType)?.schemaType||"";
+  }
+
+  function severityRank(value){
+    const rank={error:0,warning:1,notice:2,issue:3};
+    return rank[String(value||"").toLowerCase()]??4;
   }
 
   function extractVisibleUrl(facts){
@@ -1159,10 +1303,16 @@
   }
 
   function buildSpecificWorkTitle(item,captured,decision){
+    if(decision.rootCauseProven&&decision.evidenceType==="implementation_proof"){
+      return `Correct ${decision.schemaType||"structured data"} ${decision.affectedField||"field"} output in ${decision.implementationSource||"the shared implementation"}`;
+    }
     return decision.nextQuestion||"What is the next fact required to advance this Investigation?";
   }
 
   function buildSpecificAction(item,captured,decision){
+    if(decision.rootCauseProven&&decision.evidenceType==="implementation_proof"){
+      return `Update ${decision.implementationSource||"the shared implementation"} so every affected ${decision.schemaType||"structured data"} record outputs a valid ${decision.affectedField||"required"} property. Validate one corrected page and rerun the SEMrush Site Audit.`;
+    }
     return decision.nextEvidence||"Capture the next evidence screenshot required to answer the current question.";
   }
 
