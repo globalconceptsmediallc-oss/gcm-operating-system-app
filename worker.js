@@ -1,33 +1,19 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.7.2
-   Status: Audited Production Candidate
-   Source: Production worker.js 7.7.1
-   Sprint: Worker Build Recovery
-   Purpose: Restore clean GitHub-to-Cloudflare deployments by preserving
-            every route module that exists in the public repository and
-            disconnecting only the unfinished Calendar handler whose route
-            file is not present.
+   Version: 7.7.3
+   Status: Production Candidate
+   Source: Production worker.js 7.7.2
+   Sprint: Agency Command Route Connection
+   Purpose: Preserve every verified production route and connect the
+            read-only Agency Command orchestration route.
 
-   Repository audit:
-   - Verified existing route imports:
-     communicationAnalysis.js
-     clientWorkspace.js
-     clientDirectory.js
-     operationalDecision.js
-     missionControl.js
-     investigationProcessing.js
-     guidedInvestigation.js
-     workItemProcessing.js
-     mediaOperations.js
-     operationalReviews.js
-   - Removed unresolved import:
-     routes/calendarOperations.js
-   - Removed Calendar dispatch that depended on that missing module.
-   - Calendar pages, D1 tables, action constants, and stored data are not
-     deleted by this file.
-   - Health output now reports only actions this Worker can actually route.
+   Changes in 7.7.3:
+   - Added routes/agencyCommand.js import.
+   - Added agency-command to supported actions.
+   - Added Agency Command dispatch.
+   - Added Agency Command to Worker health output.
+   - No existing route, binding, D1 table, workflow, or action removed.
    ========================================================= */
 
 import {
@@ -54,6 +40,10 @@ import { handleGuidedInvestigation } from "./routes/guidedInvestigation.js";
 import { handleProcessWorkItem } from "./routes/workItemProcessing.js";
 import { handleMediaOperations } from "./routes/mediaOperations.js";
 import { handleOperationalReviews } from "./routes/operationalReviews.js";
+import {
+  handleAgencyCommand,
+  AGENCY_COMMAND_ACTION
+} from "./routes/agencyCommand.js";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
@@ -65,7 +55,8 @@ const SUPPORTED_ACTIONS = [
   ACTIONS.PROCESS_INVESTIGATION,
   ACTIONS.PROCESS_WORK_ITEM,
   ACTIONS.GET_MEDIA_OPERATIONS,
-  ACTIONS.OPERATIONAL_REVIEWS
+  ACTIONS.OPERATIONAL_REVIEWS,
+  AGENCY_COMMAND_ACTION
 ].filter(Boolean);
 
 export default {
@@ -83,12 +74,14 @@ export default {
         status: "online",
         system: "GCM OS Operational Worker",
         version: VERSION,
+        workerFileVersion: "7.7.3",
         contractVersion: API_CONTRACT_VERSION,
-        sprint: "Worker Build Recovery",
+        sprint: "Agency Command Route Connection",
         architecture:
-          "Modular production router with guided Investigation reasoning and verified repository-backed routes.",
+          "Modular production router with Agency Command orchestration, guided Investigation reasoning, and verified repository-backed routes.",
         actions: SUPPORTED_ACTIONS,
         engines: [
+          "agency-command",
           "notification-detection",
           "evidence-extraction",
           "business-meaning",
@@ -107,6 +100,7 @@ export default {
         modules: {
           shared: ["config", "http", "database", "ai"],
           routes: [
+            "agency-command",
             "communication-analysis",
             "client-workspace",
             "client-directory",
@@ -168,6 +162,9 @@ export default {
 
     try {
       switch (action) {
+        case AGENCY_COMMAND_ACTION:
+          return await handleAgencyCommand(body, env, requestId);
+
         case ACTIONS.ANALYZE_COMMUNICATION:
           return await handleCommunicationAnalysis(body, env, requestId);
 
@@ -203,6 +200,7 @@ export default {
             ok: false,
             requestId,
             version: VERSION,
+            workerFileVersion: "7.7.3",
             error: action
               ? `Unsupported action: ${action}`
               : "An action is required.",
@@ -221,6 +219,7 @@ export default {
         ok: false,
         requestId,
         version: VERSION,
+        workerFileVersion: "7.7.3",
         processingStatus: "failed",
         error: safeErrorMessage(error),
         executionTimeMs: Date.now() - requestStartedAt
