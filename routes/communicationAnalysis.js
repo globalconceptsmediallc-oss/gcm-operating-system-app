@@ -1,9 +1,9 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.7.5
+   Version: 7.7.6
    Source: Production route 7.7.1
-   Status: Production Candidate — AI Unavailable Early Exit
+   Status: Production Candidate — SEMrush Engine Integration
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
             independent report-signature recognition, specialized extraction,
@@ -14,7 +14,8 @@
             modular report-signature recognition, a fast screenshot path,
             guarded Position Tracking recovery when broad extraction fails,
             strict isolation of Workers AI/runtime diagnostic messages,
-            and an early stop when screenshot evidence cannot be produced.
+            an early stop when screenshot evidence cannot be produced,
+            and routed SEMrush specialization through shared/engines/semrushEngine.js.
    ========================================================= */
 
 import {
@@ -52,6 +53,11 @@ import {
   recognizeReportSignatureFromEvidence,
   hasStrongReportRecognition
 } from "../shared/reportRecognition.js";
+
+import {
+  analyzeSemrushCommunication,
+  SEMRUSH_ENGINE_VERSION
+} from "../shared/engines/semrushEngine.js";
 
 export async function handleCommunicationAnalysis(body, env, requestId) {
   const startedAt = Date.now();
@@ -98,6 +104,7 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
   let operationalDecision = null;
   let consultantSummary = null;
   let operationalEvidence = null;
+  let semrushAnalysis = null;
 
   /* Stage 0 + Stage 1: fast evidence path.
      Screenshot and hybrid inputs use one shared vision extraction call only.
@@ -319,6 +326,53 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
     }));
   }
 
+  /* Stage 1B: SEMrush specialized engine.
+     The shared engine owns Position Tracking, Site Audit, and Backlink Audit
+     evidence enrichment. The route remains responsible for classification,
+     WWPOWD, business meaning, proof readiness, and operational routing. */
+  {
+    semrushAnalysis = await analyzeSemrushCommunication({
+      evidence: visibleEvidence,
+      reportRecognition,
+      imageDataUrl,
+      sourceText,
+      client,
+      clientId,
+      fileName,
+      env,
+      requestId
+    });
+
+    if (semrushAnalysis?.handled) {
+      visibleEvidence = sanitizeVisibleEvidence(
+        semrushAnalysis.evidence || visibleEvidence
+      );
+
+      for (const stage of semrushAnalysis.stages || []) {
+        stages.push(stage);
+      }
+
+      for (const error of semrushAnalysis.errors || []) {
+        errors.push(error);
+      }
+
+      if (
+        semrushAnalysis.reportType &&
+        semrushAnalysis.reportType !== "unknown"
+      ) {
+        reportRecognition = normalizeReportRecognition({
+          ...(reportRecognition || {}),
+          platform: "semrush",
+          reportType: semrushAnalysis.reportType,
+          reportFamily: humanizeSemrushReportType(semrushAnalysis.reportType),
+          confidence: reportRecognition?.confidence || "High",
+          recognitionMethod: reportRecognition?.recognitionMethod || `semrush-engine-v${SEMRUSH_ENGINE_VERSION}`,
+          model: reportRecognition?.model || "deterministic"
+        });
+      }
+    }
+  }
+
   const detectedClient = detectClientFromEvidence(visibleEvidence);
 
   /* Stage 1: deterministic platform and notification classification. */
@@ -529,6 +583,7 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
     reportRecognition,
     evidence: visibleEvidence,
     operationalEvidence,
+    semrushAnalysis,
     evidenceReconciliation,
     wwPowdAnalysis,
     businessMeaning,
@@ -547,11 +602,21 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
       failedStageCount: failedStages.length,
       fallbackStageCount: fallbackStages.length,
       partialStageCount: partialStages.length,
-      performanceMode: imageDataUrl ? "fast_guarded_position_tracking_v2" : "fast_text_deterministic_plus_reasoning",
+      performanceMode: imageDataUrl ? "specialized_semrush_engine_v1" : "text_deterministic_semrush_engine_v1",
       evidenceAiCallBudget: imageDataUrl ? 1 : 0,
       reasoningAiCallBudget: 1
     }
   }, 200);
+}
+
+function humanizeSemrushReportType(reportType) {
+  const labels = {
+    position_tracking: "Position Tracking",
+    site_audit: "Site Audit",
+    backlink_audit: "Backlink Audit"
+  };
+
+  return labels[clean(reportType).toLowerCase()] || "SEMrush Report";
 }
 
 function operationalEvidenceToVisibleEvidence(operationalEvidence) {
