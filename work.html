@@ -1,14 +1,13 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.8.8
+   Version: 1.8.9
    Status: Audited Production Candidate
-   Source: Production work.html 1.8.7
-   Sprint: WWPOWD Work Page Consolidation
-   Purpose: Preserve the proven guided Investigation workflow while removing
-            dead code, preventing duplicate evidence steps, restoring saved
-            Investigation state after reload, and aligning all Worker requests
-            with the current production API contracts.
+   Source: Production work.html 1.8.8
+   Sprint: Investigation Context Synchronization
+   Purpose: Preserve the proven guided Investigation workflow while binding
+            the Open Work Items panel to the currently selected Investigation
+            so unrelated client work can never appear in the active context.
 
    Repository contracts verified:
    - analyze-client-communication
@@ -29,6 +28,9 @@
    - Reset Road Test clears both checklist and locked local evidence.
    - Keeps the proven local SEMrush direct-link workflow unchanged.
    - Does not change D1 schemas, Worker routes, or processing payload fields.
+   - Filters Open Work Items by the selected Investigation.
+   - Refreshes the Work Item panel whenever the Investigation changes.
+   - Shows an Investigation-specific empty state when no Work Item exists.
    ========================================================= -->
 <!DOCTYPE html>
 <html lang="en">
@@ -123,7 +125,7 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Investigate one evidence step at a time. Create specific work only after the evidence proves what must be done.</p></div>
-        <span class="classification">WWPOWD Audited Investigation · v1.8.8</span>
+        <span class="classification">WWPOWD Audited Investigation · v1.8.9</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -149,7 +151,7 @@
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"WWPOWD audited investigation · Work v1.8.8"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"WWPOWD audited investigation · Work v1.8.9"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),target:byId("target-banner")};
   let activeClients=[],investigations=[],workItems=[],selectedKey="",processing=false,processingWorkItem=false;
 
@@ -181,7 +183,7 @@
         (Array.isArray(op.workItems)?op.workItems:[]).filter(i=>!completed(i)).forEach(i=>workItems.push({...i,clientCode:op.client?.client_code||client.code,clientName:op.client?.name||client.name,clientWebsite}));
       });
       investigations.sort(sortInvestigations);
-      renderSummary();renderWorkItems();applyRequestedTarget();
+      renderSummary();applyRequestedTarget();
       setStatus("ready",`Loaded ${investigations.length} open Investigations and ${workItems.length} open Work Items.`);
     }catch(error){
       console.error(error);setStatus("error",error.message||"Work could not load.");el.list.innerHTML='<div class="empty">Work data unavailable.</div>';
@@ -233,12 +235,43 @@
     el.list.innerHTML=rows.length?rows.map(i=>`<button class="investigation${key(i)===selectedKey?" active":""}" data-key="${esc(key(i))}"><span class="investigation-title">${esc(i.title||"Investigation")}</span><span class="meta-row"><span>${esc(i.clientName)}</span><span class="badge ${esc(norm(i.priority))}">${esc(i.priority||"normal")}</span><span>Investigation #${esc(i.id)}</span></span></button>`).join(""):'<div class="empty">No open Investigations match this view.</div>';
     el.list.querySelectorAll("[data-key]").forEach(b=>b.addEventListener("click",()=>selectInvestigation(investigations.find(i=>key(i)===b.dataset.key))));
   }
-  function selectVisibleDefault(){const rows=visible();if(!rows.length){selectedKey="";renderList();el.detail.innerHTML='<div class="detail-empty">No open Investigations match this view.</div>';return;}selectInvestigation(rows[0]);}
+  function selectVisibleDefault(){
+    const rows=visible();
+    if(!rows.length){
+      selectedKey="";
+      renderList();
+      renderWorkItems(null);
+      el.detail.innerHTML='<div class="detail-empty">No open Investigations match this view.</div>';
+      return;
+    }
+    selectInvestigation(rows[0]);
+  }
   function applyRequestedTarget(){
     renderList();
     if(requestedWorkItemId){
       const item=workItems.find(i=>Number(i.id)===requestedWorkItemId);
-      if(item){showTarget(`Opened Work Item #${item.id} for ${item.clientName}.`);document.querySelector(`[data-work-id="${item.id}"]`)?.scrollIntoView({behavior:"smooth",block:"center"});return;}
+      if(item){
+        const linkedInvestigation=investigations.find(
+          investigation=>
+            Number(investigation.id)===Number(item.investigation_id) &&
+            String(investigation.clientCode)===String(item.clientCode)
+        );
+
+        if(linkedInvestigation){
+          el.filter.value=linkedInvestigation.clientCode;
+          showTarget(`Opened Work Item #${item.id} for ${item.clientName}.`);
+          selectInvestigation(linkedInvestigation,true);
+          document.querySelector(`[data-work-id="${item.id}"]`)?.scrollIntoView({
+            behavior:"smooth",
+            block:"center"
+          });
+          return;
+        }
+
+        showTarget(`Work Item #${item.id} is open, but its linked Investigation is not in the current open Investigation queue.`);
+        renderWorkItems(null);
+        return;
+      }
     }
     if(requestedInvestigationId){
       const item=investigations.find(i=>Number(i.id)===requestedInvestigationId&&(!requestedClientCode||String(i.clientCode).toUpperCase()===requestedClientCode));
@@ -253,7 +286,20 @@
     selectVisibleDefault();
   }
   function showTarget(message){el.target.hidden=false;el.target.textContent=message;}
-  function selectInvestigation(item,scroll=false){if(!item)return;selectedKey=key(item);renderList();renderDetail(item);if(scroll)byId("guided-investigation-panel").scrollIntoView({behavior:"smooth",block:"start"});loadGuidance(item);}
+  function selectInvestigation(item,scroll=false){
+    if(!item)return;
+    selectedKey=key(item);
+    renderList();
+    renderWorkItems(item);
+    renderDetail(item);
+    if(scroll){
+      byId("guided-investigation-panel").scrollIntoView({
+        behavior:"smooth",
+        block:"start"
+      });
+    }
+    loadGuidance(item);
+  }
   async function loadGuidance(item){try{const payload=await post({action:"get-guided-investigation",clientCode:item.clientCode,investigationId:Number(item.id)});if(selectedKey===key(item))renderDetail(item,payload.guidance||null);}catch(error){console.error(error);}}
 
   function isSemrushSiteAudit(item){
@@ -1141,16 +1187,35 @@
     processing=true;message.className="status loading";message.textContent="Saving production decision…";
     try{await post({action:"process-investigation",clientCode:item.clientCode,investigationId:Number(item.id),findingSummary:finding,outcome,workTitle:title,workDescription:description});completeEvidenceStep(item,"complete_investigation");if(outcome==="specific_work_required")completeEvidenceStep(item,"create_work");message.className="status ready";message.textContent=outcome==="no_work_required"?"Investigation closed.":"Specific Work Item created.";await load();}catch(error){message.className="status error";message.textContent=error.message;}finally{processing=false;}
   }
-  function renderWorkItems(){
-    if(!workItems.length){
-      el.openWork.innerHTML='<div class="empty">No open Work Items were returned.</div>';
+  function renderWorkItems(selectedInvestigation){
+    if(!selectedInvestigation){
+      el.openWork.innerHTML=
+        '<div class="empty">Select an open Investigation to view its linked Work Item.</div>';
       return;
     }
 
-    el.openWork.innerHTML=workItems.map(i=>`
+    const linkedWorkItems=workItems.filter(item=>
+      Number(item.investigation_id)===Number(selectedInvestigation.id) &&
+      String(item.clientCode)===String(selectedInvestigation.clientCode)
+    );
+
+    if(!linkedWorkItems.length){
+      el.openWork.innerHTML=`
+        <div class="empty">
+          <strong>No Work Item has been created for Investigation #${esc(selectedInvestigation.id)}.</strong>
+          <br />
+          Continue the Investigation until the evidence proves specific work is required.
+        </div>
+      `;
+      return;
+    }
+
+    el.openWork.innerHTML=linkedWorkItems.map(i=>`
       <article class="work-card" data-work-id="${esc(i.id)}">
         <h3>Work Item #${esc(i.id)} · ${esc(i.title||"Work Item")}</h3>
-        <p class="detail-subtitle">${esc(i.clientName)} · Investigation #${esc(i.investigation_id||"—")}</p>
+        <p class="detail-subtitle">
+          ${esc(i.clientName)} · Investigation #${esc(i.investigation_id||"—")}
+        </p>
         <section class="detail-section">
           <h3>Specific Action</h3>
           <p>${esc(i.description||"No work description stored.")}</p>
@@ -1164,7 +1229,9 @@
           <label>Completion Evidence</label>
           <textarea id="work-evidence-${esc(i.id)}" placeholder="Record the evidence that proves completion."></textarea>
           <div class="processing-actions">
-            <button class="button primary" data-complete-work="${esc(i.id)}">Complete Work Item</button>
+            <button class="button primary" data-complete-work="${esc(i.id)}">
+              Complete Work Item
+            </button>
           </div>
           <div id="work-message-${esc(i.id)}"></div>
         </section>
@@ -1174,8 +1241,8 @@
     el.openWork.querySelectorAll("[data-complete-work]").forEach(button=>{
       button.addEventListener("click",()=>{
         const id=Number(button.dataset.completeWork);
-        const item=workItems.find(entry=>Number(entry.id)===id);
-        if(item) completeWorkItem(item);
+        const item=linkedWorkItems.find(entry=>Number(entry.id)===id);
+        if(item)completeWorkItem(item);
       });
     });
   }
