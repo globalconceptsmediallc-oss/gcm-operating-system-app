@@ -1,14 +1,14 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: business-workspace.html
-   Version: 1.1.0
+   Version: 1.2.0
    Status: Production Candidate
-   Change: Shared GCM OS application shell integration
+   Change: Executable Next Best Action
    Source: Production business-workspace.html
    Shared Shell: shared/gcm-shell.js 1.0.0
-   Purpose: Preserve the existing Business Workspace engine and
-            live get-client-workspace retrieval while moving the
-            page into the shared GCM OS application shell.
+   Purpose: Preserve the existing Business Workspace engine,
+            live get-client-workspace retrieval, and shared shell while
+            making investigation and work-item next actions executable.
    ========================================================= -->
 
 <!DOCTYPE html>
@@ -461,6 +461,35 @@
       color: #ffffff;
     }
 
+    .next-action-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 22px;
+    }
+
+    .next-action-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 11px 18px;
+      border: 1px solid rgba(255, 255, 255, 0.38);
+      border-radius: 10px;
+      background: #ffffff;
+      color: var(--brand-blue-dark);
+      font-weight: 800;
+      text-decoration: none;
+      cursor: pointer;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+    }
+
+    .next-action-button:hover,
+    .next-action-button:focus-visible {
+      background: var(--brand-blue-light);
+      outline: none;
+    }
+
     .list {
       display: grid;
       gap: 14px;
@@ -836,6 +865,20 @@
                   ></p>
 
                   <div id="next-action-meta" class="next-action-meta"></div>
+
+                  <div
+                    id="next-action-controls"
+                    class="next-action-controls"
+                    hidden
+                  >
+                    <a
+                      id="next-action-link"
+                      class="next-action-button"
+                      href="#"
+                    >
+                      Resume Action
+                    </a>
+                  </div>
                 </div>
               </div>
             </section>
@@ -1009,12 +1052,12 @@
 
       if (!window.GCMOShell) {
         console.error(
-          "Business Workspace 1.1.0: shared/gcm-shell.js did not load."
+          "Business Workspace 1.2.0: shared/gcm-shell.js did not load."
         );
       } else {
         window.GCMOShell.mount({
           currentPage: "clients",
-          statusText: "Client workspace connected · Business Workspace v1.1.0"
+          statusText: "Client workspace connected · Business Workspace v1.2.0"
         });
       }
 
@@ -1095,7 +1138,10 @@
         );
 
         renderExecutiveMetrics(executive.summary);
-        renderNextBestAction(executive.nextBestAction);
+        renderNextBestAction(
+          executive.nextBestAction,
+          workspace.record.workspace
+        );
         renderCurrentWork(executive.currentWork);
         renderAlerts(executive.alerts);
         renderPriorities(executive.priorities);
@@ -1158,7 +1204,10 @@
         setText("metric-results", summary.verifiedResultsCount);
       }
 
-      function renderNextBestAction(nextAction) {
+      function renderNextBestAction(
+        nextAction,
+        workspaceRecord
+      ) {
         setText(
           "next-action-title",
           nextAction?.action || "No next action available"
@@ -1171,7 +1220,14 @@
         );
 
         const metaElement = document.getElementById("next-action-meta");
+        const controlsElement = document.getElementById(
+          "next-action-controls"
+        );
+        const actionLink = document.getElementById("next-action-link");
+
         metaElement.innerHTML = "";
+        controlsElement.hidden = true;
+        actionLink.removeAttribute("href");
 
         if (nextAction?.priority) {
           metaElement.appendChild(
@@ -1184,6 +1240,62 @@
             createPill(`Category: ${nextAction.category}`)
           );
         }
+
+        const nextActionHref = normalizeInternalHref(
+          workspaceRecord?.nextActionHref
+        );
+
+        if (!nextActionHref) {
+          return;
+        }
+
+        actionLink.href = nextActionHref;
+        actionLink.textContent = getNextActionButtonLabel(
+          workspaceRecord?.nextActionType,
+          workspaceRecord?.nextActionRecordId
+        );
+        controlsElement.hidden = false;
+      }
+
+      function getNextActionButtonLabel(actionType, recordId) {
+        const normalizedType = String(actionType || "")
+          .trim()
+          .toLowerCase();
+
+        if (normalizedType === "investigation") {
+          return recordId
+            ? `Resume Investigation #${recordId}`
+            : "Resume Investigation";
+        }
+
+        if (normalizedType === "work_item") {
+          return recordId
+            ? `Open Work Item #${recordId}`
+            : "Open Work Item";
+        }
+
+        if (normalizedType === "alert") {
+          return "Review Alert";
+        }
+
+        return "Open Next Action";
+      }
+
+      function normalizeInternalHref(value) {
+        const href = String(value || "").trim();
+
+        if (!href) {
+          return "";
+        }
+
+        if (
+          href.startsWith("work.html?") ||
+          href.startsWith("./work.html?")
+        ) {
+          return href;
+        }
+
+        return "";
       }
 
       function renderCurrentWork(items) {
