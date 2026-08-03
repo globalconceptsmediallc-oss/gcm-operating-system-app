@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: communications.html
-   Version: 2.7.0
+   Version: 2.8.0
    Source: Production Frontend
    Purpose: Client Communications intake and operational routing.
    ========================================================= -->
@@ -80,6 +80,10 @@
     .section{margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
     .section h3{margin:0 0 6px;color:var(--navy);font-size:.82rem;text-transform:uppercase;letter-spacing:.05em}
     .section p{margin:0;font-size:.88rem;white-space:pre-wrap}
+    .evidence-list{display:grid;gap:8px;margin-top:8px}
+    .evidence-item{padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:#fbfcfe;font-size:.82rem;line-height:1.4}
+    .evidence-item strong{color:var(--navy)}
+    .evidence-empty{color:var(--muted);font-size:.82rem}
     .routes{display:grid;gap:10px;margin-top:10px}
     .route{display:grid;grid-template-columns:24px minmax(0,1fr);gap:10px;align-items:start;padding:13px;border:1px solid var(--border);border-radius:12px}
     .route.recommended{border-color:#bcd4f7;background:#f7faff}
@@ -202,6 +206,8 @@ Backlink Audit update
               <div class="section"><h3>Business Impact</h3><p id="result-impact"></p></div>
               <div class="section"><h3>AI Recommendation</h3><p id="result-recommendation"></p></div>
               <div class="section"><h3>Reasoning</h3><p id="result-reasoning"></p></div>
+              <div class="section" id="evidence-summary-section" hidden><h3>Evidence Summary</h3><p id="result-evidence-summary"></p></div>
+              <div class="section" id="structured-evidence-section" hidden><h3>Structured Evidence</h3><div class="evidence-list" id="result-structured-evidence"></div></div>
             </div>
           </article>
 
@@ -277,7 +283,7 @@ Backlink Audit update
 (() => {
   "use strict";
 
-  const VERSION = "2.6.0";
+  const VERSION = "2.8.0";
   const ENDPOINT = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const CONTRACT_VERSION = "communications-operational-decision-v3";
   const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -333,6 +339,10 @@ Backlink Audit update
     source:$("result-source"), type:$("result-type"), summary:$("result-summary"),
     impact:$("result-impact"), recommendation:$("result-recommendation"),
     reasoning:$("result-reasoning"),
+    evidenceSummarySection:$("evidence-summary-section"),
+    evidenceSummary:$("result-evidence-summary"),
+    structuredEvidenceSection:$("structured-evidence-section"),
+    structuredEvidence:$("result-structured-evidence"),
     decisionInputs:Array.from(document.querySelectorAll('input[name="operational-decision"]')),
     decisionWraps:Array.from(document.querySelectorAll("[data-decision-wrap]")),
     decisionWhy:$("decision-why"), decisionSystemAction:$("decision-system-action"),
@@ -349,11 +359,11 @@ Backlink Audit update
 
   function init() {
     if (!window.GCMOShell) {
-      console.error("Communications 2.6.0: shared/gcm-shell.js did not load.");
+      console.error("Communications 2.8.0: shared/gcm-shell.js did not load.");
     } else {
       window.GCMOShell.mount({
         currentPage: "communications",
-        statusText: "Communications operational · Communications v2.6.0"
+        statusText: "Communications operational · Communications v2.8.0"
       });
     }
 
@@ -482,7 +492,7 @@ Backlink Audit update
         throw new Error(payload.error || `Analysis failed with HTTP ${response.status}.`);
       }
 
-      currentDecision = normalizeDecision(payload.analysis);
+      currentDecision = normalizeDecision(payload.analysis, payload);
 
       const detectedClient =
         payload.analysis.client ||
@@ -543,7 +553,7 @@ Backlink Audit update
     el.visionDebugPanel.hidden = false;
   }
 
-  function normalizeDecision(a) {
+  function normalizeDecision(a, payload = {}) {
     const routes = a.recommendedRoutes || {};
     const normalizedRoutes = {
       saveCommunication:routes.saveCommunication !== false,
@@ -552,18 +562,98 @@ Backlink Audit update
       replyRequired:Boolean(routes.replyRequired)
     };
 
+    const reviewEvidence =
+      a.reviewEvidence && typeof a.reviewEvidence === "object"
+        ? a.reviewEvidence
+        : {};
+
+    const classification =
+      payload.classification && typeof payload.classification === "object"
+        ? payload.classification
+        : {};
+
+    const recognition =
+      payload.reportRecognition && typeof payload.reportRecognition === "object"
+        ? payload.reportRecognition
+        : {};
+
+    const visibleFacts = Array.isArray(reviewEvidence.visibleFacts)
+      ? reviewEvidence.visibleFacts
+      : [];
+
+    const visibleMetrics = Array.isArray(reviewEvidence.visibleMetrics)
+      ? reviewEvidence.visibleMetrics
+      : [];
+
+    const structuredEvidence = [
+      ...visibleMetrics.map(item => normalizeEvidenceItem(item, "Metric")),
+      ...visibleFacts.map(item => normalizeEvidenceItem(item, "Fact"))
+    ].filter(Boolean);
+
+    const evidenceSummary =
+      firstUsefulText(
+        a.evidenceSummary,
+        buildEvidenceSummary(structuredEvidence),
+        reviewEvidence.visibleSubject
+      );
+
+    const source =
+      firstUsefulText(
+        a.source,
+        reviewEvidence.visibleSource,
+        sourceForNotificationType(
+          reviewEvidence.notificationType ||
+          classification.notificationType
+        ),
+        sourceForPlatform(
+          classification.platform ||
+          recognition.platform
+        )
+      ) || "Unknown";
+
+    const communicationType =
+      firstUsefulText(
+        a.communicationType,
+        typeForNotificationType(
+          reviewEvidence.notificationType ||
+          classification.notificationType
+        ),
+        humanize(
+          reviewEvidence.reportType ||
+          recognition.reportType ||
+          classification.notificationFamily
+        )
+      ) || "General Communication";
+
+    const operationalSummary =
+      firstUsefulText(
+        a.operationalSummary,
+        a.summary,
+        evidenceSummary
+      ) || "The communication was received and requires human review.";
+
     return {
       client:a.client || a.clientName || "",
       clientName:a.clientName || a.client || "",
       clientCode:a.clientCode || a.clientId || "",
-      source:a.source || "Unknown",
-      communicationType:a.communicationType || "General Communication",
-      title:a.title || "Client communication",
-      operationalSummary:a.operationalSummary || a.summary || "",
-      businessImpact:a.businessImpact || a.problemAssessment || "Business impact not yet verified.",
+      source,
+      communicationType,
+      title:firstUsefulText(a.title, `${source} — ${communicationType}`) || "Client communication",
+      operationalSummary,
+      businessImpact:firstUsefulText(
+        a.businessImpact,
+        a.problemAssessment
+      ) || "Business impact not yet verified.",
       importance:a.importance || "Medium",
-      recommendedAction:a.recommendedAction || "Review the communication.",
-      reasoning:a.reasoning || a.problemAssessment || "The recommendation is based on the observable communication.",
+      recommendedAction:firstUsefulText(
+        a.recommendedAction
+      ) || "Review the communication.",
+      reasoning:firstUsefulText(
+        a.reasoning,
+        a.problemAssessment
+      ) || "The recommendation is based on the observable communication.",
+      evidenceSummary,
+      structuredEvidence:dedupeEvidence(structuredEvidence),
       recommendedRoutes:normalizedRoutes,
       operationalDecision:inferOperationalDecision(normalizedRoutes)
     };
@@ -580,9 +670,159 @@ Backlink Audit update
     el.recommendation.textContent = d.recommendedAction;
     el.reasoning.textContent = d.reasoning;
 
+    const hasEvidenceSummary = Boolean(d.evidenceSummary);
+    el.evidenceSummarySection.hidden = !hasEvidenceSummary;
+    el.evidenceSummary.textContent = d.evidenceSummary || "";
+
+    renderStructuredEvidence(d.structuredEvidence || []);
+
     selectOperationalDecision(d.operationalDecision);
     el.analysisPanel.hidden = false;
     el.routePanel.hidden = false;
+  }
+
+  function renderStructuredEvidence(items) {
+    const evidence = Array.isArray(items) ? items.filter(Boolean) : [];
+
+    if (!evidence.length) {
+      el.structuredEvidenceSection.hidden = true;
+      el.structuredEvidence.innerHTML = "";
+      return;
+    }
+
+    el.structuredEvidenceSection.hidden = false;
+    el.structuredEvidence.innerHTML = evidence.map(item => `
+      <div class="evidence-item">
+        ${item.label ? `<strong>${escapeHtml(item.label)}:</strong> ` : ""}
+        ${escapeHtml(item.value || item.text || "")}
+      </div>
+    `).join("");
+  }
+
+  function normalizeEvidenceItem(item, fallbackLabel) {
+    if (item === null || item === undefined) return null;
+
+    if (typeof item === "string" || typeof item === "number") {
+      const value = String(item).trim();
+      return value ? {label:fallbackLabel, value} : null;
+    }
+
+    if (typeof item !== "object") return null;
+
+    const label = String(
+      item.label ||
+      item.key ||
+      item.name ||
+      item.metric ||
+      item.category ||
+      fallbackLabel ||
+      ""
+    ).trim();
+
+    const value = String(
+      item.displayValue ||
+      item.display_value ||
+      item.value ||
+      item.statement ||
+      item.evidence ||
+      item.text ||
+      ""
+    ).trim();
+
+    if (!label && !value) return null;
+    return {label, value};
+  }
+
+  function buildEvidenceSummary(items) {
+    return (Array.isArray(items) ? items : [])
+      .map(item => item.label && item.value
+        ? `${item.label}: ${item.value}`
+        : item.value || item.label || ""
+      )
+      .filter(Boolean)
+      .slice(0,12)
+      .join("; ");
+  }
+
+  function dedupeEvidence(items) {
+    const seen = new Set();
+    return (Array.isArray(items) ? items : []).filter(item => {
+      const key = `${item.label || ""}|${item.value || ""}`.toLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  function firstUsefulText(...values) {
+    for (const value of values) {
+      const text = String(value ?? "").trim();
+      if (!text) continue;
+      const normalized = text.toLowerCase();
+      if ([
+        "unknown",
+        "general communication",
+        "client communication",
+        "an unknown communication was received.",
+        "a unknown communication was received."
+      ].includes(normalized)) continue;
+      return text;
+    }
+    return "";
+  }
+
+  function sourceForNotificationType(value) {
+    const map = {
+      position_tracking:"SEMrush",
+      backlink_audit:"SEMrush",
+      site_audit:"SEMrush",
+      page_indexing_resolution:"Google Search Console",
+      merchant_listing_structured_data:"Google Search Console",
+      disavow_file_update:"Google Search Console",
+      search_performance:"Google Search Console",
+      business_profile:"Google Business Profile",
+      analytics:"Google Analytics"
+    };
+    return map[String(value || "").toLowerCase()] || "";
+  }
+
+  function sourceForPlatform(value) {
+    const map = {
+      semrush:"SEMrush",
+      google_search_console:"Google Search Console",
+      google_business_profile:"Google Business Profile",
+      google_analytics:"Google Analytics",
+      google_merchant_center:"Google Merchant Center",
+      client_email:"Client",
+      vendor_email:"Vendor"
+    };
+    return map[String(value || "").toLowerCase()] || humanize(value);
+  }
+
+  function typeForNotificationType(value) {
+    const map = {
+      position_tracking:"SEO Ranking Alert",
+      page_indexing_resolution:"Page Indexing Resolution Confirmation",
+      backlink_audit:"SEO Backlink Alert",
+      site_audit:"Technical SEO Audit Alert",
+      merchant_listing_structured_data:"Merchant Listings Structured Data Alert",
+      search_performance:"Search Performance Notification",
+      business_profile:"Local Presence Notification",
+      analytics:"Analytics Notification",
+      client_request:"Client or Human Communication",
+      vendor_notice:"Vendor Notice",
+      billing_notice:"Billing Notice",
+      access_security:"Access Alert"
+    };
+    return map[String(value || "").toLowerCase()] || "";
+  }
+
+  function humanize(value) {
+    const text = String(value || "").trim();
+    if (!text || text.toLowerCase() === "unknown") return "";
+    return text
+      .replace(/[_-]+/g," ")
+      .replace(/\b\w/g, character => character.toUpperCase());
   }
 
   function inferOperationalDecision(routes) {
@@ -812,6 +1052,10 @@ Backlink Audit update
     el.visionDebugImage.removeAttribute("src");
     el.visionDebugImage.style.display = "block";
     el.visionDebugMeta.textContent = "";
+    el.evidenceSummarySection.hidden = true;
+    el.evidenceSummary.textContent = "";
+    el.structuredEvidenceSection.hidden = true;
+    el.structuredEvidence.innerHTML = "";
     el.decisionInputs.forEach(input => input.checked = false);
     el.decisionWraps.forEach(wrap => wrap.classList.remove("recommended"));
     el.decisionWhy.textContent = "Select an Operational Decision.";
