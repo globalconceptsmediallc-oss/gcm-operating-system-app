@@ -1,10 +1,10 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.0
+   Version: 1.9.1
    Status: Audited Production Candidate
-   Source: Production work.html 1.8.9
-   Sprint: SEMrush Site Audit Evidence Synthesis
+   Source: Production work.html 1.9.0
+   Sprint: SEMrush Site Audit Evidence Parsing Hardening
    Purpose: Preserve the proven guided Investigation workflow while teaching
             the SEMrush Site Audit investigation to extract patterns, separate
             symptoms from root causes, request the next proof, and unlock work
@@ -32,6 +32,10 @@
    - Filters Open Work Items by the selected Investigation.
    - Refreshes the Work Item panel whenever the Investigation changes.
    - Shows an Investigation-specific empty state when no Work Item exists.
+   - Rejects instruction echoes and malformed AI issue names.
+   - Deterministically parses SEMrush overview issue rows from visible evidence.
+   - Adds a visible specialist decision trace for road-test verification.
+   - Keeps Work locked until a responsible implementation source is proven.
    ========================================================= -->
 <!DOCTYPE html>
 <html lang="en">
@@ -88,6 +92,13 @@
     .evidence-history-step p{margin:5px 0 0;color:var(--text);font-size:.74rem;line-height:1.45;white-space:pre-wrap}
     .evidence-history-step .next{color:var(--blue);font-weight:800}
     .capture-status{margin-top:10px}
+    .decision-trace{margin-top:14px;padding:14px;border:1px solid #cbdcf4;border-radius:10px;background:#f8fbff}
+    .decision-trace[hidden]{display:none}
+    .decision-trace h4{margin:0 0 8px;color:var(--navy);font-size:.82rem}
+    .decision-trace-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    .decision-trace-item{padding:9px 10px;border:1px solid var(--border);border-radius:8px;background:#fff}
+    .decision-trace-item strong{display:block;color:var(--muted);font-size:.66rem;text-transform:uppercase;letter-spacing:.05em}
+    .decision-trace-item span{display:block;margin-top:4px;color:var(--navy);font-size:.76rem;font-weight:800;overflow-wrap:anywhere}
     .tool-link-setup{margin-top:12px;padding:13px;border:1px dashed #aac7ed;border-radius:9px;background:#f8fbff}
     .tool-link-setup[hidden]{display:none}
     .tool-link-setup strong{display:block;color:var(--navy);font-size:.78rem}
@@ -126,7 +137,7 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Investigate one evidence step at a time. Create specific work only after the evidence proves what must be done.</p></div>
-        <span class="classification">WWPOWD Audited Investigation · v1.9.0</span>
+        <span class="classification">WWPOWD Audited Investigation · v1.9.1</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -152,7 +163,7 @@
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"WWPOWD audited investigation · Work v1.9.0"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"WWPOWD audited investigation · Work v1.9.1"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),target:byId("target-banner")};
   let activeClients=[],investigations=[],workItems=[],selectedKey="",processing=false,processingWorkItem=false;
 
@@ -339,12 +350,14 @@
     const question=byId("work-title");
     const evidence=byId("work-description");
     const capturedPanel=byId("captured-evidence-panel");
+    const decisionTrace=byId("decision-trace");
     const status=byId("investigation-evidence-status");
 
     if(finding)finding.value="";
     if(question)question.value="";
     if(evidence)evidence.value="";
     if(capturedPanel)capturedPanel.hidden=true;
+    if(decisionTrace)decisionTrace.hidden=true;
     if(status){
       status.className="status ready capture-status";
       status.textContent="Road-test evidence cleared. Choose the first screenshot.";
@@ -534,6 +547,10 @@
           <h4>Current Evidence Step</h4>
           <ul id="captured-evidence-list"></ul>
         </div>
+        <section class="decision-trace" id="decision-trace" hidden>
+          <h4>Specialist Decision Trace</h4>
+          <div class="decision-trace-grid" id="decision-trace-grid"></div>
+        </section>
         <section class="evidence-history" id="evidence-history" hidden>
           <div class="evidence-history-header">
             <h4>Locked Investigation Evidence</h4>
@@ -787,6 +804,7 @@
         const captured=normalizeCapturedEvidence(payload);
         const decision=buildNextStepDecision(captured,item);
         renderCapturedEvidence(captured,decision);
+        renderDecisionTrace(captured,decision);
         prefillInvestigationFields(item,captured,decision);
         const historyResult=appendEvidenceHistory(item,captured,decision);
 
@@ -824,50 +842,42 @@
   function normalizeCapturedEvidence(payload){
     const evidence=payload?.evidence||payload?.analysis?.evidence||{};
     const analysis=payload?.analysis||payload?.operationalDecision||{};
-    const rawFacts=[
-      ...(Array.isArray(evidence.visibleFacts)?evidence.visibleFacts:[]),
-      ...(Array.isArray(evidence.visibleMetrics)?evidence.visibleMetrics:[])
+    const rawFacts=[...(Array.isArray(evidence.visibleFacts)?evidence.visibleFacts:[]),...(Array.isArray(evidence.visibleMetrics)?evidence.visibleMetrics:[])];
+    const rawText=[evidence.visibleText,evidence.rawText,analysis.visibleText,analysis.extractedText,analysis.operationalSummary,analysis.summary].map(value=>String(value||"").trim()).filter(Boolean);
+    const parsedOverviewFacts=parseSemrushOverviewText(rawText.join("\n"));
+    const facts=[...new Set([...rawFacts,...parsedOverviewFacts].map(value=>String(value||"").trim()).filter(Boolean).filter(value=>!isInstructionEcho(value)).filter(value=>!isMalformedIssueName(value)))];
+    const summary=String(analysis.operationalSummary||analysis.summary||payload?.consultantSummary?.summary||"").trim();
+    return {facts,summary:isInstructionEcho(summary)?"":summary,source:cleanEvidenceLabel(evidence.visibleSource||analysis.source||"Screenshot evidence"),subject:cleanEvidenceLabel(evidence.visibleSubject||analysis.title||"SEMrush Site Audit"),confidence:String(evidence.confidence||analysis.classificationConfidence||"").trim(),recommendation:String(analysis.recommendedAction||payload?.businessMeaning?.recommendedAction||"").trim(),rawText:rawText.join("\n")};
+  }
+
+  function parseSemrushOverviewText(value){
+    const text=String(value||"");
+    const facts=[];
+    const pairs=[
+      [/([0-9][0-9,]*)\s+structured data items?\s+(?:are\s+)?invalid/ig,count=>`${count} structured data items are invalid`],
+      [/([0-9][0-9,]*)\s+pages?\s+have duplicate title tags?/ig,count=>`${count} pages have duplicate title tags`],
+      [/([0-9][0-9,]*)\s+pages?\s+have duplicate content(?: issues?)?/ig,count=>`${count} pages have duplicate content issues`],
+      [/([0-9][0-9,]*)\s+broken internal images?/ig,count=>`${count} broken internal images`],
+      [/([0-9][0-9,]*)\s+broken internal links?/ig,count=>`${count} broken internal links`],
+      [/([0-9][0-9,]*)\s+pages?\s+return(?:ed|ing)?\s+4xx/ig,count=>`${count} pages return 4XX`],
+      [/errors?\s*[:\-]?\s*([0-9][0-9,]*)/ig,count=>`Errors: ${count}`],
+      [/warnings?\s*[:\-]?\s*([0-9][0-9,]*)/ig,count=>`Warnings: ${count}`],
+      [/notices?\s*[:\-]?\s*([0-9][0-9,]*)/ig,count=>`Notices: ${count}`],
+      [/site health\s*[:\-]?\s*([0-9]{1,3})%/ig,count=>`Site Health: ${count}%`]
     ];
-
-    const facts=[...new Set(
-      rawFacts
-        .map(value=>String(value||"").trim())
-        .filter(Boolean)
-        .filter(value=>!isInstructionEcho(value))
-    )];
-
-    const summary=String(
-      analysis.operationalSummary ||
-      analysis.summary ||
-      payload?.consultantSummary?.summary ||
-      ""
-    ).trim();
-
-    return {
-      facts,
-      summary:isInstructionEcho(summary)?"":summary,
-      source:cleanEvidenceLabel(evidence.visibleSource||analysis.source||"Screenshot evidence"),
-      subject:cleanEvidenceLabel(evidence.visibleSubject||analysis.title||"SEMrush Site Audit"),
-      confidence:String(evidence.confidence||analysis.classificationConfidence||"").trim(),
-      recommendation:String(
-        analysis.recommendedAction ||
-        payload?.businessMeaning?.recommendedAction ||
-        ""
-      ).trim()
-    };
+    pairs.forEach(([pattern,label])=>{let match;while((match=pattern.exec(text))!==null){facts.push(label(match[1]));}});
+    return facts;
   }
 
   function isInstructionEcho(value){
     const text=String(value||"").toLowerCase();
-    return [
-      "active client:",
-      "client code:",
-      "investigation objective:",
-      "this screenshot is investigation evidence",
-      "extract visible facts",
-      "not a new inbound communication",
-      "operational question is:"
-    ].some(fragment=>text.includes(fragment));
+    return ["active client:","client code:","investigation objective:","this screenshot is investigation evidence","extract visible facts","not a new inbound communication","operational question is:","try identify the visible url","determine whether this screenshot is","for a live url sample","what single issue should we investigate next","preserve severity groups","read the screenshot as a technical consultant","locked evidence history:"].some(fragment=>text.includes(fragment));
+  }
+
+  function isMalformedIssueName(value){
+    const text=String(value||"").trim().toLowerCase();
+    if(!text)return true;
+    return [/^try\b/,/^identify\b/,/^determine\b/,/^return\b/,/^preserve\b/,/^read\b/,/^open one url\b/,/^what single issue\b/,/^the operational question\b/,/^for every visible\b/,/^for a live url sample\b/].some(pattern=>pattern.test(text));
   }
 
   function cleanEvidenceLabel(value){
@@ -894,6 +904,14 @@
       ? items.map(item=>`<li>${esc(item)}</li>`).join("")
       : "<li>No structured issue rows were extracted. Review the screenshot manually.</li>";
 
+    panel.hidden=false;
+  }
+
+  function renderDecisionTrace(captured,decision){
+    const panel=byId("decision-trace"),grid=byId("decision-trace-grid");
+    if(!panel||!grid)return;
+    const rows=[["Page Version","1.9.1"],["Evidence Type",decision.evidenceType||"unknown"],["Selected Issue",decision.issueName||"none"],["Affected Count",decision.count||0],["Schema Type",decision.schemaType||"not established"],["Affected Field",decision.affectedField||"not established"],["Implementation Source",decision.implementationSource||"not established"],["Work Unlocked",decision.rootCauseProven?"Yes":"No"],["Visible Fact Count",captured.facts?.length||0],["Specialist Path",decision.systemic?"systemic-pattern":"issue-selection"]];
+    grid.innerHTML=rows.map(([label,value])=>`<div class="decision-trace-item"><strong>${esc(label)}</strong><span>${esc(value)}</span></div>`).join("");
     panel.hidden=false;
   }
 
@@ -1213,12 +1231,13 @@
   }
 
   function cleanIssueName(value){
-    return String(value||"")
+    const cleaned=String(value||"")
       .replace(/\bhow to fix\b/ig,"")
       .replace(/\b\d+\s+new issues?\b/ig,"")
       .replace(/\s+/g," ")
       .replace(/^[\s:;,\-–—]+|[\s:;,\-–—]+$/g,"")
       .trim();
+    return isInstructionEcho(cleaned)||isMalformedIssueName(cleaned)?"":cleaned;
   }
 
   function isGenericMetric(name){
@@ -1245,7 +1264,9 @@
 
   function issueImpactWeight(name){
     const text=String(name||"").toLowerCase();
+    if(/structured data.*invalid|invalid structured data/.test(text))return 110;
     if(/4xx|broken internal|broken canonical/.test(text))return 100;
+    if(/duplicate title|duplicate content/.test(text))return 95;
     if(/canonical|redirect|sitemap/.test(text))return 90;
     if(/crawl|robots|blocked/.test(text))return 85;
     if(/meta description/.test(text))return 55;
