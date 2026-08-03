@@ -1,9 +1,9 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.7.2
+   Version: 7.7.3
    Source: Production route 7.7.1
-   Status: Production Candidate — Fast Two-Call Communication Analysis
+   Status: Production Candidate — Fast Path with Guarded Evidence Recovery
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
             independent report-signature recognition, specialized extraction,
@@ -11,8 +11,9 @@
             WWPOWD interpretation, proof-readiness evaluation,
             business meaning, operational routing, consultant summary,
             shared WWPOWD operational evidence extraction,
-            modular report-signature recognition, and a fast screenshot path
-            limited to one vision extraction call plus one reasoning call.
+            modular report-signature recognition, a fast screenshot path,
+            and guarded legacy recovery only when the fast evidence result
+            is too weak to support dependable classification.
    ========================================================= */
 
 import {
@@ -162,6 +163,54 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
       fallbackUsed: Boolean(!operationalEvidenceResult?.ok),
       data: operationalEvidence
     }));
+
+    /*
+     * v7.7.3 GUARDED EVIDENCE RECOVERY
+     *
+     * The fast one-call path remains authoritative when it returns dependable
+     * evidence. Road testing proved that two nearly identical SEMrush Site Audit
+     * screenshots could produce different results: one complete and one Unknown.
+     *
+     * Only when the fast result is too weak to classify, invoke the existing
+     * production vision pipeline as a recovery path. This preserves normal
+     * fast performance while preventing a readable known report from silently
+     * becoming an Unknown communication.
+     */
+    if (isWeakVisibleEvidence(visibleEvidence)) {
+      const guardedRecoveryResult = await executeVisionExtractionStage({
+        imageDataUrl,
+        sourceText,
+        client,
+        clientId,
+        fileName,
+        env,
+        requestId
+      });
+
+      stages.push({
+        ...guardedRecoveryResult.stage,
+        stageName: "guarded_evidence_recovery",
+        engine: `${guardedRecoveryResult.stage?.engine || "communication-evidence-extraction"}-guarded`
+      });
+
+      if (guardedRecoveryResult.error) {
+        errors.push(guardedRecoveryResult.error);
+      }
+
+      if (
+        guardedRecoveryResult.data &&
+        !isWeakVisibleEvidence(guardedRecoveryResult.data)
+      ) {
+        visibleEvidence = mergeVisibleEvidence(
+          visibleEvidence,
+          guardedRecoveryResult.data
+        );
+
+        reportRecognition =
+          guardedRecoveryResult.reportRecognition ||
+          recognizeReportSignatureFromEvidence(visibleEvidence);
+      }
+    }
   } else {
     const stageStartedAt = Date.now();
     visibleEvidence = deterministicTextEvidenceExtraction(sourceText);
