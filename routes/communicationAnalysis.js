@@ -1,9 +1,9 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.7.4
+   Version: 7.7.5
    Source: Production route 7.7.1
-   Status: Production Candidate — Guarded Position Tracking and Diagnostic Isolation
+   Status: Production Candidate — AI Unavailable Early Exit
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
             independent report-signature recognition, specialized extraction,
@@ -13,8 +13,8 @@
             shared WWPOWD operational evidence extraction,
             modular report-signature recognition, a fast screenshot path,
             guarded Position Tracking recovery when broad extraction fails,
-            and strict isolation of Workers AI/runtime diagnostic messages
-            from client communication evidence.
+            strict isolation of Workers AI/runtime diagnostic messages,
+            and an early stop when screenshot evidence cannot be produced.
    ========================================================= */
 
 import {
@@ -168,6 +168,62 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
       fallbackUsed: Boolean(!operationalEvidenceResult?.ok),
       data: operationalEvidence
     }));
+
+    /*
+     * v7.7.5 AI-UNAVAILABLE EARLY EXIT
+     *
+     * A screenshot must not become an Unknown communication when Workers AI
+     * cannot produce evidence. Stop before classification, reasoning, routing,
+     * or consultant-summary generation when there is no operational evidence.
+     */
+    if (!operationalEvidenceResult?.ok && !operationalEvidence) {
+      return jsonResponse({
+        ok: false,
+        action: ACTIONS.ANALYZE_COMMUNICATION,
+        version: VERSION,
+        contractVersion: API_CONTRACT_VERSION,
+        requestId,
+        generatedAt: new Date().toISOString(),
+        processingStatus: "ai_unavailable",
+        client: {
+          id: clientId || null,
+          name: client || null,
+          detectedFromEvidence: false
+        },
+        input: {
+          type: sourceText ? "hybrid" : "screenshot",
+          fileName
+        },
+        error: {
+          stage: "operational_evidence_extraction",
+          code: clean(
+            operationalEvidenceResult?.error?.code ||
+            "AI_UNAVAILABLE"
+          ),
+          message: clean(
+            operationalEvidenceResult?.error?.message ||
+            "AI processing is temporarily unavailable."
+          ),
+          retryable: Boolean(
+            operationalEvidenceResult?.error?.retryable
+          )
+        },
+        stages,
+        errors,
+        diagnostics: {
+          engine: "communication-analysis",
+          engineVersion: COMMUNICATION_ANALYSIS_ENGINE_VERSION,
+          executionTimeMs: Date.now() - startedAt,
+          stageCount: stages.length,
+          failedStageCount: 1,
+          fallbackStageCount: 0,
+          partialStageCount: 0,
+          performanceMode: "ai_unavailable_early_exit",
+          evidenceAiCallBudget: 1,
+          reasoningAiCallBudget: 0
+        }
+      }, 503);
+    }
 
     /*
      * v7.7.3 GUARDED EVIDENCE RECOVERY
