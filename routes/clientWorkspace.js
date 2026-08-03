@@ -1,20 +1,20 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/clientWorkspace.js
-   Version: 7.1.1
+   Version: 7.2.0
    Status: Production Candidate
-   Source: Production routes/clientWorkspace.js 7.1.0
-   Sprint: Client Tool Router Response Hardening
-   Purpose: Preserve the complete live D1 client workspace while returning
-            the authoritative client_tools records in every supported response
-            location used by current and future GCM OS pages.
-
+   Source: Production routes/clientWorkspace.js 7.1.1
+   Sprint: Unified Client Operational State
+   Purpose: Preserve the complete live D1 client workspace and client tool
+            router while making open Investigations authoritative in the
+            Business Workspace before unstarted Work Items, alerts, and
+            fallback planning.
    Production changes:
-   - Returns active tools as top-level clientTools.
-   - Preserves operational.clientTools.
-   - Preserves record.tools.
-   - Adds clientToolRouter keyed by tool_key for deterministic lookup.
-   - Adds explicit tool-router diagnostics without changing production data.
+   - Open Investigations now drive account health, current priority, next
+     action, Business Priorities, and operational counts.
+   - Investigation priority is ranked before Work Items and alerts.
+   - Existing communications, work items, evidence, proof, tools, history,
+     clientToolRouter, response shape, and D1 queries are preserved.
    ========================================================= */
 
 import {
@@ -100,7 +100,18 @@ export async function handleClientWorkspace(body, env, requestId) {
         SELECT *
         FROM investigations
         WHERE client_id = ?
-        ORDER BY opened_at DESC, id DESC
+        ORDER BY
+          CASE priority
+            WHEN 'urgent' THEN 0
+            WHEN 'highest' THEN 0
+            WHEN 'high' THEN 1
+            WHEN 'normal' THEN 2
+            WHEN 'medium' THEN 2
+            WHEN 'low' THEN 3
+            ELSE 4
+          END,
+          opened_at DESC,
+          id DESC
       `).bind(client.id).all(),
 
       db.prepare(`
@@ -185,6 +196,10 @@ export async function handleClientWorkspace(body, env, requestId) {
       clientTools
     });
 
+    const openInvestigations = investigations.filter(isOpenInvestigation);
+    const openWorkItems = workItems.filter(isOpenWorkItem);
+    const activeAlerts = alerts.filter(isActiveAlert);
+
     return jsonResponse({
       ok: true,
       requestId,
@@ -209,31 +224,42 @@ export async function handleClientWorkspace(body, env, requestId) {
         clientTools,
         clientToolRouter
       },
+
       counts: {
         communications: communications.length,
         openCommunications: communications.filter(
           item => !["closed", "ignored"].includes(normalizeStatus(item.status))
         ).length,
         investigations: investigations.length,
-        openInvestigations: investigations.filter(
-          item => !["resolved", "closed"].includes(normalizeStatus(item.status))
-        ).length,
+        openInvestigations: openInvestigations.length,
         workItems: workItems.length,
-        openWorkItems: workItems.filter(
-          item =>
-            !["completed", "complete", "cancelled", "closed"].includes(
-              normalizeStatus(item.status)
-            )
-        ).length,
+        openWorkItems: openWorkItems.length,
         proofOfWork: proofOfWork.length,
-        activeAlerts: alerts.filter(
-          item => ["open", "acknowledged"].includes(normalizeStatus(item.status))
-        ).length,
+        activeAlerts: activeAlerts.length,
         evidence: evidence.length,
         clientTools: clientTools.length
       },
 
       diagnostics: {
+        unifiedOperationalState: {
+          version: "1.0.0",
+          firstRecordType:
+            openInvestigations.length > 0
+              ? "investigation"
+              : openWorkItems.length > 0
+                ? "work_item"
+                : activeAlerts.length > 0
+                  ? "alert"
+                  : "none",
+          firstRecordId:
+            openInvestigations[0]?.id ||
+            openWorkItems[0]?.id ||
+            activeAlerts[0]?.id ||
+            null,
+          openInvestigationCount: openInvestigations.length,
+          openWorkItemCount: openWorkItems.length,
+          activeAlertCount: activeAlerts.length
+        },
         clientToolRouter: {
           clientCode: client.client_code,
           activeToolCount: clientTools.length,
@@ -271,26 +297,62 @@ function buildClientWorkspaceRecord({
   proofOfWork,
   clientTools
 }) {
-  const openWork = workItems.filter(
-    item =>
-      !["completed", "complete", "cancelled", "closed"].includes(
-        normalizeStatus(item.status)
-      )
-  );
-
-  const activeAlerts = alerts.filter(
-    item => ["open", "acknowledged"].includes(normalizeStatus(item.status))
-  );
+  const openInvestigations = investigations.filter(isOpenInvestigation);
+  const openWork = workItems.filter(isOpenWorkItem);
+  const activeAlerts = alerts.filter(isActiveAlert);
 
   const latestActivity = latestDate([
     ...communications.map(item => item.occurred_at),
-    ...investigations.map(item => item.opened_at),
+    ...investigations.map(item => item.updated_at || item.opened_at),
     ...workItems.map(item => item.updated_at || item.created_at),
     ...proofOfWork.map(item => item.activity_date)
   ]);
 
+  const firstInvestigation = openInvestigations[0] || null;
   const firstWork = openWork[0] || null;
   const firstAlert = activeAlerts[0] || null;
+
+  const authoritativeRecord =
+    firstInvestigation || firstWork || firstAlert || null;
+
+  const authoritativeType = firstInvestigation
+    ? "Investigation"
+    : firstWork
+      ? "Work"
+      : firstAlert
+        ? "Alert"
+        : null;
+
+  const currentPriority = authoritativeRecord
+    ? `${authoritativeType} #${authoritativeRecord.id}: ${
+        authoritativeRecord.title || "Operational review required"
+      }`
+    : "No open priority is recorded.";
+
+  const nextAction = firstInvestigation
+    ? `Continue Investigation #${firstInvestigation.id}: ${
+        firstInvestigation.title || "Review required"
+      }`
+    : firstWork?.title ||
+      firstAlert?.title ||
+      "Review the client record.";
+
+  const nextActionReason = firstInvestigation
+    ? investigationReason(firstInvestigation)
+    : firstWork?.description ||
+      firstAlert?.description ||
+      "No open operational record currently requires action.";
+
+  const owner =
+    firstInvestigation?.owner ||
+    firstInvestigation?.assigned_to ||
+    firstWork?.owner ||
+    firstAlert?.owner ||
+    "Global Concepts Media";
+
+  const accountNeedsAttention =
+    openInvestigations.length > 0 ||
+    activeAlerts.length > 0;
 
   return {
     schemaVersion: "1.1.0",
@@ -329,39 +391,62 @@ function buildClientWorkspaceRecord({
       recordType: "Client",
       status: titleCase(client.status),
       entryMethod: "Existing Client",
-      stage: openWork.length ? "Implementation" : "Management",
+      stage:
+        openInvestigations.length || openWork.length
+          ? "Implementation"
+          : "Management",
       clientSince: dateOnly(client.created_at),
       clientEnded: null,
       monthlyAgreement: null,
       billingStatus: null,
-      accountHealth: activeAlerts.length ? "Needs Attention" : "Healthy",
-      accountHealthReason:
-        firstAlert?.description || firstAlert?.title || null
+      accountHealth: accountNeedsAttention
+        ? "Needs Attention"
+        : "Healthy",
+      accountHealthReason: firstInvestigation
+        ? `Investigation #${firstInvestigation.id} is open: ${
+            firstInvestigation.title || "Review required"
+          }`
+        : firstAlert?.description ||
+          firstAlert?.title ||
+          null
     },
 
     workspace: {
-      currentPriority:
-        firstAlert?.title || firstWork?.title || "No open priority is recorded.",
-      nextAction:
-        firstWork?.title || firstAlert?.title || "Review the client record.",
-      nextActionReason:
-        firstWork?.description ||
-        firstAlert?.description ||
-        "No open operational record currently requires action.",
-      nextReviewDate: firstAlert?.due_at
-        ? dateOnly(firstAlert.due_at)
-        : null,
+      currentPriority,
+      nextAction,
+      nextActionReason,
+      nextActionType: firstInvestigation
+        ? "investigation"
+        : firstWork
+          ? "work_item"
+          : firstAlert
+            ? "alert"
+            : "planning",
+      nextActionRecordId:
+        authoritativeRecord?.id || null,
+      nextActionHref: firstInvestigation
+        ? `work.html?investigation=${encodeURIComponent(firstInvestigation.id)}`
+        : firstWork
+          ? `work.html?workItem=${encodeURIComponent(firstWork.id)}`
+          : null,
+      nextReviewDate:
+        dateOnly(
+          firstInvestigation?.due_at ||
+          firstInvestigation?.review_due_at ||
+          firstAlert?.due_at
+        ),
       lastClientContact: dateOnly(communications[0]?.occurred_at),
       lastWorkDate: dateOnly(latestActivity),
-      owner:
-        firstWork?.owner ||
-        firstAlert?.owner ||
-        "Global Concepts Media",
+      owner,
       workingNotes:
         "Loaded from the live GCM OS D1 operational database."
     },
 
-    currentPriorities: activeAlerts.map(mapAlertToPriority),
+    currentPriorities: [
+      ...openInvestigations.map(mapInvestigationToPriority),
+      ...activeAlerts.map(mapAlertToPriority)
+    ],
+
     workQueue: openWork.map(mapWorkItem),
 
     tools: clientTools.map(mapClientTool),
@@ -448,14 +533,88 @@ function buildClientWorkspaceRecord({
       operationalCounts: {
         communications: communications.length,
         investigations: investigations.length,
+        openInvestigations: openInvestigations.length,
         workItems: workItems.length,
+        openWorkItems: openWork.length,
         proofOfWork: proofOfWork.length,
         alerts: activeAlerts.length,
         evidence: evidence.length,
         clientTools: clientTools.length
       },
+      authoritativeOperationalState: {
+        type: firstInvestigation
+          ? "investigation"
+          : firstWork
+            ? "work_item"
+            : firstAlert
+              ? "alert"
+              : "none",
+        recordId: authoritativeRecord?.id || null
+      },
       dataQuality: "Live operational records"
     }
+  };
+}
+
+function isOpenInvestigation(item) {
+  return ![
+    "resolved",
+    "closed",
+    "complete",
+    "completed",
+    "cancelled",
+    "archived"
+  ].includes(normalizeStatus(item?.status));
+}
+
+function isOpenWorkItem(item) {
+  return ![
+    "completed",
+    "complete",
+    "cancelled",
+    "closed",
+    "archived"
+  ].includes(normalizeStatus(item?.status));
+}
+
+function isActiveAlert(item) {
+  return ["open", "acknowledged"].includes(normalizeStatus(item?.status));
+}
+
+function investigationReason(item) {
+  return (
+    item.current_next_step ||
+    item.next_step ||
+    item.next_question ||
+    item.description ||
+    item.finding_summary ||
+    "Review the evidence and decide the specific work required."
+  );
+}
+
+function mapInvestigationToPriority(item) {
+  return {
+    id: `investigation-${item.id}`,
+    title: `Investigation #${item.id}: ${
+      item.title || "Review required"
+    }`,
+    category: titleCase(item.category || "Investigation"),
+    status: "In Progress",
+    priority: workspacePriority(item.priority),
+    owner:
+      item.owner ||
+      item.assigned_to ||
+      "Global Concepts Media",
+    businessValue:
+      item.description ||
+      item.objective ||
+      item.finding_summary ||
+      "This investigation requires an evidence-supported operational decision.",
+    dueDate: dateOnly(item.due_at || item.review_due_at),
+    nextAction: investigationReason(item),
+    href: `work.html?investigation=${encodeURIComponent(item.id)}`,
+    sourceType: "Investigation",
+    sourceId: item.id
   };
 }
 
@@ -517,11 +676,12 @@ function mapWorkItem(item) {
     estimatedMinutes: null,
     actualMinutes: 0,
     createdDate: dateOnly(item.created_at),
-    dueDate: null,
+    dueDate: dateOnly(item.due_at),
     completedDate: dateOnly(item.completed_at),
     businessValue: item.expected_impact || item.actual_impact || "",
     nextAction: item.description || item.title,
-    proofOfWorkId: null
+    proofOfWorkId: null,
+    href: `work.html?workItem=${encodeURIComponent(item.id)}`
   };
 }
 
@@ -708,8 +868,11 @@ function workspaceStatus(value) {
 function workspacePriority(value) {
   const priorities = {
     urgent: "Critical",
+    highest: "Critical",
+    critical: "Critical",
     high: "High",
     normal: "Medium",
+    medium: "Medium",
     low: "Low"
   };
 
@@ -748,6 +911,7 @@ function timeOnly(value) {
   const match = String(value || "").match(
     /T(\d{2}:\d{2}:\d{2})/
   );
+
   return match ? match[1] : "00:00:00";
 }
 
