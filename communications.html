@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: communications.html
-   Version: 2.8.0
+   Version: 2.8.1
    Source: Production Frontend
    Purpose: Client Communications intake and operational routing.
    ========================================================= -->
@@ -84,6 +84,12 @@
     .evidence-item{padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:#fbfcfe;font-size:.82rem;line-height:1.4}
     .evidence-item strong{color:var(--navy)}
     .evidence-empty{color:var(--muted);font-size:.82rem}
+    .unavailable-panel{border:1px solid #f2c98a;background:#fff8ea}
+    .unavailable-panel .panel-header{border-bottom-color:#f2c98a}
+    .unavailable-message{display:grid;gap:12px}
+    .unavailable-message strong{font-size:1rem;color:#7a4a00}
+    .unavailable-message p{margin:0;color:#5d6678;line-height:1.5}
+    .unavailable-actions{display:flex;gap:10px;flex-wrap:wrap}
     .routes{display:grid;gap:10px;margin-top:10px}
     .route{display:grid;grid-template-columns:24px minmax(0,1fr);gap:10px;align-items:start;padding:13px;border:1px solid var(--border);border-radius:12px}
     .route.recommended{border-color:#bcd4f7;background:#f7faff}
@@ -193,6 +199,18 @@ Backlink Audit update
             </div>
           </article>
 
+          <article class="panel unavailable-panel" id="analysis-unavailable-panel" hidden>
+            <div class="panel-header"><h2>3. Analysis Unavailable</h2><p>No communication decision was generated.</p></div>
+            <div class="panel-body unavailable-message">
+              <strong id="analysis-unavailable-title">AI processing is temporarily unavailable.</strong>
+              <p id="analysis-unavailable-message">The screenshot was not classified, no operational decision was created, and nothing can be saved from this attempt.</p>
+              <div class="unavailable-actions">
+                <button class="button secondary" id="retry-analysis-button" type="button">Try Again</button>
+                <button class="button secondary" id="clear-unavailable-button" type="button">Clear</button>
+              </div>
+            </div>
+          </article>
+
           <article class="panel" id="analysis-panel" hidden>
             <div class="panel-header"><h2>3. Review Operational Decision</h2><p>Confirm what happened, then choose the business response in Step 4.</p></div>
             <div class="panel-body">
@@ -283,7 +301,7 @@ Backlink Audit update
 (() => {
   "use strict";
 
-  const VERSION = "2.8.0";
+  const VERSION = "2.8.1";
   const ENDPOINT = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const CONTRACT_VERSION = "communications-operational-decision-v3";
   const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -335,6 +353,11 @@ Backlink Audit update
     preview:$("preview-image"), remove:$("remove-image"), client:$("client"), sourceText:$("source-text"),
     analyze:$("analyze-button"), status:$("analysis-status"),
     analysisPanel:$("analysis-panel"), routePanel:$("route-panel"),
+    unavailablePanel:$("analysis-unavailable-panel"),
+    unavailableTitle:$("analysis-unavailable-title"),
+    unavailableMessage:$("analysis-unavailable-message"),
+    retryAnalysis:$("retry-analysis-button"),
+    clearUnavailable:$("clear-unavailable-button"),
     title:$("decision-title"), route:$("decision-route"), importance:$("result-importance"),
     source:$("result-source"), type:$("result-type"), summary:$("result-summary"),
     impact:$("result-impact"), recommendation:$("result-recommendation"),
@@ -359,11 +382,11 @@ Backlink Audit update
 
   function init() {
     if (!window.GCMOShell) {
-      console.error("Communications 2.8.0: shared/gcm-shell.js did not load.");
+      console.error("Communications 2.8.1: shared/gcm-shell.js did not load.");
     } else {
       window.GCMOShell.mount({
         currentPage: "communications",
-        statusText: "Communications operational · Communications v2.8.0"
+        statusText: "Communications operational · Communications v2.8.1"
       });
     }
 
@@ -409,6 +432,11 @@ Backlink Audit update
       validateAnalyze();
     });
     el.analyze.addEventListener("click", analyzeScreenshot);
+    el.retryAnalysis.addEventListener("click", analyzeScreenshot);
+    el.clearUnavailable.addEventListener("click", () => {
+      clearDecision();
+      setStatus("Screenshot ready. Generate the operational decision when AI processing is available.", "pending");
+    });
     el.decisionInputs.forEach(input => input.addEventListener("change", updateOperationalDecision));
     el.accept.addEventListener("click", commitDecision);
     el.reject.addEventListener("click", resetPage);
@@ -464,6 +492,7 @@ Backlink Audit update
       return;
     }
 
+    clearDecision();
     el.analyze.disabled = true;
     el.analyze.textContent = "Generating...";
     setStatus("Reading the screenshot, identifying the client, extracting evidence, and determining the operational route...", "pending");
@@ -488,8 +517,21 @@ Backlink Audit update
 
       const payload = await response.json().catch(() => ({}));
 
+      if (
+        payload?.processingStatus === "ai_unavailable" ||
+        payload?.error?.code === "AI_QUOTA_EXHAUSTED" ||
+        payload?.error?.code === "AI_UNAVAILABLE" ||
+        response.status === 503
+      ) {
+        showAnalysisUnavailable(payload);
+        return;
+      }
+
       if (!response.ok || !payload.ok || !payload.analysis) {
-        throw new Error(payload.error || `Analysis failed with HTTP ${response.status}.`);
+        throw new Error(
+          extractErrorMessage(payload) ||
+          `Analysis failed with HTTP ${response.status}.`
+        );
       }
 
       currentDecision = normalizeDecision(payload.analysis, payload);
@@ -521,6 +563,44 @@ Backlink Audit update
       el.analyze.textContent = "Generate Operational Decision";
       validateAnalyze();
     }
+  }
+
+  function showAnalysisUnavailable(payload = {}) {
+    currentDecision = null;
+    el.analysisPanel.hidden = true;
+    el.routePanel.hidden = true;
+    el.unavailablePanel.hidden = true;
+    el.visionDebugPanel.hidden = true;
+    el.unavailablePanel.hidden = false;
+    el.accept.disabled = true;
+
+    const message = extractErrorMessage(payload) ||
+      "AI processing is temporarily unavailable.";
+
+    el.unavailableTitle.textContent = "AI processing is temporarily unavailable.";
+    el.unavailableMessage.textContent =
+      `${message} No communication was classified, no operational decision was generated, and nothing from this attempt can be saved.`;
+
+    setStatus("Analysis unavailable. Nothing was classified or saved.", "error");
+  }
+
+  function extractErrorMessage(payload) {
+    const error = payload?.error;
+
+    if (typeof error === "string") {
+      return error.trim();
+    }
+
+    if (error && typeof error === "object") {
+      return String(
+        error.message ||
+        error.details ||
+        error.code ||
+        ""
+      ).trim();
+    }
+
+    return String(payload?.message || "").trim();
   }
 
   function renderVisionDebug(payload) {
@@ -660,6 +740,7 @@ Backlink Audit update
   }
 
   function renderDecision(d) {
+    el.unavailablePanel.hidden = true;
     el.title.textContent = d.title;
     el.route.textContent = buildRouteSummary(DECISION_CONFIG[d.operationalDecision]?.routes || d.recommendedRoutes);
     el.importance.textContent = d.importance;
