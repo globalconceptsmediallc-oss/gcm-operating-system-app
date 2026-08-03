@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: communications.html
-   Version: 2.8.2
+   Version: 2.8.3
    Source: Production Frontend
    Purpose: Client Communications intake and operational routing.
    ========================================================= -->
@@ -204,8 +204,10 @@ Backlink Audit update
             <div class="panel-body unavailable-message">
               <strong id="analysis-unavailable-title">AI processing is temporarily unavailable.</strong>
               <p id="analysis-unavailable-message">The screenshot was not classified, no operational decision was created, and nothing can be saved from this attempt.</p>
+              <p>To continue without screenshot AI, paste the sender, subject, and readable email content into <strong>Email Text</strong> above, then use Manual Recovery.</p>
               <div class="unavailable-actions">
-                <button class="button secondary" id="retry-analysis-button" type="button">Try Again</button>
+                <button class="button primary" id="manual-recovery-button" type="button" disabled>Manual Recovery from Email Text</button>
+                <button class="button secondary" id="retry-analysis-button" type="button">Try Screenshot Again</button>
                 <button class="button secondary" id="clear-unavailable-button" type="button">Clear</button>
               </div>
             </div>
@@ -301,7 +303,7 @@ Backlink Audit update
 (() => {
   "use strict";
 
-  const VERSION = "2.8.2";
+  const VERSION = "2.8.3";
   const ENDPOINT = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const CONTRACT_VERSION = "communications-operational-decision-v3";
   const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -357,6 +359,7 @@ Backlink Audit update
     unavailableTitle:$("analysis-unavailable-title"),
     unavailableMessage:$("analysis-unavailable-message"),
     retryAnalysis:$("retry-analysis-button"),
+    manualRecovery:$("manual-recovery-button"),
     clearUnavailable:$("clear-unavailable-button"),
     title:$("decision-title"), route:$("decision-route"), importance:$("result-importance"),
     source:$("result-source"), type:$("result-type"), summary:$("result-summary"),
@@ -382,11 +385,11 @@ Backlink Audit update
 
   function init() {
     if (!window.GCMOShell) {
-      console.error("Communications 2.8.2: shared/gcm-shell.js did not load.");
+      console.error("Communications 2.8.3: shared/gcm-shell.js did not load.");
     } else {
       window.GCMOShell.mount({
         currentPage: "communications",
-        statusText: "Communications operational · Communications v2.8.2"
+        statusText: "Communications operational · Communications v2.8.3"
       });
     }
 
@@ -433,6 +436,7 @@ Backlink Audit update
     });
     el.analyze.addEventListener("click", analyzeScreenshot);
     el.retryAnalysis.addEventListener("click", analyzeScreenshot);
+    el.manualRecovery.addEventListener("click", analyzeEmailTextOnly);
     el.clearUnavailable.addEventListener("click", () => {
       clearDecision();
       setStatus("Screenshot ready. Generate the operational decision when AI processing is available.", "pending");
@@ -483,36 +487,82 @@ Backlink Audit update
 
   function validateAnalyze() {
     el.analyze.disabled = !imageDataUrl;
+    el.manualRecovery.disabled = !el.sourceText.value.trim();
   }
 
   async function analyzeScreenshot() {
-    const sourceText = el.sourceText.value.trim();
     if (!imageDataUrl) {
       setStatus("Upload a readable communication screenshot first.", "error");
       return;
     }
 
+    await runCommunicationAnalysis({
+      useImage:true,
+      button:el.analyze,
+      loadingLabel:"Generating...",
+      idleLabel:"Generate Operational Decision"
+    });
+  }
+
+  async function analyzeEmailTextOnly() {
+    const sourceText = el.sourceText.value.trim();
+
+    if (!sourceText) {
+      setStatus("Paste the sender, subject, and readable email content before using Manual Recovery.", "error");
+      el.sourceText.focus();
+      return;
+    }
+
+    await runCommunicationAnalysis({
+      useImage:false,
+      button:el.manualRecovery,
+      loadingLabel:"Recovering...",
+      idleLabel:"Manual Recovery from Email Text"
+    });
+  }
+
+  async function runCommunicationAnalysis({
+    useImage,
+    button,
+    loadingLabel,
+    idleLabel
+  }) {
+    const sourceText = el.sourceText.value.trim();
+
     clearDecision();
-    el.analyze.disabled = true;
-    el.analyze.textContent = "Generating...";
-    setStatus("Reading the screenshot, identifying the client, extracting evidence, and determining the operational route...", "pending");
+    button.disabled = true;
+    button.textContent = loadingLabel;
+
+    setStatus(
+      useImage
+        ? "Reading the screenshot, identifying the client, extracting evidence, and determining the operational route..."
+        : "Using the pasted email text to identify the communication, extract evidence, and determine the operational route...",
+      "pending"
+    );
 
     try {
+      const requestBody = {
+        action:"analyze-client-communication",
+        client:el.client.value || undefined,
+        clientId:CLIENT_CODES[el.client.value] || undefined,
+        sourceText:sourceText || undefined,
+        fileName:useImage
+          ? imageFileName || "communication-screenshot"
+          : "manual-email-text",
+        contractVersion:CONTRACT_VERSION
+      };
+
+      if (useImage) {
+        requestBody.image = imageDataUrl;
+      }
+
       const response = await fetch(ENDPOINT, {
         method:"POST",
         headers:{
           "Content-Type":"application/json",
           "X-GCM-Contract-Version":CONTRACT_VERSION
         },
-        body:JSON.stringify({
-          action:"analyze-client-communication",
-          client:el.client.value || undefined,
-          clientId:CLIENT_CODES[el.client.value] || undefined,
-          sourceText:sourceText || undefined,
-          image:imageDataUrl,
-          fileName:imageFileName || "pasted-email-text",
-          contractVersion:CONTRACT_VERSION
-        })
+        body:JSON.stringify(requestBody)
       });
 
       const payload = await response.json().catch(() => ({}));
@@ -534,7 +584,7 @@ Backlink Audit update
       const detectedClient =
         payload.analysis.client ||
         payload.analysis.clientName ||
-        payload.client ||
+        payload.client?.name ||
         payload.clientName ||
         "";
 
@@ -549,13 +599,24 @@ Backlink Audit update
       }
 
       renderDecision(currentDecision);
-      renderVisionDebug(payload);
-      setStatus("Decision generated. Confirm the detected client and operational route before accepting.", "ready");
+
+      if (useImage) {
+        renderVisionDebug(payload);
+      } else {
+        el.visionDebugPanel.hidden = true;
+      }
+
+      setStatus(
+        useImage
+          ? "Decision generated. Confirm the detected client and operational route before accepting."
+          : "Manual recovery succeeded. Confirm the client, evidence, and operational route before accepting.",
+        "ready"
+      );
     } catch (error) {
       console.error(error);
-      setStatus(error.message || "The screenshot could not be evaluated.", "error");
+      setStatus(error.message || "The communication could not be evaluated.", "error");
     } finally {
-      el.analyze.textContent = "Generate Operational Decision";
+      button.textContent = idleLabel;
       validateAnalyze();
     }
   }
@@ -625,9 +686,10 @@ Backlink Audit update
 
     el.unavailableTitle.textContent = "AI processing is temporarily unavailable.";
     el.unavailableMessage.textContent =
-      `${message} No communication was classified, no operational decision was generated, and nothing from this attempt can be saved.`;
+      `${message} No communication was classified, no operational decision was generated, and nothing from this attempt can be saved. Paste the readable email content above to continue with Manual Recovery.`;
 
-    setStatus("Analysis unavailable. Nothing was classified or saved.", "error");
+    validateAnalyze();
+    setStatus("Analysis unavailable. Nothing was classified or saved. Manual Recovery is available with pasted email text.", "error");
   }
 
   function extractErrorMessage(payload) {
@@ -1195,6 +1257,7 @@ Backlink Audit update
     currentDecision = null;
     el.analysisPanel.hidden = true;
     el.routePanel.hidden = true;
+    el.unavailablePanel.hidden = true;
     el.visionDebugPanel.hidden = true;
     el.visionDebugImage.removeAttribute("src");
     el.visionDebugImage.style.display = "block";
