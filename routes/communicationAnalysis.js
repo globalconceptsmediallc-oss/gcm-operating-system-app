@@ -1,9 +1,9 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.7.3
+   Version: 7.7.4
    Source: Production route 7.7.1
-   Status: Production Candidate — Fast Path with Guarded Evidence Recovery
+   Status: Production Candidate — Guarded Position Tracking and Diagnostic Isolation
    Purpose: Complete production communication analysis route,
             including pasted-text and screenshot evidence extraction,
             independent report-signature recognition, specialized extraction,
@@ -12,8 +12,9 @@
             business meaning, operational routing, consultant summary,
             shared WWPOWD operational evidence extraction,
             modular report-signature recognition, a fast screenshot path,
-            and guarded legacy recovery only when the fast evidence result
-            is too weak to support dependable classification.
+            guarded Position Tracking recovery when broad extraction fails,
+            and strict isolation of Workers AI/runtime diagnostic messages
+            from client communication evidence.
    ========================================================= */
 
 import {
@@ -121,11 +122,15 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
     });
 
     operationalEvidence = operationalEvidenceResult?.evidence || null;
-    visibleEvidence = operationalEvidenceToVisibleEvidence(operationalEvidence);
+    visibleEvidence = sanitizeVisibleEvidence(
+      operationalEvidenceToVisibleEvidence(operationalEvidence)
+    );
 
     if (sourceText) {
       const deterministicTextEvidence = deterministicTextEvidenceExtraction(sourceText);
-      visibleEvidence = mergeVisibleEvidence(deterministicTextEvidence, visibleEvidence);
+      visibleEvidence = sanitizeVisibleEvidence(
+        mergeVisibleEvidence(deterministicTextEvidence, visibleEvidence)
+      );
 
       const anchoredSubject = clean(deterministicTextEvidence?.visibleSubject);
       const anchoredSource = clean(deterministicTextEvidence?.visibleSource);
@@ -201,9 +206,11 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
         guardedRecoveryResult.data &&
         !isWeakVisibleEvidence(guardedRecoveryResult.data)
       ) {
-        visibleEvidence = mergeVisibleEvidence(
-          visibleEvidence,
-          guardedRecoveryResult.data
+        visibleEvidence = sanitizeVisibleEvidence(
+          mergeVisibleEvidence(
+            visibleEvidence,
+            guardedRecoveryResult.data
+          )
         );
 
         reportRecognition =
@@ -236,8 +243,11 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
      when the broad transcription is incomplete. */
   {
     const stageStartedAt = Date.now();
+    visibleEvidence = sanitizeVisibleEvidence(visibleEvidence);
     reportRecognition = reportRecognition || recognizeReportSignatureFromEvidence(visibleEvidence);
-    visibleEvidence = applyReportRecognitionToEvidence(visibleEvidence, reportRecognition);
+    visibleEvidence = sanitizeVisibleEvidence(
+      applyReportRecognitionToEvidence(visibleEvidence, reportRecognition)
+    );
 
     stages.push(createStageResult({
       stageName: "report_signature_recognition",
@@ -481,7 +491,7 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
       failedStageCount: failedStages.length,
       fallbackStageCount: fallbackStages.length,
       partialStageCount: partialStages.length,
-      performanceMode: imageDataUrl ? "fast_two_call" : "fast_text_deterministic_plus_reasoning",
+      performanceMode: imageDataUrl ? "fast_guarded_position_tracking_v2" : "fast_text_deterministic_plus_reasoning",
       evidenceAiCallBudget: imageDataUrl ? 1 : 0,
       reasoningAiCallBudget: 1
     }
@@ -1005,7 +1015,11 @@ async function executeVisionExtractionStage({
    * This pass is enrichment only. It cannot change the report family and is
    * sanitized before being merged with the broader evidence.
    */
-  const positionTrackingAnchored = /\bposition tracking\b/i.test(clean(sourceText));
+  const positionTrackingAnchored =
+    /\bposition tracking\b/i.test(clean(sourceText)) ||
+    reportRecognition?.reportType === "position_tracking" ||
+    deterministicNotificationClassification(evidence).notificationType === "position_tracking";
+
   const siteAuditAnchored =
     reportRecognition?.reportType === "site_audit" ||
     deterministicNotificationClassification(evidence).notificationType === "site_audit" ||
@@ -1053,11 +1067,15 @@ async function executeVisionExtractionStage({
     });
 
     if (tableResult.ok) {
-      tableEvidence = sanitizePositionTrackingVisionEvidence(
-        normalizeVisibleEvidence(tableResult.data)
+      tableEvidence = sanitizeVisibleEvidence(
+        sanitizePositionTrackingVisionEvidence(
+          normalizeVisibleEvidence(tableResult.data)
+        )
       );
 
-      evidence = mergeVisibleEvidence(evidence, tableEvidence);
+      evidence = sanitizeVisibleEvidence(
+        mergeVisibleEvidence(evidence, tableEvidence)
+      );
     }
   }
 
@@ -1232,6 +1250,7 @@ async function executeVisionExtractionStage({
     evidence = applyReportRecognitionToEvidence(evidence, reportRecognition);
   }
 
+  evidence = sanitizeVisibleEvidence(evidence);
   const strongReportRecognition = hasStrongReportRecognition(reportRecognition);
 
   if ((!evidence || isWeakVisibleEvidence(evidence)) && !strongReportRecognition) {
@@ -1554,15 +1573,21 @@ function applyReportRecognitionToEvidence(evidence, recognition) {
 }
 
 function preservePartialVisibleEvidence(evidence, reason) {
-  const normalized = normalizeVisibleEvidence(evidence || {});
-  return normalizeVisibleEvidence({
+  const normalized = sanitizeVisibleEvidence(
+    normalizeVisibleEvidence(evidence || {})
+  );
+  const safeReason = isRuntimeDiagnosticText(reason)
+    ? "Screenshot evidence extraction was incomplete."
+    : clean(reason) || "Incomplete transcription";
+
+  return sanitizeVisibleEvidence({
     ...normalized,
     visibleText: clean(normalized.visibleText) || "Partial screenshot evidence was retained for review.",
     visibleFacts: uniqueTextValues([
       ...(normalized.visibleFacts || []),
-      `Evidence limitation: ${clean(reason) || "Incomplete transcription"}`
+      `Evidence limitation: ${safeReason}`
     ]),
-    uncertainty: clean(reason) || normalized.uncertainty || "Incomplete transcription",
+    uncertainty: safeReason,
     confidence: normalized.confidence === "High" ? "Medium" : normalized.confidence
   });
 }
@@ -2112,7 +2137,7 @@ function buildSiteAuditMetricsPrompt({ client, clientId, fileName }) {
 function buildPositionTrackingTablePrompt({ sourceText = "", client, clientId, fileName }) {
   return [
     "You are reading a SEMrush Position Tracking weekly-update screenshot.",
-    "The pasted email text confirms the report family is Position Tracking.",
+    "Report recognition or supplied text confirms the report family is Position Tracking.",
     "Your only job in this pass is to transcribe clearly readable performance evidence from the report body.",
     "",
     "STRICT RULES",
@@ -2135,7 +2160,7 @@ function buildPositionTrackingTablePrompt({ sourceText = "", client, clientId, f
     "",
     `Selected client context: ${client || clientId || "Unknown"}`,
     `Temporary filename: ${fileName}`,
-    "Report anchor from pasted text: Position Tracking",
+    "Report anchor: Position Tracking",
     "",
     "Return only valid JSON matching this contract:",
     JSON.stringify({
@@ -2270,6 +2295,10 @@ function isCrediblePositionTrackingEvidenceLine(value) {
 }
 function isWeakVisibleEvidence(evidence) {
   if (!evidence) return true;
+
+  if (containsRuntimeDiagnosticEvidence(evidence)) {
+    return true;
+  }
 
   const source = clean(evidence.visibleSource).toLowerCase();
   const subject = clean(evidence.visibleSubject).toLowerCase();
@@ -3247,7 +3276,8 @@ function buildConsultantSummary({
 
 function normalizeVisibleEvidence(value) {
   const evidence = isPlainObject(value) ? value : {};
-  return {
+
+  const normalized = {
     visibleSource: clean(evidence.visibleSource) || "Unknown",
     visibleSubject: clean(evidence.visibleSubject) || "Unknown",
     visibleText: clean(evidence.visibleText),
@@ -3258,6 +3288,74 @@ function normalizeVisibleEvidence(value) {
     confidence: normalizeConfidence(evidence.confidence),
     uncertainty: clean(evidence.uncertainty) || "None"
   };
+
+  return sanitizeVisibleEvidence(normalized);
+}
+
+function sanitizeVisibleEvidence(value) {
+  const evidence = isPlainObject(value) ? value : {};
+
+  const safeText = input => {
+    const textValue = clean(input);
+    return isRuntimeDiagnosticText(textValue) ? "" : textValue;
+  };
+
+  const safeArray = values => normalizeTextArray(values)
+    .map(safeText)
+    .filter(Boolean);
+
+  const source = safeText(evidence.visibleSource);
+  const subject = safeText(evidence.visibleSubject);
+  const visibleText = safeText(evidence.visibleText);
+  const uncertainty = safeText(evidence.uncertainty);
+
+  return {
+    visibleSource: source && source !== "Client Email"
+      ? source
+      : "Unknown",
+    visibleSubject: subject && subject !== "Human Email"
+      ? subject
+      : "Unknown",
+    visibleText,
+    visibleFacts: safeArray(evidence.visibleFacts),
+    visibleMetrics: safeArray(evidence.visibleMetrics),
+    responseExpected: normalizeBoolean(evidence.responseExpected, false),
+    explicitActionRequested: normalizeBoolean(evidence.explicitActionRequested, false),
+    confidence: normalizeConfidence(evidence.confidence),
+    uncertainty: uncertainty || "None"
+  };
+}
+
+function containsRuntimeDiagnosticEvidence(evidence) {
+  const values = [
+    evidence?.visibleSource,
+    evidence?.visibleSubject,
+    evidence?.visibleText,
+    evidence?.uncertainty,
+    ...(evidence?.visibleFacts || []),
+    ...(evidence?.visibleMetrics || [])
+  ];
+
+  return values.some(isRuntimeDiagnosticText);
+}
+
+function isRuntimeDiagnosticText(value) {
+  const textValue = clean(value);
+  if (!textValue) return false;
+
+  return (
+    /\b4006\b/i.test(textValue) ||
+    /\bdaily free allocation\b/i.test(textValue) ||
+    /\bneurons?\b/i.test(textValue) ||
+    /\bcloudflare(?:'s)? workers paid plan\b/i.test(textValue) ||
+    /\bworkers ai\b.*\b(?:quota|allocation|limit|error)\b/i.test(textValue) ||
+    /\bevidence_extraction(?:_focused_recovery)? did not return valid json\b/i.test(textValue) ||
+    /\bbusiness_meaning returned an empty response\b/i.test(textValue) ||
+    /\bai extraction attempt failed\b/i.test(textValue) ||
+    /\bmodel invocation\b.*\bfailed\b/i.test(textValue) ||
+    /\bquota exceeded\b/i.test(textValue) ||
+    /\brate limit(?:ed)?\b/i.test(textValue)
+  );
 }
 
 function fallbackVisibleEvidence(reason) {
