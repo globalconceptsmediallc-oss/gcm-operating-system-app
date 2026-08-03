@@ -1,18 +1,21 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.7.3
+   Version: 7.7.4
    Status: Production Candidate
-   Source: Production worker.js 7.7.2
-   Sprint: Agency Command Route Connection
-   Purpose: Preserve every verified production route and connect the
-            read-only Agency Command orchestration route.
+   Source: Production worker.js 7.7.3
+   Sprint: Communications Review Contract Repair
+   Purpose: Preserve every verified production route, keep Agency Command
+            connected, and repair the Communications review response so the
+            frontend receives the strongest structured analysis already
+            produced by communicationAnalysis.js.
 
-   Changes in 7.7.3:
-   - Added routes/agencyCommand.js import.
-   - Added agency-command to supported actions.
-   - Added Agency Command dispatch.
-   - Added Agency Command to Worker health output.
+   Changes in 7.7.4:
+   - Added a read-only response adapter around Communication Analysis.
+   - Enriches payload.analysis from classification, report recognition,
+     visible evidence, business meaning, WWPOWD, and consultant summary.
+   - Does not alter D1 writes, routing decisions, AI execution, or evidence.
+   - Does not replace valid analysis fields.
    - No existing route, binding, D1 table, workflow, or action removed.
    ========================================================= */
 
@@ -45,6 +48,8 @@ import {
   AGENCY_COMMAND_ACTION
 } from "./routes/agencyCommand.js";
 
+const WORKER_FILE_VERSION = "7.7.4";
+
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
   ACTIONS.GET_CLIENT_WORKSPACE,
@@ -74,14 +79,15 @@ export default {
         status: "online",
         system: "GCM OS Operational Worker",
         version: VERSION,
-        workerFileVersion: "7.7.3",
+        workerFileVersion: WORKER_FILE_VERSION,
         contractVersion: API_CONTRACT_VERSION,
-        sprint: "Agency Command Route Connection",
+        sprint: "Communications Review Contract Repair",
         architecture:
-          "Modular production router with Agency Command orchestration, guided Investigation reasoning, and verified repository-backed routes.",
+          "Modular production router with Agency Command orchestration, guided Investigation reasoning, and a Communications review response adapter.",
         actions: SUPPORTED_ACTIONS,
         engines: [
           "agency-command",
+          "communications-review-adapter",
           "notification-detection",
           "evidence-extraction",
           "business-meaning",
@@ -166,7 +172,11 @@ export default {
           return await handleAgencyCommand(body, env, requestId);
 
         case ACTIONS.ANALYZE_COMMUNICATION:
-          return await handleCommunicationAnalysis(body, env, requestId);
+          return await handleCommunicationAnalysisWithReviewAdapter(
+            body,
+            env,
+            requestId
+          );
 
         case ACTIONS.GET_CLIENT_WORKSPACE:
           return await handleClientWorkspace(body, env, requestId);
@@ -200,7 +210,7 @@ export default {
             ok: false,
             requestId,
             version: VERSION,
-            workerFileVersion: "7.7.3",
+            workerFileVersion: WORKER_FILE_VERSION,
             error: action
               ? `Unsupported action: ${action}`
               : "An action is required.",
@@ -219,7 +229,7 @@ export default {
         ok: false,
         requestId,
         version: VERSION,
-        workerFileVersion: "7.7.3",
+        workerFileVersion: WORKER_FILE_VERSION,
         processingStatus: "failed",
         error: safeErrorMessage(error),
         executionTimeMs: Date.now() - requestStartedAt
@@ -227,3 +237,315 @@ export default {
     }
   }
 };
+
+async function handleCommunicationAnalysisWithReviewAdapter(
+  body,
+  env,
+  requestId
+) {
+  const response = await handleCommunicationAnalysis(body, env, requestId);
+
+  if (!response || typeof response.json !== "function") {
+    return response;
+  }
+
+  let payload;
+
+  try {
+    payload = await response.json();
+  } catch {
+    return response;
+  }
+
+  if (
+    response.ok &&
+    payload?.ok === true &&
+    payload?.analysis &&
+    typeof payload.analysis === "object"
+  ) {
+    payload.analysis = buildCommunicationsReviewAnalysis(payload);
+    payload.reviewAdapter = {
+      applied: true,
+      version: "1.0.0",
+      workerFileVersion: WORKER_FILE_VERSION
+    };
+  }
+
+  return jsonResponse(payload, response.status);
+}
+
+function buildCommunicationsReviewAnalysis(payload) {
+  const original = payload.analysis || {};
+  const classification = payload.classification || {};
+  const recognition = payload.reportRecognition || {};
+  const evidence = payload.evidence || {};
+  const meaning = payload.businessMeaning || {};
+  const wwPowd = payload.wwPowdAnalysis || {};
+  const consultant = payload.consultantSummary || {};
+  const clientObject =
+    payload.client && typeof payload.client === "object"
+      ? payload.client
+      : {};
+
+  const source = firstMeaningful(
+    original.source,
+    sourceForNotificationType(classification.notificationType),
+    sourceForPlatform(classification.platform),
+    sourceForPlatform(recognition.platform),
+    evidence.visibleSource
+  ) || "Unknown";
+
+  const communicationType = firstMeaningful(
+    original.communicationType,
+    typeForNotificationType(classification.notificationType),
+    humanize(recognition.reportType),
+    classification.notificationFamily
+  ) || "General Communication";
+
+  const title = firstMeaningful(
+    original.title,
+    buildReviewTitle({
+      source,
+      communicationType,
+      label: meaning.operationalLabel
+    }),
+    evidence.visibleSubject
+  ) || "Client communication";
+
+  const operationalSummary = firstMeaningful(
+    original.operationalSummary,
+    wwPowd.operationalSummary,
+    meaning.operationalSummary,
+    consultant.summary,
+    buildEvidenceSummary(evidence, classification)
+  ) || "The communication was received and requires human review.";
+
+  const businessImpact = firstMeaningful(
+    original.businessImpact,
+    wwPowd.businessImpact,
+    meaning.businessImpact
+  ) || "Business impact has not yet been verified.";
+
+  const recommendedAction = firstMeaningful(
+    original.recommendedAction,
+    wwPowd.nextAction,
+    meaning.recommendedAction,
+    consultant.nextAction
+  ) || "Review and retain the communication.";
+
+  const reasoning = firstMeaningful(
+    original.reasoning,
+    wwPowd.reasoning,
+    meaning.reasoning,
+    evidence.uncertainty
+  ) || "The recommendation is based on the strongest structured evidence returned by the analysis pipeline.";
+
+  return {
+    ...original,
+    client: firstMeaningful(
+      original.client,
+      original.clientName,
+      clientObject.name
+    ),
+    clientName: firstMeaningful(
+      original.clientName,
+      original.client,
+      clientObject.name
+    ),
+    clientCode: firstMeaningful(
+      original.clientCode,
+      original.clientId,
+      clientObject.id
+    ),
+    source,
+    communicationType,
+    title,
+    operationalSummary,
+    businessImpact,
+    recommendedAction,
+    reasoning,
+    evidenceSummary: buildEvidenceSummary(evidence, classification),
+    reviewEvidence: {
+      visibleSource: evidence.visibleSource || null,
+      visibleSubject: evidence.visibleSubject || null,
+      visibleFacts: Array.isArray(evidence.visibleFacts)
+        ? evidence.visibleFacts
+        : [],
+      visibleMetrics: Array.isArray(evidence.visibleMetrics)
+        ? evidence.visibleMetrics
+        : [],
+      confidence: evidence.confidence || null,
+      notificationType: classification.notificationType || null,
+      notificationFamily: classification.notificationFamily || null,
+      reportType: recognition.reportType || null,
+      reportFamily: recognition.reportFamily || null
+    }
+  };
+}
+
+function firstMeaningful(...values) {
+  for (const value of values) {
+    const text = clean(value);
+
+    if (!text) continue;
+    if (isWeakFallback(text)) continue;
+
+    return text;
+  }
+
+  return "";
+}
+
+function isWeakFallback(value) {
+  const normalized = clean(value).toLowerCase();
+
+  return [
+    "unknown",
+    "general communication",
+    "client communication",
+    "an unknown communication was received.",
+    "a unknown communication was received.",
+    "the communication was received.",
+    "review the communication."
+  ].includes(normalized);
+}
+
+function sourceForNotificationType(value) {
+  const sources = {
+    position_tracking: "SEMrush",
+    backlink_audit: "SEMrush",
+    site_audit: "SEMrush",
+    page_indexing_resolution: "Google Search Console",
+    merchant_listing_structured_data: "Google Search Console",
+    disavow_file_update: "Google Search Console",
+    search_performance: "Google Search Console",
+    business_profile: "Google Business Profile",
+    analytics: "Google Analytics"
+  };
+
+  return sources[clean(value).toLowerCase()] || "";
+}
+
+function sourceForPlatform(value) {
+  const platforms = {
+    semrush: "SEMrush",
+    google_search_console: "Google Search Console",
+    google_business_profile: "Google Business Profile",
+    google_analytics: "Google Analytics",
+    google_merchant_center: "Google Merchant Center",
+    client_email: "Client",
+    vendor_email: "Vendor"
+  };
+
+  return platforms[clean(value).toLowerCase()] || humanize(value);
+}
+
+function typeForNotificationType(value) {
+  const types = {
+    position_tracking: "SEO Ranking Alert",
+    page_indexing_resolution: "Page Indexing Resolution Confirmation",
+    backlink_audit: "SEO Backlink Alert",
+    site_audit: "Technical SEO Audit Alert",
+    merchant_listing_structured_data:
+      "Merchant Listings Structured Data Alert",
+    search_performance: "Search Performance Notification",
+    business_profile: "Local Presence Notification",
+    analytics: "Analytics Notification",
+    client_request: "Client or Human Communication",
+    vendor_notice: "Vendor Notice",
+    billing_notice: "Billing Notice",
+    access_security: "Access Alert"
+  };
+
+  return types[clean(value).toLowerCase()] || "";
+}
+
+function buildReviewTitle({
+  source,
+  communicationType,
+  label
+}) {
+  const cleanLabel = clean(label);
+
+  if (cleanLabel) {
+    return `${source} ${communicationType} — ${cleanLabel}`;
+  }
+
+  if (source && communicationType) {
+    return `${source} — ${communicationType}`;
+  }
+
+  return source || communicationType || "";
+}
+
+function buildEvidenceSummary(evidence, classification) {
+  const values = [];
+
+  if (evidence?.visibleSubject) {
+    values.push(clean(evidence.visibleSubject));
+  }
+
+  const facts = Array.isArray(evidence?.visibleFacts)
+    ? evidence.visibleFacts
+    : [];
+
+  const metrics = Array.isArray(evidence?.visibleMetrics)
+    ? evidence.visibleMetrics
+    : [];
+
+  for (const item of [...metrics, ...facts]) {
+    const text = evidenceItemToText(item);
+
+    if (text && !values.some(existing =>
+      existing.toLowerCase() === text.toLowerCase()
+    )) {
+      values.push(text);
+    }
+  }
+
+  if (!values.length && classification?.notificationFamily) {
+    values.push(clean(classification.notificationFamily));
+  }
+
+  return values.slice(0, 12).join("; ");
+}
+
+function evidenceItemToText(item) {
+  if (item === null || item === undefined) return "";
+
+  if (typeof item === "string" || typeof item === "number") {
+    return clean(item);
+  }
+
+  if (typeof item !== "object") return "";
+
+  const label = clean(
+    item.label ||
+    item.key ||
+    item.name ||
+    item.metric ||
+    item.category
+  );
+
+  const value = clean(
+    item.displayValue ||
+    item.display_value ||
+    item.value ||
+    item.statement ||
+    item.evidence ||
+    item.text
+  );
+
+  if (label && value) return `${label}: ${value}`;
+  return label || value;
+}
+
+function humanize(value) {
+  const text = clean(value);
+
+  if (!text || text.toLowerCase() === "unknown") return "";
+
+  return text
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, character => character.toUpperCase());
+}
