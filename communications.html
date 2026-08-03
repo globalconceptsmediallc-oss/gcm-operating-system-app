@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: communications.html
-   Version: 2.8.1
+   Version: 2.8.2
    Source: Production Frontend
    Purpose: Client Communications intake and operational routing.
    ========================================================= -->
@@ -301,7 +301,7 @@ Backlink Audit update
 (() => {
   "use strict";
 
-  const VERSION = "2.8.1";
+  const VERSION = "2.8.2";
   const ENDPOINT = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const CONTRACT_VERSION = "communications-operational-decision-v3";
   const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -382,11 +382,11 @@ Backlink Audit update
 
   function init() {
     if (!window.GCMOShell) {
-      console.error("Communications 2.8.1: shared/gcm-shell.js did not load.");
+      console.error("Communications 2.8.2: shared/gcm-shell.js did not load.");
     } else {
       window.GCMOShell.mount({
         currentPage: "communications",
-        statusText: "Communications operational · Communications v2.8.1"
+        statusText: "Communications operational · Communications v2.8.2"
       });
     }
 
@@ -517,12 +517,7 @@ Backlink Audit update
 
       const payload = await response.json().catch(() => ({}));
 
-      if (
-        payload?.processingStatus === "ai_unavailable" ||
-        payload?.error?.code === "AI_QUOTA_EXHAUSTED" ||
-        payload?.error?.code === "AI_UNAVAILABLE" ||
-        response.status === 503
-      ) {
+      if (isAnalysisUnavailablePayload(payload, response.status)) {
         showAnalysisUnavailable(payload);
         return;
       }
@@ -565,6 +560,57 @@ Backlink Audit update
     }
   }
 
+  function isAnalysisUnavailablePayload(payload = {}, httpStatus = 0) {
+    if (httpStatus === 503) return true;
+    if (payload?.processingStatus === "ai_unavailable") return true;
+
+    const errorCode = String(
+      payload?.error?.code ||
+      payload?.errors?.[0]?.code ||
+      ""
+    ).toUpperCase();
+
+    if ([
+      "AI_QUOTA_EXHAUSTED",
+      "AI_UNAVAILABLE",
+      "AI_SERVICE_UNAVAILABLE",
+      "AI_BINDING_UNAVAILABLE"
+    ].includes(errorCode)) {
+      return true;
+    }
+
+    const analysisText = [
+      payload?.error?.message,
+      payload?.message,
+      payload?.analysis?.title,
+      payload?.analysis?.operationalSummary,
+      payload?.analysis?.businessImpact,
+      payload?.analysis?.recommendedAction,
+      payload?.analysis?.reasoning,
+      payload?.analysis?.evidenceSummary,
+      payload?.businessMeaning?.summary,
+      payload?.businessMeaning?.reasoning,
+      payload?.evidence?.visibleText,
+      payload?.evidence?.uncertainty,
+      ...(payload?.evidence?.visibleFacts || []),
+      ...(payload?.evidence?.visibleMetrics || []),
+      ...(payload?.errors || []).map(item => item?.message || item?.code || "")
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    return (
+      /usage allocation has been reached/.test(analysisText) ||
+      /ai processing is temporarily unavailable/.test(analysisText) ||
+      /daily free allocation/.test(analysisText) ||
+      /\b4006\b/.test(analysisText) ||
+      /\bneurons?\b/.test(analysisText) ||
+      /workers paid plan/.test(analysisText) ||
+      /quota exhausted/.test(analysisText)
+    );
+  }
+
   function showAnalysisUnavailable(payload = {}) {
     currentDecision = null;
     el.analysisPanel.hidden = true;
@@ -592,15 +638,35 @@ Backlink Audit update
     }
 
     if (error && typeof error === "object") {
-      return String(
+      const directMessage = String(
         error.message ||
         error.details ||
         error.code ||
         ""
       ).trim();
+
+      if (directMessage) return directMessage;
     }
 
-    return String(payload?.message || "").trim();
+    const nestedMessage = String(
+      payload?.errors?.[0]?.message ||
+      payload?.analysis?.reasoning ||
+      payload?.analysis?.operationalSummary ||
+      payload?.businessMeaning?.reasoning ||
+      payload?.evidence?.uncertainty ||
+      payload?.message ||
+      ""
+    ).trim();
+
+    if (
+      /usage allocation has been reached|daily free allocation|4006|neurons?|workers paid plan|quota/i.test(
+        nestedMessage
+      )
+    ) {
+      return "AI processing is temporarily unavailable because the usage allocation has been reached.";
+    }
+
+    return nestedMessage;
   }
 
   function renderVisionDebug(payload) {
