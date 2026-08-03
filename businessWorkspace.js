@@ -2,7 +2,7 @@
  * GCM OS — Business Workspace Runtime
  *
  * File: businessWorkspace.js
- * Version: 1.0.0
+ * Version: 1.0.1
  *
  * Responsibility:
  * 1. Load a Business Record.
@@ -18,8 +18,8 @@
 (function initializeBusinessWorkspace(globalScope) {
   "use strict";
 
-  const RUNTIME_VERSION = "1.0.0";
-  const SUPPORTED_SCHEMA_VERSION = "1.0.0";
+  const RUNTIME_VERSION = "1.0.1";
+  const SUPPORTED_SCHEMA_VERSION = "1.1.0";
   const DEFAULT_DATA_DIRECTORY = "data";
   const DEFAULT_RECENT_ACTIVITY_DAYS = 14;
 
