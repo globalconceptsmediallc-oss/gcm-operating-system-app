@@ -1,8 +1,3 @@
-Library
-/
-worker.js_v7.7.5.txt
-
-
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
