@@ -1,10 +1,10 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/prospectIntelligence.js
-   Version: 1.4.0
+   Version: 1.4.1
    Status: Production Road-Test Candidate
-   Source: routes/prospectIntelligence.js 1.3.0
-   Sprint: Consultant Intelligence Layer — Industry-Aware Reasoning
+   Source: routes/prospectIntelligence.js 1.4.0
+   Sprint: Consultant Intelligence Layer — Diagnosis and Action Separation
    Purpose: Preserve the Business Intelligence Record foundation and
             add consultant-grade reasoning that connects evidence to
             business meaning, action, expected result, and proof.
@@ -45,7 +45,7 @@ import {
   applyConsultantIntelligenceToBrief
 } from "../shared/engines/consultantIntelligence.js";
 
-export const PROSPECT_INTELLIGENCE_VERSION = "1.4.0";
+export const PROSPECT_INTELLIGENCE_VERSION = "1.4.1";
 
 const MAX_WEBSITE_TEXT = 18000;
 const MAX_IMAGES = 2;
@@ -175,6 +175,9 @@ export async function handleProspectIntelligence(body, env, requestId) {
               "Compare the advertisement promise with the website customer journey.",
               "Use the supplied Consultant Intelligence as the reasoning authority for the executive brief, strongest asset, largest opportunity, and first action.",
               "The strongest asset, largest opportunity, and first action must be distinct and specific to this business model.",
+              "The largest opportunity must diagnose the weakness, risk, friction, or lost-value condition.",
+              "The first recommendation must begin with an action verb and prescribe the first concrete review, test, change, or measurement.",
+              "Never repeat or lightly paraphrase the largest opportunity as the first recommendation.",
               "Never use the phrases visible business activity, focused customer-journey review, or additional marketing investment.",
               "For the most important opportunity, explicitly connect evidence, business meaning, recommended first engagement, expected business result, and proof to verify.",
               "Prioritize improving the return from existing marketing before recommending more spending when the evidence supports that conclusion.",
@@ -203,8 +206,8 @@ export async function handleProspectIntelligence(body, env, requestId) {
                 geographicMarket: "string",
                 businessSummary: "specific executive brief based on Consultant Intelligence",
                 strongestArea: "specific strongest visible business asset and why it matters",
-                largestOpportunity: "specific highest-value growth opportunity and why it matters",
-                highestPriorityRecommendation: "specific first action; distinct from the opportunity",
+                largestOpportunity: "diagnosis only: specific highest-value weakness, risk, friction, or lost-value condition and why it matters",
+                highestPriorityRecommendation: "action only: begin with a verb and prescribe the first concrete review, test, change, or measurement; must not restate the opportunity",
                 productsAndServices: ["string"],
                 targetCustomer: "string",
                 trustSignals: ["string"],
