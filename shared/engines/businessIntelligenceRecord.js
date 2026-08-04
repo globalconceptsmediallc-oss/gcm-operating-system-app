@@ -1,10 +1,10 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/engines/businessIntelligenceRecord.js
-   Version: 1.0.0
+   Version: 1.1.0
    Status: Production Road-Test Candidate
-   Source: New shared intelligence engine
-   Sprint: Business Intelligence Record — Foundation
+   Source: shared/engines/businessIntelligenceRecord.js 1.0.0
+   Sprint: Business Identification and Consultant Context
    Purpose: Normalize advertisement and website evidence into one
             reusable, evidence-first Business Intelligence Record.
 
@@ -19,7 +19,7 @@
 
 import { clean } from "../http.js";
 
-export const BUSINESS_INTELLIGENCE_RECORD_VERSION = "1.0.0";
+export const BUSINESS_INTELLIGENCE_RECORD_VERSION = "1.1.0";
 
 const SERVICE_RULES = Object.freeze([
   ["Lawn Care", /\b(?:lawn care|lawn service|fertili[sz]ation|weed control|turf)\b/i],
@@ -39,7 +39,10 @@ const SERVICE_RULES = Object.freeze([
   ["Medical Services", /\b(?:medical|clinic|physician|healthcare)\b/i],
   ["Dental Services", /\b(?:dental|dentist|orthodont)\b/i],
   ["Real Estate", /\b(?:real estate|realtor|property management)\b/i],
-  ["Restaurant", /\b(?:restaurant|menu|dining|catering)\b/i]
+  ["Restaurant", /\b(?:restaurant|menu|dining|catering)\b/i],
+  ["Automotive Sales", /\b(?:new vehicles?|used vehicles?|certified pre-owned|vehicle inventory|dealership|auto dealer|bmw|mercedes|lexus|audi)\b/i],
+  ["Automotive Service", /\b(?:service center|schedule service|vehicle service|auto repair|parts center|collision center)\b/i],
+  ["Automotive Financing", /\b(?:auto financing|vehicle financing|finance application|lease offers?|payment calculator|trade[- ]?in)\b/i]
 ]);
 
 const MARKET_PATTERNS = [
@@ -50,6 +53,8 @@ const MARKET_PATTERNS = [
   /\bPalm Bay(?:,\s*Florida|\s+FL)?\b/gi,
   /\bTitusville(?:,\s*Florida|\s+FL)?\b/gi,
   /\bViera(?:,\s*Florida|\s+FL)?\b/gi,
+  /\bJacksonville(?:,\s*Florida|\s+FL)?\b/gi,
+  /\bMelbourne(?:,\s*Florida|\s+FL)?\b/gi,
   /\bFlorida\b/gi
 ];
 
@@ -78,6 +83,9 @@ export function buildBusinessIntelligenceRecord({
 
   const businessName = firstStrongValue([
     suppliedBusinessName,
+    websiteEvidence.identifiedBusinessName,
+    websiteEvidence.structuredBusinessName,
+    websiteEvidence.openGraphSiteName,
     advertisementEvidence.visibleBusinessName,
     extractBusinessNameFromTitle(websiteEvidence.title),
     hostnameLabel(websiteUrl)
@@ -91,12 +99,16 @@ export function buildBusinessIntelligenceRecord({
     ...extractUsefulHeadings(websiteEvidence.headings)
   ]).slice(0, 12);
 
-  const industry = inferIndustry(services, evidenceText);
+  const industry = firstStrongValue([
+    websiteEvidence.identifiedIndustry,
+    inferIndustry(services, evidenceText)
+  ]) || "Requires consultant verification";
   const markets = unique([
     clean(prospectContext.location),
     ...(Array.isArray(advertisementEvidence.geographicSignals)
       ? advertisementEvidence.geographicSignals
       : []),
+    clean(websiteEvidence.identifiedMarket),
     ...extractMarkets(evidenceText)
   ]).slice(0, 8);
 
@@ -260,12 +272,18 @@ export function applyBusinessIntelligenceRecordToBrief(brief, record) {
         ? source.growthOpportunities
         : [])
     ]).filter(Boolean),
-    strongestArea:
-      record?.consultantFoundation?.strongestObservableAsset,
-    largestOpportunity:
-      record?.consultantFoundation?.largestObservableOpportunity,
-    highestPriorityRecommendation:
-      record?.consultantFoundation?.highestPriorityRecommendation,
+    strongestArea: preferVerified(
+      source.strongestArea,
+      record?.consultantFoundation?.strongestObservableAsset
+    ),
+    largestOpportunity: preferVerified(
+      source.largestOpportunity,
+      record?.consultantFoundation?.largestObservableOpportunity
+    ),
+    highestPriorityRecommendation: preferVerified(
+      source.highestPriorityRecommendation,
+      record?.consultantFoundation?.highestPriorityRecommendation
+    ),
     businessIntelligenceRecord: record
   };
 }
@@ -347,6 +365,11 @@ function inferIndustry(services, text) {
 
   if (/\bfirearms\b/i.test(joined)) {
     return "Firearms Retail";
+  }
+
+  if (/\b(automotive sales|automotive service|automotive financing)\b/i.test(joined) ||
+      /\b(?:bmw|mercedes|lexus|audi|dealership|vehicle inventory|certified pre-owned)\b/i.test(text)) {
+    return "Automotive Dealership";
   }
 
   if (/\breal estate\b/i.test(joined)) {
