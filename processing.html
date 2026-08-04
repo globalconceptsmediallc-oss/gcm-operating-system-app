@@ -1,3 +1,14 @@
+<!-- =========================================================
+   Global Concepts Media Operating System
+   File: processing.html
+   Version: 1.0.1
+   Status: Production Road-Test Candidate
+   Source: Production processing.html
+   Sprint: Business Snapshot — Worker Contract Repair
+   Purpose: Preserve the public Business Snapshot lead-generation
+            funnel and restore its Worker request through the shared
+            Prospect Intelligence website-analysis action.
+   ========================================================= -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -212,6 +223,17 @@
         };
       }
 
+      if (
+        payload.fullBusinessRecord &&
+        typeof payload.fullBusinessRecord === "object" &&
+        !Array.isArray(payload.fullBusinessRecord)
+      ) {
+        return {
+          businessRecord: payload,
+          snapshot: null
+        };
+      }
+
       return {
         businessRecord: payload,
         snapshot: null
@@ -375,8 +397,12 @@
             },
 
             body: JSON.stringify({
-              websiteUrl: request.website,
-              website: request.website,
+              action:
+                "analyze-prospect-intelligence",
+              websiteUrl:
+                request.website,
+              website:
+                request.website,
               businessName:
                 request.businessName || "",
               email:
@@ -384,7 +410,16 @@
               requestId:
                 request.requestId || "",
               source:
-                "business-snapshot"
+                "business-snapshot",
+              prospectContext: {
+                source:
+                  "Business Snapshot Lead Generation",
+                notes:
+                  "Build a public-facing Business Snapshot using website evidence only.",
+                evidenceDescription:
+                  "Evaluate the business against the Five Business Growth Questions and identify the strongest visible asset, largest growth opportunity, highest-priority recommendation, and next step."
+              },
+              advertisementImages: []
             })
           },
           90000
