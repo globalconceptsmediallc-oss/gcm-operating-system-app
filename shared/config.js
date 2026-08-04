@@ -1,22 +1,18 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/config.js
-   Version: 7.7.1
+   Version: 7.7.2
    Status: Production Candidate
-   Source: shared/config.js 7.7.0
-   Sprint: Calendar — D1 Operations Integration
+   Source: shared/config.js 7.7.1
+   Sprint: Agency Intelligence — Prospect Advertisement Intake
    Purpose: Preserve all existing production constants and add
-            Calendar appointment, reminder, appointment-type,
-            and availability-rule action contracts.
+            the read-only Prospect Intelligence action contract.
    ========================================================= */
 
-export const VERSION = "7.7.1";
+export const VERSION = "7.7.2";
 export const API_CONTRACT_VERSION = "communications-operational-decision-v3";
 export const COMMUNICATION_ANALYSIS_ENGINE_VERSION = "3.4.1";
 
-/*
- * Workers AI vision model used to read communication screenshots.
- */
 export const COMMUNICATION_VISION_MODEL =
   "@cf/meta/llama-3.2-11b-vision-instruct";
 
@@ -25,6 +21,7 @@ export const COMMUNICATION_REASONING_MODEL =
 
 export const ACTIONS = Object.freeze({
   ANALYZE_COMMUNICATION: "analyze-client-communication",
+  ANALYZE_PROSPECT_INTELLIGENCE: "analyze-prospect-intelligence",
   GET_CLIENT_WORKSPACE: "get-client-workspace",
   GET_CLIENT_DIRECTORY: "get-client-directory",
   COMMIT_OPERATIONAL_DECISION: "commit-operational-decision",
