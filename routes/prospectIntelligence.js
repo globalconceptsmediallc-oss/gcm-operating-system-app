@@ -1,10 +1,10 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/prospectIntelligence.js
-   Version: 1.2.0
+   Version: 1.3.0
    Status: Production Road-Test Candidate
-   Source: routes/prospectIntelligence.js 1.1.0
-   Sprint: Consultant Reasoning V2 — Evidence to Business Impact
+   Source: routes/prospectIntelligence.js 1.2.0
+   Sprint: Business Identification → Consultant Reasoning V3
    Purpose: Preserve the Business Intelligence Record foundation and
             add consultant-grade reasoning that connects evidence to
             business meaning, action, expected result, and proof.
@@ -39,7 +39,7 @@ import {
   applyBusinessIntelligenceRecordToBrief
 } from "../shared/engines/businessIntelligenceRecord.js";
 
-export const PROSPECT_INTELLIGENCE_VERSION = "1.2.0";
+export const PROSPECT_INTELLIGENCE_VERSION = "1.3.0";
 
 const MAX_WEBSITE_TEXT = 18000;
 const MAX_IMAGES = 2;
@@ -65,6 +65,31 @@ export async function handleProspectIntelligence(body, env, requestId) {
 
   try {
     const websiteEvidence = await collectWebsiteEvidence(websiteUrl);
+
+    const businessProfile = await identifyBusinessProfile({
+      websiteUrl,
+      suppliedBusinessName: businessName,
+      websiteEvidence,
+      prospectContext,
+      env,
+      requestId
+    });
+
+    const enrichedWebsiteEvidence = {
+      ...websiteEvidence,
+      identifiedBusinessName: clean(businessProfile.businessName),
+      identifiedIndustry: clean(businessProfile.industry),
+      identifiedMarket: clean(businessProfile.geographicMarket),
+      businessModel: clean(businessProfile.businessModel),
+      revenueStreams: Array.isArray(businessProfile.revenueStreams)
+        ? businessProfile.revenueStreams
+        : [],
+      primaryBrandAssets: Array.isArray(businessProfile.primaryBrandAssets)
+        ? businessProfile.primaryBrandAssets
+        : [],
+      identificationConfidence: clean(businessProfile.confidence)
+    };
+
     const advertisementEvidence = await analyzeAdvertisementEvidence({
       images: advertisementImages,
       businessName,
@@ -79,7 +104,7 @@ export async function handleProspectIntelligence(body, env, requestId) {
         websiteUrl,
         suppliedBusinessName: businessName,
         prospectContext,
-        websiteEvidence,
+        websiteEvidence: enrichedWebsiteEvidence,
         advertisementEvidence
       });
 
@@ -88,7 +113,7 @@ export async function handleProspectIntelligence(body, env, requestId) {
       websiteUrl,
       businessName,
       prospectContext,
-      websiteEvidence,
+      websiteEvidence: enrichedWebsiteEvidence,
       advertisementEvidence
       }),
       businessIntelligenceRecord
@@ -119,6 +144,9 @@ export async function handleProspectIntelligence(body, env, requestId) {
               "You are the senior business-development strategist for Global Concepts Media.",
               "Prepare one practical prospect intelligence brief for a one-person agency owner with limited time.",
               "Think like an experienced agency consultant preparing for a real owner conversation, not like a generic website auditor.",
+              "Before making recommendations, establish what the business is, how it likely makes money, who it serves, and which visible brand or operating assets matter most.",
+              "Do not confuse navigation labels such as Home with the business name.",
+              "Do not use Requires consultant verification when the public evidence clearly establishes the business category or market.",
               "Use the advertisement evidence as part of the reasoning, not as decoration.",
               "Compare the advertisement promise with the website customer journey.",
               "For the most important opportunity, explicitly connect evidence, business meaning, recommended first engagement, expected business result, and proof to verify.",
@@ -138,7 +166,8 @@ export async function handleProspectIntelligence(body, env, requestId) {
               businessName,
               websiteUrl,
               advertisementEvidence,
-              websiteEvidence,
+              websiteEvidence: enrichedWebsiteEvidence,
+              businessProfile,
               businessIntelligenceRecord,
               requiredOutput: {
                 businessName: "string",
@@ -236,7 +265,8 @@ export async function handleProspectIntelligence(body, env, requestId) {
         : "deterministic-fallback",
       warning: aiResult.ok ? null : aiResult?.error?.message || "Reasoning fallback used.",
       advertisementEvidence,
-      websiteEvidence,
+      websiteEvidence: enrichedWebsiteEvidence,
+      businessProfile,
       businessIntelligenceRecord,
       ...brief,
       fullBusinessRecord: {
@@ -260,7 +290,7 @@ export async function handleProspectIntelligence(body, env, requestId) {
           },
           {
             sourceType: "Website Intelligence",
-            rawEvidence: websiteEvidence
+            rawEvidence: enrichedWebsiteEvidence
           }
         ]
       }
@@ -405,6 +435,104 @@ async function analyzeAdvertisementEvidence({
   });
 }
 
+
+async function identifyBusinessProfile({
+  websiteUrl,
+  suppliedBusinessName,
+  websiteEvidence,
+  prospectContext,
+  env,
+  requestId
+}) {
+  const deterministic = {
+    businessName:
+      suppliedBusinessName ||
+      clean(websiteEvidence.openGraphSiteName) ||
+      clean(websiteEvidence.structuredBusinessName) ||
+      clean(websiteEvidence.title) ||
+      new URL(websiteUrl).hostname,
+    industry: "",
+    geographicMarket: clean(prospectContext.location),
+    businessModel: "",
+    revenueStreams: [],
+    primaryBrandAssets: [],
+    confidence: "Low",
+    evidence: []
+  };
+
+  if (!env?.AI || typeof env.AI.run !== "function") {
+    return deterministic;
+  }
+
+  const result = await runAiJsonWithRetry({
+    env,
+    model: COMMUNICATION_REASONING_MODEL,
+    input: {
+      messages: [
+        {
+          role: "system",
+          content: [
+            "Identify the business before any marketing analysis.",
+            "Use only the supplied public website evidence.",
+            "Do not use navigation labels such as Home as the business name.",
+            "Recognize major brands, franchises, dealerships, professional practices, retailers, and multi-location companies when clearly visible.",
+            "Infer the business model and revenue streams only when supported by visible services or offers.",
+            "Return one valid JSON object only."
+          ].join(" ")
+        },
+        {
+          role: "user",
+          content: JSON.stringify({
+            websiteUrl,
+            suppliedBusinessName,
+            title: websiteEvidence.title,
+            openGraphSiteName: websiteEvidence.openGraphSiteName,
+            structuredBusinessName: websiteEvidence.structuredBusinessName,
+            metaDescription: websiteEvidence.metaDescription,
+            headings: websiteEvidence.headings,
+            callsToAction: websiteEvidence.callsToAction,
+            visibleText: clean(websiteEvidence.visibleText).slice(0, 12000),
+            requestedOutput: {
+              businessName: "string",
+              industry: "specific industry or business category",
+              geographicMarket: "specific visible market or Requires consultant verification",
+              businessModel: "one sentence",
+              revenueStreams: ["string"],
+              primaryBrandAssets: ["string"],
+              targetCustomer: "string",
+              confidence: "High | Medium | Low",
+              evidence: ["short observable evidence statement"],
+              uncertainties: ["string"]
+            }
+          })
+        }
+      ],
+      max_tokens: 1400,
+      temperature: 0
+    },
+    stageName: "prospect_business_identification",
+    requestId,
+    route: ACTIONS.ANALYZE_PROSPECT_INTELLIGENCE,
+    timeoutMs: 25000,
+    maxRetries: 1
+  });
+
+  if (!result.ok || !result.data || typeof result.data !== "object") {
+    return deterministic;
+  }
+
+  return {
+    ...deterministic,
+    ...result.data,
+    businessName:
+      clean(result.data.businessName) ||
+      deterministic.businessName,
+    confidence:
+      clean(result.data.confidence) ||
+      deterministic.confidence
+  };
+}
+
 async function collectWebsiteEvidence(websiteUrl) {
   try {
     const response = await fetch(websiteUrl, {
@@ -435,6 +563,13 @@ async function collectWebsiteEvidence(websiteUrl) {
       firstMatch(html, /<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)["']/i) ||
       firstMatch(html, /<meta[^>]+content=["']([^"']*)["'][^>]+name=["']description["']/i);
 
+    const openGraphSiteName =
+      firstMatch(html, /<meta[^>]+property=["']og:site_name["'][^>]+content=["']([^"']*)["']/i) ||
+      firstMatch(html, /<meta[^>]+content=["']([^"']*)["'][^>]+property=["']og:site_name["']/i);
+
+    const structuredBusinessName =
+      firstMatch(html, /"name"\s*:\s*"([^"]{2,120})"/i);
+
     const headings = [...html.matchAll(/<h[1-3][^>]*>([\s\S]*?)<\/h[1-3]>/gi)]
       .map(match => stripHtml(match[1]))
       .filter(Boolean)
@@ -462,6 +597,8 @@ async function collectWebsiteEvidence(websiteUrl) {
       httpStatus: response.status,
       title: clean(title) || "Unknown",
       metaDescription: clean(metaDescription) || "Unknown",
+      openGraphSiteName: clean(openGraphSiteName),
+      structuredBusinessName: clean(structuredBusinessName),
       visibleText,
       headings: unique(headings),
       callsToAction: unique(callsToAction),
