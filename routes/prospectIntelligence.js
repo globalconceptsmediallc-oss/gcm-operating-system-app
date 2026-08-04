@@ -1,10 +1,10 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/prospectIntelligence.js
-   Version: 1.3.0
+   Version: 1.4.0
    Status: Production Road-Test Candidate
-   Source: routes/prospectIntelligence.js 1.2.0
-   Sprint: Business Identification → Consultant Reasoning V3
+   Source: routes/prospectIntelligence.js 1.3.0
+   Sprint: Consultant Intelligence Layer — Industry-Aware Reasoning
    Purpose: Preserve the Business Intelligence Record foundation and
             add consultant-grade reasoning that connects evidence to
             business meaning, action, expected result, and proof.
@@ -39,7 +39,13 @@ import {
   applyBusinessIntelligenceRecordToBrief
 } from "../shared/engines/businessIntelligenceRecord.js";
 
-export const PROSPECT_INTELLIGENCE_VERSION = "1.3.0";
+import {
+  CONSULTANT_INTELLIGENCE_VERSION,
+  buildConsultantIntelligence,
+  applyConsultantIntelligenceToBrief
+} from "../shared/engines/consultantIntelligence.js";
+
+export const PROSPECT_INTELLIGENCE_VERSION = "1.4.0";
 
 const MAX_WEBSITE_TEXT = 18000;
 const MAX_IMAGES = 2;
@@ -108,16 +114,32 @@ export async function handleProspectIntelligence(body, env, requestId) {
         advertisementEvidence
       });
 
-    const deterministicFallback = applyBusinessIntelligenceRecordToBrief(
-      buildFallbackBrief({
-      websiteUrl,
-      businessName,
-      prospectContext,
-      websiteEvidence: enrichedWebsiteEvidence,
-      advertisementEvidence
-      }),
-      businessIntelligenceRecord
-    );
+    const consultantIntelligence =
+      await buildConsultantIntelligence({
+        websiteUrl,
+        businessProfile,
+        businessIntelligenceRecord,
+        websiteEvidence: enrichedWebsiteEvidence,
+        advertisementEvidence,
+        prospectContext,
+        env,
+        requestId
+      });
+
+    const deterministicFallback =
+      applyConsultantIntelligenceToBrief(
+        applyBusinessIntelligenceRecordToBrief(
+          buildFallbackBrief({
+            websiteUrl,
+            businessName,
+            prospectContext,
+            websiteEvidence: enrichedWebsiteEvidence,
+            advertisementEvidence
+          }),
+          businessIntelligenceRecord
+        ),
+        consultantIntelligence
+      );
 
     if (!env?.AI || typeof env.AI.run !== "function") {
       return jsonResponse({
@@ -128,6 +150,8 @@ export async function handleProspectIntelligence(body, env, requestId) {
         prospectIntelligenceVersion: PROSPECT_INTELLIGENCE_VERSION,
         engine: "deterministic-fallback",
         warning: "Workers AI binding was unavailable.",
+        consultantIntelligenceVersion: CONSULTANT_INTELLIGENCE_VERSION,
+        consultantIntelligence,
         businessIntelligenceRecord,
         ...deterministicFallback
       });
@@ -149,6 +173,9 @@ export async function handleProspectIntelligence(body, env, requestId) {
               "Do not use Requires consultant verification when the public evidence clearly establishes the business category or market.",
               "Use the advertisement evidence as part of the reasoning, not as decoration.",
               "Compare the advertisement promise with the website customer journey.",
+              "Use the supplied Consultant Intelligence as the reasoning authority for the executive brief, strongest asset, largest opportunity, and first action.",
+              "The strongest asset, largest opportunity, and first action must be distinct and specific to this business model.",
+              "Never use the phrases visible business activity, focused customer-journey review, or additional marketing investment.",
               "For the most important opportunity, explicitly connect evidence, business meaning, recommended first engagement, expected business result, and proof to verify.",
               "Prioritize improving the return from existing marketing before recommending more spending when the evidence supports that conclusion.",
               "Never invent ad spend, revenue, ownership, campaign performance, competitor facts, rankings, review counts, technology, or guaranteed outcomes.",
@@ -169,11 +196,15 @@ export async function handleProspectIntelligence(body, env, requestId) {
               websiteEvidence: enrichedWebsiteEvidence,
               businessProfile,
               businessIntelligenceRecord,
+              consultantIntelligence,
               requiredOutput: {
                 businessName: "string",
                 industry: "string",
                 geographicMarket: "string",
-                businessSummary: "string",
+                businessSummary: "specific executive brief based on Consultant Intelligence",
+                strongestArea: "specific strongest visible business asset and why it matters",
+                largestOpportunity: "specific highest-value growth opportunity and why it matters",
+                highestPriorityRecommendation: "specific first action; distinct from the opportunity",
                 productsAndServices: ["string"],
                 targetCustomer: "string",
                 trustSignals: ["string"],
@@ -245,13 +276,16 @@ export async function handleProspectIntelligence(body, env, requestId) {
       maxRetries: 1
     });
 
-    const brief = applyConsultantReasoningToBrief(
-      applyBusinessIntelligenceRecordToBrief(
-        aiResult.ok
-          ? normalizeBrief(aiResult.data, deterministicFallback)
-          : deterministicFallback,
-        businessIntelligenceRecord
-      )
+    const brief = applyConsultantIntelligenceToBrief(
+      applyConsultantReasoningToBrief(
+        applyBusinessIntelligenceRecordToBrief(
+          aiResult.ok
+            ? normalizeBrief(aiResult.data, deterministicFallback)
+            : deterministicFallback,
+          businessIntelligenceRecord
+        )
+      ),
+      consultantIntelligence
     );
 
     return jsonResponse({
@@ -260,6 +294,7 @@ export async function handleProspectIntelligence(body, env, requestId) {
       action: ACTIONS.ANALYZE_PROSPECT_INTELLIGENCE,
       version: VERSION,
       prospectIntelligenceVersion: PROSPECT_INTELLIGENCE_VERSION,
+      consultantIntelligenceVersion: CONSULTANT_INTELLIGENCE_VERSION,
       engine: aiResult.ok
         ? COMMUNICATION_REASONING_MODEL
         : "deterministic-fallback",
@@ -267,10 +302,12 @@ export async function handleProspectIntelligence(body, env, requestId) {
       advertisementEvidence,
       websiteEvidence: enrichedWebsiteEvidence,
       businessProfile,
+      consultantIntelligence,
       businessIntelligenceRecord,
       ...brief,
       fullBusinessRecord: {
         businessIntelligenceRecord,
+        consultantIntelligence,
         websiteUrl,
         prospectContext,
         advertisementEvidence,
@@ -283,6 +320,10 @@ export async function handleProspectIntelligence(body, env, requestId) {
           {
             sourceType: "Business Intelligence Record",
             rawEvidence: businessIntelligenceRecord
+          },
+          {
+            sourceType: "Consultant Intelligence",
+            rawEvidence: consultantIntelligence
           },
           {
             sourceType: "Advertisement Intelligence",
