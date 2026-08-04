@@ -1,10 +1,10 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/engines/consultantIntelligence.js
-   Version: 1.0.0
+   Version: 1.0.1
    Status: Production Road-Test Candidate
-   Source: New shared intelligence engine
-   Sprint: Consultant Intelligence Layer — Business Model Reasoning
+   Source: shared/engines/consultantIntelligence.js 1.0.0
+   Sprint: Consultant Intelligence Layer — Diagnosis and Action Separation
    Purpose: Convert verified business identity and public website evidence
             into industry-aware consultant reasoning before the public
             Business Snapshot is written.
@@ -25,7 +25,7 @@ import {
 
 import { runAiJsonWithRetry } from "../ai.js";
 
-export const CONSULTANT_INTELLIGENCE_VERSION = "1.0.0";
+export const CONSULTANT_INTELLIGENCE_VERSION = "1.0.1";
 
 const PLAYBOOKS = Object.freeze({
   automotive: {
@@ -222,6 +222,9 @@ export async function buildConsultantIntelligence({
             "Write observations that could only apply to this business or its business model.",
             "Do not use generic phrases such as visible business activity, focused customer-journey review, or additional marketing investment.",
             "The strongest asset, largest opportunity, and first action must be three distinct ideas.",
+            "The largest opportunity is a diagnosis: describe the business weakness, risk, or lost-value condition.",
+            "The recommended first action is an imperative action: begin with a verb and state exactly what should be reviewed, tested, changed, or measured first.",
+            "Never repeat, lightly paraphrase, or restate the largest opportunity as the recommended first action.",
             "The first action must be specific, practical, and explain what should be verified first.",
             "State what should not be recommended until missing evidence is verified.",
             "Do not invent revenue, spend, rankings, review counts, performance, ownership, market share, or guaranteed outcomes.",
@@ -255,8 +258,8 @@ export async function buildConsultantIntelligence({
               primaryCustomerDecision: "what the customer must decide",
               visibleCompetitiveAdvantage: "strongest observable asset and why it matters",
               largestObservableRisk: "specific risk and why it matters",
-              highestValueOpportunity: "specific opportunity connected to business value",
-              recommendedFirstAction: "specific first investigation or action",
+              highestValueOpportunity: "diagnosis only: specific weakness, risk, friction, or lost-value condition connected to business value",
+              recommendedFirstAction: "action only: begin with a verb and specify the first review, test, change, or measurement",
               whyThisActionFirst: "business reason",
               expectedBusinessResult: "non-guaranteed measurable result",
               whatNotToRecommendYet: ["recommendation to avoid until evidence exists"],
@@ -290,15 +293,16 @@ export async function buildConsultantIntelligence({
     return deterministic;
   }
 
-  return normalizeConsultantIntelligence(aiResult.data, deterministic, playbook);
+  return enforceDiagnosisActionSeparation(
+    normalizeConsultantIntelligence(aiResult.data, deterministic, playbook)
+  );
 }
 
 export function applyConsultantIntelligenceToBrief(brief, intelligence) {
   const source = brief && typeof brief === "object" ? brief : {};
-  const insight =
-    intelligence && typeof intelligence === "object"
-      ? intelligence
-      : {};
+  const insight = enforceDiagnosisActionSeparation(
+    intelligence && typeof intelligence === "object" ? intelligence : {}
+  );
 
   const evidenceStatements = Array.isArray(insight.evidenceChain)
     ? insight.evidenceChain
@@ -482,7 +486,7 @@ function buildDeterministicConsultantIntelligence({
       .slice(0, 3)
       .join(", ")} so the next recommendation is tied to measurable business value.`;
 
-  return {
+  const result = {
     intelligenceVersion: CONSULTANT_INTELLIGENCE_VERSION,
     playbook: playbook.label,
     businessModel:
@@ -553,6 +557,55 @@ function buildDeterministicConsultantIntelligence({
       clean(businessIntelligenceRecord?.confidence?.overall) ||
       "Medium"
   };
+
+  return enforceDiagnosisActionSeparation(result);
+}
+
+function enforceDiagnosisActionSeparation(intelligence) {
+  const source = intelligence && typeof intelligence === "object" ? { ...intelligence } : {};
+  const diagnosis = clean(source.highestValueOpportunity);
+  let action = clean(source.recommendedFirstAction);
+  const proofItems = arrayOrEmpty(source.proofToVerify);
+  const missingItems = arrayOrEmpty(source.missingEvidence);
+
+  if (!action || isSubstantiallySimilar(diagnosis, action) || !startsWithActionVerb(action)) {
+    action = buildDistinctFirstAction({ diagnosis, proofItems, missingItems, playbook: clean(source.playbook) });
+  }
+
+  source.highestValueOpportunity = diagnosis || "The highest-value business opportunity requires verification.";
+  source.recommendedFirstAction = action;
+  return source;
+}
+
+function buildDistinctFirstAction({ proofItems, missingItems, playbook }) {
+  const targets = unique([...proofItems, ...missingItems]).slice(0, 3);
+  if (targets.length) {
+    return `Audit ${targets.join(", ")} and establish a measured baseline before choosing the next implementation or spending decision.`;
+  }
+  const subject = playbook && !/general business/i.test(playbook) ? playbook.toLowerCase() : "business";
+  return `Map the highest-value ${subject} customer path from discovery to qualified action, test each response point, and document the first measurable source of friction.`;
+}
+
+function isSubstantiallySimilar(leftValue, rightValue) {
+  const leftTokens = meaningfulTokens(leftValue);
+  const rightTokens = meaningfulTokens(rightValue);
+  if (!leftTokens.length || !rightTokens.length) return false;
+  const leftSet = new Set(leftTokens);
+  const rightSet = new Set(rightTokens);
+  const intersection = [...leftSet].filter((token) => rightSet.has(token)).length;
+  const union = new Set([...leftSet, ...rightSet]).size;
+  const jaccard = union ? intersection / union : 0;
+  const shorterCoverage = intersection / Math.max(1, Math.min(leftSet.size, rightSet.size));
+  return jaccard >= 0.5 || shorterCoverage >= 0.72;
+}
+
+function meaningfulTokens(value) {
+  const stopWords = new Set(["a","an","and","are","as","at","be","before","but","by","for","from","has","have","in","is","it","of","on","or","should","that","the","their","this","to","verify","with","without"]);
+  return clean(value).toLowerCase().replace(/[^a-z0-9\s-]/g," ").split(/\s+/).filter((token) => token.length > 2 && !stopWords.has(token));
+}
+
+function startsWithActionVerb(value) {
+  return /^(audit|analyze|benchmark|compare|confirm|document|evaluate|identify|inspect|map|measure|prioritize|review|test|track|validate|verify)\b/i.test(clean(value));
 }
 
 function normalizeConsultantIntelligence(value, fallback, playbook) {
