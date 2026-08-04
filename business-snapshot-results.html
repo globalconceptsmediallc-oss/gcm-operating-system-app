@@ -1,3 +1,13 @@
+<!-- =========================================================
+   Global Concepts Media Operating System
+   File: business-snapshot-results.html
+   Version: 2.1.1
+   Status: Production Road-Test Candidate
+   Source: business-snapshot-results.html 2.1.0
+   Sprint: Business Snapshot — Evidence-Based Readiness Scoring
+   Purpose: Replace the static readiness indicator with a transparent
+            five-category score derived from observable evidence.
+   ========================================================= -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -140,6 +150,36 @@
     .snapshot-results .dashboard-summary {
       display: grid;
       gap: 14px;
+    }
+
+    .snapshot-results .score-breakdown {
+      display: grid;
+      gap: 8px;
+      margin-top: 16px;
+      width: 100%;
+      max-width: 180px;
+    }
+
+    .snapshot-results .score-breakdown-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+      color: var(--result-muted);
+      font-size: 0.76rem;
+    }
+
+    .snapshot-results .score-breakdown-row strong {
+      color: var(--result-ink);
+      font-size: 0.78rem;
+    }
+
+    .snapshot-results .score-confidence {
+      margin-top: 10px;
+      color: var(--result-muted);
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-align: center;
     }
 
     .snapshot-results .dashboard-row {
@@ -427,11 +467,24 @@
             </div>
 
             <div class="executive-dashboard">
-              <div class="score-circle">
-                <div>
-                  <strong id="qualificationScore">—</strong>
-                  <span>Readiness Indicator</span>
+              <div>
+                <div class="score-circle">
+                  <div>
+                    <strong id="qualificationScore">—</strong>
+                    <span>Growth Readiness</span>
+                  </div>
                 </div>
+
+                <div
+                  id="scoreBreakdown"
+                  class="score-breakdown"
+                  aria-label="Growth readiness score breakdown"
+                ></div>
+
+                <div
+                  id="scoreConfidence"
+                  class="score-confidence"
+                ></div>
               </div>
 
               <div class="dashboard-summary">
@@ -938,13 +991,26 @@
 
       list.innerHTML = "";
 
-      if (record.qualificationScore) {
-        addMetric(
-          list,
-          "Current qualification indicator: " +
-            clean(record.qualificationScore)
+      const evidenceScore =
+        calculateEvidenceScore(
+          record,
+          snapshot
         );
-      }
+
+      addMetric(
+        list,
+        "Current Growth Readiness Score: " +
+          evidenceScore.total +
+          "/100 (" +
+          evidenceScore.display +
+          ")"
+      );
+
+      addMetric(
+        list,
+        "Evidence confidence: " +
+          evidenceScore.confidence
+      );
 
       if (
         record.outreachReadiness ||
@@ -980,6 +1046,212 @@
             "Verify lead sources, conversion gaps, local visibility, trust signals, and measurable growth opportunities."
           )
         );
+      }
+    }
+
+
+    function getBusinessIntelligenceRecord(record, snapshot) {
+      return (
+        snapshot.businessIntelligenceRecord ||
+        record.businessIntelligenceRecord ||
+        (
+          record.fullBusinessRecord &&
+          record.fullBusinessRecord.businessIntelligenceRecord
+        ) ||
+        {}
+      );
+    }
+
+    function includesSignal(values, pattern) {
+      const items = Array.isArray(values) ? values : [values];
+
+      return items.some(function (item) {
+        return pattern.test(clean(item, ""));
+      });
+    }
+
+    function calculateEvidenceScore(record, snapshot) {
+      const bir = getBusinessIntelligenceRecord(record, snapshot);
+      const identity = bir.identity || {};
+      const services =
+        (bir.services && bir.services.primaryServices) ||
+        record.productsAndServices ||
+        [];
+      const trustSignals =
+        (bir.trust && bir.trust.observableTrustSignals) ||
+        record.trustSignals ||
+        [];
+      const callsToAction =
+        (bir.offer && bir.offer.primaryCallsToAction) ||
+        [];
+      const websiteObservations = record.websiteObservations || [];
+      const verificationChecklist = record.humanVerificationChecklist || [];
+      const growthOpportunities = record.growthOpportunities || [];
+
+      const market =
+        snapshot.market ||
+        identity.geographicMarket ||
+        record.geographicMarket;
+      const industry =
+        snapshot.industry ||
+        identity.industry ||
+        record.industry;
+      const businessName =
+        snapshot.businessName ||
+        identity.businessName ||
+        record.businessName;
+      const primaryOffer =
+        (bir.offer && bir.offer.primaryOffer) || "";
+      const websiteStatus =
+        (bir.evidence && bir.evidence.websiteStatus) || "";
+      const sourceCount =
+        Number(bir.evidence && bir.evidence.sourceCount) || 0;
+
+      const findability = Math.min(
+        20,
+        (hasUsefulValue(businessName) ? 4 : 0) +
+        (hasUsefulValue(market) ? 6 : 0) +
+        (hasUsefulValue(industry) ? 3 : 0) +
+        (websiteStatus === "complete" ? 4 : 0) +
+        (includesSignal(
+          websiteObservations,
+          /\b(search|local|visibility|google business|service area)\b/i
+        ) ? 3 : 0)
+      );
+
+      const clarity = Math.min(
+        20,
+        (hasUsefulItems(services) ? 8 : 0) +
+        (hasUsefulValue(snapshot.businessSummary || record.businessSummary) ? 5 : 0) +
+        (
+          hasUsefulValue(primaryOffer) &&
+          !/not verified|not established/i.test(primaryOffer)
+            ? 4
+            : 0
+        ) +
+        (callsToAction.length ? 3 : 0)
+      );
+
+      const trust = Math.min(
+        20,
+        (hasUsefulItems(trustSignals)
+          ? Math.min(12, trustSignals.length * 4)
+          : 0) +
+        (includesSignal(
+          trustSignals,
+          /\b(licensed|insured|guarantee|award|review|established|family-owned)\b/i
+        ) ? 5 : 0) +
+        (sourceCount >= 1 ? 3 : 0)
+      );
+
+      const conversion = Math.min(
+        20,
+        (callsToAction.length
+          ? Math.min(8, callsToAction.length * 3)
+          : 0) +
+        (includesSignal(
+          websiteObservations,
+          /\b(call|form|quote|contact|conversion|customer journey|landing page)\b/i
+        ) ? 5 : 0) +
+        (hasUsefulItems(record.personalizedOutreachInsights) ? 3 : 0) +
+        (includesSignal(
+          growthOpportunities,
+          /\b(conversion|landing|call to action|customer journey)\b/i
+        ) ? 4 : 0)
+      );
+
+      const measurement = Math.min(
+        20,
+        (includesSignal(
+          websiteObservations,
+          /\b(analytics|tracking|measurement|conversion tracking)\b/i
+        ) ? 6 : 0) +
+        (includesSignal(
+          verificationChecklist,
+          /\b(analytics|tracking|calls|forms)\b/i
+        ) ? 4 : 0) +
+        (includesSignal(
+          growthOpportunities,
+          /\b(measurable|measurement|tracking|attribution)\b/i
+        ) ? 4 : 0) +
+        (sourceCount >= 2 ? 3 : 0) +
+        (
+          bir.confidence &&
+          Number(bir.confidence.overall) >= 0.75
+            ? 3
+            : 0
+        )
+      );
+
+      const categories = [
+        { label: "Findability", score: findability },
+        { label: "Offer Clarity", score: clarity },
+        { label: "Customer Trust", score: trust },
+        { label: "Conversion Path", score: conversion },
+        { label: "Measurement", score: measurement }
+      ];
+
+      const total = categories.reduce(function (sum, item) {
+        return sum + item.score;
+      }, 0);
+
+      const knownSignals = [
+        hasUsefulValue(businessName),
+        hasUsefulValue(industry),
+        hasUsefulValue(market),
+        hasUsefulItems(services),
+        hasUsefulItems(trustSignals),
+        callsToAction.length > 0,
+        websiteStatus === "complete"
+      ].filter(Boolean).length;
+
+      return {
+        total,
+        display: (total / 10).toFixed(1) + "/10",
+        categories,
+        confidence:
+          knownSignals >= 6
+            ? "High"
+            : knownSignals >= 4
+              ? "Medium"
+              : "Low"
+      };
+    }
+
+    function readinessLabel(score) {
+      if (score >= 80) return "Strong Foundation";
+      if (score >= 65) return "Growth Ready";
+      if (score >= 50) return "Needs Verification";
+      if (score >= 35) return "Priority Review";
+      return "Foundational Review";
+    }
+
+    function renderScoreBreakdown(score) {
+      const container = document.getElementById("scoreBreakdown");
+      const confidence = document.getElementById("scoreConfidence");
+
+      if (!container) return;
+
+      container.innerHTML = "";
+
+      score.categories.forEach(function (category) {
+        const row = document.createElement("div");
+        row.className = "score-breakdown-row";
+
+        const label = document.createElement("span");
+        label.textContent = category.label;
+
+        const value = document.createElement("strong");
+        value.textContent = category.score + "/20";
+
+        row.appendChild(label);
+        row.appendChild(value);
+        container.appendChild(row);
+      });
+
+      if (confidence) {
+        confidence.textContent =
+          "Evidence confidence: " + score.confidence;
       }
     }
 
@@ -1124,11 +1396,16 @@
         record.geographicMarket
       );
 
-      const readiness = clean(
-        snapshot.growthReadiness ||
-        record.growthReadiness ||
-        record.outreachReadiness
-      );
+      const evidenceScore =
+        calculateEvidenceScore(
+          record,
+          snapshot
+        );
+
+      const readiness =
+        readinessLabel(
+          evidenceScore.total
+        );
 
       const summary = clean(
         snapshot.businessSummary ||
@@ -1173,9 +1450,11 @@
 
       document.getElementById(
         "qualificationScore"
-      ).textContent = normalizeScore(
-        snapshot.qualificationScore ||
-        record.qualificationScore
+      ).textContent =
+        evidenceScore.display;
+
+      renderScoreBreakdown(
+        evidenceScore
       );
 
       document.getElementById(
