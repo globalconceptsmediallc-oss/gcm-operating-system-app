@@ -1,19 +1,18 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: processing.html
-   Version: 1.0.1
+   Version: 1.1.0
    Status: Production Road-Test Candidate
-   Source: Production processing.html
-   Sprint: Business Snapshot — Worker Contract Repair
-   Purpose: Preserve the public Business Snapshot lead-generation
-            funnel and restore its Worker request through the shared
-            Prospect Intelligence website-analysis action.
+   Source: processing.html 1.0.1
+   Sprint: Business Snapshot — Premium Processing Experience
+   Purpose: Preserve the working Business Snapshot Worker contract and
+            session-storage flow while making the analysis wait feel
+            intentional, transparent, and valuable.
    ========================================================= -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-
   <meta
     name="viewport"
     content="width=device-width, initial-scale=1.0"
@@ -26,77 +25,685 @@
     content="Global Concepts Media is reviewing your business against the five questions that influence visibility, trust, conversion, and measurable growth."
   />
 
-  <link rel="stylesheet" href="style.css?v=20260712-1" />
+  <style>
+    :root {
+      --navy-950: #07111f;
+      --navy-900: #0a1830;
+      --navy-800: #102540;
+      --blue-500: #2f7df4;
+      --cyan-500: #17b7d6;
+      --green-500: #2ccf8b;
+      --purple-500: #7c4dff;
+      --white: #ffffff;
+      --text: #f7f9ff;
+      --muted: #b8c4d8;
+      --line: rgba(255, 255, 255, 0.12);
+      --panel: rgba(14, 34, 58, 0.88);
+      --shadow: 0 28px 80px rgba(0, 0, 0, 0.34);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family:
+        Inter,
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 18% 18%, rgba(124, 77, 255, 0.28), transparent 30%),
+        radial-gradient(circle at 82% 16%, rgba(23, 183, 214, 0.24), transparent 32%),
+        linear-gradient(180deg, #09121f 0%, #07111f 58%, #0c1b2f 100%);
+    }
+
+    .processing-page {
+      position: relative;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    .processing-page::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: linear-gradient(to bottom, black, transparent 78%);
+      pointer-events: none;
+    }
+
+    .topbar {
+      position: relative;
+      z-index: 2;
+      border-bottom: 1px solid var(--line);
+      background: rgba(7, 17, 31, 0.82);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+
+    .topbar-inner,
+    .processing-container {
+      width: min(1120px, calc(100% - 36px));
+      margin: 0 auto;
+    }
+
+    .topbar-inner {
+      min-height: 70px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 800;
+    }
+
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background:
+        linear-gradient(135deg, var(--purple-500), var(--cyan-500));
+      box-shadow: 0 8px 22px rgba(47, 125, 244, 0.3);
+      font-weight: 900;
+    }
+
+    .brand-text small {
+      display: block;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .secure-note {
+      color: var(--muted);
+      font-size: 0.84rem;
+      font-weight: 700;
+    }
+
+    .processing-section {
+      position: relative;
+      z-index: 1;
+      padding: 70px 0 56px;
+    }
+
+    .processing-header {
+      max-width: 780px;
+      margin: 0 auto 34px;
+      text-align: center;
+    }
+
+    .eyebrow {
+      margin: 0 0 14px;
+      color: #6fd9ff;
+      font-size: 0.78rem;
+      font-weight: 900;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2.9rem, 6vw, 5rem);
+      line-height: 0.98;
+      letter-spacing: -0.055em;
+    }
+
+    .gradient-text {
+      display: block;
+      background: linear-gradient(
+        90deg,
+        #8f5cff 0%,
+        #2f9cf4 42%,
+        #1dd3b0 76%,
+        #39d98a 100%
+      );
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .hero-text {
+      margin: 24px auto 0;
+      max-width: 720px;
+      color: var(--muted);
+      font-size: 1.08rem;
+      line-height: 1.7;
+    }
+
+    .analysis-shell {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 330px;
+      gap: 24px;
+      align-items: stretch;
+    }
+
+    .analysis-card,
+    .insight-card {
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 26px;
+      background:
+        linear-gradient(
+          180deg,
+          rgba(19, 44, 73, 0.94),
+          rgba(10, 25, 43, 0.96)
+        );
+      box-shadow: var(--shadow);
+    }
+
+    .analysis-card {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .analysis-card::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto;
+      height: 5px;
+      background:
+        linear-gradient(
+          90deg,
+          var(--purple-500),
+          var(--blue-500),
+          var(--cyan-500),
+          var(--green-500)
+        );
+    }
+
+    .analysis-head {
+      padding: 28px 30px 24px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .analysis-head h2 {
+      margin: 0;
+      font-size: 1.45rem;
+    }
+
+    .analysis-head p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .progress-wrap {
+      padding: 24px 30px 0;
+    }
+
+    .progress-track {
+      height: 10px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .progress-bar {
+      width: 8%;
+      height: 100%;
+      border-radius: inherit;
+      background:
+        linear-gradient(
+          90deg,
+          var(--purple-500),
+          var(--blue-500),
+          var(--cyan-500),
+          var(--green-500)
+        );
+      transition: width 420ms ease;
+    }
+
+    .progress-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .processing-steps {
+      display: grid;
+      gap: 12px;
+      padding: 24px 30px 30px;
+    }
+
+    .processing-step {
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+      min-height: 74px;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.035);
+      transition:
+        border-color 180ms ease,
+        background 180ms ease,
+        transform 180ms ease;
+    }
+
+    .processing-step.active {
+      border-color: rgba(47, 156, 244, 0.55);
+      background: rgba(47, 156, 244, 0.08);
+      transform: translateX(4px);
+    }
+
+    .processing-step.complete {
+      border-color: rgba(44, 207, 139, 0.32);
+      background: rgba(44, 207, 139, 0.055);
+    }
+
+    .processing-step.error {
+      border-color: rgba(255, 107, 107, 0.42);
+      background: rgba(255, 107, 107, 0.06);
+    }
+
+    .status {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.07);
+      color: #7f8da3;
+      font-weight: 900;
+    }
+
+    .status.active {
+      color: #7fe0ff;
+      box-shadow: 0 0 0 5px rgba(47, 156, 244, 0.12);
+      animation: pulse 1.35s infinite;
+    }
+
+    .status.complete {
+      background: rgba(44, 207, 139, 0.16);
+      color: var(--green-500);
+    }
+
+    .status.error {
+      background: rgba(255, 107, 107, 0.14);
+      color: #ff9d9d;
+    }
+
+    .step-title {
+      display: block;
+      font-weight: 900;
+    }
+
+    .step-detail {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.45;
+    }
+
+    .step-state {
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .processing-message {
+      margin: 0;
+      padding: 18px 30px 24px;
+      color: #cceeff;
+      font-weight: 800;
+      text-align: center;
+    }
+
+    .insight-card {
+      padding: 26px;
+    }
+
+    .insight-card h2 {
+      margin: 0;
+      font-size: 1.22rem;
+    }
+
+    .insight-list {
+      display: grid;
+      gap: 14px;
+      margin: 20px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .insight-list li {
+      display: grid;
+      grid-template-columns: 26px minmax(0, 1fr);
+      gap: 10px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .insight-list span:first-child {
+      width: 26px;
+      height: 26px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: rgba(44, 207, 139, 0.14);
+      color: var(--green-500);
+      font-weight: 900;
+    }
+
+    .insight-note {
+      margin-top: 24px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.035);
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.55;
+    }
+
+    .snapshot-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+      padding: 0 18px;
+      border: 0;
+      border-radius: 12px;
+      background:
+        linear-gradient(
+          90deg,
+          var(--purple-500),
+          var(--blue-500),
+          var(--cyan-500)
+        );
+      color: var(--white);
+      font-weight: 900;
+      text-decoration: none;
+    }
+
+    #processingErrorActions {
+      margin-top: 18px;
+      text-align: center;
+    }
+
+    @keyframes pulse {
+      0%,
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+
+      50% {
+        transform: scale(1.08);
+        opacity: 0.78;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .analysis-shell {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .processing-section {
+        padding-top: 46px;
+      }
+
+      .analysis-head,
+      .progress-wrap,
+      .processing-steps {
+        padding-left: 20px;
+        padding-right: 20px;
+      }
+
+      .processing-step {
+        grid-template-columns: 42px minmax(0, 1fr);
+      }
+
+      .step-state {
+        display: none;
+      }
+
+      .secure-note {
+        display: none;
+      }
+    }
+  </style>
 </head>
 
 <body>
-  <main class="snapshot-page">
-    <section class="snapshot-hero">
-      <div class="snapshot-container">
+  <main class="processing-page">
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <span class="brand-mark">G</span>
 
-        <p class="eyebrow">
-          The Five Business Growth Questions™
-        </p>
-
-        <h1>Building Your Business Snapshot™</h1>
-
-        <p class="hero-text">
-          We are reviewing publicly observable information to identify
-          what is helping your business grow, where growth may be leaking,
-          and what should be reviewed first.
-        </p>
-
-        <div class="processing-card" aria-live="polite">
-
-          <div class="processing-step" id="step1">
-            <span class="status pending" aria-hidden="true">○</span>
-
-            <span>
-              Can customers find your business?
-            </span>
-          </div>
-
-          <div class="processing-step" id="step2">
-            <span class="status pending" aria-hidden="true">○</span>
-
-            <span>
-              Do they understand and trust what they find?
-            </span>
-          </div>
-
-          <div class="processing-step" id="step3">
-            <span class="status pending" aria-hidden="true">○</span>
-
-            <span>
-              Can they easily take the next step?
-            </span>
-          </div>
-
-          <div class="processing-step" id="step4">
-            <span class="status pending" aria-hidden="true">○</span>
-
-            <span>
-              Identifying your biggest growth opportunity
-            </span>
-          </div>
-
+          <span class="brand-text">
+            Global Concepts Media
+            <small>Evidence Before Assumptions</small>
+          </span>
         </div>
 
-        <p id="processingMessage" class="snapshot-note">
-          Starting your evidence-based business review...
-        </p>
-
-        <p class="snapshot-note">
-          Evidence before assumptions. Recommendations should be verified
-          before major business decisions are made.
-        </p>
-
-        <div id="processingErrorActions" hidden>
-          <a class="snapshot-button" href="business-snapshot.html">
-            Try Again
-          </a>
+        <div class="secure-note">
+          Secure public-evidence analysis
         </div>
+      </div>
+    </header>
 
+    <section class="processing-section">
+      <div class="processing-container">
+
+        <header class="processing-header">
+          <p class="eyebrow">Business Snapshot™</p>
+
+          <h1>
+            We are analyzing your business.
+            <span class="gradient-text">
+              Building your evidence-based Snapshot.
+            </span>
+          </h1>
+
+          <p class="hero-text">
+            We are reviewing publicly observable information to identify
+            what is helping your business grow, where opportunity may be
+            leaking, and what deserves attention first.
+          </p>
+        </header>
+
+        <div class="analysis-shell">
+
+          <section class="analysis-card" aria-live="polite">
+            <div class="analysis-head">
+              <p class="eyebrow">Live Analysis</p>
+
+              <h2>Your Business Snapshot is being built</h2>
+
+              <p>
+                The review usually takes about 30–60 seconds because it is
+                created from live website evidence, not a generic template.
+              </p>
+            </div>
+
+            <div class="progress-wrap">
+              <div
+                class="progress-track"
+                role="progressbar"
+                aria-label="Business Snapshot analysis progress"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                aria-valuenow="8"
+              >
+                <div id="progressBar" class="progress-bar"></div>
+              </div>
+
+              <div class="progress-meta">
+                <span id="progressLabel">Starting analysis</span>
+                <span id="progressPercent">8%</span>
+              </div>
+            </div>
+
+            <div class="processing-steps">
+
+              <div class="processing-step" id="step1">
+                <span class="status pending" aria-hidden="true">1</span>
+
+                <span>
+                  <span class="step-title">
+                    Discovering the business
+                  </span>
+
+                  <span class="step-detail">
+                    Locating the website, identity, industry, and market.
+                  </span>
+                </span>
+
+                <span class="step-state">Waiting</span>
+              </div>
+
+              <div class="processing-step" id="step2">
+                <span class="status pending" aria-hidden="true">2</span>
+
+                <span>
+                  <span class="step-title">
+                    Reviewing visible evidence
+                  </span>
+
+                  <span class="step-detail">
+                    Identifying services, offers, trust signals, and calls
+                    to action.
+                  </span>
+                </span>
+
+                <span class="step-state">Waiting</span>
+              </div>
+
+              <div class="processing-step" id="step3">
+                <span class="status pending" aria-hidden="true">3</span>
+
+                <span>
+                  <span class="step-title">
+                    Evaluating growth readiness
+                  </span>
+
+                  <span class="step-detail">
+                    Reviewing findability, clarity, trust, conversion, and
+                    measurement.
+                  </span>
+                </span>
+
+                <span class="step-state">Waiting</span>
+              </div>
+
+              <div class="processing-step" id="step4">
+                <span class="status pending" aria-hidden="true">4</span>
+
+                <span>
+                  <span class="step-title">
+                    Preparing consultant recommendations
+                  </span>
+
+                  <span class="step-detail">
+                    Identifying the strongest asset, biggest opportunity,
+                    and first action.
+                  </span>
+                </span>
+
+                <span class="step-state">Waiting</span>
+              </div>
+
+              <div class="processing-step" id="step5">
+                <span class="status pending" aria-hidden="true">5</span>
+
+                <span>
+                  <span class="step-title">
+                    Building your executive Snapshot
+                  </span>
+
+                  <span class="step-detail">
+                    Organizing the evidence into a clear business briefing.
+                  </span>
+                </span>
+
+                <span class="step-state">Waiting</span>
+              </div>
+
+            </div>
+
+            <p id="processingMessage" class="processing-message">
+              Starting your evidence-based business review...
+            </p>
+          </section>
+
+          <aside class="insight-card">
+            <p class="eyebrow">What You Will Receive</p>
+
+            <h2>A clearer picture of what deserves attention first</h2>
+
+            <ul class="insight-list">
+              <li>
+                <span>✓</span>
+                <span>Growth Readiness Score™</span>
+              </li>
+
+              <li>
+                <span>✓</span>
+                <span>Strongest Business Asset</span>
+              </li>
+
+              <li>
+                <span>✓</span>
+                <span>Biggest Growth Opportunity</span>
+              </li>
+
+              <li>
+                <span>✓</span>
+                <span>Recommended First Action</span>
+              </li>
+
+              <li>
+                <span>✓</span>
+                <span>Priorities for deeper review</span>
+              </li>
+            </ul>
+
+            <div class="insight-note">
+              Evidence before assumptions. Important recommendations should
+              be verified before major business decisions or investments are
+              made.
+            </div>
+
+            <div id="processingErrorActions" hidden>
+              <a class="snapshot-button" href="business-snapshot.html">
+                Try Again
+              </a>
+            </div>
+          </aside>
+
+        </div>
       </div>
     </section>
   </main>
@@ -109,15 +716,19 @@
       "step1",
       "step2",
       "step3",
-      "step4"
+      "step4",
+      "step5"
     ];
 
     const stepMessages = [
-      "Reviewing how customers may discover your business...",
-      "Reviewing your offer clarity and visible trust signals...",
-      "Reviewing the customer journey and available next steps...",
-      "Preparing your Growth Readiness Score and recommended next step..."
+      "Locating the business website and identifying the business...",
+      "Reviewing visible services, offers, and trust signals...",
+      "Evaluating findability, clarity, trust, conversion, and measurement...",
+      "Preparing the highest-value consultant recommendations...",
+      "Building your executive Business Snapshot..."
     ];
+
+    const progressValues = [18, 36, 58, 78, 94];
 
     const processingMessage =
       document.getElementById("processingMessage");
@@ -125,10 +736,26 @@
     const errorActions =
       document.getElementById("processingErrorActions");
 
+    const progressBar =
+      document.getElementById("progressBar");
+
+    const progressLabel =
+      document.getElementById("progressLabel");
+
+    const progressPercent =
+      document.getElementById("progressPercent");
+
+    const progressTrack =
+      document.querySelector('[role="progressbar"]');
+
     function wait(milliseconds) {
       return new Promise(function (resolve) {
         window.setTimeout(resolve, milliseconds);
       });
+    }
+
+    function getStep(index) {
+      return document.getElementById(stepIds[index]);
     }
 
     function getStatusElement(index) {
@@ -137,39 +764,80 @@
       );
     }
 
-    function activateStep(index) {
-      const status = getStatusElement(index);
+    function getStateElement(index) {
+      return document.querySelector(
+        "#" + stepIds[index] + " .step-state"
+      );
+    }
 
-      if (!status) {
+    function updateProgress(index) {
+      const value = progressValues[index] || 8;
+
+      progressBar.style.width = value + "%";
+      progressPercent.textContent = value + "%";
+      progressTrack.setAttribute("aria-valuenow", value);
+      progressLabel.textContent = stepMessages[index];
+    }
+
+    function activateStep(index) {
+      const step = getStep(index);
+      const status = getStatusElement(index);
+      const state = getStateElement(index);
+
+      if (!step || !status) {
         return;
       }
+
+      step.classList.remove("complete", "error");
+      step.classList.add("active");
 
       status.textContent = "●";
       status.className = "status active";
+
+      if (state) {
+        state.textContent = "Analyzing";
+      }
+
       processingMessage.textContent = stepMessages[index];
+      updateProgress(index);
     }
 
     function completeStep(index) {
+      const step = getStep(index);
       const status = getStatusElement(index);
+      const state = getStateElement(index);
 
-      if (!status) {
+      if (!step || !status) {
         return;
       }
+
+      step.classList.remove("active", "error");
+      step.classList.add("complete");
 
       status.textContent = "✓";
       status.className = "status complete";
+
+      if (state) {
+        state.textContent = "Complete";
+      }
     }
 
     function failActiveStep() {
+      const activeStep =
+        document.querySelector(".processing-step.active");
+
       const activeStatus =
         document.querySelector(".status.active");
 
-      if (!activeStatus) {
-        return;
+      if (activeStep) {
+        activeStep.classList.remove("active");
+        activeStep.classList.add("error");
       }
 
-      activeStatus.textContent = "!";
-      activeStatus.className = "status error";
+      if (activeStatus) {
+        activeStatus.textContent = "!";
+        activeStatus.className = "status error";
+      }
     }
 
     function clean(value, fallback) {
@@ -329,11 +997,11 @@
 
     async function runStepAnimation(workerPromise) {
       activateStep(0);
-      await wait(900);
+      await wait(1200);
       completeStep(0);
 
       activateStep(1);
-      await wait(900);
+      await wait(1400);
       completeStep(1);
 
       activateStep(2);
@@ -343,8 +1011,17 @@
       completeStep(2);
 
       activateStep(3);
-      await wait(650);
+      await wait(850);
       completeStep(3);
+
+      activateStep(4);
+      await wait(650);
+      completeStep(4);
+
+      progressBar.style.width = "100%";
+      progressPercent.textContent = "100%";
+      progressTrack.setAttribute("aria-valuenow", "100");
+      progressLabel.textContent = "Your Business Snapshot is ready.";
 
       return response;
     }
@@ -475,7 +1152,7 @@
         processingMessage.textContent =
           "Your Business Snapshot is ready.";
 
-        await wait(450);
+        await wait(500);
 
         window.location.href =
           "business-snapshot-results.html";
@@ -503,6 +1180,9 @@
 
         processingMessage.textContent =
           errorMessage;
+
+        progressLabel.textContent =
+          "Analysis could not be completed.";
 
         errorActions.hidden = false;
       }
