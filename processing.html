@@ -1,13 +1,13 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: processing.html
-   Version: 1.1.0
+   Version: 1.1.1
    Status: Production Road-Test Candidate
-   Source: processing.html 1.0.1
-   Sprint: Business Snapshot — Premium Processing Experience
+   Source: processing.html 1.1.0
+   Sprint: Business Snapshot — Continuous Analysis Progress
    Purpose: Preserve the working Business Snapshot Worker contract and
-            session-storage flow while making the analysis wait feel
-            intentional, transparent, and valuable.
+            session-storage flow while keeping the progress indicator
+            moving during the longest consultant-analysis stage.
    ========================================================= -->
 <!DOCTYPE html>
 <html lang="en">
@@ -995,6 +995,45 @@
       }
     }
 
+    function beginContinuousAnalysisProgress() {
+      const rotatingMessages = [
+        "Evaluating findability, clarity, trust, conversion, and measurement...",
+        "Reviewing business-model and customer-journey evidence...",
+        "Comparing visible authority, offers, and response paths...",
+        "Identifying the highest-value growth condition...",
+        "Separating the diagnosis from the recommended first action..."
+      ];
+
+      let displayValue = 58;
+      let messageIndex = 0;
+
+      const intervalId = window.setInterval(function () {
+        if (displayValue < 76) {
+          displayValue += 1;
+
+          progressBar.style.width = displayValue + "%";
+          progressPercent.textContent = displayValue + "%";
+          progressTrack.setAttribute(
+            "aria-valuenow",
+            String(displayValue)
+          );
+        }
+
+        messageIndex =
+          (messageIndex + 1) % rotatingMessages.length;
+
+        progressLabel.textContent =
+          rotatingMessages[messageIndex];
+
+        processingMessage.textContent =
+          rotatingMessages[messageIndex];
+      }, 850);
+
+      return function stopContinuousAnalysisProgress() {
+        window.clearInterval(intervalId);
+      };
+    }
+
     async function runStepAnimation(workerPromise) {
       activateStep(0);
       await wait(1200);
@@ -1006,9 +1045,22 @@
 
       activateStep(2);
 
-      const response = await workerPromise;
+      const stopContinuousProgress =
+        beginContinuousAnalysisProgress();
+
+      let response;
+
+      try {
+        response = await workerPromise;
+      } finally {
+        stopContinuousProgress();
+      }
 
       completeStep(2);
+
+      progressBar.style.width = "78%";
+      progressPercent.textContent = "78%";
+      progressTrack.setAttribute("aria-valuenow", "78");
 
       activateStep(3);
       await wait(850);
