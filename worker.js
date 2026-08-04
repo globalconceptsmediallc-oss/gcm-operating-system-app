@@ -1,22 +1,22 @@
+Library
+/
+worker.js_v7.7.5.txt
+
+
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.7.4
-   Status: Production Candidate
-   Source: Production worker.js 7.7.3
-   Sprint: Communications Review Contract Repair
-   Purpose: Preserve every verified production route, keep Agency Command
-            connected, and repair the Communications review response so the
-            frontend receives the strongest structured analysis already
-            produced by communicationAnalysis.js.
+   Version: 7.7.5
+   Status: Production Road-Test Candidate
+   Source: Production worker.js 7.7.4
+   Sprint: Agency Intelligence — Prospect Advertisement Intake
+   Purpose: Preserve every verified production route and connect the
+            read-only Prospect Intelligence road-test action.
 
-   Changes in 7.7.4:
-   - Added a read-only response adapter around Communication Analysis.
-   - Enriches payload.analysis from classification, report recognition,
-     visible evidence, business meaning, WWPOWD, and consultant summary.
-   - Does not alter D1 writes, routing decisions, AI execution, or evidence.
-   - Does not replace valid analysis fields.
-   - No existing route, binding, D1 table, workflow, or action removed.
+   Changes in 7.7.5:
+   - Adds analyze-prospect-intelligence.
+   - Connects routes/prospectIntelligence.js.
+   - Preserves all existing routes and the Communications review adapter.
    ========================================================= */
 
 import {
@@ -34,6 +34,7 @@ import {
 } from "./shared/http.js";
 
 import { handleCommunicationAnalysis } from "./routes/communicationAnalysis.js";
+import { handleProspectIntelligence } from "./routes/prospectIntelligence.js";
 import { handleClientWorkspace } from "./routes/clientWorkspace.js";
 import { handleClientDirectory } from "./routes/clientDirectory.js";
 import { handleCommitOperationalDecision } from "./routes/operationalDecision.js";
@@ -48,10 +49,11 @@ import {
   AGENCY_COMMAND_ACTION
 } from "./routes/agencyCommand.js";
 
-const WORKER_FILE_VERSION = "7.7.4";
+const WORKER_FILE_VERSION = "7.7.5";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
+  ACTIONS.ANALYZE_PROSPECT_INTELLIGENCE,
   ACTIONS.GET_CLIENT_WORKSPACE,
   ACTIONS.GET_CLIENT_DIRECTORY,
   ACTIONS.COMMIT_OPERATIONAL_DECISION,
@@ -81,12 +83,13 @@ export default {
         version: VERSION,
         workerFileVersion: WORKER_FILE_VERSION,
         contractVersion: API_CONTRACT_VERSION,
-        sprint: "Communications Review Contract Repair",
+        sprint: "Agency Intelligence — Prospect Advertisement Intake",
         architecture:
-          "Modular production router with Agency Command orchestration, guided Investigation reasoning, and a Communications review response adapter.",
+          "Modular production router with Agency Command, Prospect Intelligence, Communications analysis, Guided Investigation, and operational processing.",
         actions: SUPPORTED_ACTIONS,
         engines: [
           "agency-command",
+          "prospect-intelligence",
           "communications-review-adapter",
           "notification-detection",
           "evidence-extraction",
@@ -107,6 +110,7 @@ export default {
           shared: ["config", "http", "database", "ai"],
           routes: [
             "agency-command",
+            "prospect-intelligence",
             "communication-analysis",
             "client-workspace",
             "client-directory",
@@ -119,19 +123,6 @@ export default {
             "operational-reviews"
           ]
         },
-        temporarilyDisconnectedModules: [
-          {
-            module: "calendar-operations",
-            reason: "routes/calendarOperations.js is not present in the repository."
-          }
-        ],
-        removedLegacyPipelines: [
-          "business-snapshot",
-          "client-pre-research",
-          "website-intelligence",
-          "html-intelligence",
-          "prospect-qualification"
-        ],
         requestId
       });
     }
@@ -170,6 +161,9 @@ export default {
       switch (action) {
         case AGENCY_COMMAND_ACTION:
           return await handleAgencyCommand(body, env, requestId);
+
+        case ACTIONS.ANALYZE_PROSPECT_INTELLIGENCE:
+          return await handleProspectIntelligence(body, env, requestId);
 
         case ACTIONS.ANALYZE_COMMUNICATION:
           return await handleCommunicationAnalysisWithReviewAdapter(
@@ -386,19 +380,15 @@ function buildCommunicationsReviewAnalysis(payload) {
 function firstMeaningful(...values) {
   for (const value of values) {
     const text = clean(value);
-
     if (!text) continue;
     if (isWeakFallback(text)) continue;
-
     return text;
   }
-
   return "";
 }
 
 function isWeakFallback(value) {
   const normalized = clean(value).toLowerCase();
-
   return [
     "unknown",
     "general communication",
@@ -422,7 +412,6 @@ function sourceForNotificationType(value) {
     business_profile: "Google Business Profile",
     analytics: "Google Analytics"
   };
-
   return sources[clean(value).toLowerCase()] || "";
 }
 
@@ -436,7 +425,6 @@ function sourceForPlatform(value) {
     client_email: "Client",
     vendor_email: "Vendor"
   };
-
   return platforms[clean(value).toLowerCase()] || humanize(value);
 }
 
@@ -456,25 +444,13 @@ function typeForNotificationType(value) {
     billing_notice: "Billing Notice",
     access_security: "Access Alert"
   };
-
   return types[clean(value).toLowerCase()] || "";
 }
 
-function buildReviewTitle({
-  source,
-  communicationType,
-  label
-}) {
+function buildReviewTitle({ source, communicationType, label }) {
   const cleanLabel = clean(label);
-
-  if (cleanLabel) {
-    return `${source} ${communicationType} — ${cleanLabel}`;
-  }
-
-  if (source && communicationType) {
-    return `${source} — ${communicationType}`;
-  }
-
+  if (cleanLabel) return `${source} ${communicationType} — ${cleanLabel}`;
+  if (source && communicationType) return `${source} — ${communicationType}`;
   return source || communicationType || "";
 }
 
@@ -512,11 +488,7 @@ function buildEvidenceSummary(evidence, classification) {
 
 function evidenceItemToText(item) {
   if (item === null || item === undefined) return "";
-
-  if (typeof item === "string" || typeof item === "number") {
-    return clean(item);
-  }
-
+  if (typeof item === "string" || typeof item === "number") return clean(item);
   if (typeof item !== "object") return "";
 
   const label = clean(
@@ -542,9 +514,7 @@ function evidenceItemToText(item) {
 
 function humanize(value) {
   const text = clean(value);
-
   if (!text || text.toLowerCase() === "unknown") return "";
-
   return text
     .replace(/[_-]+/g, " ")
     .replace(/\b\w/g, character => character.toUpperCase());
