@@ -1,13 +1,13 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/prospectIntelligence.js
-   Version: 1.0.0
+   Version: 1.1.0
    Status: Production Road-Test Candidate
-   Source: New production route
-   Sprint: Agency Intelligence — Prospect Advertisement Intake
-   Purpose: Combine prospect advertisement evidence, public website
-            evidence, and consultant reasoning into one read-only
-            pre-call intelligence brief.
+   Source: routes/prospectIntelligence.js 1.0.0
+   Sprint: Business Intelligence Record — Foundation
+   Purpose: Build one canonical Business Intelligence Record from
+            advertisement and website evidence, then use it for both
+            Prospect Intelligence and the public Business Snapshot.
 
    PRODUCTION RULES
    - Read-only route.
@@ -34,7 +34,12 @@ import {
 
 import { runAiJsonWithRetry } from "../shared/ai.js";
 
-export const PROSPECT_INTELLIGENCE_VERSION = "1.0.0";
+import {
+  buildBusinessIntelligenceRecord,
+  applyBusinessIntelligenceRecordToBrief
+} from "../shared/engines/businessIntelligenceRecord.js";
+
+export const PROSPECT_INTELLIGENCE_VERSION = "1.1.0";
 
 const MAX_WEBSITE_TEXT = 18000;
 const MAX_IMAGES = 2;
@@ -69,13 +74,25 @@ export async function handleProspectIntelligence(body, env, requestId) {
       requestId
     });
 
-    const deterministicFallback = buildFallbackBrief({
+    const businessIntelligenceRecord =
+      buildBusinessIntelligenceRecord({
+        websiteUrl,
+        suppliedBusinessName: businessName,
+        prospectContext,
+        websiteEvidence,
+        advertisementEvidence
+      });
+
+    const deterministicFallback = applyBusinessIntelligenceRecordToBrief(
+      buildFallbackBrief({
       websiteUrl,
       businessName,
       prospectContext,
       websiteEvidence,
       advertisementEvidence
-    });
+      }),
+      businessIntelligenceRecord
+    );
 
     if (!env?.AI || typeof env.AI.run !== "function") {
       return jsonResponse({
@@ -86,6 +103,7 @@ export async function handleProspectIntelligence(body, env, requestId) {
         prospectIntelligenceVersion: PROSPECT_INTELLIGENCE_VERSION,
         engine: "deterministic-fallback",
         warning: "Workers AI binding was unavailable.",
+        businessIntelligenceRecord,
         ...deterministicFallback
       });
     }
@@ -118,6 +136,7 @@ export async function handleProspectIntelligence(body, env, requestId) {
               websiteUrl,
               advertisementEvidence,
               websiteEvidence,
+              businessIntelligenceRecord,
               requiredOutput: {
                 businessName: "string",
                 industry: "string",
@@ -179,9 +198,12 @@ export async function handleProspectIntelligence(body, env, requestId) {
       maxRetries: 1
     });
 
-    const brief = aiResult.ok
-      ? normalizeBrief(aiResult.data, deterministicFallback)
-      : deterministicFallback;
+    const brief = applyBusinessIntelligenceRecordToBrief(
+      aiResult.ok
+        ? normalizeBrief(aiResult.data, deterministicFallback)
+        : deterministicFallback,
+      businessIntelligenceRecord
+    );
 
     return jsonResponse({
       ok: true,
@@ -195,8 +217,10 @@ export async function handleProspectIntelligence(body, env, requestId) {
       warning: aiResult.ok ? null : aiResult?.error?.message || "Reasoning fallback used.",
       advertisementEvidence,
       websiteEvidence,
+      businessIntelligenceRecord,
       ...brief,
       fullBusinessRecord: {
+        businessIntelligenceRecord,
         websiteUrl,
         prospectContext,
         advertisementEvidence,
@@ -206,6 +230,10 @@ export async function handleProspectIntelligence(body, env, requestId) {
           advertisementImageCount: advertisementImages.length
         },
         evidencePackages: [
+          {
+            sourceType: "Business Intelligence Record",
+            rawEvidence: businessIntelligenceRecord
+          },
           {
             sourceType: "Advertisement Intelligence",
             rawEvidence: advertisementEvidence
