@@ -1,9 +1,12 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: client-pre-research.html
-   Version: 1.0.1
+   Version: 1.1.0
    Source: Production Frontend
-   Purpose: Prospect pre-research with standard GCM OS sidebar navigation.
+   Status: Production Road-Test Candidate
+   Source: Production client-pre-research.html 1.0.1
+   Sprint: Agency Intelligence — Prospect Advertisement Intake
+   Purpose: Prospect intelligence using advertisement evidence plus the public website.
    ========================================================= -->
 <!DOCTYPE html>
 <html lang="en">
@@ -20,7 +23,7 @@
     content="noindex, nofollow, noarchive"
   />
 
-  <title>Client Pre-Research | GCM Operations Center</title>
+  <title>Prospect Intelligence | GCM Operations Center</title>
 
   <style>
     :root {
@@ -432,6 +435,55 @@
       color: var(--muted);
       font-size: 0.79rem;
       line-height: 1.45;
+    }
+
+
+    .evidence-upload {
+      grid-column: 1 / -1;
+      padding: 20px;
+      border: 1px dashed #9fc7e5;
+      border-radius: 12px;
+      background: #f5fbff;
+    }
+
+    .evidence-upload input[type="file"] {
+      min-height: auto;
+      padding: 12px;
+      background: #fff;
+    }
+
+    .image-preview-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 14px;
+    }
+
+    .image-preview {
+      min-height: 170px;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--muted);
+      font-size: .82rem;
+      text-align: center;
+    }
+
+    .image-preview img {
+      width: 100%;
+      height: 220px;
+      object-fit: contain;
+      background: #f1f4f7;
+    }
+
+    .evidence-summary {
+      margin-top: 12px;
+      color: #155b8d;
+      font-size: .84rem;
+      font-weight: 700;
     }
 
     .form-actions {
@@ -893,7 +945,7 @@
 
     <div class="sidebar-footer">
       Mission Control operational<br>
-      Prospects v1.0.1
+      Prospects v1.1.0
     </div>
   </aside>
 
@@ -917,12 +969,10 @@
       <div class="hero-main">
         <p class="eyebrow">Client Acquisition Workflow</p>
 
-        <h1>Client Pre-Research</h1>
+        <h1>Prospect Intelligence</h1>
 
         <p class="hero-description">
-          Enter a prospective client's website to create the intelligence
-          needed for a more informed, relevant and lower-pressure first
-          conversation.
+          Upload the advertisement that caught your attention, add the business website, and build the intelligence needed for a stronger first conversation.
         </p>
       </div>
 
@@ -970,11 +1020,10 @@
     <section class="panel">
       <div class="panel-header">
         <div>
-          <h2>Start New Prospect Research</h2>
+          <h2>Start Prospect Intelligence</h2>
 
           <p>
-            A website URL is the only required field. The additional fields
-            help preserve useful prospect context.
+            The website is required. Advertisement images are optional but become part of the analysis, outreach strategy, and campaign thinking.
           </p>
         </div>
 
@@ -1031,6 +1080,11 @@
               <option value="Existing Relationship">
                 Existing Relationship
               </option>
+              <option value="Direct Mail Postcard">Direct Mail Postcard</option>
+              <option value="Magazine Advertisement">Magazine Advertisement</option>
+              <option value="Flyer">Flyer</option>
+              <option value="Billboard">Billboard</option>
+              <option value="Vehicle Graphic">Vehicle Graphic</option>
               <option value="Other">Other</option>
             </select>
           </div>
@@ -1059,6 +1113,41 @@
             />
           </div>
 
+
+          <div class="field evidence-upload">
+            <label for="advertisementImages">
+              Advertisement Evidence
+            </label>
+
+            <input
+              id="advertisementImages"
+              name="advertisementImages"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              multiple
+            />
+
+            <p class="field-note">
+              Add up to two images, such as the front and back of a postcard
+              or a magazine advertisement. Images are analyzed with the website.
+            </p>
+
+            <div id="imagePreviewGrid" class="image-preview-grid" hidden></div>
+            <div id="evidenceSummary" class="evidence-summary">
+              No advertisement images selected.
+            </div>
+          </div>
+
+          <div class="field field-full">
+            <label for="evidenceDescription">What caught your attention?</label>
+
+            <textarea
+              id="evidenceDescription"
+              name="evidenceDescription"
+              placeholder="Example: I received this postcard and want to see whether the offer, landing page, tracking and competitive position create a useful way into a first conversation."
+            ></textarea>
+          </div>
+
           <div class="field field-full">
             <label for="researchNotes">Initial Notes</label>
 
@@ -1076,7 +1165,7 @@
             class="button button-primary"
             type="submit"
           >
-            Run Client Pre-Research
+            Run Prospect Intelligence
           </button>
 
           <button
@@ -1379,6 +1468,11 @@
     const contactNameInput = document.getElementById("contactName");
     const locationInput = document.getElementById("location");
     const researchNotesInput = document.getElementById("researchNotes");
+    const advertisementImagesInput = document.getElementById("advertisementImages");
+    const evidenceDescriptionInput = document.getElementById("evidenceDescription");
+    const imagePreviewGrid = document.getElementById("imagePreviewGrid");
+    const evidenceSummary = document.getElementById("evidenceSummary");
+    let selectedAdvertisementImages = [];
 
     const runResearchButton =
       document.getElementById("runResearchButton");
@@ -1406,6 +1500,68 @@
 
     let latestResult = null;
     let latestProspectContext = null;
+
+
+    const MAX_ADVERTISEMENT_IMAGES = 2;
+    const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+
+    function fileToDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(new Error(`Could not read ${file.name}.`));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function prepareAdvertisementImages(files) {
+      const selected = Array.from(files || []).slice(0, MAX_ADVERTISEMENT_IMAGES);
+
+      for (const file of selected) {
+        if (!/^image\/(png|jpeg|webp)$/i.test(file.type)) {
+          throw new Error(`${file.name} is not a supported image type.`);
+        }
+
+        if (file.size > MAX_IMAGE_BYTES) {
+          throw new Error(`${file.name} is larger than 4 MB.`);
+        }
+      }
+
+      return Promise.all(
+        selected.map(async (file) => ({
+          fileName: file.name,
+          mimeType: file.type,
+          dataUrl: await fileToDataUrl(file)
+        }))
+      );
+    }
+
+    function renderAdvertisementPreviews() {
+      imagePreviewGrid.innerHTML = "";
+
+      if (!selectedAdvertisementImages.length) {
+        imagePreviewGrid.hidden = true;
+        evidenceSummary.textContent = "No advertisement images selected.";
+        return;
+      }
+
+      for (const item of selectedAdvertisementImages) {
+        const wrapper = document.createElement("div");
+        wrapper.className = "image-preview";
+
+        const image = document.createElement("img");
+        image.src = item.dataUrl;
+        image.alt = item.fileName;
+
+        wrapper.appendChild(image);
+        imagePreviewGrid.appendChild(wrapper);
+      }
+
+      imagePreviewGrid.hidden = false;
+      evidenceSummary.textContent =
+        `${selectedAdvertisementImages.length} advertisement image` +
+        `${selectedAdvertisementImages.length === 1 ? "" : "s"} ready for analysis.`;
+    }
 
     function normalizeUrl(value) {
       const trimmedValue = String(value || "").trim();
@@ -1443,7 +1599,7 @@
 
       runResearchButton.textContent = isLoading
         ? "Researching Business..."
-        : "Run Client Pre-Research";
+        : "Run Prospect Intelligence";
     }
 
     function safeText(value, fallback = "Not established from public evidence.") {
@@ -1861,7 +2017,7 @@
       const context = latestProspectContext;
 
       const lines = [
-        "GCM CLIENT PRE-CALL INTELLIGENCE",
+        "GCM PROSPECT INTELLIGENCE",
         "",
         `Business: ${safeText(
           result.businessName || context.businessName,
@@ -2039,6 +2195,26 @@
       return responseData;
     }
 
+
+    advertisementImagesInput.addEventListener("change", async () => {
+      hideStatus();
+
+      try {
+        selectedAdvertisementImages =
+          await prepareAdvertisementImages(advertisementImagesInput.files);
+
+        renderAdvertisementPreviews();
+      } catch (error) {
+        selectedAdvertisementImages = [];
+        advertisementImagesInput.value = "";
+        renderAdvertisementPreviews();
+        showStatus(
+          error instanceof Error ? error.message : "The advertisement images could not be prepared.",
+          "error"
+        );
+      }
+    });
+
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
 
@@ -2078,28 +2254,35 @@
         prospectSource: prospectSourceInput.value,
         contactName: contactNameInput.value.trim(),
         location: locationInput.value.trim(),
-        researchNotes: researchNotesInput.value.trim()
+        researchNotes: researchNotesInput.value.trim(),
+        evidenceDescription: evidenceDescriptionInput.value.trim(),
+        advertisementImages: selectedAdvertisementImages.map(item => ({
+          fileName: item.fileName,
+          mimeType: item.mimeType,
+          dataUrl: item.dataUrl
+        }))
       };
 
       latestProspectContext = prospectContext;
 
       const workerPayload = {
+        action: "analyze-prospect-intelligence",
         websiteUrl,
         businessName: prospectContext.businessName,
-        email: "",
-        requestType: "client-pre-research",
         prospectContext: {
           source: prospectContext.prospectSource,
           contactName: prospectContext.contactName,
           location: prospectContext.location,
-          notes: prospectContext.researchNotes
-        }
+          notes: prospectContext.researchNotes,
+          evidenceDescription: prospectContext.evidenceDescription
+        },
+        advertisementImages: prospectContext.advertisementImages
       };
 
       setLoading(true);
 
       showStatus(
-        "Collecting public website evidence and preparing pre-call intelligence. This may take up to a minute.",
+        "Analyzing the advertisement and public website together. This may take up to a minute.",
         "working"
       );
 
@@ -2117,7 +2300,7 @@
         renderResults(result, prospectContext);
 
         showStatus(
-          "Client pre-research completed. Review every observation before using it in outreach.",
+          "Prospect intelligence completed. Review the advertisement evidence, website comparison, outreach strategy and verification needs.",
           "success"
         );
       } catch (error) {
@@ -2140,6 +2323,8 @@
       resultsSection.hidden = true;
       latestResult = null;
       latestProspectContext = null;
+      selectedAdvertisementImages = [];
+      renderAdvertisementPreviews();
       websiteUrlInput.focus();
     });
 
@@ -2149,6 +2334,8 @@
       resultsSection.hidden = true;
       latestResult = null;
       latestProspectContext = null;
+      selectedAdvertisementImages = [];
+      renderAdvertisementPreviews();
 
       window.scrollTo({
         top: 0,
