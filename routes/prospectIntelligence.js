@@ -1,13 +1,13 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/prospectIntelligence.js
-   Version: 1.1.0
+   Version: 1.2.0
    Status: Production Road-Test Candidate
-   Source: routes/prospectIntelligence.js 1.0.0
-   Sprint: Business Intelligence Record — Foundation
-   Purpose: Build one canonical Business Intelligence Record from
-            advertisement and website evidence, then use it for both
-            Prospect Intelligence and the public Business Snapshot.
+   Source: routes/prospectIntelligence.js 1.1.0
+   Sprint: Consultant Reasoning V2 — Evidence to Business Impact
+   Purpose: Preserve the Business Intelligence Record foundation and
+            add consultant-grade reasoning that connects evidence to
+            business meaning, action, expected result, and proof.
 
    PRODUCTION RULES
    - Read-only route.
@@ -39,7 +39,7 @@ import {
   applyBusinessIntelligenceRecordToBrief
 } from "../shared/engines/businessIntelligenceRecord.js";
 
-export const PROSPECT_INTELLIGENCE_VERSION = "1.1.0";
+export const PROSPECT_INTELLIGENCE_VERSION = "1.2.0";
 
 const MAX_WEBSITE_TEXT = 18000;
 const MAX_IMAGES = 2;
@@ -118,12 +118,15 @@ export async function handleProspectIntelligence(body, env, requestId) {
             content: [
               "You are the senior business-development strategist for Global Concepts Media.",
               "Prepare one practical prospect intelligence brief for a one-person agency owner with limited time.",
+              "Think like an experienced agency consultant preparing for a real owner conversation, not like a generic website auditor.",
               "Use the advertisement evidence as part of the reasoning, not as decoration.",
               "Compare the advertisement promise with the website customer journey.",
-              "Identify credible marketing, website, SEO, tracking, creative, and sales-conversation opportunities.",
-              "Never invent ad spend, revenue, ownership, campaign performance, competitor facts, rankings, review counts, or technology.",
+              "For the most important opportunity, explicitly connect evidence, business meaning, recommended first engagement, expected business result, and proof to verify.",
+              "Prioritize improving the return from existing marketing before recommending more spending when the evidence supports that conclusion.",
+              "Never invent ad spend, revenue, ownership, campaign performance, competitor facts, rankings, review counts, technology, or guaranteed outcomes.",
               "Clearly label estimates and verification needs.",
-              "Recommend one first contact and one next action.",
+              "Recommend one first contact and one highest-value next action.",
+              "Use direct, specific consultant language that could win the attention of a business owner.",
               "Return one valid JSON object only."
             ].join(" ")
           },
@@ -162,6 +165,21 @@ export async function handleProspectIntelligence(body, env, requestId) {
                   nextStep: "string"
                 },
                 humanVerificationChecklist: ["string"],
+                consultantReasoning: {
+                  evidence: ["string"],
+                  businessMeaning: "string",
+                  recommendedFirstEngagement: {
+                    name: "string",
+                    scope: ["string"],
+                    whyFirst: "string"
+                  },
+                  expectedBusinessResult: "string",
+                  proofWeWillLookFor: ["string"],
+                  priority: "High | Medium | Low",
+                  impact: "Very High | High | Medium | Low",
+                  effort: "Low | Medium | High",
+                  ownerConversation: "string"
+                },
                 prospectIntelligence: {
                   advertisementAssessment: "string",
                   messageMatch: "string",
@@ -198,11 +216,13 @@ export async function handleProspectIntelligence(body, env, requestId) {
       maxRetries: 1
     });
 
-    const brief = applyBusinessIntelligenceRecordToBrief(
-      aiResult.ok
-        ? normalizeBrief(aiResult.data, deterministicFallback)
-        : deterministicFallback,
-      businessIntelligenceRecord
+    const brief = applyConsultantReasoningToBrief(
+      applyBusinessIntelligenceRecordToBrief(
+        aiResult.ok
+          ? normalizeBrief(aiResult.data, deterministicFallback)
+          : deterministicFallback,
+        businessIntelligenceRecord
+      )
     );
 
     return jsonResponse({
@@ -631,6 +651,55 @@ function buildFallbackBrief({
       "Check calls, forms, and analytics tracking.",
       "Review Google Business Profile, reviews, paid ads, organic visibility, and key competitors."
     ],
+    consultantReasoning: {
+      evidence: [
+        advertisementEvidence.status === "complete"
+          ? "The business is actively using paid advertising to attract customers."
+          : "The public website is the primary observable marketing evidence currently available.",
+        offer && !/not verified|not extracted/i.test(offer)
+          ? `The visible offer is ${offer}.`
+          : "The campaign offer requires verification.",
+        websiteEvidence.callsToAction?.length
+          ? `The website provides response paths including ${websiteEvidence.callsToAction.slice(0, 4).join(", ")}.`
+          : "The primary response path requires verification."
+      ],
+      businessMeaning:
+        advertisementEvidence.status === "complete"
+          ? "The business is already investing in customer acquisition. Before recommending more advertising, the highest-value question is whether the existing campaign promise, landing-page experience, and lead tracking work together efficiently."
+          : "The website shows enough visible business activity to justify a focused customer-journey review, but deeper evidence is required before recommending additional marketing investment.",
+      recommendedFirstEngagement: {
+        name:
+          advertisementEvidence.status === "complete"
+            ? "Campaign-to-Customer Journey Review"
+            : "Website Growth Opportunity Review",
+        scope: [
+          "Verify the primary offer and response path.",
+          "Compare the campaign or homepage promise with the landing-page message.",
+          "Review calls to action and customer-response friction.",
+          "Verify call, form, and analytics tracking.",
+          "Identify the single highest-impact improvement."
+        ],
+        whyFirst:
+          "This review improves the return from existing marketing before additional budget is recommended."
+      },
+      expectedBusinessResult:
+        "A clearer and more measurable path from marketing response to qualified inquiry, with one prioritized improvement tied to business value.",
+      proofWeWillLookFor: [
+        "Message continuity",
+        "Working calls, forms, links, and QR-code destination",
+        "Verified analytics or lead-tracking coverage",
+        "Reduced customer-journey friction",
+        "A measurable inquiry or conversion baseline"
+      ],
+      priority: "High",
+      impact:
+        advertisementEvidence.status === "complete"
+          ? "Very High"
+          : "High",
+      effort: "Medium",
+      ownerConversation:
+        `Before suggesting more marketing, I would first verify whether the path from your current advertising and website to a qualified inquiry is working as efficiently as it should.`
+    },
     prospectIntelligence: {
       advertisementAssessment:
         `The advertisement is usable prospect evidence. Extracted offer: ${offer}`,
@@ -657,6 +726,59 @@ function buildFallbackBrief({
   };
 }
 
+
+function applyConsultantReasoningToBrief(brief) {
+  const source = brief && typeof brief === "object" ? brief : {};
+  const reasoning =
+    source.consultantReasoning &&
+    typeof source.consultantReasoning === "object"
+      ? source.consultantReasoning
+      : {};
+  const engagement =
+    reasoning.recommendedFirstEngagement &&
+    typeof reasoning.recommendedFirstEngagement === "object"
+      ? reasoning.recommendedFirstEngagement
+      : {};
+
+  const evidence = Array.isArray(reasoning.evidence)
+    ? reasoning.evidence
+    : [];
+  const proof = Array.isArray(reasoning.proofWeWillLookFor)
+    ? reasoning.proofWeWillLookFor
+    : [];
+
+  return {
+    ...source,
+    strongestArea:
+      clean(source.strongestArea) ||
+      evidence[0] ||
+      "Strongest observable asset requires verification.",
+    largestOpportunity:
+      clean(reasoning.businessMeaning) ||
+      clean(source.largestOpportunity) ||
+      firstKnown(source.growthOpportunities || []) ||
+      "Largest visible opportunity requires verification.",
+    highestPriorityRecommendation:
+      clean(engagement.name)
+        ? `${clean(engagement.name)}: ${clean(engagement.whyFirst) || "Verify the highest-impact opportunity before recommending additional investment."}`
+        : clean(source.highestPriorityRecommendation),
+    personalizedOutreachInsights: unique([
+      clean(reasoning.ownerConversation),
+      ...(Array.isArray(source.personalizedOutreachInsights)
+        ? source.personalizedOutreachInsights
+        : [])
+    ]).filter(Boolean),
+    growthOpportunities: unique([
+      clean(reasoning.businessMeaning),
+      clean(reasoning.expectedBusinessResult),
+      ...proof,
+      ...(Array.isArray(source.growthOpportunities)
+        ? source.growthOpportunities
+        : [])
+    ]).filter(Boolean)
+  };
+}
+
 function normalizeBrief(value, fallback) {
   const source = value && typeof value === "object" ? value : {};
   return {
@@ -678,6 +800,26 @@ function normalizeBrief(value, fallback) {
     firstContactEmail: {
       ...fallback.firstContactEmail,
       ...(source.firstContactEmail || {})
+    },
+    consultantReasoning: {
+      ...fallback.consultantReasoning,
+      ...(source.consultantReasoning || {}),
+      evidence: arrayOrFallback(
+        source?.consultantReasoning?.evidence,
+        fallback?.consultantReasoning?.evidence || []
+      ),
+      recommendedFirstEngagement: {
+        ...(fallback?.consultantReasoning?.recommendedFirstEngagement || {}),
+        ...(source?.consultantReasoning?.recommendedFirstEngagement || {}),
+        scope: arrayOrFallback(
+          source?.consultantReasoning?.recommendedFirstEngagement?.scope,
+          fallback?.consultantReasoning?.recommendedFirstEngagement?.scope || []
+        )
+      },
+      proofWeWillLookFor: arrayOrFallback(
+        source?.consultantReasoning?.proofWeWillLookFor,
+        fallback?.consultantReasoning?.proofWeWillLookFor || []
+      )
     },
     discoveryCallScript: {
       ...fallback.discoveryCallScript,
