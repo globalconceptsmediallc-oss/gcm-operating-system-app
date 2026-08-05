@@ -1,22 +1,23 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailIntegration.js
-   Version: 1.1.1
-   Status: Production Candidate — Gmail Intelligence Preview Cleanup
+   Version: 1.2.0
+   Status: Production Candidate — Gmail Decision Calibration Preview
    Source: New production route
-   Sprint: Morning Command — Gmail Intelligence Road-Test Cleanup
+   Sprint: Morning Command — Operational Decision Calibration
    Purpose: Preserve the verified Gmail OAuth/read-only connection, retrieve
             normalized message evidence, reuse the production Communications
             intelligence engine, and preview operational recommendations
             without creating or changing production records.
-   Production change: Clean Gmail body evidence before analysis and produce
-                      concise preview meaning instead of raw email dumps.
+   Production change: Preserve cleaned Gmail evidence while exposing decision
+                      reliability, evidence sufficiency, comparison limits, and
+                      mandatory human verification before production approval.
    ========================================================= */
 import { VERSION, ACTIONS } from "../shared/config.js";
 import { clean, safeErrorMessage, logWorkerError, jsonResponse } from "../shared/http.js";
 import { getDatabase } from "../shared/database.js";
 import { handleCommunicationAnalysis } from "./communicationAnalysis.js";
-export const GMAIL_INTEGRATION_VERSION = "1.1.1";
+export const GMAIL_INTEGRATION_VERSION = "1.2.0";
 export const GMAIL_PATHS = Object.freeze({ CONNECT: "/auth/google", CALLBACK: "/auth/google/callback" });
 const AUTH_URL="https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL="https://oauth2.googleapis.com/token";
@@ -169,28 +170,36 @@ function buildGmailRecommendation(message,analysis){
       notificationType:githubFailure?"production_or_build_failure":"routine_repository_notification",
       client:analysis?.client?.name||"GCM — Internal",
       businessMeaning:githubFailure
-        ? "A development or production signal may require agency attention before it affects a working system."
+        ? "A development or production failure was explicitly reported. The email proves a failed run, but it does not by itself prove client impact, root cause, or required corrective work."
         : "Routine repository activity does not establish client impact or operational work.",
       operationalPriority:githubFailure?"High":"Low",
       recommendedAction:githubFailure
-        ? "Review the failed workflow, deployment, security alert, or repository condition before deciding whether corrective work is required."
+        ? "Open the failed run and verify the failing job, affected environment, and production impact. Create an investigation only after that evidence confirms corrective work is required."
         : "No OS record is recommended. Archive after human review.",
-      shouldCreateCommunication:githubFailure,
-      shouldCreateInvestigation:githubFailure,
+      shouldCreateCommunication:false,
+      shouldCreateInvestigation:false,
       shouldCreateWorkItem:false,
       monitoringOnly:false,
       archive:!githubFailure,
-      proposedRoute:githubFailure?"Investigation":"Archive",
+      proposedRoute:githubFailure?"Review Required":"Archive",
       confidence:"High",
+      decisionReliability:githubFailure?"Provisional — failure confirmed, impact unverified":"Reliable — routine notice",
+      evidenceSufficiency:githubFailure?"Partial":"Sufficient",
+      evidenceComparedAgainst:"Current Gmail message only",
+      verificationRequired:githubFailure?"Open the GitHub run and confirm failure scope, environment, and impact before creating any OS record.":"Confirm the notice is routine and archive it.",
+      humanReviewRequired:true,
       sourceAnalysis:decision
     };
   }
+  const type=clean(classification.notificationType).toLowerCase();
   const saveCommunication=Boolean(routes.saveCommunication);
   const createInvestigation=Boolean(routes.createInvestigation);
   const createWorkItem=Boolean(routes.createWorkItem);
   const monitoringOnly=saveCommunication&&!createInvestigation&&!createWorkItem&&!routes.replyRequired;
-  const previewMeaning=buildConciseBusinessMeaning({message,analysis,classification,decision,createInvestigation});
-  const previewAction=buildConciseRecommendedAction({message,analysis,classification,decision,createInvestigation,monitoringOnly});
+  const calibration=buildDecisionCalibration({message,analysis,classification,decision,monitoringOnly,createInvestigation});
+  const previewMeaning=buildConciseBusinessMeaning({message,analysis,classification,decision,createInvestigation:false});
+  const previewAction=buildConciseRecommendedAction({message,analysis,classification,decision,createInvestigation:false,monitoringOnly});
+  const isKnownMonitoring=["position_tracking","search_performance","site_audit","backlink_audit"].includes(type);
   return{
     communicationFamily:classification.notificationFamily||decision.notificationFamily||"Unknown",
     notificationType:classification.notificationType||"unknown",
@@ -198,14 +207,59 @@ function buildGmailRecommendation(message,analysis){
     businessMeaning:previewMeaning,
     operationalPriority:decision.operationalPriority||decision.importance||"Low",
     recommendedAction:previewAction,
-    shouldCreateCommunication:saveCommunication,
-    shouldCreateInvestigation:createInvestigation,
-    shouldCreateWorkItem:createWorkItem,
-    monitoringOnly,
-    archive:!saveCommunication&&!createInvestigation&&!createWorkItem,
-    proposedRoute:decision.proposedRoute||"Information",
+    shouldCreateCommunication:isKnownMonitoring?false:saveCommunication&&calibration.productionDecisionReady,
+    shouldCreateInvestigation:createInvestigation&&calibration.productionDecisionReady,
+    shouldCreateWorkItem:createWorkItem&&calibration.productionDecisionReady,
+    monitoringOnly:isKnownMonitoring?true:monitoringOnly&&calibration.productionDecisionReady,
+    archive:false,
+    proposedRoute:calibration.proposedRoute,
     confidence:confidenceLabel(decision.classificationConfidence),
+    decisionReliability:calibration.decisionReliability,
+    evidenceSufficiency:calibration.evidenceSufficiency,
+    evidenceComparedAgainst:calibration.evidenceComparedAgainst,
+    verificationRequired:calibration.verificationRequired,
+    humanReviewRequired:true,
+    productionDecisionReady:calibration.productionDecisionReady,
     sourceAnalysis:decision
+  };
+}
+function buildDecisionCalibration({message,analysis,classification,decision,monitoringOnly,createInvestigation}){
+  const type=clean(classification?.notificationType).toLowerCase();
+  const evidenceText=[message.subject,message.bodyText,...(analysis?.evidence?.visibleMetrics||[]),...(analysis?.evidence?.visibleFacts||[])].filter(Boolean).join(" ");
+  const hasKeywordMovement=/\b(keyword|position|rank|ranking)\b/i.test(evidenceText)&&/(moved|changed|gained|lost|up|down|position\s*\d+)/i.test(evidenceText);
+  const hasSearchMetrics=/\b(clicks?|impressions?|ctr|average position)\b/i.test(evidenceText)&&/\b\d[\d,.]*\b/.test(evidenceText);
+  const hasAuditMetrics=/\b(errors?|warnings?|notices?|site health|broken pages?)\b/i.test(evidenceText)&&/\b\d[\d,.%]*\b/.test(evidenceText);
+  if(type==="position_tracking")return{
+    decisionReliability:hasKeywordMovement?"Moderate — current movement detected":"Low — movement detail incomplete",
+    evidenceSufficiency:hasKeywordMovement?"Current report sufficient for monitoring; insufficient for escalation":"Insufficient for production decision",
+    evidenceComparedAgainst:"Current Gmail message only; no prior Position Tracking record, investigation, baseline, or proof compared",
+    verificationRequired:"Compare the affected keyword, direction, current position, and prior report. Then decide whether to save monitoring evidence, attach it to existing work, or investigate.",
+    productionDecisionReady:false,
+    proposedRoute:"Calibration Required"
+  };
+  if(type==="search_performance")return{
+    decisionReliability:hasSearchMetrics?"Moderate — current metrics detected":"Low — metric detail incomplete",
+    evidenceSufficiency:hasSearchMetrics?"Current report sufficient for monitoring; insufficient for trend decision":"Insufficient for production decision",
+    evidenceComparedAgainst:"Current Gmail message only; no prior Search Console period, baseline, investigation, or proof compared",
+    verificationRequired:"Compare clicks, impressions, CTR, and position with the prior reporting period before approving monitoring or escalation.",
+    productionDecisionReady:false,
+    proposedRoute:"Calibration Required"
+  };
+  if(type==="site_audit"||type==="backlink_audit")return{
+    decisionReliability:hasAuditMetrics?"Moderate — current condition detected":"Low — issue detail incomplete",
+    evidenceSufficiency:"Current report is evidence, but change, cause, and client impact are not yet verified",
+    evidenceComparedAgainst:"Current Gmail message only; no prior audit, open investigation, completed work, or proof compared",
+    verificationRequired:"Compare the current issue counts and changes with the prior audit and any open investigation before approving a production route.",
+    productionDecisionReady:false,
+    proposedRoute:"Calibration Required"
+  };
+  return{
+    decisionReliability:createInvestigation?"Provisional — escalation suggested":"Provisional — human judgment required",
+    evidenceSufficiency:"Current email analyzed; broader client context not compared",
+    evidenceComparedAgainst:"Current Gmail message only",
+    verificationRequired:"Review the source email and compare it with relevant client records before approving any production action.",
+    productionDecisionReady:false,
+    proposedRoute:"Manual Review"
   };
 }
 function buildConciseBusinessMeaning({message,analysis,classification,decision,createInvestigation}){
@@ -270,7 +324,13 @@ function buildFallbackRecommendation(message,error){
     monitoringOnly:false,
     archive:false,
     proposedRoute:"Manual Review",
-    confidence:"Low"
+    confidence:"Low",
+    decisionReliability:"Unavailable",
+    evidenceSufficiency:"Insufficient",
+    evidenceComparedAgainst:"Current Gmail message only",
+    verificationRequired:"Review the source email manually before taking any production action.",
+    humanReviewRequired:true,
+    productionDecisionReady:false
   };
 }
 function extractMessageText(payload){
