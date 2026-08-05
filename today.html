@@ -1,10 +1,10 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.1.2
+   Version: 3.2.0
    Status: Production Candidate
-   Source: Production today.html 3.1.1
-   Sprint: Mission Control Authoritative Record Navigation
+   Source: Production today.html 3.1.2
+   Sprint: Morning Command — Gmail Read-Only Road Test
    Purpose: Preserve the locked Mission Control layout while routing every
             decision directly to its authoritative Investigation, Work Item,
             Media record, Proof workflow, or client workspace.
@@ -1659,6 +1659,8 @@
         border-right: 0;
       }
     }
+
+.morning-command{margin-bottom:18px;border-color:#bdd0eb;background:linear-gradient(135deg,#f7fbff,#edf5ff)}.morning-command-body{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:22px;align-items:center;padding:20px 22px}.morning-command-copy h2{margin:0;color:var(--gcm-navy-950);font-size:1.05rem}.morning-command-copy p{margin:6px 0 0;color:var(--text-muted);font-size:.84rem}.morning-command-actions{display:flex;gap:10px;flex-wrap:wrap}.gmail-preview{display:grid;gap:10px;padding:0 22px 22px}.gmail-preview[hidden]{display:none}.gmail-message{padding:14px 15px;border:1px solid var(--border);border-radius:12px;background:#fff}.gmail-message strong,.gmail-message span{display:block}.gmail-message span{margin-top:4px;color:var(--text-muted);font-size:.78rem}.gmail-message p{margin:8px 0 0;font-size:.82rem}@media(max-width:760px){.morning-command-body{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -1680,6 +1682,7 @@
 <div class="date-chip">GCM OS online</div>
 </div>
 </header>
+<section aria-labelledby="morning-command-title" class="panel morning-command"><div class="morning-command-body"><div class="morning-command-copy"><p class="eyebrow">Morning Command</p><h2 id="morning-command-title">Connect Gmail and preview today’s unread inbox.</h2><p id="gmail-status-copy">Checking Gmail connection…</p></div><div class="morning-command-actions"><a class="button button-secondary" hidden id="gmail-connect-button" href="#">Connect Gmail</a><button class="button button-primary" disabled id="gmail-preview-button" type="button">Preview Inbox</button></div></div><div class="gmail-preview" hidden id="gmail-preview"></div></section>
 <section aria-labelledby="command-brief-title" class="command-brief">
 <div class="brief-grid">
 <div>
@@ -1845,6 +1848,10 @@
 
       const greeting = document.getElementById("greeting");
       const currentDate = document.getElementById("current-date");
+      const gmailConnectButton=document.getElementById("gmail-connect-button");
+      const gmailPreviewButton=document.getElementById("gmail-preview-button");
+      const gmailStatusCopy=document.getElementById("gmail-status-copy");
+      const gmailPreview=document.getElementById("gmail-preview");
       const taskList = document.getElementById("task-list");
       const attentionList = document.getElementById("attention-list");
       const proofList = document.getElementById("proof-list");
@@ -2734,15 +2741,21 @@
       });
 
       if (!window.GCMOShell) {
-        console.error("Today 3.1.2: shared/gcm-shell.js did not load.");
+        console.error("Today 3.2.0: shared/gcm-shell.js did not load.");
       } else {
         window.GCMOShell.mount({
           currentPage: "today",
-          statusText: "Agency Command Center operational · Today v3.1.2"
+          statusText: "Agency Command Center operational · Today v3.2.0"
         });
       }
 
+
+      const gmailPost=async(action,extra={})=>{const r=await fetch(WORKER_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,...extra})});const p=await r.json();if(!r.ok||p.ok!==true)throw new Error(p.error||`HTTP ${r.status}`);return p};
+      const gmailEsc=v=>String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+      async function loadGmailStatus(){try{const p=await gmailPost("get-gmail-status");if(p.connected){gmailStatusCopy.textContent=`${p.connection.account_email} is connected in read-only mode.`;gmailConnectButton.hidden=true;gmailPreviewButton.disabled=false}else{gmailStatusCopy.textContent="Gmail is not connected. Connect once for read-only access.";gmailConnectButton.href=p.connectUrl;gmailConnectButton.hidden=false;gmailPreviewButton.disabled=true}}catch(e){gmailStatusCopy.textContent=`Gmail status unavailable: ${e.message}`;gmailConnectButton.href=`${WORKER_ENDPOINT}auth/google?return_to=${encodeURIComponent(location.href)}`;gmailConnectButton.hidden=false}}
+      gmailPreviewButton.addEventListener("click",async()=>{gmailPreviewButton.disabled=true;gmailPreviewButton.textContent="Reading Inbox…";gmailStatusCopy.textContent="Previewing unread email. Nothing will be saved.";try{const p=await gmailPost("preview-gmail-inbox",{limit:10});gmailPreview.hidden=false;gmailPreview.innerHTML=(p.messages||[]).length?p.messages.map(m=>`<article class="gmail-message"><strong>${gmailEsc(m.subject)}</strong><span>${gmailEsc(m.from)} · ${gmailEsc(m.date)}</span><p>${gmailEsc(m.snippet)}</p></article>`).join(""):`<article class="gmail-message"><strong>No unread operational emails found</strong></article>`;gmailStatusCopy.textContent=`${p.reviewedCount} unread emails reviewed. No OS records were created.`;gmailPreviewButton.textContent="Refresh Preview"}catch(e){gmailStatusCopy.textContent=`Inbox preview failed: ${e.message}`;gmailPreviewButton.textContent="Try Again"}finally{gmailPreviewButton.disabled=false}});
       setDateAndGreeting();
+      loadGmailStatus();
       renderDashboard(loadData());
       updatePriority();
       renderOperationalBriefing();
