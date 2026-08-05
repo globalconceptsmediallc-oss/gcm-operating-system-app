@@ -1,15 +1,15 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/config.js
-   Version: 7.7.2
+   Version: 7.7.6
    Status: Production Candidate
-   Source: shared/config.js 7.7.1
-   Sprint: Agency Intelligence — Prospect Advertisement Intake
+   Source: shared/config.js 7.7.2
+   Sprint: Morning Command — Gmail Read-Only Connection
    Purpose: Preserve all existing production constants and add
             the read-only Prospect Intelligence action contract.
    ========================================================= */
 
-export const VERSION = "7.7.2";
+export const VERSION = "7.7.6";
 export const API_CONTRACT_VERSION = "communications-operational-decision-v3";
 export const COMMUNICATION_ANALYSIS_ENGINE_VERSION = "3.4.1";
 
@@ -22,6 +22,8 @@ export const COMMUNICATION_REASONING_MODEL =
 export const ACTIONS = Object.freeze({
   ANALYZE_COMMUNICATION: "analyze-client-communication",
   ANALYZE_PROSPECT_INTELLIGENCE: "analyze-prospect-intelligence",
+  GET_GMAIL_STATUS: "get-gmail-status",
+  PREVIEW_GMAIL_INBOX: "preview-gmail-inbox",
   GET_CLIENT_WORKSPACE: "get-client-workspace",
   GET_CLIENT_DIRECTORY: "get-client-directory",
   COMMIT_OPERATIONAL_DECISION: "commit-operational-decision",
