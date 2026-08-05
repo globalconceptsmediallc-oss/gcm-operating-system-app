@@ -1,10 +1,10 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.7.5
+   Version: 7.7.6
    Status: Production Road-Test Candidate
-   Source: Production worker.js 7.7.4
-   Sprint: Agency Intelligence — Prospect Advertisement Intake
+   Source: Production worker.js 7.7.5
+   Sprint: Morning Command — Gmail Read-Only Connection
    Purpose: Preserve every verified production route and connect the
             read-only Prospect Intelligence road-test action.
 
@@ -44,7 +44,9 @@ import {
   AGENCY_COMMAND_ACTION
 } from "./routes/agencyCommand.js";
 
-const WORKER_FILE_VERSION = "7.7.5";
+import { handleGmailGet, handleGmailAction } from "./routes/gmailIntegration.js";
+
+const WORKER_FILE_VERSION = "7.7.6";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
@@ -58,7 +60,9 @@ const SUPPORTED_ACTIONS = [
   ACTIONS.PROCESS_WORK_ITEM,
   ACTIONS.GET_MEDIA_OPERATIONS,
   ACTIONS.OPERATIONAL_REVIEWS,
-  AGENCY_COMMAND_ACTION
+  AGENCY_COMMAND_ACTION,
+  ACTIONS.GET_GMAIL_STATUS,
+  ACTIONS.PREVIEW_GMAIL_INBOX
 ].filter(Boolean);
 
 export default {
@@ -71,6 +75,8 @@ export default {
     }
 
     if (request.method === "GET") {
+      const gmailResponse = await handleGmailGet(request, env, requestId);
+      if (gmailResponse) return gmailResponse;
       return jsonResponse({
         ok: true,
         status: "online",
@@ -78,7 +84,7 @@ export default {
         version: VERSION,
         workerFileVersion: WORKER_FILE_VERSION,
         contractVersion: API_CONTRACT_VERSION,
-        sprint: "Agency Intelligence — Prospect Advertisement Intake",
+        sprint: "Morning Command — Gmail Read-Only Connection",
         architecture:
           "Modular production router with Agency Command, Prospect Intelligence, Communications analysis, Guided Investigation, and operational processing.",
         actions: SUPPORTED_ACTIONS,
@@ -154,6 +160,10 @@ export default {
 
     try {
       switch (action) {
+        case ACTIONS.GET_GMAIL_STATUS:
+        case ACTIONS.PREVIEW_GMAIL_INBOX:
+          return await handleGmailAction(body, env, requestId);
+
         case AGENCY_COMMAND_ACTION:
           return await handleAgencyCommand(body, env, requestId);
 
