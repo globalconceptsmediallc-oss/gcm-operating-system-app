@@ -1,20 +1,22 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailIntegration.js
-   Version: 1.1.0
-   Status: Production Candidate — Gmail Intelligence Preview
+   Version: 1.1.1
+   Status: Production Candidate — Gmail Intelligence Preview Cleanup
    Source: New production route
-   Sprint: Morning Command — Gmail Intelligence Preview
+   Sprint: Morning Command — Gmail Intelligence Road-Test Cleanup
    Purpose: Preserve the verified Gmail OAuth/read-only connection, retrieve
             normalized message evidence, reuse the production Communications
             intelligence engine, and preview operational recommendations
             without creating or changing production records.
+   Production change: Clean Gmail body evidence before analysis and produce
+                      concise preview meaning instead of raw email dumps.
    ========================================================= */
 import { VERSION, ACTIONS } from "../shared/config.js";
 import { clean, safeErrorMessage, logWorkerError, jsonResponse } from "../shared/http.js";
 import { getDatabase } from "../shared/database.js";
 import { handleCommunicationAnalysis } from "./communicationAnalysis.js";
-export const GMAIL_INTEGRATION_VERSION = "1.1.0";
+export const GMAIL_INTEGRATION_VERSION = "1.1.1";
 export const GMAIL_PATHS = Object.freeze({ CONNECT: "/auth/google", CALLBACK: "/auth/google/callback" });
 const AUTH_URL="https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL="https://oauth2.googleapis.com/token";
@@ -109,7 +111,7 @@ async function readMessage(id,token){
   const data=await gmailFetch(url.toString(),token);
   const headers=data?.payload?.headers||[];
   const value=name=>clean(headers.find(item=>clean(item.name).toLowerCase()===name.toLowerCase())?.value);
-  const bodyText=extractMessageText(data?.payload).slice(0,12000);
+  const bodyText=sanitizeEmailText(extractMessageText(data?.payload)).slice(0,8000);
   return{
     gmailMessageId:data.id,
     threadId:data.threadId,
@@ -179,7 +181,7 @@ function buildGmailRecommendation(message,analysis){
       monitoringOnly:false,
       archive:!githubFailure,
       proposedRoute:githubFailure?"Investigation":"Archive",
-      confidence:githubFailure?"High":"High",
+      confidence:"High",
       sourceAnalysis:decision
     };
   }
@@ -187,13 +189,15 @@ function buildGmailRecommendation(message,analysis){
   const createInvestigation=Boolean(routes.createInvestigation);
   const createWorkItem=Boolean(routes.createWorkItem);
   const monitoringOnly=saveCommunication&&!createInvestigation&&!createWorkItem&&!routes.replyRequired;
+  const previewMeaning=buildConciseBusinessMeaning({message,analysis,classification,decision,createInvestigation});
+  const previewAction=buildConciseRecommendedAction({message,analysis,classification,decision,createInvestigation,monitoringOnly});
   return{
     communicationFamily:classification.notificationFamily||decision.notificationFamily||"Unknown",
     notificationType:classification.notificationType||"unknown",
     client:analysis?.client?.name||"Unassigned — Human Review",
-    businessMeaning:decision.operationalSummary||analysis?.businessMeaning?.operationalSummary||decision.businessImpact||"Manual review is required.",
+    businessMeaning:previewMeaning,
     operationalPriority:decision.operationalPriority||decision.importance||"Low",
-    recommendedAction:decision.recommendedAction||"Review the source email before approving any production action.",
+    recommendedAction:previewAction,
     shouldCreateCommunication:saveCommunication,
     shouldCreateInvestigation:createInvestigation,
     shouldCreateWorkItem:createWorkItem,
@@ -203,6 +207,54 @@ function buildGmailRecommendation(message,analysis){
     confidence:confidenceLabel(decision.classificationConfidence),
     sourceAnalysis:decision
   };
+}
+function buildConciseBusinessMeaning({message,analysis,classification,decision,createInvestigation}){
+  const type=clean(classification?.notificationType).toLowerCase();
+  const client=analysis?.client?.name||"the client";
+  const evidenceText=[message.subject,message.bodyText,...(analysis?.evidence?.visibleMetrics||[]),...(analysis?.evidence?.visibleFacts||[])].filter(Boolean).join(" ");
+  if(type==="position_tracking"){
+    const count=extractFirstCount(evidenceText,[/\b(\d+)\s+keywords?\b/i,/\bfor\s+(\d+)\s+keywords?\b/i]);
+    const movement=count?`${count} tracked keyword${count===1?"":"s"} changed position`:`A tracked keyword ranking change was reported`;
+    return `${movement} for ${client}. ${createInvestigation?"The evidence may represent adverse movement that requires cause verification.":"The notification is monitoring evidence until the actual keyword movement proves a meaningful gain or loss."}`;
+  }
+  if(type==="search_performance"){
+    return `Google Search Console supplied a performance report for ${client}. The report should be retained as monitoring evidence and reviewed for material changes in clicks, impressions, CTR, or position.`;
+  }
+  if(type==="site_audit"){
+    return `SEMrush supplied a Site Audit update for ${client}. Existing issue counts remain monitoring evidence unless the current report proves a new or materially worsening condition.`;
+  }
+  if(type==="backlink_audit"){
+    return `SEMrush supplied a backlink-risk update for ${client}. The notice requires evidence review before deciding whether any link investigation is justified.`;
+  }
+  return conciseText(decision.operationalSummary||analysis?.consultantSummary?.summary||analysis?.businessMeaning?.operationalSummary||decision.businessImpact,"Manual review is required.");
+}
+function buildConciseRecommendedAction({classification,decision,createInvestigation,monitoringOnly}){
+  const type=clean(classification?.notificationType).toLowerCase();
+  if(type==="position_tracking"){
+    return createInvestigation
+      ? "Open the ranking evidence, identify the affected keyword and direction of movement, then verify the cause before creating corrective work."
+      : "Compare the reported keyword movement with the prior Position Tracking evidence. Retain it as monitoring unless a meaningful loss, threshold change, or client-impact signal is proven.";
+  }
+  if(type==="search_performance"){
+    return "Compare the current Search Console metrics with the prior reporting period. Escalate only when the evidence shows a material performance change requiring investigation.";
+  }
+  if(type==="site_audit"){
+    return createInvestigation
+      ? "Review the changed Site Audit metrics and isolate the new or worsening issue before defining corrective work."
+      : "Save the report as monitoring evidence and continue watching for new or worsening errors, warnings, or broken pages.";
+  }
+  if(monitoringOnly)return "Save the communication as monitoring evidence and continue watching for a material change.";
+  return conciseText(decision.recommendedAction,"Review the source email before approving any production action.");
+}
+function extractFirstCount(value,patterns){
+  for(const pattern of patterns){const match=String(value||"").match(pattern);if(match)return Number(match[1]);}
+  return null;
+}
+function conciseText(value,fallback){
+  const text=sanitizeEmailText(value);
+  if(!text)return fallback;
+  const sentence=text.split(/(?<=[.!?])\s+/).find(item=>item.length>=20)||text;
+  return sentence.length>420?`${sentence.slice(0,417).trim()}...`:sentence;
 }
 function buildFallbackRecommendation(message,error){
   return{
@@ -241,8 +293,33 @@ function extractMessageText(payload){
 function decodeGmailText(value){
   try{return new TextDecoder().decode(decode(value));}catch{return"";}
 }
+function sanitizeEmailText(value){
+  let text=String(value||"");
+  for(let i=0;i<2;i++)text=decodeHtmlEntities(text);
+  text=text
+    .replace(/<style[\s\S]*?<\/style>/gi," ")
+    .replace(/<script[\s\S]*?<\/script>/gi," ")
+    .replace(/<[^>]+>/g," ")
+    .replace(/https?:\/\/\S+/gi," ")
+    .replace(/\b(?:unsubscribe|manage preferences|view in browser|privacy policy|contact us|email preferences)\b[\s\S]{0,500}$/gi," ")
+    .replace(/\b[A-Za-z0-9_-]{80,}\b/g," ")
+    .replace(/[ \t]+/g," ")
+    .replace(/\n[ \t]+/g,"\n")
+    .replace(/\n{3,}/g,"\n\n");
+  return clean(text);
+}
+function decodeHtmlEntities(value){
+  return String(value||"")
+    .replace(/&nbsp;|&#160;/gi," ")
+    .replace(/&amp;|&#38;/gi,"&")
+    .replace(/&lt;|&#60;/gi,"<")
+    .replace(/&gt;|&#62;/gi,">")
+    .replace(/&quot;|&#34;/gi,'"')
+    .replace(/&#39;|&apos;/gi,"'")
+    .replace(/&#(\d+);/g,(_,code)=>{const value=Number(code);return value>0&&value<=1114111?String.fromCodePoint(value):" ";});
+}
 function htmlToText(value){
-  return clean(String(value||"")
+  return sanitizeEmailText(String(value||"")
     .replace(/<style[\s\S]*?<\/style>/gi," ")
     .replace(/<script[\s\S]*?<\/script>/gi," ")
     .replace(/<br\s*\/?\s*>/gi,"\n")
