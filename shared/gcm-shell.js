@@ -1,18 +1,18 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gcm-shell.js
-   Version: 1.0.3
+   Version: 1.0.4
    Status: Production Candidate
    Purpose: Shared internal GCM OS application shell foundation.
    Source: gcm-shell.js 1.0.2 production navigation
-   Sprint: Calendar Navigation Integration
-   Change: Adds Calendar to production navigation while preserving the existing window.GCMOShell contract and all current links.
+   Sprint: Case Studies Navigation Activation
+   Change: Activates Case Studies in production navigation while preserving Calendar, Settings deferred state, the existing window.GCMOShell contract, and all current links.
    ========================================================= */
 
 (() => {
   "use strict";
 
-  const SHELL_VERSION = "1.0.3";
+  const SHELL_VERSION = "1.0.4";
 
   const PAGE_MAP = {
     today: {
@@ -59,15 +59,15 @@
       label: "Calendar",
       href: "calendar.html",
       icon: "▦"
+    },
+    caseStudies: {
+      label: "Case Studies",
+      href: "case-studies.html",
+      icon: "★"
     }
   };
 
   const DEFERRED_NAV = [
-    {
-      label: "Case Studies",
-      icon: "★",
-      reason: "Workflow not yet active"
-    },
     {
       label: "Settings",
       icon: "⚙",
