@@ -1,17 +1,23 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.7.6
+   Version: 7.7.7
    Status: Production Road-Test Candidate
-   Source: Production worker.js 7.7.5
-   Sprint: Morning Command — Gmail Read-Only Connection
+   Source: Production worker.js 7.7.6
+   Sprint: Create Requested Work
    Purpose: Preserve every verified production route and connect the
-            read-only Prospect Intelligence road-test action.
+            direct client-requested Work Item creation action.
 
    Changes in 7.7.5:
    - Adds analyze-prospect-intelligence.
    - Connects routes/prospectIntelligence.js.
    - Preserves all existing routes and the Communications review adapter.
+
+   Change in 7.7.7:
+   - Adds create-requested-work.
+   - Connects routes/requestedWork.js.
+   - Preserves Gmail, Prospect Intelligence, Agency Command, Communications,
+     Investigations, Work Items, Media, and Operational Reviews.
    ========================================================= */
 
 import {
@@ -37,6 +43,7 @@ import { handleMissionControl } from "./routes/missionControl.js";
 import { handleProcessInvestigation } from "./routes/investigationProcessing.js";
 import { handleGuidedInvestigation } from "./routes/guidedInvestigation.js";
 import { handleProcessWorkItem } from "./routes/workItemProcessing.js";
+import { handleCreateRequestedWork } from "./routes/requestedWork.js";
 import { handleMediaOperations } from "./routes/mediaOperations.js";
 import { handleOperationalReviews } from "./routes/operationalReviews.js";
 import {
@@ -46,7 +53,7 @@ import {
 
 import { handleGmailGet, handleGmailAction } from "./routes/gmailIntegration.js";
 
-const WORKER_FILE_VERSION = "7.7.6";
+const WORKER_FILE_VERSION = "7.7.7";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
@@ -58,6 +65,7 @@ const SUPPORTED_ACTIONS = [
   ACTIONS.GET_GUIDED_INVESTIGATION,
   ACTIONS.PROCESS_INVESTIGATION,
   ACTIONS.PROCESS_WORK_ITEM,
+  ACTIONS.CREATE_REQUESTED_WORK,
   ACTIONS.GET_MEDIA_OPERATIONS,
   ACTIONS.OPERATIONAL_REVIEWS,
   AGENCY_COMMAND_ACTION,
@@ -84,7 +92,7 @@ export default {
         version: VERSION,
         workerFileVersion: WORKER_FILE_VERSION,
         contractVersion: API_CONTRACT_VERSION,
-        sprint: "Morning Command — Gmail Read-Only Connection",
+        sprint: "Create Requested Work",
         architecture:
           "Modular production router with Agency Command, Prospect Intelligence, Communications analysis, Guided Investigation, and operational processing.",
         actions: SUPPORTED_ACTIONS,
@@ -104,6 +112,7 @@ export default {
           "guided-investigation",
           "investigation-processing",
           "work-item-processing",
+          "requested-work-creation",
           "media-operations",
           "operational-reviews"
         ],
@@ -120,6 +129,7 @@ export default {
             "guided-investigation",
             "investigation-processing",
             "work-item-processing",
+            "requested-work",
             "media-operations",
             "operational-reviews"
           ]
@@ -197,6 +207,9 @@ export default {
 
         case ACTIONS.PROCESS_WORK_ITEM:
           return await handleProcessWorkItem(body, env, requestId);
+
+        case ACTIONS.CREATE_REQUESTED_WORK:
+          return await handleCreateRequestedWork(body, env, requestId);
 
         case ACTIONS.GET_MEDIA_OPERATIONS:
           return await handleMediaOperations(body, env, requestId);
