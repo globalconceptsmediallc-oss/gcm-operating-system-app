@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Case Studies | GCM OS</title>
+
+  <!-- =========================================================
+       Global Concepts Media Operating System
+       File: case-studies.html
+       Version: 1.0.0
+       Status: Production Candidate
+       Source: GCM OS Case Study Intelligence
+       Sprint: Case Studies Foundation
+       Purpose: Road-test the Case Studies workspace using real GCM projects
+                without changing D1 or existing production workflows.
+       ========================================================= -->
+
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f4f7fb;
+      color: #172033;
+    }
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 270px minmax(0, 1fr);
+    }
+    main { min-width: 0; padding: 28px; }
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .menu-button {
+      display: none;
+      border: 1px solid #d9e1ec;
+      border-radius: 10px;
+      background: #fff;
+      padding: 9px 11px;
+      cursor: pointer;
+    }
+    h1 { margin: 0; font-size: 2rem; }
+    .subtitle { margin: 6px 0 0; color: #667085; }
+    .version {
+      margin-left: auto;
+      padding: 6px 10px;
+      border: 1px solid #d9e1ec;
+      border-radius: 999px;
+      background: #fff;
+      color: #667085;
+      font-size: .75rem;
+      font-weight: 700;
+    }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .summary-card, .case-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, .04);
+    }
+    .summary-card { padding: 18px; }
+    .summary-card strong { display: block; font-size: 1.7rem; }
+    .summary-card span { color: #667085; font-size: .82rem; font-weight: 700; }
+    .notice {
+      margin-bottom: 20px;
+      padding: 16px 18px;
+      border: 1px solid #cbdcf8;
+      border-radius: 14px;
+      background: #eef5ff;
+      line-height: 1.5;
+    }
+    .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+    .filter {
+      border: 1px solid #d9e1ec;
+      border-radius: 999px;
+      background: #fff;
+      padding: 8px 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .filter.active { background: #172033; color: #fff; border-color: #172033; }
+    .cases { display: grid; gap: 16px; }
+    .case-card { padding: 20px; }
+    .case-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .case-head h2 { margin: 0 0 5px; font-size: 1.15rem; }
+    .client { color: #667085; font-size: .86rem; }
+    .badge {
+      flex: 0 0 auto;
+      padding: 6px 9px;
+      border-radius: 999px;
+      background: #eef2f7;
+      font-size: .72rem;
+      font-weight: 800;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .metric {
+      padding: 13px;
+      border-radius: 12px;
+      background: #f7f9fc;
+    }
+    .metric small { display: block; color: #667085; margin-bottom: 5px; }
+    .metric strong { font-size: .95rem; }
+    .story {
+      margin-top: 16px;
+      padding-top: 15px;
+      border-top: 1px solid #edf0f4;
+      line-height: 1.55;
+    }
+    .story strong { display: block; margin-bottom: 5px; }
+    .footnote { margin-top: 20px; color: #667085; font-size: .78rem; }
+    @media (max-width: 1000px) {
+      .summary, .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 860px) {
+      .app { grid-template-columns: 1fr; }
+      main { padding: 20px; }
+      .menu-button { display: inline-block; }
+    }
+    @media (max-width: 620px) {
+      .summary, .grid { grid-template-columns: 1fr; }
+      .version { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside data-gcm-shell-sidebar></aside>
+
+    <main>
+      <header class="topbar">
+        <button class="menu-button" type="button" data-gcm-shell-menu-button aria-label="Open navigation">☰</button>
+        <div>
+          <h1>Case Studies</h1>
+          <p class="subtitle">Turn client history, work, measurements and outcomes into provable stories.</p>
+        </div>
+        <span class="version">v1.0.0</span>
+      </header>
+
+      <section class="summary" aria-label="Case study summary">
+        <div class="summary-card"><strong>3</strong><span>Road-test candidates</span></div>
+        <div class="summary-card"><strong>1</strong><span>Verified result</span></div>
+        <div class="summary-card"><strong>1</strong><span>Measuring now</span></div>
+        <div class="summary-card"><strong>1</strong><span>Retrospective</span></div>
+      </section>
+
+      <div class="notice">
+        <strong>Case Studies v1 is read-only.</strong>
+        This first road test does not create new D1 tables or alter Communications, Investigations, Work, Proof, Media, Finance or Calendar.
+        Its purpose is to prove the case-study workflow before persistence is added.
+      </div>
+
+      <div class="filters" aria-label="Case study filters">
+        <button class="filter active" data-filter="all">All</button>
+        <button class="filter" data-filter="verified">Verified</button>
+        <button class="filter" data-filter="measuring">Measuring</button>
+        <button class="filter" data-filter="retrospective">Retrospective</button>
+      </div>
+
+      <section class="cases">
+        <article class="case-card" data-stage="verified">
+          <div class="case-head">
+            <div>
+              <h2>MediaForge — Liberty Product Image Production Automation</h2>
+              <div class="client">Southeast Safes · Active client · Operational improvement</div>
+            </div>
+            <span class="badge">RESULT PROVEN</span>
+          </div>
+          <div class="grid">
+            <div class="metric"><small>Production run</small><strong>63 / 63 images</strong></div>
+            <div class="metric"><small>Output</small><strong>1200 × 1200 WebP</strong></div>
+            <div class="metric"><small>Compression result</small><strong>≤150 KB achieved</strong></div>
+            <div class="metric"><small>Failures</small><strong>0</strong></div>
+            <div class="metric"><small>Build effort</small><strong>600 minutes</strong></div>
+            <div class="metric"><small>Next proof</small><strong>Test broader Liberty variants</strong></div>
+          </div>
+          <div class="story">
+            <strong>Story</strong>
+            A recurring manual Liberty Safe image-production problem exposed a repeatable automation opportunity.
+            MediaForge used the existing 63-record catalog as the production database, retrieved official images, centered the complete safe,
+            produced standardized WebP files with exact filenames, built the ZIP, and delivered the completed production run.
+          </div>
+        </article>
+
+        <article class="case-card" data-stage="measuring">
+          <div class="case-head">
+            <div>
+              <h2>HB Guns — Organic Search & Website Recovery</h2>
+              <div class="client">HB Guns · Active client · Developing case</div>
+            </div>
+            <span class="badge">BASELINE / MEASURING</span>
+          </div>
+          <div class="grid">
+            <div class="metric"><small>Position Tracking visibility</small><strong>40.6%</strong></div>
+            <div class="metric"><small>Tracked keywords</small><strong>66</strong></div>
+            <div class="metric"><small>Top 10</small><strong>46</strong></div>
+            <div class="metric"><small>Site Health</small><strong>71%</strong></div>
+            <div class="metric"><small>Technical condition</small><strong>139 errors · 7,589 warnings</strong></div>
+            <div class="metric"><small>Authority Score</small><strong>11</strong></div>
+          </div>
+          <div class="story">
+            <strong>Story being tested</strong>
+            HBG already has meaningful tracked-keyword visibility while the website shows substantial technical debt and weak authority.
+            The case-study question is whether GCM can correct the constraints and expand search opportunity without damaging what is already working.
+            Current unknowns include true page count, obsolete-page volume, keyword-set quality and competitive authority gap.
+          </div>
+        </article>
+
+        <article class="case-card" data-stage="retrospective">
+          <div class="case-head">
+            <div>
+              <h2>1-800 4A Gun Safe — Client Value Retrospective</h2>
+              <div class="client">Former client · Historical learning case</div>
+            </div>
+            <span class="badge">RETROSPECTIVE</span>
+          </div>
+          <div class="grid">
+            <div class="metric"><small>Historical POW records</small><strong>231</strong></div>
+            <div class="metric"><small>Documented time</small><strong>154 hours</strong></div>
+            <div class="metric"><small>Records with actual impact</small><strong>131</strong></div>
+            <div class="metric"><small>Records with evidence reference</small><strong>96</strong></div>
+            <div class="metric"><small>D1 measurement series</small><strong>Missing</strong></div>
+            <div class="metric"><small>Primary lesson</small><strong>Effort ≠ perceived value</strong></div>
+          </div>
+          <div class="story">
+            <strong>Why this belongs in Case Studies</strong>
+            The historical record proves substantial work, but the operating system did not continuously connect work to longitudinal measurements
+            and client-visible business value. This retrospective is the failure-mode test for the new measurement and case-study process.
+          </div>
+        </article>
+      </section>
+
+      <p class="footnote">
+        Production Candidate v1.0.0 · Road-test data is intentionally explicit and read-only. D1 persistence comes only after this workflow is verified.
+      </p>
+    </main>
+  </div>
+
+  <script src="shared/gcm-shell.js"></script>
+  <script>
+    window.addEventListener("DOMContentLoaded", () => {
+      if (window.GCMOShell) {
+        window.GCMOShell.mount({
+          currentPage: "caseStudies",
+          statusText: "GCM OS operational"
+        });
+      }
+
+      const buttons = [...document.querySelectorAll("[data-filter]")];
+      const cards = [...document.querySelectorAll("[data-stage]")];
+
+      buttons.forEach((button) => {
+        button.addEventListener("click", () => {
+          const filter = button.dataset.filter;
+
+          buttons.forEach((item) => item.classList.toggle("active", item === button));
+          cards.forEach((card) => {
+            card.hidden = filter !== "all" && card.dataset.stage !== filter;
+          });
+        });
+      });
+    });
+  </script>
+</body>
+</html>
