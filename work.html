@@ -1,14 +1,13 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.2
+   Version: 1.9.3
    Status: Audited Production Candidate
-   Source: Production work.html 1.9.1
-   Sprint: SEMrush Extraction-Only Vision Contract
-   Purpose: Preserve the proven guided Investigation workflow while teaching
-            the SEMrush Site Audit investigation to extract patterns, separate
-            symptoms from root causes, request the next proof, and unlock work
-            only after the responsible implementation source is identified.
+   Source: Production work.html 1.9.2
+   Sprint: Create Requested Work
+   Purpose: Preserve the complete audited SEMrush evidence and guided
+            Investigation workflow while adding a direct D1 entrance for
+            known client-requested work that needs no artificial Investigation.
 
    Repository contracts verified:
    - analyze-client-communication
@@ -38,6 +37,10 @@
    - Changes the extraction prompt by investigation stage.
    - Rejects malformed or instruction-derived issue rows before reasoning.
    - Returns an explicit recapture state when no valid issue rows exist.
+   - Adds Create Requested Work for known deliverables.
+   - Loads the D1 client directory for requested-work selection.
+   - Preserves Investigation-created work and supports direct Work Items
+     whose investigation_id is NULL.
    ========================================================= -->
 <!DOCTYPE html>
 <html lang="en">
@@ -121,8 +124,8 @@
     @media(max-width:700px){.evidence-step{grid-template-columns:28px minmax(0,1fr)}.evidence-step-status{grid-column:2}.evidence-workflow-header{flex-direction:column}}
 
 
-.processing-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px}.work-card{padding:16px;border:1px solid var(--border);border-radius:10px;background:#fff;margin-bottom:12px}.target-banner{margin-bottom:16px;padding:13px;border:1px solid #aac7ed;border-radius:10px;background:var(--blue-soft);color:#205c9f;font-size:.82rem;font-weight:800}
-    @media(max-width:1100px){.workspace-grid{grid-template-columns:1fr}.investigation-list{max-height:none}}@media(max-width:860px){.app-shell{display:block}main{padding:18px 14px 32px}.summary-grid{grid-template-columns:1fr}}
+.processing-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px}.work-card{padding:16px;border:1px solid var(--border);border-radius:10px;background:#fff;margin-bottom:12px}.target-banner{margin-bottom:16px;padding:13px;border:1px solid #aac7ed;border-radius:10px;background:var(--blue-soft);color:#205c9f;font-size:.82rem;font-weight:800}.requested-work-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.requested-work-grid .full{grid-column:1/-1}.requested-work-grid label{display:block;margin:0 0 6px;color:var(--navy);font-size:.75rem;font-weight:850}.requested-work-grid select,.requested-work-grid input,.requested-work-grid textarea{width:100%}.requested-work-grid select,.requested-work-grid input{min-height:42px;padding:0 11px}.requested-work-help{margin:0 0 13px;color:var(--muted);font-size:.78rem;line-height:1.45}.requested-work-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px}.direct-work-label{display:inline-flex;margin-bottom:9px;padding:4px 8px;border-radius:999px;background:var(--blue-soft);color:#205c9f;font-size:.66rem;font-weight:900;text-transform:uppercase}
+    @media(max-width:1100px){.workspace-grid{grid-template-columns:1fr}.investigation-list{max-height:none}}@media(max-width:700px){.requested-work-grid{grid-template-columns:1fr}.requested-work-grid .full{grid-column:auto}}@media(max-width:860px){.app-shell{display:block}main{padding:18px 14px 32px}.summary-grid{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -131,8 +134,8 @@
   <main>
     <div class="page">
       <header class="page-header">
-        <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Investigate one evidence step at a time. Create specific work only after the evidence proves what must be done.</p></div>
-        <span class="classification">WWPOWD Audited Investigation · v1.9.2</span>
+        <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Use Investigation when the correct action is unknown. Use Create Requested Work when the client need and deliverable are already clear.</p></div>
+        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.3</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -140,7 +143,65 @@
         <article class="summary-card"><span class="summary-label">Existing Work Items</span><strong id="work-items" class="summary-value">—</strong></article>
       </section>
       <div id="target-banner" class="target-banner" hidden></div>
-      <section id="open-work-panel" class="panel"><div class="panel-header"><h2>Open Work Items</h2><p>Confirmed specific work created from Investigation findings.</p></div><div id="open-work-list" class="panel-body"></div></section>
+      <section id="requested-work-panel" class="panel">
+        <div class="panel-header">
+          <h2>Create Requested Work</h2>
+          <p>Use this only when the client request or agency commitment already establishes the exact deliverable.</p>
+        </div>
+        <div class="panel-body">
+          <p class="requested-work-help">The new record enters the normal Work, completion-evidence, Proof, measurement, and future Case Study chain. Investigation remains the correct path when evidence is still needed to decide what should be done.</p>
+          <form id="requested-work-form">
+            <div class="requested-work-grid">
+              <div>
+                <label for="requested-client">Client</label>
+                <select id="requested-client" required><option value="">Select client</option></select>
+              </div>
+              <div>
+                <label for="requested-by">Requested By</label>
+                <input id="requested-by" type="text" placeholder="Example: Kristy" />
+              </div>
+              <div class="full">
+                <label for="requested-title">Specific Work</label>
+                <input id="requested-title" type="text" required placeholder="Example: Liberty Premium Product Image Production" />
+              </div>
+              <div class="full">
+                <label for="requested-description">Specific Action / Deliverable</label>
+                <textarea id="requested-description" required placeholder="Describe exactly what must be produced or completed."></textarea>
+              </div>
+              <div class="full">
+                <label for="requested-impact">Expected Result / Why It Matters</label>
+                <textarea id="requested-impact" required placeholder="Describe the expected client or business result."></textarea>
+              </div>
+              <div>
+                <label for="requested-priority">Priority</label>
+                <select id="requested-priority">
+                  <option value="Normal">Normal</option>
+                  <option value="High">High</option>
+                  <option value="Urgent">Urgent</option>
+                  <option value="Low">Low</option>
+                </select>
+              </div>
+              <div>
+                <label for="requested-owner">Owner</label>
+                <input id="requested-owner" type="text" value="Andy" />
+              </div>
+              <div>
+                <label for="requested-communication">Source Communication ID (optional)</label>
+                <input id="requested-communication" type="text" inputmode="numeric" placeholder="Example: 89" />
+              </div>
+              <div>
+                <label for="requested-category">Category</label>
+                <input id="requested-category" type="text" value="Client Requested Work" />
+              </div>
+            </div>
+            <div class="requested-work-actions">
+              <button id="create-requested-work" class="button primary" type="submit">Create Requested Work</button>
+              <div id="requested-work-message"></div>
+            </div>
+          </form>
+        </div>
+      </section>
+      <section id="open-work-panel" class="panel"><div class="panel-header"><h2>Open Work Items</h2><p>Specific work created from proven Investigation findings or known client requests.</p></div><div id="open-work-list" class="panel-body"></div></section>
       <section class="workspace-grid">
         <article class="panel"><div class="panel-header"><h2>Investigation Queue</h2><p>Select an unresolved Investigation.</p></div><div class="panel-body"><div class="toolbar"><select id="client-filter"><option value="">All clients</option></select><button id="refresh-button" class="button">Refresh</button></div><div id="runtime-status" class="status loading">Loading production D1…</div><div id="investigation-list" class="investigation-list"></div></div></article>
         <article id="guided-investigation-panel" class="panel"><div class="panel-header"><h2>Guided Investigation</h2><p>Evidence first. Final resolution remains secondary until the current step is complete.</p></div><div id="detail-panel" class="panel-body"><div class="detail-empty">Select an open Investigation.</div></div></article>
@@ -158,20 +219,23 @@
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"WWPOWD audited investigation · Work v1.9.2"});}
-  const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),target:byId("target-banner")};
-  let activeClients=[],investigations=[],workItems=[],selectedKey="",processing=false,processingWorkItem=false;
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.3"});}
+  const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),target:byId("target-banner"),requestedForm:byId("requested-work-form"),requestedClient:byId("requested-client"),requestedMessage:byId("requested-work-message"),createRequested:byId("create-requested-work")};
+  let activeClients=[],directoryClients=[],investigations=[],workItems=[],selectedKey="",processing=false,processingWorkItem=false,processingRequestedWork=false;
 
   el.filter.addEventListener("change",()=>selectVisibleDefault());
   el.refresh.addEventListener("click",load);
+  el.requestedForm.addEventListener("submit",createRequestedWork);
   load();
 
   async function load(){
     setStatus("loading","Loading open Investigations and Work Items from production D1…");
     el.refresh.disabled=true;
     try{
-      activeClients=await loadAttentionClients();
+      directoryClients=await loadClientDirectory();
+      activeClients=directoryClients;
       renderFilter(activeClients);
+      renderRequestedClientOptions(directoryClients);
       const results=await Promise.allSettled(activeClients.map(loadWorkspace));
       investigations=[];workItems=[];
       results.forEach((result,index)=>{
@@ -200,6 +264,26 @@
   async function loadAttentionClients(){
     const r=await post({action:"get-mission-control"});const clients=Array.isArray(r.missionControl?.clientsRequiringAttention)?r.missionControl.clientsRequiringAttention:[];
     return clients.filter(c=>c.clientCode).map(c=>({code:String(c.clientCode),name:String(c.clientName||c.clientCode)}));
+  }
+
+  async function loadClientDirectory(){
+    const payload=await post({action:"get-client-directory"});
+    const clients=Array.isArray(payload?.clients)?payload.clients:[];
+    return clients.map(client=>({
+      code:String(client.client_code||client.clientCode||client.code||"").trim(),
+      name:String(client.name||client.client_name||client.clientName||client.client_code||"").trim(),
+      status:String(client.status||"").trim()
+    })).filter(client=>client.code);
+  }
+  function renderRequestedClientOptions(clients){
+    el.requestedClient.innerHTML='<option value="">Select client</option>'+clients.map(client=>{
+      const status=client.status?` · ${client.status}`:"";
+      return `<option value="${esc(client.code)}">${esc(client.name)}${esc(status)}</option>`;
+    }).join("");
+    if(requestedClientCode){
+      const match=clients.find(client=>client.code.toUpperCase()===requestedClientCode);
+      if(match)el.requestedClient.value=match.code;
+    }
   }
   async function loadWorkspace(client){return post({action:"get-client-workspace",clientCode:client.code});}
   async function post(body){
@@ -272,6 +356,16 @@
             behavior:"smooth",
             block:"center"
           });
+          return;
+        }
+
+        if(!item.investigation_id){
+          el.filter.value=item.clientCode;
+          showTarget(`Opened direct requested Work Item #${item.id} for ${item.clientName}.`);
+          renderList();
+          renderWorkItems(null);
+          el.detail.innerHTML='<div class="detail-empty">This Work Item came from a known client request, so no Investigation was required.</div>';
+          document.querySelector(`[data-work-id="${item.id}"]`)?.scrollIntoView({behavior:"smooth",block:"center"});
           return;
         }
 
@@ -1492,6 +1586,70 @@
       : "Create Work Locked — Continue Investigation";
   }
 
+  async function createRequestedWork(event){
+    event.preventDefault();
+    if(processingRequestedWork)return;
+
+    const clientCode=el.requestedClient.value.trim();
+    const requestedBy=byId("requested-by").value.trim();
+    const title=byId("requested-title").value.trim();
+    const description=byId("requested-description").value.trim();
+    const expectedImpact=byId("requested-impact").value.trim();
+    const priority=byId("requested-priority").value;
+    const owner=byId("requested-owner").value.trim()||"Andy";
+    const category=byId("requested-category").value.trim()||"Client Requested Work";
+    const communicationId=positiveInt(byId("requested-communication").value);
+
+    if(!clientCode||!title||!description||!expectedImpact){
+      el.requestedMessage.className="status error";
+      el.requestedMessage.textContent="Client, Specific Work, Specific Action, and Expected Result are required.";
+      return;
+    }
+
+    processingRequestedWork=true;
+    el.createRequested.disabled=true;
+    el.requestedMessage.className="status loading";
+    el.requestedMessage.textContent="Creating requested Work Item in production D1…";
+
+    try{
+      const response=await post({
+        action:"create-requested-work",
+        clientCode,
+        requestedBy,
+        title,
+        description,
+        expectedImpact,
+        priority,
+        owner,
+        category,
+        communicationId:communicationId||null
+      });
+
+      const workItemId=Number(response?.workItem?.id||response?.workItemId||0);
+      el.requestedMessage.className="status ready";
+      el.requestedMessage.textContent=workItemId
+        ? `Requested Work Item #${workItemId} created. Opening it now…`
+        : "Requested Work Item created.";
+
+      if(workItemId){
+        const nextUrl=new URL(location.href);
+        nextUrl.search="";
+        nextUrl.searchParams.set("workItem",String(workItemId));
+        nextUrl.searchParams.set("client",clientCode);
+        location.href=nextUrl.toString();
+        return;
+      }
+
+      await load();
+    }catch(error){
+      el.requestedMessage.className="status error";
+      el.requestedMessage.textContent=error.message;
+    }finally{
+      processingRequestedWork=false;
+      el.createRequested.disabled=false;
+    }
+  }
+
   async function processInvestigation(item,outcome){
     if(processing)return;
     const finding=byId("finding-summary").value.trim(),title=byId("work-title").value.trim(),description=byId("work-description").value.trim(),message=byId("process-message");
@@ -1501,33 +1659,29 @@
     try{await post({action:"process-investigation",clientCode:item.clientCode,investigationId:Number(item.id),findingSummary:finding,outcome,workTitle:title,workDescription:description});completeEvidenceStep(item,"complete_investigation");if(outcome==="specific_work_required")completeEvidenceStep(item,"create_work");message.className="status ready";message.textContent=outcome==="no_work_required"?"Investigation closed.":"Specific Work Item created.";await load();}catch(error){message.className="status error";message.textContent=error.message;}finally{processing=false;}
   }
   function renderWorkItems(selectedInvestigation){
-    if(!selectedInvestigation){
-      el.openWork.innerHTML=
-        '<div class="empty">Select an open Investigation to view its linked Work Item.</div>';
-      return;
-    }
-
-    const linkedWorkItems=workItems.filter(item=>
-      Number(item.investigation_id)===Number(selectedInvestigation.id) &&
-      String(item.clientCode)===String(selectedInvestigation.clientCode)
-    );
+    const linkedWorkItems=selectedInvestigation
+      ? workItems.filter(item=>
+          Number(item.investigation_id)===Number(selectedInvestigation.id) &&
+          String(item.clientCode)===String(selectedInvestigation.clientCode)
+        )
+      : workItems.filter(item=>
+          !item.investigation_id &&
+          (!el.filter.value||String(item.clientCode)===String(el.filter.value))
+        );
 
     if(!linkedWorkItems.length){
-      el.openWork.innerHTML=`
-        <div class="empty">
-          <strong>No Work Item has been created for Investigation #${esc(selectedInvestigation.id)}.</strong>
-          <br />
-          Continue the Investigation until the evidence proves specific work is required.
-        </div>
-      `;
+      el.openWork.innerHTML=selectedInvestigation
+        ? `<div class="empty"><strong>No Work Item has been created for Investigation #${esc(selectedInvestigation.id)}.</strong><br />Continue the Investigation until the evidence proves specific work is required.</div>`
+        : '<div class="empty">No direct requested Work Items match this view. Select an Investigation to view its linked work.</div>';
       return;
     }
 
     el.openWork.innerHTML=linkedWorkItems.map(i=>`
       <article class="work-card" data-work-id="${esc(i.id)}">
         <h3>Work Item #${esc(i.id)} · ${esc(i.title||"Work Item")}</h3>
+        ${i.investigation_id?"":'<span class="direct-work-label">Direct Requested Work</span>'}
         <p class="detail-subtitle">
-          ${esc(i.clientName)} · Investigation #${esc(i.investigation_id||"—")}
+          ${esc(i.clientName)} · ${i.investigation_id?`Investigation #${esc(i.investigation_id)}`:"No Investigation required"}
         </p>
         <section class="detail-section">
           <h3>Specific Action</h3>
@@ -1575,7 +1729,7 @@
       return;
     }
 
-    if(!window.confirm(`Complete Work Item #${id} and close its linked Investigation?`))return;
+    if(!window.confirm(item.investigation_id?`Complete Work Item #${id} and close its linked Investigation?`:`Complete requested Work Item #${id}?`))return;
 
     processingWorkItem=true;
     message.className="status loading";
@@ -1589,12 +1743,12 @@
         workPerformed,
         actualImpact,
         evidenceDescription,
-        evidenceSource:"Guided Investigation Completion Evidence",
+        evidenceSource:item.investigation_id?"Guided Investigation Completion Evidence":"Requested Work Completion Evidence",
         evidenceType:"completion"
       });
 
       message.className="status ready";
-      message.textContent=`Work Item #${id} completed and its linked Investigation closed.`;
+      message.textContent=item.investigation_id?`Work Item #${id} completed and its linked Investigation closed.`:`Requested Work Item #${id} completed.`;
       await load();
     }catch(error){
       message.className="status error";
