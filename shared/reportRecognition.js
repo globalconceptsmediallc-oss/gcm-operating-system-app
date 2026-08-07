@@ -1,10 +1,10 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/reportRecognition.js
-   Version: 1.0.0
+   Version: 1.0.1
    Status: Production Candidate
-   Source: routes/communicationAnalysis.js v7.7.0
-   Sprint: WWPOWD Architecture — Route Modularization
+   Source: shared/reportRecognition.js v1.0.0
+   Sprint: Google Search Console Visual Signature Hardening
    Purpose:
    Identify recurring business-report families from deterministic evidence
    and Workers AI visual signatures without interpreting business meaning,
@@ -16,6 +16,8 @@
    - Recognition does not recommend work.
    - Recognition does not create Communications, Investigations, Work Items,
      Verification records, or Proof records.
+   - v1.0.1 hardens Google Search Console URL Inspection / Merchant Listings
+     recognition and prevents generic issue language from becoming Site Audit.
    ========================================================= */
 
 import {
@@ -26,7 +28,7 @@ import {
 import { clean } from "./http.js";
 import { runAiJsonWithRetry } from "./ai.js";
 
-export const REPORT_RECOGNITION_VERSION = "1.0.0";
+export const REPORT_RECOGNITION_VERSION = "1.0.1";
 
 /**
  * Run deterministic and visual report-family recognition, then retain the
@@ -117,10 +119,11 @@ export function buildReportSignaturePrompt({
     "Gmail or a browser is only the container and must never be returned as the business platform.",
     "",
     "KNOWN SIGNATURES",
-    "SEMrush Site Audit: Site Audit heading and/or a coherent group including Site Health, Crawled Pages, Errors, Warnings, Notices, Healthy, Broken, Has Issues, Redirects, Blocked, or Top Issues.",
+    "SEMrush Site Audit: require SEMrush/Site Audit identity or a distinctive Site Audit group such as Site Health, Crawled Pages, Errors, Warnings, Notices, or Top Issues. Generic words such as issue, error, warning, valid, indexed, or URL are NOT enough by themselves.",
     "SEMrush Position Tracking: Position Tracking heading and/or Visibility, Traffic, Top Keywords, keyword Position/Change/Volume, or landing-page ranking sections.",
     "SEMrush Backlink Audit: Backlink Audit heading and/or referring domains, backlinks, toxic score, lost/new domains, or anchor text.",
-    "Google Search Console: Search Console branding and/or page indexing, search performance, clicks, impressions, average position, validation, or coverage language.",
+    "Google Search Console: Search Console branding and/or URL Inspection, URL is on Google, Test Live URL, Page indexing, Page is indexed, Product snippets, Merchant listings, Breadcrumbs, clicks, impressions, average position, validation, or coverage language.",
+    "Google Search Console URL Inspection / Merchant Listings: a visible combination such as URL Inspection + Merchant listings, URL is on Google + Product snippets/Merchant listings/Breadcrumbs, or Test Live URL + Page indexing is authoritative Google Search Console evidence and must NOT be classified as SEMrush Site Audit.",
     "Google Analytics: Google Analytics/GA4 branding and/or Active Users, New Users, Engagement Time, Events, Views, Page/Screen, or Bounce Rate.",
     "Google Business Profile: Business Profile branding and/or profile views, calls, directions, searches, messages, or reviews.",
     "",
@@ -129,7 +132,8 @@ export function buildReportSignaturePrompt({
     "2. matchedSignals must contain only labels or branding actually visible or explicitly present in supplied text.",
     "3. Set confidence High only when the heading/branding is readable or at least three mutually consistent characteristic signals are visible.",
     "4. Do not use the selected client as evidence of report family.",
-    "5. Return valid JSON only. No markdown.",
+    "5. If URL Inspection, URL is on Google, Test Live URL, Product snippets, Merchant listings, Breadcrumbs, or Page is indexed are visibly present, prefer Google Search Console over SEMrush Site Audit unless SEMrush branding or a Site Audit heading is also visibly present.",
+    "6. Return valid JSON only. No markdown.",
     "",
     `Selected client context: ${client || clientId || "Unknown"}`,
     `Temporary filename: ${fileName}`,
@@ -242,7 +246,14 @@ export function recognizeReportSignatureFromEvidence(evidence) {
       reportFamily: "Google Search Console",
       signals: [
         ["Search Console", /\bsearch\s*console\b/i],
+        ["URL Inspection", /\burl\s*inspection\b/i],
+        ["URL is on Google", /\burl\s+is\s+on\s+google\b/i],
+        ["Test Live URL", /\btest\s+live\s+url\b/i],
         ["Page Indexing", /\bpage\s*indexing\b/i],
+        ["Page is indexed", /\bpage\s+is\s+indexed\b/i],
+        ["Product snippets", /\bproduct\s*snippets?\b/i],
+        ["Merchant listings", /\bmerchant\s*listings?\b/i],
+        ["Breadcrumbs", /\bbreadcrumbs?\b/i],
         ["Clicks", /\bclicks?\b/i],
         ["Impressions", /\bimpressions?\b/i],
         ["Average Position", /\baverage\s*position\b/i]
@@ -282,10 +293,24 @@ export function recognizeReportSignatureFromEvidence(evidence) {
       .map(([label]) => label);
 
     const headingMatched = matchedSignals.some(value =>
-      /site audit|position tracking|backlink audit|search console|google analytics|ga4|business profile/i.test(value)
+      /site audit|position tracking|backlink audit|search console|url inspection|url is on google|google analytics|ga4|business profile/i.test(value)
     );
 
-    const score = matchedSignals.length + (headingMatched ? 2 : 0);
+    // v1.0.1: generic error/warning language must never establish SEMrush Site Audit.
+    // Require a real Site Audit identity signal before that family can compete.
+    const hasSiteAuditIdentity = signature.reportType !== "site_audit" || matchedSignals.some(value =>
+      /semrush|site audit|site health|crawled pages|top issues/i.test(value)
+    );
+
+    const gscDistinctiveCount = signature.reportType === "search_console"
+      ? matchedSignals.filter(value =>
+          /url inspection|url is on google|test live url|page indexing|page is indexed|product snippets|merchant listings|breadcrumbs/i.test(value)
+        ).length
+      : 0;
+
+    const score = hasSiteAuditIdentity
+      ? matchedSignals.length + (headingMatched ? 2 : 0) + (gscDistinctiveCount >= 2 ? 3 : 0)
+      : 0;
 
     if (!best || score > best.score) {
       best = {
