@@ -1,541 +1,2087 @@
-/* =========================================================
+<!-- =========================================================
    Global Concepts Media Operating System
-   File: worker.js
-   Version: 7.7.8
-   Status: Production Road-Test Candidate
-   Source: Production worker.js 7.7.6
-   Sprint: Create Requested Work
-   Purpose: Preserve every verified production route and connect the
-            direct client-requested Work Item creation action.
+   File: work.html
+   Version: 1.9.8
+   Status: FBDT Production Candidate
+   Source: Production work.html 1.9.7
+   Sprint: Investigation-Aware Evidence Guard + Source-Specific Extraction
+   Purpose: Preserve the complete audited SEMrush evidence and guided
+            Investigation workflow while adding a direct D1 entrance for
+            known client-requested work that needs no artificial Investigation.
 
-   Changes in 7.7.5:
-   - Adds analyze-prospect-intelligence.
-   - Connects routes/prospectIntelligence.js.
-   - Preserves all existing routes and the Communications review adapter.
+   Repository contracts verified:
+   - analyze-client-communication
+   - get-mission-control
+   - get-client-workspace
+   - get-guided-investigation
+   - process-investigation
+   - process-work-item
+   - communications-operational-decision-v3
 
-   Change in 7.7.7:
-   - Adds create-requested-work.
-   - Connects routes/requestedWork.js.
-   - Preserves Gmail, Prospect Intelligence, Agency Command, Communications,
-     Investigations, Work Items, Media, and Operational Reviews.
-   ========================================================= */
+   Audited changes:
+   - Removes unused investigationFamily() and unused page VERSION constant.
+   - Eliminates repeated decision calculations during one analysis cycle.
+   - Rejects only the exact same screenshot; a new screenshot may be locked even when the decision fingerprint is unchanged.
+   - Removes the false crop/re-capture instruction caused only by repeated decision fingerprints.
+   - Uses the Investigation objective as the baseline for audit totals.
+   - Restores locked findings, next question, next evidence, and Work gating
+     after page reload.
+   - Reset Road Test clears both checklist and locked local evidence.
+   - Keeps the proven local SEMrush direct-link workflow unchanged.
+   - Adds Google Search Console evidence routing for Search Console investigations.
+   - Rejects evidence whose recognized source conflicts with the selected Investigation.
+   - Adds a Google Search Console Merchant Listings decision path for SKU evidence.
+   - Recognizes invalid-SKU diagnosis, implementation evidence, and live verified fixes.
+   - Prevents Search Console investigations from falling through to SEMrush Site Audit logic.
+   - Adds one-time per-client saved Search Console evidence links.
+   - Makes the first evidence-workflow step source-neutral.
+   - Uses the actual investigation source in screenshot extraction prompts.
+   - Does not change D1 schemas, Worker routes, or processing payload fields.
+   - Filters Open Work Items by the selected Investigation.
+   - Refreshes the Work Item panel whenever the Investigation changes.
+   - Shows an Investigation-specific empty state when no Work Item exists.
+   - Uses an extraction-only Workers AI contract for SEMrush evidence.
+   - Removes decision instructions, URL tests, and 404 language from the
+     vision prompt so those instructions cannot be echoed as evidence.
+   - Changes the extraction prompt by investigation stage.
+   - Rejects malformed or instruction-derived issue rows before reasoning.
+   - Returns an explicit recapture state when no valid issue rows exist.
+   - Adds Create Requested Work for known deliverables.
+   - Loads the D1 client directory for requested-work selection.
+   - Preserves Investigation-created work and supports direct Work Items
+     whose investigation_id is NULL.
+   ========================================================= -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Work | GCM OS</title>
+  <meta name="description" content="GCM OS guided investigation and work processing workspace." />
+  <style>
+    :root{--navy:#07192e;--blue:#1f6fd6;--blue-dark:#1459b7;--blue-soft:#edf5ff;--background:#f2f5fa;--card:#fff;--border:#d9e1eb;--text:#102039;--muted:#66758a;--green:#1f7a4d;--green-soft:#eaf7f0;--yellow:#986414;--yellow-soft:#fff5df;--red:#b23b3b;--red-soft:#fff0f0;--shadow:0 12px 32px rgba(8,23,48,.08)}
+    *{box-sizing:border-box} body{margin:0;min-height:100vh;background:var(--background);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    button,select,textarea,input{font:inherit} button{cursor:pointer} button:disabled{cursor:not-allowed;opacity:.6} a{color:inherit;text-decoration:none}
+    .app-shell{min-height:100vh;display:grid;grid-template-columns:220px minmax(0,1fr)} main{min-width:0;width:100%;padding:28px 34px 44px}.page{width:min(100%,1280px);margin:0 auto}
+    .page-header{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;margin-bottom:18px}.eyebrow{margin:0 0 7px;color:var(--blue);font-size:.72rem;font-weight:900;letter-spacing:.13em;text-transform:uppercase}
+    h1{margin:0;color:var(--navy);font-size:clamp(2rem,3vw,2.7rem);line-height:1.02}.subtitle{max-width:760px;margin:8px 0 0;color:var(--muted);font-size:.94rem;line-height:1.5}
+    .classification{padding:9px 12px;border:1px solid #c8d9f2;border-radius:999px;background:var(--blue-soft);color:#205c9f;font-size:.62rem;font-weight:850;white-space:nowrap}
+    .summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:16px}.summary-card{min-height:96px;padding:16px 18px;border:1px solid var(--border);border-radius:12px;background:var(--card);box-shadow:0 6px 18px rgba(8,23,48,.055)}
+    .summary-label{display:block;color:var(--muted);font-size:.72rem;font-weight:850;letter-spacing:.07em;text-transform:uppercase}.summary-value{display:block;margin-top:5px;color:var(--navy);font-size:1.85rem;font-weight:900;line-height:1}
+    .panel{overflow:hidden;border:1px solid var(--border);border-radius:13px;background:var(--card);box-shadow:var(--shadow)}.panel+.panel{margin-top:18px}.panel-header{padding:14px 16px 12px;border-bottom:1px solid var(--border)}.panel-header h2{margin:0;color:var(--navy);font-size:1rem}.panel-header p{margin:5px 0 0;color:var(--muted);font-size:.8rem;line-height:1.45}.panel-body{padding:14px 16px 18px}
+    .workspace-grid{display:grid;grid-template-columns:minmax(300px,.82fr) minmax(0,1.68fr);gap:16px;align-items:start;margin-top:18px}.toolbar{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:13px}
+    select,.button,textarea,input{border:1px solid var(--border);border-radius:9px;background:#fff;color:var(--text)}select,.button{min-height:40px;padding:0 12px}select{min-width:215px}.button{color:var(--navy);font-size:.8rem;font-weight:850}.button.primary{border-color:var(--blue);background:var(--blue);color:#fff}.button.primary:hover{background:var(--blue-dark)}
+    textarea,input[type=text]{width:100%;padding:12px}textarea{min-height:110px;resize:vertical;line-height:1.5}.status{margin-bottom:13px;padding:12px 13px;border-radius:10px;font-size:.79rem;font-weight:750;line-height:1.45}.status.loading{border:1px solid #cbdcf4;background:var(--blue-soft);color:#225e9e}.status.ready{border:1px solid #cbe5d6;background:var(--green-soft);color:var(--green)}.status.error{border:1px solid #efcccc;background:var(--red-soft);color:var(--red)}
+    .investigation-list{display:grid;gap:9px;max-height:720px;overflow:auto}.investigation{width:100%;padding:13px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);text-align:left}.investigation:hover{border-color:#abc5eb}.investigation.active{border:2px solid var(--blue);background:var(--blue-soft);box-shadow:0 0 0 3px rgba(31,111,214,.12)}
+    .investigation-title{display:block;color:var(--navy);font-size:.87rem;font-weight:850;line-height:1.4}.meta-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;color:var(--muted);font-size:.7rem}.badge{display:inline-flex;padding:4px 7px;border-radius:999px;background:#eef2f7;font-size:.65rem;font-weight:850;text-transform:uppercase}.badge.high,.badge.urgent{background:var(--red-soft);color:var(--red)}.badge.normal,.badge.medium{background:var(--yellow-soft);color:var(--yellow)}
+    .detail-empty,.empty{padding:32px 18px;border:1px dashed var(--border);border-radius:9px;color:var(--muted);text-align:center}.detail-title{margin:0;color:var(--navy);font-size:1.4rem}.detail-subtitle{margin:7px 0 0;color:var(--muted);font-size:.79rem}.detail-section{margin-top:17px;padding-top:15px;border-top:1px solid var(--border)}.detail-section h3{margin:0 0 7px;color:var(--navy);font-size:.72rem;font-weight:900;letter-spacing:.06em;text-transform:uppercase}.detail-section p{margin:0;font-size:.88rem;line-height:1.55;white-space:pre-wrap}
+    .guided-box,.processing-box{margin-top:18px;padding:16px;border:1px solid #cbdcf4;border-radius:11px;background:#f8fbff}.guided-box{border:2px solid var(--blue)}.guided-label{margin:0 0 7px;color:var(--blue);font-size:.68rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase}.guided-step{font-size:1rem;font-weight:750;line-height:1.55;white-space:pre-wrap}.processing-box label{display:block;margin:12px 0 7px;font-size:.78rem;font-weight:850}
+    .evidence-actions{margin-top:14px;padding-top:14px;border-top:1px solid #cbdcf4}
+    .evidence-actions-label{display:block;margin-bottom:9px;color:var(--navy);font-size:.68rem;font-weight:900;letter-spacing:.09em;text-transform:uppercase}
+    .evidence-actions-row{display:flex;flex-wrap:wrap;gap:9px}
+    .evidence-link{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;padding:0 13px;border:1px solid #aac7ed;border-radius:9px;background:#fff;color:#185fae;font-size:.78rem;font-weight:850}
+    .evidence-link:hover,.evidence-link:focus-visible{border-color:var(--blue);background:var(--blue-soft);outline:none}
+    .evidence-link-primary{border-color:var(--blue);background:var(--blue);color:#fff}
+    .evidence-link-primary:hover,.evidence-link-primary:focus-visible{background:var(--blue-dark);color:#fff}
+    .evidence-capture{margin-top:14px;padding:14px;border:1px solid #cbdcf4;border-radius:10px;background:#fff}
+    .evidence-capture h4{margin:0;color:var(--navy);font-size:.82rem}
+    .evidence-capture p{margin:5px 0 12px;color:var(--muted);font-size:.75rem;line-height:1.45}
+    .evidence-upload-row{display:flex;flex-wrap:wrap;gap:9px;align-items:center}
+    .evidence-file{position:absolute;inline-size:1px;block-size:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+    .evidence-preview{display:none;max-width:100%;max-height:330px;margin-top:12px;border:1px solid var(--border);border-radius:9px;object-fit:contain}
+    .evidence-preview.visible{display:block}
+    .captured-evidence{margin-top:14px;padding:14px;border:1px solid #cbe5d6;border-radius:10px;background:var(--green-soft)}
+    .captured-evidence[hidden]{display:none}
+    .captured-evidence h4{margin:0 0 8px;color:var(--green);font-size:.82rem}
+    .captured-evidence ul{margin:0;padding-left:18px}
+    .captured-evidence li{margin:4px 0;color:#214b37;font-size:.78rem;line-height:1.45}
+    .evidence-history{margin-top:14px;padding:14px;border:1px solid var(--border);border-radius:10px;background:#fff}
+    .evidence-history[hidden]{display:none}
+    .evidence-history-header{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:10px}
+    .evidence-history-header h4{margin:0;color:var(--navy);font-size:.82rem}
+    .evidence-history-header span{color:var(--muted);font-size:.7rem;font-weight:800}
+    .evidence-history-list{display:grid;gap:9px}
+    .evidence-history-step{padding:11px;border:1px solid var(--border);border-radius:9px;background:#f8fafc}
+    .evidence-history-step strong{display:block;color:var(--navy);font-size:.76rem}
+    .evidence-history-step p{margin:5px 0 0;color:var(--text);font-size:.74rem;line-height:1.45;white-space:pre-wrap}
+    .evidence-history-step .next{color:var(--blue);font-weight:800}
+    .capture-status{margin-top:10px}
+    .tool-link-setup{margin-top:12px;padding:13px;border:1px dashed #aac7ed;border-radius:9px;background:#f8fbff}
+    .tool-link-setup[hidden]{display:none}
+    .tool-link-setup strong{display:block;color:var(--navy);font-size:.78rem}
+    .tool-link-setup p{margin:4px 0 10px;color:var(--muted);font-size:.72rem;line-height:1.4}
+    .tool-link-status{margin-top:8px;color:var(--muted);font-size:.72rem;font-weight:750}
+    .evidence-workflow{margin-top:16px;padding:15px;border:1px solid var(--border);border-radius:10px;background:#fff}
+    .evidence-workflow-header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+    .evidence-workflow-header h4{margin:0;color:var(--navy);font-size:.86rem}
+    .evidence-workflow-header p{margin:4px 0 0;color:var(--muted);font-size:.73rem;line-height:1.4}
+    .workflow-progress{display:inline-flex;align-items:center;min-height:28px;padding:0 9px;border-radius:999px;background:var(--blue-soft);color:#205c9f;font-size:.68rem;font-weight:900;white-space:nowrap}
+    .evidence-step-list{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:8px}
+    .evidence-step{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 11px;border:1px solid var(--border);border-radius:9px;background:#fbfcfe}
+    .evidence-step-index{width:24px;height:24px;display:grid;place-items:center;border-radius:999px;background:#e9eef5;color:var(--muted);font-size:.68rem;font-weight:900}
+    .evidence-step strong,.evidence-step small{display:block}
+    .evidence-step strong{color:var(--navy);font-size:.78rem}
+    .evidence-step small{margin-top:2px;color:var(--muted);font-size:.68rem;line-height:1.35}
+    .evidence-step-status{font-size:.67rem;font-weight:900;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+    .evidence-step.complete{border-color:#b9dfc8;background:var(--green-soft)}
+    .evidence-step.complete .evidence-step-index{background:var(--green);color:#fff}
+    .evidence-step.complete .evidence-step-status{color:var(--green)}
+    .evidence-step.active{border:2px solid var(--blue);background:var(--blue-soft)}
+    .evidence-step.active .evidence-step-index{background:var(--blue);color:#fff}
+    .evidence-step.active .evidence-step-status{color:var(--blue)}
+    .evidence-workflow-actions{display:flex;justify-content:flex-end;margin-top:10px}
+    @media(max-width:700px){.evidence-step{grid-template-columns:28px minmax(0,1fr)}.evidence-step-status{grid-column:2}.evidence-workflow-header{flex-direction:column}}
 
-import {
-  VERSION,
-  API_CONTRACT_VERSION,
-  ACTIONS,
-  corsHeaders
-} from "./shared/config.js";
 
-import {
-  clean,
-  safeErrorMessage,
-  logWorkerError,
-  jsonResponse
-} from "./shared/http.js";
+.processing-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px}.work-card{padding:16px;border:1px solid var(--border);border-radius:10px;background:#fff;margin-bottom:12px}.target-banner{margin-bottom:16px;padding:13px;border:1px solid #aac7ed;border-radius:10px;background:var(--blue-soft);color:#205c9f;font-size:.82rem;font-weight:800}.requested-work-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.requested-work-grid .full{grid-column:1/-1}.requested-work-grid label{display:block;margin:0 0 6px;color:var(--navy);font-size:.75rem;font-weight:850}.requested-work-grid select,.requested-work-grid input,.requested-work-grid textarea{width:100%}.requested-work-grid select,.requested-work-grid input{min-height:42px;padding:0 11px}.requested-work-help{margin:0 0 13px;color:var(--muted);font-size:.78rem;line-height:1.45}.requested-work-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px}.direct-work-label{display:inline-flex;margin-bottom:9px;padding:4px 8px;border-radius:999px;background:var(--blue-soft);color:#205c9f;font-size:.66rem;font-weight:900;text-transform:uppercase}
+    @media(max-width:1100px){.workspace-grid{grid-template-columns:1fr}.investigation-list{max-height:none}}@media(max-width:700px){.requested-work-grid{grid-template-columns:1fr}.requested-work-grid .full{grid-column:auto}}@media(max-width:860px){.app-shell{display:block}main{padding:18px 14px 32px}.summary-grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <aside data-gcm-shell-sidebar aria-label="Primary navigation"></aside>
+  <main>
+    <div class="page">
+      <header class="page-header">
+        <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Use Investigation when the correct action is unknown. Use Create Requested Work when the client need and deliverable are already clear.</p></div>
+        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.8</span>
+      </header>
+      <section class="summary-grid">
+        <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
+        <article class="summary-card"><span class="summary-label">Clients With Open Work</span><strong id="clients-with-investigations" class="summary-value">—</strong></article>
+        <article class="summary-card"><span class="summary-label">Existing Work Items</span><strong id="work-items" class="summary-value">—</strong></article>
+      </section>
+      <div id="target-banner" class="target-banner" hidden></div>
+      <section id="requested-work-panel" class="panel">
+        <div class="panel-header">
+          <h2>Create Requested Work</h2>
+          <p>Use this only when the client request or agency commitment already establishes the exact deliverable.</p>
+        </div>
+        <div class="panel-body">
+          <p class="requested-work-help">The new record enters the normal Work, completion-evidence, Proof, measurement, and future Case Study chain. Investigation remains the correct path when evidence is still needed to decide what should be done.</p>
+          <form id="requested-work-form">
+            <div class="requested-work-grid">
+              <div>
+                <label for="requested-client">Client</label>
+                <select id="requested-client" required><option value="">Select client</option></select>
+              </div>
+              <div>
+                <label for="requested-by">Requested By</label>
+                <input id="requested-by" type="text" placeholder="Example: Kristy" />
+              </div>
+              <div class="full">
+                <label for="requested-title">Specific Work</label>
+                <input id="requested-title" type="text" required placeholder="Example: Liberty Premium Product Image Production" />
+              </div>
+              <div class="full">
+                <label for="requested-description">Specific Action / Deliverable</label>
+                <textarea id="requested-description" required placeholder="Describe exactly what must be produced or completed."></textarea>
+              </div>
+              <div class="full">
+                <label for="requested-impact">Expected Result / Why It Matters</label>
+                <textarea id="requested-impact" required placeholder="Describe the expected client or business result."></textarea>
+              </div>
+              <div>
+                <label for="requested-priority">Priority</label>
+                <select id="requested-priority">
+                  <option value="Normal">Normal</option>
+                  <option value="High">High</option>
+                  <option value="Urgent">Urgent</option>
+                  <option value="Low">Low</option>
+                </select>
+              </div>
+              <div>
+                <label for="requested-owner">Owner</label>
+                <input id="requested-owner" type="text" value="Andy" />
+              </div>
+              <div>
+                <label for="requested-communication">Source Communication ID (optional)</label>
+                <input id="requested-communication" type="text" inputmode="numeric" placeholder="Example: 89" />
+              </div>
+              <div>
+                <label for="requested-category">Category</label>
+                <input id="requested-category" type="text" value="Client Requested Work" />
+              </div>
+            </div>
+            <div class="requested-work-actions">
+              <button id="create-requested-work" class="button primary" type="submit">Create Requested Work</button>
+              <div id="requested-work-message"></div>
+            </div>
+          </form>
+        </div>
+      </section>
+      <section id="open-work-panel" class="panel"><div class="panel-header"><h2>Open Work Items</h2><p>Specific work created from proven Investigation findings or known client requests.</p></div><div id="open-work-list" class="panel-body"></div></section>
+      <section class="workspace-grid">
+        <article class="panel"><div class="panel-header"><h2>Investigation Queue</h2><p>Select an unresolved Investigation.</p></div><div class="panel-body"><div class="toolbar"><select id="client-filter"><option value="">All clients</option></select><button id="refresh-button" class="button">Refresh</button></div><div id="runtime-status" class="status loading">Loading production D1…</div><div id="investigation-list" class="investigation-list"></div></div></article>
+        <article id="guided-investigation-panel" class="panel"><div class="panel-header"><h2>Guided Investigation</h2><p>Evidence first. Final resolution remains secondary until the current step is complete.</p></div><div id="detail-panel" class="panel-body"><div class="detail-empty">Select an open Investigation.</div></div></article>
+      </section>
+    </div>
+  </main>
+</div>
+<script src="shared/gcm-shell.js"></script>
+<script>
+(() => {
+  "use strict";
+  const WORKER_URL="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+  const params=new URLSearchParams(location.search);
+  const requestedInvestigationId=positiveInt(params.get("investigation"));
+  const requestedWorkItemId=positiveInt(params.get("workItem"));
+  const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-import { handleCommunicationAnalysis } from "./routes/communicationAnalysis.js";
-import { handleProspectIntelligence } from "./routes/prospectIntelligence.js";
-import { handleClientWorkspace } from "./routes/clientWorkspace.js";
-import { handleClientDirectory } from "./routes/clientDirectory.js";
-import { handleCommitOperationalDecision } from "./routes/operationalDecision.js";
-import { handleMissionControl } from "./routes/missionControl.js";
-import { handleProcessInvestigation } from "./routes/investigationProcessing.js";
-import { handleGuidedInvestigation } from "./routes/guidedInvestigation.js";
-import { handleProcessWorkItem } from "./routes/workItemProcessing.js";
-import { handleCreateRequestedWork } from "./routes/requestedWork.js";
-import { handleMediaOperations } from "./routes/mediaOperations.js";
-import { handleOperationalReviews } from "./routes/operationalReviews.js";
-import {
-  handleAgencyCommand,
-  AGENCY_COMMAND_ACTION
-} from "./routes/agencyCommand.js";
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.8"});}
+  const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),target:byId("target-banner"),requestedForm:byId("requested-work-form"),requestedClient:byId("requested-client"),requestedMessage:byId("requested-work-message"),createRequested:byId("create-requested-work")};
+  let activeClients=[],directoryClients=[],investigations=[],workItems=[],selectedKey="",processing=false,processingWorkItem=false,processingRequestedWork=false;
 
-import { handleGmailGet, handleGmailAction } from "./routes/gmailIntegration.js";
+  el.filter.addEventListener("change",()=>selectVisibleDefault());
+  el.refresh.addEventListener("click",load);
+  el.requestedForm.addEventListener("submit",createRequestedWork);
+  load();
 
-const WORKER_FILE_VERSION = "7.7.8";
-
-const SUPPORTED_ACTIONS = [
-  ACTIONS.ANALYZE_COMMUNICATION,
-  ACTIONS.ANALYZE_PROSPECT_INTELLIGENCE,
-  ACTIONS.GET_CLIENT_WORKSPACE,
-  ACTIONS.GET_CLIENT_DIRECTORY,
-  ACTIONS.COMMIT_OPERATIONAL_DECISION,
-  ACTIONS.GET_MISSION_CONTROL,
-  ACTIONS.GET_GUIDED_INVESTIGATION,
-  ACTIONS.PROCESS_INVESTIGATION,
-  ACTIONS.PROCESS_WORK_ITEM,
-  ACTIONS.CREATE_REQUESTED_WORK,
-  ACTIONS.GET_MEDIA_OPERATIONS,
-  ACTIONS.OPERATIONAL_REVIEWS,
-  AGENCY_COMMAND_ACTION,
-  ACTIONS.GET_GMAIL_STATUS,
-  ACTIONS.PREVIEW_GMAIL_INBOX,
-  ACTIONS.APPROVE_GMAIL_MONITORING
-].filter(Boolean);
-
-export default {
-  async fetch(request, env) {
-    const requestId = crypto.randomUUID();
-    const requestStartedAt = Date.now();
-
-    if (request.method === "OPTIONS") {
-      return new Response(null, { headers: corsHeaders });
-    }
-
-    if (request.method === "GET") {
-      const gmailResponse = await handleGmailGet(request, env, requestId);
-      if (gmailResponse) return gmailResponse;
-      return jsonResponse({
-        ok: true,
-        status: "online",
-        system: "GCM OS Operational Worker",
-        version: VERSION,
-        workerFileVersion: WORKER_FILE_VERSION,
-        contractVersion: API_CONTRACT_VERSION,
-        sprint: "Create Requested Work",
-        architecture:
-          "Modular production router with Agency Command, Prospect Intelligence, Communications analysis, Guided Investigation, and operational processing.",
-        actions: SUPPORTED_ACTIONS,
-        engines: [
-          "agency-command",
-          "prospect-intelligence",
-          "communications-review-adapter",
-          "notification-detection",
-          "evidence-extraction",
-          "business-meaning",
-          "operational-routing",
-          "consultant-summary",
-          "client-workspace",
-          "client-directory",
-          "operational-decision-commit",
-          "mission-control",
-          "guided-investigation",
-          "investigation-processing",
-          "work-item-processing",
-          "requested-work-creation",
-          "media-operations",
-          "operational-reviews"
-        ],
-        modules: {
-          shared: ["config", "http", "database", "ai"],
-          routes: [
-            "agency-command",
-            "prospect-intelligence",
-            "communication-analysis",
-            "client-workspace",
-            "client-directory",
-            "operational-decision",
-            "mission-control",
-            "guided-investigation",
-            "investigation-processing",
-            "work-item-processing",
-            "requested-work",
-            "media-operations",
-            "operational-reviews"
-          ]
-        },
-        requestId
+  async function load(){
+    setStatus("loading","Loading open Investigations and Work Items from production D1…");
+    el.refresh.disabled=true;
+    try{
+      directoryClients=await loadClientDirectory();
+      activeClients=directoryClients;
+      renderFilter(activeClients);
+      renderRequestedClientOptions(directoryClients);
+      const results=await Promise.allSettled(activeClients.map(loadWorkspace));
+      investigations=[];workItems=[];
+      results.forEach((result,index)=>{
+        if(result.status!=="fulfilled")return;
+        const client=activeClients[index],op=result.value.operational||{};
+        const communications=Array.isArray(op.communications)?op.communications:[];
+        const communicationById=new Map(communications.map(c=>[Number(c.id),c]));
+        const clientWebsite=normalizeWebsite(
+          op.client?.website_url ||
+          op.client?.website ||
+          op.client?.domain ||
+          op.client?.primary_domain ||
+          client.website
+        );
+        (Array.isArray(op.investigations)?op.investigations:[]).filter(i=>!closed(i)).forEach(i=>investigations.push({...i,clientCode:op.client?.client_code||client.code,clientName:op.client?.name||client.name,clientWebsite,communication:communicationById.get(Number(i.communication_id))||null}));
+        (Array.isArray(op.workItems)?op.workItems:[]).filter(i=>!completed(i)).forEach(i=>workItems.push({...i,clientCode:op.client?.client_code||client.code,clientName:op.client?.name||client.name,clientWebsite}));
       });
+      investigations.sort(sortInvestigations);
+      renderSummary();applyRequestedTarget();
+      setStatus("ready",`Loaded ${investigations.length} open Investigations and ${workItems.length} open Work Items.`);
+    }catch(error){
+      console.error(error);setStatus("error",error.message||"Work could not load.");el.list.innerHTML='<div class="empty">Work data unavailable.</div>';
+    }finally{el.refresh.disabled=false;}
+  }
+
+  async function loadAttentionClients(){
+    const r=await post({action:"get-mission-control"});const clients=Array.isArray(r.missionControl?.clientsRequiringAttention)?r.missionControl.clientsRequiringAttention:[];
+    return clients.filter(c=>c.clientCode).map(c=>({code:String(c.clientCode),name:String(c.clientName||c.clientCode)}));
+  }
+
+  async function loadClientDirectory(){
+    const payload=await post({action:"get-client-directory"});
+    const clients=Array.isArray(payload?.clients)?payload.clients:[];
+    return clients.map(client=>({
+      code:String(client.client_code||client.clientCode||client.code||"").trim(),
+      name:String(client.name||client.client_name||client.clientName||client.client_code||"").trim(),
+      status:String(client.status||"").trim()
+    })).filter(client=>client.code);
+  }
+  function renderRequestedClientOptions(clients){
+    el.requestedClient.innerHTML='<option value="">Select client</option>'+clients.map(client=>{
+      const status=client.status?` · ${client.status}`:"";
+      return `<option value="${esc(client.code)}">${esc(client.name)}${esc(status)}</option>`;
+    }).join("");
+    if(requestedClientCode){
+      const match=clients.find(client=>client.code.toUpperCase()===requestedClientCode);
+      if(match)el.requestedClient.value=match.code;
     }
-
-    if (request.method !== "POST") {
-      return jsonResponse({
-        ok: false,
-        requestId,
-        error: "Method not allowed."
-      }, 405);
-    }
-
-    let body;
-
-    try {
-      body = await request.json();
-    } catch (error) {
-      logWorkerError({
-        requestId,
-        route: "request-parser",
-        stage: "request_validation",
-        error
+  }
+  async function loadWorkspace(client){return post({action:"get-client-workspace",clientCode:client.code});}
+  async function post(body){
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),60000);
+    try{
+      const response=await fetch(WORKER_URL,{
+        method:"POST",
+        headers:{"Content-Type":"application/json",Accept:"application/json"},
+        body:JSON.stringify(body),
+        signal:controller.signal
       });
-
-      return jsonResponse({
-        ok: false,
-        requestId,
-        error: "The request body must contain valid JSON.",
-        details: safeErrorMessage(error)
-      }, 400);
-    }
-
-    const action = clean(body?.action);
-
-    try {
-      switch (action) {
-        case ACTIONS.GET_GMAIL_STATUS:
-        case ACTIONS.PREVIEW_GMAIL_INBOX:
-        case ACTIONS.APPROVE_GMAIL_MONITORING:
-          return await handleGmailAction(body, env, requestId);
-
-        case AGENCY_COMMAND_ACTION:
-          return await handleAgencyCommand(body, env, requestId);
-
-        case ACTIONS.ANALYZE_PROSPECT_INTELLIGENCE:
-          return await handleProspectIntelligence(body, env, requestId);
-
-        case ACTIONS.ANALYZE_COMMUNICATION:
-          return await handleCommunicationAnalysisWithReviewAdapter(
-            body,
-            env,
-            requestId
-          );
-
-        case ACTIONS.GET_CLIENT_WORKSPACE:
-          return await handleClientWorkspace(body, env, requestId);
-
-        case ACTIONS.GET_CLIENT_DIRECTORY:
-          return await handleClientDirectory(body, env, requestId);
-
-        case ACTIONS.COMMIT_OPERATIONAL_DECISION:
-          return await handleCommitOperationalDecision(body, env, requestId);
-
-        case ACTIONS.GET_MISSION_CONTROL:
-          return await handleMissionControl(body, env, requestId);
-
-        case ACTIONS.GET_GUIDED_INVESTIGATION:
-          return await handleGuidedInvestigation(body, env, requestId);
-
-        case ACTIONS.PROCESS_INVESTIGATION:
-          return await handleProcessInvestigation(body, env, requestId);
-
-        case ACTIONS.PROCESS_WORK_ITEM:
-          return await handleProcessWorkItem(body, env, requestId);
-
-        case ACTIONS.CREATE_REQUESTED_WORK:
-          return await handleCreateRequestedWork(body, env, requestId);
-
-        case ACTIONS.GET_MEDIA_OPERATIONS:
-          return await handleMediaOperations(body, env, requestId);
-
-        case ACTIONS.OPERATIONAL_REVIEWS:
-          return await handleOperationalReviews(body, env, requestId);
-
-        default:
-          return jsonResponse({
-            ok: false,
-            requestId,
-            version: VERSION,
-            workerFileVersion: WORKER_FILE_VERSION,
-            error: action
-              ? `Unsupported action: ${action}`
-              : "An action is required.",
-            supportedActions: SUPPORTED_ACTIONS
-          }, 400);
+      const raw=await response.text();
+      let payload={};
+      try{payload=raw?JSON.parse(raw):{};}catch(error){
+        throw new Error(`Worker returned non-JSON output (HTTP ${response.status}).`);
       }
-    } catch (error) {
-      logWorkerError({
-        requestId,
-        route: action || "unknown",
-        stage: "request_handler",
-        error
-      });
-
-      return jsonResponse({
-        ok: false,
-        requestId,
-        version: VERSION,
-        workerFileVersion: WORKER_FILE_VERSION,
-        processingStatus: "failed",
-        error: safeErrorMessage(error),
-        executionTimeMs: Date.now() - requestStartedAt
-      }, 500);
+      if(!response.ok||payload.ok!==true){
+        throw new Error(payload.error||payload.details||`Worker request failed (HTTP ${response.status}).`);
+      }
+      return payload;
+    }catch(error){
+      if(error?.name==="AbortError"){
+        throw new Error("The Worker request timed out after 60 seconds.");
+      }
+      throw error;
+    }finally{
+      clearTimeout(timeout);
     }
   }
-};
 
-async function handleCommunicationAnalysisWithReviewAdapter(
-  body,
-  env,
-  requestId
-) {
-  const response = await handleCommunicationAnalysis(body, env, requestId);
+  function renderFilter(clients){
+    el.filter.innerHTML='<option value="">All clients</option>'+clients.map(c=>`<option value="${esc(c.code)}">${esc(c.name)}</option>`).join("");
+    if(requestedClientCode&&clients.some(c=>c.code.toUpperCase()===requestedClientCode))el.filter.value=clients.find(c=>c.code.toUpperCase()===requestedClientCode).code;
+  }
+  function renderSummary(){el.openInvestigations.textContent=investigations.length;el.clients.textContent=new Set(investigations.map(i=>i.clientCode)).size;el.workItems.textContent=workItems.length;}
+  function visible(){return el.filter.value?investigations.filter(i=>i.clientCode===el.filter.value):investigations;}
+  function renderList(){
+    const rows=visible();
+    el.list.innerHTML=rows.length?rows.map(i=>`<button class="investigation${key(i)===selectedKey?" active":""}" data-key="${esc(key(i))}"><span class="investigation-title">${esc(i.title||"Investigation")}</span><span class="meta-row"><span>${esc(i.clientName)}</span><span class="badge ${esc(norm(i.priority))}">${esc(i.priority||"normal")}</span><span>Investigation #${esc(i.id)}</span></span></button>`).join(""):'<div class="empty">No open Investigations match this view.</div>';
+    el.list.querySelectorAll("[data-key]").forEach(b=>b.addEventListener("click",()=>selectInvestigation(investigations.find(i=>key(i)===b.dataset.key))));
+  }
+  function selectVisibleDefault(){
+    const rows=visible();
+    if(!rows.length){
+      selectedKey="";
+      renderList();
+      renderWorkItems(null);
+      el.detail.innerHTML='<div class="detail-empty">No open Investigations match this view.</div>';
+      return;
+    }
+    selectInvestigation(rows[0]);
+  }
+  function applyRequestedTarget(){
+    renderList();
+    if(requestedWorkItemId){
+      const item=workItems.find(i=>Number(i.id)===requestedWorkItemId);
+      if(item){
+        const linkedInvestigation=investigations.find(
+          investigation=>
+            Number(investigation.id)===Number(item.investigation_id) &&
+            String(investigation.clientCode)===String(item.clientCode)
+        );
 
-  if (!response || typeof response.json !== "function") {
-    return response;
+        if(linkedInvestigation){
+          el.filter.value=linkedInvestigation.clientCode;
+          showTarget(`Opened Work Item #${item.id} for ${item.clientName}.`);
+          selectInvestigation(linkedInvestigation,true);
+          document.querySelector(`[data-work-id="${item.id}"]`)?.scrollIntoView({
+            behavior:"smooth",
+            block:"center"
+          });
+          return;
+        }
+
+        if(!item.investigation_id){
+          el.filter.value=item.clientCode;
+          showTarget(`Opened direct requested Work Item #${item.id} for ${item.clientName}.`);
+          renderList();
+          renderWorkItems(null);
+          el.detail.innerHTML='<div class="detail-empty">This Work Item came from a known client request, so no Investigation was required.</div>';
+          document.querySelector(`[data-work-id="${item.id}"]`)?.scrollIntoView({behavior:"smooth",block:"center"});
+          return;
+        }
+
+        showTarget(`Work Item #${item.id} is open, but its linked Investigation is not in the current open Investigation queue.`);
+        renderWorkItems(null);
+        return;
+      }
+    }
+    if(requestedInvestigationId){
+      const item=investigations.find(i=>Number(i.id)===requestedInvestigationId&&(!requestedClientCode||String(i.clientCode).toUpperCase()===requestedClientCode));
+      if(item){
+        el.filter.value=item.clientCode;
+        showTarget(`Opened Investigation #${item.id} for ${item.clientName}.`);
+        selectInvestigation(item,true);
+        return;
+      }
+      showTarget(`Investigation #${requestedInvestigationId} is no longer open or was not returned.`);
+    }
+    selectVisibleDefault();
+  }
+  function showTarget(message){el.target.hidden=false;el.target.textContent=message;}
+  function selectInvestigation(item,scroll=false){
+    if(!item)return;
+    selectedKey=key(item);
+    renderList();
+    renderWorkItems(item);
+    renderDetail(item);
+    if(scroll){
+      byId("guided-investigation-panel").scrollIntoView({
+        behavior:"smooth",
+        block:"start"
+      });
+    }
+    loadGuidance(item);
+  }
+  async function loadGuidance(item){try{const payload=await post({action:"get-guided-investigation",clientCode:item.clientCode,investigationId:Number(item.id)});if(selectedKey===key(item))renderDetail(item,payload.guidance||null);}catch(error){console.error(error);}}
+
+  function isSemrushSiteAudit(item){
+    const combined=[
+      item?.title,
+      item?.description,
+      item?.communication?.subject,
+      item?.communication?.notification_type,
+      item?.communication?.communication_family
+    ].map(value=>norm(value)).join(" ");
+
+    return combined.includes("semrush") &&
+      (combined.includes("site_audit") || combined.includes("site audit"));
   }
 
-  let payload;
+  function isGoogleSearchConsole(item){
+    const combined=[
+      item?.title,
+      item?.description,
+      item?.communication?.subject,
+      item?.communication?.notification_type,
+      item?.communication?.communication_family
+    ].map(value=>norm(value)).join(" ");
 
-  try {
-    payload = await response.json();
-  } catch {
-    return response;
+    return combined.includes("google search console") ||
+      combined.includes("search_console") ||
+      combined.includes("search console");
   }
 
-  if (
-    response.ok &&
-    payload?.ok === true &&
-    payload?.analysis &&
-    typeof payload.analysis === "object"
-  ) {
-    payload.analysis = buildCommunicationsReviewAnalysis(payload);
-    payload.reviewAdapter = {
-      applied: true,
-      version: "1.0.0",
-      workerFileVersion: WORKER_FILE_VERSION
+  function evidenceSourceName(item){
+    if(isSemrushSiteAudit(item))return "SEMrush Site Audit";
+    if(isGoogleSearchConsole(item))return "Google Search Console";
+    return "client evidence source";
+  }
+
+  const EVIDENCE_STEPS=[
+    {id:"open_semrush",title:"Open Evidence Source",detail:"Open the correct source page for this Investigation."},
+    {id:"review_issues",title:"Review Issues",detail:"Open the Issues screen and identify the highest-value issue."},
+    {id:"capture_screenshot",title:"Capture Screenshot",detail:"Choose the current evidence screenshot."},
+    {id:"analyze_evidence",title:"Analyze Evidence",detail:"Use Workers AI to extract visible facts and metrics."},
+    {id:"review_findings",title:"Review AI Findings",detail:"Confirm the extracted evidence and prefilled fields."},
+    {id:"complete_investigation",title:"Complete Investigation",detail:"Approve the evidence-supported finding."},
+    {id:"create_work",title:"Create Work Item",detail:"Create specific work only when evidence proves it is required."}
+  ];
+  function evidenceWorkflowKey(item){return `gcm-os-evidence-workflow:${String(item.clientCode||"").toUpperCase()}:${Number(item.id)}`;}
+  function getEvidenceWorkflowState(item){try{const raw=localStorage.getItem(evidenceWorkflowKey(item));const parsed=raw?JSON.parse(raw):{};return parsed&&typeof parsed==="object"?parsed:{};}catch(error){console.warn(error);return {};}}
+  function saveEvidenceWorkflowState(item,state){try{localStorage.setItem(evidenceWorkflowKey(item),JSON.stringify(state));}catch(error){console.warn(error);}}
+  function completeEvidenceStep(item,stepId){const state=getEvidenceWorkflowState(item);state[stepId]=true;saveEvidenceWorkflowState(item,state);renderEvidenceWorkflowState(item);}
+  function resetEvidenceWorkflow(item){
+    localStorage.removeItem(evidenceWorkflowKey(item));
+    localStorage.removeItem(evidenceHistoryKey(item));
+    renderEvidenceWorkflowState(item);
+    renderEvidenceHistory(item);
+
+    const finding=byId("finding-summary");
+    const question=byId("work-title");
+    const evidence=byId("work-description");
+    const capturedPanel=byId("captured-evidence-panel");
+    const status=byId("investigation-evidence-status");
+
+    if(finding)finding.value="";
+    if(question)question.value="";
+    if(evidence)evidence.value="";
+    if(capturedPanel)capturedPanel.hidden=true;
+    if(status){
+      status.className="status ready capture-status";
+      status.textContent="Road-test evidence cleared. Choose the first screenshot.";
+    }
+
+    updateDecisionControls({rootCauseProven:false});
+  }
+  function nextIncompleteStep(state){return EVIDENCE_STEPS.find(step=>!state[step.id])?.id||"";}
+  function buildEvidenceWorkflow(item){const state=getEvidenceWorkflowState(item);const completed=EVIDENCE_STEPS.filter(step=>state[step.id]).length;return `<section class="evidence-workflow" id="evidence-workflow"><div class="evidence-workflow-header"><div><h4>Evidence Workflow</h4><p>Follow the investigation in order. The next required step is highlighted.</p></div><span class="workflow-progress" id="workflow-progress">${completed} of ${EVIDENCE_STEPS.length} complete</span></div><ol class="evidence-step-list" id="evidence-step-list"></ol><div class="evidence-workflow-actions"><button class="button" id="reset-evidence-workflow" type="button">Reset Road Test</button></div></section>`;}
+  function renderEvidenceWorkflowState(item){const list=byId("evidence-step-list"),progress=byId("workflow-progress");if(!list||!progress)return;const state=getEvidenceWorkflowState(item),activeId=nextIncompleteStep(state),completed=EVIDENCE_STEPS.filter(step=>state[step.id]).length;progress.textContent=`${completed} of ${EVIDENCE_STEPS.length} complete`;list.innerHTML=EVIDENCE_STEPS.map((step,index)=>{const isComplete=Boolean(state[step.id]),isActive=!isComplete&&step.id===activeId,className=isComplete?"complete":isActive?"active":"",status=isComplete?"Complete":isActive?"Current":"Waiting";return `<li class="evidence-step ${className}"><span class="evidence-step-index">${isComplete?"✓":index+1}</span><span><strong>${esc(step.title)}</strong><small>${esc(step.detail)}</small></span><span class="evidence-step-status">${status}</span></li>`;}).join("");}
+  function bindEvidenceWorkflow(item){renderEvidenceWorkflowState(item);byId("reset-evidence-workflow")?.addEventListener("click",()=>{if(window.confirm("Clear the checklist and all locally locked road-test evidence for this Investigation?"))resetEvidenceWorkflow(item);});document.querySelectorAll("[data-evidence-tool]").forEach(link=>link.addEventListener("click",()=>completeEvidenceStep(item,"open_semrush")));const finding=byId("finding-summary"),title=byId("work-title"),description=byId("work-description");[finding,title,description].forEach(field=>field?.addEventListener("input",()=>{if(String(finding?.value||"").trim()&&String(title?.value||"").trim()&&String(description?.value||"").trim())completeEvidenceStep(item,"review_findings");}));}
+
+  function semrushStorageKey(clientCode){
+    return `gcm-os-semrush-site-audit-url:${String(clientCode||"").trim().toUpperCase()}`;
+  }
+
+  function getSavedSemrushUrl(clientCode){
+    try{
+      return String(localStorage.getItem(semrushStorageKey(clientCode))||"").trim();
+    }catch(error){
+      console.warn("Could not read the saved SEMrush project URL.",error);
+      return "";
+    }
+  }
+
+  function saveSemrushUrl(clientCode,url){
+    localStorage.setItem(semrushStorageKey(clientCode),url);
+  }
+
+  function removeSemrushUrl(clientCode){
+    localStorage.removeItem(semrushStorageKey(clientCode));
+  }
+
+  function validSemrushUrl(value){
+    try{
+      const parsed=new URL(String(value||"").trim());
+      return /^https?:$/.test(parsed.protocol)&&
+        /(^|\.)semrush\.com$/i.test(parsed.hostname);
+    }catch(error){
+      return false;
+    }
+  }
+
+  function searchConsoleStorageKey(clientCode){
+    return `gcm-os-search-console-url:${String(clientCode||"").trim().toUpperCase()}`;
+  }
+
+  function getSavedSearchConsoleUrl(clientCode){
+    try{
+      return String(localStorage.getItem(searchConsoleStorageKey(clientCode))||"").trim();
+    }catch(error){
+      console.warn("Could not read the saved Google Search Console URL.",error);
+      return "";
+    }
+  }
+
+  function saveSearchConsoleUrl(clientCode,url){
+    localStorage.setItem(searchConsoleStorageKey(clientCode),url);
+  }
+
+  function removeSearchConsoleUrl(clientCode){
+    localStorage.removeItem(searchConsoleStorageKey(clientCode));
+  }
+
+  function validSearchConsoleUrl(value){
+    try{
+      const parsed=new URL(String(value||"").trim());
+      return /^https?:$/.test(parsed.protocol) &&
+        parsed.hostname.toLowerCase()==="search.google.com" &&
+        parsed.pathname.startsWith("/search-console");
+    }catch(error){
+      return false;
+    }
+  }
+
+  function buildEvidenceActions(item){
+    const actions=[];
+    const savedSemrushUrl=getSavedSemrushUrl(item.clientCode);
+    const savedSearchConsoleUrl=getSavedSearchConsoleUrl(item.clientCode);
+
+    if(isSemrushSiteAudit(item)){
+      actions.push({
+        label:savedSemrushUrl
+          ? `Open ${item.clientName} Issues`
+          : `Open ${item.clientName} Site Audit`,
+        href:savedSemrushUrl||"https://www.semrush.com/siteaudit/",
+        primary:true,
+        tool:"semrush"
+      });
+    }else if(isGoogleSearchConsole(item)){
+      actions.push({
+        label:savedSearchConsoleUrl
+          ? `Open ${item.clientName} Search Console Evidence`
+          : "Open Google Search Console",
+        href:savedSearchConsoleUrl||"https://search.google.com/search-console/",
+        primary:true,
+        tool:"search-console"
+      });
+    }
+
+    if(item.clientWebsite){
+      actions.push({
+        label:`Open ${item.clientName} Website`,
+        href:item.clientWebsite,
+        primary:false
+      });
+    }
+
+    actions.push({
+      label:"Open Client Workspace",
+      href:`business-workspace.html?business=${encodeURIComponent(item.clientCode)}`,
+      primary:false,
+      internal:true
+    });
+
+    return actions.map(action=>`
+      <a
+        class="evidence-link${action.primary?" evidence-link-primary":""}"
+        href="${esc(action.href)}"
+        ${action.internal?"":'target="_blank" rel="noopener noreferrer"'}
+        ${action.tool?`data-evidence-tool="${esc(action.tool)}"`:""}
+      >${esc(action.label)}${action.internal?"":" ↗"}</a>
+    `).join("");
+  }
+
+  function buildSemrushLinkSetup(item){
+    if(!isSemrushSiteAudit(item))return "";
+
+    const saved=getSavedSemrushUrl(item.clientCode);
+
+    return `
+      <div class="tool-link-setup" id="semrush-link-setup">
+        <strong>${saved?`${esc(item.clientName)} Issues link saved`:`One-time ${esc(item.clientName)} Issues setup`}</strong>
+        <p>${saved
+          ? `The blue action now opens the saved ${esc(item.clientName)} SEMrush Issues page directly.`
+          : `On the exact ${esc(item.clientName)} SEMrush Issues tab, copy the browser URL. Return here and click Save Copied Issues Link. This is required only once for this browser.`}
+        </p>
+        <div class="tool-link-setup-actions">
+          ${saved
+            ? `<button class="button" id="clear-semrush-project-url" type="button">Clear Saved Link</button>`
+            : `<button class="button primary" id="save-semrush-project-url" type="button">Save Copied Issues Link</button>`}
+        </div>
+        <div class="tool-link-status" id="semrush-link-status">
+          ${saved?"Direct Issues link ready.":"No direct Issues link saved yet."}
+        </div>
+      </div>
+    `;
+  }
+
+  function bindSemrushLinkSetup(item){
+    if(!isSemrushSiteAudit(item))return;
+
+    const saveButton=byId("save-semrush-project-url");
+    const status=byId("semrush-link-status");
+    const clearButton=byId("clear-semrush-project-url");
+
+    saveButton?.addEventListener("click",async()=>{
+      status.textContent="Reading the copied browser URL…";
+      status.style.color="var(--muted)";
+
+      try{
+        const value=String(await navigator.clipboard.readText()).trim();
+
+        if(!validSemrushUrl(value)){
+          status.textContent="The clipboard does not contain a valid semrush.com URL. Open the exact Issues tab, copy its browser URL, then try again.";
+          status.style.color="var(--red)";
+          return;
+        }
+
+        saveSemrushUrl(item.clientCode,value);
+        status.textContent=`Direct ${item.clientName} Issues link saved.`;
+        status.style.color="var(--green)";
+
+        const link=document.querySelector('[data-evidence-tool="semrush"]');
+        if(link){
+          link.href=value;
+          link.textContent=`Open ${item.clientName} Issues ↗`;
+        }
+
+        saveButton.textContent="Issues Link Saved";
+        saveButton.disabled=true;
+      }catch(error){
+        console.error(error);
+        status.textContent="The browser could not read the clipboard. Copy the Issues URL and allow clipboard access when prompted.";
+        status.style.color="var(--red)";
+      }
+    });
+
+    clearButton?.addEventListener("click",()=>{
+      removeSemrushUrl(item.clientCode);
+      status.textContent="Saved direct link cleared. The generic SEMrush Site Audit page will open.";
+      status.style.color="var(--muted)";
+
+      const link=document.querySelector('[data-evidence-tool="semrush"]');
+      if(link){
+        link.href="https://www.semrush.com/siteaudit/";
+        link.textContent=`Open ${item.clientName} Site Audit ↗`;
+      }
+
+      clearButton.disabled=true;
+      clearButton.textContent="Link Cleared";
+    });
+  }
+
+  function buildSearchConsoleLinkSetup(item){
+    if(!isGoogleSearchConsole(item))return "";
+
+    const saved=getSavedSearchConsoleUrl(item.clientCode);
+
+    return `
+      <div class="tool-link-setup" id="search-console-link-setup">
+        <strong>${saved?`${esc(item.clientName)} Search Console evidence link saved`:`One-time ${esc(item.clientName)} Search Console setup`}</strong>
+        <p>${saved
+          ? `The blue action now opens the saved ${esc(item.clientName)} Google Search Console evidence page directly.`
+          : `Open the exact Google Search Console report or issue for ${esc(item.clientName)}, copy the browser URL, return here, and click Save Copied Search Console Link. This is required only once for this browser.`}
+        </p>
+        <div class="tool-link-setup-actions">
+          ${saved
+            ? `<button class="button" id="clear-search-console-url" type="button">Clear Saved Link</button>`
+            : `<button class="button primary" id="save-search-console-url" type="button">Save Copied Search Console Link</button>`}
+        </div>
+        <div class="tool-link-status" id="search-console-link-status">
+          ${saved?"Direct Search Console evidence link ready.":"No direct Search Console evidence link saved yet."}
+        </div>
+      </div>
+    `;
+  }
+
+  function bindSearchConsoleLinkSetup(item){
+    if(!isGoogleSearchConsole(item))return;
+
+    const saveButton=byId("save-search-console-url");
+    const status=byId("search-console-link-status");
+    const clearButton=byId("clear-search-console-url");
+
+    saveButton?.addEventListener("click",async()=>{
+      status.textContent="Reading the copied Google Search Console URL…";
+      status.style.color="var(--muted)";
+
+      try{
+        const value=String(await navigator.clipboard.readText()).trim();
+
+        if(!validSearchConsoleUrl(value)){
+          status.textContent="The clipboard does not contain a valid search.google.com/search-console URL. Open the exact Search Console evidence page, copy its browser URL, then try again.";
+          status.style.color="var(--red)";
+          return;
+        }
+
+        saveSearchConsoleUrl(item.clientCode,value);
+        status.textContent=`Direct ${item.clientName} Search Console evidence link saved.`;
+        status.style.color="var(--green)";
+
+        const link=document.querySelector('[data-evidence-tool="search-console"]');
+        if(link){
+          link.href=value;
+          link.textContent=`Open ${item.clientName} Search Console Evidence ↗`;
+        }
+
+        saveButton.textContent="Search Console Link Saved";
+        saveButton.disabled=true;
+      }catch(error){
+        console.error(error);
+        status.textContent="The browser could not read the clipboard. Copy the Search Console URL and allow clipboard access when prompted.";
+        status.style.color="var(--red)";
+      }
+    });
+
+    clearButton?.addEventListener("click",()=>{
+      removeSearchConsoleUrl(item.clientCode);
+      status.textContent="Saved direct link cleared. The generic Google Search Console page will open.";
+      status.style.color="var(--muted)";
+
+      const link=document.querySelector('[data-evidence-tool="search-console"]');
+      if(link){
+        link.href="https://search.google.com/search-console/";
+        link.textContent="Open Google Search Console ↗";
+      }
+
+      clearButton.disabled=true;
+      clearButton.textContent="Link Cleared";
+    });
+  }
+
+  function renderDetail(item,guidance=null){
+    const communication=item.communication;
+    el.detail.innerHTML=`<h2 class="detail-title">${esc(item.title||"Investigation")}</h2><p class="detail-subtitle"><a href="business-workspace.html?business=${encodeURIComponent(item.clientCode)}" style="color:#1f6fd6;font-weight:800">${esc(item.clientName)}</a> · Investigation #${esc(item.id)}${item.communication_id?` · Communication #${esc(item.communication_id)}`:""}</p>
+    <section class="detail-section"><h3>Investigation Objective</h3><p>${esc(guidance?.current_objective||item.description||"Determine what the evidence proves.")}</p></section>
+    <div class="guided-box">
+      <p class="guided-label">Current Next Step</p>
+      <div class="guided-step">${esc(guidance?.current_next_step||item.recommendation||"Review the originating evidence and establish the next fact required.")}</div>
+      ${buildEvidenceWorkflow(item)}
+      <div class="evidence-actions">
+        <span class="evidence-actions-label">Evidence Actions</span>
+        <div class="evidence-actions-row">${buildEvidenceActions(item)}</div>
+        ${buildSemrushLinkSetup(item)}
+         ${buildSearchConsoleLinkSetup(item)}
+      </div>
+      <div class="evidence-capture">
+        <h4>Capture the Next Evidence Screenshot</h4>
+        <p>Each screenshot advances the Investigation by one step. Analyze it, follow the recommended next action, then return with the next screenshot. Completed evidence steps are locked below.</p>
+        <div class="evidence-upload-row">
+          <label class="button" for="investigation-evidence-file">Choose Screenshot</label>
+          <input class="evidence-file" id="investigation-evidence-file" type="file" accept="image/png,image/jpeg,image/webp" />
+          <button class="button primary" id="analyze-investigation-evidence" type="button" disabled>Analyze Evidence</button>
+        </div>
+        <img class="evidence-preview" id="investigation-evidence-preview" alt="Selected Investigation evidence screenshot preview" />
+        <div class="capture-status" id="investigation-evidence-status"></div>
+        <div class="captured-evidence" id="captured-evidence-panel" hidden>
+          <h4>Current Evidence Step</h4>
+          <ul id="captured-evidence-list"></ul>
+        </div>
+        <section class="evidence-history" id="evidence-history" hidden>
+          <div class="evidence-history-header">
+            <h4>Locked Investigation Evidence</h4>
+            <span id="evidence-history-count">0 steps</span>
+          </div>
+          <div class="evidence-history-list" id="evidence-history-list"></div>
+        </section>
+      </div>
+    </div>
+    <section class="detail-section"><h3>Current Understanding</h3><p>${esc(guidance?.current_understanding||communication?.ai_summary||communication?.raw_content||item.description||"No summary stored.")}</p></section>
+    <section class="detail-section"><h3>Investigation Decision</h3><div class="processing-box"><label>What We Know</label><textarea id="finding-summary">${esc(item.finding_summary||"")}</textarea><label>Next Question to Answer</label><textarea id="work-title"></textarea><label>Next Evidence Needed</label><textarea id="work-description"></textarea><div class="processing-actions"><button id="close-button" class="button">Close — No Work Required</button><button id="create-button" class="button primary">Root Cause Proven — Create Work</button></div><div id="process-message"></div></div></section>`;
+    byId("close-button").addEventListener("click",()=>processInvestigation(item,"no_work_required"));
+    byId("create-button").disabled=true;
+    byId("create-button").title="Corrective work remains locked until the root cause is proven.";
+    byId("create-button").textContent="Create Work Locked — Continue Investigation";
+    byId("create-button").addEventListener("click",()=>processInvestigation(item,"specific_work_required"));
+    bindEvidenceCapture(item);
+    bindSemrushLinkSetup(item);
+    bindEvidenceWorkflow(item);
+    renderEvidenceHistory(item);
+    restoreInvestigationState(item);
+  }
+  function evidenceHistoryKey(item){
+    return `gcm-os-investigation-evidence:${String(item.clientCode||"").toUpperCase()}:${Number(item.id)}`;
+  }
+
+  function getEvidenceHistory(item){
+    try{
+      const raw=localStorage.getItem(evidenceHistoryKey(item));
+      const parsed=raw?JSON.parse(raw):[];
+      return Array.isArray(parsed)?parsed:[];
+    }catch(error){
+      console.warn(error);
+      return [];
+    }
+  }
+
+  function saveEvidenceHistory(item,history){
+    try{localStorage.setItem(evidenceHistoryKey(item),JSON.stringify(history));}
+    catch(error){console.warn(error);}
+  }
+
+  function evidenceDecisionFingerprint(decision){
+    return JSON.stringify({
+      evidenceType:String(decision?.evidenceType||"unknown"),
+      issueName:String(decision?.issueName||"").trim().toLowerCase(),
+      count:Number(decision?.count)||0,
+      sampleUrl:String(decision?.sampleUrl||"").trim().toLowerCase(),
+      schemaType:String(decision?.schemaType||"").trim().toLowerCase(),
+      affectedField:String(decision?.affectedField||"").trim().toLowerCase(),
+      implementationSource:String(decision?.implementationSource||"").trim().toLowerCase(),
+      nextQuestion:String(decision?.nextQuestion||"").trim().toLowerCase(),
+      nextEvidence:String(decision?.nextEvidence||"").trim().toLowerCase()
+    });
+  }
+
+  function appendEvidenceHistory(item,captured,decision,imageFingerprint){
+    const history=getEvidenceHistory(item);
+    const fingerprint=evidenceDecisionFingerprint(decision);
+    const exactImageAlreadyLocked=Boolean(
+      imageFingerprint && history.some(entry=>entry.imageFingerprint===imageFingerprint)
+    );
+
+    if(exactImageAlreadyLocked){
+      return {added:false,reason:"duplicate_image",history};
+    }
+
+    history.push({
+      step:history.length+1,
+      capturedAt:new Date().toISOString(),
+      screen:captured.subject||"Screenshot evidence",
+      facts:captured.facts.slice(0,20),
+      finding:buildInvestigationFinding(item,captured,decision),
+      nextAction:buildSpecificAction(item,captured,decision),
+      evidenceType:decision.evidenceType||"unknown",
+      issueName:decision.issueName||"",
+      issueCount:Number(decision.count)||0,
+      sampleUrl:decision.sampleUrl||"",
+      schemaType:decision.schemaType||"",
+      affectedField:decision.affectedField||"",
+      implementationSource:decision.implementationSource||"",
+      systemic:Boolean(decision.systemic),
+      rootCauseProven:Boolean(decision.rootCauseProven),
+      nextQuestion:decision.nextQuestion||"",
+      fingerprint,
+      imageFingerprint:imageFingerprint||""
+    });
+
+    saveEvidenceHistory(item,history);
+    renderEvidenceHistory(item);
+    return {added:true,history};
+  }
+
+  function renderEvidenceHistory(item){
+    const panel=byId("evidence-history");
+    const list=byId("evidence-history-list");
+    const count=byId("evidence-history-count");
+    if(!panel||!list||!count)return;
+    const history=getEvidenceHistory(item);
+    panel.hidden=!history.length;
+    count.textContent=`${history.length} locked step${history.length===1?"":"s"}`;
+    list.innerHTML=history.map(entry=>`
+      <article class="evidence-history-step">
+        <strong>Step ${esc(entry.step)} · ${esc(entry.screen)}</strong>
+        <p>${esc(entry.finding)}</p>
+        <p class="next">Next: ${esc(entry.nextAction)}</p>
+      </article>
+    `).join("");
+  }
+
+  function restoreInvestigationState(item){
+    const history=getEvidenceHistory(item);
+
+    if(!history.length){
+      updateDecisionControls({rootCauseProven:false});
+      return;
+    }
+
+    const finding=byId("finding-summary");
+    const question=byId("work-title");
+    const evidence=byId("work-description");
+    const latest=history.at(-1);
+
+    if(finding){
+      finding.value=history
+        .map(entry=>`Step ${entry.step}: ${entry.finding}`)
+        .join("\n\n");
+    }
+    if(question){
+      question.value=latest.nextQuestion||extractNextQuestion(latest.nextAction);
+    }
+    if(evidence){
+      evidence.value=latest.nextAction||"";
+    }
+
+    updateDecisionControls({
+      rootCauseProven:Boolean(latest.rootCauseProven)
+    });
+  }
+
+  function extractNextQuestion(value){
+    const text=String(value||"").trim();
+    return text.match(/^.*?[?](?:\s|$)/)?.[0]||text;
+  }
+
+  function resetEvidenceCaptureForNextStep(input,preview,analyze,status){
+    input.value="";
+    preview.removeAttribute("src");
+    preview.classList.remove("visible");
+    analyze.disabled=true;
+    analyze.textContent="Analyze Evidence";
+    status.className="status ready capture-status";
+    status.textContent="Evidence step locked. Follow the next action, then choose the next screenshot.";
+  }
+
+  function bindEvidenceCapture(item){
+    const input=byId("investigation-evidence-file");
+    const preview=byId("investigation-evidence-preview");
+    const analyze=byId("analyze-investigation-evidence");
+    const status=byId("investigation-evidence-status");
+    let imageDataUrl="";
+    let fileName="investigation-evidence";
+    let analysisLocked=false;
+
+    input.addEventListener("change",event=>{
+      const [file]=event.target.files||[];
+      if(!file)return;
+
+      const allowed=new Set(["image/png","image/jpeg","image/webp"]);
+      if(!allowed.has(file.type)){
+        status.className="status error capture-status";
+        status.textContent="Choose a PNG, JPG, JPEG, or WEBP screenshot.";
+        input.value="";
+        analyze.disabled=true;
+        return;
+      }
+
+      if(file.size>10*1024*1024){
+        status.className="status error capture-status";
+        status.textContent="The screenshot is larger than 10 MB.";
+        input.value="";
+        analyze.disabled=true;
+        return;
+      }
+
+      const reader=new FileReader();
+      reader.onload=()=>{
+        analysisLocked=false;
+        imageDataUrl=String(reader.result||"");
+        fileName=file.name||"investigation-evidence";
+        preview.src=imageDataUrl;
+        preview.classList.add("visible");
+        analyze.disabled=false;
+        completeEvidenceStep(item,"capture_screenshot");
+        status.className="status ready capture-status";
+        status.textContent="Screenshot ready. Analyze the visible evidence.";
+      };
+      reader.onerror=()=>{
+        status.className="status error capture-status";
+        status.textContent="The screenshot could not be read.";
+      };
+      reader.readAsDataURL(file);
+    });
+
+    analyze.addEventListener("click",async event=>{
+      event.preventDefault();
+      event.stopPropagation();
+
+      if(analysisLocked){
+        status.className="status error capture-status";
+        status.textContent="This screenshot is already locked. Choose the next screenshot.";
+        return;
+      }
+
+      if(!imageDataUrl){
+        status.className="status error capture-status";
+        status.textContent="No screenshot is loaded. Choose the next screenshot.";
+        return;
+      }
+
+      analyze.disabled=true;
+      analyze.textContent="Analyzing…";
+      status.className="status loading capture-status";
+      status.textContent="Analyze button confirmed. Sending screenshot to Workers AI…";
+      await new Promise(resolve=>setTimeout(resolve,50));
+
+      try{
+        const context=buildEvidenceExtractionPrompt(
+          item,
+          getEvidenceHistory(item)
+        );
+
+        const payload=await post({
+          action:"analyze-client-communication",
+          client:item.clientName,
+          clientId:item.clientCode,
+          sourceText:context,
+          image:imageDataUrl,
+          fileName,
+          contractVersion:"communications-operational-decision-v3"
+        });
+
+        const captured=normalizeCapturedEvidence(payload);
+        const relevance=validateEvidenceRelevance(captured,item);
+        if(!relevance.ok){
+          renderCapturedEvidence(captured,{
+            evidenceType:"wrong_source",
+            issueName:"",
+            count:0,
+            rootCauseProven:false,
+            reason:relevance.reason,
+            nextQuestion:"Does this screenshot belong to the selected Investigation?",
+            nextEvidence:`Capture evidence from ${evidenceSourceName(item)} for Investigation #${item.id}.`
+          });
+          status.className="status error capture-status";
+          status.textContent=relevance.reason;
+          analyze.disabled=false;
+          analyze.textContent="Analyze Evidence";
+          return;
+        }
+        const decision=buildNextStepDecision(captured,item);
+        renderCapturedEvidence(captured,decision);
+        prefillInvestigationFields(item,captured,decision);
+        const imageFingerprint=fingerprintImageData(imageDataUrl);
+        const historyResult=appendEvidenceHistory(item,captured,decision,imageFingerprint);
+
+        imageDataUrl="";
+        input.value="";
+        preview.removeAttribute("src");
+        preview.classList.remove("visible");
+        analyze.disabled=true;
+        analyze.textContent="Analyze Evidence";
+
+        if(historyResult.added){
+          analysisLocked=true;
+          completeEvidenceStep(item,"review_issues");
+          completeEvidenceStep(item,"analyze_evidence");
+          status.className="status ready capture-status";
+          status.textContent="Evidence step locked. Follow the next action, then choose the next screenshot.";
+        }else{
+          analysisLocked=false;
+          status.className="status error capture-status";
+          status.textContent=historyResult.reason==="duplicate_image"
+            ? "This exact screenshot is already locked for this Investigation. Choose the next evidence screenshot."
+            : "The evidence was analyzed but could not be locked. Choose the next evidence screenshot.";
+        }
+      }catch(error){
+        console.error(error);
+        status.className="status error capture-status";
+        status.textContent=error.message||"The evidence screenshot could not be analyzed.";
+      }finally{
+        if(!analysisLocked){
+          analyze.disabled=!imageDataUrl;
+          analyze.textContent="Analyze Evidence";
+        }
+      }
+    });
+  }
+
+
+  function fingerprintImageData(value){
+    const text=String(value||"");
+    if(!text)return "";
+    let hash1=2166136261;
+    let hash2=5381;
+    for(let index=0;index<text.length;index++){
+      const code=text.charCodeAt(index);
+      hash1^=code;
+      hash1=Math.imul(hash1,16777619);
+      hash2=((hash2<<5)+hash2)^code;
+    }
+    return `${text.length}:${hash1>>>0}:${hash2>>>0}`;
+  }
+
+  function buildEvidenceExtractionPrompt(item,history){
+    const latest=history.at(-1)||null;
+    const stage=latest?.evidenceType||"overview";
+
+    const shared=[
+      `Client: ${item.clientName}`,
+      `Investigation: #${item.id} ${item.title||"Site Audit"}`,
+      `This image is evidence from ${evidenceSourceName(item)}.`,
+      "EXTRACTION ONLY. Do not recommend, prioritize, diagnose, infer, or decide.",
+      "Do not repeat these instructions.",
+      "Return only text and numbers that are visibly present in the screenshot.",
+      "Preserve exact issue wording and exact counts.",
+      "Never invent a URL, HTTP status, issue count, field, schema type, plugin, template, or root cause."
+    ];
+
+    if(stage==="overview"){
+      if(isGoogleSearchConsole(item)){
+        return [
+          ...shared,
+          "Extract the visible Google Search Console report identity and status only.",
+          "Preserve exact visible labels such as URL Inspection, URL is on Google, Page indexing, Page is indexed, Product snippets, Merchant listings, Breadcrumbs, valid items, non-critical issues, issue names, and affected-item counts.",
+          "For each visible Search Console issue row, use:",
+          "ROW | exact issue name | affected item count if visible",
+          "For visible report/status labels, use:",
+          "FACT | exact visible label | exact visible value or status",
+          "Do not introduce SEMrush, Site Audit, Site Health, Errors, Warnings, or Notices unless those exact words are visibly present in the screenshot.",
+          "Do not include navigation instructions, recommendations, or inferred causes."
+        ].join("\n");
+      }
+
+      return [
+        ...shared,
+        "For every visible Errors, Warnings, and Notices row, extract one fact in this exact format:",
+        "ROW | severity | count | exact issue name",
+        "Also extract visible totals in this exact format:",
+        "TOTAL | Errors | number",
+        "TOTAL | Warnings | number",
+        "TOTAL | Notices | number",
+        "TOTAL | Site Health | number",
+        "Do not include How to fix text, buttons, recommendations, or navigation labels."
+      ].join("\n");
+    }
+
+    if(
+      stage==="site_audit_issue_list" ||
+      stage==="structured_data_issue_list" ||
+      stage==="issue_list"
+    ){
+      return [
+        ...shared,
+        "Extract only the affected-record evidence.",
+        "For each visible row return:",
+        "RECORD | exact visible URL or page title | structured data type if visible | affected field if visible | issue description if visible",
+        "Also return:",
+        "FAILED | exact visible failed count",
+        "SUCCESSFUL | exact visible successful count",
+        "Do not recommend opening a URL and do not describe what might happen."
+      ].join("\n");
+    }
+
+    if(stage==="affected_field"){
+      return [
+        ...shared,
+        "Extract only implementation-source evidence visible in the screenshot.",
+        "Return:",
+        "SOURCE | exact plugin, template, theme, schema generator, configuration, module, or component name if visibly shown",
+        "SCHEMA | exact schema type if visibly shown",
+        "FIELD | exact affected field if visibly shown",
+        "CODE | exact visible JSON-LD property/value lines if shown",
+        "If no implementation source is visible, return SOURCE | not visible."
+      ].join("\n");
+    }
+
+    return [
+      ...shared,
+      "Extract exact visible facts only.",
+      "Use short FACT | value lines.",
+      "Do not provide a next action."
+    ].join("\n");
+  }
+
+  function normalizeCapturedEvidence(payload){
+    const evidence=payload?.evidence||payload?.analysis?.evidence||{};
+    const analysis=payload?.analysis||payload?.operationalDecision||{};
+
+    const rawFacts=[
+      ...(Array.isArray(evidence.visibleFacts)?evidence.visibleFacts:[]),
+      ...(Array.isArray(evidence.visibleMetrics)?evidence.visibleMetrics:[])
+    ];
+
+    const facts=[...new Set(
+      rawFacts
+        .flatMap(splitExtractedFact)
+        .map(value=>String(value||"").trim())
+        .filter(Boolean)
+        .filter(value=>!isInstructionEcho(value))
+        .filter(value=>!isMalformedEvidence(value))
+    )];
+
+    return {
+      facts,
+      summary:"",
+      source:cleanEvidenceLabel(
+        evidence.visibleSource||
+        analysis.source||
+        "Screenshot evidence"
+      ),
+      subject:cleanEvidenceLabel(
+        evidence.visibleSubject||
+        analysis.title||
+        "Screenshot evidence"
+      ),
+      confidence:String(
+        evidence.confidence||
+        analysis.classificationConfidence||
+        ""
+      ).trim(),
+      recommendation:""
     };
   }
 
-  return jsonResponse(payload, response.status);
-}
+  function splitExtractedFact(value){
+    return String(value||"")
+      .split(/\n+/)
+      .map(line=>line.trim())
+      .filter(Boolean);
+  }
 
-function buildCommunicationsReviewAnalysis(payload) {
-  const original = payload.analysis || {};
-  const classification = payload.classification || {};
-  const recognition = payload.reportRecognition || {};
-  const evidence = payload.evidence || {};
-  const meaning = payload.businessMeaning || {};
-  const wwPowd = payload.wwPowdAnalysis || {};
-  const consultant = payload.consultantSummary || {};
-  const clientObject =
-    payload.client && typeof payload.client === "object"
-      ? payload.client
-      : {};
+  function isMalformedEvidence(value){
+    const text=String(value||"").trim().toLowerCase();
 
-  const source = firstMeaningful(
-    original.source,
-    sourceForNotificationType(classification.notificationType),
-    sourceForPlatform(classification.platform),
-    sourceForPlatform(recognition.platform),
-    evidence.visibleSource
-  ) || "Unknown";
+    if(!text)return true;
 
-  const communicationType = firstMeaningful(
-    original.communicationType,
-    typeForNotificationType(classification.notificationType),
-    humanize(recognition.reportType),
-    classification.notificationFamily
-  ) || "General Communication";
+    return [
+      "try identify",
+      "identify the visible url",
+      "whether it returns",
+      "recommended next issue",
+      "why chosen",
+      "open the first affected url",
+      "operational question",
+      "next evidence",
+      "next action",
+      "read the screenshot",
+      "technical consultant",
+      "locked evidence history",
+      "preserve severity",
+      "for every visible semrush",
+      "determine whether this screenshot"
+    ].some(fragment=>text.includes(fragment));
+  }
 
-  const title = firstMeaningful(
-    original.title,
-    buildReviewTitle({
-      source,
-      communicationType,
-      label: meaning.operationalLabel
-    }),
-    evidence.visibleSubject
-  ) || "Client communication";
+  function isInstructionEcho(value){
+    const text=String(value||"").toLowerCase();
 
-  const operationalSummary = firstMeaningful(
-    original.operationalSummary,
-    wwPowd.operationalSummary,
-    meaning.operationalSummary,
-    consultant.summary,
-    buildEvidenceSummary(evidence, classification)
-  ) || "The communication was received and requires human review.";
+    return [
+      "active client:",
+      "client code:",
+      "investigation objective:",
+      "this screenshot is investigation evidence",
+      "this image is evidence",
+      "extraction only",
+      "do not recommend",
+      "do not repeat these instructions",
+      "return only text and numbers",
+      "preserve exact issue wording",
+      "never invent",
+      "for every visible errors",
+      "extract one fact in this exact format",
+      "do not include how to fix",
+      "extract only the affected-record evidence",
+      "extract only implementation-source evidence"
+    ].some(fragment=>text.includes(fragment));
+  }
 
-  const businessImpact = firstMeaningful(
-    original.businessImpact,
-    wwPowd.businessImpact,
-    meaning.businessImpact
-  ) || "Business impact has not yet been verified.";
 
-  const recommendedAction = firstMeaningful(
-    original.recommendedAction,
-    wwPowd.nextAction,
-    meaning.recommendedAction,
-    consultant.nextAction
-  ) || "Review and retain the communication.";
+  function cleanEvidenceLabel(value){
+    const text=String(value||"").trim();
+    return isInstructionEcho(text)?"Screenshot evidence":text;
+  }
 
-  const reasoning = firstMeaningful(
-    original.reasoning,
-    wwPowd.reasoning,
-    meaning.reasoning,
-    evidence.uncertainty
-  ) || "The recommendation is based on the strongest structured evidence returned by the analysis pipeline.";
+  function renderCapturedEvidence(captured,decision){
+    const panel=byId("captured-evidence-panel");
+    const list=byId("captured-evidence-list");
+    const items=[
+      captured.subject&&`Screen/report: ${captured.subject}`,
+      ...captured.facts,
+      decision.issueName&&`Recommended next issue: ${decision.issueName}${decision.count?` — ${decision.count} affected`:``}`,
+      decision.schemaType&&`Shared schema type: ${decision.schemaType}`,
+      decision.affectedField&&`Affected field: ${decision.affectedField}`,
+      decision.implementationSource&&`Implementation source: ${decision.implementationSource}`,
+      decision.systemic&&"Pattern classification: Systemic/shared implementation candidate",
+      decision.reason&&`Why chosen: ${decision.reason}`,
+      captured.confidence&&`Extraction confidence: ${captured.confidence}`
+    ].filter(Boolean);
 
-  return {
-    ...original,
-    client: firstMeaningful(
-      original.client,
-      original.clientName,
-      clientObject.name
-    ),
-    clientName: firstMeaningful(
-      original.clientName,
-      original.client,
-      clientObject.name
-    ),
-    clientCode: firstMeaningful(
-      original.clientCode,
-      original.clientId,
-      clientObject.id
-    ),
-    source,
-    communicationType,
-    title,
-    operationalSummary,
-    businessImpact,
-    recommendedAction,
-    reasoning,
-    evidenceSummary: buildEvidenceSummary(evidence, classification),
-    reviewEvidence: {
-      visibleSource: evidence.visibleSource || null,
-      visibleSubject: evidence.visibleSubject || null,
-      visibleFacts: Array.isArray(evidence.visibleFacts)
-        ? evidence.visibleFacts
-        : [],
-      visibleMetrics: Array.isArray(evidence.visibleMetrics)
-        ? evidence.visibleMetrics
-        : [],
-      confidence: evidence.confidence || null,
-      notificationType: classification.notificationType || null,
-      notificationFamily: classification.notificationFamily || null,
-      reportType: recognition.reportType || null,
-      reportFamily: recognition.reportFamily || null
+    list.innerHTML=items.length
+      ? items.map(item=>`<li>${esc(item)}</li>`).join("")
+      : "<li>No structured issue rows were extracted. Review the screenshot manually.</li>";
+
+    panel.hidden=false;
+  }
+
+  function prefillInvestigationFields(item,captured,decision){
+    const finding=byId("finding-summary");
+    const workTitle=byId("work-title");
+    const workDescription=byId("work-description");
+
+    const history=getEvidenceHistory(item);
+    const currentFinding=buildInvestigationFinding(item,captured,decision);
+    const priorFindings=history.map(entry=>`Step ${entry.step}: ${entry.finding}`).join("\n\n");
+
+    finding.value=[priorFindings,currentFinding].filter(Boolean).join("\n\n");
+    workTitle.value=buildSpecificWorkTitle(item,captured,decision);
+    workDescription.value=buildSpecificAction(item,captured,decision);
+    updateDecisionControls(decision);
+  }
+
+  function validateEvidenceRelevance(captured,item){
+    const text=[captured?.source,captured?.subject,...(captured?.facts||[])].join(" ").toLowerCase();
+
+    if(isGoogleSearchConsole(item)){
+      const explicitSemrush=/\bsemrush\b|semrush site audit/.test(text);
+      const explicitGoogle=/google search console|search console|merchant listings|url inspection|product snippets|invalid value in field|valid item detected|url is on google/.test(text);
+      if(explicitSemrush&&!explicitGoogle){
+        return {ok:false,reason:`Wrong evidence source for Investigation #${item.id}. This Investigation requires Google Search Console evidence; the screenshot was recognized as SEMrush evidence and was NOT locked.`};
+      }
     }
-  };
-}
 
-function firstMeaningful(...values) {
-  for (const value of values) {
-    const text = clean(value);
-    if (!text) continue;
-    if (isWeakFallback(text)) continue;
-    return text;
-  }
-  return "";
-}
+    if(isSemrushSiteAudit(item)){
+      const explicitGoogle=/google search console|search console|merchant listings|url inspection|url is on google/.test(text);
+      const explicitSemrush=/\bsemrush\b|site audit|site health|errors|warnings|notices/.test(text);
+      if(explicitGoogle&&!explicitSemrush){
+        return {ok:false,reason:`Wrong evidence source for Investigation #${item.id}. This Investigation requires SEMrush Site Audit evidence; the screenshot was recognized as Google Search Console evidence and was NOT locked.`};
+      }
+    }
 
-function isWeakFallback(value) {
-  const normalized = clean(value).toLowerCase();
-  return [
-    "unknown",
-    "general communication",
-    "client communication",
-    "an unknown communication was received.",
-    "a unknown communication was received.",
-    "the communication was received.",
-    "review the communication."
-  ].includes(normalized);
-}
-
-function sourceForNotificationType(value) {
-  const sources = {
-    position_tracking: "SEMrush",
-    backlink_audit: "SEMrush",
-    site_audit: "SEMrush",
-    page_indexing_resolution: "Google Search Console",
-    merchant_listing_structured_data: "Google Search Console",
-    disavow_file_update: "Google Search Console",
-    search_performance: "Google Search Console",
-    business_profile: "Google Business Profile",
-    analytics: "Google Analytics"
-  };
-  return sources[clean(value).toLowerCase()] || "";
-}
-
-function sourceForPlatform(value) {
-  const platforms = {
-    semrush: "SEMrush",
-    google_search_console: "Google Search Console",
-    google_business_profile: "Google Business Profile",
-    google_analytics: "Google Analytics",
-    google_merchant_center: "Google Merchant Center",
-    client_email: "Client",
-    vendor_email: "Vendor"
-  };
-  return platforms[clean(value).toLowerCase()] || humanize(value);
-}
-
-function typeForNotificationType(value) {
-  const types = {
-    position_tracking: "SEO Ranking Alert",
-    page_indexing_resolution: "Page Indexing Resolution Confirmation",
-    backlink_audit: "SEO Backlink Alert",
-    site_audit: "Technical SEO Audit Alert",
-    merchant_listing_structured_data:
-      "Merchant Listings Structured Data Alert",
-    search_performance: "Search Performance Notification",
-    business_profile: "Local Presence Notification",
-    analytics: "Analytics Notification",
-    client_request: "Client or Human Communication",
-    vendor_notice: "Vendor Notice",
-    billing_notice: "Billing Notice",
-    access_security: "Access Alert"
-  };
-  return types[clean(value).toLowerCase()] || "";
-}
-
-function buildReviewTitle({ source, communicationType, label }) {
-  const cleanLabel = clean(label);
-  if (cleanLabel) return `${source} ${communicationType} — ${cleanLabel}`;
-  if (source && communicationType) return `${source} — ${communicationType}`;
-  return source || communicationType || "";
-}
-
-function buildEvidenceSummary(evidence, classification) {
-  const values = [];
-
-  if (evidence?.visibleSubject) {
-    values.push(clean(evidence.visibleSubject));
+    return {ok:true,reason:""};
   }
 
-  const facts = Array.isArray(evidence?.visibleFacts)
-    ? evidence.visibleFacts
-    : [];
+  function buildGoogleSearchConsoleDecision({facts,joined,history,item}){
+    const skuMatch=(facts||[]).join(" ").match(/\bsku\b\s*[:|\-]?\s*["']?([A-Z0-9][A-Z0-9._-]{2,})["']?/i);
+    const sku=skuMatch?skuMatch[1]:"";
+    const invalidSku=/invalid value in field ["']?sku|invalid (?:value )?(?:in )?(?:field )?["']?sku/i.test(joined);
+    const merchant=/merchant listings|product snippets|structured data|rich result|valid item detected/i.test(joined);
+    const success=/valid item detected|url is on google|eligible for google search|no critical issues/i.test(joined);
+    const priorInvalid=history.some(entry=>/sku/i.test(String(entry.issueName||"")+" "+String(entry.finding||""))&&/invalid/i.test(String(entry.finding||"")));
 
-  const metrics = Array.isArray(evidence?.visibleMetrics)
-    ? evidence.visibleMetrics
-    : [];
+    if(success&&sku&&!invalidSku){
+      return {
+        evidenceType:"verification_proof",
+        issueName:"Invalid value in field sku",
+        count:1,
+        severity:"warning",
+        affectedField:"sku",
+        implementationSource:"Shopify product variant SKU",
+        rootCauseProven:true,
+        reason:`Google Search Console live evidence shows SKU ${sku} and no invalid-SKU warning. The corrective change is verified on the live structured data.`,
+        expectedImpact:"The affected Merchant Listings SKU is now valid in Google's live structured-data result.",
+        nextQuestion:"Is the corrected SKU now verified and ready to be recorded as completed work?",
+        nextEvidence:"Use this live Google Search Console result as completion evidence and complete the Investigation."
+      };
+    }
 
-  for (const item of [...metrics, ...facts]) {
-    const text = evidenceItemToText(item);
+    if(invalidSku){
+      return {
+        evidenceType:"affected_field",
+        issueName:"Invalid value in field sku",
+        count:1,
+        severity:"warning",
+        affectedField:"sku",
+        implementationSource:sku?"Shopify product variant SKU":"",
+        rootCauseProven:Boolean(sku),
+        reason:sku
+          ? `Google Search Console identifies the invalid Merchant Listings field as sku and exposes the current value ${sku}.`
+          : "Google Search Console identifies sku as the invalid Merchant Listings field.",
+        expectedImpact:"Correcting the product variant SKU should remove the Merchant Listings invalid-SKU warning without changing product identity or sales processing.",
+        nextQuestion:sku?"What valid internal SKU should replace the invalid Shopify variant SKU?":"What exact SKU value is being emitted for the affected product variant?",
+        nextEvidence:sku
+          ? "Update the affected Shopify variant SKU, then run Google Search Console live testing and capture the corrected Merchant Listings result."
+          : "Open the affected item details and capture the visible SKU value and product URL."
+      };
+    }
 
-    if (text && !values.some(existing =>
-      existing.toLowerCase() === text.toLowerCase()
-    )) {
-      values.push(text);
+    if(merchant){
+      return {
+        evidenceType:"issue_list",
+        issueName:"Merchant Listings structured-data issue",
+        count:1,
+        severity:"warning",
+        rootCauseProven:false,
+        reason:"Google Search Console confirms a Merchant Listings structured-data issue, but the exact affected field/value still needs to be identified.",
+        expectedImpact:"No corrective work should be created until the affected field and source value are proven.",
+        nextQuestion:"Which Merchant Listings field is invalid, and what exact value is Google reading?",
+        nextEvidence:"Open one representative affected item and capture the exact validation error, product URL, and field value."
+      };
+    }
+
+    return {
+      evidenceType:"extraction_failed",
+      issueName:"",
+      count:0,
+      severity:"",
+      rootCauseProven:false,
+      reason:"The screenshot does not contain enough recognizable Google Search Console Merchant Listings evidence to advance this Investigation.",
+      expectedImpact:"No evidence is locked as a decision until the relevant Search Console facts are visible.",
+      nextQuestion:"What exact Merchant Listings issue is visible for the affected product?",
+      nextEvidence:"Capture the Google Search Console Merchant Listings issue or live result with the issue name, affected item, and field/value visible."
+    };
+  }
+
+  function buildNextStepDecision(captured,item){
+    const facts=captured.facts||[];
+    const joined=facts.join(" ").toLowerCase();
+    const history=item?getEvidenceHistory(item):[];
+
+    if(isGoogleSearchConsole(item)){
+      return buildGoogleSearchConsoleDecision({facts,joined,history,item});
+    }
+
+    if(isSemrushSiteAudit(item)){
+      const specialist=buildSemrushSiteAuditDecision({
+        facts,
+        joined,
+        history,
+        item
+      });
+      if(specialist)return specialist;
+    }
+
+    const sampleUrl=extractVisibleUrl(facts);
+    const is404=/\b404\b|page not found|page can.t be found|nothing was found at this location/.test(joined);
+    const isSuccess=/\b200\b|loads successfully|page loaded successfully/.test(joined);
+    const isRedirect=/\b301\b|\b302\b|redirected to|redirects to/.test(joined);
+
+    if(sampleUrl&&(is404||isSuccess||isRedirect)){
+      const behavior=is404?"returns a 404 Page Not Found":isRedirect?"redirects to another URL":"loads successfully";
+      const matchingSamples=history.filter(entry=>
+        entry.evidenceType==="live_url_sample" &&
+        String(entry.finding||"").toLowerCase().includes(is404?"404":isRedirect?"redirect":"loads successfully")
+      ).length;
+      const rootCauseProven=matchingSamples+1>=3;
+      return {
+        evidenceType:"live_url_sample",
+        sampleUrl,
+        issueName:mostRecentIssueName(history)||"the selected SEMrush issue",
+        count:mostRecentIssueCount(history),
+        severity:"error",
+        rootCauseProven,
+        reason:`The sampled URL ${behavior}. One URL proves the behavior exists, but not yet whether the same root cause explains the full issue group.`,
+        expectedImpact:rootCauseProven
+          ?"Repeated samples support one corrective work item followed by a new crawl."
+          :"Test additional URLs from the same SEMrush issue.",
+        nextQuestion:rootCauseProven
+          ?"What shared source, template, redirect rule, or deleted-content pattern is generating these invalid URLs?"
+          :`Do at least two more affected URLs from the same issue show the same ${is404?"404":"behavior"}?`,
+        nextEvidence:rootCauseProven
+          ?"Capture the page, template, redirect configuration, sitemap entry, or CMS source that proves the shared root cause."
+          :"Open another affected URL from the same SEMrush issue and capture the live result."
+      };
+    }
+
+    const rows=extractIssueRows(facts);
+    const selected=[...rows].sort((a,b)=>
+      severityRank(a.severity)-severityRank(b.severity) ||
+      issueImpactWeight(b.name)-issueImpactWeight(a.name) ||
+      b.count-a.count
+    )[0]||null;
+
+    if(selected){
+      return {
+        evidenceType:"issue_list",
+        issueName:selected.name,
+        count:selected.count,
+        severity:selected.severity,
+        rootCauseProven:false,
+        reason:`It is a visible ${selected.severity} affecting ${selected.count} page${selected.count===1?"":"s"}.`,
+        expectedImpact:"The issue category is selected, but corrective work is not yet proven.",
+        nextQuestion:`What actually happens when one affected URL from "${selected.name}" is opened on the live website?`,
+        nextEvidence:`Open the first affected URL listed under "${selected.name}" and capture the live result.`
+      };
+    }
+
+    const totals=extractAuditTotals([
+      ...facts,
+      item?.description,
+      item?.communication?.ai_summary,
+      item?.communication?.raw_content
+    ].filter(Boolean));
+
+    return {
+      evidenceType:"overview",
+      issueName:"",
+      count:0,
+      severity:"",
+      rootCauseProven:false,
+      reason:"The screenshot confirms technical issues exist, but does not yet identify one grouped root-cause candidate.",
+      expectedImpact:"No corrective work should be created yet.",
+      nextQuestion:"Which Error category has the highest verified impact?",
+      nextEvidence:"Open the SEMrush Errors list and capture the visible issue names with their affected-page counts.",
+      totals
+    };
+  }
+
+  function buildSemrushSiteAuditDecision({facts,joined,history,item}){
+    const implementationSource=extractImplementationSource(facts);
+    const affectedField=extractAffectedField(facts);
+    const schemaType=extractSchemaType(facts);
+    const rows=extractIssueRows(facts);
+    const structuredIssue=rows.find(row=>/structured data/i.test(row.name));
+    const count=structuredIssue?.count||extractStructuredDataCount(facts)||mostRecentIssueCount(history);
+
+    if(implementationSource){
+      return {
+        evidenceType:"implementation_proof",
+        issueName:mostRecentIssueName(history)||"invalid structured data items",
+        count,
+        severity:"error",
+        schemaType:mostRecentSchemaType(history)||schemaType||"Event",
+        affectedField:mostRecentAffectedField(history)||affectedField||"location",
+        implementationSource,
+        systemic:true,
+        rootCauseProven:true,
+        reason:`The evidence identifies ${implementationSource} as the shared source producing the invalid schema.`,
+        expectedImpact:"One implementation repair can correct the shared output across the affected records.",
+        nextQuestion:`What exact change is required in ${implementationSource}?`,
+        nextEvidence:"After implementation, capture corrected JSON-LD or validation evidence and rerun the SEMrush Site Audit."
+      };
+    }
+
+    if(affectedField||schemaType){
+      const resolvedSchema=schemaType||mostRecentSchemaType(history)||"Event";
+      const resolvedField=affectedField||mostRecentAffectedField(history)||"location";
+      return {
+        evidenceType:"affected_field",
+        issueName:mostRecentIssueName(history)||structuredIssue?.name||"invalid structured data items",
+        count,
+        severity:"error",
+        schemaType:resolvedSchema,
+        affectedField:resolvedField,
+        systemic:true,
+        rootCauseProven:false,
+        reason:`The affected records share the ${resolvedSchema} schema type and the required "${resolvedField}" field is missing or invalid. This proves a repeated systemic symptom, but not yet which implementation component is responsible.`,
+        expectedImpact:"Corrective work remains locked until the responsible plugin, template, schema generator, or configuration is identified.",
+        nextQuestion:`Which plugin, template, schema generator, or configuration is omitting "${resolvedField}" from the ${resolvedSchema} structured data?`,
+        nextEvidence:`Inspect one affected page's generated JSON-LD and the event plugin/template or schema configuration. Capture the component responsible for omitting "${resolvedField}".`
+      };
+    }
+
+    if(structuredIssue||/\bstructured data\b/.test(joined)){
+      return {
+        evidenceType:"structured_data_issue_list",
+        issueName:structuredIssue?.name||"structured data items are invalid",
+        count,
+        severity:"error",
+        schemaType:detectRepeatedSchemaType(facts),
+        systemic:true,
+        rootCauseProven:false,
+        reason:`${count||"Multiple"} structured-data failures are visible and appear to share a page or schema pattern.`,
+        expectedImpact:"No work is created from the count alone.",
+        nextQuestion:"Do the affected records share the same structured-data type and the same invalid or missing field?",
+        nextEvidence:"Expand one representative row and capture the Structured Data Type, Affected Field, and issue description."
+      };
+    }
+
+    if(!history.length){
+      return {
+        evidenceType:"extraction_failed",
+        issueName:"",
+        count:0,
+        severity:"",
+        rootCauseProven:false,
+        reason:"Workers AI did not return any valid visible SEMrush issue rows. No issue was selected and no evidence was locked as a root-cause decision.",
+        expectedImpact:"The screenshot must be reprocessed with exact row extraction before the OS can prioritize an issue.",
+        nextQuestion:"Which visible SEMrush Error row has the highest verified priority?",
+        nextEvidence:"Re-analyze the same overview screenshot. If no rows are extracted, crop tightly around the Errors and Warnings table and analyze again."
+      };
+    }
+
+    return null;
+  }
+
+  function extractStructuredDataCount(facts){
+    const text=(facts||[]).join(" ");
+    const match=text.match(/(\d[\d,]*)\s+structured data items?\s+(?:are\s+)?invalid/i)||
+      text.match(/failed\s*[:\-]?\s*(\d[\d,]*)/i);
+    return match?Number(match[1].replaceAll(",","")):0;
+  }
+
+  function extractSchemaType(facts){
+    const text=(facts||[]).join(" ");
+    const match=text.match(/structured data type\s*[:\-]?\s*([A-Za-z][A-Za-z0-9_-]*)/i);
+    if(match)return match[1];
+    return ["Event","Product","Organization","LocalBusiness","Article","BreadcrumbList","FAQPage"]
+      .find(type=>new RegExp(`\\b${type}\\b`,"i").test(text))||"";
+  }
+
+  function detectRepeatedSchemaType(facts){
+    const values=(facts||[]).join(" ").match(/\b(Event|Product|Organization|LocalBusiness|Article|BreadcrumbList|FAQPage)\b/gi)||[];
+    const counts=new Map();
+    values.forEach(value=>counts.set(value.toLowerCase(),(counts.get(value.toLowerCase())||0)+1));
+    const top=[...counts.entries()].sort((a,b)=>b[1]-a[1])[0];
+    return top?top[0].replace(/\b\w/g,char=>char.toUpperCase()):"";
+  }
+
+  function extractAffectedField(facts){
+    const text=(facts||[]).join(" ");
+    const patterns=[
+      /affected fields?\s*[:\-]?\s*([A-Za-z][A-Za-z0-9_.-]*)/i,
+      /value for the\s+([A-Za-z][A-Za-z0-9_.-]*)\s+field is required/i,
+      /\b(location|startDate|endDate|offers|organizer|performer|image|name|url)\b\s+field/i
+    ];
+    for(const pattern of patterns){
+      const match=text.match(pattern);
+      if(match)return match[1];
+    }
+    return "";
+  }
+
+  function extractImplementationSource(facts){
+    const text=(facts||[]).join(" ");
+    const patterns=[
+      /(?:plugin|template|schema generator|configuration|theme|module|component)\s*[:\-]\s*([^.;\n]{3,120})/i,
+      /generated by\s+([^.;\n]{3,120})/i,
+      /source(?: component)?\s*[:\-]\s*([^.;\n]{3,120})/i
+    ];
+    for(const pattern of patterns){
+      const match=text.match(pattern);
+      if(match)return String(match[1]||"").replace(/\s+/g," ").trim();
+    }
+    return "";
+  }
+
+  function mostRecentAffectedField(history){
+    return [...history].reverse().find(entry=>entry.affectedField)?.affectedField||"";
+  }
+
+  function mostRecentSchemaType(history){
+    return [...history].reverse().find(entry=>entry.schemaType)?.schemaType||"";
+  }
+
+  function severityRank(value){
+    const rank={error:0,warning:1,notice:2,issue:3};
+    return rank[String(value||"").toLowerCase()]??4;
+  }
+
+  function extractVisibleUrl(facts){
+    const joined=(facts||[]).join(" ");
+    const match=joined.match(/https?:\/\/[^\s<>"')\]]+/i);
+    return match?match[0].replace(/[.,;:!?]+$/,""):"";
+  }
+
+  function mostRecentIssueName(history){
+    return [...history].reverse().find(entry=>entry.issueName)?.issueName||"";
+  }
+
+  function mostRecentIssueCount(history){
+    return Number([...history].reverse().find(entry=>Number(entry.issueCount)>0)?.issueCount)||0;
+  }
+
+  function extractIssueRows(facts){
+    const rows=[];
+    let currentSeverity="";
+
+    facts.forEach(value=>{
+      const raw=String(value||"").trim();
+      const lower=raw.toLowerCase();
+
+      const contracted=raw.match(
+        /^ROW\s*\|\s*(error|warning|notice)\s*\|\s*(\d[\d,]*)\s*\|\s*(.+)$/i
+      );
+
+      if(contracted){
+        const name=cleanIssueName(contracted[3]);
+        const count=Number(contracted[2].replaceAll(",",""));
+
+        if(name&&Number.isFinite(count)&&count>0){
+          rows.push({
+            name,
+            count,
+            severity:contracted[1].toLowerCase()
+          });
+        }
+        return;
+      }
+
+      if(/^errors?\b/.test(lower)){currentSeverity="error";}
+      else if(/^warnings?\b/.test(lower)){currentSeverity="warning";}
+      else if(/^notices?\b/.test(lower)){currentSeverity="notice";}
+
+      const normalized=raw
+        .replace(/^\s*[•\-–—]\s*/,"")
+        .replace(/\bnew issues?\b/ig,"")
+        .replace(/\baffected\b/ig,"")
+        .trim();
+
+      const patterns=[
+        /^(\d[\d,]*)\s+(?:pages?|issues?|links?|urls?)?\s*(?:have|has|with|returned|found|contain|are)?\s*(.+)$/i,
+        /^(.+?)\s*[:—-]\s*(\d[\d,]*)\s*(?:pages?|issues?|links?|urls?)?\s*$/i,
+        /^(.+?)\s+\((\d[\d,]*)\s*(?:pages?|issues?|links?|urls?)\)$/i
+      ];
+
+      for(const pattern of patterns){
+        const match=normalized.match(pattern);
+        if(!match)continue;
+
+        let count;
+        let name;
+
+        if(/^\d/.test(match[1])){
+          count=Number(match[1].replaceAll(",",""));
+          name=match[2];
+        }else{
+          name=match[1];
+          count=Number(match[2].replaceAll(",",""));
+        }
+
+        name=cleanIssueName(name);
+        if(
+          Number.isFinite(count) &&
+          count>0 &&
+          name &&
+          !isGenericMetric(name) &&
+          !isInstructionEcho(name)
+        ){
+          rows.push({
+            name,
+            count,
+            severity:inferSeverity(raw,currentSeverity,name)
+          });
+          break;
+        }
+      }
+    });
+
+    const unique=new Map();
+    rows.forEach(row=>{
+      const key=row.name.toLowerCase();
+      const existing=unique.get(key);
+      if(!existing||row.count>existing.count){
+        unique.set(key,row);
+      }
+    });
+
+    return [...unique.values()];
+  }
+
+  function isMalformedIssueName(value){
+    const text=String(value||"").trim().toLowerCase();
+
+    return !text || [
+      /^try\b/,
+      /^identify\b/,
+      /^determine\b/,
+      /^return\b/,
+      /^preserve\b/,
+      /^read\b/,
+      /^open\b/,
+      /^what\b/,
+      /^whether\b/,
+      /^recommended\b/,
+      /^next\b/
+    ].some(pattern=>pattern.test(text)) ||
+    isMalformedEvidence(text) ||
+    isInstructionEcho(text);
+  }
+
+  function cleanIssueName(value){
+    const cleaned=String(value||"")
+      .replace(/^ROW\s*\|\s*[^|]+\|\s*\d[\d,]*\s*\|\s*/i,"")
+      .replace(/\bhow to fix\b/ig,"")
+      .replace(/\b\d+\s+new issues?\b/ig,"")
+      .replace(/\s+/g," ")
+      .replace(/^[\s:;,\-–—]+|[\s:;,\-–—]+$/g,"")
+      .trim();
+
+    return isMalformedIssueName(cleaned)?"":cleaned;
+  }
+
+  function isGenericMetric(name){
+    const lower=String(name||"").toLowerCase();
+    return [
+      "errors",
+      "warnings",
+      "notices",
+      "site health",
+      "change",
+      "new issue",
+      "new issues",
+      "pages crawled"
+    ].some(metric=>lower===metric||lower.startsWith(`${metric} `));
+  }
+
+  function inferSeverity(raw,currentSeverity,name){
+    const text=`${raw} ${name}`.toLowerCase();
+    if(/\berror\b|4xx|broken|canonical|redirect|sitemap/.test(text))return "error";
+    if(/\bwarning\b|unminified|uncompressed|low text|meta description|nofollow|low word count|underscore/.test(text))return "warning";
+    if(/\bnotice\b/.test(text))return "notice";
+    return currentSeverity||"issue";
+  }
+
+  function issueImpactWeight(name){
+    const text=String(name||"").toLowerCase();
+    if(/4xx|broken internal|broken canonical/.test(text))return 100;
+    if(/canonical|redirect|sitemap/.test(text))return 90;
+    if(/crawl|robots|blocked/.test(text))return 85;
+    if(/meta description/.test(text))return 55;
+    if(/javascript|css|unminified|uncompressed/.test(text))return 35;
+    return 10;
+  }
+
+  function extractAuditTotals(facts){
+    const joined=facts.join(" ");
+    return {
+      errors:metricValue(joined,/errors?\s*[:\-]?\s*(\d[\d,]*)/i),
+      warnings:metricValue(joined,/warnings?\s*[:\-]?\s*(\d[\d,]*)/i),
+      notices:metricValue(joined,/notices?\s*[:\-]?\s*(\d[\d,]*)/i),
+      siteHealth:metricValue(joined,/site health\s*[:\-]?\s*(\d{1,3})%?/i)
+    };
+  }
+
+  function metricValue(text,pattern){
+    const match=String(text||"").match(pattern);
+    return match?Number(match[1].replaceAll(",","")):0;
+  }
+
+  function buildInvestigationFinding(item,captured,decision){
+    const totals=decision.totals||extractAuditTotals(captured.facts);
+    const baseline=[
+      totals.siteHealth?`Site Health is ${totals.siteHealth}%.`:"",
+      totals.errors?`${totals.errors} errors are active.`:"",
+      totals.warnings?`${totals.warnings} warnings are active.`:""
+    ].filter(Boolean).join(" ");
+
+    if(decision.evidenceType==="live_url_sample"){
+      return [
+        `Live sample: ${decision.sampleUrl}.`,
+        decision.reason,
+        decision.rootCauseProven
+          ? "Decision state: repeated evidence supports advancing to root-cause proof."
+          : "Decision state: continue sampling before defining corrective work."
+      ].join("\n\n");
+    }
+
+    if(decision.evidenceType==="verification_proof"){
+      return [
+        `Verified result: ${decision.issueName}.`,
+        decision.reason,
+        "Decision state: live evidence verifies the corrective change; the Investigation can advance to completion and Proof of Work."
+      ].filter(Boolean).join("\n\n");
+    }
+
+    if(decision.issueName){
+      return [
+        baseline||`The ${evidenceSourceName(item)} evidence provides a verified issue category.`,
+        `Selected issue: "${decision.issueName}" affecting ${decision.count} item${decision.count===1?"":"s"}.`,
+        `Why selected: ${decision.reason}`,
+        decision.rootCauseProven
+          ? "Decision state: the responsible field/source is proven; proceed to corrective action and verification."
+          : "Decision state: continue the evidence path before creating corrective work."
+      ].filter(Boolean).join("\n\n");
+    }
+
+    return [
+      baseline||"The screenshot confirms unresolved technical issues.",
+      decision.reason,
+      "Decision state: the next evidence must identify the highest-impact Error category."
+    ].join("\n\n");
+  }
+
+  function buildSpecificWorkTitle(item,captured,decision){
+    if(decision.rootCauseProven&&decision.evidenceType==="implementation_proof"){
+      return `Correct ${decision.schemaType||"structured data"} ${decision.affectedField||"field"} output in ${decision.implementationSource||"the shared implementation"}`;
+    }
+    return decision.nextQuestion||"What is the next fact required to advance this Investigation?";
+  }
+
+  function buildSpecificAction(item,captured,decision){
+    if(decision.rootCauseProven&&decision.evidenceType==="implementation_proof"){
+      return `Update ${decision.implementationSource||"the shared implementation"} so every affected ${decision.schemaType||"structured data"} record outputs a valid ${decision.affectedField||"required"} property. Validate one corrected page and rerun the SEMrush Site Audit.`;
+    }
+    return decision.nextEvidence||"Capture the next evidence screenshot required to answer the current question.";
+  }
+
+  function updateDecisionControls(decision){
+    const createButton=byId("create-button");
+    if(!createButton)return;
+
+    createButton.disabled=!decision.rootCauseProven;
+    createButton.title=decision.rootCauseProven
+      ? "Repeated evidence supports creating corrective work."
+      : "Corrective work remains locked until the root cause is proven.";
+    createButton.textContent=decision.rootCauseProven
+      ? "Root Cause Proven — Create Work"
+      : "Create Work Locked — Continue Investigation";
+  }
+
+  async function createRequestedWork(event){
+    event.preventDefault();
+    if(processingRequestedWork)return;
+
+    const clientCode=el.requestedClient.value.trim();
+    const requestedBy=byId("requested-by").value.trim();
+    const title=byId("requested-title").value.trim();
+    const description=byId("requested-description").value.trim();
+    const expectedImpact=byId("requested-impact").value.trim();
+    const priority=byId("requested-priority").value;
+    const owner=byId("requested-owner").value.trim()||"Andy";
+    const category=byId("requested-category").value.trim()||"Client Requested Work";
+    const communicationId=positiveInt(byId("requested-communication").value);
+
+    if(!clientCode||!title||!description||!expectedImpact){
+      el.requestedMessage.className="status error";
+      el.requestedMessage.textContent="Client, Specific Work, Specific Action, and Expected Result are required.";
+      return;
+    }
+
+    processingRequestedWork=true;
+    el.createRequested.disabled=true;
+    el.requestedMessage.className="status loading";
+    el.requestedMessage.textContent="Creating requested Work Item in production D1…";
+
+    try{
+      const response=await post({
+        action:"create-requested-work",
+        clientCode,
+        requestedBy,
+        title,
+        description,
+        expectedImpact,
+        priority,
+        owner,
+        category,
+        communicationId:communicationId||null
+      });
+
+      const workItemId=Number(response?.workItem?.id||response?.workItemId||0);
+      el.requestedMessage.className="status ready";
+      el.requestedMessage.textContent=workItemId
+        ? `Requested Work Item #${workItemId} created. Opening it now…`
+        : "Requested Work Item created.";
+
+      if(workItemId){
+        const nextUrl=new URL(location.href);
+        nextUrl.search="";
+        nextUrl.searchParams.set("workItem",String(workItemId));
+        nextUrl.searchParams.set("client",clientCode);
+        location.href=nextUrl.toString();
+        return;
+      }
+
+      await load();
+    }catch(error){
+      el.requestedMessage.className="status error";
+      el.requestedMessage.textContent=error.message;
+    }finally{
+      processingRequestedWork=false;
+      el.createRequested.disabled=false;
     }
   }
 
-  if (!values.length && classification?.notificationFamily) {
-    values.push(clean(classification.notificationFamily));
+  async function processInvestigation(item,outcome){
+    if(processing)return;
+    const finding=byId("finding-summary").value.trim(),title=byId("work-title").value.trim(),description=byId("work-description").value.trim(),message=byId("process-message");
+    if(!finding){message.className="status error";message.textContent="Record the evidence-supported Investigation Finding.";return;}
+    if(outcome==="specific_work_required"&&(!title||!description)){message.className="status error";message.textContent="The root cause and corrective action are required before creating work.";return;}
+    processing=true;message.className="status loading";message.textContent="Saving production decision…";
+    try{await post({action:"process-investigation",clientCode:item.clientCode,investigationId:Number(item.id),findingSummary:finding,outcome,workTitle:title,workDescription:description});completeEvidenceStep(item,"complete_investigation");if(outcome==="specific_work_required")completeEvidenceStep(item,"create_work");message.className="status ready";message.textContent=outcome==="no_work_required"?"Investigation closed.":"Specific Work Item created.";await load();}catch(error){message.className="status error";message.textContent=error.message;}finally{processing=false;}
+  }
+  function renderWorkItems(selectedInvestigation){
+    const linkedWorkItems=selectedInvestigation
+      ? workItems.filter(item=>
+          Number(item.investigation_id)===Number(selectedInvestigation.id) &&
+          String(item.clientCode)===String(selectedInvestigation.clientCode)
+        )
+      : workItems.filter(item=>
+          !item.investigation_id &&
+          (!el.filter.value||String(item.clientCode)===String(el.filter.value))
+        );
+
+    if(!linkedWorkItems.length){
+      el.openWork.innerHTML=selectedInvestigation
+        ? `<div class="empty"><strong>No Work Item has been created for Investigation #${esc(selectedInvestigation.id)}.</strong><br />Continue the Investigation until the evidence proves specific work is required.</div>`
+        : '<div class="empty">No direct requested Work Items match this view. Select an Investigation to view its linked work.</div>';
+      return;
+    }
+
+    el.openWork.innerHTML=linkedWorkItems.map(i=>`
+      <article class="work-card" data-work-id="${esc(i.id)}">
+        <h3>Work Item #${esc(i.id)} · ${esc(i.title||"Work Item")}</h3>
+        ${i.investigation_id?"":'<span class="direct-work-label">Direct Requested Work</span>'}
+        <p class="detail-subtitle">
+          ${esc(i.clientName)} · ${i.investigation_id?`Investigation #${esc(i.investigation_id)}`:"No Investigation required"}
+        </p>
+        <section class="detail-section">
+          <h3>Specific Action</h3>
+          <p>${esc(i.description||"No work description stored.")}</p>
+        </section>
+        <section class="detail-section">
+          <h3>Complete Work Item</h3>
+          <label>Work Performed</label>
+          <textarea id="work-performed-${esc(i.id)}" placeholder="Record what was actually done."></textarea>
+          <label>Result</label>
+          <textarea id="work-result-${esc(i.id)}" placeholder="Record the verified result or actual impact."></textarea>
+          <label>Completion Evidence</label>
+          <textarea id="work-evidence-${esc(i.id)}" placeholder="Record the evidence that proves completion."></textarea>
+          <div class="processing-actions">
+            <button class="button primary" data-complete-work="${esc(i.id)}">
+              Complete Work Item
+            </button>
+          </div>
+          <div id="work-message-${esc(i.id)}"></div>
+        </section>
+      </article>
+    `).join("");
+
+    el.openWork.querySelectorAll("[data-complete-work]").forEach(button=>{
+      button.addEventListener("click",()=>{
+        const id=Number(button.dataset.completeWork);
+        const item=linkedWorkItems.find(entry=>Number(entry.id)===id);
+        if(item)completeWorkItem(item);
+      });
+    });
   }
 
-  return values.slice(0, 12).join("; ");
-}
+  async function completeWorkItem(item){
+    if(processingWorkItem)return;
 
-function evidenceItemToText(item) {
-  if (item === null || item === undefined) return "";
-  if (typeof item === "string" || typeof item === "number") return clean(item);
-  if (typeof item !== "object") return "";
+    const id=Number(item.id);
+    const workPerformed=byId(`work-performed-${id}`)?.value.trim()||"";
+    const actualImpact=byId(`work-result-${id}`)?.value.trim()||"";
+    const evidenceDescription=byId(`work-evidence-${id}`)?.value.trim()||"";
+    const message=byId(`work-message-${id}`);
 
-  const label = clean(
-    item.label ||
-    item.key ||
-    item.name ||
-    item.metric ||
-    item.category
-  );
+    if(!workPerformed||!actualImpact||!evidenceDescription){
+      message.className="status error";
+      message.textContent="Work Performed, Result, and Completion Evidence are all required.";
+      return;
+    }
 
-  const value = clean(
-    item.displayValue ||
-    item.display_value ||
-    item.value ||
-    item.statement ||
-    item.evidence ||
-    item.text
-  );
+    if(!window.confirm(item.investigation_id?`Complete Work Item #${id} and close its linked Investigation?`:`Complete requested Work Item #${id}?`))return;
 
-  if (label && value) return `${label}: ${value}`;
-  return label || value;
-}
+    processingWorkItem=true;
+    message.className="status loading";
+    message.textContent=`Completing Work Item #${id} in production D1…`;
 
-function humanize(value) {
-  const text = clean(value);
-  if (!text || text.toLowerCase() === "unknown") return "";
-  return text
-    .replace(/[_-]+/g, " ")
-    .replace(/\b\w/g, character => character.toUpperCase());
-}
+    try{
+      await post({
+        action:"process-work-item",
+        clientCode:item.clientCode,
+        workItemId:id,
+        workPerformed,
+        actualImpact,
+        evidenceDescription,
+        evidenceSource:item.investigation_id?"Guided Investigation Completion Evidence":"Requested Work Completion Evidence",
+        evidenceType:"completion"
+      });
+
+      message.className="status ready";
+      message.textContent=item.investigation_id?`Work Item #${id} completed and its linked Investigation closed.`:`Requested Work Item #${id} completed.`;
+      await load();
+    }catch(error){
+      message.className="status error";
+      message.textContent=error.message||"The Work Item could not be completed.";
+    }finally{
+      processingWorkItem=false;
+    }
+  }
+
+  function sortInvestigations(a,b){const p={urgent:0,high:1,normal:2,medium:2,low:3};return (p[norm(a.priority)]??4)-(p[norm(b.priority)]??4)||((Date.parse(b.opened_at||b.created_at||"")||0)-(Date.parse(a.opened_at||a.created_at||"")||0));}
+  function closed(i){return ["complete","completed","closed","resolved","cancelled","canceled","archived","ignored","no_action"].includes(norm(i.status));}
+  function completed(i){return ["complete","completed","closed","resolved","cancelled","canceled"].includes(norm(i.status));}
+  function key(i){return `${i.clientCode}:${i.id}`;}
+  function norm(v){return String(v||"").trim().toLowerCase().replace(/\s+/g,"_");}
+  function normalizeWebsite(value){
+    const raw=String(value||"").trim();
+    if(!raw)return "";
+    if(/^https?:\/\//i.test(raw))return raw;
+    return `https://${raw.replace(/^\/+/, "")}`;
+  }
+  function setStatus(type,text){el.status.className=`status ${type}`;el.status.textContent=text;} function positiveInt(v){const n=Number(v);return Number.isInteger(n)&&n>0?n:null;} function byId(id){return document.getElementById(id);}
+  function esc(v){return String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");}
+})();
+</script>
+</body>
+</html>
