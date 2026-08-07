@@ -1,10 +1,10 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.5
+   Version: 1.9.6
    Status: Audited Production Candidate
-   Source: Production work.html 1.9.4
-   Sprint: Search Console Setup Render Fix
+   Source: Production work.html 1.9.5
+   Sprint: Investigation-Aware Evidence Guard
    Purpose: Preserve the complete audited SEMrush evidence and guided
             Investigation workflow while adding a direct D1 entrance for
             known client-requested work that needs no artificial Investigation.
@@ -28,6 +28,10 @@
    - Reset Road Test clears both checklist and locked local evidence.
    - Keeps the proven local SEMrush direct-link workflow unchanged.
    - Adds Google Search Console evidence routing for Search Console investigations.
+   - Rejects evidence whose recognized source conflicts with the selected Investigation.
+   - Adds a Google Search Console Merchant Listings decision path for SKU evidence.
+   - Recognizes invalid-SKU diagnosis, implementation evidence, and live verified fixes.
+   - Prevents Search Console investigations from falling through to SEMrush Site Audit logic.
    - Adds one-time per-client saved Search Console evidence links.
    - Makes the first evidence-workflow step source-neutral.
    - Uses the actual investigation source in screenshot extraction prompts.
@@ -1020,6 +1024,23 @@
         });
 
         const captured=normalizeCapturedEvidence(payload);
+        const relevance=validateEvidenceRelevance(captured,item);
+        if(!relevance.ok){
+          renderCapturedEvidence(captured,{
+            evidenceType:"wrong_source",
+            issueName:"",
+            count:0,
+            rootCauseProven:false,
+            reason:relevance.reason,
+            nextQuestion:"Does this screenshot belong to the selected Investigation?",
+            nextEvidence:`Capture evidence from ${evidenceSourceName(item)} for Investigation #${item.id}.`
+          });
+          status.className="status error capture-status";
+          status.textContent=relevance.reason;
+          analyze.disabled=false;
+          analyze.textContent="Analyze Evidence";
+          return;
+        }
         const decision=buildNextStepDecision(captured,item);
         renderCapturedEvidence(captured,decision);
         prefillInvestigationFields(item,captured,decision);
@@ -1260,10 +1281,107 @@
     updateDecisionControls(decision);
   }
 
+  function validateEvidenceRelevance(captured,item){
+    const text=[captured?.source,captured?.subject,...(captured?.facts||[])].join(" ").toLowerCase();
+
+    if(isGoogleSearchConsole(item)){
+      const explicitSemrush=/\bsemrush\b|semrush site audit/.test(text);
+      const explicitGoogle=/google search console|search console|merchant listings|url inspection|product snippets|invalid value in field|valid item detected|url is on google/.test(text);
+      if(explicitSemrush&&!explicitGoogle){
+        return {ok:false,reason:`Wrong evidence source for Investigation #${item.id}. This Investigation requires Google Search Console evidence; the screenshot was recognized as SEMrush evidence and was NOT locked.`};
+      }
+    }
+
+    if(isSemrushSiteAudit(item)){
+      const explicitGoogle=/google search console|search console|merchant listings|url inspection|url is on google/.test(text);
+      const explicitSemrush=/\bsemrush\b|site audit|site health|errors|warnings|notices/.test(text);
+      if(explicitGoogle&&!explicitSemrush){
+        return {ok:false,reason:`Wrong evidence source for Investigation #${item.id}. This Investigation requires SEMrush Site Audit evidence; the screenshot was recognized as Google Search Console evidence and was NOT locked.`};
+      }
+    }
+
+    return {ok:true,reason:""};
+  }
+
+  function buildGoogleSearchConsoleDecision({facts,joined,history,item}){
+    const skuMatch=(facts||[]).join(" ").match(/\bsku\b\s*[:|\-]?\s*["']?([A-Z0-9][A-Z0-9._-]{2,})["']?/i);
+    const sku=skuMatch?skuMatch[1]:"";
+    const invalidSku=/invalid value in field ["']?sku|invalid (?:value )?(?:in )?(?:field )?["']?sku/i.test(joined);
+    const merchant=/merchant listings|product snippets|structured data|rich result|valid item detected/i.test(joined);
+    const success=/valid item detected|url is on google|eligible for google search|no critical issues/i.test(joined);
+    const priorInvalid=history.some(entry=>/sku/i.test(String(entry.issueName||"")+" "+String(entry.finding||""))&&/invalid/i.test(String(entry.finding||"")));
+
+    if(success&&sku&&!invalidSku){
+      return {
+        evidenceType:"verification_proof",
+        issueName:"Invalid value in field sku",
+        count:1,
+        severity:"warning",
+        affectedField:"sku",
+        implementationSource:"Shopify product variant SKU",
+        rootCauseProven:true,
+        reason:`Google Search Console live evidence shows SKU ${sku} and no invalid-SKU warning. The corrective change is verified on the live structured data.`,
+        expectedImpact:"The affected Merchant Listings SKU is now valid in Google's live structured-data result.",
+        nextQuestion:"Is the corrected SKU now verified and ready to be recorded as completed work?",
+        nextEvidence:"Use this live Google Search Console result as completion evidence and complete the Investigation."
+      };
+    }
+
+    if(invalidSku){
+      return {
+        evidenceType:"affected_field",
+        issueName:"Invalid value in field sku",
+        count:1,
+        severity:"warning",
+        affectedField:"sku",
+        implementationSource:sku?"Shopify product variant SKU":"",
+        rootCauseProven:Boolean(sku),
+        reason:sku
+          ? `Google Search Console identifies the invalid Merchant Listings field as sku and exposes the current value ${sku}.`
+          : "Google Search Console identifies sku as the invalid Merchant Listings field.",
+        expectedImpact:"Correcting the product variant SKU should remove the Merchant Listings invalid-SKU warning without changing product identity or sales processing.",
+        nextQuestion:sku?"What valid internal SKU should replace the invalid Shopify variant SKU?":"What exact SKU value is being emitted for the affected product variant?",
+        nextEvidence:sku
+          ? "Update the affected Shopify variant SKU, then run Google Search Console live testing and capture the corrected Merchant Listings result."
+          : "Open the affected item details and capture the visible SKU value and product URL."
+      };
+    }
+
+    if(merchant){
+      return {
+        evidenceType:"issue_list",
+        issueName:"Merchant Listings structured-data issue",
+        count:1,
+        severity:"warning",
+        rootCauseProven:false,
+        reason:"Google Search Console confirms a Merchant Listings structured-data issue, but the exact affected field/value still needs to be identified.",
+        expectedImpact:"No corrective work should be created until the affected field and source value are proven.",
+        nextQuestion:"Which Merchant Listings field is invalid, and what exact value is Google reading?",
+        nextEvidence:"Open one representative affected item and capture the exact validation error, product URL, and field value."
+      };
+    }
+
+    return {
+      evidenceType:"extraction_failed",
+      issueName:"",
+      count:0,
+      severity:"",
+      rootCauseProven:false,
+      reason:"The screenshot does not contain enough recognizable Google Search Console Merchant Listings evidence to advance this Investigation.",
+      expectedImpact:"No evidence is locked as a decision until the relevant Search Console facts are visible.",
+      nextQuestion:"What exact Merchant Listings issue is visible for the affected product?",
+      nextEvidence:"Capture the Google Search Console Merchant Listings issue or live result with the issue name, affected item, and field/value visible."
+    };
+  }
+
   function buildNextStepDecision(captured,item){
     const facts=captured.facts||[];
     const joined=facts.join(" ").toLowerCase();
     const history=item?getEvidenceHistory(item):[];
+
+    if(isGoogleSearchConsole(item)){
+      return buildGoogleSearchConsoleDecision({facts,joined,history,item});
+    }
 
     if(isSemrushSiteAudit(item)){
       const specialist=buildSemrushSiteAuditDecision({
@@ -1689,12 +1807,22 @@
       ].join("\n\n");
     }
 
+    if(decision.evidenceType==="verification_proof"){
+      return [
+        `Verified result: ${decision.issueName}.`,
+        decision.reason,
+        "Decision state: live evidence verifies the corrective change; the Investigation can advance to completion and Proof of Work."
+      ].filter(Boolean).join("\n\n");
+    }
+
     if(decision.issueName){
       return [
-        baseline||"The SEMrush issue list provides a verified issue category.",
-        `Selected issue: "${decision.issueName}" affecting ${decision.count} page${decision.count===1?"":"s"}.`,
+        baseline||`The ${evidenceSourceName(item)} evidence provides a verified issue category.`,
+        `Selected issue: "${decision.issueName}" affecting ${decision.count} item${decision.count===1?"":"s"}.`,
         `Why selected: ${decision.reason}`,
-        "Decision state: investigate one live example before creating corrective work."
+        decision.rootCauseProven
+          ? "Decision state: the responsible field/source is proven; proceed to corrective action and verification."
+          : "Decision state: continue the evidence path before creating corrective work."
       ].filter(Boolean).join("\n\n");
     }
 
