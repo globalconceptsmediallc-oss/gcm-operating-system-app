@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailIntegration.js
-   Version: 1.2.0
+   Version: 1.3.0
    Status: Production Candidate — Gmail Decision Calibration Preview
    Source: New production route
    Sprint: Morning Command — Operational Decision Calibration
@@ -17,7 +17,7 @@ import { VERSION, ACTIONS } from "../shared/config.js";
 import { clean, safeErrorMessage, logWorkerError, jsonResponse } from "../shared/http.js";
 import { getDatabase } from "../shared/database.js";
 import { handleCommunicationAnalysis } from "./communicationAnalysis.js";
-export const GMAIL_INTEGRATION_VERSION = "1.2.0";
+export const GMAIL_INTEGRATION_VERSION = "1.3.0";
 export const GMAIL_PATHS = Object.freeze({ CONNECT: "/auth/google", CALLBACK: "/auth/google/callback" });
 const AUTH_URL="https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL="https://oauth2.googleapis.com/token";
@@ -34,6 +34,7 @@ export async function handleGmailGet(request,env,requestId){
 export async function handleGmailAction(body,env,requestId){
   if(body?.action===ACTIONS.GET_GMAIL_STATUS)return status(env,requestId);
   if(body?.action===ACTIONS.PREVIEW_GMAIL_INBOX)return preview(body,env,requestId);
+  if(body?.action===ACTIONS.APPROVE_GMAIL_MONITORING)return approveMonitoring(body,env,requestId);
   return null;
 }
 async function beginAuth(url,env){
@@ -106,6 +107,37 @@ async function preview(body,env,requestId){
     return jsonResponse({ok:false,requestId,action:ACTIONS.PREVIEW_GMAIL_INBOX,error:safeErrorMessage(error)},500);
   }
 }
+async function approveMonitoring(body,env,requestId){
+  const gmailMessageId=clean(body?.gmailMessageId);
+  if(!gmailMessageId)return jsonResponse({ok:false,requestId,error:"gmailMessageId is required."},400);
+  try{
+    const db=requireDb(env); await ensureTable(db);
+    const sourceReference=`gmail:${gmailMessageId}`;
+    const existing=await db.prepare(`SELECT id,client_id,activity_date,activity,source_reference FROM activity_records WHERE source_reference=? LIMIT 1`).bind(sourceReference).first();
+    if(existing)return jsonResponse({ok:true,requestId,action:ACTIONS.APPROVE_GMAIL_MONITORING,duplicate:true,writesPerformed:0,record:existing});
+    const connection=await db.prepare(`SELECT account_email,encrypted_refresh_token FROM gmail_connections ORDER BY updated_at DESC LIMIT 1`).first();
+    if(!connection)return jsonResponse({ok:false,requestId,error:"Gmail is not connected."},401);
+    const refreshToken=await decrypt(connection.encrypted_refresh_token,env.GOOGLE_CLIENT_SECRET);
+    const accessToken=await refreshAccessToken(refreshToken,env);
+    const message=await readMessage(gmailMessageId,accessToken);
+    const analyzed=await analyzePreviewMessage(message,env,`${requestId}-approval`);
+    const intel=analyzed.intelligence||{};
+    if(!intel.monitoringOnly)return jsonResponse({ok:false,requestId,error:"This email is not classified as a Monitoring Candidate. Review it manually before creating an OS record.",intelligence:intel},409);
+    const clientName=clean(intel.client);
+    if(!clientName||/unassigned|human review/i.test(clientName))return jsonResponse({ok:false,requestId,error:"A verified client match is required before monitoring can be approved."},409);
+    const client=await db.prepare(`SELECT id,name FROM clients WHERE lower(name)=lower(?) LIMIT 1`).bind(clientName).first();
+    if(!client)return jsonResponse({ok:false,requestId,error:`No production client matched ${clientName}.`},409);
+    const activityDate=normalizeActivityDate(message.date);
+    const category=monitoringCategory(intel.notificationType);
+    const activity=clean(message.subject)||`${intel.communicationFamily||"Monitoring"} update`;
+    const notes=[`Business meaning: ${clean(intel.businessMeaning)}`,`Recommended action: ${clean(intel.recommendedAction)}`,`Gmail message ID: ${gmailMessageId}`,`Gmail thread ID: ${clean(message.threadId)}`].filter(Boolean).join("\n");
+    const result=await db.prepare(`INSERT INTO activity_records (client_id,activity_date,category,activity,evidence_type,evidence_reference,status,owner,time_minutes,expected_impact,actual_impact,notes,source_type,source_reference,priority,win,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`).bind(client.id,activityDate,category,activity,"Gmail",sourceReference,"completed","Andy",0,"Monitoring / trend evidence",clean(intel.businessMeaning),notes,"gmail_monitoring",sourceReference,clean(intel.operationalPriority)||"Low",0).run();
+    return jsonResponse({ok:true,requestId,action:ACTIONS.APPROVE_GMAIL_MONITORING,duplicate:false,writesPerformed:1,record:{id:result?.meta?.last_row_id||null,client_id:client.id,client:client.name,activity_date:activityDate,activity,source_reference:sourceReference}});
+  }catch(error){logWorkerError({requestId,route:ACTIONS.APPROVE_GMAIL_MONITORING,stage:"gmail_monitoring_approval",error});return jsonResponse({ok:false,requestId,action:ACTIONS.APPROVE_GMAIL_MONITORING,error:safeErrorMessage(error)},500);}
+}
+function normalizeActivityDate(value){const d=new Date(value);return Number.isNaN(d.getTime())?new Date().toISOString().slice(0,10):d.toISOString().slice(0,10);}
+function monitoringCategory(type){const map={position_tracking:"SEO Ranking Alert",search_performance:"Search Performance Notification",site_audit:"Technical SEO Audit Alert",backlink_audit:"SEO Backlink Alert",analytics:"Analytics Notification",business_profile:"Local Presence Notification"};return map[clean(type).toLowerCase()]||"Monitoring Intelligence";}
+
 async function readMessage(id,token){
   const url=new URL(`${API}/users/me/messages/${encodeURIComponent(id)}`);
   url.searchParams.set("format","full");
