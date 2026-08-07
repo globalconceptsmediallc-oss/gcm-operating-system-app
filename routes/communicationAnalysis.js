@@ -1,10 +1,10 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.7.6
-   Source: Production route 7.7.1
-   Status: Production Candidate — SEMrush Engine Integration
-   Purpose: Complete production communication analysis route,
+   Version: 7.8.0
+   Source: Production route 7.7.6
+   Status: Production Candidate — Authoritative Report Dispatch
+   Purpose: Complete production communication analysis route with one authoritative report-family decision before specialist dispatch,
             including pasted-text and screenshot evidence extraction,
             independent report-signature recognition, specialized extraction,
             evidence reconciliation, notification classification,
@@ -326,49 +326,38 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
     }));
   }
 
-  /* Stage 1B: SEMrush specialized engine.
-     The shared engine owns Position Tracking, Site Audit, and Backlink Audit
-     evidence enrichment. The route remains responsible for classification,
-     WWPOWD, business meaning, proof readiness, and operational routing. */
+  /* Stage 1B: specialist dispatch after authoritative recognition.
+     v7.8.0 rule: reportRecognition owns platform/report identity. A specialist
+     may enrich a recognized family, but it may not reclassify an unrelated or
+     unknown report. This prevents Google Search Console evidence from entering
+     the SEMrush Site Audit specialist because of generic words such as errors
+     or warnings. */
   {
-    semrushAnalysis = await analyzeSemrushCommunication({
-      evidence: visibleEvidence,
-      reportRecognition,
-      imageDataUrl,
-      sourceText,
-      client,
-      clientId,
-      fileName,
-      env,
-      requestId
-    });
+    if (isRecognizedSemrushReport(reportRecognition)) {
+      semrushAnalysis = await analyzeSemrushCommunication({
+        evidence: visibleEvidence,
+        reportRecognition,
+        imageDataUrl,
+        sourceText,
+        client,
+        clientId,
+        fileName,
+        env,
+        requestId
+      });
 
-    if (semrushAnalysis?.handled) {
-      visibleEvidence = sanitizeVisibleEvidence(
-        semrushAnalysis.evidence || visibleEvidence
-      );
+      if (semrushAnalysis?.handled) {
+        visibleEvidence = sanitizeVisibleEvidence(
+          semrushAnalysis.evidence || visibleEvidence
+        );
 
-      for (const stage of semrushAnalysis.stages || []) {
-        stages.push(stage);
-      }
+        for (const stage of semrushAnalysis.stages || []) {
+          stages.push(stage);
+        }
 
-      for (const error of semrushAnalysis.errors || []) {
-        errors.push(error);
-      }
-
-      if (
-        semrushAnalysis.reportType &&
-        semrushAnalysis.reportType !== "unknown"
-      ) {
-        reportRecognition = normalizeReportRecognition({
-          ...(reportRecognition || {}),
-          platform: "semrush",
-          reportType: semrushAnalysis.reportType,
-          reportFamily: humanizeSemrushReportType(semrushAnalysis.reportType),
-          confidence: reportRecognition?.confidence || "High",
-          recognitionMethod: reportRecognition?.recognitionMethod || `semrush-engine-v${SEMRUSH_ENGINE_VERSION}`,
-          model: reportRecognition?.model || "deterministic"
-        });
+        for (const error of semrushAnalysis.errors || []) {
+          errors.push(error);
+        }
       }
     }
   }
@@ -607,6 +596,15 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
       reasoningAiCallBudget: 1
     }
   }, 200);
+}
+
+function isRecognizedSemrushReport(recognition) {
+  const normalized = normalizeReportRecognition(recognition || {});
+  return normalized.platform === "semrush" && [
+    "site_audit",
+    "position_tracking",
+    "backlink_audit"
+  ].includes(normalized.reportType);
 }
 
 function humanizeSemrushReportType(reportType) {
@@ -1677,12 +1675,10 @@ function applyReportRecognitionToEvidence(evidence, recognition) {
 
   return normalizeVisibleEvidence({
     ...normalized,
-    visibleSource: clean(normalized.visibleSource) && normalized.visibleSource !== "Unknown"
-      ? normalized.visibleSource
-      : sourceMap[recognized.platform] || "Unknown",
-    visibleSubject: clean(normalized.visibleSubject) && normalized.visibleSubject !== "Unknown"
-      ? normalized.visibleSubject
-      : recognized.reportFamily,
+    // v7.8.0: recognition is authoritative for report identity. Broad evidence
+    // extraction may supply facts/metrics, but may not override platform/family.
+    visibleSource: sourceMap[recognized.platform] || normalized.visibleSource || "Unknown",
+    visibleSubject: recognized.reportFamily || normalized.visibleSubject || "Unknown",
     visibleFacts: uniqueTextValues([
       ...(normalized.visibleFacts || []),
       `Recognized report family: ${recognized.reportFamily}`
