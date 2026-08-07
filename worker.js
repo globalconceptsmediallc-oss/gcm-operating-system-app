@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.7.7
+   Version: 7.7.8
    Status: Production Road-Test Candidate
    Source: Production worker.js 7.7.6
    Sprint: Create Requested Work
@@ -53,7 +53,7 @@ import {
 
 import { handleGmailGet, handleGmailAction } from "./routes/gmailIntegration.js";
 
-const WORKER_FILE_VERSION = "7.7.7";
+const WORKER_FILE_VERSION = "7.7.8";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
@@ -70,7 +70,8 @@ const SUPPORTED_ACTIONS = [
   ACTIONS.OPERATIONAL_REVIEWS,
   AGENCY_COMMAND_ACTION,
   ACTIONS.GET_GMAIL_STATUS,
-  ACTIONS.PREVIEW_GMAIL_INBOX
+  ACTIONS.PREVIEW_GMAIL_INBOX,
+  ACTIONS.APPROVE_GMAIL_MONITORING
 ].filter(Boolean);
 
 export default {
@@ -172,6 +173,7 @@ export default {
       switch (action) {
         case ACTIONS.GET_GMAIL_STATUS:
         case ACTIONS.PREVIEW_GMAIL_INBOX:
+        case ACTIONS.APPROVE_GMAIL_MONITORING:
           return await handleGmailAction(body, env, requestId);
 
         case AGENCY_COMMAND_ACTION:
