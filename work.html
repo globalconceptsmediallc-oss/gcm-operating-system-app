@@ -1,10 +1,10 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.3
+   Version: 1.9.4
    Status: Audited Production Candidate
-   Source: Production work.html 1.9.2
-   Sprint: Create Requested Work
+   Source: Production work.html 1.9.3
+   Sprint: Evidence Source Routing
    Purpose: Preserve the complete audited SEMrush evidence and guided
             Investigation workflow while adding a direct D1 entrance for
             known client-requested work that needs no artificial Investigation.
@@ -27,6 +27,10 @@
      after page reload.
    - Reset Road Test clears both checklist and locked local evidence.
    - Keeps the proven local SEMrush direct-link workflow unchanged.
+   - Adds Google Search Console evidence routing for Search Console investigations.
+   - Adds one-time per-client saved Search Console evidence links.
+   - Makes the first evidence-workflow step source-neutral.
+   - Uses the actual investigation source in screenshot extraction prompts.
    - Does not change D1 schemas, Worker routes, or processing payload fields.
    - Filters Open Work Items by the selected Investigation.
    - Refreshes the Work Item panel whenever the Investigation changes.
@@ -135,7 +139,7 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Use Investigation when the correct action is unknown. Use Create Requested Work when the client need and deliverable are already clear.</p></div>
-        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.3</span>
+        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.4</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -219,7 +223,7 @@
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.3"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.4"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),target:byId("target-banner"),requestedForm:byId("requested-work-form"),requestedClient:byId("requested-client"),requestedMessage:byId("requested-work-message"),createRequested:byId("create-requested-work")};
   let activeClients=[],directoryClients=[],investigations=[],workItems=[],selectedKey="",processing=false,processingWorkItem=false,processingRequestedWork=false;
 
@@ -416,8 +420,28 @@
       (combined.includes("site_audit") || combined.includes("site audit"));
   }
 
+  function isGoogleSearchConsole(item){
+    const combined=[
+      item?.title,
+      item?.description,
+      item?.communication?.subject,
+      item?.communication?.notification_type,
+      item?.communication?.communication_family
+    ].map(value=>norm(value)).join(" ");
+
+    return combined.includes("google search console") ||
+      combined.includes("search_console") ||
+      combined.includes("search console");
+  }
+
+  function evidenceSourceName(item){
+    if(isSemrushSiteAudit(item))return "SEMrush Site Audit";
+    if(isGoogleSearchConsole(item))return "Google Search Console";
+    return "client evidence source";
+  }
+
   const EVIDENCE_STEPS=[
-    {id:"open_semrush",title:"Open Client Site Audit",detail:"Open the correct client project or saved Issues page."},
+    {id:"open_semrush",title:"Open Evidence Source",detail:"Open the correct source page for this Investigation."},
     {id:"review_issues",title:"Review Issues",detail:"Open the Issues screen and identify the highest-value issue."},
     {id:"capture_screenshot",title:"Capture Screenshot",detail:"Choose the current evidence screenshot."},
     {id:"analyze_evidence",title:"Analyze Evidence",detail:"Use Workers AI to extract visible facts and metrics."},
@@ -455,7 +479,7 @@
   function nextIncompleteStep(state){return EVIDENCE_STEPS.find(step=>!state[step.id])?.id||"";}
   function buildEvidenceWorkflow(item){const state=getEvidenceWorkflowState(item);const completed=EVIDENCE_STEPS.filter(step=>state[step.id]).length;return `<section class="evidence-workflow" id="evidence-workflow"><div class="evidence-workflow-header"><div><h4>Evidence Workflow</h4><p>Follow the investigation in order. The next required step is highlighted.</p></div><span class="workflow-progress" id="workflow-progress">${completed} of ${EVIDENCE_STEPS.length} complete</span></div><ol class="evidence-step-list" id="evidence-step-list"></ol><div class="evidence-workflow-actions"><button class="button" id="reset-evidence-workflow" type="button">Reset Road Test</button></div></section>`;}
   function renderEvidenceWorkflowState(item){const list=byId("evidence-step-list"),progress=byId("workflow-progress");if(!list||!progress)return;const state=getEvidenceWorkflowState(item),activeId=nextIncompleteStep(state),completed=EVIDENCE_STEPS.filter(step=>state[step.id]).length;progress.textContent=`${completed} of ${EVIDENCE_STEPS.length} complete`;list.innerHTML=EVIDENCE_STEPS.map((step,index)=>{const isComplete=Boolean(state[step.id]),isActive=!isComplete&&step.id===activeId,className=isComplete?"complete":isActive?"active":"",status=isComplete?"Complete":isActive?"Current":"Waiting";return `<li class="evidence-step ${className}"><span class="evidence-step-index">${isComplete?"✓":index+1}</span><span><strong>${esc(step.title)}</strong><small>${esc(step.detail)}</small></span><span class="evidence-step-status">${status}</span></li>`;}).join("");}
-  function bindEvidenceWorkflow(item){renderEvidenceWorkflowState(item);byId("reset-evidence-workflow")?.addEventListener("click",()=>{if(window.confirm("Clear the checklist and all locally locked road-test evidence for this Investigation?"))resetEvidenceWorkflow(item);});document.querySelector('[data-evidence-tool="semrush"]')?.addEventListener("click",()=>completeEvidenceStep(item,"open_semrush"));const finding=byId("finding-summary"),title=byId("work-title"),description=byId("work-description");[finding,title,description].forEach(field=>field?.addEventListener("input",()=>{if(String(finding?.value||"").trim()&&String(title?.value||"").trim()&&String(description?.value||"").trim())completeEvidenceStep(item,"review_findings");}));}
+  function bindEvidenceWorkflow(item){renderEvidenceWorkflowState(item);byId("reset-evidence-workflow")?.addEventListener("click",()=>{if(window.confirm("Clear the checklist and all locally locked road-test evidence for this Investigation?"))resetEvidenceWorkflow(item);});document.querySelectorAll("[data-evidence-tool]").forEach(link=>link.addEventListener("click",()=>completeEvidenceStep(item,"open_semrush")));const finding=byId("finding-summary"),title=byId("work-title"),description=byId("work-description");[finding,title,description].forEach(field=>field?.addEventListener("input",()=>{if(String(finding?.value||"").trim()&&String(title?.value||"").trim()&&String(description?.value||"").trim())completeEvidenceStep(item,"review_findings");}));}
 
   function semrushStorageKey(clientCode){
     return `gcm-os-semrush-site-audit-url:${String(clientCode||"").trim().toUpperCase()}`;
@@ -488,9 +512,42 @@
     }
   }
 
+  function searchConsoleStorageKey(clientCode){
+    return `gcm-os-search-console-url:${String(clientCode||"").trim().toUpperCase()}`;
+  }
+
+  function getSavedSearchConsoleUrl(clientCode){
+    try{
+      return String(localStorage.getItem(searchConsoleStorageKey(clientCode))||"").trim();
+    }catch(error){
+      console.warn("Could not read the saved Google Search Console URL.",error);
+      return "";
+    }
+  }
+
+  function saveSearchConsoleUrl(clientCode,url){
+    localStorage.setItem(searchConsoleStorageKey(clientCode),url);
+  }
+
+  function removeSearchConsoleUrl(clientCode){
+    localStorage.removeItem(searchConsoleStorageKey(clientCode));
+  }
+
+  function validSearchConsoleUrl(value){
+    try{
+      const parsed=new URL(String(value||"").trim());
+      return /^https?:$/.test(parsed.protocol) &&
+        parsed.hostname.toLowerCase()==="search.google.com" &&
+        parsed.pathname.startsWith("/search-console");
+    }catch(error){
+      return false;
+    }
+  }
+
   function buildEvidenceActions(item){
     const actions=[];
     const savedSemrushUrl=getSavedSemrushUrl(item.clientCode);
+    const savedSearchConsoleUrl=getSavedSearchConsoleUrl(item.clientCode);
 
     if(isSemrushSiteAudit(item)){
       actions.push({
@@ -500,6 +557,15 @@
         href:savedSemrushUrl||"https://www.semrush.com/siteaudit/",
         primary:true,
         tool:"semrush"
+      });
+    }else if(isGoogleSearchConsole(item)){
+      actions.push({
+        label:savedSearchConsoleUrl
+          ? `Open ${item.clientName} Search Console Evidence`
+          : "Open Google Search Console",
+        href:savedSearchConsoleUrl||"https://search.google.com/search-console/",
+        primary:true,
+        tool:"search-console"
       });
     }
 
@@ -600,6 +666,85 @@
       if(link){
         link.href="https://www.semrush.com/siteaudit/";
         link.textContent=`Open ${item.clientName} Site Audit ↗`;
+      }
+
+      clearButton.disabled=true;
+      clearButton.textContent="Link Cleared";
+    });
+  }
+
+  function buildSearchConsoleLinkSetup(item){
+    if(!isGoogleSearchConsole(item))return "";
+
+    const saved=getSavedSearchConsoleUrl(item.clientCode);
+
+    return `
+      <div class="tool-link-setup" id="search-console-link-setup">
+        <strong>${saved?`${esc(item.clientName)} Search Console evidence link saved`:`One-time ${esc(item.clientName)} Search Console setup`}</strong>
+        <p>${saved
+          ? `The blue action now opens the saved ${esc(item.clientName)} Google Search Console evidence page directly.`
+          : `Open the exact Google Search Console report or issue for ${esc(item.clientName)}, copy the browser URL, return here, and click Save Copied Search Console Link. This is required only once for this browser.`}
+        </p>
+        <div class="tool-link-setup-actions">
+          ${saved
+            ? `<button class="button" id="clear-search-console-url" type="button">Clear Saved Link</button>`
+            : `<button class="button primary" id="save-search-console-url" type="button">Save Copied Search Console Link</button>`}
+        </div>
+        <div class="tool-link-status" id="search-console-link-status">
+          ${saved?"Direct Search Console evidence link ready.":"No direct Search Console evidence link saved yet."}
+        </div>
+      </div>
+    `;
+  }
+
+  function bindSearchConsoleLinkSetup(item){
+    if(!isGoogleSearchConsole(item))return;
+
+    const saveButton=byId("save-search-console-url");
+    const status=byId("search-console-link-status");
+    const clearButton=byId("clear-search-console-url");
+
+    saveButton?.addEventListener("click",async()=>{
+      status.textContent="Reading the copied Google Search Console URL…";
+      status.style.color="var(--muted)";
+
+      try{
+        const value=String(await navigator.clipboard.readText()).trim();
+
+        if(!validSearchConsoleUrl(value)){
+          status.textContent="The clipboard does not contain a valid search.google.com/search-console URL. Open the exact Search Console evidence page, copy its browser URL, then try again.";
+          status.style.color="var(--red)";
+          return;
+        }
+
+        saveSearchConsoleUrl(item.clientCode,value);
+        status.textContent=`Direct ${item.clientName} Search Console evidence link saved.`;
+        status.style.color="var(--green)";
+
+        const link=document.querySelector('[data-evidence-tool="search-console"]');
+        if(link){
+          link.href=value;
+          link.textContent=`Open ${item.clientName} Search Console Evidence ↗`;
+        }
+
+        saveButton.textContent="Search Console Link Saved";
+        saveButton.disabled=true;
+      }catch(error){
+        console.error(error);
+        status.textContent="The browser could not read the clipboard. Copy the Search Console URL and allow clipboard access when prompted.";
+        status.style.color="var(--red)";
+      }
+    });
+
+    clearButton?.addEventListener("click",()=>{
+      removeSearchConsoleUrl(item.clientCode);
+      status.textContent="Saved direct link cleared. The generic Google Search Console page will open.";
+      status.style.color="var(--muted)";
+
+      const link=document.querySelector('[data-evidence-tool="search-console"]');
+      if(link){
+        link.href="https://search.google.com/search-console/";
+        link.textContent="Open Google Search Console ↗";
       }
 
       clearButton.disabled=true;
@@ -917,7 +1062,7 @@
     const shared=[
       `Client: ${item.clientName}`,
       `Investigation: #${item.id} ${item.title||"Site Audit"}`,
-      "This image is evidence from SEMrush Site Audit.",
+      `This image is evidence from ${evidenceSourceName(item)}.`,
       "EXTRACTION ONLY. Do not recommend, prioritize, diagnose, infer, or decide.",
       "Do not repeat these instructions.",
       "Return only text and numbers that are visibly present in the screenshot.",
