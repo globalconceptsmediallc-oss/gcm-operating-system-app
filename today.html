@@ -1,10 +1,10 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.4.2
+   Version: 3.4.3
    Status: Production Candidate
    Source: Production today.html 3.1.2
-   Sprint: Morning Command — Gmail Intelligence Preview
+   Sprint: Morning Command — Gmail Reconnect Control
    Purpose: Preserve the locked Mission Control layout and existing routing while
             extending Morning Command from raw unread Gmail preview to read-only
             operational intelligence recommendations with no production writes.
@@ -2745,7 +2745,7 @@
       } else {
         window.GCMOShell.mount({
           currentPage: "today",
-          statusText: "Agency Command Center operational · Today v3.4.2"
+          statusText: "Agency Command Center operational · Today v3.4.3"
         });
       }
 
@@ -2754,7 +2754,28 @@
       const gmailEsc=v=>String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
       const gmailDecision=(label,value,extra="")=>`<span class="gmail-decision ${value?`yes ${extra}`:""}">${gmailEsc(label)}: ${value?"Yes":"No"}</span>`;
       const renderGmailMessage=m=>{const i=m.intelligence||{};const canMonitor=Boolean(i.monitoringOnly)&&!String(i.client||"").toLowerCase().includes("unassigned");return `<article class="gmail-message" data-gmail-id="${gmailEsc(m.gmailMessageId)}"><div class="gmail-message-header"><div><h3 class="gmail-message-title">${gmailEsc(m.subject)}</h3><span class="gmail-message-meta">${gmailEsc(m.from)} · ${gmailEsc(m.date)}</span></div><span class="gmail-route">${gmailEsc(i.proposedRoute||"Manual Review")}</span></div><div class="gmail-intelligence-grid"><div class="gmail-intelligence-field"><span class="gmail-intelligence-label">Communication Family</span><span class="gmail-intelligence-value">${gmailEsc(i.communicationFamily||"Unknown")}</span></div><div class="gmail-intelligence-field"><span class="gmail-intelligence-label">Notification Type</span><span class="gmail-intelligence-value">${gmailEsc(i.notificationType||"unknown")}</span></div><div class="gmail-intelligence-field"><span class="gmail-intelligence-label">Client</span><span class="gmail-intelligence-value">${gmailEsc(i.client||"Unassigned")}</span></div><div class="gmail-intelligence-field"><span class="gmail-intelligence-label">Priority</span><span class="gmail-intelligence-value">${gmailEsc(i.operationalPriority||"Low")}</span></div><div class="gmail-intelligence-field"><span class="gmail-intelligence-label">Confidence</span><span class="gmail-intelligence-value">${gmailEsc(i.confidence||"Low")}</span></div><div class="gmail-intelligence-field"><span class="gmail-intelligence-label">Recommended Route</span><span class="gmail-intelligence-value">${gmailEsc(i.proposedRoute||"Manual Review")}</span></div><div class="gmail-intelligence-field wide"><span class="gmail-intelligence-label">Business Meaning</span><span class="gmail-intelligence-value">${gmailEsc(i.businessMeaning||"Manual review required.")}</span></div><div class="gmail-intelligence-field wide"><span class="gmail-intelligence-label">Recommended Action</span><span class="gmail-intelligence-value">${gmailEsc(i.recommendedAction||"Review manually.")}</span></div></div><div class="gmail-decision-row">${gmailDecision("Communication Approved",false)}${gmailDecision("Investigation Approved",false)}${gmailDecision("Work Item Approved",false)}${gmailDecision("Monitoring Candidate",i.monitoringOnly)}${gmailDecision("Archive Candidate",i.archive,"archive")}</div><p class="gmail-source-preview">${gmailEsc(m.snippet||"")}</p>${canMonitor?`<div class="gmail-approval"><input class="gmail-monitor-check" id="gmail-${gmailEsc(m.gmailMessageId)}" type="checkbox" value="${gmailEsc(m.gmailMessageId)}"><label for="gmail-${gmailEsc(m.gmailMessageId)}">Approve as Monitoring</label><span class="gmail-approval-status">Not saved</span></div>`:""}</article>`};
-      async function loadGmailStatus(){try{const p=await gmailPost("get-gmail-status");if(p.connected){gmailStatusCopy.textContent=`${p.connection.account_email} is connected. Preview creates no records until you approve a monitoring candidate.`;gmailConnectButton.hidden=true;gmailPreviewButton.disabled=false}else{gmailStatusCopy.textContent="Gmail is not connected. Connect once for read-only access.";gmailConnectButton.href=p.connectUrl;gmailConnectButton.hidden=false;gmailPreviewButton.disabled=true}}catch(e){gmailStatusCopy.textContent=`Gmail status unavailable: ${e.message}`;gmailConnectButton.href=`${WORKER_ENDPOINT}auth/google?return_to=${encodeURIComponent(location.href)}`;gmailConnectButton.hidden=false}}
+      async function loadGmailStatus(){
+        try{
+          const p=await gmailPost("get-gmail-status");
+          gmailConnectButton.href=p.connectUrl||`${WORKER_ENDPOINT}auth/google?return_to=${encodeURIComponent(location.href)}`;
+          gmailConnectButton.hidden=false;
+
+          if(p.connected){
+            gmailStatusCopy.textContent=`${p.connection.account_email} is connected. Preview creates no records until you approve a monitoring candidate.`;
+            gmailConnectButton.textContent="Reconnect Gmail";
+            gmailPreviewButton.disabled=false;
+          }else{
+            gmailStatusCopy.textContent="Gmail is not connected. Connect Gmail to analyze the unread inbox.";
+            gmailConnectButton.textContent="Connect Gmail";
+            gmailPreviewButton.disabled=true;
+          }
+        }catch(e){
+          gmailStatusCopy.textContent=`Gmail status unavailable: ${e.message}`;
+          gmailConnectButton.href=`${WORKER_ENDPOINT}auth/google?return_to=${encodeURIComponent(location.href)}&reauthorize=1`;
+          gmailConnectButton.textContent="Reconnect Gmail";
+          gmailConnectButton.hidden=false;
+        }
+      }
       function bindGmailApprovals(){
         const checks=[...gmailPreview.querySelectorAll(".gmail-monitor-check")];
         checks.forEach(check=>check.addEventListener("change",async()=>{
