@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/config.js
-   Version: 7.7.7
+   Version: 7.7.8
    Status: Production Candidate
    Source: shared/config.js 7.7.6
    Sprint: Create Requested Work
@@ -9,7 +9,7 @@
             the direct client-requested Work Item action contract.
    ========================================================= */
 
-export const VERSION = "7.7.7";
+export const VERSION = "7.7.8";
 export const API_CONTRACT_VERSION = "communications-operational-decision-v3";
 export const COMMUNICATION_ANALYSIS_ENGINE_VERSION = "3.4.1";
 
@@ -24,6 +24,7 @@ export const ACTIONS = Object.freeze({
   ANALYZE_PROSPECT_INTELLIGENCE: "analyze-prospect-intelligence",
   GET_GMAIL_STATUS: "get-gmail-status",
   PREVIEW_GMAIL_INBOX: "preview-gmail-inbox",
+  APPROVE_GMAIL_MONITORING: "approve-gmail-monitoring",
   GET_CLIENT_WORKSPACE: "get-client-workspace",
   GET_CLIENT_DIRECTORY: "get-client-directory",
   COMMIT_OPERATIONAL_DECISION: "commit-operational-decision",
