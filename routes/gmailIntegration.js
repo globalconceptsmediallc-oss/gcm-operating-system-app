@@ -1,8 +1,8 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailIntegration.js
-   Version: 1.4.0
-   Status: Production Candidate — Approved Monitoring Cleanup
+   Version: 1.4.1
+   Status: Production Candidate — Forced Gmail Reauthorization
    Source: New production route
    Sprint: Morning Command — Operational Decision Calibration
    Purpose: Preserve the verified Gmail intelligence and approval workflow,
@@ -17,7 +17,7 @@ import { VERSION, ACTIONS } from "../shared/config.js";
 import { clean, safeErrorMessage, logWorkerError, jsonResponse } from "../shared/http.js";
 import { getDatabase } from "../shared/database.js";
 import { handleCommunicationAnalysis } from "./communicationAnalysis.js";
-export const GMAIL_INTEGRATION_VERSION = "1.4.0";
+export const GMAIL_INTEGRATION_VERSION = "1.4.1";
 export const GMAIL_PATHS = Object.freeze({ CONNECT: "/auth/google", CALLBACK: "/auth/google/callback" });
 const AUTH_URL="https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL="https://oauth2.googleapis.com/token";
@@ -47,7 +47,8 @@ async function beginAuth(url,env){
   target.searchParams.set("response_type","code");
   target.searchParams.set("scope",SCOPE);
   target.searchParams.set("access_type","offline");
-  target.searchParams.set("prompt","consent");
+  target.searchParams.set("prompt","consent select_account");
+  target.searchParams.set("include_granted_scopes","true");
   target.searchParams.set("state",state);
   return Response.redirect(target.toString(),302);
 }
@@ -63,6 +64,10 @@ async function finishAuth(url,env,requestId){
     const response=await fetch(TOKEN_URL,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({client_id:env.GOOGLE_CLIENT_ID,client_secret:env.GOOGLE_CLIENT_SECRET,code,grant_type:"authorization_code",redirect_uri:REDIRECT})});
     const token=await response.json();
     if(!response.ok||!token.refresh_token)throw new Error(token.error_description||token.error||"Google did not return a refresh token.");
+    const grantedScope=clean(token.scope);
+    if(!grantedScope.split(/\s+/).includes(SCOPE)){
+      throw new Error("Google did not grant gmail.modify. Reconnect Gmail and approve the requested Gmail permission.");
+    }
     const profile=await gmailFetch(`${API}/users/me/profile`,token.access_token);
     const db=requireDb(env);await ensureTable(db);
     const encrypted=await encrypt(token.refresh_token,env.GOOGLE_CLIENT_SECRET);
@@ -71,7 +76,7 @@ async function finishAuth(url,env,requestId){
   }catch(error){logWorkerError({requestId,route:"gmail-oauth-callback",stage:"gmail_oauth",error});return callbackPage(false,"Gmail connection failed",safeErrorMessage(error),state.returnTo,500);}
 }
 async function status(env,requestId){
-  try{const db=requireDb(env);await ensureTable(db);const connection=await db.prepare(`SELECT account_email,scope,connected_at,updated_at FROM gmail_connections ORDER BY updated_at DESC LIMIT 1`).first();return jsonResponse({ok:true,requestId,action:ACTIONS.GET_GMAIL_STATUS,version:VERSION,gmailIntegrationVersion:GMAIL_INTEGRATION_VERSION,connected:Boolean(connection),connection:connection||null,connectUrl:`${REDIRECT.replace('/auth/google/callback','/auth/google')}?return_to=${encodeURIComponent(TODAY)}`});}
+  try{const db=requireDb(env);await ensureTable(db);const connection=await db.prepare(`SELECT account_email,scope,connected_at,updated_at FROM gmail_connections ORDER BY updated_at DESC LIMIT 1`).first();return jsonResponse({ok:true,requestId,action:ACTIONS.GET_GMAIL_STATUS,version:VERSION,gmailIntegrationVersion:GMAIL_INTEGRATION_VERSION,connected:Boolean(connection),connection:connection||null,connectUrl:`${REDIRECT.replace('/auth/google/callback','/auth/google')}?return_to=${encodeURIComponent(TODAY)}&reauthorize=1`});}
   catch(error){return jsonResponse({ok:false,requestId,action:ACTIONS.GET_GMAIL_STATUS,error:safeErrorMessage(error)},500);}
 }
 async function preview(body,env,requestId){
