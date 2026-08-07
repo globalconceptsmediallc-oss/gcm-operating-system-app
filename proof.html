@@ -13,7 +13,7 @@
 <!-- =========================================================
  Global Concepts Media Operating System
  File: proof.html
- Version: 2.1.1
+ Version: 2.1.2
  Status: Production Candidate
  Purpose: Read-only Proof / Client Reporting view over existing D1 records, including completed Work Items and historical activity records, using the shared GCM OS shell.
  ========================================================= -->
@@ -62,14 +62,14 @@ window.addEventListener("DOMContentLoaded", () => {
   if (window.GCMOShell) {
     window.GCMOShell.mount({
       currentPage: "proof",
-      statusText: "Proof reporting operational · Proof v2.1.1"
+      statusText: "Proof reporting operational · Proof v2.1.2"
     });
   }
 });
 </script>
 <script>
 (()=>{"use strict";
-const VERSION="2.1.1",WORKER_URL="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+const VERSION="2.1.2",WORKER_URL="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
 const C=[{code:"SES",name:"Southeast Safes"},{code:"SFS",name:"South Florida Safes"},{code:"A1",name:"A1 Action Safe & Lock"},{code:"HBG",name:"HB Guns"},{code:"PW",name:"Pickett Weaponry"},{code:"NFS",name:"North Florida Safes"},{code:"MAS",name:"Move A Safe"},{code:"GCM",name:"Global Concepts Media"},{code:"LUMI",name:"Lumi Studio"},{code:"4A",name:"1-800 4A Gun Safe"}];
 const $=id=>document.getElementById(id),e={client:$("client"),period:$("period"),outputType:$("outputType"),groupMode:$("groupMode"),dates:$("dates"),startDate:$("startDate"),endDate:$("endDate"),includeWork:$("includeWork"),includeMonitoring:$("includeMonitoring"),generate:$("generate"),refresh:$("refresh"),copy:$("copy"),status:$("status"),recordList:$("recordList"),output:$("output"),outputMeta:$("outputMeta"),completed:$("completed"),results:$("results"),monitoring:$("monitoring"),time:$("time")};
 let W=[],R=[];
@@ -78,7 +78,101 @@ e.generate.onclick=generate;e.refresh.onclick=load;e.copy.onclick=copy;setDates(
 async function load(){status("loading","Loading client workspaces from production D1…");e.generate.disabled=e.refresh.disabled=true;const a=await Promise.all(C.map(async c=>{try{const r=await fetch(WORKER_URL,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify({action:"get-client-workspace",clientCode:c.code})}),p=await r.json();return r.ok&&p.ok?{code:p.operational.client.client_code||c.code,name:p.operational.client.name||c.name,p}:null}catch{return null}}));W=a.filter(Boolean).sort((a,b)=>a.name.localeCompare(b.name));e.client.innerHTML='<option value="ALL">All Clients</option>'+W.map(w=>`<option value="${esc(w.code)}">${esc(w.name)}</option>`).join('');e.generate.disabled=e.refresh.disabled=false;status("ready",`Loaded ${W.length} client workspaces. Choose the report and click Generate Proof.`)}
 function syncDates(){e.dates.hidden=e.period.value!=="custom";if(!["custom","historical"].includes(e.period.value))setDates(e.period.value)}
 function generate(){const T=e.client.value==="ALL"?W:W.filter(w=>w.code===e.client.value),range=resolveRange(T);R=T.flatMap(w=>records(w,range));R.sort((a,b)=>(e.period.value==="historical"||e.groupMode.value==="date")?a.date.localeCompare(b.date):b.date.localeCompare(a.date));summary();renderRecords();renderOutput(range);status("ready",`Generated ${labelOutput(e.outputType.value)} from ${R.length} supporting records. You may edit the draft before copying.`)}
-function records(w,range){const o=w.p.operational||{},out=[],completedWorkIds=new Set;if(e.includeWork.checked){(o.workItems||[]).forEach(item=>{const d=date(item.completed_at||item.updated_at||item.created_at);if(!d||!inside(d,range)||!complete(item.status))return;completedWorkIds.add(Number(item.id));const linkedEvidence=(o.evidence||[]).filter(entry=>Number(entry.work_item_id)===Number(item.id));const evidenceText=linkedEvidence.map(entry=>clean(entry.description)||clean(entry.source)).filter(Boolean).join(" | ");const result=useful(item.actual_impact)?clean(item.actual_impact):"";out.push({stream:"work",client:w.name,date:d,category:clean(item.category)||"Client Work",title:clean(item.title)||"Completed work",summary:clean(item.description),why:clean(item.expected_impact),result,evidence:evidenceText,minutes:num(item.minutes_spent||item.time_minutes),win:Boolean(result),sourceId:`work-${item.id}`})});(o.proofOfWork||[]).forEach(a=>{if(a.work_item_id&&completedWorkIds.has(Number(a.work_item_id)))return;const d=date(a.activity_date||a.created_at);if(d&&inside(d,range)&&complete(a.status)){const result=useful(a.actual_impact)?clean(a.actual_impact):"";out.push({stream:"work",client:w.name,date:d,category:clean(a.category)||"Client Work",title:clean(a.activity)||"Completed work",summary:clean(a.notes),why:clean(a.expected_impact),result,evidence:clean(a.evidence_reference),minutes:num(a.time_minutes),win:Boolean(Number(a.win)||result),sourceId:`activity-${a.id}`})}})}if(e.includeMonitoring.checked)(o.communications||[]).forEach(c=>{const d=date(c.occurred_at||c.created_at);if(d&&inside(d,range)&&monitor(c))out.push({stream:"monitoring",client:w.name,date:d,category:clean(c.category)||clean(c.source)||"Monitoring",title:clean(c.subject)||`${clean(c.source)||"Platform"} update`,summary:clean(c.ai_summary)||clean(c.raw_content),why:"",result:"",evidence:clean(c.source),minutes:num(c.minutes_spent),win:false,sourceId:`communication-${c.id}`})});return dedupe(out)}
+function records(w,range){
+  const o=w.p.operational||{},out=[],completedWorkIds=new Set;
+
+  if(e.includeWork.checked){
+    (o.workItems||[]).forEach(item=>{
+      const d=date(item.completed_at||item.updated_at||item.created_at);
+      if(!d||!inside(d,range)||!complete(item.status))return;
+      completedWorkIds.add(Number(item.id));
+      const linkedEvidence=(o.evidence||[]).filter(entry=>Number(entry.work_item_id)===Number(item.id));
+      const evidenceText=linkedEvidence.map(entry=>clean(entry.description)||clean(entry.source)).filter(Boolean).join(" | ");
+      const result=useful(item.actual_impact)?clean(item.actual_impact):"";
+      out.push({
+        stream:"work",
+        client:w.name,
+        date:d,
+        category:clean(item.category)||"Client Work",
+        title:clean(item.title)||"Completed work",
+        summary:clean(item.description),
+        why:clean(item.expected_impact),
+        result,
+        evidence:evidenceText,
+        minutes:num(item.minutes_spent||item.time_minutes),
+        win:Boolean(result),
+        sourceId:`work-${item.id}`
+      });
+    });
+
+    (o.proofOfWork||[]).forEach(a=>{
+      if(clean(a.source_type).toLowerCase()==="gmail_monitoring")return;
+      if(a.work_item_id&&completedWorkIds.has(Number(a.work_item_id)))return;
+      const d=date(a.activity_date||a.created_at);
+      if(d&&inside(d,range)&&complete(a.status)){
+        const result=useful(a.actual_impact)?clean(a.actual_impact):"";
+        out.push({
+          stream:"work",
+          client:w.name,
+          date:d,
+          category:clean(a.category)||"Client Work",
+          title:clean(a.activity)||"Completed work",
+          summary:clean(a.notes),
+          why:clean(a.expected_impact),
+          result,
+          evidence:clean(a.evidence_reference),
+          minutes:num(a.time_minutes),
+          win:Boolean(Number(a.win)||result),
+          sourceId:`activity-${a.id}`
+        });
+      }
+    });
+  }
+
+  if(e.includeMonitoring.checked){
+    (o.communications||[]).forEach(c=>{
+      const d=date(c.occurred_at||c.created_at);
+      if(d&&inside(d,range)&&monitor(c)){
+        out.push({
+          stream:"monitoring",
+          client:w.name,
+          date:d,
+          category:clean(c.category)||clean(c.source)||"Monitoring",
+          title:clean(c.subject)||`${clean(c.source)||"Platform"} update`,
+          summary:clean(c.ai_summary)||clean(c.raw_content),
+          why:"",
+          result:"",
+          evidence:clean(c.source),
+          minutes:num(c.minutes_spent),
+          win:false,
+          sourceId:`communication-${c.id}`
+        });
+      }
+    });
+
+    (o.proofOfWork||[]).forEach(a=>{
+      if(clean(a.source_type).toLowerCase()!=="gmail_monitoring")return;
+      const d=date(a.activity_date||a.created_at);
+      if(!d||!inside(d,range))return;
+      out.push({
+        stream:"monitoring",
+        client:w.name,
+        date:d,
+        category:clean(a.category)||"Monitoring Intelligence",
+        title:clean(a.activity)||"Monitoring update",
+        summary:clean(a.actual_impact)||clean(a.notes),
+        why:clean(a.expected_impact),
+        result:"",
+        evidence:clean(a.evidence_reference),
+        minutes:0,
+        win:false,
+        sourceId:`gmail-monitoring-${a.id}`
+      });
+    });
+  }
+
+  return dedupe(out);
+}
 function monitor(c){const dec=clean(c.operational_decision).toLowerCase(),st=clean(c.status).toLowerCase();return Number(c.requires_investigation||0)!==1&&!['investigation_open','work_item_open','ignored'].includes(st)&&['information','measurement','monitoring','no_action',''].includes(dec)}
 function dedupe(a){const s=new Set;return a.filter(r=>{const k=r.sourceId||[r.stream,r.client,r.date,r.title.toLowerCase()].join('|');if(s.has(k))return false;s.add(k);return true})}
 function resolveRange(T){if(e.period.value!=="historical")return{start:e.startDate.value,end:e.endDate.value,historical:false};const ds=[];T.forEach(w=>{const o=w.p.operational||{};(o.workItems||[]).forEach(x=>{const d=date(x.completed_at||x.updated_at||x.created_at);if(d)ds.push(d)});(o.proofOfWork||[]).forEach(x=>{const d=date(x.activity_date||x.created_at);if(d)ds.push(d)});(o.communications||[]).forEach(x=>{const d=date(x.occurred_at||x.created_at);if(d)ds.push(d)});(o.baselines||[]).forEach(x=>{const d=date(x.baseline_date||x.created_at);if(d)ds.push(d)})});ds.sort();return{start:ds[0]||iso(new Date()),end:iso(new Date()),historical:true}}
