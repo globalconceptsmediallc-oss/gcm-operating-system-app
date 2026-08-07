@@ -1,9 +1,9 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.7
-   Status: Audited Production Candidate
-   Source: Production work.html 1.9.5
+   Version: 1.9.8
+   Status: FBDT Production Candidate
+   Source: Production work.html 1.9.7
    Sprint: Investigation-Aware Evidence Guard + Source-Specific Extraction
    Purpose: Preserve the complete audited SEMrush evidence and guided
             Investigation workflow while adding a direct D1 entrance for
@@ -21,7 +21,8 @@
    Audited changes:
    - Removes unused investigationFamily() and unused page VERSION constant.
    - Eliminates repeated decision calculations during one analysis cycle.
-   - Rejects duplicate/no-progress evidence instead of locking repeated steps.
+   - Rejects only the exact same screenshot; a new screenshot may be locked even when the decision fingerprint is unchanged.
+   - Removes the false crop/re-capture instruction caused only by repeated decision fingerprints.
    - Uses the Investigation objective as the baseline for audit totals.
    - Restores locked findings, next question, next evidence, and Work gating
      after page reload.
@@ -143,7 +144,7 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Use Investigation when the correct action is unknown. Use Create Requested Work when the client need and deliverable are already clear.</p></div>
-        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.7</span>
+        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.8</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -227,7 +228,7 @@
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.7"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.8"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),target:byId("target-banner"),requestedForm:byId("requested-work-form"),requestedClient:byId("requested-client"),requestedMessage:byId("requested-work-message"),createRequested:byId("create-requested-work")};
   let activeClients=[],directoryClients=[],investigations=[],workItems=[],selectedKey="",processing=false,processingWorkItem=false,processingRequestedWork=false;
 
@@ -840,13 +841,15 @@
     });
   }
 
-  function appendEvidenceHistory(item,captured,decision){
+  function appendEvidenceHistory(item,captured,decision,imageFingerprint){
     const history=getEvidenceHistory(item);
     const fingerprint=evidenceDecisionFingerprint(decision);
-    const last=history.at(-1);
+    const exactImageAlreadyLocked=Boolean(
+      imageFingerprint && history.some(entry=>entry.imageFingerprint===imageFingerprint)
+    );
 
-    if(last?.fingerprint===fingerprint){
-      return {added:false,history};
+    if(exactImageAlreadyLocked){
+      return {added:false,reason:"duplicate_image",history};
     }
 
     history.push({
@@ -866,7 +869,8 @@
       systemic:Boolean(decision.systemic),
       rootCauseProven:Boolean(decision.rootCauseProven),
       nextQuestion:decision.nextQuestion||"",
-      fingerprint
+      fingerprint,
+      imageFingerprint:imageFingerprint||""
     });
 
     saveEvidenceHistory(item,history);
@@ -1044,7 +1048,8 @@
         const decision=buildNextStepDecision(captured,item);
         renderCapturedEvidence(captured,decision);
         prefillInvestigationFields(item,captured,decision);
-        const historyResult=appendEvidenceHistory(item,captured,decision);
+        const imageFingerprint=fingerprintImageData(imageDataUrl);
+        const historyResult=appendEvidenceHistory(item,captured,decision,imageFingerprint);
 
         imageDataUrl="";
         input.value="";
@@ -1062,7 +1067,9 @@
         }else{
           analysisLocked=false;
           status.className="status error capture-status";
-          status.textContent="This screenshot did not advance the Investigation. Crop tightly around the issue names, affected counts, URL, or live result, then analyze the new screenshot.";
+          status.textContent=historyResult.reason==="duplicate_image"
+            ? "This exact screenshot is already locked for this Investigation. Choose the next evidence screenshot."
+            : "The evidence was analyzed but could not be locked. Choose the next evidence screenshot.";
         }
       }catch(error){
         console.error(error);
@@ -1075,6 +1082,21 @@
         }
       }
     });
+  }
+
+
+  function fingerprintImageData(value){
+    const text=String(value||"");
+    if(!text)return "";
+    let hash1=2166136261;
+    let hash2=5381;
+    for(let index=0;index<text.length;index++){
+      const code=text.charCodeAt(index);
+      hash1^=code;
+      hash1=Math.imul(hash1,16777619);
+      hash2=((hash2<<5)+hash2)^code;
+    }
+    return `${text.length}:${hash1>>>0}:${hash2>>>0}`;
   }
 
   function buildEvidenceExtractionPrompt(item,history){
