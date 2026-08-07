@@ -13,7 +13,7 @@
 <!-- =========================================================
  Global Concepts Media Operating System
  File: proof.html
- Version: 2.1.2
+ Version: 2.2.0
  Status: Production Candidate
  Purpose: Read-only Proof / Client Reporting view over existing D1 records, including completed Work Items and historical activity records, using the shared GCM OS shell.
  ========================================================= -->
@@ -35,7 +35,7 @@
 <div class="filters">
 <div class="field"><label>Client</label><select id="client"><option value="ALL">All Clients</option></select></div>
 <div class="field"><label>Time</label><select id="period"><option value="this_week">This Week</option><option value="last_7">Last 7 Days</option><option value="last_week">Last Week</option><option value="this_month">This Month</option><option value="historical">Historical</option><option value="custom">Custom</option></select></div>
-<div class="field"><label>Output Type</label><select id="outputType"><option value="client_email">Client Email</option><option value="internal_summary">Internal Summary</option><option value="proof_digest">Proof of Work Digest</option></select></div>
+<div class="field"><label>Output Type</label><select id="outputType"><option value="client_email">Client Email</option><option value="internal_summary">Internal Summary</option><option value="proof_digest">Proof of Work Digest</option><option value="intelligence_audit">Intelligence Audit</option></select></div>
 <div class="field"><label>Grouping</label><select id="groupMode"><option value="date">Chronological / Date</option><option value="category">Group by Category</option><option value="client">Group by Client</option></select></div>
 </div>
 <div id="dates" class="dates" hidden>
@@ -62,14 +62,14 @@ window.addEventListener("DOMContentLoaded", () => {
   if (window.GCMOShell) {
     window.GCMOShell.mount({
       currentPage: "proof",
-      statusText: "Proof reporting operational · Proof v2.1.2"
+      statusText: "Proof reporting operational · Proof v2.2.0"
     });
   }
 });
 </script>
 <script>
 (()=>{"use strict";
-const VERSION="2.1.2",WORKER_URL="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+const VERSION="2.2.0",WORKER_URL="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
 const C=[{code:"SES",name:"Southeast Safes"},{code:"SFS",name:"South Florida Safes"},{code:"A1",name:"A1 Action Safe & Lock"},{code:"HBG",name:"HB Guns"},{code:"PW",name:"Pickett Weaponry"},{code:"NFS",name:"North Florida Safes"},{code:"MAS",name:"Move A Safe"},{code:"GCM",name:"Global Concepts Media"},{code:"LUMI",name:"Lumi Studio"},{code:"4A",name:"1-800 4A Gun Safe"}];
 const $=id=>document.getElementById(id),e={client:$("client"),period:$("period"),outputType:$("outputType"),groupMode:$("groupMode"),dates:$("dates"),startDate:$("startDate"),endDate:$("endDate"),includeWork:$("includeWork"),includeMonitoring:$("includeMonitoring"),generate:$("generate"),refresh:$("refresh"),copy:$("copy"),status:$("status"),recordList:$("recordList"),output:$("output"),outputMeta:$("outputMeta"),completed:$("completed"),results:$("results"),monitoring:$("monitoring"),time:$("time")};
 let W=[],R=[];
@@ -178,7 +178,7 @@ function dedupe(a){const s=new Set;return a.filter(r=>{const k=r.sourceId||[r.st
 function resolveRange(T){if(e.period.value!=="historical")return{start:e.startDate.value,end:e.endDate.value,historical:false};const ds=[];T.forEach(w=>{const o=w.p.operational||{};(o.workItems||[]).forEach(x=>{const d=date(x.completed_at||x.updated_at||x.created_at);if(d)ds.push(d)});(o.proofOfWork||[]).forEach(x=>{const d=date(x.activity_date||x.created_at);if(d)ds.push(d)});(o.communications||[]).forEach(x=>{const d=date(x.occurred_at||x.created_at);if(d)ds.push(d)});(o.baselines||[]).forEach(x=>{const d=date(x.baseline_date||x.created_at);if(d)ds.push(d)})});ds.sort();return{start:ds[0]||iso(new Date()),end:iso(new Date()),historical:true}}
 function summary(){const w=R.filter(r=>r.stream==='work'),m=R.filter(r=>r.stream==='monitoring');e.completed.textContent=w.length;e.results.textContent=w.filter(r=>r.win||r.result).length;e.monitoring.textContent=m.length;e.time.textContent=duration(w.reduce((s,r)=>s+r.minutes,0))}
 function renderRecords(){if(!R.length){e.recordList.innerHTML='<div class="empty">No records match the selected report.</div>';return}e.recordList.innerHTML=R.map(r=>`<article class="record"><div><span class="badge ${r.stream==='work'?'result':'monitor'}">${r.stream==='work'?'Completed Work':'Monitoring'}</span><span class="badge">${esc(r.category)}</span></div><strong>${esc(r.title)}</strong><div class="meta">${esc(r.client)} · ${esc(fmt(r.date))}${r.minutes?` · ${esc(duration(r.minutes))}`:''}</div>${r.stream==='monitoring'&&r.summary?`<p><strong>Observed:</strong> ${esc(short(r.summary,240))}</p>`:''}${r.why?`<p><strong>Why it matters:</strong> ${esc(r.why)}</p>`:''}${r.result?`<p><strong>Recorded result:</strong> ${esc(r.result)}</p>`:''}</article>`).join('')}
-function renderOutput(range){const cn=e.client.value==='ALL'?'All Clients':W.find(w=>w.code===e.client.value)?.name||e.client.value;e.outputMeta.innerHTML=`<span class="badge">${esc(cn)}</span><span class="badge">${esc(period(range))}</span><span class="badge">${esc(labelOutput(e.outputType.value))}</span>`;if(!R.length){e.output.value=`No supporting records were found for ${cn} during ${period(range)}.`;return}e.output.value=e.outputType.value==='client_email'?clientEmail(range,cn):e.outputType.value==='proof_digest'?digest(range):internal(range)}
+function renderOutput(range){const cn=e.client.value==='ALL'?'All Clients':W.find(w=>w.code===e.client.value)?.name||e.client.value;e.outputMeta.innerHTML=`<span class="badge">${esc(cn)}</span><span class="badge">${esc(period(range))}</span><span class="badge">${esc(labelOutput(e.outputType.value))}</span>`;if(!R.length){e.output.value=`No supporting records were found for ${cn} during ${period(range)}.`;return}e.output.value=e.outputType.value==='client_email'?clientEmail(range,cn):e.outputType.value==='proof_digest'?digest(range):e.outputType.value==='intelligence_audit'?audit(range,cn):internal(range)}
 function clientEmail(range,cn){const w=R.filter(r=>r.stream==='work'),m=R.filter(r=>r.stream==='monitoring'),themes=themesFor(w,m).slice(0,4);return[`Subject: ${subject(range)}`,"",`Hi ${cn==='All Clients'?'there':cn},`,"",w.length&&m.length?'Here’s the business-level update from this period — what we improved, protected, and kept a close eye on:':w.length?'Here’s the business-level update on the work completed during this period:':'Here’s the business-level update on the performance signals we monitored during this period:',"",themes.map(x=>`• ${x}`).join('\n'),"",m.length?'We’ll keep watching the performance signals that matter and step in when the evidence shows a change needs action.':'We’ll continue monitoring performance and focus next on the actions most likely to strengthen results.',"","Best,","Andrew","Global Concepts Media"].join('\n')}
 function themesFor(w,m){const B={search:[],technical:[],authority:[],content:[],other:[]};[...w,...m].forEach(r=>B[theme(r)].push(r));return Object.entries(B).filter(([,a])=>a.length).map(([k,a])=>themeSentence(k,a))}
 function theme(r){const x=`${r.category} ${r.title} ${r.summary}`.toLowerCase();if(/position tracking|ranking|keyword|visibility|search performance/.test(x))return'search';if(/backlink|toxic|disavow|referring domain|authority/.test(x))return'authority';if(/site audit|technical|schema|structured data|crawl|index|sitemap|robots|redirect|website/.test(x))return'technical';if(/content|video|youtube|social|business profile|review/.test(x))return'content';return'other'}
@@ -186,10 +186,107 @@ function themeSentence(k,a){const labels={search:'Search visibility',technical:'
 function trend(a){const x=a.map(r=>`${r.title} ${r.summary}`).join(' ').toLowerCase(),p=(x.match(/\b(improved|increase|increased|gained|entered|enters|up\b|top 10|top 3)/g)||[]).length,n=(x.match(/\b(declined|decrease|decreased|dropped|lost|leaves|left|down\b)/g)||[]).length;if(p&&n)return`we tracked both positive and negative movement across ${a.length} updates, giving us a clearer trend instead of reacting to one alert`;if(p)return`we tracked ${a.length} update${a.length===1?'':'s'} showing positive movement or stronger visibility`;if(n)return`we tracked ${a.length} update${a.length===1?'':'s'} showing declines that need continued observation before corrective work is warranted`;return`we monitored ${a.length} meaningful update${a.length===1?'':'s'} to keep progress and risks visible`}
 function digest(range){const lines=['GCM OS — PROOF OF WORK & MANAGEMENT DIGEST',period(range).toUpperCase(),''];groups(R).forEach(g=>{lines.push(g.label);g.records.forEach(r=>{lines.push(`• ${r.date} — ${r.client} — [${r.stream==='work'?'COMPLETED WORK':'MONITORING'}] ${r.title}`);if(r.summary)lines.push(`  Detail: ${r.summary}`);if(r.why)lines.push(`  Why it matters: ${r.why}`);if(r.result)lines.push(`  Recorded result: ${r.result}`);if(r.evidence)lines.push(`  Evidence/source: ${r.evidence}`);if(r.minutes)lines.push(`  Time: ${duration(r.minutes)}`)});lines.push('')});return lines.join('\n')}
 function internal(range){const w=R.filter(r=>r.stream==='work'),m=R.filter(r=>r.stream==='monitoring'),lines=['GCM OS — INTERNAL CLIENT SUMMARY',period(range).toUpperCase(),'',`Completed work records: ${w.length}`,`Recorded results / wins: ${w.filter(r=>r.win||r.result).length}`,`Monitoring communications: ${m.length}`,`Recorded work time: ${duration(w.reduce((s,r)=>s+r.minutes,0))}`,''];groups(R).forEach(g=>{lines.push(g.label);g.records.forEach(r=>{lines.push(`- ${r.date} | ${r.stream.toUpperCase()} | ${r.category} | ${r.title}`);if(r.summary)lines.push(`  Summary: ${r.summary}`);if(r.why)lines.push(`  Why: ${r.why}`);if(r.result)lines.push(`  Result: ${r.result}`)});lines.push('')});return lines.join('\n')}
+function audit(range,cn){
+  const w=R.filter(r=>r.stream==='work'),m=R.filter(r=>r.stream==='monitoring');
+  const search=m.filter(r=>theme(r)==='search'),technical=m.filter(r=>theme(r)==='technical'),authority=m.filter(r=>theme(r)==='authority');
+  const observations=search.flatMap(keywordObservations);
+  const byKeyword=new Map;
+  observations.forEach(o=>{const k=o.keyword.toLowerCase();if(!byKeyword.has(k))byKeyword.set(k,[]);byKeyword.get(k).push(o)});
+  byKeyword.forEach(a=>a.sort((x,y)=>x.date.localeCompare(y.date)));
+  const repeated=[...byKeyword.entries()].filter(([,a])=>a.length>1).sort((a,b)=>b[1].length-a[1].length);
+  const lines=['GCM OS — INTELLIGENCE AUDIT',`${cn.toUpperCase()} · ${period(range).toUpperCase()}`,'',
+    'AUDIT PURPOSE',
+    'Review the selected D1 evidence as a history, identify repeated patterns and volatility, separate isolated signals from sustained movement, and expose gaps that may justify investigation.',
+    '',
+    'EVIDENCE COVERAGE',
+    `• ${R.length} total supporting records`,
+    `• ${m.length} monitoring signals`,
+    `• ${w.length} completed-work records`,
+    `• ${search.length} search/keyword monitoring records`,
+    `• ${technical.length} technical/site-health monitoring records`,
+    `• ${authority.length} authority/backlink monitoring records`,
+    `• ${observations.length} keyword-position observations parsed from available evidence`,
+    ''
+  ];
+
+  if(search.length){
+    lines.push('SEARCH VISIBILITY & KEYWORD PATTERNS');
+    const vis=search.flatMap(visibilityObservations).sort((a,b)=>a.date.localeCompare(b.date));
+    if(vis.length){
+      lines.push(`• Visibility observations: ${vis.map(v=>`${v.date}: ${v.value}%${v.change!==null?` (${v.change>0?'+':''}${v.change}%)`:''}`).join(' → ')}`);
+    }
+    if(repeated.length){
+      repeated.slice(0,12).forEach(([k,a])=>{
+        const name=a[0].keyword;
+        const path=a.map(x=>`${x.date} #${x.position}`).join(' → ');
+        const delta=a[a.length-1].position-a[0].position;
+        const assessment=delta<0?'net improvement':delta>0?'net decline':'returned to the same recorded position';
+        lines.push(`• ${name}: ${path} — ${assessment}.`);
+      });
+    }else if(observations.length){
+      lines.push('• Keyword evidence is present, but no keyword appears often enough in the selected period to establish a repeated-position pattern.');
+    }else{
+      lines.push('• Search monitoring exists, but the available text did not expose enough structured keyword/position pairs to reconstruct keyword paths.');
+    }
+    lines.push('');
+  }
+
+  const recovered=repeated.filter(([,a])=>a.length>=3 && hasReversal(a));
+  const declines=repeated.filter(([,a])=>a.length>=2 && sustainedDecline(a));
+  const gains=repeated.filter(([,a])=>a.length>=2 && sustainedGain(a));
+
+  lines.push('PATTERN ASSESSMENT');
+  if(recovered.length) lines.push(`• Volatility / recovery: ${recovered.slice(0,8).map(([k])=>byKeyword.get(k)[0].keyword).join('; ')}. These should not be treated as one-alert corrective work without additional evidence.`);
+  if(declines.length) lines.push(`• Repeated net declines: ${declines.slice(0,8).map(([k])=>byKeyword.get(k)[0].keyword).join('; ')}. These deserve closer review because the selected history shows deterioration rather than a single fluctuation.`);
+  if(gains.length) lines.push(`• Repeated net gains: ${gains.slice(0,8).map(([k])=>byKeyword.get(k)[0].keyword).join('; ')}. These are positive trend evidence.`);
+  if(!recovered.length&&!declines.length&&!gains.length) lines.push('• The selected records do not yet establish a strong repeated-direction pattern; continue monitoring rather than manufacturing work from isolated alerts.');
+  lines.push('');
+
+  const malformed=[...byKeyword.values()].map(a=>a[0].keyword).filter(suspiciousKeyword);
+  const zeroVol=(search.map(r=>r.summary).join(' ').match(/Volume:\s*0\b/gi)||[]).length;
+  lines.push('GAPS / DATA QUALITY');
+  if(malformed.length) lines.push(`• Review suspicious or malformed tracked terms: ${[...new Set(malformed)].slice(0,12).join('; ')}.`);
+  if(zeroVol) lines.push(`• ${zeroVol} zero-volume observations are visible in the selected monitoring evidence. Ranking movement alone should not be treated as equal business value.`);
+  if(search.length&&!observations.length) lines.push('• Keyword movement is being retained mainly as prose. More structured keyword fields would make automated month-over-month analysis stronger.');
+  if(!technical.length) lines.push('• No technical/site-health monitoring signals were available in this selection.');
+  if(!authority.length) lines.push('• No authority/backlink monitoring signals were available in this selection.');
+  lines.push('');
+
+  lines.push('WORK / EVIDENCE CONNECTION');
+  if(w.length) lines.push(`• ${w.length} completed-work records are available beside the monitoring history. Use them to test whether observed changes followed specific corrective work rather than assuming causation from timing alone.`);
+  else lines.push('• No completed-work records are available in this selection, so the audit can identify monitoring patterns but cannot connect them to recorded corrective work.');
+  lines.push('');
+
+  lines.push('RECOMMENDED NEXT ACTION');
+  if(declines.length) lines.push('Investigate the repeated declines first. Preserve isolated gains/losses as monitoring unless the longer history, business value, or another evidence source establishes a problem.');
+  else lines.push('Continue monitoring. Escalate only when repeated movement, business value, or corroborating evidence establishes a pattern that justifies work.');
+  lines.push('');
+  lines.push('AUDIT NOTE');
+  lines.push('This audit is generated only from the D1 records selected on the Proof page. It does not create or modify records, and absence of evidence in this report should not be interpreted as proof that no issue exists.');
+  return lines.join('\n');
+}
+function keywordObservations(r){
+  const text=clean(r.summary),out=[],seen=new Set;
+  const patterns=[
+    /Keyword:\s*([^;\n,]+?)[;,]\s*(?:Pos\. on [^:;,\n]+|Position|Pos\.)\s*:\s*#?(\d+)/gi,
+    /([A-Za-z0-9][A-Za-z0-9 ._\-]+?)\s+(?:reached|moved to|improved to|position)\s+#?(\d+)/gi
+  ];
+  patterns.forEach(rx=>{let m;while((m=rx.exec(text))){const keyword=clean(m[1]).replace(/[.;,]+$/,'');const position=Number(m[2]);const key=`${keyword.toLowerCase()}|${position}`;if(keyword&&Number.isFinite(position)&&!seen.has(key)){seen.add(key);out.push({keyword,position,date:r.date})}}});
+  return out;
+}
+function visibilityObservations(r){
+  const text=clean(r.summary),out=[],rx=/Domain:\s*(?:southeast-safes\.com|sesafes\.com)[^;]*;\s*Visibility:\s*([\d.]+)%\s*;\s*Change:\s*([+-]?[\d.]+)%/gi;
+  let m;while((m=rx.exec(text)))out.push({date:r.date,value:Number(m[1]),change:Number(m[2])});
+  return out;
+}
+function hasReversal(a){if(a.length<3)return false;let signs=[];for(let i=1;i<a.length;i++){const d=a[i].position-a[i-1].position;if(d)signs.push(Math.sign(d))}return signs.includes(1)&&signs.includes(-1)}
+function sustainedDecline(a){return a[a.length-1].position>a[0].position&&!hasReversal(a)}
+function sustainedGain(a){return a[a.length-1].position<a[0].position&&!hasReversal(a)}
+function suspiciousKeyword(v){const x=clean(v).toLowerCase();return /[._]{2,}|(?:^|[._])(?:hacker|you|site)(?:[._]|$)|\bmelbourne\s+1\b/.test(x)}
 function groups(a){const mode=e.groupMode.value,m=new Map;a.forEach(r=>{const k=mode==='category'?r.category:mode==='client'?r.client:r.date;if(!m.has(k))m.set(k,[]);m.get(k).push(r)});let z=[...m.entries()];if(mode==='date')z.sort((a,b)=>e.period.value==='historical'?a[0].localeCompare(b[0]):b[0].localeCompare(a[0]));else z.sort((a,b)=>a[0].localeCompare(b[0]));return z.map(([k,v])=>({label:mode==='date'?fmt(k).toUpperCase():k.toUpperCase(),records:v}))}
 function subject(r){if(e.period.value==='historical')return`Historical Progress Summary — ${fmt(r.start)} to ${fmt(r.end)}`;if(e.period.value==='this_month'){const d=new Date(`${r.start}T12:00:00`);return`${new Intl.DateTimeFormat('en-US',{month:'long',year:'numeric'}).format(d)} Progress Update`}return`Weekly Progress Update — ${fmt(r.start)} to ${fmt(r.end)}`}
 function period(r){return e.period.value==='historical'?`Historical: ${fmt(r.start)} → ${fmt(r.end)}`:`${fmt(r.start)} → ${fmt(r.end)}`}
-function labelOutput(v){return({client_email:'Client Email',proof_digest:'Proof of Work Digest',internal_summary:'Internal Summary'})[v]||'Report'}
+function labelOutput(v){return({client_email:'Client Email',proof_digest:'Proof of Work Digest',internal_summary:'Internal Summary',intelligence_audit:'Intelligence Audit'})[v]||'Report'}
 function setDates(p){const t=new Date(),d=new Date(t.getFullYear(),t.getMonth(),t.getDate());let s=new Date(d),n=new Date(d);if(p==='this_week'){const x=d.getDay(),o=x===0?-6:1-x;s.setDate(d.getDate()+o)}else if(p==='last_7')s.setDate(d.getDate()-6);else if(p==='last_week'){const x=d.getDay(),o=x===0?-6:1-x,m=new Date(d);m.setDate(d.getDate()+o);s=new Date(m);s.setDate(m.getDate()-7);n=new Date(s);n.setDate(s.getDate()+6)}else if(p==='this_month')s=new Date(d.getFullYear(),d.getMonth(),1);e.startDate.value=iso(s);e.endDate.value=iso(n)}
 function complete(v){return['completed','complete','closed','done'].includes(clean(v).toLowerCase())}function useful(v){const x=clean(v);return x&&!/^(high|medium|low|none|n\/a|#error!?)$/i.test(x)&&x.length>=8}function inside(d,r){return d&&r.start&&r.end&&d>=r.start&&d<=r.end}function date(v){if(!v)return'';const m=String(v).match(/^(\d{4}-\d{2}-\d{2})/);if(m)return m[1];const d=new Date(v);return Number.isNaN(d.getTime())?'':iso(d)}function fmt(v){if(!v)return'Not recorded';const d=new Date(`${v}T12:00:00`);return Number.isNaN(d.getTime())?v:new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',year:'numeric'}).format(d)}function duration(m){m=Number(m||0);if(!m)return'0 min';if(m<60)return`${m} min`;const h=m/60;return`${h%1===0?h.toFixed(0):h.toFixed(1)} hr`}function num(v){const n=Number(v);return Number.isFinite(n)&&n>0?n:0}function clean(v){return String(v??'').trim()}function iso(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}function short(v,n){const x=clean(v);return x.length<=n?x:`${x.slice(0,n-1).trim()}…`}function lower(v){const x=clean(v);return x?x[0].toLowerCase()+x.slice(1):x}function esc(v){return String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;')}function status(t,m){e.status.className=`status ${t}`;e.status.textContent=m}
 async function copy(){const v=e.output.value.trim();if(!v)return status('error','There is no generated output to copy.');try{await navigator.clipboard.writeText(v);status('ready','Generated output copied to clipboard.')}catch{e.output.focus();e.output.select();status('error','Clipboard access was unavailable. The output is selected for manual copy.')}}
