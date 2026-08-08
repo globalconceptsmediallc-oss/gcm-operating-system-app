@@ -1,9 +1,9 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.8.7
+   Version: 7.8.8
    Source: Production route 7.7.6
-   Status: Production Candidate — Evidence Timeout Retry Guard
+   Status: Production Candidate — Merchant Listings Verification Evidence
    Purpose: Complete production communication analysis route with one authoritative report-family decision before specialist dispatch,
             including pasted-text and screenshot evidence extraction,
             independent report-signature recognition, specialized extraction,
@@ -2853,6 +2853,75 @@ function buildWwPowdAnalysis({ visibleEvidence, classification }) {
     };
   }
 
+  /* v7.8.8 MERCHANT LISTINGS VERIFICATION EVIDENCE
+   * A successful AFTER screenshot may no longer contain the original SKU error.
+   * When Merchant Listings is already the recognized report family, treat clear
+   * visible validation/resolution states as verification rather than demanding
+   * that the old error remain visible. Ambiguous screenshots remain monitoring.
+   */
+  if (type === "merchant_listing_structured_data") {
+    const resolutionSignals = uniqueTextValues([
+      ...((evidence.visibleFacts || []).filter(value =>
+        /\b(?:valid|passed|fixed|resolved|no\s+(?:issues?|errors?)|0\s+(?:affected|invalid|issues?|errors?)|zero\s+(?:affected|invalid|issues?|errors?)|no\s+items?\s+affected|not\s+detected|no\s+longer\s+detected)\b/i.test(clean(value))
+      )),
+      ...((evidence.visibleMetrics || []).filter(value =>
+        /\b(?:valid|passed|0\s+(?:affected|invalid|issues?|errors?)|zero\s+(?:affected|invalid|issues?|errors?))\b/i.test(clean(value))
+      ))
+    ]);
+    const unresolvedSignals = uniqueTextValues([
+      ...((evidence.visibleFacts || []).filter(value =>
+        /\b(?:invalid|string length|error|issue|affected)\b/i.test(clean(value)) &&
+        !/\b(?:0|zero|no)\s+(?:affected|invalid|issues?|errors?)\b/i.test(clean(value))
+      )),
+      ...((evidence.visibleMetrics || []).filter(value =>
+        /\b(?:invalid|string length|error|issue|affected)\b/i.test(clean(value)) &&
+        !/\b(?:0|zero|no)\s+(?:affected|invalid|issues?|errors?)\b/i.test(clean(value))
+      ))
+    ]);
+
+    const verifiedResolved = resolutionSignals.length > 0 && unresolvedSignals.length === 0;
+    const whatHappened = buildEvidenceSummary(evidence, classification);
+
+    return {
+      supportedByEvidence: evidence.confidence !== "Low",
+      framework: "WWPOWD",
+      notificationType: type,
+      whatHappened,
+      eventDirection: verifiedResolved ? "Positive" : unresolvedSignals.length ? "Negative" : "Neutral",
+      resolvedEvidence: verifiedResolved ? resolutionSignals : [],
+      openEvidence: unresolvedSignals,
+      measuredEvidence: uniqueTextValues(evidence.visibleMetrics || []),
+      proofGap: verifiedResolved
+        ? "None. The Merchant Listings verification evidence visibly establishes that the previously documented condition is resolved or valid."
+        : unresolvedSignals.length
+          ? "Merchant Listings still shows unresolved issue evidence and requires corrective work plus follow-up verification."
+          : "The screenshot establishes Merchant Listings context but does not visibly prove either an unresolved issue or a successful validation result.",
+      decisionState: verifiedResolved ? "verification_complete" : unresolvedSignals.length ? "investigation_required" : "monitoring_only",
+      operationalSummary: whatHappened,
+      businessImpact: verifiedResolved
+        ? "The follow-up Merchant Listings evidence supports closure of the documented structured-data issue and preservation as Proof of Work."
+        : "The Merchant Listings evidence should remain in the operating workflow until the issue state is explicit.",
+      nextAction: verifiedResolved
+        ? "Record this screenshot as verification evidence, complete the Proof of Work chain, and close the related work/investigation when its corrective action is already documented."
+        : unresolvedSignals.length
+          ? "Continue the Investigation, correct the documented Merchant Listings issue, and capture a follow-up validation screenshot."
+          : "Save the screenshot as monitoring evidence and obtain a readable Merchant Listings validation state before closing the work.",
+      reasoning: verifiedResolved
+        ? "WWPOWD accepts a clean AFTER state as verification evidence; the original error does not need to remain visible after it has been corrected."
+        : "WWPOWD requires the smallest evidence-supported next step and does not infer resolution from the absence of readable issue text alone.",
+      legacyTsvInterpretation: {
+        category: "SEO",
+        activity: verifiedResolved ? "Google Merchant Listings structured-data fix verified" : "Google Merchant Listings structured-data review",
+        status: verifiedResolved ? "completed_proof" : unresolvedSignals.length ? "investigation_open" : "monitoring",
+        evidenceType: "Google Search Console Merchant Listings",
+        expectedImpact: "Maintain valid Merchant Listings structured data and product eligibility",
+        actualImpact: verifiedResolved ? "Follow-up validation evidence confirms the documented issue is resolved" : "Awaiting explicit verification"
+      },
+      confidence: evidence.confidence,
+      manualReviewRequired: evidence.confidence === "Low"
+    };
+  }
+
   const hasAdverseWords = /\b(?:declined?|decreased?|dropped?|lost|failed|error|warning|issue|broken|invalid|toxic|down)\b/i.test(text);
   return {
     supportedByEvidence: type !== "unknown" && evidence.confidence !== "Low",
@@ -2897,14 +2966,17 @@ function buildProofReadiness({
   if (decisionState === "investigation_required") proofState = "partial_progress";
   if (decisionState === "work_required" || actionRequested) proofState = "work_not_completed";
   if (decisionState === "monitoring_only") proofState = "monitoring_evidence";
+  if (decisionState === "verification_complete") proofState = "completed_proof";
 
   return {
     proofState,
     readyForClientProof: proofState === "completed_proof",
-    communicationIsProofOfWork: false,
+    communicationIsProofOfWork: proofState === "completed_proof",
     resolvedEvidence: wwPowdAnalysis?.resolvedEvidence || [],
     unresolvedEvidence: wwPowdAnalysis?.openEvidence || [],
-    requiredBeforeProof: proofState === "partial_progress"
+    requiredBeforeProof: proofState === "completed_proof"
+      ? []
+      : proofState === "partial_progress"
       ? [
           "Investigation findings",
           "Specific work required",
@@ -2917,7 +2989,9 @@ function buildProofReadiness({
           "Evidence that the work occurred",
           "Verification or result appropriate to the work"
         ],
-    recommendedRecord: decisionState === "investigation_required"
+    recommendedRecord: decisionState === "verification_complete"
+      ? "Communication + Proof of Work"
+      : decisionState === "investigation_required"
       ? "Communication + Investigation"
       : decisionState === "work_required"
         ? "Communication + Work Item"
