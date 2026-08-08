@@ -1,9 +1,9 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.8.5
+   Version: 7.8.6
    Source: Production route 7.7.6
-   Status: Production Candidate — Merchant Listings Vision Evidence Guard
+   Status: Production Candidate — Merchant Listings Fast-Path Recovery Guard
    Purpose: Complete production communication analysis route with one authoritative report-family decision before specialist dispatch,
             including pasted-text and screenshot evidence extraction,
             independent report-signature recognition, specialized extraction,
@@ -233,18 +233,20 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
     }
 
     /*
-     * v7.7.3 GUARDED EVIDENCE RECOVERY
+     * v7.8.6 GUARDED EVIDENCE RECOVERY
      *
      * The fast one-call path remains authoritative when it returns dependable
      * evidence. Road testing proved that two nearly identical SEMrush Site Audit
      * screenshots could produce different results: one complete and one Unknown.
      *
      * Only when the fast result is too weak to classify, invoke the existing
-     * production vision pipeline as a recovery path. This preserves normal
-     * fast performance while preventing a readable known report from silently
-     * becoming an Unknown communication.
+     * production vision pipeline as a recovery path. Merchant Listings recognition
+     * alone must not trigger legacy recovery when the fast path already returned
+     * usable evidence. This preserves normal fast performance, prevents redundant
+     * Merchant Listings AI passes, and keeps recovery available for genuinely weak
+     * screenshot evidence.
      */
-    if (isWeakVisibleEvidence(visibleEvidence) || hasMerchantListingsEvidenceSignal(visibleEvidence)) {
+    if (isWeakVisibleEvidence(visibleEvidence)) {
       const guardedRecoveryResult = await executeVisionExtractionStage({
         imageDataUrl,
         sourceText,
