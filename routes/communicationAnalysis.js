@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.8.0
+   Version: 7.8.1
    Source: Production route 7.7.6
    Status: Production Candidate — Authoritative Report Dispatch
    Purpose: Complete production communication analysis route with one authoritative report-family decision before specialist dispatch,
@@ -244,7 +244,7 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
      * fast performance while preventing a readable known report from silently
      * becoming an Unknown communication.
      */
-    if (isWeakVisibleEvidence(visibleEvidence)) {
+    if (isWeakVisibleEvidence(visibleEvidence) || hasMerchantListingsEvidenceSignal(visibleEvidence)) {
       const guardedRecoveryResult = await executeVisionExtractionStage({
         imageDataUrl,
         sourceText,
@@ -596,6 +596,18 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
       reasoningAiCallBudget: 1
     }
   }, 200);
+}
+
+function hasMerchantListingsEvidenceSignal(evidence) {
+  const searchable = [
+    clean(evidence?.visibleSource),
+    clean(evidence?.visibleSubject),
+    clean(evidence?.visibleText),
+    ...(Array.isArray(evidence?.visibleFacts) ? evidence.visibleFacts.map(clean) : []),
+    ...(Array.isArray(evidence?.visibleMetrics) ? evidence.visibleMetrics.map(clean) : [])
+  ].filter(Boolean).join(" ");
+
+  return /merchant listings?|merchant listings? structured data|structured[- ]data|invalid string length|field ["']?sku["']?/i.test(searchable);
 }
 
 function isRecognizedSemrushReport(recognition) {
@@ -1757,7 +1769,15 @@ function buildVisionEvidencePrompt({ sourceText = "", client, clientId, fileName
         "2. Preserve each clearly readable summary metric and its displayed percentage change separately.",
         "3. Preserve clearly readable page/screen performance rows when available, including Views, Active Users, and Bounce Rate.",
         "4. Do not label the source as Gmail merely because the screenshot was captured inside Gmail. Gmail is the container, not the business-information source.",
-        "5. Do not invent Google Analytics metrics that are not visibly present."
+        "5. Do not invent Google Analytics metrics that are not visibly present.",
+        "",
+        "GOOGLE SEARCH CONSOLE MERCHANT LISTINGS RULES",
+        "1. When the screenshot is Merchant listings or Merchant Listings structured-data evidence, inspect the issue detail and affected-item fields, not only the Search Console heading.",
+        "2. Preserve the exact visible issue name, including 'Invalid string length in field sku' or equivalent wording when readable.",
+        "3. Preserve the affected product/item/page name or URL when readable.",
+        "4. Preserve the exact visible sku field value when readable. Do not normalize, shorten, repair, or guess the SKU.",
+        "5. Put the issue name, affected item/page, and exact sku field/value into visibleFacts as separate source-grounded facts when visible.",
+        "6. A visible Merchant listings issue detail is diagnostic evidence even when it contains no conventional numeric metric. Do not discard it for lacking counts or percentages."
       ];
 
   return [
