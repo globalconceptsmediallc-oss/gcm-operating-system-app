@@ -1,9 +1,9 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.8.6
+   Version: 7.8.7
    Source: Production route 7.7.6
-   Status: Production Candidate — Merchant Listings Fast-Path Recovery Guard
+   Status: Production Candidate — Evidence Timeout Retry Guard
    Purpose: Complete production communication analysis route with one authoritative report-family decision before specialist dispatch,
             including pasted-text and screenshot evidence extraction,
             independent report-signature recognition, specialized extraction,
@@ -1063,6 +1063,15 @@ async function executeVisionExtractionStage({
     focusedRecovery: false
   });
 
+  /*
+   * v7.8.7 EVIDENCE TIMEOUT RETRY GUARD
+   *
+   * Cloudflare Observability proved the broad evidence_extraction vision call
+   * timed out at 30 seconds on attempt 0 and was immediately retried as attempt 1,
+   * consuming another 30 seconds before Safari lost the request. The broad
+   * primary/recovery calls in this legacy guarded path are therefore single
+   * attempt only. Specialist extractors remain unchanged.
+   */
   const primaryResult = await runAiJsonWithRetry({
     env,
     model: COMMUNICATION_VISION_MODEL,
@@ -1085,7 +1094,7 @@ async function executeVisionExtractionStage({
     requestId,
     route: ACTIONS.ANALYZE_COMMUNICATION,
     timeoutMs: 30000,
-    maxRetries: 1
+    maxRetries: 0
   });
 
   let primaryEvidence = null;
@@ -1128,7 +1137,7 @@ async function executeVisionExtractionStage({
       requestId,
       route: ACTIONS.ANALYZE_COMMUNICATION,
       timeoutMs: 30000,
-      maxRetries: 1
+      maxRetries: 0
     });
 
     if (recoveryResult.ok) {
