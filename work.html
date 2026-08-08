@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.9
+   Version: 1.9.10
    Status: FBDT Production Candidate
    Source: Production work.html 1.9.8
    Sprint: Investigation-Aware Evidence Guard + Source-Specific Extraction
@@ -33,6 +33,8 @@
    - Adds a Google Search Console Merchant Listings decision path for SKU evidence.
    - Recognizes invalid-SKU diagnosis, implementation evidence, and live verified fixes.
    - v1.9.9 keeps Search Console extraction_failed screenshots on the Merchant Listings diagnostic prompt.
+   - v1.9.10 prevents partial, failed, or Worker-error analysis responses from becoming locked Investigation evidence.
+   - v1.9.10 preserves the selected screenshot after a rejected analysis so the same evidence can be retried after the service recovers.
    - v1.9.9 recognizes both invalid value and invalid string length SKU validation wording and extracts exact SKU field/value evidence.
    - Prevents Search Console investigations from falling through to SEMrush Site Audit logic.
    - Adds one-time per-client saved Search Console evidence links.
@@ -1028,6 +1030,44 @@
           fileName,
           contractVersion:"communications-operational-decision-v3"
         });
+
+        /*
+         * v1.9.10 EVIDENCE LOCK INTEGRITY GUARD
+         *
+         * Investigation evidence is immutable once locked. A Worker response that
+         * is partial, failed, or carries processing errors may be useful for
+         * diagnostics, but it is not verified evidence and must never advance the
+         * Investigation. Keep the screenshot loaded so the same evidence can be
+         * retried after Workers AI recovers.
+         */
+        const processingStatus=String(payload?.processingStatus||"").trim().toLowerCase();
+        const workerErrors=Array.isArray(payload?.errors)?payload.errors:[];
+        const failedStages=Array.isArray(payload?.stages)
+          ? payload.stages.filter(stage=>String(stage?.status||"").trim().toLowerCase()==="failed")
+          : [];
+
+        if(
+          payload?.ok!==true ||
+          processingStatus!=="complete" ||
+          workerErrors.length>0 ||
+          failedStages.length>0
+        ){
+          const workerMessage=String(
+            workerErrors[0]?.message ||
+            payload?.error?.message ||
+            failedStages[0]?.rawAiError ||
+            "The analysis did not complete successfully."
+          ).trim();
+
+          status.className="status error capture-status";
+          status.textContent=workerMessage
+            ? `Evidence not locked. ${workerMessage}`
+            : "Evidence not locked because the analysis did not complete successfully.";
+          analyze.disabled=false;
+          analyze.textContent="Analyze Evidence";
+          analysisLocked=false;
+          return;
+        }
 
         const captured=normalizeCapturedEvidence(payload);
         const relevance=validateEvidenceRelevance(captured,item);
