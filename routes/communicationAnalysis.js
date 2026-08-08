@@ -1,9 +1,9 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.8.8
+   Version: 7.8.9
    Source: Production route 7.7.6
-   Status: Production Candidate — Merchant Listings Verification Evidence
+   Status: Production Candidate — Screenshot Evidence Trust Gate
    Purpose: Complete production communication analysis route with one authoritative report-family decision before specialist dispatch,
             including pasted-text and screenshot evidence extraction,
             independent report-signature recognition, specialized extraction,
@@ -282,6 +282,81 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
           guardedRecoveryResult.reportRecognition ||
           recognizeReportSignatureFromEvidence(visibleEvidence);
       }
+    }
+
+    /*
+     * v7.8.9 SCREENSHOT EVIDENCE TRUST GATE
+     *
+     * A screenshot may advance the operating workflow only when the assembled
+     * evidence contains source-grounded business/report content. Platform/report
+     * identity by itself is not evidence. Runtime diagnostics, prompt leakage,
+     * generic headings, and recognition-only facts must never become a successful
+     * communication that downstream pages can lock as Investigation evidence.
+     *
+     * The guarded recovery path above gets one chance to replace weak fast-path
+     * evidence. If the assembled screenshot evidence still fails this gate, stop
+     * here before classification, WWPOWD, proof readiness, or routing.
+     */
+    if (!isTrustworthyScreenshotEvidence(visibleEvidence)) {
+      const trustError = buildOperationalError({
+        stage: "screenshot_evidence_trust_gate",
+        code: "SCREENSHOT_EVIDENCE_NOT_TRUSTWORTHY",
+        message: "The screenshot did not produce enough source-grounded evidence to advance this workflow.",
+        retryable: true
+      });
+
+      errors.push(trustError);
+      stages.push(createStageResult({
+        stageName: "screenshot_evidence_trust_gate",
+        status: STAGE_STATUS.FAILED,
+        engine: "screenshot-evidence-trust-gate-v1",
+        model: "deterministic",
+        startedAt: Date.now(),
+        confidence: 0,
+        retryCount: 0,
+        retryStatus: "evidence_rejected",
+        rawAiError: null,
+        fallbackUsed: false,
+        data: {
+          accepted: false,
+          reason: "No trustworthy source-grounded screenshot evidence survived extraction and recovery."
+        }
+      }));
+
+      return jsonResponse({
+        ok: false,
+        action: ACTIONS.ANALYZE_COMMUNICATION,
+        version: VERSION,
+        contractVersion: API_CONTRACT_VERSION,
+        requestId,
+        generatedAt: new Date().toISOString(),
+        processingStatus: "evidence_rejected",
+        client: {
+          id: clientId || null,
+          name: client || null,
+          detectedFromEvidence: false
+        },
+        input: {
+          type: sourceText ? "hybrid" : "screenshot",
+          fileName
+        },
+        evidence: sanitizeVisibleEvidence(visibleEvidence),
+        error: trustError,
+        stages,
+        errors,
+        diagnostics: {
+          engine: "communication-analysis",
+          engineVersion: COMMUNICATION_ANALYSIS_ENGINE_VERSION,
+          executionTimeMs: Date.now() - startedAt,
+          stageCount: stages.length,
+          failedStageCount: stages.filter(stage => stage.status === STAGE_STATUS.FAILED).length,
+          fallbackStageCount: stages.filter(stage => stage.status === STAGE_STATUS.FALLBACK).length,
+          partialStageCount: stages.filter(stage => stage.status === STAGE_STATUS.PARTIAL).length,
+          performanceMode: "screenshot_evidence_rejected",
+          evidenceAiCallBudget: 1,
+          reasoningAiCallBudget: 0
+        }
+      }, 422);
     }
   } else {
     const stageStartedAt = Date.now();
@@ -2556,6 +2631,48 @@ function isCrediblePositionTrackingEvidenceLine(value) {
 
   return true;
 }
+function isTrustworthyScreenshotEvidence(evidence) {
+  if (!evidence || containsRuntimeDiagnosticEvidence(evidence)) return false;
+
+  const normalized = sanitizeVisibleEvidence(evidence);
+  if (normalized.confidence === "Low") return false;
+
+  const source = clean(normalized.visibleSource);
+  const subject = clean(normalized.visibleSubject);
+  const facts = uniqueTextValues(normalized.visibleFacts || []);
+  const metrics = uniqueTextValues(normalized.visibleMetrics || []);
+  const visibleText = clean(normalized.visibleText);
+
+  const allEvidence = [visibleText, ...facts, ...metrics]
+    .filter(Boolean)
+    .join(" ");
+
+  if (!allEvidence || containsPromptInstructionLeakage(allEvidence)) return false;
+
+  const identitySignal = /semrush|google search console|search console|merchant listings?|business profile|google analytics|ga4|backlink audit|position tracking|site audit/i.test(
+    `${source} ${subject} ${allEvidence}`
+  );
+
+  const substantiveValues = uniqueTextValues([
+    ...facts,
+    ...metrics,
+    visibleText
+  ]).filter(value => {
+    const text = clean(value);
+    if (!text) return false;
+    if (/^recognized report family\s*:/i.test(text)) return false;
+    if (/^(?:google search console|search console|semrush|merchant listings?|site audit|position tracking|backlink audit)$/i.test(text)) return false;
+    if (/^screenshot evidence extraction was incomplete\.?$/i.test(text)) return false;
+    return /[a-z]{3,}/i.test(text) && (
+      /\d/.test(text) ||
+      /\b(?:valid|passed|fixed|resolved|invalid|error|warning|issue|affected|clicks?|impressions?|traffic|keywords?|position|ranking|backlinks?|domains?|site health|broken|toxic|increase|decrease|improved|declined|no change|not detected)\b/i.test(text) ||
+      text.split(/\s+/).filter(Boolean).length >= 5
+    );
+  });
+
+  return Boolean(identitySignal && substantiveValues.length > 0);
+}
+
 function isWeakVisibleEvidence(evidence) {
   if (!evidence) return true;
 
