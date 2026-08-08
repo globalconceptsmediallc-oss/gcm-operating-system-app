@@ -1,9 +1,9 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.8.2
+   Version: 7.8.3
    Source: Production route 7.7.6
-   Status: Production Candidate — Merchant Listings Evidence Recovery
+   Status: Production Candidate — Merchant Listings Partial Evidence Preservation
    Purpose: Complete production communication analysis route with one authoritative report-family decision before specialist dispatch,
             including pasted-text and screenshot evidence extraction,
             independent report-signature recognition, specialized extraction,
@@ -1204,7 +1204,17 @@ async function executeVisionExtractionStage({
       maxRetries: 1
     });
 
-    if (merchantListingsResult.ok) {
+    /*
+     * v7.8.3 MERCHANT LISTINGS PARTIAL-EVIDENCE PRESERVATION
+     *
+     * A focused vision call can return source-grounded Merchant Listings detail
+     * while the shared AI wrapper still marks the attempt partial. Do not discard
+     * that evidence solely because result.ok is false. Normalize and sanitize any
+     * returned data, then merge it only when it independently passes the strict
+     * Merchant Listings evidence check. Prompt/instruction leakage remains weak
+     * evidence and is rejected by isWeakMerchantListingsEvidence().
+     */
+    if (merchantListingsResult?.data && isPlainObject(merchantListingsResult.data)) {
       merchantListingsEvidence = sanitizeVisibleEvidence(
         normalizeVisibleEvidence(merchantListingsResult.data)
       );
