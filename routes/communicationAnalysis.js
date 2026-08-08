@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.8.3
+   Version: 7.8.4
    Source: Production route 7.7.6
    Status: Production Candidate — Merchant Listings Partial Evidence Preservation
    Purpose: Complete production communication analysis route with one authoritative report-family decision before specialist dispatch,
@@ -1166,8 +1166,22 @@ async function executeVisionExtractionStage({
   let siteAuditChangeVerificationResult = null;
   let siteAuditChangeVerification = null;
 
+  /*
+   * v7.8.4 MERCHANT LISTINGS CONTEXT ANCHOR
+   *
+   * Verification screenshots can legitimately omit the prior SKU error after
+   * the correction succeeds. In that state, broad vision may recognize only
+   * generic Search Console and hasMerchantListingsEvidenceSignal(evidence) can
+   * be false, which previously prevented the focused Merchant Listings pass
+   * from running at all. Preserve the investigation/report context supplied in
+   * sourceText as an anchor so the focused extractor still reads the AFTER
+   * screenshot. This does not infer success; it only ensures the correct
+   * specialist extractor runs.
+   */
   const merchantListingsAnchored =
     reportRecognition?.reportType === "merchant_listing_structured_data" ||
+    deterministicNotificationClassification(evidence).notificationType === "merchant_listing_structured_data" ||
+    /\bmerchant listings?\b/i.test(clean(sourceText)) ||
     hasMerchantListingsEvidenceSignal(evidence);
 
   /*
