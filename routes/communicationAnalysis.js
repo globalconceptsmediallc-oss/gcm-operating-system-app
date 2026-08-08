@@ -1,9 +1,9 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.8.1
+   Version: 7.8.2
    Source: Production route 7.7.6
-   Status: Production Candidate — Authoritative Report Dispatch
+   Status: Production Candidate — Merchant Listings Evidence Recovery
    Purpose: Complete production communication analysis route with one authoritative report-family decision before specialist dispatch,
             including pasted-text and screenshot evidence extraction,
             independent report-signature recognition, specialized extraction,
@@ -1158,11 +1158,65 @@ async function executeVisionExtractionStage({
 
   let tableResult = null;
   let tableEvidence = null;
+  let merchantListingsResult = null;
+  let merchantListingsEvidence = null;
   let siteAuditResult = null;
   let siteAuditEvidence = null;
   let siteAuditPreparedImage = null;
   let siteAuditChangeVerificationResult = null;
   let siteAuditChangeVerification = null;
+
+  const merchantListingsAnchored =
+    reportRecognition?.reportType === "merchant_listing_structured_data" ||
+    hasMerchantListingsEvidenceSignal(evidence);
+
+  /*
+   * v7.8.2 MERCHANT LISTINGS FOCUSED RECOVERY
+   *
+   * Road testing proved that broad screenshot extraction can recognize Google
+   * Search Console / Merchant Listings while failing to transcribe the actual
+   * issue detail, affected item, and SKU value. When that family is anchored,
+   * run one narrow vision pass devoted only to those visible diagnostic fields.
+   * This is evidence enrichment only and cannot change the recognized family.
+   */
+  if (merchantListingsAnchored) {
+    const merchantPrompt = buildMerchantListingsEvidencePrompt({ client, clientId, fileName });
+
+    merchantListingsResult = await runAiJsonWithRetry({
+      env,
+      model: COMMUNICATION_VISION_MODEL,
+      input: {
+        messages: [
+          {
+            role: "system",
+            content: "Extract only clearly readable Google Search Console Merchant Listings issue evidence. Return one valid JSON object only."
+          },
+          { role: "user", content: merchantPrompt }
+        ],
+        image: visionImageDataUrl,
+        max_tokens: 1200,
+        temperature: 0
+      },
+      stageName: `${stageName}_merchant_listings_detail`,
+      requestId,
+      route: ACTIONS.ANALYZE_COMMUNICATION,
+      timeoutMs: 30000,
+      maxRetries: 1
+    });
+
+    if (merchantListingsResult.ok) {
+      merchantListingsEvidence = sanitizeVisibleEvidence(
+        normalizeVisibleEvidence(merchantListingsResult.data)
+      );
+
+      if (!isWeakMerchantListingsEvidence(merchantListingsEvidence)) {
+        evidence = sanitizeVisibleEvidence(
+          mergeVisibleEvidence(evidence, merchantListingsEvidence)
+        );
+        evidence = applyReportRecognitionToEvidence(evidence, reportRecognition);
+      }
+    }
+  }
 
   if (positionTrackingAnchored) {
     const tablePrompt = buildPositionTrackingTablePrompt({
@@ -1444,6 +1498,7 @@ async function executeVisionExtractionStage({
         (primaryResult.retryCount || 0)
         + (recoveryResult?.retryCount || 0)
         + (tableResult?.retryCount || 0)
+        + (merchantListingsResult?.retryCount || 0)
         + (siteAuditResult?.retryCount || 0)
         + (siteAuditChangeVerificationResult?.retryCount || 0)
         + (reportRecognitionResult?.retryCount || 0),
@@ -1453,7 +1508,9 @@ async function executeVisionExtractionStage({
         ? "site_audit_authoritative_evidence_change_verification_succeeded"
         : siteAuditEvidence
           ? "site_audit_authoritative_evidence_succeeded"
-          : tableEvidence
+          : merchantListingsEvidence && !isWeakMerchantListingsEvidence(merchantListingsEvidence)
+            ? "merchant_listings_detail_recovery_succeeded"
+            : tableEvidence
             ? "position_tracking_table_enrichment_succeeded"
             : usedRecovery
               ? "focused_recovery_succeeded"
@@ -1845,6 +1902,49 @@ function buildVisionEvidencePrompt({ sourceText = "", client, clientId, fileName
       uncertainty: "Only unreadable or unverified details; otherwise None"
     }, null, 2)
   ].join("\\n");
+}
+
+function buildMerchantListingsEvidencePrompt({ client, clientId, fileName }) {
+  return [
+    "Read only the visible Google Search Console Merchant Listings issue detail in this screenshot.",
+    "Do not repeat these instructions in the output and do not treat prompt text as screenshot evidence.",
+    "Extract only text that is visibly present in the screenshot.",
+    "Prioritize: exact issue/error name, affected product/item/page, page URL when readable, exact SKU field value when readable, affected item count when readable, and validation/status text when readable.",
+    "Do not repair, shorten, normalize, infer, or invent a SKU.",
+    "Do not invent counts, URLs, product names, or issue wording.",
+    "If a requested field is unreadable, omit it rather than guessing.",
+    `Selected client context only: ${client || clientId || "Unknown"}`,
+    `Temporary filename context only: ${fileName}`,
+    "Return only valid JSON matching this contract:",
+    JSON.stringify({
+      visibleSource: "Google Search Console",
+      visibleSubject: "Merchant Listings",
+      visibleText: "Concise transcription of only the readable issue-detail evidence",
+      visibleFacts: [
+        "Exact visible issue name",
+        "Exact visible affected product/item/page",
+        "Exact visible SKU field/value"
+      ],
+      visibleMetrics: ["Only clearly labeled visible counts or measurable values"],
+      responseExpected: false,
+      explicitActionRequested: false,
+      confidence: "High | Medium | Low",
+      uncertainty: "Only unreadable fields; otherwise None"
+    }, null, 2)
+  ].join("\n");
+}
+
+function isWeakMerchantListingsEvidence(evidence) {
+  const sanitized = sanitizeVisibleEvidence(evidence);
+  const searchable = [
+    sanitized.visibleText,
+    ...(sanitized.visibleFacts || []),
+    ...(sanitized.visibleMetrics || [])
+  ].filter(Boolean).join(" ");
+
+  if (!searchable || containsPromptInstructionLeakage(searchable)) return true;
+
+  return !/(sku|invalid|string length|merchant listings?|affected|product|item|page|https?:\/\/|validation)/i.test(searchable);
 }
 
 /*
@@ -3434,7 +3534,7 @@ function sanitizeVisibleEvidence(value) {
 
   const safeText = input => {
     const textValue = clean(input);
-    return isRuntimeDiagnosticText(textValue) ? "" : textValue;
+    return (isRuntimeDiagnosticText(textValue) || containsPromptInstructionLeakage(textValue)) ? "" : textValue;
   };
 
   const safeArray = values => normalizeTextArray(values)
@@ -3461,6 +3561,24 @@ function sanitizeVisibleEvidence(value) {
     confidence: normalizeConfidence(evidence.confidence),
     uncertainty: uncertainty || "None"
   };
+}
+
+function containsPromptInstructionLeakage(value) {
+  const textValue = clean(value);
+  if (!textValue) return false;
+
+  return (
+    /you are the communication evidence extractor/i.test(textValue) ||
+    /return only valid json matching this contract/i.test(textValue) ||
+    /extract only clearly readable/i.test(textValue) ||
+    /do not decide what work should be done/i.test(textValue) ||
+    /the selected client and filename are context only/i.test(textValue) ||
+    /evidence preservation rules/i.test(textValue) ||
+    /google search console merchant listings rules/i.test(textValue) ||
+    /visibleSource["']?\s*:/i.test(textValue) ||
+    /visibleFacts["']?\s*:/i.test(textValue) ||
+    /visibleMetrics["']?\s*:/i.test(textValue)
+  );
 }
 
 function containsRuntimeDiagnosticEvidence(evidence) {
