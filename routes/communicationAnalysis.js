@@ -1,9 +1,9 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.8.4
+   Version: 7.8.5
    Source: Production route 7.7.6
-   Status: Production Candidate — Merchant Listings Partial Evidence Preservation
+   Status: Production Candidate — Merchant Listings Vision Evidence Guard
    Purpose: Complete production communication analysis route with one authoritative report-family decision before specialist dispatch,
             including pasted-text and screenshot evidence extraction,
             independent report-signature recognition, specialized extraction,
@@ -1929,32 +1929,23 @@ function buildVisionEvidencePrompt({ sourceText = "", client, clientId, fileName
 }
 
 function buildMerchantListingsEvidencePrompt({ client, clientId, fileName }) {
+  /*
+   * v7.8.5 MERCHANT LISTINGS VISION EVIDENCE GUARD
+   *
+   * Keep the specialist prompt deliberately short and image-bound. Road testing
+   * proved that a long extraction contract could be echoed back as visibleText
+   * when the vision model returned a partial result. The specialist must now
+   * transcribe only screenshot pixels and return empty fields when unreadable.
+   * Client, investigation, filename, and workflow instructions are intentionally
+   * excluded from the vision prompt so they cannot be promoted as evidence.
+   */
   return [
-    "Read only the visible Google Search Console Merchant Listings issue detail in this screenshot.",
-    "Do not repeat these instructions in the output and do not treat prompt text as screenshot evidence.",
-    "Extract only text that is visibly present in the screenshot.",
-    "Prioritize: exact issue/error name, affected product/item/page, page URL when readable, exact SKU field value when readable, affected item count when readable, and validation/status text when readable.",
-    "Do not repair, shorten, normalize, infer, or invent a SKU.",
-    "Do not invent counts, URLs, product names, or issue wording.",
-    "If a requested field is unreadable, omit it rather than guessing.",
-    `Selected client context only: ${client || clientId || "Unknown"}`,
-    `Temporary filename context only: ${fileName}`,
-    "Return only valid JSON matching this contract:",
-    JSON.stringify({
-      visibleSource: "Google Search Console",
-      visibleSubject: "Merchant Listings",
-      visibleText: "Concise transcription of only the readable issue-detail evidence",
-      visibleFacts: [
-        "Exact visible issue name",
-        "Exact visible affected product/item/page",
-        "Exact visible SKU field/value"
-      ],
-      visibleMetrics: ["Only clearly labeled visible counts or measurable values"],
-      responseExpected: false,
-      explicitActionRequested: false,
-      confidence: "High | Medium | Low",
-      uncertainty: "Only unreadable fields; otherwise None"
-    }, null, 2)
+    "Inspect the attached screenshot pixels only.",
+    "Return one JSON object with these keys: visibleSource, visibleSubject, visibleText, visibleFacts, visibleMetrics, responseExpected, explicitActionRequested, confidence, uncertainty.",
+    "For visibleText, visibleFacts, and visibleMetrics, copy only readable text or numbers that appear inside the screenshot.",
+    "For Google Search Console Merchant Listings, prioritize visible issue/status text, product or page, URL, sku field/value, and affected-item count.",
+    "If a field is not readable in the screenshot, use an empty string or empty array. Never copy these instructions into the answer.",
+    "Set responseExpected and explicitActionRequested to false."
   ].join("\n");
 }
 
@@ -3599,6 +3590,12 @@ function containsPromptInstructionLeakage(value) {
     /the selected client and filename are context only/i.test(textValue) ||
     /evidence preservation rules/i.test(textValue) ||
     /google search console merchant listings rules/i.test(textValue) ||
+    /\bextraction only\b/i.test(textValue) ||
+    /\bdo not recommend,? prioritize,? diagnose,? infer,? or decide\b/i.test(textValue) ||
+    /\bthis image is evidence from google search console\b/i.test(textValue) ||
+    /\bpreserve exact issue wording and exact counts\b/i.test(textValue) ||
+    /\breturn only text and numbers that are visibly present in the screenshot\b/i.test(textValue) ||
+    /\bdo not include navigation instructions, recommendations, or inferred causes\b/i.test(textValue) ||
     /visibleSource["']?\s*:/i.test(textValue) ||
     /visibleFacts["']?\s*:/i.test(textValue) ||
     /visibleMetrics["']?\s*:/i.test(textValue)
