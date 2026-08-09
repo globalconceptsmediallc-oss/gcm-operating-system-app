@@ -1,1 +1,2883 @@
+<!-- =========================================================
+   Global Concepts Media Operating System
+   File: today.html
+   Version: 3.4.5
+   Status: Production Candidate
+   Source: Production today.html 3.4.3
+   Sprint: Gmail Human-Approved Investigation Processing
+   Purpose: Preserve the locked Mission Control layout and existing routing while
+            extending Morning Command from raw unread Gmail preview to read-only
+            operational intelligence recommendations with no production writes.
 
+   Production changes:
+   - Preserve verified Approve as Monitoring behavior.
+   - Add Approve Communication + Investigation only for verified Investigation candidates.
+   - Investigation approval creates no Work Item from Today.
+   - Existing layout, live data, priority order, Media logic, and shell remain.
+   - Archive Candidate now renders a working Archive action.
+   - Archive uses the existing approved Gmail action contract with archiveOnly=true; zero D1 records are created.
+   ========================================================= -->
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mission Control | GCM OS</title>
+<meta content="Agency Command Center for the Global Concepts Media Operating System." name="description"/>
+<style>
+    :root {
+      --gcm-navy-950: #071426;
+      --gcm-navy-900: #0b1d33;
+      --gcm-navy-800: #112a47;
+      --gcm-blue-600: #1f68d8;
+      --gcm-blue-500: #347ce8;
+      --gcm-blue-100: #eaf2ff;
+      --gcm-gold-500: #d6a94a;
+      --gcm-gold-100: #fff7df;
+
+      --surface: #ffffff;
+      --surface-soft: #f5f7fb;
+      --surface-muted: #edf1f7;
+      --border: #dbe2ec;
+
+      --text: #132238;
+      --text-muted: #637083;
+      --text-soft: #8290a3;
+
+      --success: #1f7a4f;
+      --success-soft: #e9f7f0;
+      --warning: #9a6414;
+      --warning-soft: #fff4dd;
+      --critical: #b33a3a;
+      --critical-soft: #fff0f0;
+      --info: #245fae;
+      --info-soft: #edf5ff;
+
+      --shadow-sm: 0 8px 24px rgba(7, 20, 38, 0.07);
+      --shadow-md: 0 16px 42px rgba(7, 20, 38, 0.11);
+
+      --radius-sm: 10px;
+      --radius-md: 16px;
+      --radius-lg: 22px;
+
+      --content-width: 1480px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--surface-soft);
+      color: var(--text);
+      font-family:
+        Inter,
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+      line-height: 1.5;
+    }
+
+    button,
+    a {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .skip-link {
+      position: absolute;
+      top: -48px;
+      left: 16px;
+      z-index: 1000;
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: #ffffff;
+      color: var(--gcm-navy-950);
+      font-weight: 800;
+    }
+
+    .skip-link:focus {
+      top: 16px;
+    }
+
+    .app-shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 250px minmax(0, 1fr);
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 24px 18px;
+      background:
+        radial-gradient(circle at top right, rgba(52, 124, 232, 0.19), transparent 34%),
+        linear-gradient(180deg, var(--gcm-navy-900), var(--gcm-navy-950));
+      color: #ffffff;
+      overflow-y: auto;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 2px 8px 22px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 13px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--gcm-gold-500);
+      font-weight: 900;
+      letter-spacing: -0.04em;
+    }
+
+    .brand-copy strong,
+    .brand-copy span {
+      display: block;
+    }
+
+    .brand-copy strong {
+      font-size: 0.95rem;
+      letter-spacing: 0.01em;
+    }
+
+    .brand-copy span {
+      margin-top: 2px;
+      color: rgba(255, 255, 255, 0.58);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .nav-label {
+      margin: 24px 10px 10px;
+      color: rgba(255, 255, 255, 0.42);
+      font-size: 0.68rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+    }
+
+    .primary-nav {
+      display: grid;
+      gap: 6px;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 46px;
+      padding: 0 13px;
+      border-radius: 12px;
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 0.92rem;
+      font-weight: 700;
+      transition:
+        background 160ms ease,
+        color 160ms ease,
+        transform 160ms ease;
+    }
+
+    .nav-link:hover,
+    .nav-link:focus-visible {
+      background: rgba(255, 255, 255, 0.08);
+      color: #ffffff;
+      transform: translateX(2px);
+      outline: none;
+    }
+
+    .nav-link[aria-current="page"] {
+      background: rgba(52, 124, 232, 0.2);
+      color: #ffffff;
+      box-shadow: inset 3px 0 0 var(--gcm-gold-500);
+    }
+
+    .nav-link.media-attention {
+      background: rgba(214, 169, 74, 0.18);
+      color: #ffffff;
+      box-shadow: inset 3px 0 0 var(--gcm-gold-500);
+    }
+
+    .media-nav-badge {
+      margin-left: auto;
+      min-width: 24px;
+      height: 24px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 0 7px;
+      border-radius: 999px;
+      background: var(--gcm-gold-500);
+      color: var(--gcm-navy-950);
+      font-size: 0.7rem;
+      font-weight: 900;
+    }
+
+    .media-nav-badge.is-visible {
+      display: inline-flex;
+    }
+
+    .media-check-panel {
+      display: none;
+      border-color: #edcf8d;
+      background: var(--gcm-gold-100);
+    }
+
+    .media-check-panel.is-visible {
+      display: block;
+    }
+
+    .media-check-body {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 18px 22px;
+    }
+
+    .media-check-copy strong {
+      display: block;
+      color: var(--gcm-navy-950);
+      font-size: 0.92rem;
+    }
+
+    .media-check-copy span {
+      display: block;
+      margin-top: 4px;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+
+    .nav-icon {
+      width: 22px;
+      text-align: center;
+      font-size: 1rem;
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding: 18px 8px 2px;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .sidebar-status {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: rgba(255, 255, 255, 0.67);
+      font-size: 0.78rem;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #5fd397;
+      box-shadow: 0 0 0 4px rgba(95, 211, 151, 0.12);
+    }
+
+    .main {
+      min-width: 0;
+      padding: 28px 32px 48px;
+    }
+
+    .main-inner {
+      width: min(100%, var(--content-width));
+      margin: 0 auto;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    .eyebrow {
+      margin: 0 0 6px;
+      color: var(--gcm-blue-600);
+      font-size: 0.72rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+    }
+
+    .page-title {
+      margin: 0;
+      color: var(--gcm-navy-950);
+      font-size: clamp(2rem, 4vw, 3.15rem);
+      line-height: 1;
+      letter-spacing: -0.045em;
+    }
+
+    .page-subtitle {
+      margin: 10px 0 0;
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .date-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 42px;
+      padding: 0 14px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--text-muted);
+      box-shadow: var(--shadow-sm);
+      font-size: 0.84rem;
+      font-weight: 800;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 42px;
+      padding: 0 16px;
+      border: 1px solid transparent;
+      border-radius: 11px;
+      cursor: pointer;
+      font-size: 0.86rem;
+      font-weight: 850;
+      transition:
+        transform 160ms ease,
+        box-shadow 160ms ease,
+        background 160ms ease,
+        border-color 160ms ease;
+    }
+
+    .button:hover {
+      transform: translateY(-1px);
+    }
+
+    .button:focus-visible {
+      outline: 3px solid rgba(52, 124, 232, 0.26);
+      outline-offset: 2px;
+    }
+
+    .button-primary {
+      background: var(--gcm-blue-600);
+      color: #ffffff;
+      box-shadow: 0 10px 24px rgba(31, 104, 216, 0.22);
+    }
+
+    .button-primary:hover {
+      background: #185fc8;
+    }
+
+    .button-secondary {
+      border-color: var(--border);
+      background: var(--surface);
+      color: var(--gcm-navy-900);
+    }
+
+    .button-secondary:hover {
+      border-color: #c3cfde;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .summary-card {
+      position: relative;
+      min-height: 124px;
+      padding: 18px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--surface);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+
+    .summary-card::after {
+      content: "";
+      position: absolute;
+      top: -20px;
+      right: -20px;
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: var(--accent-soft, var(--info-soft));
+    }
+
+    .summary-label {
+      position: relative;
+      z-index: 1;
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 0.74rem;
+      font-weight: 850;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .summary-value {
+      position: relative;
+      z-index: 1;
+      margin: 8px 0 2px;
+      color: var(--gcm-navy-950);
+      font-size: 2rem;
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: -0.04em;
+    }
+
+    .summary-note {
+      position: relative;
+      z-index: 1;
+      margin: 8px 0 0;
+      color: var(--text-soft);
+      font-size: 0.78rem;
+    }
+
+    .workspace-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.45fr) minmax(340px, 0.75fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .stack {
+      display: grid;
+      gap: 18px;
+    }
+
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 20px 22px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .panel-title {
+      margin: 0;
+      color: var(--gcm-navy-950);
+      font-size: 1rem;
+      font-weight: 900;
+      letter-spacing: -0.015em;
+    }
+
+    .panel-description {
+      margin: 5px 0 0;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+    }
+
+    .priority-card {
+      padding: 24px;
+      background:
+        linear-gradient(135deg, rgba(31, 104, 216, 0.98), rgba(11, 29, 51, 0.99));
+      color: #ffffff;
+    }
+
+    .priority-card .panel-header {
+      padding: 0 0 20px;
+      border-bottom-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .priority-card .panel-title {
+      color: #ffffff;
+    }
+
+    .priority-card .panel-description {
+      color: rgba(255, 255, 255, 0.64);
+    }
+
+    .priority-badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 0 10px;
+      border-radius: 999px;
+      background: rgba(214, 169, 74, 0.18);
+      color: #f3d48d;
+      font-size: 0.72rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .priority-badge:hover,
+    .priority-badge:focus-visible {
+      background: rgba(214, 169, 74, 0.32);
+      color: #ffffff;
+      outline: 2px solid rgba(255, 255, 255, 0.35);
+      outline-offset: 2px;
+    }
+
+    .attention-item {
+      position: relative;
+    }
+
+    .attention-link {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 11px;
+    }
+
+    .attention-order {
+      width: 28px;
+      height: 28px;
+      display: inline-grid;
+      place-items: center;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 900;
+    }
+
+    .attention-content {
+      min-width: 0;
+    }
+
+    .attention-reason {
+      margin: 4px 0 0;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      line-height: 1.35;
+    }
+
+    .attention-action {
+      color: var(--gcm-blue-600);
+      font-size: 0.7rem;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .attention-critical {
+      border-left: 5px solid var(--critical);
+      background: var(--critical-soft);
+    }
+
+    .attention-critical .attention-order {
+      background: var(--critical);
+      color: #ffffff;
+    }
+
+    .attention-high {
+      border-left: 5px solid var(--warning);
+      background: var(--warning-soft);
+    }
+
+    .attention-high .attention-order {
+      background: var(--warning);
+      color: #ffffff;
+    }
+
+    .attention-normal {
+      border-left: 5px solid var(--info);
+      background: var(--info-soft);
+    }
+
+    .attention-normal .attention-order {
+      background: var(--info);
+      color: #ffffff;
+    }
+
+    .priority-body {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 24px;
+      align-items: end;
+      padding-top: 22px;
+    }
+
+    .priority-type {
+      margin: 0 0 5px;
+      color: #a8c9ff;
+      font-size: 0.75rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .priority-name {
+      margin: 0;
+      font-size: clamp(1.55rem, 3vw, 2.35rem);
+      line-height: 1.06;
+      letter-spacing: -0.04em;
+    }
+
+    .priority-reason {
+      max-width: 720px;
+      margin: 12px 0 0;
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 0.94rem;
+    }
+
+    .priority-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 18px;
+    }
+
+    .priority-meta span {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 0 10px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      color: rgba(255, 255, 255, 0.75);
+      font-size: 0.72rem;
+      font-weight: 800;
+    }
+
+    .priority-brief-body {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 22px;
+      align-items: stretch;
+    }
+
+    .decision-client {
+      padding-bottom: 18px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .decision-client .priority-name {
+      max-width: 920px;
+    }
+
+    .decision-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .decision-field {
+      min-height: 104px;
+      padding: 15px 16px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 13px;
+      background: rgba(255, 255, 255, 0.055);
+    }
+
+    .decision-field-wide {
+      grid-column: 1 / -1;
+    }
+
+    .decision-label {
+      display: block;
+      margin-bottom: 7px;
+      color: #a8c9ff;
+      font-size: 0.68rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .decision-value {
+      margin: 0;
+      color: #ffffff;
+      font-size: 0.9rem;
+      font-weight: 760;
+      line-height: 1.48;
+    }
+
+    .decision-value-secondary {
+      margin-top: 5px;
+      color: rgba(255, 255, 255, 0.66);
+      font-size: 0.76rem;
+      font-weight: 700;
+    }
+
+    .decision-action-row {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 20px;
+      padding-top: 2px;
+    }
+
+    .decision-action-copy {
+      min-width: 0;
+    }
+
+    .decision-action-copy .decision-label {
+      margin-bottom: 5px;
+    }
+
+    .decision-action-copy p {
+      margin: 0;
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 0.8rem;
+    }
+
+    .priority-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .priority-actions .button-primary {
+      background: var(--gcm-gold-500);
+      color: var(--gcm-navy-950);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+    }
+
+    .priority-actions .button-primary:hover {
+      background: #e2b95e;
+    }
+
+    .priority-actions .button-secondary {
+      border-color: rgba(255, 255, 255, 0.25);
+      background: rgba(255, 255, 255, 0.08);
+      color: #ffffff;
+    }
+
+    .task-list,
+    .attention-list,
+    .proof-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .task-item {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      padding: 16px 22px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .task-item:last-child {
+      border-bottom: 0;
+    }
+
+    .task-check {
+      width: 20px;
+      height: 20px;
+      accent-color: var(--gcm-blue-600);
+      cursor: pointer;
+    }
+
+    .task-title {
+      margin: 0;
+      color: var(--text);
+      font-size: 0.9rem;
+      font-weight: 850;
+    }
+
+    .task-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 10px;
+      margin-top: 4px;
+      color: var(--text-soft);
+      font-size: 0.75rem;
+    }
+
+    .task-item.is-complete .task-title {
+      color: var(--text-soft);
+      text-decoration: line-through;
+    }
+
+    .task-item.is-complete {
+      background: #fbfcfe;
+    }
+
+    .priority-pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      padding: 0 9px;
+      border-radius: 999px;
+      font-size: 0.68rem;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .pill-critical {
+      background: var(--critical-soft);
+      color: var(--critical);
+    }
+
+    .pill-warning {
+      background: var(--warning-soft);
+      color: var(--warning);
+    }
+
+    .pill-info {
+      background: var(--info-soft);
+      color: var(--info);
+    }
+
+    .attention-item,
+    .proof-item {
+      padding: 17px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .attention-item:last-child,
+    .proof-item:last-child {
+      border-bottom: 0;
+    }
+
+    .attention-top,
+    .proof-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .attention-name,
+    .proof-name {
+      margin: 0;
+      color: var(--text);
+      font-size: 0.87rem;
+      font-weight: 900;
+    }
+
+    .attention-link {
+      display: block;
+      margin: -17px -20px;
+      padding: 17px 20px;
+      transition:
+        background 160ms ease,
+        color 160ms ease;
+    }
+
+    .attention-link:hover,
+    .attention-link:focus-visible {
+      background: var(--info-soft);
+      outline: none;
+    }
+
+    .attention-link:hover .attention-name,
+    .attention-link:focus-visible .attention-name {
+      color: var(--gcm-blue-600);
+    }
+
+    .attention-detail,
+    .proof-detail {
+      margin: 5px 0 0;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+    }
+
+    .status-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 27px;
+      padding: 0 9px;
+      border-radius: 999px;
+      font-size: 0.67rem;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .status-label::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .status-warning {
+      background: var(--warning-soft);
+      color: var(--warning);
+    }
+
+    .status-success {
+      background: var(--success-soft);
+      color: var(--success);
+    }
+
+    .status-info {
+      background: var(--info-soft);
+      color: var(--info);
+    }
+
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      padding: 18px;
+    }
+
+    .quick-action {
+      min-height: 92px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      background: var(--surface-soft);
+      transition:
+        transform 160ms ease,
+        border-color 160ms ease,
+        background 160ms ease;
+    }
+
+    .quick-action:hover,
+    .quick-action:focus-visible {
+      border-color: #bccbdd;
+      background: #ffffff;
+      transform: translateY(-2px);
+      outline: none;
+    }
+
+    .quick-action-icon {
+      display: block;
+      margin-bottom: 9px;
+      font-size: 1.05rem;
+    }
+
+    .quick-action strong,
+    .quick-action span {
+      display: block;
+    }
+
+    .quick-action strong {
+      color: var(--gcm-navy-950);
+      font-size: 0.82rem;
+    }
+
+    .quick-action span {
+      margin-top: 3px;
+      color: var(--text-soft);
+      font-size: 0.7rem;
+    }
+
+    .wins-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      padding: 18px;
+    }
+
+    .win-card {
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      background: linear-gradient(180deg, #ffffff, #fbfcfe);
+    }
+
+    .win-value {
+      margin: 0;
+      color: var(--success);
+      font-size: 1.45rem;
+      font-weight: 900;
+      letter-spacing: -0.035em;
+    }
+
+    .win-label {
+      margin: 5px 0 0;
+      color: var(--text-muted);
+      font-size: 0.74rem;
+      font-weight: 700;
+    }
+
+    .panel-footer {
+      display: flex;
+      justify-content: flex-end;
+      padding: 14px 18px;
+      border-top: 1px solid var(--border);
+      background: #fbfcfe;
+    }
+
+    .text-link {
+      color: var(--gcm-blue-600);
+      font-size: 0.78rem;
+      font-weight: 900;
+    }
+
+    .text-link:hover {
+      text-decoration: underline;
+    }
+
+    .command-brief { position: relative; margin-bottom: 18px; padding: 26px; border: 1px solid rgba(52,124,232,.18); border-radius: var(--radius-lg); background: radial-gradient(circle at top right, rgba(214,169,74,.15), transparent 24%), linear-gradient(135deg,#fff 0%,#f7faff 100%); box-shadow: var(--shadow-md); overflow: hidden; }
+    .command-brief::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 6px; background: linear-gradient(180deg,var(--gcm-gold-500),var(--gcm-blue-600)); }
+    .brief-grid { display:grid; grid-template-columns:minmax(0,1.25fr) minmax(320px,.75fr); gap:28px; align-items:center; }
+    .brief-kicker { margin:0 0 8px; color:var(--gcm-blue-600); font-size:.72rem; font-weight:900; text-transform:uppercase; letter-spacing:.13em; }
+    .brief-title { margin:0; color:var(--gcm-navy-950); font-size:clamp(1.55rem,3vw,2.35rem); line-height:1.08; letter-spacing:-.04em; }
+    .brief-copy { max-width:800px; margin:12px 0 0; color:var(--text-muted); font-size:.96rem; }
+    .brief-status { display:grid; gap:10px; }
+    .brief-status-item { display:flex; justify-content:space-between; gap:14px; padding:12px 14px; border:1px solid var(--border); border-radius:12px; background:rgba(255,255,255,.82); }
+    .brief-status-item span { color:var(--text-muted); font-size:.78rem; font-weight:800; }
+    .brief-status-item strong { color:var(--gcm-navy-950); font-size:.8rem; text-align:right; }
+    .intelligence-empty { padding:24px; text-align:center; }
+    .intelligence-empty strong { display:block; color:var(--gcm-navy-950); font-size:.92rem; }
+    .intelligence-empty span { display:block; max-width:650px; margin:8px auto 0; color:var(--text-muted); font-size:.8rem; }
+    .pulse-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px; padding:18px; }
+    .pulse-card { padding:14px; border:1px solid var(--border); border-radius:13px; background:linear-gradient(180deg,#fff,#fbfcfe); }
+    .pulse-value { margin:0; color:var(--gcm-navy-950); font-size:1.45rem; font-weight:900; letter-spacing:-.035em; }
+    .pulse-label { margin:5px 0 0; color:var(--text-muted); font-size:.72rem; font-weight:750; }
+
+    .mobile-menu-button {
+      display: none;
+    }
+
+    @media (max-width: 1180px) {
+      .summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .workspace-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .priority-body {
+        grid-template-columns: 1fr;
+      }
+
+      .priority-actions {
+        justify-content: flex-start;
+      }
+    }
+
+    @media (max-width: 860px) {
+      .app-shell {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: fixed;
+        inset: 0 auto 0 0;
+        z-index: 100;
+        width: 250px;
+        transform: translateX(-100%);
+        transition: transform 180ms ease;
+      }
+
+      .sidebar.is-open {
+        transform: translateX(0);
+      }
+
+      .mobile-menu-button {
+        display: inline-flex;
+      }
+
+      .main {
+        padding: 20px;
+      }
+
+      .topbar {
+        align-items: center;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .main {
+        padding: 16px;
+      }
+
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .topbar-actions {
+        width: 100%;
+        justify-content: flex-start;
+      }
+
+      .summary-grid,
+      .wins-grid,
+      .quick-actions {
+        grid-template-columns: 1fr;
+      }
+
+      .task-item {
+        grid-template-columns: auto minmax(0, 1fr);
+      }
+
+      .task-item .priority-pill {
+        grid-column: 2;
+        justify-self: start;
+      }
+
+      .priority-card {
+        padding: 20px;
+      }
+
+      .decision-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .decision-field-wide {
+        grid-column: auto;
+      }
+
+      .decision-action-row {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .priority-actions {
+        width: 100%;
+      }
+
+      .priority-actions .button {
+        flex: 1 1 auto;
+      }
+
+      .panel-header {
+        padding: 18px;
+      }
+    }
+  
+    .operating-section-label {
+      margin: 0 0 5px;
+      color: #a8c9ff;
+      font-size: 0.66rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+    }
+
+    .operating-section-label-dark {
+      color: var(--gcm-blue-600);
+    }
+
+    .prepare-actions {
+      display: grid;
+      gap: 10px;
+      padding: 18px;
+    }
+
+    .prepare-action {
+      display: block;
+      padding: 14px 15px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface-soft);
+      transition:
+        transform 160ms ease,
+        border-color 160ms ease,
+        background 160ms ease;
+    }
+
+    .prepare-action:hover,
+    .prepare-action:focus-visible {
+      border-color: #bccbdd;
+      background: #ffffff;
+      transform: translateY(-1px);
+      outline: none;
+    }
+
+    .prepare-action strong,
+    .prepare-action span {
+      display: block;
+    }
+
+    .prepare-action strong {
+      color: var(--gcm-navy-950);
+      font-size: 0.84rem;
+    }
+
+    .prepare-action span {
+      margin-top: 3px;
+      color: var(--text-muted);
+      font-size: 0.73rem;
+    }
+
+    .prepare-section {
+      margin-top: 18px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+
+    .prepare-section-header {
+      padding: 20px 22px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .prepare-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      padding: 18px;
+    }
+
+    .prepare-card {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--surface-soft);
+      overflow: hidden;
+    }
+
+    .prepare-card summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      min-height: 92px;
+      padding: 18px;
+      cursor: pointer;
+      list-style: none;
+    }
+
+    .prepare-card summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .prepare-card summary strong,
+    .prepare-card summary small {
+      display: block;
+    }
+
+    .prepare-card summary strong {
+      color: var(--gcm-navy-950);
+      font-size: 1rem;
+    }
+
+    .prepare-card summary small {
+      margin-top: 5px;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      line-height: 1.35;
+    }
+
+    .prepare-toggle {
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      border-radius: 999px;
+      background: var(--gcm-blue-100);
+      color: var(--gcm-blue-600);
+      font-size: 1.1rem;
+      font-weight: 900;
+      transition: transform 160ms ease;
+    }
+
+    .prepare-card[open] .prepare-toggle {
+      transform: rotate(45deg);
+    }
+
+    .prepare-card-body {
+      padding: 0 18px 18px;
+      border-top: 1px solid var(--border);
+      background: #ffffff;
+    }
+
+    .prepare-card-body p {
+      margin: 16px 0;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      line-height: 1.5;
+    }
+
+    .prepare-card-body .button {
+      width: 100%;
+    }
+
+    @media (max-width: 980px) {
+      .prepare-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .mission-workflow {
+      display: grid;
+      gap: 18px;
+    }
+
+    .workflow-row {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+
+    .workflow-row-header {
+      padding: 20px 22px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .workflow-row-header h2 {
+      margin: 0;
+      color: var(--gcm-navy-950);
+      font-size: 1rem;
+      letter-spacing: -0.015em;
+    }
+
+    .workflow-row-header p:last-child {
+      margin: 5px 0 0;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+    }
+
+    .workflow-kicker {
+      display: block;
+      margin: 0 0 5px;
+      color: var(--gcm-blue-600);
+      font-size: 0.66rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+    }
+
+    .decide-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.65fr) minmax(340px, 0.75fr);
+      gap: 18px;
+      padding: 18px;
+      align-items: start;
+    }
+
+    .decide-grid > .panel {
+      height: 100%;
+      box-shadow: none;
+    }
+
+    .workflow-expandable > summary {
+      list-style: none;
+    }
+
+    .workflow-expandable > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .workflow-summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      min-height: 94px;
+      padding: 18px 22px;
+      cursor: pointer;
+    }
+
+    .workflow-summary-copy {
+      min-width: 0;
+    }
+
+    .workflow-summary-copy strong,
+    .workflow-summary-copy small {
+      display: block;
+    }
+
+    .workflow-summary-copy strong {
+      color: var(--gcm-navy-950);
+      font-size: 1rem;
+    }
+
+    .workflow-summary-copy small {
+      margin-top: 5px;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      line-height: 1.4;
+    }
+
+    .workflow-summary-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 0 0 auto;
+    }
+
+    .workflow-live-count {
+      display: inline-flex;
+      min-height: 28px;
+      align-items: center;
+      padding: 0 10px;
+      border-radius: 999px;
+      background: var(--info-soft);
+      color: var(--info);
+      font-size: 0.7rem;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .workflow-expand-icon {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: var(--gcm-blue-100);
+      color: var(--gcm-blue-600);
+      font-size: 1.15rem;
+      font-weight: 900;
+      transition: transform 160ms ease;
+    }
+
+    .workflow-expandable[open] .workflow-expand-icon {
+      transform: rotate(45deg);
+    }
+
+    .workflow-row-body {
+      border-top: 1px solid var(--border);
+      background: #ffffff;
+    }
+
+    .prepare-row-body {
+      padding: 18px;
+    }
+
+    .prepare-row-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .prepare-row-card {
+      display: block;
+      min-height: 132px;
+      padding: 18px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--surface-soft);
+      transition:
+        transform 160ms ease,
+        border-color 160ms ease,
+        background 160ms ease;
+    }
+
+    .prepare-row-card:hover,
+    .prepare-row-card:focus-visible {
+      border-color: #bccbdd;
+      background: #ffffff;
+      transform: translateY(-2px);
+      outline: none;
+    }
+
+    .prepare-row-card strong,
+    .prepare-row-card span,
+    .prepare-row-card b {
+      display: block;
+    }
+
+    .prepare-row-card strong {
+      color: var(--gcm-navy-950);
+      font-size: 0.95rem;
+    }
+
+    .prepare-row-card span {
+      margin-top: 7px;
+      color: var(--text-muted);
+      font-size: 0.76rem;
+      line-height: 1.45;
+    }
+
+    .prepare-row-card b {
+      margin-top: 16px;
+      color: var(--gcm-blue-600);
+      font-size: 0.75rem;
+    }
+
+    @media (max-width: 1050px) {
+      .decide-grid,
+      .prepare-row-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .workflow-summary {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .workflow-summary-actions {
+        width: 100%;
+        justify-content: space-between;
+      }
+    }
+
+    /* Mission Control 3.1.1 final road-test layout */
+
+    .mission-workflow-final {
+      display: grid;
+      gap: 18px;
+    }
+
+    .operational-card-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+      align-items: start;
+    }
+
+    .operational-card {
+      min-width: 0;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+
+    .operational-card > summary {
+      min-height: 138px;
+      align-items: flex-start;
+      padding: 20px;
+      list-style: none;
+    }
+
+    .operational-card > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .operational-card .workflow-summary-copy strong {
+      font-size: 1rem;
+      line-height: 1.3;
+    }
+
+    .operational-card .workflow-summary-copy small {
+      min-height: 42px;
+      margin-top: 8px;
+    }
+
+    .operational-card .workflow-summary-actions {
+      align-self: flex-start;
+    }
+
+    .operational-card[open] {
+      grid-column: 1 / -1;
+    }
+
+    .operational-card[open] > summary {
+      min-height: auto;
+      padding-bottom: 18px;
+    }
+
+    .operational-card[open] .workflow-row-body {
+      width: 100%;
+    }
+
+    .operational-card[open] .task-list,
+    .operational-card[open] .proof-list {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .operational-card[open] .task-item,
+    .operational-card[open] .proof-item {
+      border-right: 1px solid var(--border);
+    }
+
+    .operational-card[open] .task-item:nth-child(3n),
+    .operational-card[open] .proof-item:nth-child(3n) {
+      border-right: 0;
+    }
+
+    .operational-card[open] .prepare-row-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .operational-card-do {
+      border-top: 4px solid var(--gcm-blue-600);
+    }
+
+    .operational-card-communicate {
+      border-top: 4px solid var(--success);
+    }
+
+    .operational-card-prepare {
+      border-top: 4px solid var(--gcm-gold-500);
+    }
+
+    @media (max-width: 1120px) {
+      .operational-card-row {
+        grid-template-columns: 1fr;
+      }
+
+      .operational-card[open] {
+        grid-column: auto;
+      }
+
+      .operational-card[open] .task-list,
+      .operational-card[open] .proof-list,
+      .operational-card[open] .prepare-row-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .operational-card[open] .task-item,
+      .operational-card[open] .proof-item {
+        border-right: 0;
+      }
+    }
+
+.morning-command{margin-bottom:18px;border-color:#bdd0eb;background:linear-gradient(135deg,#f7fbff,#edf5ff)}.morning-command-body{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:22px;align-items:center;padding:20px 22px}.morning-command-copy h2{margin:0;color:var(--gcm-navy-950);font-size:1.05rem}.morning-command-copy p{margin:6px 0 0;color:var(--text-muted);font-size:.84rem}.morning-command-actions{display:flex;gap:10px;flex-wrap:wrap}.gmail-preview{display:grid;gap:12px;padding:0 22px 22px}.gmail-preview[hidden]{display:none}.gmail-message{padding:16px;border:1px solid var(--border);border-radius:14px;background:#fff}.gmail-message-header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}.gmail-message-title{margin:0;color:var(--gcm-navy-950);font-size:.92rem}.gmail-message-meta{display:block;margin-top:4px;color:var(--text-muted);font-size:.75rem}.gmail-route{display:inline-flex;align-items:center;min-height:26px;padding:0 9px;border-radius:999px;background:var(--info-soft);color:var(--info);font-size:.68rem;font-weight:900;white-space:nowrap}.gmail-intelligence-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:13px}.gmail-intelligence-field{padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--surface-soft)}.gmail-intelligence-field.wide{grid-column:1/-1}.gmail-intelligence-label{display:block;color:var(--text-soft);font-size:.62rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em}.gmail-intelligence-value{display:block;margin-top:4px;color:var(--text);font-size:.76rem;font-weight:750;line-height:1.4}.gmail-decision-row{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}.gmail-decision{display:inline-flex;align-items:center;min-height:25px;padding:0 8px;border-radius:999px;background:var(--surface-muted);color:var(--text-muted);font-size:.65rem;font-weight:850}.gmail-decision.yes{background:var(--warning-soft);color:var(--warning)}.gmail-decision.archive{background:var(--success-soft);color:var(--success)}.gmail-source-preview{margin:11px 0 0;color:var(--text-muted);font-size:.76rem;line-height:1.45}.gmail-approval{display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}.gmail-approval input{width:18px;height:18px;accent-color:var(--gcm-blue-600)}.gmail-approval label{font-size:.76rem;font-weight:800;color:var(--text)}.gmail-approval-status{margin-left:auto;font-size:.72rem;font-weight:800;color:var(--text-muted)}.gmail-batch-actions{position:sticky;bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid #bdd0eb;border-radius:12px;background:#f7fbff;box-shadow:var(--shadow-sm);z-index:5}.gmail-batch-copy{font-size:.76rem;font-weight:800;color:var(--text-muted)}@media(max-width:900px){.gmail-intelligence-grid{grid-template-columns:1fr 1fr}}@media(max-width:760px){.morning-command-body{grid-template-columns:1fr}.gmail-message-header{display:block}.gmail-route{margin-top:9px}.gmail-intelligence-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main-content">Skip to main content</a>
+<div class="app-shell">
+<aside aria-label="Primary navigation" data-gcm-shell-sidebar=""></aside>
+<main class="main" id="main-content">
+<div class="main-inner">
+<header class="topbar">
+<div>
+<p class="eyebrow">Agency Command Center</p>
+<h1 class="page-title" id="greeting">Good morning, Andy.</h1>
+<p class="page-subtitle">
+              See what matters, decide what happens next, and uncover opportunities the agency may otherwise miss.
+            </p>
+</div>
+<div class="topbar-actions">
+<div aria-label="Current date" class="date-chip" id="current-date"></div>
+<div class="date-chip">GCM OS online</div>
+</div>
+</header>
+<section aria-labelledby="morning-command-title" class="panel morning-command"><div class="morning-command-body"><div class="morning-command-copy"><p class="eyebrow">Morning Command</p><h2 id="morning-command-title">Turn today’s unread Gmail into agency intelligence.</h2><p id="gmail-status-copy">Checking Gmail connection…</p></div><div class="morning-command-actions"><a class="button button-secondary" hidden id="gmail-connect-button" href="#">Connect Gmail</a><button class="button button-primary" disabled id="gmail-preview-button" type="button">Analyze Inbox</button></div></div><div class="gmail-preview" hidden id="gmail-preview"></div></section>
+<section aria-labelledby="command-brief-title" class="command-brief">
+<div class="brief-grid">
+<div>
+<p class="brief-kicker">Today's Command Brief</p>
+<h2 class="brief-title" id="command-brief-title">Mission Control is checking the agency's live operating state.</h2>
+<p class="brief-copy" id="command-brief-copy">Client attention, open work, proof, media deadlines, and opportunity signals are being assembled into one decision view.</p>
+</div>
+<div class="brief-status">
+<div class="brief-status-item"><span>Client attention</span><strong id="brief-attention">Checking…</strong></div>
+<div class="brief-status-item"><span>Media deadlines</span><strong id="brief-media">Checking…</strong></div>
+<div class="brief-status-item"><span>Intelligence layer</span><strong>Framework active</strong></div>
+</div>
+</div>
+</section>
+<article aria-live="polite" class="panel media-check-panel" id="media-check-panel">
+<div class="media-check-body">
+<div class="media-check-copy">
+<strong id="media-check-title">Media needs attention</strong>
+<span id="media-check-detail">Open Media to review current traffic deadlines.</span>
+</div>
+<a class="button button-primary" href="media.html">Check Media</a>
+</div>
+</article>
+<section aria-label="Agency operating workflow" class="mission-workflow mission-workflow-final"><section class="workflow-row workflow-row-decide"><div class="workflow-row-header">
+<div>
+<p class="workflow-kicker">DECIDE</p>
+<h2>What needs your judgment?</h2>
+<p>Review the highest-value decision first, then move through the ordered client queue.</p>
+</div>
+</div><div class="decide-grid"><article class="panel priority-card">
+<div class="panel-header">
+<div>
+<h2 class="panel-title">Highest-Value Next Action</h2>
+<p class="panel-description">The single action most likely to protect revenue, deliver client value, or advance growth.</p>
+</div>
+<a class="priority-badge" href="clients.html" id="priority-badge">Decision</a>
+</div>
+<div class="priority-body priority-brief-body">
+<div class="decision-client">
+<p class="priority-type" id="priority-type">Agency Review</p>
+<h2 class="priority-name" id="priority-name">Mission Control is loading the highest-value decision.</h2>
+</div>
+<div aria-label="Highest-value decision briefing" class="decision-grid">
+<section class="decision-field">
+<span class="decision-label">Who</span>
+<p class="decision-value" id="priority-who">Checking the responsible client and owner…</p>
+</section>
+<section class="decision-field">
+<span class="decision-label">What</span>
+<p class="decision-value" id="priority-what">Checking the specific operational issue…</p>
+</section>
+<section class="decision-field">
+<span class="decision-label">When</span>
+<p class="decision-value" id="priority-when">Checking priority and operating status…</p>
+</section>
+<section class="decision-field">
+<span class="decision-label">Why</span>
+<p class="decision-value" id="priority-why">Checking the recorded business reason…</p>
+</section>
+<section class="decision-field decision-field-wide">
+<span class="decision-label">Evidence</span>
+<p class="decision-value" id="priority-evidence">Checking source records and verified findings…</p>
+<p class="decision-value-secondary" id="priority-evidence-references"></p>
+</section>
+</div>
+<div class="decision-action-row">
+<div class="decision-action-copy">
+<span class="decision-label">Next Action</span>
+<p id="priority-action-guidance">Open the authoritative record before committing work.</p>
+</div>
+<div class="priority-actions">
+<a class="button button-primary" href="clients.html" id="priority-primary-action">Open Record</a>
+<a class="button button-secondary" href="clients.html" id="priority-secondary-action">Open Client</a>
+</div>
+</div>
+</div>
+</article><article class="panel">
+<div class="panel-header"><div><h2 class="panel-title">Needs Your Attention</h2><p class="panel-description">Live client decisions that require review.</p></div></div>
+<ul class="attention-list" id="attention-list"></ul>
+</article></div></section><section aria-label="Do, communicate, and prepare" class="operational-card-row"><details class="operational-card operational-card-do">
+<summary class="workflow-summary">
+<span class="workflow-summary-copy">
+<span class="workflow-kicker">DO</span>
+<strong>What work have I committed to?</strong>
+<small>Expand to view live committed work and continue the highest-priority item.</small>
+</span>
+<span class="workflow-summary-actions">
+<span class="priority-pill pill-info" id="task-progress">0 open</span>
+<span aria-hidden="true" class="workflow-expand-icon">+</span>
+</span>
+</summary>
+<div class="workflow-row-body">
+<ul class="task-list" id="task-list"></ul>
+<div class="panel-footer"><a class="text-link" href="work.html">Open full work queue →</a></div>
+</div>
+</details><details class="operational-card operational-card-communicate">
+<summary class="workflow-summary">
+<span class="workflow-summary-copy">
+<span class="workflow-kicker">COMMUNICATE</span>
+<strong>What completed value has the client not seen?</strong>
+<small>Expand to review completed work waiting to become client-facing proof.</small>
+</span>
+<span class="workflow-summary-actions">
+<span class="workflow-live-count"><span id="proof-row-count">0</span> waiting</span>
+<span aria-hidden="true" class="workflow-expand-icon">+</span>
+</span>
+</summary>
+<div class="workflow-row-body">
+<ul class="proof-list" id="proof-list"></ul>
+<div class="panel-footer"><a class="text-link" href="proof.html">Build Proof of Work →</a></div>
+</div>
+</details><details class="operational-card operational-card-prepare">
+<summary class="workflow-summary">
+<span class="workflow-summary-copy">
+<span class="workflow-kicker">PREPARE</span>
+<strong>What is coming that I need to get ahead of?</strong>
+<small>Expand to open Calendar, Media, or Finance obligations.</small>
+</span>
+<span class="workflow-summary-actions">
+<span class="workflow-live-count">3 operating areas</span>
+<span aria-hidden="true" class="workflow-expand-icon">+</span>
+</span>
+</summary>
+<div class="workflow-row-body prepare-row-body">
+<div class="prepare-row-grid">
+<a class="prepare-row-card" href="calendar.html">
+<strong>Calendar</strong>
+<span>Appointments, investigations, follow-ups, and deadlines</span>
+<b>Open Calendar →</b>
+</a>
+<a class="prepare-row-card" href="media.html">
+<strong>Media</strong>
+<span>Campaign flights, traffic instructions, and confirmations</span>
+<b>Open Media →</b>
+</a>
+<a class="prepare-row-card" href="finance.html">
+<strong>Finance</strong>
+<span>Retainers, invoices, payments, balances, and revenue</span>
+<b>Open Finance →</b>
+</a>
+</div>
+</div>
+</details></section></section>
+<div aria-hidden="true" hidden="" id="mission-control-state-values"><span id="prospect-count">0</span><span id="attention-count">0</span><span id="open-task-count">0</span><span id="proof-count">0</span><span id="media-pulse-count">0</span></div></div>
+</main>
+</div>
+<script src="shared/gcm-shell.js?v=1.0.1"></script>
+<script>
+    (() => {
+      "use strict";
+
+      const DATA_KEY = "gcm-os-operational-records-v2";
+      const WORKER_ENDPOINT = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+
+      const DEFAULT_DATA = {
+        prospects: [],
+        workItems: [],
+        investigations: [],
+        alerts: [],
+        communications: [],
+        proofItems: []
+      };
+
+      const greeting = document.getElementById("greeting");
+      const currentDate = document.getElementById("current-date");
+      const gmailConnectButton=document.getElementById("gmail-connect-button");
+      const gmailPreviewButton=document.getElementById("gmail-preview-button");
+      const gmailStatusCopy=document.getElementById("gmail-status-copy");
+      const gmailPreview=document.getElementById("gmail-preview");
+      const taskList = document.getElementById("task-list");
+      const attentionList = document.getElementById("attention-list");
+      const proofList = document.getElementById("proof-list");
+      const openTaskCount = document.getElementById("open-task-count");
+      const taskProgress = document.getElementById("task-progress");
+      const prospectCount = document.getElementById("prospect-count");
+      const prospectNote = { textContent: "" };
+      const attentionCount = document.getElementById("attention-count");
+      const attentionNote = { textContent: "" };
+      const openWorkNote = { textContent: "" };
+      const proofCount = document.getElementById("proof-count");
+      const proofNote = { textContent: "" };
+      const mediaCheckPanel = document.getElementById("media-check-panel");
+      const mediaCheckTitle = document.getElementById("media-check-title");
+      const mediaCheckDetail = document.getElementById("media-check-detail");
+      const commandBriefTitle = document.getElementById("command-brief-title");
+      const commandBriefCopy = document.getElementById("command-brief-copy");
+      const briefAttention = document.getElementById("brief-attention");
+      const briefMedia = document.getElementById("brief-media");
+      const mediaPulseCount = document.getElementById("media-pulse-count");
+      const priorityBadge = document.getElementById("priority-badge");
+      const priorityType = document.getElementById("priority-type");
+      const priorityName = document.getElementById("priority-name");
+      const priorityWho = document.getElementById("priority-who");
+      const priorityWhat = document.getElementById("priority-what");
+      const priorityWhen = document.getElementById("priority-when");
+      const priorityWhy = document.getElementById("priority-why");
+      const priorityEvidence = document.getElementById("priority-evidence");
+      const priorityEvidenceReferences = document.getElementById("priority-evidence-references");
+      const priorityActionGuidance = document.getElementById("priority-action-guidance");
+      const priorityPrimaryAction = document.getElementById("priority-primary-action");
+      const prioritySecondaryAction = document.getElementById("priority-secondary-action");
+      let attentionClientsState = [];
+      let highestPriorityDecisionState = null;
+      let mediaAttentionState = 0;
+      let missionControlLoaded = false;
+      let missionControlUnavailable = false;
+      let mediaLoaded = false;
+      let mediaUnavailable = false;
+
+      const cloneDefaults = () => JSON.parse(JSON.stringify(DEFAULT_DATA));
+
+      function loadData() {
+        try {
+          const stored = localStorage.getItem(DATA_KEY);
+          if (!stored) {
+            const seeded = cloneDefaults();
+            localStorage.setItem(DATA_KEY, JSON.stringify(seeded));
+            return seeded;
+          }
+          const parsed = JSON.parse(stored);
+          return {
+            ...cloneDefaults(),
+            ...parsed,
+            prospects: Array.isArray(parsed.prospects) ? parsed.prospects : [],
+            workItems: Array.isArray(parsed.workItems) ? parsed.workItems : [],
+            investigations: Array.isArray(parsed.investigations) ? parsed.investigations : [],
+            alerts: Array.isArray(parsed.alerts) ? parsed.alerts : [],
+            communications: Array.isArray(parsed.communications) ? parsed.communications : [],
+            proofItems: Array.isArray(parsed.proofItems) ? parsed.proofItems : []
+          };
+        } catch (error) {
+          console.warn("Could not load operational records.", error);
+          return cloneDefaults();
+        }
+      }
+
+      function saveData(data) {
+        localStorage.setItem(DATA_KEY, JSON.stringify(data));
+      }
+
+      function setDateAndGreeting() {
+        const now = new Date();
+        const hour = now.getHours();
+        const daypart = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+        greeting.textContent = `${daypart}, Andy.`;
+        currentDate.textContent = new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric" }).format(now);
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
+      }
+
+      function priorityClass(priority) {
+        return priority === "highest" ? "pill-critical" : priority === "high" ? "pill-warning" : "pill-info";
+      }
+
+      function priorityLabel(priority) {
+        return priority === "highest" ? "Highest" : priority === "high" ? "High" : "Normal";
+      }
+
+      function statusClass(label = "") {
+        const normalized = label.toLowerCase();
+        if (normalized.includes("ready") || normalized.includes("complete")) return "status-success";
+        if (normalized.includes("review")) return "status-info";
+        return "status-warning";
+      }
+
+      function cleanDisplay(value, fallback = "") {
+        const text = String(value ?? "").trim();
+        return text || fallback;
+      }
+
+      function titleCase(value) {
+        return cleanDisplay(value)
+          .replaceAll("_", " ")
+          .replaceAll("-", " ")
+          .replace(/\b\w/g, (character) => character.toUpperCase());
+      }
+
+      function formatDecisionDate(value) {
+        const raw = cleanDisplay(value);
+        if (!raw) return "";
+
+        const date = new Date(raw);
+        if (Number.isNaN(date.getTime())) return raw;
+
+        return new Intl.DateTimeFormat("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric"
+        }).format(date);
+      }
+
+      function setDecisionBrief({
+        badge,
+        type,
+        client,
+        who,
+        what,
+        when,
+        why,
+        evidence,
+        evidenceReferences,
+        actionGuidance,
+        primaryLabel,
+        primaryHref,
+        secondaryLabel,
+        secondaryHref
+      }) {
+        priorityBadge.textContent = cleanDisplay(badge, "Decide");
+        priorityBadge.href = cleanDisplay(primaryHref, "clients.html");
+        priorityBadge.setAttribute(
+          "aria-label",
+          `${cleanDisplay(badge, "Decide")}: ${cleanDisplay(what, "Open operational decision")}`
+        );
+        priorityType.textContent = cleanDisplay(type, "Operational Decision");
+        priorityName.textContent = cleanDisplay(client, "Agency Decision");
+        priorityWho.textContent = cleanDisplay(who, "Owner not recorded.");
+        priorityWhat.textContent = cleanDisplay(what, "Review the authoritative operational record.");
+        priorityWhen.textContent = cleanDisplay(when, "Priority and timing are not recorded.");
+        priorityWhy.textContent = cleanDisplay(why, "Review the record before deciding what happens next.");
+        priorityEvidence.textContent = cleanDisplay(evidence, "No separate evidence summary has been recorded yet.");
+        priorityEvidenceReferences.textContent = cleanDisplay(evidenceReferences);
+        priorityActionGuidance.textContent = cleanDisplay(actionGuidance, "Open the authoritative record before committing work.");
+        priorityPrimaryAction.textContent = cleanDisplay(primaryLabel, "Open Record");
+        priorityPrimaryAction.href = cleanDisplay(primaryHref, "clients.html");
+        prioritySecondaryAction.textContent = cleanDisplay(secondaryLabel, "Open Client");
+        prioritySecondaryAction.href = cleanDisplay(secondaryHref, "clients.html");
+      }
+
+      function buildClientWorkspaceHref(clientCode) {
+        const code = cleanDisplay(clientCode);
+        return code
+          ? `clients.html?client=${encodeURIComponent(code)}`
+          : "clients.html";
+      }
+
+      function getLocalOperatingState() {
+        const data = loadData();
+
+        const openWork = data.workItems.filter(
+          (item) =>
+            !["complete", "completed", "archived"].includes(
+              String(item.status || "").toLowerCase()
+            )
+        );
+
+        const proofWaiting = data.proofItems.filter(
+          (item) =>
+            !["complete", "completed", "published", "archived"].includes(
+              String(item.status || "").toLowerCase()
+            )
+        );
+
+        return {
+          openWorkCount: openWork.length,
+          proofWaitingCount: proofWaiting.length,
+          prospectCount: data.prospects.length
+        };
+      }
+
+      function pluralize(count, singular, plural = `${singular}s`) {
+        return `${count} ${count === 1 ? singular : plural}`;
+      }
+
+      function renderOperationalBriefing() {
+        const localState = getLocalOperatingState();
+
+        if (!missionControlLoaded || !mediaLoaded) {
+          commandBriefTitle.textContent =
+            "Mission Control is assembling today's live operating brief.";
+          commandBriefCopy.textContent =
+            "Client decisions, Media deadlines, committed work, and proof are being checked before the OS recommends the first action.";
+          return;
+        }
+
+        const statusParts = [];
+
+        if (missionControlUnavailable) {
+          statusParts.push("Client decision records are temporarily unavailable");
+        } else {
+          statusParts.push(
+            attentionClientsState.length
+              ? `${pluralize(attentionClientsState.length, "client decision")} waiting`
+              : "No client decisions waiting"
+          );
+        }
+
+        if (mediaUnavailable) {
+          statusParts.push("Media records are temporarily unavailable");
+        } else {
+          statusParts.push(
+            mediaAttentionState
+              ? `${pluralize(mediaAttentionState, "Media deadline")} requiring review`
+              : "No Media deadlines requiring review"
+          );
+        }
+
+        statusParts.push(
+          localState.openWorkCount
+            ? `${pluralize(localState.openWorkCount, "open work item")}`
+            : "No open work"
+        );
+
+        statusParts.push(
+          localState.proofWaitingCount
+            ? `${pluralize(localState.proofWaitingCount, "proof item")} waiting`
+            : "No proof waiting"
+        );
+
+        if (mediaAttentionState > 0) {
+          commandBriefTitle.textContent =
+            "Protect client delivery first: Media requires the first operating decision.";
+        } else if (highestPriorityDecisionState) {
+          const clientName = cleanDisplay(
+            highestPriorityDecisionState?.clientName,
+            "A client"
+          );
+          commandBriefTitle.textContent =
+            `${clientName} holds today's highest-value operational decision.`;
+        } else if (attentionClientsState.length > 0) {
+          commandBriefTitle.textContent =
+            attentionClientsState.length === 1
+              ? "One client decision requires review before more work is added."
+              : `${attentionClientsState.length} client decisions require review before more work is added.`;
+        } else if (localState.openWorkCount > 0) {
+          commandBriefTitle.textContent =
+            "The urgent queues are clear. Execute the strongest committed work.";
+        } else if (localState.proofWaitingCount > 0) {
+          commandBriefTitle.textContent =
+            "Operations are clear. Convert completed work into client-facing proof.";
+        } else {
+          commandBriefTitle.textContent =
+            "The agency is operationally clear. Use the available window to create revenue.";
+        }
+
+        commandBriefCopy.textContent = `${statusParts.join(" · ")}.`;
+      }
+
+      function buildAuthoritativeDecisionHref(decision) {
+        const clientCode = cleanDisplay(
+          decision?.clientCode ||
+          decision?.client_code ||
+          decision?.who?.clientCode ||
+          decision?.who?.client_code
+        );
+
+        const recordType = cleanDisplay(
+          decision?.recordType || decision?.record_type
+        ).toLowerCase();
+
+        const recordId =
+          decision?.recordId ??
+          decision?.record_id ??
+          decision?.investigationId ??
+          decision?.investigation_id ??
+          decision?.workItemId ??
+          decision?.work_item_id ??
+          decision?.id;
+
+        if (recordType === "investigation" && recordId) {
+          const params = new URLSearchParams({
+            investigation: String(recordId)
+          });
+          if (clientCode) params.set("client", clientCode);
+          return `work.html?${params.toString()}`;
+        }
+
+        if ((recordType === "work_item" || recordType === "work item") && recordId) {
+          const params = new URLSearchParams({
+            workItem: String(recordId)
+          });
+          if (clientCode) params.set("client", clientCode);
+          return `work.html?${params.toString()}`;
+        }
+
+        return cleanDisplay(decision?.nextAction?.href, "work.html");
+      }
+
+      function buildBusinessWorkspaceHref(clientCode) {
+        const code = cleanDisplay(clientCode);
+        return code
+          ? `business-workspace.html?business=${encodeURIComponent(code)}`
+          : "clients.html";
+      }
+
+      function renderHighestPriorityDecision(decision) {
+        const clientName = cleanDisplay(decision?.clientName, "Unknown Client");
+        const owner = cleanDisplay(decision?.who?.owner, "Unassigned");
+        const priority = titleCase(decision?.when?.priority || "normal");
+        const status = titleCase(decision?.when?.status || "open");
+        const attentionDate = formatDecisionDate(decision?.when?.attentionAt);
+        const whenParts = [`${priority} priority`, status];
+
+        if (attentionDate) {
+          whenParts.push(`Recorded ${attentionDate}`);
+        }
+
+        const references = Array.isArray(decision?.evidence?.sourceReferences)
+          ? decision.evidence.sourceReferences.filter(Boolean)
+          : [];
+
+        const recordType =
+          decision?.recordType === "work_item"
+            ? "Committed Work"
+            : "Investigation";
+
+        setDecisionBrief({
+          badge: decision?.recordType === "work_item" ? "Deliver" : "Decide",
+          type: recordType,
+          client: clientName,
+          who: `Client: ${clientName} · Owner: ${owner}`,
+          what: decision?.what,
+          when: whenParts.join(" · "),
+          why: decision?.why,
+          evidence: decision?.evidence?.summary,
+          evidenceReferences: references.join(" · "),
+          actionGuidance:
+            decision?.recordType === "work_item"
+              ? "Open the committed work item and complete the next verified step."
+              : "Open the investigation, review the evidence, and decide the specific work required.",
+          primaryLabel: decision?.nextAction?.label,
+          primaryHref: buildAuthoritativeDecisionHref(decision),
+          secondaryLabel: `Open ${clientName}`,
+          secondaryHref: buildBusinessWorkspaceHref(decision?.clientCode)
+        });
+
+        commandBriefTitle.textContent = `${clientName} requires the first operating decision.`;
+        commandBriefCopy.textContent = cleanDisplay(
+          decision?.what,
+          "Review the highest-priority operational record before adding more work."
+        );
+      }
+
+      function renderWorkQueue(data) {
+        const items = data.workItems.filter((item) => item.status !== "archived").sort((a, b) => ({ highest: 0, high: 1, normal: 2 }[a.priority] ?? 3) - ({ highest: 0, high: 1, normal: 2 }[b.priority] ?? 3));
+        taskList.innerHTML = items.map((item) => `
+          <li class="task-item${item.status === "complete" ? " is-complete" : ""}" data-task-id="${escapeHtml(item.id)}">
+            <input class="task-check" type="checkbox" ${item.status === "complete" ? "checked" : ""} aria-label="${escapeHtml(item.title)}" />
+            <div>
+              <p class="task-title"><a href="${escapeHtml(item.href || "#")}">${escapeHtml(item.title)}</a></p>
+              <div class="task-meta"><span>${escapeHtml(item.area || "Work")}</span><span>${escapeHtml(item.detail || item.client || "")}</span></div>
+            </div>
+            <span class="priority-pill ${priorityClass(item.priority)}">${priorityLabel(item.priority)}</span>
+          </li>`).join("");
+      }
+
+      function renderAttentionLoading() {
+        attentionList.innerHTML = `
+          <li class="attention-item">
+            <p class="attention-name">Loading clients...</p>
+          </li>
+        `;
+        attentionCount.textContent = "—";
+        attentionNote.textContent = "Checking live operational records."; briefAttention.textContent = "Checking…";
+      }
+
+      function normalizeAttentionPriority(client, index) {
+        const explicit = cleanDisplay(
+          client?.priority ||
+          client?.attentionPriority ||
+          client?.attention_priority ||
+          client?.severity ||
+          client?.level
+        ).toLowerCase();
+
+        if (["highest", "critical", "urgent"].includes(explicit)) {
+          return { className: "attention-critical", label: "First" };
+        }
+
+        if (["high", "warning"].includes(explicit)) {
+          return { className: "attention-high", label: "Next" };
+        }
+
+        if (["normal", "medium", "info"].includes(explicit)) {
+          return { className: "attention-normal", label: "Review" };
+        }
+
+        if (index === 0) {
+          return { className: "attention-critical", label: "First" };
+        }
+
+        if (index <= 2) {
+          return { className: "attention-high", label: "Next" };
+        }
+
+        return { className: "attention-normal", label: "Review" };
+      }
+
+      function buildAttentionReason(client) {
+        const reason = cleanDisplay(
+          client?.reason ||
+          client?.detail ||
+          client?.attentionReason ||
+          client?.attention_reason ||
+          client?.what ||
+          client?.title
+        );
+
+        if (reason) return reason;
+
+        const recordType = titleCase(
+          client?.recordType ||
+          client?.record_type ||
+          client?.sourceType ||
+          client?.source_type
+        );
+
+        const recordId =
+          client?.recordId ||
+          client?.record_id ||
+          client?.investigationId ||
+          client?.investigation_id ||
+          client?.workItemId ||
+          client?.work_item_id;
+
+        if (recordType && recordId) {
+          return `${recordType} #${recordId} requires review.`;
+        }
+
+        return "An unresolved operational decision requires review.";
+      }
+
+      function buildAttentionHref(client) {
+        const directHref = cleanDisplay(
+          client?.href ||
+          client?.decisionHref ||
+          client?.decision_href ||
+          client?.nextAction?.href
+        );
+
+        if (directHref) return directHref;
+
+        return buildBusinessWorkspaceHref(client?.clientCode || client?.client_code);
+      }
+
+      function renderAttentionClients(clients) {
+        if (!clients.length) {
+          attentionList.innerHTML = `
+            <li class="attention-item">
+              <p class="attention-name">No clients need attention</p>
+            </li>
+          `;
+          attentionCount.textContent = "0";
+          attentionNote.textContent = "No clients currently require attention.";
+          briefAttention.textContent = "No client decisions waiting";
+          attentionClientsState = [];
+          missionControlLoaded = true;
+          missionControlUnavailable = false;
+          updatePriority();
+          renderOperationalBriefing();
+          return;
+        }
+
+        attentionList.innerHTML = clients.map((client, index) => {
+          const priority = normalizeAttentionPriority(client, index);
+          const clientName = cleanDisplay(client?.clientName, "Unknown Client");
+          const reason = buildAttentionReason(client);
+          const href = buildAttentionHref(client);
+
+          return `
+            <li class="attention-item ${priority.className}">
+              <a
+                class="attention-link"
+                href="${escapeHtml(href)}"
+                aria-label="Open priority ${index + 1}: ${escapeHtml(clientName)}"
+              >
+                <span class="attention-order" aria-hidden="true">${index + 1}</span>
+                <span class="attention-content">
+                  <span class="attention-name">${escapeHtml(clientName)}</span>
+                  <span class="attention-reason">${escapeHtml(reason)}</span>
+                </span>
+                <span class="attention-action">${escapeHtml(priority.label)} →</span>
+              </a>
+            </li>
+          `;
+        }).join("");
+
+        attentionCount.textContent = String(clients.length);
+        attentionNote.textContent = "Open the client record to review the decision.";
+        attentionClientsState = clients;
+        missionControlLoaded = true;
+        missionControlUnavailable = false;
+        briefAttention.textContent =
+          clients.length === 1
+            ? "1 client decision waiting"
+            : `${clients.length} client decisions waiting`;
+        updatePriority();
+        renderOperationalBriefing();
+      }
+
+      function renderAttentionError(message) {
+        attentionList.innerHTML = `
+          <li class="attention-item">
+            <p class="attention-name">Clients could not be loaded</p>
+            <p class="attention-detail">${escapeHtml(message || "Mission Control is temporarily unavailable.")}</p>
+          </li>
+        `;
+        attentionCount.textContent = "—";
+        attentionNote.textContent = "Live attention records are unavailable.";
+        briefAttention.textContent = "Live records unavailable";
+        attentionClientsState = [];
+        missionControlLoaded = true;
+        missionControlUnavailable = true;
+        updatePriority();
+        renderOperationalBriefing();
+      }
+
+      async function loadMissionControlAttention() {
+        renderAttentionLoading();
+
+        try {
+          const response = await fetch(WORKER_ENDPOINT, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              action: "get-mission-control"
+            })
+          });
+
+          const payload = await response.json();
+
+          if (!response.ok || payload?.ok !== true) {
+            throw new Error(
+              payload?.error ||
+              payload?.details ||
+              "Mission Control request failed."
+            );
+          }
+
+          const clients = Array.isArray(
+            payload?.missionControl?.clientsRequiringAttention
+          )
+            ? payload.missionControl.clientsRequiringAttention
+            : [];
+
+          highestPriorityDecisionState =
+            payload?.missionControl?.highestPriorityDecision || null;
+
+          missionControlUnavailable = false;
+          renderAttentionClients(clients);
+        } catch (error) {
+          console.error("Could not load Mission Control attention records.", error);
+          highestPriorityDecisionState = null;
+          renderAttentionError(error?.message);
+        }
+      }
+
+      function setMediaAttention(count) {
+        const total = Number(count) || 0;
+        const hasAttention = total > 0;
+        mediaAttentionState = total;
+        mediaPulseCount.textContent = String(total);
+        briefMedia.textContent = hasAttention ? `${total} ${total === 1 ? "deadline requires" : "deadlines require"} review` : "No deadlines requiring review";
+
+        mediaCheckPanel.classList.toggle("is-visible", hasAttention);
+
+        const mediaNavLink = document.querySelector('[data-gcm-shell-sidebar] a[href="media.html"]');
+        let mediaNavBadge = mediaNavLink?.querySelector(".media-nav-badge");
+
+        if (mediaNavLink) {
+          mediaNavLink.classList.toggle("media-attention", hasAttention);
+          if (hasAttention && !mediaNavBadge) {
+            mediaNavBadge = document.createElement("span");
+            mediaNavBadge.className = "media-nav-badge";
+            mediaNavLink.appendChild(mediaNavBadge);
+          }
+          if (mediaNavBadge) {
+            mediaNavBadge.classList.toggle("is-visible", hasAttention);
+            mediaNavBadge.textContent = hasAttention ? String(total) : "";
+          }
+        }
+
+        if (hasAttention) {
+          mediaCheckTitle.textContent = `${total} media ${total === 1 ? "item needs" : "items need"} attention`;
+          mediaCheckDetail.textContent = "Traffic deadlines are active. Open Media to review the placements before the station deadline.";
+        }
+        updatePriority();
+      }
+
+      async function loadMediaAttention() {
+        try {
+          const response = await fetch(WORKER_ENDPOINT, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "get-media-operations" })
+          });
+
+          const payload = await response.json();
+
+          if (!response.ok || payload?.ok !== true) {
+            throw new Error(payload?.error || payload?.details || "Media Operations request failed.");
+          }
+
+          const media = payload?.mediaOperations || payload?.media || payload;
+          const attention =
+            media?.needsAttention ??
+            media?.needs_attention ??
+            media?.summary?.needsAttention ??
+            media?.summary?.needs_attention ??
+            media?.counts?.needsAttention ??
+            media?.counts?.needs_attention;
+
+          if (Array.isArray(attention)) {
+            mediaLoaded = true;
+            mediaUnavailable = false;
+            setMediaAttention(attention.length);
+            renderOperationalBriefing();
+            return;
+          }
+
+          if (Number.isFinite(Number(attention))) {
+            mediaLoaded = true;
+            mediaUnavailable = false;
+            setMediaAttention(Number(attention));
+            renderOperationalBriefing();
+            return;
+          }
+
+          const records =
+            media?.records ??
+            media?.placements ??
+            media?.items ??
+            [];
+
+          if (Array.isArray(records)) {
+            const count = records.filter(
+              (record) =>
+                record?.needsAttention === true ||
+                record?.needs_attention === true
+            ).length;
+
+            mediaLoaded = true;
+            mediaUnavailable = false;
+            setMediaAttention(count);
+            renderOperationalBriefing();
+            return;
+          }
+
+          mediaLoaded = true;
+          mediaUnavailable = false;
+          setMediaAttention(0);
+          renderOperationalBriefing();
+        } catch (error) {
+          console.error("Could not load Media attention.", error);
+          mediaLoaded = true;
+          mediaUnavailable = true;
+          setMediaAttention(0);
+          renderOperationalBriefing();
+        }
+      }
+
+      function renderProof(data) {
+        const waiting = data.proofItems.filter((item) => !["complete", "completed", "published", "archived"].includes(String(item.status || "").toLowerCase()));
+        proofList.innerHTML = waiting.length ? waiting.map((item) => {
+          const label = item.status === "ready" ? "Ready" : "Pending";
+          return `<li class="proof-item"><a href="${escapeHtml(item.href || "#")}"><div class="proof-top"><div><p class="proof-name">${escapeHtml(item.title)}</p><p class="proof-detail">${escapeHtml(item.detail || "")}</p></div><span class="status-label ${statusClass(label)}">${label}</span></div></a></li>`;
+        }).join("") : `<li class="proof-item"><div class="proof-top"><div><p class="proof-name">No proof is waiting</p><p class="proof-detail">Completed work has been documented.</p></div><span class="status-label status-success">Clear</span></div></li>`;
+        return waiting;
+      }
+
+      function renderSummary(data, proofWaiting) {
+        const readyProspects = data.prospects.filter((p) => p.status === "ready");
+        const openWork = data.workItems.filter((item) => item.status === "open");
+        const completedWork = data.workItems.filter((item) => item.status === "complete");
+        prospectCount.textContent = data.prospects.length;
+        prospectNote.textContent = readyProspects.length ? `${readyProspects.length} ${readyProspects.length === 1 ? "is" : "are"} ready for personalized outreach.` : "No prospects are ready for personalized outreach.";
+        openTaskCount.textContent = openWork.length;
+        openWorkNote.textContent = openWork.length ? "Highest-impact work appears first." : "No open work items.";
+        proofCount.textContent = proofWaiting.length;
+        const proofRowCount = document.getElementById("proof-row-count");
+        if (proofRowCount) proofRowCount.textContent = String(proofWaiting.length);
+        proofNote.textContent = proofWaiting.length ? `${proofWaiting.length} ${proofWaiting.length === 1 ? "item is" : "items are"} ready to document.` : "No completed work is waiting for proof.";
+        taskProgress.textContent = `${openWork.length} open`;
+      }
+
+      function updatePriority() {
+        const data = loadData();
+        const openWork = data.workItems
+          .filter((item) =>
+            !["complete", "completed", "archived"].includes(
+              String(item.status || "").toLowerCase()
+            )
+          )
+          .sort(
+            (a, b) =>
+              ({ highest: 0, high: 1, normal: 2 }[a.priority] ?? 3) -
+              ({ highest: 0, high: 1, normal: 2 }[b.priority] ?? 3)
+          );
+
+        const proofWaiting = data.proofItems.filter(
+          (item) =>
+            !["complete", "completed", "published", "archived"].includes(
+              String(item.status || "").toLowerCase()
+            )
+        );
+
+        if (mediaAttentionState > 0) {
+          setDecisionBrief({
+            badge: "Protect",
+            type: "Media Deadline",
+            client:
+              mediaAttentionState === 1
+                ? "One Media Placement"
+                : `${mediaAttentionState} Media Placements`,
+            who: "Client delivery · Media Operations",
+            what:
+              mediaAttentionState === 1
+                ? "Review the active media deadline."
+                : `Review the ${mediaAttentionState} active media deadlines.`,
+            when: "Deadline-sensitive · Review first",
+            why: "An active station deadline can create immediate execution risk for client delivery.",
+            evidence: "Live Media Operations records currently require attention.",
+            evidenceReferences: "Media Operations",
+            actionGuidance: "Open Media and resolve the deadline before lower-priority work.",
+            primaryLabel: "Open Media",
+            primaryHref: "media.html",
+            secondaryLabel: "Open Work",
+            secondaryHref: "work.html"
+          });
+
+          commandBriefTitle.textContent = "Media requires the first operating decision today.";
+          commandBriefCopy.textContent = "Protect client delivery by resolving the active station deadline before routine production work.";
+          return;
+        }
+
+        if (highestPriorityDecisionState) {
+          renderHighestPriorityDecision(highestPriorityDecisionState);
+          return;
+        }
+
+        if (attentionClientsState.length > 0) {
+          const client = attentionClientsState[0];
+          const clientName = cleanDisplay(client?.clientName, "Client");
+
+          setDecisionBrief({
+            badge: "Decide",
+            type: "Client Attention",
+            client: clientName,
+            who: `Client: ${clientName} · Owner not recorded`,
+            what: "Review the live client decision requiring attention.",
+            when: `${attentionClientsState.length} ${
+              attentionClientsState.length === 1 ? "client requires" : "clients require"
+            } review`,
+            why: cleanDisplay(
+              client?.reason || client?.detail || client?.attentionReason,
+              "A live client decision is waiting. Review the evidence before committing work."
+            ),
+            evidence: "The client has an unresolved Investigation or Work Item.",
+            evidenceReferences: "Mission Control attention record",
+            actionGuidance: "Open the client workspace and identify the authoritative decision record.",
+            primaryLabel: `Open ${clientName}`,
+            primaryHref: client?.href || "clients.html",
+            secondaryLabel: "Open Communications",
+            secondaryHref: "communications-v2.html"
+          });
+
+          commandBriefTitle.textContent =
+            attentionClientsState.length === 1
+              ? "One client decision requires your attention."
+              : `${attentionClientsState.length} client decisions require your attention.`;
+          commandBriefCopy.textContent = "Resolve the strongest live client decision before adding more work.";
+          return;
+        }
+
+        if (openWork.length > 0) {
+          const item = openWork[0];
+
+          setDecisionBrief({
+            badge: "Deliver",
+            type: item.area || "Open Work",
+            client: item.client || "Committed Work",
+            who: cleanDisplay(item.client, "Client not recorded"),
+            what: item.title || "Complete the highest-priority open work item.",
+            when: `${priorityLabel(item.priority)} priority · Open`,
+            why: item.detail || "No urgent media or client decision outranks this committed work.",
+            evidence: "This item is already recorded in the active work queue.",
+            evidenceReferences: cleanDisplay(item.id) ? `Work Item #${item.id}` : "Work queue",
+            actionGuidance: "Open the work item and complete the next verified step.",
+            primaryLabel: "Open Work Item",
+            primaryHref: item.href || "work.html",
+            secondaryLabel: "Open Work Queue",
+            secondaryHref: "work.html"
+          });
+
+          commandBriefTitle.textContent = "The agency is clear of urgent decisions. Execute the strongest committed work.";
+          commandBriefCopy.textContent = "No live media deadline or client attention record outranks the current work queue.";
+          return;
+        }
+
+        if (proofWaiting.length > 0) {
+          setDecisionBrief({
+            badge: "Prove",
+            type: "Client Value",
+            client: "Proof of Work",
+            who: "Completed client work",
+            what: "Turn completed work into client-facing proof.",
+            when: `${proofWaiting.length} ${
+              proofWaiting.length === 1 ? "proof item is" : "proof items are"
+            } waiting`,
+            why: "Documented proof supports client reporting, retention, and future sales.",
+            evidence: "Completed work exists without finished client-facing proof.",
+            evidenceReferences: "Proof queue",
+            actionGuidance: "Open Proof and document the completed work from its source records.",
+            primaryLabel: "Build Proof",
+            primaryHref: "proof.html",
+            secondaryLabel: "Open Clients",
+            secondaryHref: "clients.html"
+          });
+
+          commandBriefTitle.textContent = "Operations are clear. Convert completed work into proof.";
+          commandBriefCopy.textContent = "No stronger operational issue is visible. Document completed work so clients can see the value delivered.";
+          return;
+        }
+
+        setDecisionBrief({
+          badge: "Acquire",
+          type: "Agency Growth",
+          client: "Qualified Prospecting",
+          who: "Global Concepts Media",
+          what: "Use the clear operating window to advance the strongest prospect.",
+          when: "Operating queues clear",
+          why: "No urgent client, media, work, or proof obligation is visible. Available capacity should create revenue rather than invented internal work.",
+          evidence: "Mission Control found no stronger delivery or client-risk signal.",
+          evidenceReferences: "Agency operating state",
+          actionGuidance: "Research one qualified prospect and prepare personalized outreach.",
+          primaryLabel: "Research Prospect",
+          primaryHref: "client-pre-research.html",
+          secondaryLabel: "Open Clients",
+          secondaryHref: "clients.html"
+        });
+
+        commandBriefTitle.textContent = "The agency is operationally clear. Use the window to create new revenue.";
+        commandBriefCopy.textContent = "Mission Control found no stronger delivery or client-risk signal. The highest-value action shifts to qualified prospecting.";
+      }
+
+      function renderDashboard(data) {
+        renderWorkQueue(data);
+        const proofWaiting = renderProof(data);
+        renderSummary(data, proofWaiting);
+        renderOperationalBriefing();
+      }
+
+      taskList.addEventListener("change", (event) => {
+        const checkbox = event.target.closest(".task-check");
+        if (!checkbox) return;
+        const id = checkbox.closest(".task-item")?.dataset.taskId;
+        const data = loadData();
+        const item = data.workItems.find((record) => record.id === id);
+        if (!item) return;
+        item.status = checkbox.checked ? "complete" : "open";
+        saveData(data);
+        renderDashboard(data);
+      });
+
+      if (!window.GCMOShell) {
+        console.error("Today 3.2.0: shared/gcm-shell.js did not load.");
+      } else {
+        window.GCMOShell.mount({
+          currentPage: "today",
+          statusText: "Agency Command Center operational · Today v3.4.4"
+        });
+      }
+
+
+      const gmailPost=async(action,extra={})=>{const r=await fetch(WORKER_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,...extra})});const p=await r.json();if(!r.ok||p.ok!==true)throw new Error(typeof p.error==="string"?p.error:p.error?.message||`HTTP ${r.status}`);return p};
+      const gmailEsc=v=>String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+      const gmailDecision=(label,value,extra="")=>`<span class="gmail-decision ${value?`yes ${extra}`:""}">${gmailEsc(label)}: ${value?"Yes":"No"}</span>`;
+      const renderGmailMessage=m=>{
+        const i=m.intelligence||{};
+        const clientAssigned=!String(i.client||"").toLowerCase().includes("unassigned");
+        const canMonitor=Boolean(i.monitoringOnly)&&clientAssigned;
+        const canInvestigate=Boolean(i.investigationCandidate||i.shouldCreateInvestigation)&&clientAssigned&&!i.monitoringOnly;
+        const approvalControl=Boolean(i.archive)
+          ? `<div class="gmail-approval"><button class="button button-secondary gmail-archive-button" type="button" data-gmail-id="${gmailEsc(m.gmailMessageId)}">Archive</button><span class="gmail-approval-status">No OS record will be created</span></div>`
+          : canMonitor
+            ? `<div class="gmail-approval"><input class="gmail-monitor-check" id="gmail-monitor-${gmailEsc(m.gmailMessageId)}" type="checkbox" value="${gmailEsc(m.gmailMessageId)}"><label for="gmail-monitor-${gmailEsc(m.gmailMessageId)}">Approve as Monitoring</label><span class="gmail-approval-status">Not saved</span></div>`
+            : canInvestigate
+              ? `<div class="gmail-approval"><input class="gmail-investigation-check" id="gmail-investigation-${gmailEsc(m.gmailMessageId)}" type="checkbox" value="${gmailEsc(m.gmailMessageId)}"><label for="gmail-investigation-${gmailEsc(m.gmailMessageId)}">Approve Communication + Investigation</label><span class="gmail-approval-status">Not saved</span></div>`
+              : "";
+        return `<article class="gmail-message" data-gmail-id="${gmailEsc(m.gmailMessageId)}"><div class="gmail-message-header"><div><h3 class="gmail-message-title">${gmailEsc(m.subject)}</h3><span class="gmail-message-meta">${gmailEsc(m.from)} · ${gmailEsc(m.date)}</span></div><span class="gmail-route">${gmailEsc(i.proposedRoute||"Manual Review")}</span></div><div class="gmail-intelligence-grid"><div class="gmail-intelligence-field"><span class="gmail-intelligence-label">Communication Family</span><span class="gmail-intelligence-value">${gmailEsc(i.communicationFamily||"Unknown")}</span></div><div class="gmail-intelligence-field"><span class="gmail-intelligence-label">Notification Type</span><span class="gmail-intelligence-value">${gmailEsc(i.notificationType||"unknown")}</span></div><div class="gmail-intelligence-field"><span class="gmail-intelligence-label">Client</span><span class="gmail-intelligence-value">${gmailEsc(i.client||"Unassigned")}</span></div><div class="gmail-intelligence-field"><span class="gmail-intelligence-label">Priority</span><span class="gmail-intelligence-value">${gmailEsc(i.operationalPriority||"Low")}</span></div><div class="gmail-intelligence-field"><span class="gmail-intelligence-label">Confidence</span><span class="gmail-intelligence-value">${gmailEsc(i.confidence||"Low")}</span></div><div class="gmail-intelligence-field"><span class="gmail-intelligence-label">Recommended Route</span><span class="gmail-intelligence-value">${gmailEsc(i.proposedRoute||"Manual Review")}</span></div><div class="gmail-intelligence-field wide"><span class="gmail-intelligence-label">Business Meaning</span><span class="gmail-intelligence-value">${gmailEsc(i.businessMeaning||"Manual review required.")}</span></div><div class="gmail-intelligence-field wide"><span class="gmail-intelligence-label">Recommended Action</span><span class="gmail-intelligence-value">${gmailEsc(i.recommendedAction||"Review manually.")}</span></div></div><div class="gmail-decision-row">${gmailDecision("Communication Approved",false)}${gmailDecision("Investigation Approved",false)}${gmailDecision("Work Item Approved",false)}${gmailDecision("Monitoring Candidate",i.monitoringOnly)}${gmailDecision("Investigation Candidate",Boolean(i.investigationCandidate||i.shouldCreateInvestigation))}${gmailDecision("Archive Candidate",i.archive,"archive")}</div><p class="gmail-source-preview">${gmailEsc(m.snippet||"")}</p>${approvalControl}</article>`;
+      };
+      async function loadGmailStatus(){
+        try{
+          const p=await gmailPost("get-gmail-status");
+          gmailConnectButton.href=p.connectUrl||`${WORKER_ENDPOINT}auth/google?return_to=${encodeURIComponent(location.href)}`;
+          gmailConnectButton.hidden=false;
+
+          if(p.connected){
+            gmailStatusCopy.textContent=`${p.connection.account_email} is connected. Preview creates no records until you approve a Monitoring or Investigation candidate.`;
+            gmailConnectButton.textContent="Reconnect Gmail";
+            gmailPreviewButton.disabled=false;
+          }else{
+            gmailStatusCopy.textContent="Gmail is not connected. Connect Gmail to analyze the unread inbox.";
+            gmailConnectButton.textContent="Connect Gmail";
+            gmailPreviewButton.disabled=true;
+          }
+        }catch(e){
+          gmailStatusCopy.textContent=`Gmail status unavailable: ${e.message}`;
+          gmailConnectButton.href=`${WORKER_ENDPOINT}auth/google?return_to=${encodeURIComponent(location.href)}&reauthorize=1`;
+          gmailConnectButton.textContent="Reconnect Gmail";
+          gmailConnectButton.hidden=false;
+        }
+      }
+      function bindGmailApprovals(){
+        const archiveButtons=[...gmailPreview.querySelectorAll(".gmail-archive-button")];
+        archiveButtons.forEach(button=>button.addEventListener("click",async()=>{
+          if(button.disabled)return;
+          const card=button.closest(".gmail-message");
+          const status=card?.querySelector(".gmail-approval-status");
+          const gmailMessageId=button.dataset.gmailId;
+          button.disabled=true;
+          if(status)status.textContent="Archiving…";
+          try{
+            const result=await gmailPost("approve-gmail-monitoring",{gmailMessageId,archiveOnly:true});
+            if(Number(result.writesPerformed||0)!==0)throw new Error("Archive safety check failed: an OS write was reported.");
+            if(status)status.textContent="Archived · 0 OS records created";
+            gmailStatusCopy.textContent="Gmail message archived and removed from Morning Command. 0 OS records were created.";
+            card?.remove();
+            if(!gmailPreview.querySelector(".gmail-message")){
+              gmailPreview.innerHTML='<article class="gmail-message"><h3 class="gmail-message-title">No unread operational emails remain in this preview</h3></article>';
+            }
+          }catch(error){
+            button.disabled=false;
+            if(status)status.textContent=`Archive failed: ${error.message}`;
+            gmailStatusCopy.textContent=`Gmail archive failed: ${error.message}`;
+          }
+        }));
+
+        const monitorChecks=[...gmailPreview.querySelectorAll(".gmail-monitor-check")];
+        monitorChecks.forEach(check=>check.addEventListener("change",async()=>{
+          if(!check.checked||check.disabled)return;
+          const card=check.closest(".gmail-message");
+          const status=card?.querySelector(".gmail-approval-status");
+          check.disabled=true;
+          if(status)status.textContent="Saving…";
+          try{
+            const result=await gmailPost("approve-gmail-monitoring",{gmailMessageId:check.value});
+            if(status)status.textContent=result.duplicate?"Already saved · Gmail cleared":"Saved to D1 · Gmail cleared";
+            gmailStatusCopy.textContent=result.duplicate
+              ?"This monitoring record was already in D1. Gmail was marked read and removed from Morning Command."
+              :"1 Gmail monitoring record was saved to D1. Gmail was marked read and removed from Morning Command.";
+            card?.remove();
+            if(!gmailPreview.querySelector(".gmail-message")){
+              gmailPreview.innerHTML='<article class="gmail-message"><h3 class="gmail-message-title">No unread operational emails remain in this preview</h3></article>';
+            }
+          }catch(error){
+            check.checked=false;
+            check.disabled=false;
+            if(status)status.textContent=`Review required: ${error.message}`;
+            gmailStatusCopy.textContent=`Monitoring approval failed: ${error.message}`;
+          }
+        }));
+
+        const investigationChecks=[...gmailPreview.querySelectorAll(".gmail-investigation-check")];
+        investigationChecks.forEach(check=>check.addEventListener("change",async()=>{
+          if(!check.checked||check.disabled)return;
+          const card=check.closest(".gmail-message");
+          const status=card?.querySelector(".gmail-approval-status");
+          check.disabled=true;
+          if(status)status.textContent="Creating Communication + Investigation…";
+          try{
+            const result=await gmailPost("approve-gmail-investigation",{gmailMessageId:check.value});
+            if(status)status.textContent=result.duplicate?"Already saved · Gmail cleared":"Communication + Investigation saved · Gmail cleared";
+            gmailStatusCopy.textContent=result.duplicate
+              ?`This Gmail issue was already processed. Communication #${result.communicationId||"—"} and Investigation #${result.investigationId||"—"} are preserved; Gmail was marked read.`
+              :`Communication #${result.communicationId||"—"} + Investigation #${result.investigationId||"—"} created. 0 Work Items created. Gmail was marked read and removed from Morning Command.`;
+            card?.remove();
+            loadMissionControlAttention();
+            if(!gmailPreview.querySelector(".gmail-message")){
+              gmailPreview.innerHTML='<article class="gmail-message"><h3 class="gmail-message-title">No unread operational emails remain in this preview</h3></article>';
+            }
+          }catch(error){
+            check.checked=false;
+            check.disabled=false;
+            if(status)status.textContent=`Review required: ${error.message}`;
+            gmailStatusCopy.textContent=`Investigation approval failed: ${error.message}`;
+          }
+        }));
+      }
+
+      gmailPreviewButton.addEventListener("click",async()=>{gmailPreviewButton.disabled=true;gmailPreviewButton.textContent="Analyzing Inbox…";gmailStatusCopy.textContent="Reading unread email and generating operational recommendations. Nothing will be saved.";try{const p=await gmailPost("preview-gmail-inbox",{limit:10});gmailPreview.hidden=false;gmailPreview.innerHTML=(p.messages||[]).length?p.messages.map(renderGmailMessage).join(""):`<article class="gmail-message"><h3 class="gmail-message-title">No unread operational emails found</h3></article>`;gmailStatusCopy.textContent=`${p.reviewedCount} unread emails analyzed. ${p.writesPerformed||0} OS records were created.`;bindGmailApprovals();gmailPreviewButton.textContent="Refresh Intelligence"}catch(e){gmailStatusCopy.textContent=`Inbox intelligence preview failed: ${e.message}`;gmailPreviewButton.textContent="Try Again"}finally{gmailPreviewButton.disabled=false}});
+      setDateAndGreeting();
+      loadGmailStatus();
+      renderDashboard(loadData());
+      updatePriority();
+      renderOperationalBriefing();
+      loadMissionControlAttention();
+      loadMediaAttention();
+    })();
+  </script>
+</body>
+</html>
