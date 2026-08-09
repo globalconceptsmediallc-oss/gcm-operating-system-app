@@ -1,10 +1,10 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.10
+   Version: 1.9.11
    Status: FBDT Production Candidate
    Source: Production work.html 1.9.8
-   Sprint: Investigation-Aware Evidence Guard + Source-Specific Extraction
+   Sprint: Decision Evidence Synthesis Guard + Source-Specific Extraction
    Purpose: Preserve the complete audited SEMrush evidence and guided
             Investigation workflow while adding a direct D1 entrance for
             known client-requested work that needs no artificial Investigation.
@@ -831,6 +831,34 @@
     catch(error){console.warn(error);}
   }
 
+  /*
+   * v1.9.11 DECISION EVIDENCE SYNTHESIS GUARD
+   *
+   * Historical road testing may contain locked diagnostic/failed extraction
+   * entries created before the v1.9.10 lock-integrity guard. Preserve those
+   * entries as immutable history, but never allow them to drive the current
+   * Investigation Decision, the next question, duplicate-image blocking, or
+   * the context sent into a new evidence analysis.
+   */
+  function isDecisionQualityEvidenceEntry(entry){
+    if(!entry||typeof entry!=="object")return false;
+
+    const evidenceType=String(entry.evidenceType||"").trim().toLowerCase();
+    const screen=String(entry.screen||"").trim().toLowerCase();
+    const finding=String(entry.finding||"").trim().toLowerCase();
+    const nextAction=String(entry.nextAction||"").trim().toLowerCase();
+    const combined=`${screen} ${finding} ${nextAction}`;
+
+    if(!evidenceType||evidenceType==="unknown"||evidenceType==="extraction_failed"||evidenceType==="wrong_source")return false;
+    if(/ai processing|usage allocation|quota|timed out|timeout|insufficient recognizable|does not contain enough recognizable|screenshot evidence extraction was incomplete|workers ai/.test(combined))return false;
+
+    return true;
+  }
+
+  function getDecisionEvidenceHistory(item){
+    return getEvidenceHistory(item).filter(isDecisionQualityEvidenceEntry);
+  }
+
   function evidenceDecisionFingerprint(decision){
     return JSON.stringify({
       evidenceType:String(decision?.evidenceType||"unknown"),
@@ -849,7 +877,10 @@
     const history=getEvidenceHistory(item);
     const fingerprint=evidenceDecisionFingerprint(decision);
     const exactImageAlreadyLocked=Boolean(
-      imageFingerprint && history.some(entry=>entry.imageFingerprint===imageFingerprint)
+      imageFingerprint && history.some(entry=>
+        entry.imageFingerprint===imageFingerprint &&
+        isDecisionQualityEvidenceEntry(entry)
+      )
     );
 
     if(exactImageAlreadyLocked){
@@ -900,7 +931,7 @@
   }
 
   function restoreInvestigationState(item){
-    const history=getEvidenceHistory(item);
+    const history=getDecisionEvidenceHistory(item);
 
     if(!history.length){
       updateDecisionControls({rootCauseProven:false});
@@ -1018,7 +1049,7 @@
       try{
         const context=buildEvidenceExtractionPrompt(
           item,
-          getEvidenceHistory(item)
+          getDecisionEvidenceHistory(item)
         );
 
         const payload=await post({
@@ -1354,7 +1385,7 @@
     const workTitle=byId("work-title");
     const workDescription=byId("work-description");
 
-    const history=getEvidenceHistory(item);
+    const history=getDecisionEvidenceHistory(item);
     const currentFinding=buildInvestigationFinding(item,captured,decision);
     const priorFindings=history.map(entry=>`Step ${entry.step}: ${entry.finding}`).join("\n\n");
 
@@ -1466,7 +1497,7 @@
   function buildNextStepDecision(captured,item){
     const facts=captured.facts||[];
     const joined=facts.join(" ").toLowerCase();
-    const history=item?getEvidenceHistory(item):[];
+    const history=item?getDecisionEvidenceHistory(item):[];
 
     if(isGoogleSearchConsole(item)){
       return buildGoogleSearchConsoleDecision({facts,joined,history,item});
