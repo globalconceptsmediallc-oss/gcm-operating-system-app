@@ -1,10 +1,10 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailIntegration.js
-   Version: 1.5.4
+   Version: 1.6.0
    Status: Production Candidate — Human Operational Intelligence
-   Source: routes/gmailIntegration.js 1.5.2
-   Sprint: Morning Command — Human Role + Explicit Client Hardening
+   Source: routes/gmailIntegration.js 1.5.4
+   Sprint: Media — Gmail Attached Draft Creation
    Purpose: Preserve the verified Gmail intelligence and monitoring approval
             workflow, add human-approved Communication + Investigation
             processing through the existing operational decision commit route,
@@ -53,7 +53,7 @@ import { clean, safeErrorMessage, logWorkerError, jsonResponse } from "../shared
 import { getDatabase } from "../shared/database.js";
 import { handleCommunicationAnalysis } from "./communicationAnalysis.js";
 import { handleCommitOperationalDecision } from "./operationalDecision.js";
-export const GMAIL_INTEGRATION_VERSION = "1.5.4";
+export const GMAIL_INTEGRATION_VERSION = "1.6.0";
 export const GMAIL_PATHS = Object.freeze({ CONNECT: "/auth/google", CALLBACK: "/auth/google/callback" });
 const AUTH_URL="https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL="https://oauth2.googleapis.com/token";
@@ -72,6 +72,7 @@ export async function handleGmailAction(body,env,requestId){
   if(body?.action===ACTIONS.PREVIEW_GMAIL_INBOX)return preview(body,env,requestId);
   if(body?.action===ACTIONS.APPROVE_GMAIL_MONITORING)return approveMonitoring(body,env,requestId);
   if(body?.action===ACTIONS.APPROVE_GMAIL_INVESTIGATION)return approveInvestigation(body,env,requestId);
+  if(body?.action===ACTIONS.CREATE_GMAIL_DRAFT)return createGmailDraft(body,env,requestId);
   return null;
 }
 async function beginAuth(url,env){
@@ -474,6 +475,65 @@ async function approveInvestigation(body,env,requestId){
     },500);
   }
 }
+
+async function createGmailDraft(body,env,requestId){
+  const to=clean(body?.to);
+  const subject=clean(body?.subject);
+  const messageBody=String(body?.body||"").trim();
+  const attachment=body?.attachment&&typeof body.attachment==="object"?body.attachment:null;
+  const fileName=clean(attachment?.fileName);
+  const mimeType=clean(attachment?.mimeType)||"application/octet-stream";
+  const base64=String(attachment?.base64||"").replace(/\s+/g,"");
+  if(!to||!subject||!messageBody)return jsonResponse({ok:false,requestId,error:"Draft recipient, subject, and body are required."},400);
+  if(!fileName||!base64)return jsonResponse({ok:false,requestId,error:"A physical attachment filename and base64 payload are required."},400);
+  try{
+    const db=requireDb(env);
+    await ensureTable(db);
+    const connection=await db.prepare(`SELECT account_email,encrypted_refresh_token,scope FROM gmail_connections ORDER BY updated_at DESC LIMIT 1`).first();
+    if(!connection)return jsonResponse({ok:false,requestId,error:"Gmail is not connected."},401);
+    const refreshToken=await decrypt(connection.encrypted_refresh_token,env.GOOGLE_CLIENT_SECRET);
+    const accessToken=await refreshAccessToken(refreshToken,env);
+    const boundary=`GCM_OS_${Date.now()}_${crypto.randomUUID().replace(/-/g,"")}`;
+    const safeName=fileName.replace(/[\r\n"]/g,"_");
+    const raw=[
+      `To: ${to}`,
+      `Subject: ${encodeMimeHeader(subject)}`,
+      "MIME-Version: 1.0",
+      `Content-Type: multipart/mixed; boundary="${boundary}"`,
+      "",
+      `--${boundary}`,
+      'Content-Type: text/plain; charset="UTF-8"',
+      "Content-Transfer-Encoding: base64",
+      "",
+      wrapMimeBase64(bytesToStandardBase64(new TextEncoder().encode(messageBody))),
+      "",
+      `--${boundary}`,
+      `Content-Type: ${mimeType}; name="${safeName}"`,
+      "Content-Transfer-Encoding: base64",
+      `Content-Disposition: attachment; filename="${safeName}"`,
+      "",
+      wrapMimeBase64(base64),
+      "",
+      `--${boundary}--`,
+      ""
+    ].join("\r\n");
+    const response=await fetch(`${API}/users/me/drafts`,{
+      method:"POST",
+      headers:{Authorization:`Bearer ${accessToken}`,"Content-Type":"application/json"},
+      body:JSON.stringify({message:{raw:encode(new TextEncoder().encode(raw))}})
+    });
+    const data=await response.json();
+    if(!response.ok||!data?.id)throw new Error(data?.error?.message||`Gmail draft creation failed with HTTP ${response.status}.`);
+    const threadId=clean(data?.message?.threadId);
+    return jsonResponse({ok:true,requestId,action:ACTIONS.CREATE_GMAIL_DRAFT,gmailIntegrationVersion:GMAIL_INTEGRATION_VERSION,draftId:data.id,messageId:data?.message?.id||null,threadId:threadId||null,gmailUrl:threadId?`https://mail.google.com/mail/u/0/#drafts/${encodeURIComponent(threadId)}`:"https://mail.google.com/mail/u/0/#drafts",to,subject,attachmentFileName:fileName,sent:false,writesPerformed:0});
+  }catch(error){
+    logWorkerError({requestId,route:ACTIONS.CREATE_GMAIL_DRAFT,stage:"gmail_draft_creation",error});
+    return jsonResponse({ok:false,requestId,action:ACTIONS.CREATE_GMAIL_DRAFT,error:safeErrorMessage(error)},500);
+  }
+}
+function bytesToStandardBase64(bytes){let binary="";const chunk=0x8000;for(let i=0;i<bytes.length;i+=chunk)binary+=String.fromCharCode(...bytes.subarray(i,i+chunk));return btoa(binary);}
+function wrapMimeBase64(value){return String(value||"").match(/.{1,76}/g)?.join("\r\n")||"";}
+function encodeMimeHeader(value){return `=?UTF-8?B?${bytesToStandardBase64(new TextEncoder().encode(String(value||"")))}?=`;}
 
 async function archiveMessage(gmailMessageId,accessToken){
   const response=await fetch(`${API}/users/me/messages/${encodeURIComponent(gmailMessageId)}/modify`,{
