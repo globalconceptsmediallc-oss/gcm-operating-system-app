@@ -1,9 +1,9 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailIntegration.js
-   Version: 1.4.4
+   Version: 1.4.5
    Status: Production Candidate — Gmail Rich HTML Evidence Extraction
-   Source: routes/gmailIntegration.js 1.4.3
+   Source: routes/gmailIntegration.js 1.4.4
    Sprint: Gmail Rich HTML Evidence Extraction
    Purpose: Preserve the verified Gmail intelligence and monitoring approval
             workflow, add human-approved Communication + Investigation
@@ -17,13 +17,15 @@
    - Gmail is marked read only after D1 confirms the save or duplicate.
    - No Work Item is created by Gmail Investigation approval.
    - Uses gmail.modify so approved messages leave Morning Command.
+   - Recognizes YouTube monthly performance emails as monitoring evidence and preserves
+     subscribers, minutes watched, and total views for future growth/decline comparison.
    ========================================================= */
 import { VERSION, ACTIONS } from "../shared/config.js";
 import { clean, safeErrorMessage, logWorkerError, jsonResponse } from "../shared/http.js";
 import { getDatabase } from "../shared/database.js";
 import { handleCommunicationAnalysis } from "./communicationAnalysis.js";
 import { handleCommitOperationalDecision } from "./operationalDecision.js";
-export const GMAIL_INTEGRATION_VERSION = "1.4.4";
+export const GMAIL_INTEGRATION_VERSION = "1.4.5";
 export const GMAIL_PATHS = Object.freeze({ CONNECT: "/auth/google", CALLBACK: "/auth/google/callback" });
 const AUTH_URL="https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL="https://oauth2.googleapis.com/token";
@@ -172,8 +174,11 @@ async function approveMonitoring(body,env,requestId){
     const activityDate=normalizeActivityDate(message.date);
     const category=monitoringCategory(intel.notificationType);
     const activity=clean(message.subject)||`${intel.communicationFamily||"Monitoring"} update`;
+    const monitoringMetrics=intel.monitoringMetrics&&typeof intel.monitoringMetrics==="object"?intel.monitoringMetrics:null;
+    const metricsNote=monitoringMetrics?`Monitoring metrics: ${JSON.stringify(monitoringMetrics)}`:"";
     const notes=[
       `Business meaning: ${clean(intel.businessMeaning)}`,
+      metricsNote,
       `Recommended action: ${clean(intel.recommendedAction)}`,
       `Gmail message ID: ${gmailMessageId}`,
       `Gmail thread ID: ${clean(message.threadId)}`
@@ -436,7 +441,7 @@ async function markMessageRead(gmailMessageId,accessToken){
   return data;
 }
 function normalizeActivityDate(value){const d=new Date(value);return Number.isNaN(d.getTime())?new Date().toISOString().slice(0,10):d.toISOString().slice(0,10);}
-function monitoringCategory(type){const map={position_tracking:"SEO Ranking Alert",search_performance:"Search Performance Notification",site_audit:"Technical SEO Audit Alert",backlink_audit:"SEO Backlink Alert",analytics:"Analytics Notification",business_profile:"Local Presence Notification"};return map[clean(type).toLowerCase()]||"Monitoring Intelligence";}
+function monitoringCategory(type){const map={position_tracking:"SEO Ranking Alert",search_performance:"Search Performance Notification",site_audit:"Technical SEO Audit Alert",backlink_audit:"SEO Backlink Alert",analytics:"Analytics Notification",business_profile:"Local Presence Notification",youtube_performance:"YouTube Performance"};return map[clean(type).toLowerCase()]||"Monitoring Intelligence";}
 
 async function readMessage(id,token){
   const url=new URL(`${API}/users/me/messages/${encodeURIComponent(id)}`);
@@ -495,6 +500,43 @@ function buildGmailRecommendation(message,analysis){
   const decision=analysis?.operationalDecision||analysis?.analysis||{};
   const routes=decision?.recommendedRoutes||{};
   const sourceText=`${message.from} ${message.subject} ${message.bodyText}`.toLowerCase();
+  const youtubeMonthly=isYouTubeMonthlyPerformance(message);
+  if(youtubeMonthly){
+    const metrics=extractYouTubeMonthlyMetrics(message.bodyText);
+    const client=inferYouTubeClient(message)||analysis?.client?.name||"Unassigned — Human Review";
+    const metricParts=[
+      metrics.newSubscribers!==null?`${metrics.newSubscribers} new subscriber${metrics.newSubscribers===1?"":"s"}`:"",
+      metrics.minutesWatched!==null?`${metrics.minutesWatched} minutes watched`:"",
+      metrics.totalViews!==null?`${metrics.totalViews} total views`:""
+    ].filter(Boolean);
+    const hasMetrics=metricParts.length>0;
+    return{
+      communicationFamily:"YouTube Monthly Performance",
+      notificationType:"youtube_performance",
+      client,
+      businessMeaning:hasMetrics
+        ? `YouTube monthly performance for ${client}: ${metricParts.join(", ")}. Preserve these metrics as monitoring evidence for future growth or decline comparison.`
+        : `YouTube monthly performance was received for ${client}. Preserve the report as monitoring evidence for future comparison.`,
+      operationalPriority:"Low",
+      recommendedAction:"Save the monthly YouTube metrics as monitoring evidence so the next report can be compared for growth or decline.",
+      shouldCreateCommunication:false,
+      shouldCreateInvestigation:false,
+      investigationCandidate:false,
+      shouldCreateWorkItem:false,
+      monitoringOnly:true,
+      monitoringMetrics:metrics,
+      archive:false,
+      proposedRoute:"Monitoring",
+      confidence:hasMetrics?"High":"Medium",
+      decisionReliability:hasMetrics?"Reliable — monthly metrics extracted":"Moderate — monthly report recognized",
+      evidenceSufficiency:hasMetrics?"Sufficient for monitoring and future trend comparison":"Sufficient to retain as monitoring evidence",
+      evidenceComparedAgainst:"Current Gmail message; future reports can compare against this saved monitoring record",
+      verificationRequired:"No investigation required. Human approval saves the current monthly metrics as the comparison reference.",
+      humanReviewRequired:true,
+      productionDecisionReady:true,
+      sourceAnalysis:decision
+    };
+  }
   const github=/github|notifications@github\.com/.test(sourceText);
   const githubFailure=github&&/(failed|failure|error|cancelled|timed out|deployment failed|build failed|workflow run failed|checks? failed|action required|security alert|vulnerability)/i.test(sourceText);
   if(github){
@@ -559,6 +601,42 @@ function buildGmailRecommendation(message,analysis){
     sourceAnalysis:decision
   };
 }
+
+function isYouTubeMonthlyPerformance(message){
+  const sender=clean(message?.from).toLowerCase();
+  const subject=clean(message?.subject);
+  const body=clean(message?.bodyText);
+  return /(?:youtube creators|no-reply@youtube\.com)/i.test(sender)&&
+    /(?:your\s+)?(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+month in review is here/i.test(subject)&&
+    /(?:minutes watched|total views|new subscribers?)/i.test(body);
+}
+function extractYouTubeMonthlyMetrics(value){
+  const text=sanitizeEmailText(value);
+  const first=(patterns)=>{for(const pattern of patterns){const m=text.match(pattern);if(m)return Number(String(m[1]).replace(/,/g,""));}return null;};
+  return{
+    newSubscribers:first([/([\d,]+)\s+new subscribers?/i,/new subscribers?\s+([\d,]+)/i]),
+    minutesWatched:first([/([\d,]+)\s+minutes watched/i,/minutes watched\s+([\d,]+)/i]),
+    totalViews:first([/([\d,]+)\s+total views/i,/total views\s+([\d,]+)/i])
+  };
+}
+function inferYouTubeClient(message){
+  const subject=clean(message?.subject).toLowerCase();
+  const recipient=clean(message?.to).toLowerCase();
+  const text=`${subject} ${recipient}`;
+  const rules=[
+    [/a1[- ]?action safe|a1 action safe|a1actionsafeandlock/,"A1 Action Safe & Lock"],
+    [/southeast safes|southeast-safes|sesafes/,"Southeast Safes"],
+    [/south florida safes|south-florida-s|southfloridasafes/,"South Florida Safes"],
+    [/north florida safes|northfloridasafes/,"North Florida Safes"],
+    [/harry beckwith guns|hb guns|hbguns/,"HB Guns"],
+    [/pickett weaponry|pickettweaponry/,"Pickett Weaponry"],
+    [/move a safe|moveasafe/,"Move A Safe"],
+    [/global concepts media|globalconceptsmedia/,"Global Concepts Media"]
+  ];
+  for(const [pattern,name] of rules)if(pattern.test(text))return name;
+  return "";
+}
+
 function buildDecisionCalibration({message,analysis,classification,decision,monitoringOnly,createInvestigation}){
   const type=clean(classification?.notificationType).toLowerCase();
   const evidenceText=[message.subject,message.bodyText,...(analysis?.evidence?.visibleMetrics||[]),...(analysis?.evidence?.visibleFacts||[])].filter(Boolean).join(" ");
