@@ -1,10 +1,10 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.11
+   Version: 1.9.12
    Status: FBDT Production Candidate
    Source: Production work.html 1.9.8
-   Sprint: Decision Evidence Synthesis Guard + Source-Specific Extraction
+   Sprint: Worker Error Object Normalization + Decision Evidence Synthesis Guard
    Purpose: Preserve the complete audited SEMrush evidence and guided
             Investigation workflow while adding a direct D1 entrance for
             known client-requested work that needs no artificial Investigation.
@@ -299,6 +299,39 @@
     }
   }
   async function loadWorkspace(client){return post({action:"get-client-workspace",clientCode:client.code});}
+
+  /*
+   * v1.9.12 WORKER ERROR OBJECT NORMALIZATION
+   *
+   * Worker failures may return `error` or `details` as structured objects.
+   * Passing an object directly to `new Error()` renders as `[object Object]`,
+   * hiding the actual Cloudflare/AI failure from the road test. Normalize any
+   * Worker error shape to a human-readable message before throwing it.
+   */
+  function workerErrorMessage(value,fallback="Worker request failed."){
+    if(value==null||value==="")return fallback;
+    if(typeof value==="string")return value.trim()||fallback;
+    if(value instanceof Error)return String(value.message||fallback).trim()||fallback;
+    if(typeof value==="object"){
+      const direct=[
+        value.message,
+        value.error,
+        value.details,
+        value.reason,
+        value.rawAiError,
+        value.code
+      ].find(candidate=>typeof candidate==="string"&&candidate.trim());
+      if(direct)return direct.trim();
+      try{
+        const json=JSON.stringify(value);
+        if(json&&json!=="{}")return json;
+      }catch(error){
+        console.warn("Could not serialize Worker error object.",error);
+      }
+    }
+    return String(value||fallback).trim()||fallback;
+  }
+
   async function post(body){
     const controller=new AbortController();
     const timeout=setTimeout(()=>controller.abort(),60000);
@@ -315,7 +348,11 @@
         throw new Error(`Worker returned non-JSON output (HTTP ${response.status}).`);
       }
       if(!response.ok||payload.ok!==true){
-        throw new Error(payload.error||payload.details||`Worker request failed (HTTP ${response.status}).`);
+        const workerFailure=payload.error??payload.details??payload.message;
+        throw new Error(workerErrorMessage(
+          workerFailure,
+          `Worker request failed (HTTP ${response.status}).`
+        ));
       }
       return payload;
     }catch(error){
@@ -1083,12 +1120,12 @@
           workerErrors.length>0 ||
           failedStages.length>0
         ){
-          const workerMessage=String(
-            workerErrors[0]?.message ||
-            payload?.error?.message ||
-            failedStages[0]?.rawAiError ||
+          const workerMessage=workerErrorMessage(
+            workerErrors[0] ||
+            payload?.error ||
+            failedStages[0]?.rawAiError,
             "The analysis did not complete successfully."
-          ).trim();
+          );
 
           status.className="status error capture-status";
           status.textContent=workerMessage
