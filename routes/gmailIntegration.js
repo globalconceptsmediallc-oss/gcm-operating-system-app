@@ -1,23 +1,29 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailIntegration.js
-   Version: 1.4.1
-   Status: Production Candidate — Forced Gmail Reauthorization
-   Source: New production route
-   Sprint: Morning Command — Operational Decision Calibration
-   Purpose: Preserve the verified Gmail intelligence and approval workflow,
-            save human-approved monitoring evidence, and remove approved
-            messages from the unread Gmail queue only after D1 succeeds.
+   Version: 1.4.2
+   Status: Production Candidate — Human-Approved Investigation Processing
+   Source: routes/gmailIntegration.js 1.4.1
+   Sprint: Gmail Human-Approved Investigation Processing
+   Purpose: Preserve the verified Gmail intelligence and monitoring approval
+            workflow, add human-approved Communication + Investigation
+            processing through the existing operational decision commit route,
+            and remove approved messages from the unread Gmail queue only after
+            D1 succeeds.
    Production change:
    - Approved monitoring remains monitoring evidence, not completed work.
+   - Approved Investigation candidates reuse operationalDecision.js so existing
+     Communication + Investigation relationships remain authoritative.
    - Gmail is marked read only after D1 confirms the save or duplicate.
+   - No Work Item is created by Gmail Investigation approval.
    - Uses gmail.modify so approved messages leave Morning Command.
    ========================================================= */
 import { VERSION, ACTIONS } from "../shared/config.js";
 import { clean, safeErrorMessage, logWorkerError, jsonResponse } from "../shared/http.js";
 import { getDatabase } from "../shared/database.js";
 import { handleCommunicationAnalysis } from "./communicationAnalysis.js";
-export const GMAIL_INTEGRATION_VERSION = "1.4.1";
+import { handleCommitOperationalDecision } from "./operationalDecision.js";
+export const GMAIL_INTEGRATION_VERSION = "1.4.2";
 export const GMAIL_PATHS = Object.freeze({ CONNECT: "/auth/google", CALLBACK: "/auth/google/callback" });
 const AUTH_URL="https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL="https://oauth2.googleapis.com/token";
@@ -35,6 +41,7 @@ export async function handleGmailAction(body,env,requestId){
   if(body?.action===ACTIONS.GET_GMAIL_STATUS)return status(env,requestId);
   if(body?.action===ACTIONS.PREVIEW_GMAIL_INBOX)return preview(body,env,requestId);
   if(body?.action===ACTIONS.APPROVE_GMAIL_MONITORING)return approveMonitoring(body,env,requestId);
+  if(body?.action===ACTIONS.APPROVE_GMAIL_INVESTIGATION)return approveInvestigation(body,env,requestId);
   return null;
 }
 async function beginAuth(url,env){
@@ -230,6 +237,185 @@ async function approveMonitoring(body,env,requestId){
   }
 }
 
+
+async function approveInvestigation(body,env,requestId){
+  const gmailMessageId=clean(body?.gmailMessageId);
+  if(!gmailMessageId)return jsonResponse({ok:false,requestId,error:"gmailMessageId is required."},400);
+
+  try{
+    const db=requireDb(env);
+    await ensureTable(db);
+
+    const connection=await db.prepare(`SELECT account_email,encrypted_refresh_token,scope FROM gmail_connections ORDER BY updated_at DESC LIMIT 1`).first();
+    if(!connection)return jsonResponse({ok:false,requestId,error:"Gmail is not connected."},401);
+
+    const refreshToken=await decrypt(connection.encrypted_refresh_token,env.GOOGLE_CLIENT_SECRET);
+    const accessToken=await refreshAccessToken(refreshToken,env);
+    const sourceReference=`gmail:${gmailMessageId}`;
+
+    const existing=await db.prepare(`
+      SELECT
+        c.id AS communication_id,
+        i.id AS investigation_id,
+        c.client_id,
+        c.subject
+      FROM communications c
+      LEFT JOIN investigations i ON i.communication_id=c.id
+      WHERE c.external_id=?
+      ORDER BY i.id DESC
+      LIMIT 1
+    `).bind(sourceReference).first();
+
+    if(existing?.communication_id&&existing?.investigation_id){
+      await markMessageRead(gmailMessageId,accessToken);
+      return jsonResponse({
+        ok:true,
+        requestId,
+        action:ACTIONS.APPROVE_GMAIL_INVESTIGATION,
+        duplicate:true,
+        writesPerformed:0,
+        gmailMarkedRead:true,
+        communicationId:existing.communication_id,
+        investigationId:existing.investigation_id,
+        workItemId:null
+      });
+    }
+
+    if(existing?.communication_id&&!existing?.investigation_id){
+      return jsonResponse({
+        ok:false,
+        requestId,
+        action:ACTIONS.APPROVE_GMAIL_INVESTIGATION,
+        error:"This Gmail message is already linked to a Communication without an Investigation. Review the existing Communication before creating another production record."
+      },409);
+    }
+
+    const message=await readMessage(gmailMessageId,accessToken);
+    const analyzed=await analyzePreviewMessage(message,env,`${requestId}-investigation-approval`);
+    const intel=analyzed.intelligence||{};
+    const sourceDecision=intel.sourceAnalysis&&typeof intel.sourceAnalysis==="object"?intel.sourceAnalysis:{};
+    const notificationType=clean(intel.notificationType).toLowerCase();
+    const directIssueTypes=new Set(["page_indexing_issue","merchant_listing_structured_data"]);
+    const routeRequestsInvestigation=Boolean(sourceDecision?.recommendedRoutes?.createInvestigation);
+    const investigationCandidate=Boolean(
+      intel.investigationCandidate ||
+      intel.shouldCreateInvestigation ||
+      (routeRequestsInvestigation&&directIssueTypes.has(notificationType))
+    );
+
+    if(!investigationCandidate){
+      return jsonResponse({
+        ok:false,
+        requestId,
+        action:ACTIONS.APPROVE_GMAIL_INVESTIGATION,
+        error:"This email is not currently a verified Investigation Candidate. Review its evidence and calibration before creating production records.",
+        intelligence:intel
+      },409);
+    }
+
+    const clientName=clean(intel.client);
+    if(!clientName||/unassigned|human review/i.test(clientName)){
+      return jsonResponse({ok:false,requestId,error:"A verified client match is required before an Investigation can be approved."},409);
+    }
+
+    const client=await db.prepare(`SELECT id,name,client_code FROM clients WHERE lower(name)=lower(?) LIMIT 1`).bind(clientName).first();
+    if(!client?.client_code)return jsonResponse({ok:false,requestId,error:`No production client matched ${clientName}.`},409);
+
+    const decision={
+      ...sourceDecision,
+      source:clean(sourceDecision.source)||clean(intel.communicationFamily)||"Gmail",
+      communicationType:clean(sourceDecision.communicationType)||clean(intel.notificationType)||"Operational Alert",
+      title:clean(sourceDecision.title)||clean(message.subject)||"Gmail Investigation",
+      operationalSummary:clean(sourceDecision.operationalSummary)||clean(intel.businessMeaning)||clean(message.snippet)||"Gmail evidence requires investigation.",
+      businessImpact:clean(sourceDecision.businessImpact)||clean(intel.businessMeaning),
+      importance:clean(sourceDecision.importance)||clean(intel.operationalPriority)||"Medium",
+      operationalPriority:clean(sourceDecision.operationalPriority)||clean(intel.operationalPriority)||"Medium",
+      recommendedAction:clean(sourceDecision.recommendedAction)||clean(intel.recommendedAction)||"Investigate the reported condition and determine the required corrective action.",
+      reasoning:clean(sourceDecision.reasoning)||`Human-approved Gmail Investigation candidate: ${clean(intel.communicationFamily)||notificationType}.`,
+      recommendedRoutes:{
+        saveCommunication:true,
+        createInvestigation:true,
+        createWorkItem:false,
+        replyRequired:false
+      }
+    };
+
+    const commitResponse=await handleCommitOperationalDecision({
+      action:ACTIONS.COMMIT_OPERATIONAL_DECISION,
+      clientCode:client.client_code,
+      externalId:sourceReference,
+      occurredAt:message.date,
+      direction:"incoming",
+      owner:"Andrew",
+      rawContent:message.bodyText||message.snippet||message.subject,
+      decision
+    },env,`${requestId}-commit`);
+
+    const commit=await commitResponse.json();
+    if(!commitResponse.ok||commit?.ok!==true){
+      return jsonResponse({
+        ok:false,
+        requestId,
+        action:ACTIONS.APPROVE_GMAIL_INVESTIGATION,
+        error:typeof commit?.error==="string"?commit.error:commit?.error?.message||"The operational decision could not be committed.",
+        commit
+      },commitResponse.status||500);
+    }
+
+    if(!commit.duplicate&&(!commit.communicationId||!commit.investigationId||commit.workItemId)){
+      return jsonResponse({
+        ok:false,
+        requestId,
+        action:ACTIONS.APPROVE_GMAIL_INVESTIGATION,
+        error:"D1 did not confirm exactly one Communication plus one Investigation with no Work Item. Gmail was left unread for review.",
+        commit
+      },500);
+    }
+
+    if(commit.duplicate&&!commit.communicationId){
+      return jsonResponse({
+        ok:false,
+        requestId,
+        action:ACTIONS.APPROVE_GMAIL_INVESTIGATION,
+        error:"Duplicate protection triggered without a confirmed Communication ID. Gmail was left unread for review.",
+        commit
+      },500);
+    }
+
+    await markMessageRead(gmailMessageId,accessToken);
+
+    return jsonResponse({
+      ok:true,
+      requestId,
+      action:ACTIONS.APPROVE_GMAIL_INVESTIGATION,
+      duplicate:Boolean(commit.duplicate),
+      writesPerformed:commit.duplicate?0:2,
+      gmailMarkedRead:true,
+      communicationId:commit.communicationId||null,
+      investigationId:commit.investigationId||null,
+      workItemId:null,
+      client:{
+        id:client.id,
+        clientCode:client.client_code,
+        name:client.name
+      }
+    });
+  }catch(error){
+    logWorkerError({
+      requestId,
+      route:ACTIONS.APPROVE_GMAIL_INVESTIGATION,
+      stage:"gmail_investigation_approval",
+      error
+    });
+    return jsonResponse({
+      ok:false,
+      requestId,
+      action:ACTIONS.APPROVE_GMAIL_INVESTIGATION,
+      error:safeErrorMessage(error)
+    },500);
+  }
+}
+
 async function markMessageRead(gmailMessageId,accessToken){
   const response=await fetch(`${API}/users/me/messages/${encodeURIComponent(gmailMessageId)}/modify`,{
     method:"POST",
@@ -355,6 +541,9 @@ function buildGmailRecommendation(message,analysis){
     recommendedAction:previewAction,
     shouldCreateCommunication:isKnownMonitoring?false:saveCommunication&&calibration.productionDecisionReady,
     shouldCreateInvestigation:createInvestigation&&calibration.productionDecisionReady,
+    investigationCandidate:createInvestigation&&(
+      calibration.productionDecisionReady||["page_indexing_issue","merchant_listing_structured_data"].includes(type)
+    ),
     shouldCreateWorkItem:createWorkItem&&calibration.productionDecisionReady,
     monitoringOnly:isKnownMonitoring?true:monitoringOnly&&calibration.productionDecisionReady,
     archive:false,
@@ -466,6 +655,7 @@ function buildFallbackRecommendation(message,error){
     recommendedAction:`Review this email manually. Analysis error: ${safeErrorMessage(error)}`,
     shouldCreateCommunication:false,
     shouldCreateInvestigation:false,
+    investigationCandidate:false,
     shouldCreateWorkItem:false,
     monitoringOnly:false,
     archive:false,
