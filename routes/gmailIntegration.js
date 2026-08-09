@@ -1,10 +1,10 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailIntegration.js
-   Version: 1.4.6
-   Status: Production Candidate — Gmail Rich HTML Evidence Extraction
-   Source: routes/gmailIntegration.js 1.4.5
-   Sprint: Google Analytics Monitoring Intelligence
+   Version: 1.4.7
+   Status: Production Candidate — Google Analytics Metric Parsing
+   Source: routes/gmailIntegration.js 1.4.6
+   Sprint: Google Analytics Metric Accuracy
    Purpose: Preserve the verified Gmail intelligence and monitoring approval
             workflow, add human-approved Communication + Investigation
             processing through the existing operational decision commit route,
@@ -657,31 +657,63 @@ function isGoogleAnalyticsPerformance(message){
 }
 function extractGoogleAnalyticsMetrics(value){
   const text=sanitizeEmailText(value);
-  const numberValue=value=>{
-    const raw=String(value||"").replace(/,/g,"").trim().toLowerCase();
-    const match=raw.match(/^([\d.]+)\s*([kmb])?$/i);
+  const summary=text.split(/\bView report snapshot\b/i)[0];
+  const lines=summary
+    .split(/\r?\n/)
+    .map(line=>clean(line))
+    .filter(Boolean);
+
+  const parseMetricNumber=value=>{
+    const raw=String(value||"").replace(/,/g,"").trim();
+    // Metric suffixes are valid only when attached directly to the number.
+    // This prevents the first letter of a following label (for example
+    // "Bounce Rate") from being misread as B = billion.
+    const match=raw.match(/^([\d]+(?:\.[\d]+)?)([KMB])?$/i);
     if(!match)return null;
     const base=Number(match[1]);
     if(!Number.isFinite(base))return null;
-    const multiplier=match[2]==="k"?1000:match[2]==="m"?1000000:match[2]==="b"?1000000000:1;
+    const suffix=(match[2]||"").toUpperCase();
+    const multiplier=suffix==="K"?1000:suffix==="M"?1000000:suffix==="B"?1000000000:1;
     return Math.round(base*multiplier);
   };
-  const firstNumber=(patterns)=>{for(const pattern of patterns){const m=text.match(pattern);if(m){const parsed=numberValue(m[1]);if(parsed!==null)return parsed;}}return null;};
-  const firstText=(patterns)=>{for(const pattern of patterns){const m=text.match(pattern);if(m)return clean(m[1]);}return "";};
+
+  const findSummaryValue=label=>{
+    const index=lines.findIndex(line=>label.test(line));
+    if(index<0)return "";
+    // Google Analytics emails place all four labels first, followed by the
+    // four metric values and their percentage deltas. Prefer the ordered
+    // summary block rather than later page/screen tables.
+    const labels=[/^(?:active users)$/i,/^(?:new users)$/i,/^(?:avg|average) engagement time$/i,/^events$/i];
+    const labelIndexes=labels.map(pattern=>lines.findIndex(line=>pattern.test(line)));
+    const lastLabel=Math.max(...labelIndexes);
+    if(lastLabel>=0){
+      const values=lines.slice(lastLabel+1).filter(line=>
+        /^(?:[\d,.]+(?:[KMB])?|[\d.]+(?:s|sec|secs|seconds?|m|min|mins|minutes?))$/i.test(line)
+      );
+      const metricPosition=labelIndexes.findIndex(i=>i===index);
+      if(metricPosition>=0&&values[metricPosition])return values[metricPosition];
+    }
+    return "";
+  };
+
+  const activeRaw=findSummaryValue(/^active users$/i);
+  const newRaw=findSummaryValue(/^new users$/i);
+  const engagementRaw=findSummaryValue(/^(?:avg|average) engagement time$/i);
+  const eventsRaw=findSummaryValue(/^events$/i);
+
   return{
-    activeUsers:firstNumber([/active users\s+([\d,.]+\s*[kmb]?)/i,/([\d,.]+\s*[kmb]?)\s+active users/i]),
-    newUsers:firstNumber([/new users\s+([\d,.]+\s*[kmb]?)/i,/([\d,.]+\s*[kmb]?)\s+new users/i]),
-    averageEngagementTime:firstText([/(?:average|avg) engagement time\s+([\d.]+\s*(?:seconds?|secs?|s|minutes?|mins?|m))/i,/([\d.]+\s*(?:seconds?|secs?|s|minutes?|mins?|m))\s+(?:average|avg) engagement time/i]),
-    eventCount:firstNumber([/events?\s+([\d,.]+\s*[kmb]?)/i,/([\d,.]+\s*[kmb]?)\s+events?/i])
+    activeUsers:parseMetricNumber(activeRaw),
+    newUsers:parseMetricNumber(newRaw),
+    averageEngagementTime:clean(engagementRaw),
+    eventCount:parseMetricNumber(eventsRaw)
   };
 }
 function inferAnalyticsClient(message){
   const subject=clean(message?.subject).toLowerCase();
-  const recipient=clean(message?.to).toLowerCase();
   const body=clean(message?.bodyText).toLowerCase();
   // Strong identity evidence only. Body matches require an explicit Analytics property/project label;
   // page/screen names are intentionally excluded because they can mention unrelated brands.
-  const strongText=`${subject} ${recipient}`;
+  const strongText=subject;
   const propertyText=(body.match(/(?:property|account|stream|website)\s*(?:name|:)?\s*[^\n]{0,140}/gi)||[]).join(" ");
   const text=`${strongText} ${propertyText}`;
   const rules=[
