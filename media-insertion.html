@@ -1,7 +1,7 @@
-<!-- =========================================================
+!-- =========================================================
    Global Concepts Media Operating System
    File: media-insertion.html
-   Version: 1.6.0
+   Version: 1.6.1
    Status: Production Candidate — Sent / Awaiting Confirmation State Commit
    Source: Current GCM OS Media Operations architecture
    Sprint: Media Traffic Package — Operational State Commit
@@ -16,7 +16,8 @@
    - Market / Station: Melbourne / WMMB
    - Event: Melbourne Scratch & Dent Gun Show, August 22–23, 2026
    - Flight: August 17–22, 2026
-   - Asset: SESLM2601_Liberty_GunShow_30_V1.mp3
+   - Production attachment name: SESLM2601_Liberty_GunShow_30_V1.mp3
+   - Repository source file: SESL2601_Liberty_GunShow_30(1).mp3
    - Agency traffic preparation rule: 17 calendar days before first air
    - Critical station-confirmation rule: 3 business days before air, noon
    ========================================================= -->
@@ -156,8 +157,8 @@
               <p class="help">The same ISCI remains attached while the exact audio is reused. A materially revised spot requires a new identifier.</p>
             </div>
             <div>
-              <label>Repository Audio File<input id="repositoryAudioFile" class="readonly" value="SESLM2601_Liberty_GunShow_30_V1.mp3" readonly></label>
-              <audio id="audio" controls preload="metadata" src="SESLM2601_Liberty_GunShow_30_V1.mp3"></audio>
+              <label>Repository Audio Source<input id="repositoryAudioFile" class="readonly" value="SESL2601_Liberty_GunShow_30(1).mp3" readonly></label>
+              <audio id="audio" controls preload="metadata" src="SESL2601_Liberty_GunShow_30(1).mp3"></audio>
               <p class="help" id="audioStatus">Loaded automatically from the repository.</p>
             </div>
           </div>
@@ -219,6 +220,7 @@
 (() => {
   const WORKER_ENDPOINT = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev";
   const $ = id => document.getElementById(id);
+  const REPOSITORY_AUDIO_SOURCE = "SESL2601_Liberty_GunShow_30(1).mp3";
   const requestedRecordId = Number(new URLSearchParams(window.location.search).get("mediaRecordId") || 0);
   let existingRecord = null;
 
@@ -295,7 +297,7 @@
     $("isci").value=isci;
     $("filename").value=`${isci}_${descriptor}_V${version}.mp3`;
     $("audio").src=$("filename").value;
-    if($("repositoryAudioFile")) $("repositoryAudioFile").value=$("filename").value;
+    if($("repositoryAudioFile")) $("repositoryAudioFile").value=REPOSITORY_AUDIO_SOURCE;
     $("audioStatus").textContent=`Loaded automatically from the repository: ${$("filename").value}`;
   }
 
@@ -501,8 +503,8 @@ Andy`;
   async function loadRepositoryAsset(){
     const fileName=$("filename").value.trim();
     if(!fileName) throw new Error("No production filename is available.");
-    const response=await fetch(encodeURI(fileName),{cache:"no-store"});
-    if(!response.ok) throw new Error(`Production file could not be loaded (${response.status}).`);
+    const response=await fetch(encodeURI(REPOSITORY_AUDIO_SOURCE),{cache:"no-store"});
+    if(!response.ok) throw new Error(`Repository audio could not be loaded (${response.status}): ${REPOSITORY_AUDIO_SOURCE}`);
     return {
       fileName,
       blob:await response.blob()
