@@ -1,10 +1,10 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailIntegration.js
-   Version: 1.4.3
-   Status: Production Candidate — Gmail Evidence Detail
-   Source: routes/gmailIntegration.js 1.4.2
-   Sprint: Gmail Evidence Detail
+   Version: 1.4.4
+   Status: Production Candidate — Gmail Rich HTML Evidence Extraction
+   Source: routes/gmailIntegration.js 1.4.3
+   Sprint: Gmail Rich HTML Evidence Extraction
    Purpose: Preserve the verified Gmail intelligence and monitoring approval
             workflow, add human-approved Communication + Investigation
             processing through the existing operational decision commit route,
@@ -23,7 +23,7 @@ import { clean, safeErrorMessage, logWorkerError, jsonResponse } from "../shared
 import { getDatabase } from "../shared/database.js";
 import { handleCommunicationAnalysis } from "./communicationAnalysis.js";
 import { handleCommitOperationalDecision } from "./operationalDecision.js";
-export const GMAIL_INTEGRATION_VERSION = "1.4.3";
+export const GMAIL_INTEGRATION_VERSION = "1.4.4";
 export const GMAIL_PATHS = Object.freeze({ CONNECT: "/auth/google", CALLBACK: "/auth/google/callback" });
 const AUTH_URL="https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL="https://oauth2.googleapis.com/token";
@@ -685,7 +685,24 @@ function extractMessageText(payload){
     for(const child of Array.isArray(part.parts)?part.parts:[])visit(child);
   };
   visit(payload);
-  return clean((plain.length?plain:html).join("\n\n"));
+  const plainText=clean(plain.join("\n\n"));
+  const htmlText=clean(html.join("\n\n"));
+  if(!plainText)return htmlText;
+  if(!htmlText)return plainText;
+
+  // Multipart/alternative emails often contain a short text/plain summary while
+  // the useful report table exists only in text/html. Preserve the richer body
+  // instead of automatically discarding HTML whenever plain text is present.
+  const plainScore=evidenceRichnessScore(plainText);
+  const htmlScore=evidenceRichnessScore(htmlText);
+  return htmlScore>plainScore?htmlText:plainText;
+}
+function evidenceRichnessScore(value){
+  const text=clean(value);
+  if(!text)return 0;
+  const numericTokens=(text.match(/(?:^|\s)[+-]?\d+(?:[.,]\d+)?%?(?=\s|$)/g)||[]).length;
+  const seoTerms=(text.match(/\b(keyword|position|rank|ranking|change|traffic|clicks?|impressions?|errors?|warnings?|notices?|site health|canonical|redirect|url)\b/gi)||[]).length;
+  return text.length+(numericTokens*40)+(seoTerms*25);
 }
 function decodeGmailText(value){
   try{return new TextDecoder().decode(decode(value));}catch{return"";}
