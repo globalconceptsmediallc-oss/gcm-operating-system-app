@@ -1,10 +1,10 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailIntegration.js
-   Version: 1.5.2
+   Version: 1.5.3
    Status: Production Candidate — Human Operational Intelligence
-   Source: routes/gmailIntegration.js 1.5.1
-   Sprint: Morning Command — Known Human Role Intelligence
+   Source: routes/gmailIntegration.js 1.5.2
+   Sprint: Morning Command — Human Role + Explicit Client Hardening
    Purpose: Preserve the verified Gmail intelligence and monitoring approval
             workflow, add human-approved Communication + Investigation
             processing through the existing operational decision commit route,
@@ -41,13 +41,17 @@
    - Ted/Liberty regional communications are treated as manufacturer-relationship intelligence;
      visit notices trigger meeting preparation rather than generic client-request classification.
    - Human-email preview remains read-only: this version changes intelligence, not D1 write rules.
+   - Adrianne is now treated as a known SES leadership/operations human before generic platform keywords.
+   - Explicit client names in billing subjects/body override weaker inferred client assignment.
+   - iHeart invoices are recognized as finance/co-op coordination: Adrianne payment + Kristy co-op support.
+   - Cloudflare promotional mail is classified as non-operational archive noise rather than Manual Review work.
    ========================================================= */
 import { VERSION, ACTIONS } from "../shared/config.js";
 import { clean, safeErrorMessage, logWorkerError, jsonResponse } from "../shared/http.js";
 import { getDatabase } from "../shared/database.js";
 import { handleCommunicationAnalysis } from "./communicationAnalysis.js";
 import { handleCommitOperationalDecision } from "./operationalDecision.js";
-export const GMAIL_INTEGRATION_VERSION = "1.5.2";
+export const GMAIL_INTEGRATION_VERSION = "1.5.3";
 export const GMAIL_PATHS = Object.freeze({ CONNECT: "/auth/google", CALLBACK: "/auth/google/callback" });
 const AUTH_URL="https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL="https://oauth2.googleapis.com/token";
@@ -600,6 +604,10 @@ function buildGmailRecommendation(message,analysis){
       sourceAnalysis:decision
     };
   }
+  const billingOperational=buildBillingRecommendation(message,analysis,decision);
+  if(billingOperational)return billingOperational;
+  const promotionalOperational=buildPromotionalRecommendation(message,analysis,decision);
+  if(promotionalOperational)return promotionalOperational;
   const humanOperational=buildKnownHumanRecommendation(message,analysis,decision);
   if(humanOperational)return humanOperational;
 
@@ -731,6 +739,7 @@ function buildKnownHumanRecommendation(message,analysis,decision){
   };
 
   const isKristy=/\bkristy\b/.test(sender);
+  const isAdrianne=/\badrianne\b/.test(sender);
   const isFrank=/\bfrank\b/.test(sender);
   const isTed=/\bted\b/.test(sender)&&/(liberty|safe|sales|regional|visit|scorecard)/i.test(text);
 
@@ -777,6 +786,11 @@ function buildKnownHumanRecommendation(message,analysis,decision){
     return{...base,communicationFamily:"Human — Website / Content Operations",notificationType,client,businessMeaning:meaning,operationalPriority:(activeResearch||mediaForge)?"Normal":"Low",recommendedAction:action,verificationRequired:verification};
   }
 
+  if(isAdrianne){
+    const crossChannel=/(google (?:business )?profile|facebook|instagram|youtube|social|website|web site)/i.test(text);
+    return{...base,communicationFamily:"Human — Leadership / Client Operations",notificationType:crossChannel?"content_coordination_signal":"operational_heads_up",client,businessMeaning:crossChannel?`Adrianne is participating in a human client/operations conversation${client&&!/unassigned/i.test(client)?` for ${client}`:""}. Platform names inside the thread are context, not proof that the email itself is a Google or social-platform notification.`:"Adrianne is providing client/operations context. Treat the human conversation by its business meaning rather than by platform words quoted inside the thread.",operationalPriority:"Normal",recommendedAction:crossChannel?"Review the underlying website/content change and decide what cross-channel coordination Andy/GCM owns. Do not reclassify Adrianne's human reply as a Google Business Profile notification merely because the thread mentions Google or social channels.":"Read the operational context, identify any explicit decision or follow-up Andy owns, and otherwise preserve it as human client context.",verificationRequired:"Create work only when the human conversation proves a concrete action, deadline, unresolved issue, or coordination responsibility."};
+  }
+
   if(isFrank){
     return{...base,communicationFamily:"Human — Leadership / Client Operations",notificationType:"operational_heads_up",client,businessMeaning:"Frank is providing an operational heads-up or client/business context. The message should inform Andy's coordination, but it is not automatically website-content work or a new investigation.",operationalPriority:"Normal",recommendedAction:"Read the heads-up in context, identify any explicit decision or follow-up Andy owns, and otherwise preserve it as relationship/operational context rather than inventing work.",verificationRequired:"Only create work when Frank's message contains or proves a concrete action, decision, deadline, or issue."};
   }
@@ -786,6 +800,42 @@ function buildKnownHumanRecommendation(message,analysis,decision){
     return{...base,communicationFamily:"Human — Liberty Corporate / Regional Sales",notificationType:visit?"manufacturer_visit_preparation":"manufacturer_relationship_update",client:client&&!/unassigned/i.test(client)?client:"Southeast Safes",businessMeaning:visit?"Ted, Liberty Safe's regional sales manager, is signaling an upcoming visit/meeting. His communications can cover new/upcoming Liberty products, programs, scorecards, dealer matters, and other Liberty corporate business.":"Ted is providing Liberty corporate/regional sales relationship intelligence.",operationalPriority:visit?"Normal":"Low",recommendedAction:visit?"Prepare for the visit by surfacing relevant Liberty issues, upcoming products, MediaForge dependencies, dealer/co-op matters, performance questions, and other open items already known to GCM. Review any attached scorecards.":"Preserve the Liberty relationship context and surface any concrete follow-up Andy should prepare.",verificationRequired:visit?"Confirm visit timing and review attachments/context before deciding what should be raised with Ted.":"Determine whether the update creates a concrete preparation or follow-up action."};
   }
   return null;
+}
+function buildBillingRecommendation(message,analysis,decision){
+  const sender=clean(message?.from).toLowerCase();
+  const subject=clean(message?.subject);
+  const body=clean(message?.bodyText);
+  const text=`${subject}\n${body}`;
+  const isInvoice=/\binvoice\b/i.test(text);
+  const isIheart=/iheartmedia|iheart media|hanselmann/i.test(`${sender}\n${text}`);
+  if(!isInvoice||!isIheart)return null;
+  const explicitClient=inferHumanClient(message);
+  const client=explicitClient||analysis?.client?.name||"Unassigned — Human Review";
+  return{
+    communicationFamily:"Human — Finance / Media Operations",
+    notificationType:"billing_coop_coordination",
+    client,
+    businessMeaning:`iHeartMedia sent an invoice${client&&!/unassigned/i.test(client)?` explicitly tied to ${client}`:""}. This is operational finance/media evidence: Adrianne handles payment and Kristy needs the invoice for co-op reporting.`,
+    operationalPriority:"Normal",
+    recommendedAction:"Route the invoice context to Adrianne for payment and Kristy for co-op reporting. Preserve the client association from the explicit invoice subject/body; do not assign it from unrelated account history.",
+    shouldCreateCommunication:false,shouldCreateInvestigation:false,investigationCandidate:false,shouldCreateWorkItem:false,monitoringOnly:false,archive:false,proposedRoute:"Human Review",confidence:explicitClient?"High":"Medium",decisionReliability:explicitClient?"Reliable — invoice and client identity explicitly matched":"Review Required — invoice recognized but client identity is not explicit",evidenceSufficiency:"Sufficient for finance/co-op coordination; not evidence of completed client work",evidenceComparedAgainst:"Current Gmail invoice subject/body and known operational roles",verificationRequired:"Confirm the invoice attachment/details before payment or co-op submission. No investigation is implied by receipt of a normal invoice.",humanReviewRequired:true,productionDecisionReady:false,sourceAnalysis:decision
+  };
+}
+function buildPromotionalRecommendation(message,analysis,decision){
+  const sender=clean(message?.from).toLowerCase();
+  const subject=clean(message?.subject);
+  const body=clean(message?.bodyText);
+  const text=`${subject}\n${body}`;
+  const cloudflare=/cloudflare/.test(sender)||/cloudflare/i.test(text);
+  const promo=/(last chance|\$\d+ off|promo(?:tion)?|discount|agents week|offer expires|register now)/i.test(text);
+  if(!cloudflare||!promo)return null;
+  return{
+    communicationFamily:"Vendor — Promotional / Non-Operational",
+    notificationType:"vendor_promotion",
+    client:"GCM — Internal",
+    businessMeaning:"Cloudflare promotional/marketing email. It does not establish a client issue, production failure, deadline, or operational work.",
+    operationalPriority:"Low",recommendedAction:"Archive as non-operational promotional mail. Do not create a Communication, Investigation, Work Item, or monitoring record.",shouldCreateCommunication:false,shouldCreateInvestigation:false,investigationCandidate:false,shouldCreateWorkItem:false,monitoringOnly:false,archive:true,proposedRoute:"Archive",confidence:"High",decisionReliability:"Reliable — promotional language detected",evidenceSufficiency:"Sufficient to exclude from operational review",evidenceComparedAgainst:"Current Gmail sender, subject, and body",verificationRequired:"None unless the message separately reports a production/security/account issue.",humanReviewRequired:false,productionDecisionReady:true,sourceAnalysis:decision
+  };
 }
 function inferHumanClient(message){
   const text=`${clean(message?.subject)}\n${clean(message?.bodyText)}`.toLowerCase();
