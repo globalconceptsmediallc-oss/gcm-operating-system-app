@@ -1,10 +1,10 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailIntegration.js
-   Version: 1.5.0
-   Status: Production Candidate — HBG Merchant Center Investigation Routing
-   Source: routes/gmailIntegration.js 1.4.9
-   Sprint: Morning Command — HBG Merchant Center Manual Review Resolution
+   Version: 1.5.1
+   Status: Production Candidate — Monitored Gmail Label Coverage
+   Source: routes/gmailIntegration.js 1.5.0
+   Sprint: Morning Command — Operational Label Coverage
    Purpose: Preserve the verified Gmail intelligence and monitoring approval
             workflow, add human-approved Communication + Investigation
             processing through the existing operational decision commit route,
@@ -29,13 +29,17 @@
      into Business Meaning as well as the structured Client field.
    - Verified, non-adverse Position Tracking updates may route to Monitoring; explicit decline
      signals remain Calibration Required for human review.
+   - Morning Command now includes unread operational mail routed by Gmail rules to the
+     Kristy and Frank & Adrianne Stuff labels, in addition to unread Inbox mail.
+   - Existing spam/trash exclusions remain in place; Inbox promotion/social filtering is
+     preserved without excluding explicitly monitored operational labels.
    ========================================================= */
 import { VERSION, ACTIONS } from "../shared/config.js";
 import { clean, safeErrorMessage, logWorkerError, jsonResponse } from "../shared/http.js";
 import { getDatabase } from "../shared/database.js";
 import { handleCommunicationAnalysis } from "./communicationAnalysis.js";
 import { handleCommitOperationalDecision } from "./operationalDecision.js";
-export const GMAIL_INTEGRATION_VERSION = "1.5.0";
+export const GMAIL_INTEGRATION_VERSION = "1.5.1";
 export const GMAIL_PATHS = Object.freeze({ CONNECT: "/auth/google", CALLBACK: "/auth/google/callback" });
 const AUTH_URL="https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL="https://oauth2.googleapis.com/token";
@@ -108,7 +112,7 @@ async function preview(body,env,requestId){
     const refreshToken=await decrypt(connection.encrypted_refresh_token,env.GOOGLE_CLIENT_SECRET);
     const accessToken=await refreshAccessToken(refreshToken,env);
     const listUrl=new URL(`${API}/users/me/messages`);
-    listUrl.searchParams.set("q","is:unread in:inbox -in:spam -in:trash -category:promotions -category:social");
+    listUrl.searchParams.set("q",'is:unread -in:spam -in:trash {(in:inbox -category:promotions -category:social) label:Kristy label:"Frank & Adrianne Stuff"}');
     listUrl.searchParams.set("maxResults",String(limit));
     const list=await gmailFetch(listUrl.toString(),accessToken);
     const rawMessages=await Promise.all((list.messages||[]).map(item=>readMessage(item.id,accessToken)));
