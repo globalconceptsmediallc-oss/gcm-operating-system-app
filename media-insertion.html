@@ -1,3 +1,26 @@
+<!-- =========================================================
+   Global Concepts Media Operating System
+   File: media-insertion.html
+   Version: 1.7.0
+   Status: Production Candidate — Gmail Attached Station Draft
+   Source: Current GCM OS Media Operations architecture
+   Sprint: Media Traffic Package — Gmail Draft Integration
+   Purpose: Create or load the exact Media campaign selected from the dashboard,
+            enforce market-specific GCM ISCI and production filenames, generate
+            professional station traffic instructions, update the selected D1
+            record, mark sent traffic as awaiting station confirmation, and return
+            to the operator workspace.
+
+   Pilot:
+   - Client: Southeast Safes
+   - Market / Station: Melbourne / WMMB
+   - Event: Melbourne Scratch & Dent Gun Show, August 22–23, 2026
+   - Flight: August 17–22, 2026
+   - Production attachment name: SESLM2601_Liberty_GunShow_30_V1.mp3
+   - Repository source file: SESL2601_Liberty_GunShow_30(1).mp3
+   - Agency traffic preparation rule: 17 calendar days before first air
+   - Critical station-confirmation rule: 3 business days before air, noon
+   ========================================================= -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -88,7 +111,7 @@
           <h1 id="pageTitle">Media Insertion</h1>
           <p class="subtitle" id="pageSubtitle">Create the campaign package that Media will operate, confirm, complete, and reuse.</p>
         </div>
-        <div class="version">Installed version 1.6.0</div>
+        <div class="version">Installed version 1.7.0</div>
       </header>
 
       <section class="summary">
@@ -166,7 +189,8 @@
         <div class="panel-head"><div><h2>3. Communications Generated</h2><p>One station traffic communication and one internal Facebook reminder.</p></div></div>
         <div class="body review">
           <div>
-            <label>Station Email Subject<input id="stationSubject"></label>
+            <label>Station Recipient<input id="stationRecipient" value="StephanieStein@iheartmedia.com"></label>
+            <label style="margin-top:10px">Station Email Subject<input id="stationSubject"></label>
             <label style="margin-top:10px">Station Traffic Email<textarea id="stationDraft" class="draft"></textarea></label>
           </div>
           <div>
@@ -182,7 +206,7 @@
           <div class="actions">
             <a class="button secondary" href="media.html">Back to Media</a>
             <button class="button secondary" id="refresh" type="button">Refresh Package</button>
-            <button class="button secondary" id="copyStation" type="button">Generate Attached Station Draft</button>
+            <button class="button secondary" id="copyStation" type="button">Create Gmail Station Draft</button>
             <button class="button secondary" id="copyKristie" type="button">Send Kristie Reminder</button>
             <button class="button primary" id="insert" type="button">Insert Campaign into GCM OS</button>
           </div>
@@ -562,15 +586,32 @@ Andy`;
     refresh();
     $("copyStation").disabled=true;
     $("saveStatus").className="status";
-    $("saveStatus").textContent="Building the complete station email draft with the repository MP3 attached…";
-
+    $("saveStatus").textContent="Creating the Gmail station draft with the repository MP3 physically attached…";
     try{
-      const fileName=await createAttachedEmailPackage();
+      const {fileName,blob}=await loadRepositoryAsset();
+      const audioBytes=new Uint8Array(await blob.arrayBuffer());
+      const audioBase64=bytesToBase64(audioBytes);
+      const recipient=$("stationRecipient").value.trim();
+      if(!recipient) throw new Error("Station recipient email is required.");
+      const response=await fetch(WORKER_ENDPOINT,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          action:"create-gmail-draft",
+          to:recipient,
+          subject:$("stationSubject").value.trim(),
+          body:$("stationDraft").value,
+          attachment:{fileName,mimeType:"audio/mpeg",base64:audioBase64}
+        })
+      });
+      const payload=await response.json().catch(()=>({}));
+      if(!response.ok||payload?.ok!==true)throw new Error(payload?.error||`Worker returned ${response.status}.`);
       $("saveStatus").className="status ok";
-      $("saveStatus").textContent=`Station email package created with ${fileName} physically attached. Open the downloaded .eml package to review and send the draft.`;
+      $("saveStatus").textContent=`Gmail draft created for ${recipient} with ${fileName} physically attached. Nothing has been sent.`;
+      window.open(payload.gmailUrl||"https://mail.google.com/mail/u/0/#drafts","_blank");
     }catch(error){
       $("saveStatus").className="status error";
-      $("saveStatus").textContent=`Station package could not be created: ${error.message}`;
+      $("saveStatus").textContent=`Gmail station draft could not be created: ${error.message}`;
     }finally{
       $("copyStation").disabled=false;
     }
