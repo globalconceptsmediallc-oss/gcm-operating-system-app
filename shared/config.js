@@ -1,15 +1,16 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/config.js
-   Version: 7.7.8
+   Version: 7.7.9
    Status: Production Candidate
-   Source: shared/config.js 7.7.6
-   Sprint: Create Requested Work
+   Source: shared/config.js 7.7.8
+   Sprint: Gmail Human-Approved Investigation Processing
    Purpose: Preserve all existing production constants and add
-            the direct client-requested Work Item action contract.
+            the human-approved Gmail Communication + Investigation
+            action contract.
    ========================================================= */
 
-export const VERSION = "7.7.8";
+export const VERSION = "7.7.9";
 export const API_CONTRACT_VERSION = "communications-operational-decision-v3";
 export const COMMUNICATION_ANALYSIS_ENGINE_VERSION = "3.4.1";
 
@@ -25,6 +26,7 @@ export const ACTIONS = Object.freeze({
   GET_GMAIL_STATUS: "get-gmail-status",
   PREVIEW_GMAIL_INBOX: "preview-gmail-inbox",
   APPROVE_GMAIL_MONITORING: "approve-gmail-monitoring",
+  APPROVE_GMAIL_INVESTIGATION: "approve-gmail-investigation",
   GET_CLIENT_WORKSPACE: "get-client-workspace",
   GET_CLIENT_DIRECTORY: "get-client-directory",
   COMMIT_OPERATIONAL_DECISION: "commit-operational-decision",
