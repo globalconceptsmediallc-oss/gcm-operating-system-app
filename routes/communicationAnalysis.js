@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.8.11
+   Version: 7.8.12
    Source: Production route 7.7.6
    Status: Production Candidate — Human Review Evidence Handoff
    Purpose: Complete production communication analysis route with one authoritative report-family decision before specialist dispatch,
@@ -3379,6 +3379,7 @@ function deterministicNotificationClassification(evidence) {
   const typeRules = [
     { type: "disavow_file_update", family: "Google Search Console — Disavow File Update", patterns: [/disavow file updated/i, /update to the disavow file/i, /new disavow file contains/i, /disavow links?/i] },
     { type: "merchant_listing_structured_data", family: "Google Search Console — Merchant Listings Structured Data", patterns: [/merchant listings?/i, /merchant listings? structured data/i, /structured data issues?/i, /invalid string length in field ["']?sku["']?/i] },
+    { type: "page_indexing_issue", family: "Google Search Console — Page Indexing Issue", patterns: [/new reasons? prevent pages? from being indexed/i, /new reasons? preventing pages? from being indexed/i, /pages? (?:are |were )?not indexed/i, /pages? (?:are |were )?not being indexed/i, /prevent(?:s|ing)? pages? from being indexed/i, /page indexing issues? detected/i, /indexing issues? detected/i] },
     { type: "page_indexing_resolution", family: "Google Search Console — Page Indexing Resolution", patterns: [/page indexing issues? successfully fixed/i, /indexing issues? successfully fixed/i, /validation (?:passed|complete|completed|successful)/i, /pages? validated as fixed/i, /successfully validated/i] },
     { type: "position_tracking", family: "SEMrush Position Tracking", patterns: [/position tracking/i, /keyword positions?/i, /rankings?/i, /keywords? improved/i, /keywords? declined/i, /top 3/i, /top 10/i] },
     { type: "backlink_audit", family: "SEMrush Backlink Audit", patterns: [/backlink audit/i, /backlinks?/i, /referring domains?/i, /lost domains?/i, /new domains?/i, /toxic(?:ity)?/i] },
@@ -3433,6 +3434,20 @@ function deterministicNotificationClassification(evidence) {
   if (platform === "google_search_console" && merchantListingStructuredDataSignal) {
     notificationType = "merchant_listing_structured_data";
     notificationFamily = "Google Search Console — Merchant Listings Structured Data";
+    bestScore = Math.max(bestScore, 3);
+  }
+
+  /*
+   * v7.8.12 SEARCH CONSOLE NEW PAGE-INDEXING ISSUE GUARDRAIL
+   * A new reason preventing pages from being indexed is a technical issue that
+   * requires diagnosis, not a generic Search Performance monitoring update.
+   */
+  const pageIndexingIssueSignal =
+    /new reasons? prevent pages? from being indexed|new reasons? preventing pages? from being indexed|pages? (?:are |were )?not indexed|pages? (?:are |were )?not being indexed|prevent(?:s|ing)? pages? from being indexed|page indexing issues? detected|indexing issues? detected/i.test(searchable);
+
+  if (platform === "google_search_console" && pageIndexingIssueSignal) {
+    notificationType = "page_indexing_issue";
+    notificationFamily = "Google Search Console — Page Indexing Issue";
     bestScore = Math.max(bestScore, 3);
   }
 
@@ -3604,6 +3619,7 @@ function buildOperationalDecision({
     backlink_audit: "SEMrush",
     site_audit: "SEMrush",
     page_indexing_resolution: "Google Search Console",
+    page_indexing_issue: "Google Search Console",
     merchant_listing_structured_data: "Google Search Console",
     disavow_file_update: "Google Search Console",
     search_performance: "Google Search Console",
@@ -3869,6 +3885,7 @@ function buildDeterministicBusinessMeaning({ visibleEvidence, classification, ww
     "merchant_listing_structured_data",
     "disavow_file_update",
     "page_indexing_resolution",
+    "page_indexing_issue",
     "search_performance",
     "business_profile",
     "analytics",
@@ -4253,6 +4270,14 @@ function buildDeterministicBusinessMeaning({ visibleEvidence, classification, ww
       recordPurpose: "Technical SEO Monitoring Evidence",
       operationalLabel: negative ? "Review Required" : "Technical Monitoring Update"
     },
+    page_indexing_issue: {
+      summary: `Google Search Console reported a new page-indexing condition that is preventing one or more pages from being indexed.${evidenceDetail} The affected reason and representative URL should be diagnosed before corrective work is assigned.`,
+      impact: "Pages prevented from being indexed may be unable to appear in Google Search results. The notification establishes a technical indexing issue, but the affected URLs, root cause, and required correction must be verified in Search Console before work is created.",
+      action: "Save the communication and open an Investigation. In Google Search Console, identify the reported indexing reason and affected URL(s), select a representative affected page, determine the root cause, and only then create the corrective Work Item.",
+      reasoning: "Google Search Console explicitly reports a new reason preventing pages from being indexed. This establishes a technical issue requiring diagnosis, but it does not yet establish the root cause or corrective action.",
+      recordPurpose: "Page Indexing Issue Evidence",
+      operationalLabel: "Review Required"
+    },
     page_indexing_resolution: {
       summary: `Google Search Console confirmed that a previously reported page-indexing condition was successfully validated as fixed.${evidenceDetail}`,
       impact: "This is positive technical verification that Google accepted the reported indexing correction for the affected pages. It should be retained as outcome evidence and compared with any related open Investigation or prior corrective work.",
@@ -4302,7 +4327,7 @@ function buildDeterministicBusinessMeaning({ visibleEvidence, classification, ww
   if (!template) return null;
 
   const investigationSuggested =
-    ["backlink_audit", "merchant_listing_structured_data"].includes(type)
+    ["backlink_audit", "merchant_listing_structured_data", "page_indexing_issue"].includes(type)
       ? true
       : negative && [
           "position_tracking",
@@ -4316,7 +4341,7 @@ function buildDeterministicBusinessMeaning({ visibleEvidence, classification, ww
     eventDirection,
     operationalSummary: template.summary,
     businessImpact: template.impact,
-    importance: type === "merchant_listing_structured_data" ? "Medium" : negative ? "Medium" : "Low",
+    importance: ["merchant_listing_structured_data", "page_indexing_issue"].includes(type) ? "Medium" : negative ? "Medium" : "Low",
     recommendedAction: template.action,
     investigationSuggested,
     workItemSuggested: false,
@@ -4343,6 +4368,7 @@ function recordPurposeForNotificationType(type) {
   const purposes = {
     position_tracking: "Historical SEO Monitoring Evidence",
     page_indexing_resolution: "Page Indexing Resolution Evidence",
+    page_indexing_issue: "Page Indexing Issue Evidence",
     backlink_audit: "Backlink Health Monitoring Evidence",
     site_audit: "Technical SEO Monitoring Evidence",
     merchant_listing_structured_data: "Structured Data Issue Evidence",
@@ -4358,6 +4384,7 @@ function operationalLabelForNotificationType(type, direction) {
   const labels = {
     position_tracking: "Monitoring Update",
     page_indexing_resolution: "Technical Resolution Confirmed",
+    page_indexing_issue: "Review Required",
     backlink_audit: "Backlink Monitoring Update",
     site_audit: "Technical Monitoring Update",
     merchant_listing_structured_data: "Review Required",
@@ -4430,6 +4457,7 @@ function communicationTypeForClassification(classification) {
   const types = {
     position_tracking: "SEO Ranking Alert",
     page_indexing_resolution: "Page Indexing Resolution Confirmation",
+    page_indexing_issue: "Page Indexing Issue Alert",
     backlink_audit: "SEO Backlink Alert",
     site_audit: "Technical SEO Audit Alert",
     merchant_listing_structured_data: "Merchant Listings Structured Data Alert",
