@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailIntegration.js
-   Version: 1.4.8
+   Version: 1.4.9
    Status: Production Candidate — Position Tracking Client Resolution
    Source: routes/gmailIntegration.js 1.4.7
    Sprint: Position Tracking Client Accuracy
@@ -25,15 +25,17 @@
      are never silently assigned or saved to the wrong client.
    - Position Tracking client identity is deterministically resolved from the explicit
      project/domain in Gmail evidence before using AI client classification.
-   - northfloridasafes.com maps only to North Florida Safes; it cannot inherit the
-     Southeast Safes client assignment from a similar safe-industry project.
+   - northfloridasafes.com maps only to North Florida Safes; verified identity now propagates
+     into Business Meaning as well as the structured Client field.
+   - Verified, non-adverse Position Tracking updates may route to Monitoring; explicit decline
+     signals remain Calibration Required for human review.
    ========================================================= */
 import { VERSION, ACTIONS } from "../shared/config.js";
 import { clean, safeErrorMessage, logWorkerError, jsonResponse } from "../shared/http.js";
 import { getDatabase } from "../shared/database.js";
 import { handleCommunicationAnalysis } from "./communicationAnalysis.js";
 import { handleCommitOperationalDecision } from "./operationalDecision.js";
-export const GMAIL_INTEGRATION_VERSION = "1.4.8";
+export const GMAIL_INTEGRATION_VERSION = "1.4.9";
 export const GMAIL_PATHS = Object.freeze({ CONNECT: "/auth/google", CALLBACK: "/auth/google/callback" });
 const AUTH_URL="https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL="https://oauth2.googleapis.com/token";
@@ -620,11 +622,11 @@ function buildGmailRecommendation(message,analysis){
   const createInvestigation=Boolean(routes.createInvestigation);
   const createWorkItem=Boolean(routes.createWorkItem);
   const monitoringOnly=saveCommunication&&!createInvestigation&&!createWorkItem&&!routes.replyRequired;
-  const calibration=buildDecisionCalibration({message,analysis,classification,decision,monitoringOnly,createInvestigation});
-  const previewMeaning=buildConciseBusinessMeaning({message,analysis,classification,decision,createInvestigation:false});
+  const verifiedMonitoringClient=type==="position_tracking"?inferPositionTrackingClient(message):"";
+  const calibration=buildDecisionCalibration({message,analysis,classification,decision,monitoringOnly,createInvestigation,verifiedMonitoringClient});
+  const previewMeaning=buildConciseBusinessMeaning({message,analysis,classification,decision,createInvestigation:false,verifiedClient:verifiedMonitoringClient});
   const previewAction=buildConciseRecommendedAction({message,analysis,classification,decision,createInvestigation:false,monitoringOnly});
   const isKnownMonitoring=["position_tracking","search_performance","site_audit","backlink_audit"].includes(type);
-  const verifiedMonitoringClient=type==="position_tracking"?inferPositionTrackingClient(message):"";
   return{
     communicationFamily:classification.notificationFamily||decision.notificationFamily||"Unknown",
     notificationType:classification.notificationType||"unknown",
@@ -786,20 +788,24 @@ function inferYouTubeClient(message){
   return "";
 }
 
-function buildDecisionCalibration({message,analysis,classification,decision,monitoringOnly,createInvestigation}){
+function buildDecisionCalibration({message,analysis,classification,decision,monitoringOnly,createInvestigation,verifiedMonitoringClient}){
   const type=clean(classification?.notificationType).toLowerCase();
   const evidenceText=[message.subject,message.bodyText,...(analysis?.evidence?.visibleMetrics||[]),...(analysis?.evidence?.visibleFacts||[])].filter(Boolean).join(" ");
   const hasKeywordMovement=/\b(keyword|position|rank|ranking)\b/i.test(evidenceText)&&/(moved|changed|gained|lost|up|down|position\s*\d+)/i.test(evidenceText);
   const hasSearchMetrics=/\b(clicks?|impressions?|ctr|average position)\b/i.test(evidenceText)&&/\b\d[\d,.]*\b/.test(evidenceText);
   const hasAuditMetrics=/\b(errors?|warnings?|notices?|site health|broken pages?)\b/i.test(evidenceText)&&/\b\d[\d,.%]*\b/.test(evidenceText);
-  if(type==="position_tracking")return{
-    decisionReliability:hasKeywordMovement?"Moderate — current movement detected":"Low — movement detail incomplete",
-    evidenceSufficiency:hasKeywordMovement?"Current report sufficient for monitoring; insufficient for escalation":"Insufficient for production decision",
-    evidenceComparedAgainst:"Current Gmail message only; no prior Position Tracking record, investigation, baseline, or proof compared",
-    verificationRequired:"Compare the affected keyword, direction, current position, and prior report. Then decide whether to save monitoring evidence, attach it to existing work, or investigate.",
-    productionDecisionReady:false,
-    proposedRoute:"Calibration Required"
-  };
+  if(type==="position_tracking"){
+    const adverseSignal=/(rankings? declined|rankings? decreased|lost rankings?|visibility[^\n]{0,40}-\d|traffic[^\n]{0,40}-\d)/i.test(evidenceText);
+    const routineMonitoringReady=Boolean(verifiedMonitoringClient)&&hasKeywordMovement&&!adverseSignal;
+    return{
+      decisionReliability:routineMonitoringReady?"Reliable — verified client and current ranking movement detected":hasKeywordMovement?"Moderate — current movement detected":"Low — movement detail incomplete",
+      evidenceSufficiency:routineMonitoringReady?"Sufficient for monitoring; no adverse escalation signal proven":hasKeywordMovement?"Current report sufficient for monitoring; insufficient for escalation":"Insufficient for production decision",
+      evidenceComparedAgainst:"Current Gmail message only; no prior Position Tracking record, investigation, baseline, or proof compared",
+      verificationRequired:routineMonitoringReady?"No investigation required. Human approval may save this Position Tracking update as monitoring evidence.":"Compare the affected keyword, direction, current position, and prior report. Then decide whether to save monitoring evidence, attach it to existing work, or investigate.",
+      productionDecisionReady:routineMonitoringReady,
+      proposedRoute:routineMonitoringReady?"Monitoring":"Calibration Required"
+    };
+  }
   if(type==="search_performance")return{
     decisionReliability:hasSearchMetrics?"Moderate — current metrics detected":"Low — metric detail incomplete",
     evidenceSufficiency:hasSearchMetrics?"Current report sufficient for monitoring; insufficient for trend decision":"Insufficient for production decision",
@@ -825,9 +831,9 @@ function buildDecisionCalibration({message,analysis,classification,decision,moni
     proposedRoute:"Manual Review"
   };
 }
-function buildConciseBusinessMeaning({message,analysis,classification,decision,createInvestigation}){
+function buildConciseBusinessMeaning({message,analysis,classification,decision,createInvestigation,verifiedClient}){
   const type=clean(classification?.notificationType).toLowerCase();
-  const client=analysis?.client?.name||"the client";
+  const client=verifiedClient||analysis?.client?.name||"the client";
   const evidenceText=[message.subject,message.bodyText,...(analysis?.evidence?.visibleMetrics||[]),...(analysis?.evidence?.visibleFacts||[])].filter(Boolean).join(" ");
   if(type==="position_tracking"){
     const count=extractFirstCount(evidenceText,[/\b(\d+)\s+keywords?\b/i,/\bfor\s+(\d+)\s+keywords?\b/i]);
