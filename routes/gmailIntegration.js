@@ -1,10 +1,10 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailIntegration.js
-   Version: 1.4.2
-   Status: Production Candidate — Human-Approved Investigation Processing
-   Source: routes/gmailIntegration.js 1.4.1
-   Sprint: Gmail Human-Approved Investigation Processing
+   Version: 1.4.3
+   Status: Production Candidate — Gmail Evidence Detail
+   Source: routes/gmailIntegration.js 1.4.2
+   Sprint: Gmail Evidence Detail
    Purpose: Preserve the verified Gmail intelligence and monitoring approval
             workflow, add human-approved Communication + Investigation
             processing through the existing operational decision commit route,
@@ -23,7 +23,7 @@ import { clean, safeErrorMessage, logWorkerError, jsonResponse } from "../shared
 import { getDatabase } from "../shared/database.js";
 import { handleCommunicationAnalysis } from "./communicationAnalysis.js";
 import { handleCommitOperationalDecision } from "./operationalDecision.js";
-export const GMAIL_INTEGRATION_VERSION = "1.4.2";
+export const GMAIL_INTEGRATION_VERSION = "1.4.3";
 export const GMAIL_PATHS = Object.freeze({ CONNECT: "/auth/google", CALLBACK: "/auth/google/callback" });
 const AUTH_URL="https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL="https://oauth2.googleapis.com/token";
@@ -454,6 +454,7 @@ async function readMessage(id,token){
     date:value("Date"),
     snippet:clean(data.snippet),
     bodyText:bodyText||clean(data.snippet),
+    evidenceText:(bodyText||clean(data.snippet)).slice(0,6000),
     labels:Array.isArray(data.labelIds)?data.labelIds:[]
   };
 }
