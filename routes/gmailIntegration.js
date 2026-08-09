@@ -1,10 +1,10 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailIntegration.js
-   Version: 1.5.1
-   Status: Production Candidate — Monitored Gmail Label Coverage
-   Source: routes/gmailIntegration.js 1.5.0
-   Sprint: Morning Command — Operational Label Coverage
+   Version: 1.5.2
+   Status: Production Candidate — Human Operational Intelligence
+   Source: routes/gmailIntegration.js 1.5.1
+   Sprint: Morning Command — Known Human Role Intelligence
    Purpose: Preserve the verified Gmail intelligence and monitoring approval
             workflow, add human-approved Communication + Investigation
             processing through the existing operational decision commit route,
@@ -33,13 +33,21 @@
      Kristy and Frank & Adrianne Stuff labels, in addition to unread Inbox mail.
    - Existing spam/trash exclusions remain in place; Inbox promotion/social filtering is
      preserved without excluding explicitly monitored operational labels.
+   - Known human senders are interpreted by operational role before generic platform keywords.
+   - Kristy communications distinguish completed/corrective website work, active research,
+     MediaForge opportunities, show-calendar planning, and cross-channel follow-up opportunities.
+   - Frank communications are treated as leadership/operational heads-up unless the message
+     itself proves a direct action request.
+   - Ted/Liberty regional communications are treated as manufacturer-relationship intelligence;
+     visit notices trigger meeting preparation rather than generic client-request classification.
+   - Human-email preview remains read-only: this version changes intelligence, not D1 write rules.
    ========================================================= */
 import { VERSION, ACTIONS } from "../shared/config.js";
 import { clean, safeErrorMessage, logWorkerError, jsonResponse } from "../shared/http.js";
 import { getDatabase } from "../shared/database.js";
 import { handleCommunicationAnalysis } from "./communicationAnalysis.js";
 import { handleCommitOperationalDecision } from "./operationalDecision.js";
-export const GMAIL_INTEGRATION_VERSION = "1.5.1";
+export const GMAIL_INTEGRATION_VERSION = "1.5.2";
 export const GMAIL_PATHS = Object.freeze({ CONNECT: "/auth/google", CALLBACK: "/auth/google/callback" });
 const AUTH_URL="https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL="https://oauth2.googleapis.com/token";
@@ -592,6 +600,9 @@ function buildGmailRecommendation(message,analysis){
       sourceAnalysis:decision
     };
   }
+  const humanOperational=buildKnownHumanRecommendation(message,analysis,decision);
+  if(humanOperational)return humanOperational;
+
   const hbgMerchantCenter=isHbgMerchantCenterStoreRatings(message);
   if(hbgMerchantCenter){
     return{
@@ -694,6 +705,102 @@ function buildGmailRecommendation(message,analysis){
     productionDecisionReady:calibration.productionDecisionReady,
     sourceAnalysis:decision
   };
+}
+
+function buildKnownHumanRecommendation(message,analysis,decision){
+  const sender=clean(message?.from).toLowerCase();
+  const subject=clean(message?.subject);
+  const body=clean(message?.bodyText);
+  const text=`${subject}\n${body}`;
+  const client=inferHumanClient(message)||analysis?.client?.name||"Unassigned — Human Review";
+  const base={
+    shouldCreateCommunication:false,
+    shouldCreateInvestigation:false,
+    investigationCandidate:false,
+    shouldCreateWorkItem:false,
+    monitoringOnly:false,
+    archive:false,
+    proposedRoute:"Human Review",
+    confidence:"High",
+    decisionReliability:"Role-aware preview — human judgment retained",
+    evidenceSufficiency:"Current human email analyzed in sender-role context",
+    evidenceComparedAgainst:"Current Gmail message and known sender role; existing OS records are not yet automatically matched",
+    humanReviewRequired:true,
+    productionDecisionReady:false,
+    sourceAnalysis:decision
+  };
+
+  const isKristy=/\bkristy\b/.test(sender);
+  const isFrank=/\bfrank\b/.test(sender);
+  const isTed=/\bted\b/.test(sender)&&/(liberty|safe|sales|regional|visit|scorecard)/i.test(text);
+
+  if(isKristy){
+    const mediaForge=/(media\s*forge|premium.*(?:image|photo)|accessor(?:y|ies)|liberty.*accessor)/i.test(text);
+    const showCalendar=/(calendar of shows|show calendar|gun show|shows?\b.*(?:calendar|schedule|date))/i.test(text);
+    const correctiveWork=/(canonical|sitemap|weebly|square platform|permalink|redirect|internal link|we move safes|shopify)/i.test(text)&&/(updated|added|verified|fixed|looked into|changed|rebuil|consolidat|cannot|can't|limitation)/i.test(text);
+    const activeResearch=/(i(?:'|’)ll|i will|i need to|i(?:'|’)m going to|look back through|research|check into|look into)/i.test(text);
+    const completedWork=/(i (?:updated|added|changed|fixed|created|built|rebuilt|consolidated)|has been updated|now outputs|i looked into)/i.test(text);
+    const crossChannel=/(google (?:business )?profile|facebook|instagram|youtube|social|website|web site)/i.test(text);
+
+    let notificationType="human_content_operations";
+    let meaning=`Kristy sent operational website/content information${client&&!/unassigned/i.test(client)?` for ${client}`:""}. Her role is website/content execution; cross-channel coordination remains with GCM.`;
+    let action="Review what Kristy completed or is doing, preserve useful work evidence, and decide whether Andy needs to coordinate a next step.";
+    let verification="Determine whether the message reports completed work, active work, a request, or a cross-channel opportunity before creating any new record.";
+
+    if(correctiveWork){
+      notificationType="corrective_work_report";
+      meaning=`Kristy is reporting corrective website work or a platform constraint${client&&!/unassigned/i.test(client)?` for ${client}`:""}. This is implementation evidence that may belong to existing investigation/work and may now require verification.`;
+      action="Match this reply to the existing issue/work if possible. Verify the live change, preserve any unresolved platform constraint, rerun the relevant audit when appropriate, and record Proof of Work only after verification.";
+      verification="Existing related work should be matched before creating a new investigation. Separate solved changes, platform constraints, future migration resolution, and still-in-progress work.";
+    }else if(showCalendar){
+      notificationType="future_event_planning";
+      meaning="Kristy supplied or discussed show-calendar information. Show dates are future planning intelligence: Kristy handles show-related Facebook execution, while GCM owns broader coordination and support.";
+      action="Preserve the show dates as planning memory and use them to work backward on media, Facebook support assets, and other appropriate channel opportunities before each show.";
+      verification="Confirm the client/show dates and avoid treating the calendar as a one-time FYI; it should feed future planning.";
+    }else if(mediaForge){
+      notificationType="mediaforge_opportunity";
+      meaning="Kristy is connecting the successful Liberty Premium image workflow to a possible next MediaForge use, such as new accessories. The same email may also contain separate completed-work information.";
+      action="Preserve the MediaForge opportunity separately from any completed website work in the same email. Verify Liberty's accessory/model readiness before reopening production work.";
+      verification="Treat this as a multi-signal human email: do not collapse a new MediaForge opportunity and unrelated completed work into one generic classification.";
+    }else if(activeResearch){
+      notificationType="work_in_progress_support_opportunity";
+      meaning=`Kristy is actively working/researching website content${client&&!/unassigned/i.test(client)?` for ${client}`:""}. She is not automatically assigning the research to Andy; the opportunity is for GCM to support her while the work is still active.`;
+      action="Review promptly and offer useful research/evidence support if it can help Kristy before she completes the work. Do not create an Andy investigation merely because Kristy says she will research something.";
+      verification="Time-sensitive support opportunity; determine whether assistance is still useful before routing work.";
+    }else if(completedWork||crossChannel){
+      notificationType=completedWork?"completed_content_work":"content_coordination_signal";
+      meaning=`Kristy is reporting website/content activity${client&&!/unassigned/i.test(client)?` for ${client}`:""}. Completed content may also create a separate cross-channel coordination opportunity for Andy/GCM.`;
+      action="Preserve completed work as evidence when supported, then consider whether the content should be coordinated to Google Business Profile, Facebook, Instagram, YouTube, or other appropriate channels. Kristy does not own that broader coordination except show-related Facebook.";
+      verification="Separate Kristy's executed work from Andy/GCM's possible cross-channel next action.";
+    }
+
+    return{...base,communicationFamily:"Human — Website / Content Operations",notificationType,client,businessMeaning:meaning,operationalPriority:(activeResearch||mediaForge)?"Normal":"Low",recommendedAction:action,verificationRequired:verification};
+  }
+
+  if(isFrank){
+    return{...base,communicationFamily:"Human — Leadership / Client Operations",notificationType:"operational_heads_up",client,businessMeaning:"Frank is providing an operational heads-up or client/business context. The message should inform Andy's coordination, but it is not automatically website-content work or a new investigation.",operationalPriority:"Normal",recommendedAction:"Read the heads-up in context, identify any explicit decision or follow-up Andy owns, and otherwise preserve it as relationship/operational context rather than inventing work.",verificationRequired:"Only create work when Frank's message contains or proves a concrete action, decision, deadline, or issue."};
+  }
+
+  if(isTed){
+    const visit=/\bvisit|coming|meet(?:ing)?|stop(?:ping)? by|scorecards?/i.test(text);
+    return{...base,communicationFamily:"Human — Liberty Corporate / Regional Sales",notificationType:visit?"manufacturer_visit_preparation":"manufacturer_relationship_update",client:client&&!/unassigned/i.test(client)?client:"Southeast Safes",businessMeaning:visit?"Ted, Liberty Safe's regional sales manager, is signaling an upcoming visit/meeting. His communications can cover new/upcoming Liberty products, programs, scorecards, dealer matters, and other Liberty corporate business.":"Ted is providing Liberty corporate/regional sales relationship intelligence.",operationalPriority:visit?"Normal":"Low",recommendedAction:visit?"Prepare for the visit by surfacing relevant Liberty issues, upcoming products, MediaForge dependencies, dealer/co-op matters, performance questions, and other open items already known to GCM. Review any attached scorecards.":"Preserve the Liberty relationship context and surface any concrete follow-up Andy should prepare.",verificationRequired:visit?"Confirm visit timing and review attachments/context before deciding what should be raised with Ted.":"Determine whether the update creates a concrete preparation or follow-up action."};
+  }
+  return null;
+}
+function inferHumanClient(message){
+  const text=`${clean(message?.subject)}\n${clean(message?.bodyText)}`.toLowerCase();
+  const rules=[
+    [/southfloridasafes\.com|south florida safes/,"South Florida Safes"],
+    [/northfloridasafes\.com|north florida safes/,"North Florida Safes"],
+    [/sesafes\.com|southeast safes/,"Southeast Safes"],
+    [/a1actionsafeandlock\.com|a1 action safe(?: & lock)?/,"A1 Action Safe & Lock"],
+    [/hbguns\.com|hb guns|harry beckwith guns/,"HB Guns"],
+    [/pickettweaponry\.com|pickett weaponry/,"Pickett Weaponry"],
+    [/moveasafe\.com|move a safe/,"Move A Safe"],
+    [/globalconceptsmedia\.com|global concepts media/,"Global Concepts Media"]
+  ];
+  for(const [pattern,name] of rules)if(pattern.test(text))return name;
+  return "";
 }
 
 function inferPositionTrackingClient(message){
