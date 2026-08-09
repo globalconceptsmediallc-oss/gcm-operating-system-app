@@ -1,9 +1,9 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.8.10
+   Version: 7.8.11
    Source: Production route 7.7.6
-   Status: Production Candidate — Merchant Listings Grounded Detail Trust
+   Status: Production Candidate — Human Review Evidence Handoff
    Purpose: Complete production communication analysis route with one authoritative report-family decision before specialist dispatch,
             including pasted-text and screenshot evidence extraction,
             independent report-signature recognition, specialized extraction,
@@ -285,79 +285,42 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
     }
 
     /*
-     * v7.8.9 SCREENSHOT EVIDENCE TRUST GATE
+     * v7.8.11 HUMAN REVIEW EVIDENCE HANDOFF
      *
-     * A screenshot may advance the operating workflow only when the assembled
-     * evidence contains source-grounded business/report content. Platform/report
-     * identity by itself is not evidence. Runtime diagnostics, prompt leakage,
-     * generic headings, and recognition-only facts must never become a successful
-     * communication that downstream pages can lock as Investigation evidence.
+     * Road testing proved the deterministic trust gate was blocking usable
+     * screenshot extraction before the existing Review AI Findings step could
+     * do its job. That inverted the intended WWPOWD workflow and caused rejected
+     * attempts to accumulate instead of letting the operator review extracted
+     * source evidence.
      *
-     * The guarded recovery path above gets one chance to replace weak fast-path
-     * evidence. If the assembled screenshot evidence still fails this gate, stop
-     * here before classification, WWPOWD, proof readiness, or routing.
+     * The trust check is now advisory, not a blocking return. Runtime/AI failure
+     * protection above remains authoritative: when no operational evidence exists,
+     * the request still stops. When evidence does exist, preserve it and continue
+     * through classification, WWPOWD interpretation, proof readiness, and the human
+     * review handoff. Only human-accepted evidence should be locked downstream.
      */
-    if (!isTrustworthyScreenshotEvidence(visibleEvidence)) {
-      const trustError = buildOperationalError({
-        stage: "screenshot_evidence_trust_gate",
-        code: "SCREENSHOT_EVIDENCE_NOT_TRUSTWORTHY",
-        message: "The screenshot did not produce enough source-grounded evidence to advance this workflow.",
-        retryable: true
-      });
+    const screenshotEvidenceTrusted = isTrustworthyScreenshotEvidence(visibleEvidence);
 
-      errors.push(trustError);
-      stages.push(createStageResult({
-        stageName: "screenshot_evidence_trust_gate",
-        status: STAGE_STATUS.FAILED,
-        engine: "screenshot-evidence-trust-gate-v1",
-        model: "deterministic",
-        startedAt: Date.now(),
-        confidence: 0,
-        retryCount: 0,
-        retryStatus: "evidence_rejected",
-        rawAiError: null,
-        fallbackUsed: false,
-        data: {
-          accepted: false,
-          reason: "No trustworthy source-grounded screenshot evidence survived extraction and recovery."
-        }
-      }));
-
-      return jsonResponse({
-        ok: false,
-        action: ACTIONS.ANALYZE_COMMUNICATION,
-        version: VERSION,
-        contractVersion: API_CONTRACT_VERSION,
-        requestId,
-        generatedAt: new Date().toISOString(),
-        processingStatus: "evidence_rejected",
-        client: {
-          id: clientId || null,
-          name: client || null,
-          detectedFromEvidence: false
-        },
-        input: {
-          type: sourceText ? "hybrid" : "screenshot",
-          fileName
-        },
-        evidence: sanitizeVisibleEvidence(visibleEvidence),
-        error: trustError,
-        stages,
-        errors,
-        diagnostics: {
-          engine: "communication-analysis",
-          engineVersion: COMMUNICATION_ANALYSIS_ENGINE_VERSION,
-          executionTimeMs: Date.now() - startedAt,
-          stageCount: stages.length,
-          failedStageCount: stages.filter(stage => stage.status === STAGE_STATUS.FAILED).length,
-          fallbackStageCount: stages.filter(stage => stage.status === STAGE_STATUS.FALLBACK).length,
-          partialStageCount: stages.filter(stage => stage.status === STAGE_STATUS.PARTIAL).length,
-          performanceMode: "screenshot_evidence_rejected",
-          evidenceAiCallBudget: 1,
-          reasoningAiCallBudget: 0
-        }
-      }, 422);
-    }
+    stages.push(createStageResult({
+      stageName: "screenshot_evidence_trust_gate",
+      status: screenshotEvidenceTrusted ? STAGE_STATUS.SUCCESS : STAGE_STATUS.PARTIAL,
+      engine: "screenshot-evidence-review-handoff-v2",
+      model: "deterministic",
+      startedAt: Date.now(),
+      confidence: screenshotEvidenceTrusted ? 1 : 0.5,
+      retryCount: 0,
+      retryStatus: screenshotEvidenceTrusted ? "evidence_trusted" : "human_review_required",
+      rawAiError: null,
+      fallbackUsed: !screenshotEvidenceTrusted,
+      data: {
+        accepted: screenshotEvidenceTrusted,
+        advisoryOnly: true,
+        requiresHumanReview: !screenshotEvidenceTrusted,
+        reason: screenshotEvidenceTrusted
+          ? "Screenshot evidence passed deterministic trust checks."
+          : "Screenshot evidence was preserved for Review AI Findings instead of being rejected before human review."
+      }
+    }));
   } else {
     const stageStartedAt = Date.now();
     visibleEvidence = deterministicTextEvidenceExtraction(sourceText);
