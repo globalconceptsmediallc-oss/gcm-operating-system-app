@@ -1,10 +1,10 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailIntegration.js
-   Version: 1.4.9
-   Status: Production Candidate — Position Tracking Client Resolution
-   Source: routes/gmailIntegration.js 1.4.7
-   Sprint: Position Tracking Client Accuracy
+   Version: 1.5.0
+   Status: Production Candidate — HBG Merchant Center Investigation Routing
+   Source: routes/gmailIntegration.js 1.4.9
+   Sprint: Morning Command — HBG Merchant Center Manual Review Resolution
    Purpose: Preserve the verified Gmail intelligence and monitoring approval
             workflow, add human-approved Communication + Investigation
             processing through the existing operational decision commit route,
@@ -35,7 +35,7 @@ import { clean, safeErrorMessage, logWorkerError, jsonResponse } from "../shared
 import { getDatabase } from "../shared/database.js";
 import { handleCommunicationAnalysis } from "./communicationAnalysis.js";
 import { handleCommitOperationalDecision } from "./operationalDecision.js";
-export const GMAIL_INTEGRATION_VERSION = "1.4.9";
+export const GMAIL_INTEGRATION_VERSION = "1.5.0";
 export const GMAIL_PATHS = Object.freeze({ CONNECT: "/auth/google", CALLBACK: "/auth/google/callback" });
 const AUTH_URL="https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL="https://oauth2.googleapis.com/token";
@@ -310,7 +310,7 @@ async function approveInvestigation(body,env,requestId){
     const intel=analyzed.intelligence||{};
     const sourceDecision=intel.sourceAnalysis&&typeof intel.sourceAnalysis==="object"?intel.sourceAnalysis:{};
     const notificationType=clean(intel.notificationType).toLowerCase();
-    const directIssueTypes=new Set(["page_indexing_issue","merchant_listing_structured_data"]);
+    const directIssueTypes=new Set(["page_indexing_issue","merchant_listing_structured_data","merchant_center_configuration"]);
     const routeRequestsInvestigation=Boolean(sourceDecision?.recommendedRoutes?.createInvestigation);
     const investigationCandidate=Boolean(
       intel.investigationCandidate ||
@@ -588,6 +588,44 @@ function buildGmailRecommendation(message,analysis){
       sourceAnalysis:decision
     };
   }
+  const hbgMerchantCenter=isHbgMerchantCenterStoreRatings(message);
+  if(hbgMerchantCenter){
+    return{
+      communicationFamily:"Google Merchant Center",
+      notificationType:"merchant_center_configuration",
+      client:"HB Guns",
+      businessMeaning:"Google Merchant Center account 5611556858 is associated with Harry Beckwith Guns & Range. Human verification found the account setup incomplete, with no product data source and zero product clicks. The account requires investigation before any configuration changes are made.",
+      operationalPriority:"Normal",
+      recommendedAction:"Create an HBG Communication + Investigation to determine why Merchant Center is incomplete, whether HBG should have an active product feed, and whether completing the setup is a worthwhile growth action. Do not create a Work Item until the investigation establishes the corrective action.",
+      shouldCreateCommunication:true,
+      shouldCreateInvestigation:true,
+      investigationCandidate:true,
+      shouldCreateWorkItem:false,
+      monitoringOnly:false,
+      archive:false,
+      proposedRoute:"Investigation",
+      confidence:"High",
+      decisionReliability:"Reliable — Merchant Center account and HBG identity verified by human review",
+      evidenceSufficiency:"Sufficient to open an investigation; insufficient to prescribe corrective work",
+      evidenceComparedAgainst:"Gmail Merchant Center notice plus human verification of Merchant Center account 5611556858",
+      verificationRequired:"Investigate the existing Merchant Center configuration and product eligibility before making setup changes.",
+      humanReviewRequired:true,
+      productionDecisionReady:true,
+      sourceAnalysis:{
+        ...decision,
+        source:"Google Merchant Center",
+        communicationType:"Merchant Center Configuration",
+        title:"HBG — Google Merchant Center configuration and product feed investigation",
+        operationalSummary:"Harry Beckwith Guns & Range has Merchant Center account 5611556858. Human verification found setup incomplete, no product data source, and zero product clicks.",
+        businessImpact:"Potential unused Google product-distribution opportunity; current value and required configuration are not yet proven.",
+        importance:"Normal",
+        operationalPriority:"Normal",
+        recommendedAction:"Determine whether HBG should have an active Merchant Center product feed and what configuration, if any, is justified.",
+        reasoning:"Human review verified that the Merchant Center email belongs to HBG and uncovered an incomplete account with no product source. Preserve the email as evidence and investigate before creating corrective work.",
+        recommendedRoutes:{saveCommunication:true,createInvestigation:true,createWorkItem:false,replyRequired:false}
+      }
+    };
+  }
   const github=/github|notifications@github\.com/.test(sourceText);
   const githubFailure=github&&/(failed|failure|error|cancelled|timed out|deployment failed|build failed|workflow run failed|checks? failed|action required|security alert|vulnerability)/i.test(sourceText);
   if(github){
@@ -670,6 +708,13 @@ function inferPositionTrackingClient(message){
   return "";
 }
 
+function isHbgMerchantCenterStoreRatings(message){
+  const sender=clean(message?.from).toLowerCase();
+  const text=`${clean(message?.subject)}\n${clean(message?.bodyText)}`;
+  return /google|merchant/i.test(sender)&&
+    /harry beckwith guns(?: & range)?/i.test(text)&&
+    /(?:merchant center|store ratings|google customer reviews|5611556858)/i.test(text);
+}
 function isGoogleAnalyticsPerformance(message){
   const sender=clean(message?.from).toLowerCase();
   const subject=clean(message?.subject);
