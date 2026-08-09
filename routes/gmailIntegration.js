@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailIntegration.js
-   Version: 1.5.3
+   Version: 1.5.4
    Status: Production Candidate — Human Operational Intelligence
    Source: routes/gmailIntegration.js 1.5.2
    Sprint: Morning Command — Human Role + Explicit Client Hardening
@@ -45,13 +45,15 @@
    - Explicit client names in billing subjects/body override weaker inferred client assignment.
    - iHeart invoices are recognized as finance/co-op coordination: Adrianne payment + Kristy co-op support.
    - Cloudflare promotional mail is classified as non-operational archive noise rather than Manual Review work.
+   - Archive candidates can now be cleared through the existing Gmail approval action with zero D1 writes.
+   - Archive removes UNREAD and INBOX labels only after the message is re-verified as an archive candidate.
    ========================================================= */
 import { VERSION, ACTIONS } from "../shared/config.js";
 import { clean, safeErrorMessage, logWorkerError, jsonResponse } from "../shared/http.js";
 import { getDatabase } from "../shared/database.js";
 import { handleCommunicationAnalysis } from "./communicationAnalysis.js";
 import { handleCommitOperationalDecision } from "./operationalDecision.js";
-export const GMAIL_INTEGRATION_VERSION = "1.5.3";
+export const GMAIL_INTEGRATION_VERSION = "1.5.4";
 export const GMAIL_PATHS = Object.freeze({ CONNECT: "/auth/google", CALLBACK: "/auth/google/callback" });
 const AUTH_URL="https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL="https://oauth2.googleapis.com/token";
@@ -160,6 +162,32 @@ async function approveMonitoring(body,env,requestId){
 
     const refreshToken=await decrypt(connection.encrypted_refresh_token,env.GOOGLE_CLIENT_SECRET);
     const accessToken=await refreshAccessToken(refreshToken,env);
+
+    if(body?.archiveOnly===true){
+      const message=await readMessage(gmailMessageId,accessToken);
+      const analyzed=await analyzePreviewMessage(message,env,`${requestId}-archive-approval`);
+      const intel=analyzed.intelligence||{};
+      if(!intel.archive){
+        return jsonResponse({
+          ok:false,
+          requestId,
+          action:ACTIONS.APPROVE_GMAIL_MONITORING,
+          error:"This email is no longer classified as an Archive Candidate. Gmail was left unchanged for review.",
+          intelligence:intel
+        },409);
+      }
+      await archiveMessage(gmailMessageId,accessToken);
+      return jsonResponse({
+        ok:true,
+        requestId,
+        action:ACTIONS.APPROVE_GMAIL_MONITORING,
+        archiveOnly:true,
+        writesPerformed:0,
+        gmailArchived:true,
+        gmailMarkedRead:true
+      });
+    }
+
     const sourceReference=`gmail:${gmailMessageId}`;
     const existing=await db.prepare(`SELECT id,client_id,activity_date,activity,source_reference FROM activity_records WHERE source_reference=? LIMIT 1`).bind(sourceReference).first();
 
@@ -445,6 +473,21 @@ async function approveInvestigation(body,env,requestId){
       error:safeErrorMessage(error)
     },500);
   }
+}
+
+async function archiveMessage(gmailMessageId,accessToken){
+  const response=await fetch(`${API}/users/me/messages/${encodeURIComponent(gmailMessageId)}/modify`,{
+    method:"POST",
+    headers:{Authorization:`Bearer ${accessToken}`,"Content-Type":"application/json"},
+    body:JSON.stringify({removeLabelIds:["UNREAD","INBOX"]})
+  });
+  const data=await response.json();
+  if(!response.ok){
+    const message=data?.error?.message||`Gmail archive failed with HTTP ${response.status}.`;
+    if(response.status===403)throw new Error(`${message} Reconnect Gmail once to grant permission to archive messages.`);
+    throw new Error(message);
+  }
+  return data;
 }
 
 async function markMessageRead(gmailMessageId,accessToken){
