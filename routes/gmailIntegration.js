@@ -1,10 +1,10 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailIntegration.js
-   Version: 1.4.5
+   Version: 1.4.6
    Status: Production Candidate — Gmail Rich HTML Evidence Extraction
-   Source: routes/gmailIntegration.js 1.4.4
-   Sprint: Gmail Rich HTML Evidence Extraction
+   Source: routes/gmailIntegration.js 1.4.5
+   Sprint: Google Analytics Monitoring Intelligence
    Purpose: Preserve the verified Gmail intelligence and monitoring approval
             workflow, add human-approved Communication + Investigation
             processing through the existing operational decision commit route,
@@ -19,13 +19,17 @@
    - Uses gmail.modify so approved messages leave Morning Command.
    - Recognizes YouTube monthly performance emails as monitoring evidence and preserves
      subscribers, minutes watched, and total views for future growth/decline comparison.
+   - Recognizes Google Analytics performance-report emails, extracts report-level metrics,
+     and maps a client only when the Gmail evidence contains a verified client/property alias.
+   - Analytics reports without a verified client/property match remain Manual Review; they
+     are never silently assigned or saved to the wrong client.
    ========================================================= */
 import { VERSION, ACTIONS } from "../shared/config.js";
 import { clean, safeErrorMessage, logWorkerError, jsonResponse } from "../shared/http.js";
 import { getDatabase } from "../shared/database.js";
 import { handleCommunicationAnalysis } from "./communicationAnalysis.js";
 import { handleCommitOperationalDecision } from "./operationalDecision.js";
-export const GMAIL_INTEGRATION_VERSION = "1.4.5";
+export const GMAIL_INTEGRATION_VERSION = "1.4.6";
 export const GMAIL_PATHS = Object.freeze({ CONNECT: "/auth/google", CALLBACK: "/auth/google/callback" });
 const AUTH_URL="https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL="https://oauth2.googleapis.com/token";
@@ -501,6 +505,47 @@ function buildGmailRecommendation(message,analysis){
   const routes=decision?.recommendedRoutes||{};
   const sourceText=`${message.from} ${message.subject} ${message.bodyText}`.toLowerCase();
   const youtubeMonthly=isYouTubeMonthlyPerformance(message);
+  const analyticsPerformance=isGoogleAnalyticsPerformance(message);
+  if(analyticsPerformance){
+    const metrics=extractGoogleAnalyticsMetrics(message.bodyText);
+    const client=inferAnalyticsClient(message);
+    const metricParts=[
+      metrics.activeUsers!==null?`${metrics.activeUsers} active users`:"",
+      metrics.newUsers!==null?`${metrics.newUsers} new users`:"",
+      metrics.averageEngagementTime?`${metrics.averageEngagementTime} average engagement time`:"",
+      metrics.eventCount!==null?`${metrics.eventCount} events`:""
+    ].filter(Boolean);
+    const hasMetrics=metricParts.length>0;
+    const verifiedClient=Boolean(client);
+    return{
+      communicationFamily:"Google Analytics Performance",
+      notificationType:"analytics",
+      client:verifiedClient?client:"Unassigned — Human Review",
+      businessMeaning:verifiedClient
+        ? `Google Analytics performance for ${client}: ${metricParts.join(", ")||"report metrics received"}. Preserve these metrics as monitoring evidence for future growth or decline comparison.`
+        : `Google Analytics performance report received${hasMetrics?`: ${metricParts.join(", ")}`:""}, but the Gmail evidence does not prove which GCM client/property owns the report.`,
+      operationalPriority:"Low",
+      recommendedAction:verifiedClient
+        ? "Save the Google Analytics metrics as monitoring evidence so the next report can be compared for growth or decline."
+        : "Verify the Google Analytics property/client before saving these metrics. Do not assign the report from page names or unrelated text alone.",
+      shouldCreateCommunication:false,
+      shouldCreateInvestigation:false,
+      investigationCandidate:false,
+      shouldCreateWorkItem:false,
+      monitoringOnly:verifiedClient,
+      monitoringMetrics:metrics,
+      archive:false,
+      proposedRoute:verifiedClient?"Monitoring":"Manual Review",
+      confidence:verifiedClient&&hasMetrics?"High":hasMetrics?"Medium":"Low",
+      decisionReliability:verifiedClient?"Reliable — Analytics report and client/property matched":"Review Required — Analytics metrics found but client/property is unverified",
+      evidenceSufficiency:verifiedClient?"Sufficient for monitoring and future trend comparison":"Insufficient for client assignment",
+      evidenceComparedAgainst:"Current Gmail message; future reports can compare against an approved saved monitoring record",
+      verificationRequired:verifiedClient?"No investigation required. Human approval saves the current Analytics metrics as the comparison reference.":"Open the Analytics report or verify the property identity before approving any client monitoring record.",
+      humanReviewRequired:true,
+      productionDecisionReady:verifiedClient,
+      sourceAnalysis:decision
+    };
+  }
   if(youtubeMonthly){
     const metrics=extractYouTubeMonthlyMetrics(message.bodyText);
     const client=inferYouTubeClient(message)||analysis?.client?.name||"Unassigned — Human Review";
@@ -600,6 +645,57 @@ function buildGmailRecommendation(message,analysis){
     productionDecisionReady:calibration.productionDecisionReady,
     sourceAnalysis:decision
   };
+}
+
+function isGoogleAnalyticsPerformance(message){
+  const sender=clean(message?.from).toLowerCase();
+  const subject=clean(message?.subject);
+  const body=clean(message?.bodyText);
+  return /(?:google analytics|analytics-noreply@google\.com)/i.test(sender)&&
+    /(?:google analytics performance report|performance report)/i.test(subject)&&
+    /(?:active users|new users|average engagement|engagement time|events|views)/i.test(body);
+}
+function extractGoogleAnalyticsMetrics(value){
+  const text=sanitizeEmailText(value);
+  const numberValue=value=>{
+    const raw=String(value||"").replace(/,/g,"").trim().toLowerCase();
+    const match=raw.match(/^([\d.]+)\s*([kmb])?$/i);
+    if(!match)return null;
+    const base=Number(match[1]);
+    if(!Number.isFinite(base))return null;
+    const multiplier=match[2]==="k"?1000:match[2]==="m"?1000000:match[2]==="b"?1000000000:1;
+    return Math.round(base*multiplier);
+  };
+  const firstNumber=(patterns)=>{for(const pattern of patterns){const m=text.match(pattern);if(m){const parsed=numberValue(m[1]);if(parsed!==null)return parsed;}}return null;};
+  const firstText=(patterns)=>{for(const pattern of patterns){const m=text.match(pattern);if(m)return clean(m[1]);}return "";};
+  return{
+    activeUsers:firstNumber([/active users\s+([\d,.]+\s*[kmb]?)/i,/([\d,.]+\s*[kmb]?)\s+active users/i]),
+    newUsers:firstNumber([/new users\s+([\d,.]+\s*[kmb]?)/i,/([\d,.]+\s*[kmb]?)\s+new users/i]),
+    averageEngagementTime:firstText([/(?:average|avg) engagement time\s+([\d.]+\s*(?:seconds?|secs?|s|minutes?|mins?|m))/i,/([\d.]+\s*(?:seconds?|secs?|s|minutes?|mins?|m))\s+(?:average|avg) engagement time/i]),
+    eventCount:firstNumber([/events?\s+([\d,.]+\s*[kmb]?)/i,/([\d,.]+\s*[kmb]?)\s+events?/i])
+  };
+}
+function inferAnalyticsClient(message){
+  const subject=clean(message?.subject).toLowerCase();
+  const recipient=clean(message?.to).toLowerCase();
+  const body=clean(message?.bodyText).toLowerCase();
+  // Strong identity evidence only. Body matches require an explicit Analytics property/project label;
+  // page/screen names are intentionally excluded because they can mention unrelated brands.
+  const strongText=`${subject} ${recipient}`;
+  const propertyText=(body.match(/(?:property|account|stream|website)\s*(?:name|:)?\s*[^\n]{0,140}/gi)||[]).join(" ");
+  const text=`${strongText} ${propertyText}`;
+  const rules=[
+    [/a1[- ]?action safe|a1 action safe|a1actionsafeandlock/,"A1 Action Safe & Lock"],
+    [/southeast safes|southeast-safes|sesafes/,"Southeast Safes"],
+    [/south florida safes|south-florida-s|southfloridasafes/,"South Florida Safes"],
+    [/north florida safes|northfloridasafes/,"North Florida Safes"],
+    [/harry beckwith guns|hb guns|hbguns/,"HB Guns"],
+    [/pickett weaponry|pickettweaponry/,"Pickett Weaponry"],
+    [/move a safe|moveasafe/,"Move A Safe"],
+    [/global concepts media|globalconceptsmedia/,"Global Concepts Media"]
+  ];
+  for(const [pattern,name] of rules)if(pattern.test(text))return name;
+  return "";
 }
 
 function isYouTubeMonthlyPerformance(message){
