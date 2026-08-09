@@ -1,9 +1,9 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.8.9
+   Version: 7.8.10
    Source: Production route 7.7.6
-   Status: Production Candidate — Screenshot Evidence Trust Gate
+   Status: Production Candidate — Merchant Listings Grounded Detail Trust
    Purpose: Complete production communication analysis route with one authoritative report-family decision before specialist dispatch,
             including pasted-text and screenshot evidence extraction,
             independent report-signature recognition, specialized extraction,
@@ -2653,11 +2653,13 @@ function isTrustworthyScreenshotEvidence(evidence) {
     `${source} ${subject} ${allEvidence}`
   );
 
-  const substantiveValues = uniqueTextValues([
+  const candidateValues = uniqueTextValues([
     ...facts,
     ...metrics,
     visibleText
-  ]).filter(value => {
+  ]);
+
+  const substantiveValues = candidateValues.filter(value => {
     const text = clean(value);
     if (!text) return false;
     if (/^recognized report family\s*:/i.test(text)) return false;
@@ -2670,7 +2672,47 @@ function isTrustworthyScreenshotEvidence(evidence) {
     );
   });
 
-  return Boolean(identitySignal && substantiveValues.length > 0);
+  /*
+   * v7.8.10 MERCHANT LISTINGS GROUNDED DETAIL TRUST
+   *
+   * Investigation road testing proved that a Search Console affected-item detail
+   * can be excellent evidence while containing short structured-data values rather
+   * than prose. Examples include `sku: SES-LIB-BLOCKADE-LI`, an MPN/barcode, a
+   * product URL, price, brand, seller, or product name. The generic v7.8.9 gate
+   * rejected those values because they did not look like long narrative findings.
+   *
+   * Accept these compact values only when Merchant Listings/Search Console identity
+   * is already present. This preserves the anti-hallucination gate while allowing
+   * visibly grounded product-schema evidence to advance a Merchant Listings
+   * investigation. Recognition-only text still cannot pass by itself.
+   */
+  const merchantListingsIdentity = /merchant listings?|google search console|search console/i.test(
+    `${source} ${subject} ${allEvidence}`
+  );
+
+  const merchantGroundedValues = merchantListingsIdentity
+    ? candidateValues.filter(value => {
+        const text = clean(value);
+        if (!text) return false;
+        if (/^recognized report family\s*:/i.test(text)) return false;
+        if (containsPromptInstructionLeakage(text) || isRuntimeDiagnosticText(text)) return false;
+
+        return (
+          /\bsku\b\s*[:=]?\s*[a-z0-9][a-z0-9._\-/]{2,}/i.test(text) ||
+          /\b(?:mpn|barcode|gtin)\b\s*[:=]?\s*[a-z0-9][a-z0-9._\-/]{4,}/i.test(text) ||
+          /https?:\/\/[^\s]+/i.test(text) ||
+          /\b(?:brand|seller|product|item name|name)\b\s*[:=]\s*[^;]{3,}/i.test(text) ||
+          /\b(?:price|pricecurrency|currency)\b\s*[:=]?\s*(?:usd\s*)?\$?\d/i.test(text) ||
+          /\b(?:availability|instock|outofstock)\b/i.test(text) ||
+          /\b(?:invalid value in field|invalid string length in field)\s*[\"']?sku[\"']?/i.test(text)
+        );
+      })
+    : [];
+
+  return Boolean(
+    identitySignal &&
+    (substantiveValues.length > 0 || merchantGroundedValues.length > 0)
+  );
 }
 
 function isWeakVisibleEvidence(evidence) {
