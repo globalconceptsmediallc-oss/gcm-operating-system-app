@@ -46,7 +46,7 @@ import {
 
 import { handleGmailGet, handleGmailAction } from "./routes/gmailIntegration.js";
 
-const WORKER_FILE_VERSION = "7.7.7";
+const WORKER_FILE_VERSION = "7.7.8";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
@@ -63,7 +63,8 @@ const SUPPORTED_ACTIONS = [
   AGENCY_COMMAND_ACTION,
   ACTIONS.GET_GMAIL_STATUS,
   ACTIONS.PREVIEW_GMAIL_INBOX,
-  ACTIONS.APPROVE_GMAIL_MONITORING
+  ACTIONS.APPROVE_GMAIL_MONITORING,
+  ACTIONS.APPROVE_GMAIL_INVESTIGATION
 ].filter(Boolean);
 
 export default {
@@ -164,6 +165,7 @@ export default {
         case ACTIONS.GET_GMAIL_STATUS:
         case ACTIONS.PREVIEW_GMAIL_INBOX:
         case ACTIONS.APPROVE_GMAIL_MONITORING:
+        case ACTIONS.APPROVE_GMAIL_INVESTIGATION:
           return await handleGmailAction(body, env, requestId);
 
         case AGENCY_COMMAND_ACTION:
