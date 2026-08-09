@@ -1,10 +1,10 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailIntegration.js
-   Version: 1.4.7
-   Status: Production Candidate — Google Analytics Metric Parsing
-   Source: routes/gmailIntegration.js 1.4.6
-   Sprint: Google Analytics Metric Accuracy
+   Version: 1.4.8
+   Status: Production Candidate — Position Tracking Client Resolution
+   Source: routes/gmailIntegration.js 1.4.7
+   Sprint: Position Tracking Client Accuracy
    Purpose: Preserve the verified Gmail intelligence and monitoring approval
             workflow, add human-approved Communication + Investigation
             processing through the existing operational decision commit route,
@@ -23,13 +23,17 @@
      and maps a client only when the Gmail evidence contains a verified client/property alias.
    - Analytics reports without a verified client/property match remain Manual Review; they
      are never silently assigned or saved to the wrong client.
+   - Position Tracking client identity is deterministically resolved from the explicit
+     project/domain in Gmail evidence before using AI client classification.
+   - northfloridasafes.com maps only to North Florida Safes; it cannot inherit the
+     Southeast Safes client assignment from a similar safe-industry project.
    ========================================================= */
 import { VERSION, ACTIONS } from "../shared/config.js";
 import { clean, safeErrorMessage, logWorkerError, jsonResponse } from "../shared/http.js";
 import { getDatabase } from "../shared/database.js";
 import { handleCommunicationAnalysis } from "./communicationAnalysis.js";
 import { handleCommitOperationalDecision } from "./operationalDecision.js";
-export const GMAIL_INTEGRATION_VERSION = "1.4.6";
+export const GMAIL_INTEGRATION_VERSION = "1.4.8";
 export const GMAIL_PATHS = Object.freeze({ CONNECT: "/auth/google", CALLBACK: "/auth/google/callback" });
 const AUTH_URL="https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL="https://oauth2.googleapis.com/token";
@@ -620,10 +624,11 @@ function buildGmailRecommendation(message,analysis){
   const previewMeaning=buildConciseBusinessMeaning({message,analysis,classification,decision,createInvestigation:false});
   const previewAction=buildConciseRecommendedAction({message,analysis,classification,decision,createInvestigation:false,monitoringOnly});
   const isKnownMonitoring=["position_tracking","search_performance","site_audit","backlink_audit"].includes(type);
+  const verifiedMonitoringClient=type==="position_tracking"?inferPositionTrackingClient(message):"";
   return{
     communicationFamily:classification.notificationFamily||decision.notificationFamily||"Unknown",
     notificationType:classification.notificationType||"unknown",
-    client:analysis?.client?.name||"Unassigned — Human Review",
+    client:verifiedMonitoringClient||analysis?.client?.name||"Unassigned — Human Review",
     businessMeaning:previewMeaning,
     operationalPriority:decision.operationalPriority||decision.importance||"Low",
     recommendedAction:previewAction,
@@ -645,6 +650,22 @@ function buildGmailRecommendation(message,analysis){
     productionDecisionReady:calibration.productionDecisionReady,
     sourceAnalysis:decision
   };
+}
+
+function inferPositionTrackingClient(message){
+  const text=`${clean(message?.subject)}\n${clean(message?.bodyText)}`.toLowerCase();
+  const rules=[
+    [/\bnorthfloridasafes\.com\b|\bnorth florida safes\b/,"North Florida Safes"],
+    [/\bsouthfloridasafes\.com\b|\bsouth florida safes\b/,"South Florida Safes"],
+    [/\bsesafes\.com\b|\bsoutheast safes\b/,"Southeast Safes"],
+    [/\ba1actionsafeandlock\.com\b|\ba1 action safe(?: & lock)?\b/,"A1 Action Safe & Lock"],
+    [/\bhbguns\.com\b|\bhb guns\b|\bharry beckwith guns\b/,"HB Guns"],
+    [/\bpickettweaponry\.com\b|\bpickett weaponry\b/,"Pickett Weaponry"],
+    [/\bmoveasafe\.com\b|\bmove a safe\b/,"Move A Safe"],
+    [/\bglobalconceptsmedia\.com\b|\bglobal concepts media\b/,"Global Concepts Media"]
+  ];
+  for(const [pattern,name] of rules)if(pattern.test(text))return name;
+  return "";
 }
 
 function isGoogleAnalyticsPerformance(message){
