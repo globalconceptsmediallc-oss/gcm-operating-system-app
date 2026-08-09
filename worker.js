@@ -3,15 +3,15 @@
    File: worker.js
    Version: 7.7.7
    Status: Production Road-Test Candidate
-   Source: Production worker.js 7.7.6
-   Sprint: Morning Command — Gmail Monitoring Approval Dispatch
+   Source: Production worker.js 7.7.5
+   Sprint: Morning Command — Gmail Read-Only Connection
    Purpose: Preserve every verified production route and connect the
             read-only Prospect Intelligence road-test action.
 
-   Changes in 7.7.7:
-   - Adds approve-gmail-monitoring to the Worker action allowlist.
-   - Routes approve-gmail-monitoring to routes/gmailIntegration.js.
-   - Preserves all existing production routes and behavior.
+   Changes in 7.7.5:
+   - Adds analyze-prospect-intelligence.
+   - Connects routes/prospectIntelligence.js.
+   - Preserves all existing routes and the Communications review adapter.
    ========================================================= */
 
 import {
@@ -46,7 +46,7 @@ import {
 
 import { handleGmailGet, handleGmailAction } from "./routes/gmailIntegration.js";
 
-const WORKER_FILE_VERSION = "7.7.8";
+const WORKER_FILE_VERSION = "7.7.7";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
