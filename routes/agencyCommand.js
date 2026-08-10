@@ -1,20 +1,30 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/agencyCommand.js
-   Version: 1.0.0
+   Version: 1.1.0
    Status: Production Road-Test Candidate
    Source: Agency Command Sprint
-   Sprint: Intelligent Agency Entry Point — Stage 1
+   Sprint: Intelligent Agency Entry Point — Stage 2
    Purpose:
    Accept a natural-language agency objective, identify the correct
-   operating workspace, interpret supplied agency context, and return
-   a concise next-action brief.
+   operating workspace, load durable Intelligence decision candidates
+   from D1, merge any explicitly supplied context, and return a concise
+   next-action brief.
+
+   Changes in 1.1.0:
+   - Reads durable Intelligence records directly from D1.
+   - Separates unresolved, investigating, work-underway, monitoring,
+     and historically handled intelligence.
+   - Prevents already-handled Intelligence from being promoted as new work.
+   - Preserves existing intent routing and supplied-context behavior.
+   - Remains read-only; creates no records.
 
    SAFETY / SCOPE
    - Read-only.
+   - Reads D1 Intelligence and linked handling records; performs no D1 writes.
    - Creates no Communication, Investigation, Work Item, Proof,
      Media, Prospect, Calendar, or D1 record.
-   - Does not claim to read Gmail, Calendar, or external sources
+   - Does not claim to read Gmail, Calendar, or external public sources
      unless that information is explicitly supplied in the request.
    - Current public research is marked as requiring live verification.
    ========================================================= */
@@ -38,7 +48,7 @@ import {
   buildOperationalError
 } from "../shared/ai.js";
 
-export const AGENCY_COMMAND_VERSION = "1.0.0";
+export const AGENCY_COMMAND_VERSION = "1.1.0";
 export const AGENCY_COMMAND_ACTION = "agency-command";
 
 const INTENTS = Object.freeze({
@@ -171,11 +181,16 @@ export async function handleAgencyCommand(body, env, requestId) {
   }
 
   const suppliedContext = normalizeAgencyContext(body?.context);
+  const d1Intelligence = await loadAgencyIntelligence(env, requestId);
+  const agencyContext = mergeAgencyContextWithIntelligence(
+    suppliedContext,
+    d1Intelligence
+  );
   const classification = classifyAgencyRequest(question);
   const deterministicBrief = buildDeterministicAgencyBrief({
     question,
     classification,
-    context: suppliedContext
+    context: agencyContext
   });
 
   const stages = [
@@ -202,7 +217,7 @@ export async function handleAgencyCommand(body, env, requestId) {
       const aiResult = await runAgencyCommandReasoning({
         question,
         classification,
-        context: suppliedContext,
+        context: agencyContext,
         env,
         requestId
       });
@@ -283,6 +298,13 @@ export async function handleAgencyCommand(body, env, requestId) {
     workspace,
     brief,
     suppliedContextSummary: summarizeContext(suppliedContext),
+    agencyContextSummary: summarizeContext(agencyContext),
+    intelligenceContext: {
+      source: d1Intelligence.source,
+      available: d1Intelligence.available,
+      counts: d1Intelligence.counts,
+      error: d1Intelligence.error
+    },
     recordPolicy: {
       readOnly: true,
       recordsCreated: [],
@@ -587,6 +609,45 @@ function buildDeterministicAgencyBrief({
   const gaps = [];
   const recommendedSequence = [];
 
+  for (const item of context.intelligence) {
+    const title = clean(item.whatHappened || item.what_happened || item.subject || "Agency intelligence");
+    const businessMeaning = clean(item.businessMeaning || item.business_meaning);
+    const handlingState = clean(item.handlingState || item.handling_state).toLowerCase();
+    const alreadyBeingHandled = item.alreadyBeingHandled === true || item.already_being_handled === true;
+    const workItemId = item.workItemId ?? item.work_item_id ?? null;
+    const investigationId = item.investigationId ?? item.investigation_id ?? null;
+
+    if (handlingState === "work_underway" || workItemId) {
+      alreadyHandled.push(
+        `${title} — already in active Work${workItemId ? ` Item #${workItemId}` : ""}.`
+      );
+      continue;
+    }
+
+    if (handlingState === "investigating" || investigationId || alreadyBeingHandled) {
+      alreadyHandled.push(
+        `${title} — already under Investigation${investigationId ? ` #${investigationId}` : ""}.`
+      );
+      continue;
+    }
+
+    if (handlingState === "monitoring" || handlingState === "historical" || handlingState === "handled") {
+      monitoring.push(title);
+      continue;
+    }
+
+    if (item.eligibleForAgencyPriority === false || item.eligible_for_agency_priority === false) {
+      monitoring.push(title);
+      continue;
+    }
+
+    needsAttention.push({
+      title,
+      reason: businessMeaning || "Durable Intelligence is unresolved and is not currently linked to active handling.",
+      workspace: "today"
+    });
+  }
+
   for (const item of context.communications) {
     if (item.status === "processed" || item.status === "recorded") {
       alreadyHandled.push(
@@ -711,6 +772,151 @@ function normalizeAgencyBrief(value, fallback) {
   };
 }
 
+async function loadAgencyIntelligence(env, requestId) {
+  if (!env?.DB || typeof env.DB.prepare !== "function") {
+    return {
+      source: "D1",
+      available: false,
+      items: [],
+      counts: emptyIntelligenceCounts(),
+      error: "D1 binding is unavailable."
+    };
+  }
+
+  try {
+    const result = await env.DB.prepare(`
+      SELECT
+        i.id,
+        i.client_id,
+        c.client_code,
+        c.name AS client_name,
+        i.what_happened,
+        i.business_meaning,
+        i.novelty,
+        i.trend,
+        i.importance,
+        i.handling_state,
+        i.recommended_action,
+        i.why_now,
+        i.proof_requirement,
+        i.communication_id,
+        i.investigation_id,
+        i.work_item_id,
+        i.updated_at
+      FROM intelligence i
+      LEFT JOIN clients c ON c.id = i.client_id
+      ORDER BY
+        CASE LOWER(COALESCE(i.handling_state, 'unhandled'))
+          WHEN 'unhandled' THEN 0
+          WHEN 'needs_decision' THEN 0
+          WHEN 'investigating' THEN 1
+          WHEN 'work_underway' THEN 2
+          WHEN 'monitoring' THEN 3
+          ELSE 4
+        END,
+        datetime(COALESCE(i.updated_at, i.created_at)) DESC,
+        i.id DESC
+      LIMIT 100
+    `).all();
+
+    const rows = Array.isArray(result?.results) ? result.results : [];
+    const items = rows.map(normalizeD1IntelligenceItem);
+    return {
+      source: "D1",
+      available: true,
+      items,
+      counts: countIntelligenceStates(items),
+      error: null
+    };
+  } catch (error) {
+    logWorkerError({
+      requestId,
+      route: AGENCY_COMMAND_ACTION,
+      stage: "agency_intelligence_read",
+      error
+    });
+
+    return {
+      source: "D1",
+      available: false,
+      items: [],
+      counts: emptyIntelligenceCounts(),
+      error: safeErrorMessage(error)
+    };
+  }
+}
+
+function normalizeD1IntelligenceItem(row) {
+  const handlingState = clean(row?.handling_state) || "unhandled";
+  const workItemId = row?.work_item_id ?? null;
+  const investigationId = row?.investigation_id ?? null;
+
+  return {
+    id: row?.id ?? null,
+    clientId: row?.client_id ?? null,
+    clientCode: clean(row?.client_code) || null,
+    clientName: clean(row?.client_name) || null,
+    whatHappened: clean(row?.what_happened),
+    businessMeaning: clean(row?.business_meaning),
+    novelty: clean(row?.novelty) || "unknown",
+    trend: clean(row?.trend) || "unknown",
+    importance: clean(row?.importance) || "normal",
+    handlingState,
+    recommendedAction: clean(row?.recommended_action),
+    whyNow: clean(row?.why_now),
+    proofRequirement: clean(row?.proof_requirement),
+    communicationId: row?.communication_id ?? null,
+    investigationId,
+    workItemId,
+    alreadyBeingHandled:
+      handlingState === "investigating" ||
+      handlingState === "work_underway" ||
+      Boolean(investigationId) ||
+      Boolean(workItemId),
+    eligibleForAgencyPriority:
+      !["monitoring", "historical", "handled"].includes(handlingState),
+    updatedAt: clean(row?.updated_at) || null
+  };
+}
+
+function mergeAgencyContextWithIntelligence(context, d1Intelligence) {
+  return {
+    ...context,
+    intelligence: [
+      ...normalizeObjectArray(d1Intelligence?.items),
+      ...normalizeObjectArray(context?.intelligence)
+    ].slice(0, 100)
+  };
+}
+
+function countIntelligenceStates(items) {
+  const counts = emptyIntelligenceCounts();
+
+  for (const item of items) {
+    const state = clean(item?.handlingState || item?.handling_state).toLowerCase();
+
+    if (state === "work_underway") counts.workUnderway += 1;
+    else if (state === "investigating") counts.investigating += 1;
+    else if (state === "monitoring") counts.monitoring += 1;
+    else if (state === "historical" || state === "handled") counts.historicalHandled += 1;
+    else counts.unresolved += 1;
+  }
+
+  counts.total = items.length;
+  return counts;
+}
+
+function emptyIntelligenceCounts() {
+  return {
+    total: 0,
+    unresolved: 0,
+    investigating: 0,
+    workUnderway: 0,
+    monitoring: 0,
+    historicalHandled: 0
+  };
+}
+
 function normalizeAgencyContext(value) {
   const context = value && typeof value === "object" ? value : {};
 
@@ -724,6 +930,7 @@ function normalizeAgencyContext(value) {
     historicalSignals: normalizeObjectArray(
       context.historicalSignals || context.historical_signals
     ),
+    intelligence: normalizeObjectArray(context.intelligence),
     prospecting: {
       daysSinceLastActivity: normalizeNonNegativeNumber(
         context?.prospecting?.daysSinceLastActivity ??
@@ -747,6 +954,7 @@ function summarizeContext(context) {
     media: context.media.length,
     prospects: context.prospects.length,
     historicalSignals: context.historicalSignals.length,
+    intelligence: context.intelligence.length,
     notes: context.notes.length
   };
 
