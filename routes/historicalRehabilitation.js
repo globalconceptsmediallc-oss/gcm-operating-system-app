@@ -1,13 +1,12 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/historicalRehabilitation.js
-   Version: 1.0.0
+   Version: 1.1.0
    Status: Production Road-Test Candidate
    Sprint: Historical Record Rehabilitation
    Purpose:
-   Safely apply one human-approved historical rehabilitation proposal
-   to an existing production record while preserving the durable
-   rehabilitation audit trail.
+   Generate controlled historical rehabilitation proposals and safely apply
+   one human-approved proposal while preserving the durable audit trail.
 
    Production rules:
    - D1 is production truth.
@@ -35,9 +34,156 @@ import {
   jsonResponse
 } from "../shared/http.js";
 
-export const HISTORICAL_REHABILITATION_VERSION = "1.0.0";
+export const HISTORICAL_REHABILITATION_VERSION = "1.1.0";
+export const HISTORICAL_REHABILITATION_PROPOSAL_ACTION =
+  "generate-historical-rehabilitation-proposals";
 export const HISTORICAL_REHABILITATION_ACTION =
   "apply-historical-rehabilitation";
+
+
+export async function handleHistoricalRehabilitationProposals(body, env, requestId) {
+  const startedAt = Date.now();
+  const db = getDatabase(env);
+
+  if (!db || typeof db.prepare !== "function") {
+    return jsonResponse({
+      ok: false, requestId,
+      action: HISTORICAL_REHABILITATION_PROPOSAL_ACTION,
+      historicalRehabilitationVersion: HISTORICAL_REHABILITATION_VERSION,
+      error: "The production D1 database binding is unavailable."
+    }, 503);
+  }
+
+  const previewOnly = body?.commit !== true;
+
+  try {
+    const result = await db.prepare(`
+      SELECT ar.id, ar.client_id, ar.activity_date, ar.category, ar.activity,
+             ar.time_minutes, ar.source_type, ar.source_reference
+      FROM activity_records ar
+      WHERE ar.source_type = 'gmail_monitoring'
+        AND (ar.time_minutes IS NULL OR ar.time_minutes = 0)
+        AND NOT EXISTS (
+          SELECT 1 FROM record_rehabilitations rr
+          WHERE rr.record_type = 'activity_record'
+            AND rr.record_id = ar.id
+            AND rr.field_name = 'time_minutes'
+            AND rr.status IN ('proposed','approved','applied')
+        )
+      ORDER BY ar.activity_date ASC, ar.id ASC
+    `).all();
+
+    const rows = Array.isArray(result?.results) ? result.results : [];
+    const proposals = rows.map(row => ({
+      recordId: Number(row.id),
+      clientId: Number(row.client_id),
+      activityDate: row.activity_date || null,
+      category: clean(row.category) || null,
+      activity: clean(row.activity) || null,
+      originalValue: row.time_minutes === null ? null : String(row.time_minutes),
+      proposedValue: "5"
+    }));
+
+    if (previewOnly) {
+      return jsonResponse({
+        ok: true, requestId,
+        action: HISTORICAL_REHABILITATION_PROPOSAL_ACTION,
+        historicalRehabilitationVersion: HISTORICAL_REHABILITATION_VERSION,
+        previewOnly: true, commitRequested: false,
+        policy: {
+          sourceType: "gmail_monitoring",
+          proposedMinutes: 5,
+          activityRecordsChanged: false,
+          humanApprovalRequiredBeforeApply: true
+        },
+        discovered: proposals.length,
+        proposals,
+        writes: { recordRehabilitations: 0, activityRecords: 0 },
+        executionTimeMs: Date.now() - startedAt
+      });
+    }
+
+    if (!proposals.length) {
+      return jsonResponse({
+        ok: true, requestId,
+        action: HISTORICAL_REHABILITATION_PROPOSAL_ACTION,
+        historicalRehabilitationVersion: HISTORICAL_REHABILITATION_VERSION,
+        previewOnly: false, commitRequested: true,
+        discovered: 0, created: 0, proposals: [],
+        writes: { recordRehabilitations: 0, activityRecords: 0 },
+        executionTimeMs: Date.now() - startedAt
+      });
+    }
+
+    if (typeof db.batch !== "function") {
+      return jsonResponse({
+        ok: false, requestId,
+        action: HISTORICAL_REHABILITATION_PROPOSAL_ACTION,
+        historicalRehabilitationVersion: HISTORICAL_REHABILITATION_VERSION,
+        error: "The production D1 binding does not support batch writes required for proposal generation."
+      }, 503);
+    }
+
+    const evidenceDetail =
+      "Routine Gmail monitoring workflow: read the monitoring email, interpret it through GCM OS/ChatGPT, and preserve the operating record. Production evidence and road testing establish 5 minutes as the conservative minimum for this monitoring-input class. Substantive follow-up work remains separate Proof of Work.";
+
+    const statements = proposals.map(p => db.prepare(`
+      INSERT INTO record_rehabilitations (
+        record_type, record_id, client_id, field_name,
+        original_value, proposed_value, rehabilitation_type,
+        evidence_source, evidence_reference, evidence_detail,
+        confidence, status
+      )
+      SELECT 'activity_record', ?, ?, 'time_minutes', ?, '5',
+             'historical_estimate_pow_comparable',
+             'GCM historical workflow and comparable POW records',
+             'gmail_monitoring_verified_minimum',
+             ?, 'high', 'proposed'
+      WHERE NOT EXISTS (
+        SELECT 1 FROM record_rehabilitations
+        WHERE record_type = 'activity_record'
+          AND record_id = ?
+          AND field_name = 'time_minutes'
+          AND status IN ('proposed','approved','applied')
+      )
+    `).bind(p.recordId, p.clientId, p.originalValue, evidenceDetail, p.recordId));
+
+    const batchResult = await db.batch(statements);
+    const created = batchResult.reduce(
+      (sum, item) => sum + Number(item?.meta?.changes || 0), 0
+    );
+
+    return jsonResponse({
+      ok: true, requestId,
+      action: HISTORICAL_REHABILITATION_PROPOSAL_ACTION,
+      historicalRehabilitationVersion: HISTORICAL_REHABILITATION_VERSION,
+      previewOnly: false, commitRequested: true,
+      policy: {
+        sourceType: "gmail_monitoring",
+        proposedMinutes: 5,
+        activityRecordsChanged: false,
+        humanApprovalRequiredBeforeApply: true
+      },
+      discovered: proposals.length, created, proposals,
+      writes: { recordRehabilitations: created, activityRecords: 0 },
+      executionTimeMs: Date.now() - startedAt
+    });
+  } catch (error) {
+    logWorkerError({
+      requestId,
+      route: HISTORICAL_REHABILITATION_PROPOSAL_ACTION,
+      stage: "historical_rehabilitation_proposals",
+      error
+    });
+    return jsonResponse({
+      ok: false, requestId,
+      action: HISTORICAL_REHABILITATION_PROPOSAL_ACTION,
+      historicalRehabilitationVersion: HISTORICAL_REHABILITATION_VERSION,
+      error: safeErrorMessage(error),
+      executionTimeMs: Date.now() - startedAt
+    }, 500);
+  }
+}
 
 export async function handleHistoricalRehabilitation(body, env, requestId) {
   const startedAt = Date.now();
@@ -152,7 +298,7 @@ export async function handleHistoricalRehabilitation(body, env, requestId) {
         historicalRehabilitationVersion: HISTORICAL_REHABILITATION_VERSION,
         rehabilitationId,
         error:
-          "Version 1.0.0 only supports activity_record.time_minutes rehabilitation."
+          "Version 1.1.0 only supports activity_record.time_minutes rehabilitation."
       }, 400);
     }
 
