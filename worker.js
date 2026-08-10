@@ -1,18 +1,18 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.10.0
+   Version: 7.11.0
    Status: Production Road-Test Candidate
-   Source: Production worker.js 7.8.0
-   Sprint: Today / Agency Command Center — Intelligence Backlog Controller
-   Purpose: Preserve every verified production route and add a bounded
-            controller for advancing the historical Intelligence backlog
-            through the locked Intelligence Refresh engine.
+   Source: Production worker.js 7.10.0
+   Sprint: Historical Record Rehabilitation
+   Purpose: Preserve every verified production route and add the
+            controlled Historical Rehabilitation apply route.
 
-   Changes in 7.10.0:
-   - Adds process-intelligence-backlog to the Worker action allowlist.
-   - Routes it to routes/intelligenceBacklog.js.
-   - Leaves Intelligence Refresh v1.2.0 unchanged.
+   Changes in 7.11.0:
+   - Adds apply-historical-rehabilitation to the Worker action allowlist.
+   - Routes it to routes/historicalRehabilitation.js v1.0.0.
+   - Adds Historical Rehabilitation to Worker diagnostics.
+   - Leaves Intelligence Backlog v1.0.1 and Intelligence Refresh v1.2.0 unchanged.
    - Preserves all existing production behavior.
    ========================================================= */
 
@@ -65,10 +65,14 @@ import {
   handleIntelligenceBacklog,
   INTELLIGENCE_BACKLOG_ACTION
 } from "./routes/intelligenceBacklog.js";
+import {
+  handleHistoricalRehabilitation,
+  HISTORICAL_REHABILITATION_ACTION
+} from "./routes/historicalRehabilitation.js";
 
 import { handleGmailGet, handleGmailAction } from "./routes/gmailIntegration.js";
 
-const WORKER_FILE_VERSION = "7.10.0";
+const WORKER_FILE_VERSION = "7.11.0";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
@@ -88,6 +92,7 @@ const SUPPORTED_ACTIONS = [
   COMMUNICATION_INTELLIGENCE_ACTION,
   INTELLIGENCE_REFRESH_ACTION,
   INTELLIGENCE_BACKLOG_ACTION,
+  HISTORICAL_REHABILITATION_ACTION,
   ACTIONS.GET_GMAIL_STATUS,
   ACTIONS.PREVIEW_GMAIL_INBOX,
   ACTIONS.APPROVE_GMAIL_MONITORING,
@@ -114,12 +119,13 @@ export default {
         version: VERSION,
         workerFileVersion: WORKER_FILE_VERSION,
         contractVersion: API_CONTRACT_VERSION,
-        sprint: "Today / Agency Command Center — Intelligence Backlog Controller",
+        sprint: "Historical Record Rehabilitation",
         architecture:
-          "Modular production router with Agency Command, Intelligence Backlog, Intelligence Refresh, Communication Intelligence, Activity Intelligence, Intelligence Processing, Prospect Intelligence, Communications analysis, Guided Investigation, and operational processing.",
+          "Modular production router with Agency Command, Historical Rehabilitation, Intelligence Backlog, Intelligence Refresh, Communication Intelligence, Activity Intelligence, Intelligence Processing, Prospect Intelligence, Communications analysis, Guided Investigation, and operational processing.",
         actions: SUPPORTED_ACTIONS,
         engines: [
           "agency-command",
+          "historical-rehabilitation",
           "intelligence-backlog",
           "intelligence-refresh",
           "communication-intelligence",
@@ -146,6 +152,7 @@ export default {
           shared: ["config", "http", "database", "ai"],
           routes: [
             "agency-command",
+            "historical-rehabilitation",
             "intelligence-backlog",
             "intelligence-refresh",
             "communication-intelligence",
@@ -224,6 +231,9 @@ export default {
 
         case INTELLIGENCE_BACKLOG_ACTION:
           return await handleIntelligenceBacklog(body, env, requestId);
+
+        case HISTORICAL_REHABILITATION_ACTION:
+          return await handleHistoricalRehabilitation(body, env, requestId);
 
         case ACTIONS.ANALYZE_PROSPECT_INTELLIGENCE:
           return await handleProspectIntelligence(body, env, requestId);
