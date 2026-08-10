@@ -1,17 +1,19 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.8.2
+   Version: 7.9.0
    Status: Production Road-Test Candidate
    Source: Production worker.js 7.8.0
-   Sprint: Today / Agency Command Center — Communication Intelligence Intake
-   Purpose: Preserve every verified production route and add the
-            Communication → Intelligence interpretation action.
+   Sprint: Today / Agency Command Center — Automatic Intelligence Refresh
+   Purpose: Preserve every verified production route and add bounded
+            automatic discovery/processing of durable records that do
+            not yet have Intelligence.
 
-   Changes in 7.8.2:
-   - Adds process-communication-intelligence to the Worker action allowlist.
-   - Routes it to routes/communicationIntelligence.js.
-   - Preserves process-activity-intelligence, process-intelligence, and all existing production behavior.
+   Changes in 7.9.0:
+   - Adds refresh-intelligence to the Worker action allowlist.
+   - Routes it to routes/intelligenceRefresh.js.
+   - Preserves Agency Command, Communication Intelligence, Activity
+     Intelligence, Intelligence Processing, and all existing production behavior.
    ========================================================= */
 
 import {
@@ -55,10 +57,14 @@ import {
   handleCommunicationIntelligence,
   COMMUNICATION_INTELLIGENCE_ACTION
 } from "./routes/communicationIntelligence.js";
+import {
+  handleIntelligenceRefresh,
+  INTELLIGENCE_REFRESH_ACTION
+} from "./routes/intelligenceRefresh.js";
 
 import { handleGmailGet, handleGmailAction } from "./routes/gmailIntegration.js";
 
-const WORKER_FILE_VERSION = "7.8.2";
+const WORKER_FILE_VERSION = "7.9.0";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
@@ -76,6 +82,7 @@ const SUPPORTED_ACTIONS = [
   INTELLIGENCE_PROCESSING_ACTION,
   ACTIVITY_INTELLIGENCE_ACTION,
   COMMUNICATION_INTELLIGENCE_ACTION,
+  INTELLIGENCE_REFRESH_ACTION,
   ACTIONS.GET_GMAIL_STATUS,
   ACTIONS.PREVIEW_GMAIL_INBOX,
   ACTIONS.APPROVE_GMAIL_MONITORING,
@@ -102,12 +109,13 @@ export default {
         version: VERSION,
         workerFileVersion: WORKER_FILE_VERSION,
         contractVersion: API_CONTRACT_VERSION,
-        sprint: "Today / Agency Command Center — Communication Intelligence Intake",
+        sprint: "Today / Agency Command Center — Automatic Intelligence Refresh",
         architecture:
-          "Modular production router with Agency Command, Communication Intelligence, Activity Intelligence, Intelligence Processing, Prospect Intelligence, Communications analysis, Guided Investigation, and operational processing.",
+          "Modular production router with Agency Command, Intelligence Refresh, Communication Intelligence, Activity Intelligence, Intelligence Processing, Prospect Intelligence, Communications analysis, Guided Investigation, and operational processing.",
         actions: SUPPORTED_ACTIONS,
         engines: [
           "agency-command",
+          "intelligence-refresh",
           "communication-intelligence",
           "activity-intelligence",
           "intelligence-processing",
@@ -132,6 +140,7 @@ export default {
           shared: ["config", "http", "database", "ai"],
           routes: [
             "agency-command",
+            "intelligence-refresh",
             "communication-intelligence",
             "activity-intelligence",
             "intelligence-processing",
@@ -202,6 +211,9 @@ export default {
 
         case COMMUNICATION_INTELLIGENCE_ACTION:
           return await handleCommunicationIntelligence(body, env, requestId);
+
+        case INTELLIGENCE_REFRESH_ACTION:
+          return await handleIntelligenceRefresh(body, env, requestId);
 
         case ACTIONS.ANALYZE_PROSPECT_INTELLIGENCE:
           return await handleProspectIntelligence(body, env, requestId);
