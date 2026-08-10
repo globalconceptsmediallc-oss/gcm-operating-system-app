@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/intelligenceRefresh.js
-   Version: 1.1.1
+   Version: 1.2.0
    Status: Production Road-Test Candidate
    Sprint: Today / Agency Command Center — Automatic Intelligence Refresh
    Purpose:
@@ -18,14 +18,14 @@
      intelligenceProcessing.js.
    - Bounded batch processing prevents an unbounded refresh request.
 
-   Changes in 1.1.1:
-   - Removes sourceReference as an automatic Intelligence qualification.
-   - Treats provenance as proof of source, not proof of Intelligence value.
-   - Keeps routine monitoring/trend and baseline Activity Records as durable
-     Activity history unless a separate operational change/result is established.
-   - Preserves Communications as operating inputs and Work-linked Activity
-     Records as eligible correlation candidates.
-   - Preserves preview-first behavior; no Intelligence write unless commit=true.
+   Changes in 1.2.0:
+   - Adds durable evaluation persistence through intelligence_evaluations.
+   - Preview mode remains read-only and writes nothing.
+   - Commit mode records every reviewed candidate as promoted or skipped.
+   - Promoted candidates preserve the resulting intelligence_id in the ledger.
+   - Future discovery excludes records already represented in Intelligence
+     or intelligence_evaluations so evaluated monitoring/history does not recycle.
+   - Preserves v1.1.1 eligibility rules and bounded batch behavior.
    ========================================================= */
 
 import { getDatabase } from "../shared/database.js";
@@ -42,7 +42,7 @@ import {
   handleActivityIntelligence
 } from "./activityIntelligence.js";
 
-export const INTELLIGENCE_REFRESH_VERSION = "1.1.1";
+export const INTELLIGENCE_REFRESH_VERSION = "1.2.0";
 export const INTELLIGENCE_REFRESH_ACTION = "refresh-intelligence";
 
 const DEFAULT_LIMIT = 3;
@@ -72,6 +72,7 @@ export async function handleIntelligenceRefresh(body, env, requestId) {
     const skipped = reviewed.filter(item => !item.eligible);
     const processed = [];
     const failed = [];
+    const evaluations = [];
 
     if (commit) {
       for (const candidate of eligible) {
@@ -115,8 +116,37 @@ export async function handleIntelligenceRefresh(body, env, requestId) {
               : payload?.error || "Intelligence processing failed."
         };
 
-        if (result.ok) processed.push(result);
-        else failed.push(result);
+        if (result.ok) {
+          processed.push(result);
+
+          const evaluation = await upsertEvaluation(db, {
+            recordType: candidate.recordType,
+            recordId: candidate.recordId,
+            clientId: candidate.clientId,
+            decision: "promoted",
+            decisionReason: candidate.eligibilityReason,
+            intelligenceId: result.intelligenceId,
+            evaluatorVersion: INTELLIGENCE_REFRESH_VERSION
+          });
+
+          evaluations.push(evaluation);
+        } else {
+          failed.push(result);
+        }
+      }
+
+      for (const candidate of skipped) {
+        const evaluation = await upsertEvaluation(db, {
+          recordType: candidate.recordType,
+          recordId: candidate.recordId,
+          clientId: candidate.clientId,
+          decision: "skipped",
+          decisionReason: candidate.eligibilityReason,
+          intelligenceId: null,
+          evaluatorVersion: INTELLIGENCE_REFRESH_VERSION
+        });
+
+        evaluations.push(evaluation);
       }
     }
 
@@ -140,9 +170,11 @@ export async function handleIntelligenceRefresh(body, env, requestId) {
       },
       processed,
       failed,
+      evaluations,
       remaining,
       writes: {
         intelligence: processed.length,
+        intelligenceEvaluations: evaluations.length,
         communications: 0,
         investigations: 0,
         workItems: 0,
@@ -197,6 +229,12 @@ async function discoverCandidates(db, limit) {
         WHERE i.communication_id = comm.id
            OR i.source_reference = ('communication:' || comm.id)
       )
+      AND NOT EXISTS (
+        SELECT 1
+        FROM intelligence_evaluations ie
+        WHERE ie.record_type = 'communication'
+          AND ie.record_id = comm.id
+      )
 
       UNION ALL
 
@@ -230,6 +268,12 @@ async function discoverCandidates(db, limit) {
           AND ar.work_item_id IS NOT NULL
           AND i.source_type = COALESCE(ar.source_type, 'activity_record')
         )
+      )
+      AND NOT EXISTS (
+        SELECT 1
+        FROM intelligence_evaluations ie
+        WHERE ie.record_type = 'activity_record'
+          AND ie.record_id = ar.id
       )
     )
     ORDER BY datetime(observed_at) DESC, record_id DESC
@@ -439,6 +483,12 @@ async function countRemainingCandidates(db) {
           WHERE i.communication_id = comm.id
              OR i.source_reference = ('communication:' || comm.id)
         )
+        AND NOT EXISTS (
+          SELECT 1
+          FROM intelligence_evaluations ie
+          WHERE ie.record_type = 'communication'
+            AND ie.record_id = comm.id
+        )
       ) AS communications,
       (
         SELECT COUNT(*)
@@ -456,6 +506,12 @@ async function countRemainingCandidates(db) {
              AND ar.work_item_id IS NOT NULL
              AND i.source_type = COALESCE(ar.source_type, 'activity_record')
         )
+        AND NOT EXISTS (
+          SELECT 1
+          FROM intelligence_evaluations ie
+          WHERE ie.record_type = 'activity_record'
+            AND ie.record_id = ar.id
+        )
       ) AS activity_records
   `).first();
 
@@ -466,6 +522,58 @@ async function countRemainingCandidates(db) {
     communications,
     activityRecords,
     total: communications + activityRecords
+  };
+}
+
+async function upsertEvaluation(db, {
+  recordType,
+  recordId,
+  clientId,
+  decision,
+  decisionReason,
+  intelligenceId,
+  evaluatorVersion
+}) {
+  await db.prepare(`
+    INSERT INTO intelligence_evaluations (
+      record_type,
+      record_id,
+      client_id,
+      decision,
+      decision_reason,
+      intelligence_id,
+      evaluator,
+      evaluator_version,
+      evaluated_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, 'intelligence_refresh', ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(record_type, record_id) DO UPDATE SET
+      client_id = excluded.client_id,
+      decision = excluded.decision,
+      decision_reason = excluded.decision_reason,
+      intelligence_id = excluded.intelligence_id,
+      evaluator = excluded.evaluator,
+      evaluator_version = excluded.evaluator_version,
+      evaluated_at = CURRENT_TIMESTAMP
+  `).bind(
+    recordType,
+    recordId,
+    clientId,
+    decision,
+    decisionReason || null,
+    intelligenceId || null,
+    evaluatorVersion
+  ).run();
+
+  return {
+    recordType,
+    recordId,
+    clientId,
+    decision,
+    decisionReason: decisionReason || null,
+    intelligenceId: intelligenceId || null,
+    evaluator: "intelligence_refresh",
+    evaluatorVersion
   };
 }
 
