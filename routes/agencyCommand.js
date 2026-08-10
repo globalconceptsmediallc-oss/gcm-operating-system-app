@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/agencyCommand.js
-   Version: 1.1.1
+   Version: 1.2.0
    Status: Production Road-Test Candidate
    Source: Agency Command Sprint
    Sprint: Intelligent Agency Entry Point — Stage 2
@@ -11,15 +11,13 @@
    from D1, merge any explicitly supplied context, and return a concise
    next-action brief.
 
-   Changes in 1.1.1:
-   - Preserves verified v1.1.0 direct D1 Intelligence loading.
-   - Makes authoritative handling_state outrank historical record links.
-   - Keeps monitoring Intelligence in Monitoring even when linked to a
-     closed historical Investigation.
-   - Treats active Investigation and Work states as active agency candidates
-     without recreating intake or duplicate work.
-   - Chooses a concrete deterministic next action from active work,
-     active investigation, or unresolved Intelligence.
+   Changes in 1.2.0:
+   - Preserves verified v1.1.1 D1 loading and handling-state behavior.
+   - Reads linked Investigation and Work Item priority/status metadata.
+   - Ranks active agency candidates by evidence-supported priority, trend,
+     importance, and handling state instead of fixed workspace ordering.
+   - Returns the ranking reason with each candidate and selects the highest
+     supported next action without creating duplicate intake or work.
    - Remains read-only; creates no records.
 
    SAFETY / SCOPE
@@ -51,7 +49,7 @@ import {
   buildOperationalError
 } from "../shared/ai.js";
 
-export const AGENCY_COMMAND_VERSION = "1.1.1";
+export const AGENCY_COMMAND_VERSION = "1.2.0";
 export const AGENCY_COMMAND_ACTION = "agency-command";
 
 const INTENTS = Object.freeze({
@@ -630,11 +628,12 @@ function buildDeterministicAgencyBrief({
       alreadyHandled.push(
         `${title} — intake is already handled by active Work${workItemId ? ` Item #${workItemId}` : ""}.`
       );
-      needsAttention.push({
+      needsAttention.push(buildRankedAttentionCandidate({
         title: workItemId ? `Continue/verify Work Item #${workItemId}` : title,
         reason: businessMeaning || "Justified work is already underway; evaluate continuation or verification rather than creating duplicate work.",
-        workspace: "work"
-      });
+        workspace: "work",
+        item
+      }));
       continue;
     }
 
@@ -642,11 +641,12 @@ function buildDeterministicAgencyBrief({
       alreadyHandled.push(
         `${title} — intake is already handled by Investigation${investigationId ? ` #${investigationId}` : ""}.`
       );
-      needsAttention.push({
+      needsAttention.push(buildRankedAttentionCandidate({
         title: investigationId ? `Advance Investigation #${investigationId}` : title,
         reason: businessMeaning || "The condition is already under active investigation; advance the bounded question rather than recreating intake.",
-        workspace: "investigations"
-      });
+        workspace: "investigations",
+        item
+      }));
       continue;
     }
 
@@ -664,11 +664,12 @@ function buildDeterministicAgencyBrief({
       continue;
     }
 
-    needsAttention.push({
+    needsAttention.push(buildRankedAttentionCandidate({
       title,
       reason: businessMeaning || "Durable Intelligence is unresolved and is not currently linked to active handling.",
-      workspace: "today"
-    });
+      workspace: "today",
+      item
+    }));
   }
 
   for (const item of context.communications) {
@@ -730,24 +731,14 @@ function buildDeterministicAgencyBrief({
   }
 
   if (needsAttention.length) {
-    const workspaceOrder = {
-      work: 0,
-      investigations: 1,
-      today: 2,
-      communications: 3,
-      media: 4
-    };
-
     needsAttention.sort((a, b) => {
-      const aRank = workspaceOrder[a.workspace] ?? 9;
-      const bRank = workspaceOrder[b.workspace] ?? 9;
-      return aRank - bRank;
+      const scoreDifference = Number(b.priorityScore || 0) - Number(a.priorityScore || 0);
+      if (scoreDifference !== 0) return scoreDifference;
+      return clean(a.title).localeCompare(clean(b.title));
     });
 
     recommendedSequence.push(
-      needsAttention[0].workspace === "work"
-        ? needsAttention[0].title
-        : `Start with: ${needsAttention[0].title}`
+      `Start with: ${needsAttention[0].title}`
     );
   }
 
@@ -788,6 +779,89 @@ function buildDeterministicAgencyBrief({
       : [
           "No operational context was supplied. Agency Command can classify the request, but it cannot truthfully report what has already been handled, what is due, or what is in Gmail or Calendar."
         ]
+  };
+}
+
+function buildRankedAttentionCandidate({ title, reason, workspace, item }) {
+  const ranking = scoreAgencyCandidate(item, workspace);
+
+  return {
+    title,
+    reason,
+    workspace,
+    priorityScore: ranking.score,
+    priorityReason: ranking.reason
+  };
+}
+
+function scoreAgencyCandidate(item, workspace) {
+  let score = 0;
+  const reasons = [];
+
+  const linkedPriority = clean(
+    workspace === "work"
+      ? item.workItemPriority || item.work_item_priority
+      : item.investigationPriority || item.investigation_priority
+  ).toLowerCase();
+
+  const intelligenceImportance = clean(item.importance).toLowerCase();
+  const trend = clean(item.trend).toLowerCase();
+  const novelty = clean(item.novelty).toLowerCase();
+  const handlingState = clean(item.handlingState || item.handling_state).toLowerCase();
+
+  const priorityPoints = {
+    critical: 50,
+    urgent: 45,
+    high: 35,
+    medium: 20,
+    normal: 10,
+    low: 0
+  };
+
+  if (linkedPriority) {
+    const points = priorityPoints[linkedPriority] ?? 10;
+    score += points;
+    reasons.push(`${linkedPriority} linked-record priority`);
+  } else if (intelligenceImportance) {
+    const points = priorityPoints[intelligenceImportance] ?? 10;
+    score += points;
+    reasons.push(`${intelligenceImportance} intelligence importance`);
+  }
+
+  if (trend === "deteriorating") {
+    score += 25;
+    reasons.push("deteriorating evidence");
+  } else if (trend === "improving") {
+    score += 5;
+    reasons.push("improving evidence");
+  } else if (trend === "stable") {
+    reasons.push("stable evidence");
+  }
+
+  if (novelty === "new") {
+    score += 10;
+    reasons.push("new intelligence");
+  } else if (novelty === "changed") {
+    score += 8;
+    reasons.push("changed intelligence");
+  }
+
+  if (handlingState === "investigating") {
+    score += 12;
+    reasons.push("active investigation");
+  } else if (handlingState === "work_underway") {
+    score += 10;
+    reasons.push("active work");
+  } else if (handlingState === "unhandled" || handlingState === "needs_decision") {
+    score += 15;
+    reasons.push("unresolved decision");
+  }
+
+  return {
+    score,
+    reason: reasons.length
+      ? reasons.join("; ")
+      : "No stronger priority signal is currently available."
   };
 }
 
@@ -841,9 +915,17 @@ async function loadAgencyIntelligence(env, requestId) {
         i.communication_id,
         i.investigation_id,
         i.work_item_id,
-        i.updated_at
+        i.updated_at,
+        inv.status AS investigation_status,
+        inv.priority AS investigation_priority,
+        inv.title AS investigation_title,
+        wi.status AS work_item_status,
+        wi.priority AS work_item_priority,
+        wi.title AS work_item_title
       FROM intelligence i
       LEFT JOIN clients c ON c.id = i.client_id
+      LEFT JOIN investigations inv ON inv.id = i.investigation_id
+      LEFT JOIN work_items wi ON wi.id = i.work_item_id
       ORDER BY
         CASE LOWER(COALESCE(i.handling_state, 'unhandled'))
           WHEN 'unhandled' THEN 0
@@ -907,6 +989,12 @@ function normalizeD1IntelligenceItem(row) {
     communicationId: row?.communication_id ?? null,
     investigationId,
     workItemId,
+    investigationStatus: clean(row?.investigation_status) || null,
+    investigationPriority: clean(row?.investigation_priority) || null,
+    investigationTitle: clean(row?.investigation_title) || null,
+    workItemStatus: clean(row?.work_item_status) || null,
+    workItemPriority: clean(row?.work_item_priority) || null,
+    workItemTitle: clean(row?.work_item_title) || null,
     alreadyBeingHandled:
       handlingState === "investigating" ||
       handlingState === "work_underway" ||
@@ -1041,7 +1129,11 @@ function normalizeAttentionItems(value, fallback = []) {
       return {
         title: clean(item.title || item.subject || item.summary),
         reason: clean(item.reason),
-        workspace: clean(item.workspace) || "today"
+        workspace: clean(item.workspace) || "today",
+        priorityScore: Number.isFinite(Number(item.priorityScore))
+          ? Number(item.priorityScore)
+          : null,
+        priorityReason: clean(item.priorityReason) || null
       };
     })
     .filter(item => item && item.title)
