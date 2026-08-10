@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationIntelligence.js
-   Version: 1.0.0
+   Version: 1.0.1
    Status: Production Road-Test Candidate
    Source: Today / Agency Command Center Rebuild
    Sprint: Communication → Durable Intelligence
@@ -20,6 +20,11 @@
      discovered deterministically by the common correlation engine.
    - Never creates Investigation, Work Item, Evidence, Measurement, Activity,
      Media, Calendar, Prospect, Finance, Proof, or Case Study records.
+
+   Changes in 1.0.1:
+   - Deterministic fallback now reads production communications.ai_summary.
+   - Deterministic fallback now reads production communications.raw_content.
+   - Preserves the verified correlation path and all no-duplicate-write behavior.
    ========================================================= */
 
 import { COMMUNICATION_REASONING_MODEL } from "../shared/config.js";
@@ -28,7 +33,7 @@ import { clean, safeErrorMessage, logWorkerError, jsonResponse } from "../shared
 import { runAiJsonWithRetry } from "../shared/ai.js";
 import { handleIntelligenceProcessing } from "./intelligenceProcessing.js";
 
-export const COMMUNICATION_INTELLIGENCE_VERSION = "1.0.0";
+export const COMMUNICATION_INTELLIGENCE_VERSION = "1.0.1";
 export const COMMUNICATION_INTELLIGENCE_ACTION = "process-communication-intelligence";
 
 export async function handleCommunicationIntelligence(body, env, requestId) {
@@ -216,8 +221,10 @@ function buildDeterministicInterpretation(communication) {
   const body = communicationBody(communication);
   const summary = firstClean(
     communication.operational_summary,
+    communication.ai_summary,
     communication.summary,
     communication.analysis_summary,
+    communication.raw_content,
     communication.description,
     body
   );
@@ -269,7 +276,7 @@ function normalizeInterpretation(value, fallback) {
 function communicationSubject(row) { return firstClean(row.subject,row.title,row.email_subject,row.communication_subject); }
 function communicationCategory(row) { return firstClean(row.category,row.communication_type,row.type,row.notification_type); }
 function communicationSource(row) { return firstClean(row.source,row.platform,row.sender_name,row.from_name,row.from_email); }
-function communicationBody(row) { return firstClean(row.body,row.content,row.message,row.email_text,row.raw_text,row.text); }
+function communicationBody(row) { return firstClean(row.raw_content,row.ai_summary,row.body,row.content,row.message,row.email_text,row.raw_text,row.text); }
 function communicationObservedAt(row) { return firstClean(row.communication_date,row.received_at,row.date,row.occurred_at,row.created_at); }
 
 function inferTrend(value) {
