@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/intelligenceBacklog.js
-   Version: 1.0.0
+   Version: 1.0.1
    Status: Production Road-Test Candidate
    Sprint: Today / Agency Command Center — Intelligence Backlog Controller
    Purpose:
@@ -19,6 +19,12 @@
    - Stops after the execution-time safety threshold.
    - Creates no records directly; all writes remain owned by Intelligence Refresh
      and its verified downstream processors.
+
+   Changes in 1.0.1:
+   - Reduces the maximum internal Refresh batch from 10 records to 3.
+   - Prevents one expensive Communication-heavy batch from monopolizing the
+     controller request before the elapsed-time safety check can run.
+   - Does not change Intelligence Refresh v1.2.0 or its eligibility logic.
    ========================================================= */
 
 import {
@@ -33,11 +39,11 @@ import {
   INTELLIGENCE_REFRESH_VERSION
 } from "./intelligenceRefresh.js";
 
-export const INTELLIGENCE_BACKLOG_VERSION = "1.0.0";
+export const INTELLIGENCE_BACKLOG_VERSION = "1.0.1";
 export const INTELLIGENCE_BACKLOG_ACTION = "process-intelligence-backlog";
 
-const DEFAULT_BATCH_SIZE = 10;
-const MAX_BATCH_SIZE = 10;
+const DEFAULT_BATCH_SIZE = 3;
+const MAX_BATCH_SIZE = 3;
 const DEFAULT_MAX_BATCHES = 2;
 const MAX_BATCHES = 5;
 const SAFETY_TIME_MS = 25000;
