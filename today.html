@@ -1,21 +1,22 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.4.6
+   Version: 3.5.0
    Status: Production Candidate
-   Source: Production today.html 3.4.3
-   Sprint: Gmail Human-Approved Investigation Processing
-   Purpose: Preserve the locked Mission Control layout and existing routing while
-            extending Morning Command from raw unread Gmail preview to read-only
-            operational intelligence recommendations with no production writes.
+   Source: Production today.html 3.4.6
+   Sprint: Today / Agency Command Center — Live Agency Command
+   Purpose: Preserve the locked Today layout, Gmail approvals, Mission Control,
+            Media logic, and operating workflow while making the verified
+            agency-command route the primary live consulting brief for Today.
 
-   Production changes:
-   - Preserve verified Approve as Monitoring behavior.
-   - Add Approve Communication + Investigation only for verified Investigation candidates.
-   - Investigation approval creates no Work Item from Today.
-   - Existing layout, live data, priority order, Media logic, and shell remain.
-   - Archive Candidate now renders a working Archive action.
-   - Archive uses the existing approved Gmail action contract with archiveOnly=true; zero D1 records are created.
+   Production changes in 3.5.0:
+   - Adds read-only agency-command request: "What needs my attention today?"
+   - Uses the returned D1 Intelligence brief to drive Today's Command Brief.
+   - Uses agency-command needsAttention to populate the ordered attention queue.
+   - Uses agency-command nextBestAction as the primary decision when no Media deadline outranks it.
+   - Preserves existing Gmail preview/approval behavior unchanged.
+   - Preserves existing Mission Control, Media, DO, COMMUNICATE, PREPARE, shell, and local fallbacks.
+   - Creates zero records from the new Agency Command read path.
    ========================================================= -->
 <!DOCTYPE html>
 
@@ -1894,6 +1895,9 @@
       let missionControlUnavailable = false;
       let mediaLoaded = false;
       let mediaUnavailable = false;
+      let agencyCommandLoaded = false;
+      let agencyCommandUnavailable = false;
+      let agencyCommandState = null;
 
       const cloneDefaults = () => JSON.parse(JSON.stringify(DEFAULT_DATA));
 
@@ -2051,6 +2055,176 @@
         return `${count} ${count === 1 ? singular : plural}`;
       }
 
+
+      function buildAgencyWorkspaceHref(workspace) {
+        const value = cleanDisplay(workspace).toLowerCase();
+        const routes = {
+          investigations: "investigations.html",
+          investigation: "investigations.html",
+          work: "work.html",
+          communications: "communications-v2.html",
+          communication: "communications-v2.html",
+          media: "media.html",
+          proof: "proof.html",
+          prospects: "prospects.html",
+          prospecting: "prospects.html",
+          calendar: "calendar.html",
+          finance: "finance.html",
+          clients: "clients.html",
+          today: "today.html"
+        };
+        return routes[value] || "clients.html";
+      }
+
+      function renderAgencyAttentionQueue(brief) {
+        const items = Array.isArray(brief?.needsAttention)
+          ? brief.needsAttention
+          : [];
+
+        if (!items.length) return false;
+
+        attentionList.innerHTML = items.map((item, index) => {
+          const score = Number(item?.priorityScore || 0);
+          const className =
+            score >= 70
+              ? "attention-critical"
+              : score >= 40
+                ? "attention-high"
+                : "attention-normal";
+          const label = index === 0 ? "First" : score >= 40 ? "Next" : "Review";
+          const href = buildAgencyWorkspaceHref(item?.workspace);
+
+          return `
+            <li class="attention-item ${className}">
+              <a
+                class="attention-link"
+                href="${escapeHtml(href)}"
+                aria-label="Open priority ${index + 1}: ${escapeHtml(item?.title || "Agency attention")}"
+              >
+                <span class="attention-order" aria-hidden="true">${index + 1}</span>
+                <span class="attention-content">
+                  <span class="attention-name">${escapeHtml(item?.title || "Agency attention")}</span>
+                  <span class="attention-reason">${escapeHtml(item?.reason || item?.priorityReason || "Review the durable record and decide the next action.")}</span>
+                </span>
+                <span class="attention-action">${escapeHtml(label)} →</span>
+              </a>
+            </li>
+          `;
+        }).join("");
+
+        attentionCount.textContent = String(items.length);
+        attentionNote.textContent = "Ordered by the live Agency Command brief.";
+        briefAttention.textContent =
+          items.length === 1
+            ? "1 agency decision waiting"
+            : `${items.length} agency decisions waiting`;
+
+        return true;
+      }
+
+      function renderAgencyCommandDecision(brief) {
+        const items = Array.isArray(brief?.needsAttention)
+          ? brief.needsAttention
+          : [];
+        const first = items[0] || null;
+
+        if (!first) {
+          setDecisionBrief({
+            badge: "Review",
+            type: "Agency Command",
+            client: "Agency Operating State",
+            who: "Global Concepts Media",
+            what: cleanDisplay(
+              brief?.nextBestAction,
+              "No stronger live decision is currently recorded."
+            ),
+            when: "Current D1 operating state",
+            why: cleanDisplay(
+              Array.isArray(brief?.currentState) ? brief.currentState.join(" · ") : "",
+              "Agency Command found no stronger unresolved decision."
+            ),
+            evidence: cleanDisplay(
+              Array.isArray(brief?.monitoring) ? brief.monitoring.join(" · ") : "",
+              "Durable Intelligence and linked operating records were reviewed."
+            ),
+            evidenceReferences: "Agency Command · D1 Intelligence",
+            actionGuidance: cleanDisplay(
+              brief?.nextBestAction,
+              "Continue with the strongest committed work."
+            ),
+            primaryLabel: "Open Clients",
+            primaryHref: "clients.html",
+            secondaryLabel: "Open Work",
+            secondaryHref: "work.html"
+          });
+          return;
+        }
+
+        const href = buildAgencyWorkspaceHref(first?.workspace);
+
+        setDecisionBrief({
+          badge: "Decide",
+          type: "Agency Command",
+          client: cleanDisplay(first?.title, "Agency Attention"),
+          who: `Workspace: ${titleCase(first?.workspace || "clients")}`,
+          what: cleanDisplay(first?.title, brief?.nextBestAction),
+          when: first?.priorityScore
+            ? `Priority score ${first.priorityScore}`
+            : "Current operating priority",
+          why: cleanDisplay(first?.reason, first?.priorityReason),
+          evidence: cleanDisplay(
+            first?.priorityReason,
+            "Durable Intelligence and linked records were reviewed."
+          ),
+          evidenceReferences: "Agency Command · D1 Intelligence",
+          actionGuidance: cleanDisplay(
+            brief?.nextBestAction,
+            `Open ${titleCase(first?.workspace || "clients")} and continue the verified next step.`
+          ),
+          primaryLabel: `Open ${titleCase(first?.workspace || "record")}`,
+          primaryHref: href,
+          secondaryLabel: "Open Clients",
+          secondaryHref: "clients.html"
+        });
+      }
+
+      async function loadAgencyCommand() {
+        try {
+          const response = await fetch(WORKER_ENDPOINT, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "agency-command",
+              question: "What needs my attention today?"
+            })
+          });
+
+          const payload = await response.json();
+
+          if (!response.ok || payload?.ok !== true || !payload?.brief) {
+            throw new Error(
+              payload?.error ||
+              payload?.details ||
+              "Agency Command request failed."
+            );
+          }
+
+          agencyCommandState = payload.brief;
+          agencyCommandLoaded = true;
+          agencyCommandUnavailable = false;
+
+          renderAgencyAttentionQueue(payload.brief);
+          updatePriority();
+          renderOperationalBriefing();
+        } catch (error) {
+          console.error("Could not load Agency Command.", error);
+          agencyCommandState = null;
+          agencyCommandLoaded = true;
+          agencyCommandUnavailable = true;
+          renderOperationalBriefing();
+        }
+      }
+
       function renderOperationalBriefing() {
         const localState = getLocalOperatingState();
 
@@ -2063,6 +2237,29 @@
         }
 
         const statusParts = [];
+
+        if (agencyCommandLoaded && agencyCommandState) {
+          const brief = agencyCommandState;
+          const currentState = Array.isArray(brief.currentState)
+            ? brief.currentState.filter(Boolean)
+            : [];
+          const monitoring = Array.isArray(brief.monitoring)
+            ? brief.monitoring.filter(Boolean)
+            : [];
+          const nextBestAction = cleanDisplay(
+            brief.nextBestAction,
+            "Review the strongest live agency decision."
+          );
+
+          commandBriefTitle.textContent = nextBestAction;
+          commandBriefCopy.textContent = [
+            ...currentState,
+            monitoring.length
+              ? `${pluralize(monitoring.length, "monitoring signal")} preserved`
+              : ""
+          ].filter(Boolean).join(" · ") || "Agency Command reviewed the current D1 operating state.";
+          return;
+        }
 
         if (missionControlUnavailable) {
           statusParts.push("Client decision records are temporarily unavailable");
@@ -2614,6 +2811,11 @@
           return;
         }
 
+        if (agencyCommandLoaded && agencyCommandState) {
+          renderAgencyCommandDecision(agencyCommandState);
+          return;
+        }
+
         if (highestPriorityDecisionState) {
           renderHighestPriorityDecision(highestPriorityDecisionState);
           return;
@@ -2748,7 +2950,7 @@
       } else {
         window.GCMOShell.mount({
           currentPage: "today",
-          statusText: "Agency Command Center operational · Today v3.4.6"
+          statusText: "Agency Command Center operational · Today v3.5.0"
         });
       }
 
@@ -2877,6 +3079,7 @@
       renderOperationalBriefing();
       loadMissionControlAttention();
       loadMediaAttention();
+      loadAgencyCommand();
     })();
   </script>
 </body>
