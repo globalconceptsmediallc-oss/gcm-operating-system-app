@@ -1,19 +1,19 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.9.0
+   Version: 7.10.0
    Status: Production Road-Test Candidate
    Source: Production worker.js 7.8.0
-   Sprint: Today / Agency Command Center — Automatic Intelligence Refresh
-   Purpose: Preserve every verified production route and add bounded
-            automatic discovery/processing of durable records that do
-            not yet have Intelligence.
+   Sprint: Today / Agency Command Center — Intelligence Backlog Controller
+   Purpose: Preserve every verified production route and add a bounded
+            controller for advancing the historical Intelligence backlog
+            through the locked Intelligence Refresh engine.
 
-   Changes in 7.9.0:
-   - Adds refresh-intelligence to the Worker action allowlist.
-   - Routes it to routes/intelligenceRefresh.js.
-   - Preserves Agency Command, Communication Intelligence, Activity
-     Intelligence, Intelligence Processing, and all existing production behavior.
+   Changes in 7.10.0:
+   - Adds process-intelligence-backlog to the Worker action allowlist.
+   - Routes it to routes/intelligenceBacklog.js.
+   - Leaves Intelligence Refresh v1.2.0 unchanged.
+   - Preserves all existing production behavior.
    ========================================================= */
 
 import {
@@ -61,10 +61,14 @@ import {
   handleIntelligenceRefresh,
   INTELLIGENCE_REFRESH_ACTION
 } from "./routes/intelligenceRefresh.js";
+import {
+  handleIntelligenceBacklog,
+  INTELLIGENCE_BACKLOG_ACTION
+} from "./routes/intelligenceBacklog.js";
 
 import { handleGmailGet, handleGmailAction } from "./routes/gmailIntegration.js";
 
-const WORKER_FILE_VERSION = "7.9.0";
+const WORKER_FILE_VERSION = "7.10.0";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
@@ -83,6 +87,7 @@ const SUPPORTED_ACTIONS = [
   ACTIVITY_INTELLIGENCE_ACTION,
   COMMUNICATION_INTELLIGENCE_ACTION,
   INTELLIGENCE_REFRESH_ACTION,
+  INTELLIGENCE_BACKLOG_ACTION,
   ACTIONS.GET_GMAIL_STATUS,
   ACTIONS.PREVIEW_GMAIL_INBOX,
   ACTIONS.APPROVE_GMAIL_MONITORING,
@@ -109,12 +114,13 @@ export default {
         version: VERSION,
         workerFileVersion: WORKER_FILE_VERSION,
         contractVersion: API_CONTRACT_VERSION,
-        sprint: "Today / Agency Command Center — Automatic Intelligence Refresh",
+        sprint: "Today / Agency Command Center — Intelligence Backlog Controller",
         architecture:
-          "Modular production router with Agency Command, Intelligence Refresh, Communication Intelligence, Activity Intelligence, Intelligence Processing, Prospect Intelligence, Communications analysis, Guided Investigation, and operational processing.",
+          "Modular production router with Agency Command, Intelligence Backlog, Intelligence Refresh, Communication Intelligence, Activity Intelligence, Intelligence Processing, Prospect Intelligence, Communications analysis, Guided Investigation, and operational processing.",
         actions: SUPPORTED_ACTIONS,
         engines: [
           "agency-command",
+          "intelligence-backlog",
           "intelligence-refresh",
           "communication-intelligence",
           "activity-intelligence",
@@ -140,6 +146,7 @@ export default {
           shared: ["config", "http", "database", "ai"],
           routes: [
             "agency-command",
+            "intelligence-backlog",
             "intelligence-refresh",
             "communication-intelligence",
             "activity-intelligence",
@@ -214,6 +221,9 @@ export default {
 
         case INTELLIGENCE_REFRESH_ACTION:
           return await handleIntelligenceRefresh(body, env, requestId);
+
+        case INTELLIGENCE_BACKLOG_ACTION:
+          return await handleIntelligenceBacklog(body, env, requestId);
 
         case ACTIONS.ANALYZE_PROSPECT_INTELLIGENCE:
           return await handleProspectIntelligence(body, env, requestId);
