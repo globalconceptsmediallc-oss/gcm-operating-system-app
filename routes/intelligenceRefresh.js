@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/intelligenceRefresh.js
-   Version: 1.0.0
+   Version: 1.0.1
    Status: Production Road-Test Candidate
    Sprint: Today / Agency Command Center — Automatic Intelligence Refresh
    Purpose:
@@ -17,6 +17,10 @@
    - Intelligence persistence/correlation remains owned by
      intelligenceProcessing.js.
    - Bounded batch processing prevents an unbounded refresh request.
+
+   Changes in 1.0.1:
+   - Corrects Communications production timestamp field from the invalid
+     comm.date assumption to verified comm.occurred_at.
    ========================================================= */
 
 import { getDatabase } from "../shared/database.js";
@@ -33,7 +37,7 @@ import {
   handleActivityIntelligence
 } from "./activityIntelligence.js";
 
-export const INTELLIGENCE_REFRESH_VERSION = "1.0.0";
+export const INTELLIGENCE_REFRESH_VERSION = "1.0.1";
 export const INTELLIGENCE_REFRESH_ACTION = "refresh-intelligence";
 
 const DEFAULT_LIMIT = 3;
@@ -156,7 +160,7 @@ async function discoverCandidates(db, limit) {
         'communication' AS record_type,
         comm.id AS record_id,
         comm.client_id AS client_id,
-        COALESCE(comm.date, comm.created_at) AS observed_at
+        COALESCE(comm.occurred_at, comm.created_at) AS observed_at
       FROM communications comm
       WHERE NOT EXISTS (
         SELECT 1
