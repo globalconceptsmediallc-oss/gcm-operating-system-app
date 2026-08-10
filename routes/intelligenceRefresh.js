@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/intelligenceRefresh.js
-   Version: 1.1.0
+   Version: 1.1.1
    Status: Production Road-Test Candidate
    Sprint: Today / Agency Command Center — Automatic Intelligence Refresh
    Purpose:
@@ -18,12 +18,14 @@
      intelligenceProcessing.js.
    - Bounded batch processing prevents an unbounded refresh request.
 
-   Changes in 1.1.0:
-   - Adds a deterministic eligibility gate before Intelligence processing.
-   - Separates operational signals from historical/import/proof-only history.
-   - Adds preview-first behavior; no Intelligence write occurs unless commit=true.
-   - Returns an eligibility reason for every reviewed candidate.
-   - Preserves bounded batches and verified source processors/correlation.
+   Changes in 1.1.1:
+   - Removes sourceReference as an automatic Intelligence qualification.
+   - Treats provenance as proof of source, not proof of Intelligence value.
+   - Keeps routine monitoring/trend and baseline Activity Records as durable
+     Activity history unless a separate operational change/result is established.
+   - Preserves Communications as operating inputs and Work-linked Activity
+     Records as eligible correlation candidates.
+   - Preserves preview-first behavior; no Intelligence write unless commit=true.
    ========================================================= */
 
 import { getDatabase } from "../shared/database.js";
@@ -40,7 +42,7 @@ import {
   handleActivityIntelligence
 } from "./activityIntelligence.js";
 
-export const INTELLIGENCE_REFRESH_VERSION = "1.1.0";
+export const INTELLIGENCE_REFRESH_VERSION = "1.1.1";
 export const INTELLIGENCE_REFRESH_ACTION = "refresh-intelligence";
 
 const DEFAULT_LIMIT = 3;
@@ -259,6 +261,7 @@ function classifyEligibility(candidate) {
   const category = key(candidate.category);
   const evidenceType = key(candidate.evidenceType);
   const status = key(candidate.recordStatus);
+  const expectedImpact = key(candidate.expectedImpact);
   const text = [
     candidate.category,
     candidate.subject,
@@ -310,16 +313,16 @@ function classifyEligibility(candidate) {
       ...candidate,
       eligible: true,
       eligibilityReason:
-        "Activity Record is linked to active/completed Work and may carry outcome or progress Intelligence."
+        "Activity Record is linked to Work and may carry outcome or progress Intelligence for existing handling."
     };
   }
 
-  if (candidate.sourceReference) {
+  if (isRoutineMonitoring(expectedImpact, category, sourceType, text)) {
     return {
       ...candidate,
-      eligible: true,
+      eligible: false,
       eligibilityReason:
-        "Activity Record has a durable source reference and is eligible for correlation."
+        "Activity Record is routine monitoring/trend evidence. Preserve the durable Activity and source provenance; create Intelligence only when comparison proves a meaningful change, problem, result, or required action."
     };
   }
 
@@ -328,7 +331,7 @@ function classifyEligibility(candidate) {
       ...candidate,
       eligible: true,
       eligibilityReason:
-        "Activity Record contains an operational monitoring/change signal that should be correlated with durable history."
+        "Activity Record contains a non-routine operational change/problem/result signal that should be correlated with durable history."
     };
   }
 
@@ -336,8 +339,28 @@ function classifyEligibility(candidate) {
     ...candidate,
     eligible: false,
     eligibilityReason:
-      "No durable source reference, Work link, or explicit operational signal was found; retain as Activity history."
+      "Activity Record is durable history, but no Work link or proven operational change/problem/result establishes a separate Intelligence need."
   };
+}
+
+function isRoutineMonitoring(expectedImpact, category, sourceType, text) {
+  if (expectedImpact === "monitoring_trend_evidence") return true;
+
+  if ([
+    "youtube_performance",
+    "monthly_performance",
+    "monthly_report",
+    "baseline",
+    "monitoring"
+  ].includes(category)) return true;
+
+  if (/\bpreserve (these|the) metrics as monitoring evidence\b/.test(text)) return true;
+  if (/\bsave the monthly .* metrics as monitoring evidence\b/.test(text)) return true;
+  if (/\bremain(s)? monitoring evidence unless\b/.test(text)) return true;
+  if (/\bmonitoring evidence until\b/.test(text)) return true;
+  if (/\bretain it as monitoring unless\b/.test(text)) return true;
+
+  return false;
 }
 
 function isHistoricalOnly(sourceType, category, evidenceType, status, text) {
