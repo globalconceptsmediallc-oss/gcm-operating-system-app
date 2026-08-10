@@ -1,10 +1,10 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/intelligenceProcessing.js
-   Version: 1.0.1
+   Version: 1.1.0
    Status: Production Candidate
    Source: Today / Agency Command Center Rebuild
-   Sprint: Common Intelligence Correlation Foundation
+   Sprint: Historical + Active Handling Correlation
    Purpose: Persist already-interpreted agency intelligence, correlate
             repeated signals to existing Intelligence / Investigation /
             Work history, and return a normalized decision candidate.
@@ -14,13 +14,15 @@
    - Never creates Communication, Investigation, Work, Evidence,
      Measurement, Activity, Media, Calendar, Prospect, or Finance records.
    - Reuses one active Intelligence record per correlation key.
+   - Distinguishes active handling from relevant closed/historical handling.
+   - Preserves a durable link to historically related Investigation/Work context.
    - Preserves first observed date and advances last observed date.
    ========================================================= */
 
 import { getDatabase } from "../shared/database.js";
 import { clean, safeErrorMessage, logWorkerError, jsonResponse } from "../shared/http.js";
 
-export const INTELLIGENCE_PROCESSING_VERSION = "1.0.1";
+export const INTELLIGENCE_PROCESSING_VERSION = "1.1.0";
 export const INTELLIGENCE_PROCESSING_ACTION = "process-intelligence";
 
 const CLOSED = "'complete','completed','closed','resolved','cancelled','canceled','archived','ignored','no_action','published'";
@@ -49,9 +51,21 @@ export async function handleIntelligenceProcessing(body, env, requestId) {
     const correlationKey = input.correlationKey || await createCorrelationKey(client.id, input.intelligenceType, input.subject);
     const existing = await db.prepare(`SELECT * FROM intelligence WHERE client_id=? AND correlation_key=? AND LOWER(COALESCE(status,'active'))='active' ORDER BY id DESC LIMIT 1`).bind(client.id, correlationKey).first();
     const handling = await findHandling(db, client.id, input);
+    const historicalHandling = handling
+      ? null
+      : await findHistoricalHandling(db, client.id, input);
     const novelty = determineNovelty(existing, input);
-    const handlingState = determineHandlingState(input.handlingState, handling);
-    const links = resolveLinks(input, existing, handling);
+    const handlingState = determineHandlingState(
+      input.handlingState,
+      handling,
+      historicalHandling
+    );
+    const links = resolveLinks(
+      input,
+      existing,
+      handling,
+      historicalHandling
+    );
 
     let id = Number(existing?.id || 0) || null;
     let created = false;
@@ -78,8 +92,24 @@ export async function handleIntelligenceProcessing(body, env, requestId) {
       intelligenceProcessingVersion:INTELLIGENCE_PROCESSING_VERSION,
       source:"D1",
       client:{ id:Number(client.id), clientCode:clean(client.client_code), name:clean(client.name) },
-      result:{ intelligenceId:id, created, updated:!created, novelty:novelty.value, changedFields:novelty.changedFields, handlingState, correlationKey, links },
-      decisionCandidate:buildDecisionCandidate(record, client, Boolean(handling)),
+      result:{
+        intelligenceId:id,
+        created,
+        updated:!created,
+        novelty:novelty.value,
+        changedFields:novelty.changedFields,
+        handlingState,
+        correlationKey,
+        links,
+        activeHandling:summarizeHandling(handling),
+        historicalHandling:summarizeHistoricalHandling(historicalHandling)
+      },
+      decisionCandidate:buildDecisionCandidate(
+        record,
+        client,
+        Boolean(handling),
+        historicalHandling
+      ),
       writes:{ intelligence:1, communications:0, investigations:0, workItems:0, evidence:0, measurements:0, activityRecords:0 }
     });
   } catch (error) {
@@ -142,6 +172,153 @@ async function findHandling(db, clientId, v) {
   return best && score>=0.5 ? { kind:best.record_type, record:{...best,id:Number(best.id)}, matchConfidence:score } : null;
 }
 
+
+async function findHistoricalHandling(db, clientId, v) {
+  const rows=(await db.prepare(`SELECT * FROM (
+    SELECT
+      'work_item' record_type,
+      id,
+      title,
+      description,
+      status,
+      priority,
+      communication_id,
+      investigation_id,
+      expected_impact context_text,
+      actual_impact outcome_text,
+      created_at,
+      completed_at history_date
+    FROM work_items
+    WHERE client_id=?
+      AND LOWER(REPLACE(REPLACE(COALESCE(status,'open'),'-','_'),' ','_')) IN (${CLOSED})
+    UNION ALL
+    SELECT
+      'investigation' record_type,
+      id,
+      title,
+      description,
+      status,
+      priority,
+      communication_id,
+      id AS investigation_id,
+      COALESCE(recommendation,finding_summary) AS context_text,
+      finding_summary AS outcome_text,
+      created_at,
+      COALESCE(closed_at,resolved_at) AS history_date
+    FROM investigations
+    WHERE client_id=?
+      AND LOWER(REPLACE(REPLACE(COALESCE(status,'open'),'-','_'),' ','_')) IN (${CLOSED})
+  ) ORDER BY datetime(COALESCE(history_date,created_at)) DESC LIMIT 50`).bind(
+    clientId,
+    clientId
+  ).all())?.results || [];
+
+  const target=tokens(v.subject);
+  let best=null;
+  let score=0;
+
+  for (const r of rows) {
+    const candidateText=[
+      r.title,
+      r.description,
+      r.context_text,
+      r.outcome_text
+    ].filter(Boolean).join(" ");
+    const s=overlap(target,tokens(candidateText));
+    if (s>score) {
+      score=s;
+      best=r;
+    }
+  }
+
+  if (!best || score<0.5) return null;
+
+  let relatedWorkItems=[];
+  if (best.record_type==="investigation") {
+    relatedWorkItems=(await db.prepare(`
+      SELECT id,title,status,priority,expected_impact,actual_impact,completed_at,created_at
+      FROM work_items
+      WHERE investigation_id=?
+      ORDER BY id DESC
+      LIMIT 20
+    `).bind(best.id).all())?.results || [];
+  }
+
+  return {
+    kind:best.record_type,
+    record:{...best,id:Number(best.id)},
+    matchConfidence:score,
+    disposition:inferHistoricalDisposition(best,relatedWorkItems),
+    relatedWorkItems
+  };
+}
+
+function inferHistoricalDisposition(record, relatedWorkItems) {
+  const text=canon([
+    record?.title,
+    record?.description,
+    record?.context_text,
+    record?.outcome_text
+  ].filter(Boolean).join(" "));
+
+  const hasRelatedWork=Array.isArray(relatedWorkItems)&&relatedWorkItems.length>0;
+
+  if (
+    !hasRelatedWork &&
+    /\b(monitor|monitoring|historical|history|informational|information|no action|watch|tracking update)\b/.test(text)
+  ) {
+    return "monitoring";
+  }
+
+  const verifiedWork=(relatedWorkItems||[]).some(w=>{
+    const workText=canon([w.status,w.actual_impact].filter(Boolean).join(" "));
+    return /\b(complete|completed|resolved|verified|fixed|corrected)\b/.test(workText);
+  });
+
+  if (verifiedWork) return "previously_resolved";
+  if (hasRelatedWork) return "previously_worked";
+  return "previously_evaluated";
+}
+
+function summarizeHandling(handling) {
+  if (!handling) return null;
+  const r=handling.record||{};
+  return {
+    kind:handling.kind||null,
+    recordId:positiveInt(r.id),
+    status:clean(r.status)||null,
+    title:clean(r.title)||null,
+    matchConfidence:
+      typeof handling.matchConfidence==="number"
+        ? handling.matchConfidence
+        : null
+  };
+}
+
+function summarizeHistoricalHandling(handling) {
+  if (!handling) return null;
+  const r=handling.record||{};
+  return {
+    kind:handling.kind||null,
+    recordId:positiveInt(r.id),
+    investigationId:
+      handling.kind==="investigation"
+        ? positiveInt(r.id)
+        : positiveInt(r.investigation_id),
+    communicationId:positiveInt(r.communication_id),
+    status:clean(r.status)||null,
+    title:clean(r.title)||null,
+    disposition:clean(handling.disposition)||"previously_evaluated",
+    matchConfidence:
+      typeof handling.matchConfidence==="number"
+        ? handling.matchConfidence
+        : null,
+    relatedWorkItemCount:Array.isArray(handling.relatedWorkItems)
+      ? handling.relatedWorkItems.length
+      : 0
+  };
+}
+
 function determineNovelty(existing, v) {
   if (!existing) return { value:"new", changedFields:[] };
   const pairs=[['what_happened',existing.what_happened,v.whatHappened],['business_meaning',existing.business_meaning,v.businessMeaning],['trend',existing.trend,v.trend],['importance',existing.importance,v.importance],['recommended_action',existing.recommended_action,v.recommendedAction],['why_now',existing.why_now,v.whyNow],['proof_requirement',existing.proof_requirement,v.proofRequirement]];
@@ -149,9 +326,71 @@ function determineNovelty(existing, v) {
   return { value:changed.length?"changed":"repeated", changedFields:changed };
 }
 
-function determineHandlingState(explicit, handling) { if (explicit && explicit!=="unhandled") return explicit; if (handling?.kind==="work_item") return "work_underway"; if (handling?.kind==="investigation") return "investigating"; return explicit||"unhandled"; }
-function resolveLinks(v, existing, handling) { const r=handling?.record||{}; return { communicationId:v.communicationId||positiveInt(r.communication_id)||positiveInt(existing?.communication_id), investigationId:v.investigationId||(handling?.kind==="investigation"?positiveInt(r.id):positiveInt(r.investigation_id))||positiveInt(existing?.investigation_id), workItemId:v.workItemId||(handling?.kind==="work_item"?positiveInt(r.id):null)||positiveInt(existing?.work_item_id) }; }
-function buildDecisionCandidate(r,c,handled) { const state=clean(r?.handling_state)||"unhandled"; return { recordType:"intelligence",recordId:Number(r?.id||0)||null,clientId:Number(c.id),clientCode:clean(c.client_code),clientName:clean(c.name),whatHappened:clean(r?.what_happened),businessMeaning:clean(r?.business_meaning),novelty:clean(r?.novelty)||"unknown",trend:clean(r?.trend)||"unknown",importance:clean(r?.importance)||"normal",handlingState:state,recommendedAction:clean(r?.recommended_action),whyNow:clean(r?.why_now),proofRequirement:clean(r?.proof_requirement),references:{communicationId:positiveInt(r?.communication_id),investigationId:positiveInt(r?.investigation_id),workItemId:positiveInt(r?.work_item_id)},alreadyBeingHandled:handled,eligibleForAgencyPriority:clean(r?.status).toLowerCase()==="active"&&!['monitoring','resolved'].includes(state)}; }
+function determineHandlingState(explicit, handling, historicalHandling) {
+  if (explicit && explicit!=="unhandled") return explicit;
+  if (handling?.kind==="work_item") return "work_underway";
+  if (handling?.kind==="investigation") return "investigating";
+  if (historicalHandling?.disposition==="monitoring") return "monitoring";
+  return explicit||"unhandled";
+}
+
+function resolveLinks(v, existing, handling, historicalHandling) {
+  const active=handling?.record||{};
+  const historical=historicalHandling?.record||{};
+
+  return {
+    communicationId:
+      v.communicationId||
+      positiveInt(active.communication_id)||
+      positiveInt(existing?.communication_id)||
+      positiveInt(historical.communication_id),
+    investigationId:
+      v.investigationId||
+      (handling?.kind==="investigation"
+        ? positiveInt(active.id)
+        : positiveInt(active.investigation_id))||
+      positiveInt(existing?.investigation_id)||
+      (historicalHandling?.kind==="investigation"
+        ? positiveInt(historical.id)
+        : positiveInt(historical.investigation_id)),
+    workItemId:
+      v.workItemId||
+      (handling?.kind==="work_item"?positiveInt(active.id):null)||
+      positiveInt(existing?.work_item_id)||
+      (historicalHandling?.kind==="work_item"?positiveInt(historical.id):null)
+  };
+}
+
+function buildDecisionCandidate(r,c,handled,historicalHandling) {
+  const state=clean(r?.handling_state)||"unhandled";
+  return {
+    recordType:"intelligence",
+    recordId:Number(r?.id||0)||null,
+    clientId:Number(c.id),
+    clientCode:clean(c.client_code),
+    clientName:clean(c.name),
+    whatHappened:clean(r?.what_happened),
+    businessMeaning:clean(r?.business_meaning),
+    novelty:clean(r?.novelty)||"unknown",
+    trend:clean(r?.trend)||"unknown",
+    importance:clean(r?.importance)||"normal",
+    handlingState:state,
+    recommendedAction:clean(r?.recommended_action),
+    whyNow:clean(r?.why_now),
+    proofRequirement:clean(r?.proof_requirement),
+    references:{
+      communicationId:positiveInt(r?.communication_id),
+      investigationId:positiveInt(r?.investigation_id),
+      workItemId:positiveInt(r?.work_item_id)
+    },
+    alreadyBeingHandled:handled,
+    previouslyEvaluated:Boolean(historicalHandling),
+    historicalContext:summarizeHistoricalHandling(historicalHandling),
+    eligibleForAgencyPriority:
+      clean(r?.status).toLowerCase()==="active" &&
+      !['monitoring','resolved'].includes(state)
+  };
+}
 
 async function createCorrelationKey(clientId,type,subject) { const raw=JSON.stringify({clientId,intelligenceType:key(type),subject:canon(subject)}); const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(raw)); const hash=[...new Uint8Array(digest)].map(b=>b.toString(16).padStart(2,"0")).join("").slice(0,32); return `intel-${clientId}-${hash}`; }
 function normalizeTrend(v){const x=key(v);return ['improving','deteriorating','stable','unknown'].includes(x)?x:'unknown';}
