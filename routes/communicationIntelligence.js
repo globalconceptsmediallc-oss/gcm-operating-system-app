@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationIntelligence.js
-   Version: 1.0.2
+   Version: 1.0.3
    Status: Production Road-Test Candidate
    Source: Today / Agency Command Center Rebuild
    Sprint: Communication → Durable Intelligence
@@ -21,11 +21,12 @@
    - Never creates Investigation, Work Item, Evidence, Measurement, Activity,
      Media, Calendar, Prospect, Finance, Proof, or Case Study records.
 
-   Changes in 1.0.2:
-   - Preserves v1.0.1 production evidence extraction from ai_summary/raw_content.
-   - Strengthens generic directional trend detection for compact evidence such as
-     errors/warnings/notices up/down and health/score movement.
-   - Generates evidence-based deterministic business meaning when AI is unavailable.
+   Changes in 1.0.3:
+   - Preserves all verified v1.0.2 evidence extraction and correlation behavior.
+   - Gives explicit stable/no-change evidence precedence over promotional language.
+   - Recognizes generic no-significant-change / no-material-change wording as stable.
+   - Removes the generic word "win" as an improvement signal to prevent marketing
+     copy from being interpreted as verified client improvement.
    - Preserves the verified correlation path and all no-duplicate-write behavior.
    ========================================================= */
 
@@ -35,7 +36,7 @@ import { clean, safeErrorMessage, logWorkerError, jsonResponse } from "../shared
 import { runAiJsonWithRetry } from "../shared/ai.js";
 import { handleIntelligenceProcessing } from "./intelligenceProcessing.js";
 
-export const COMMUNICATION_INTELLIGENCE_VERSION = "1.0.2";
+export const COMMUNICATION_INTELLIGENCE_VERSION = "1.0.3";
 export const COMMUNICATION_INTELLIGENCE_ACTION = "process-communication-intelligence";
 
 export async function handleCommunicationIntelligence(body, env, requestId) {
@@ -289,6 +290,16 @@ function communicationObservedAt(row) { return firstClean(row.communication_date
 function inferTrend(value) {
   const text=clean(value).toLowerCase();
 
+  const stableSignals = [
+    /\bno\s+(?:significant|material|meaningful)\s+changes?\b/,
+    /\bno\s+(?:significant|material|meaningful)\s+(?:change|movement)\b/,
+    /\bno\s+change\b/,
+    /\b(stable|unchanged|steady|flat)\b/
+  ];
+
+  // Explicit no-change evidence outranks surrounding promotional language.
+  if (stableSignals.some((pattern) => pattern.test(text))) return "stable";
+
   const deteriorationSignals = [
     /\b(declin|drop|fall|fell|lost|worse|decreas|deteriorat)/,
     /\b(errors?|warnings?|issues?|failures?|defects?)\s*:\s*up\b/,
@@ -298,7 +309,7 @@ function inferTrend(value) {
   ];
 
   const improvementSignals = [
-    /\b(improv|gain|grew|growth|higher|top 10|top ten|win|resolved|fixed|recovered)/,
+    /\b(improv|gain|grew|growth|higher|top 10|top ten|resolved|fixed|recovered)/,
     /\b(errors?|warnings?|issues?|failures?|defects?)\s*:\s*down\b/,
     /\b(errors?|warnings?|issues?|failures?|defects?)\s+(?:decreased|fell|dropped|lower)\b/,
     /\b(health|score|visibility|traffic|ranking|rankings)\s*:\s*up\b/,
@@ -307,7 +318,6 @@ function inferTrend(value) {
 
   if (deteriorationSignals.some((pattern) => pattern.test(text))) return "deteriorating";
   if (improvementSignals.some((pattern) => pattern.test(text))) return "improving";
-  if (/\b(stable|unchanged|steady|flat)\b/.test(text)) return "stable";
   return "unknown";
 }
 
