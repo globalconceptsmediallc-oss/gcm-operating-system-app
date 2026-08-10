@@ -1,16 +1,16 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.7.9
+   Version: 7.8.0
    Status: Production Road-Test Candidate
-   Source: Production worker.js 7.7.8
-   Sprint: Media — Gmail Attached Draft Dispatch
-   Purpose: Preserve every verified production route and connect the
-            read-only Prospect Intelligence road-test action.
+   Source: Production worker.js 7.7.9
+   Sprint: Today / Agency Command Center — Intelligence Processing Route
+   Purpose: Preserve every verified production route and add the
+            source-neutral Intelligence processing/correlation action.
 
-   Changes in 7.7.7:
-   - Adds approve-gmail-monitoring to the Worker action allowlist.
-   - Routes approve-gmail-monitoring to routes/gmailIntegration.js.
+   Changes in 7.8.0:
+   - Adds process-intelligence to the Worker action allowlist.
+   - Routes process-intelligence to routes/intelligenceProcessing.js.
    - Preserves all existing production routes and behavior.
    ========================================================= */
 
@@ -43,10 +43,14 @@ import {
   handleAgencyCommand,
   AGENCY_COMMAND_ACTION
 } from "./routes/agencyCommand.js";
+import {
+  handleIntelligenceProcessing,
+  INTELLIGENCE_PROCESSING_ACTION
+} from "./routes/intelligenceProcessing.js";
 
 import { handleGmailGet, handleGmailAction } from "./routes/gmailIntegration.js";
 
-const WORKER_FILE_VERSION = "7.7.9";
+const WORKER_FILE_VERSION = "7.8.0";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
@@ -61,6 +65,7 @@ const SUPPORTED_ACTIONS = [
   ACTIONS.GET_MEDIA_OPERATIONS,
   ACTIONS.OPERATIONAL_REVIEWS,
   AGENCY_COMMAND_ACTION,
+  INTELLIGENCE_PROCESSING_ACTION,
   ACTIONS.GET_GMAIL_STATUS,
   ACTIONS.PREVIEW_GMAIL_INBOX,
   ACTIONS.APPROVE_GMAIL_MONITORING,
@@ -87,12 +92,13 @@ export default {
         version: VERSION,
         workerFileVersion: WORKER_FILE_VERSION,
         contractVersion: API_CONTRACT_VERSION,
-        sprint: "Morning Command — Gmail Read-Only Connection",
+        sprint: "Today / Agency Command Center — Intelligence Processing Route",
         architecture:
-          "Modular production router with Agency Command, Prospect Intelligence, Communications analysis, Guided Investigation, and operational processing.",
+          "Modular production router with Agency Command, Intelligence Processing, Prospect Intelligence, Communications analysis, Guided Investigation, and operational processing.",
         actions: SUPPORTED_ACTIONS,
         engines: [
           "agency-command",
+          "intelligence-processing",
           "prospect-intelligence",
           "communications-review-adapter",
           "notification-detection",
@@ -114,6 +120,7 @@ export default {
           shared: ["config", "http", "database", "ai"],
           routes: [
             "agency-command",
+            "intelligence-processing",
             "prospect-intelligence",
             "communication-analysis",
             "client-workspace",
@@ -172,6 +179,9 @@ export default {
 
         case AGENCY_COMMAND_ACTION:
           return await handleAgencyCommand(body, env, requestId);
+
+        case INTELLIGENCE_PROCESSING_ACTION:
+          return await handleIntelligenceProcessing(body, env, requestId);
 
         case ACTIONS.ANALYZE_PROSPECT_INTELLIGENCE:
           return await handleProspectIntelligence(body, env, requestId);
