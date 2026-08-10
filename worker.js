@@ -1,17 +1,18 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.11.0
+   Version: 7.12.0
    Status: Production Road-Test Candidate
-   Source: Production worker.js 7.10.0
-   Sprint: Historical Record Rehabilitation
-   Purpose: Preserve every verified production route and add the
-            controlled Historical Rehabilitation apply route.
+   Source: Production worker.js 7.11.0
+   Sprint: Historical Record Rehabilitation — Proposal Generation
+   Purpose: Preserve every verified production route and add controlled
+            rehabilitation proposal generation without applying changes
+            to Activity Records.
 
-   Changes in 7.11.0:
-   - Adds apply-historical-rehabilitation to the Worker action allowlist.
-   - Routes it to routes/historicalRehabilitation.js v1.0.0.
-   - Adds Historical Rehabilitation to Worker diagnostics.
+   Changes in 7.12.0:
+   - Adds generate-historical-rehabilitation-proposals to the Worker action allowlist.
+   - Routes it to routes/historicalRehabilitation.js v1.1.0.
+   - Preserves apply-historical-rehabilitation behavior.
    - Leaves Intelligence Backlog v1.0.1 and Intelligence Refresh v1.2.0 unchanged.
    - Preserves all existing production behavior.
    ========================================================= */
@@ -67,12 +68,14 @@ import {
 } from "./routes/intelligenceBacklog.js";
 import {
   handleHistoricalRehabilitation,
-  HISTORICAL_REHABILITATION_ACTION
+  handleHistoricalRehabilitationProposals,
+  HISTORICAL_REHABILITATION_ACTION,
+  HISTORICAL_REHABILITATION_PROPOSAL_ACTION
 } from "./routes/historicalRehabilitation.js";
 
 import { handleGmailGet, handleGmailAction } from "./routes/gmailIntegration.js";
 
-const WORKER_FILE_VERSION = "7.11.0";
+const WORKER_FILE_VERSION = "7.12.0";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
@@ -93,6 +96,7 @@ const SUPPORTED_ACTIONS = [
   INTELLIGENCE_REFRESH_ACTION,
   INTELLIGENCE_BACKLOG_ACTION,
   HISTORICAL_REHABILITATION_ACTION,
+  HISTORICAL_REHABILITATION_PROPOSAL_ACTION,
   ACTIONS.GET_GMAIL_STATUS,
   ACTIONS.PREVIEW_GMAIL_INBOX,
   ACTIONS.APPROVE_GMAIL_MONITORING,
@@ -119,7 +123,7 @@ export default {
         version: VERSION,
         workerFileVersion: WORKER_FILE_VERSION,
         contractVersion: API_CONTRACT_VERSION,
-        sprint: "Historical Record Rehabilitation",
+        sprint: "Historical Record Rehabilitation — Proposal Generation",
         architecture:
           "Modular production router with Agency Command, Historical Rehabilitation, Intelligence Backlog, Intelligence Refresh, Communication Intelligence, Activity Intelligence, Intelligence Processing, Prospect Intelligence, Communications analysis, Guided Investigation, and operational processing.",
         actions: SUPPORTED_ACTIONS,
@@ -234,6 +238,9 @@ export default {
 
         case HISTORICAL_REHABILITATION_ACTION:
           return await handleHistoricalRehabilitation(body, env, requestId);
+
+        case HISTORICAL_REHABILITATION_PROPOSAL_ACTION:
+          return await handleHistoricalRehabilitationProposals(body, env, requestId);
 
         case ACTIONS.ANALYZE_PROSPECT_INTELLIGENCE:
           return await handleProspectIntelligence(body, env, requestId);
