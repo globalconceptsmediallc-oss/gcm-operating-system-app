@@ -1,0 +1,56 @@
+# =========================================================
+# Global Concepts Media Operating System
+# File: .github/workflows/gcm-worker-deploy.yml
+# Version: 1.0.0
+# Status: Production Deployment Candidate
+# Purpose: Test and deploy the GCM OS Cloudflare Worker from main.
+# =========================================================
+
+name: GCM Worker Deploy
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "worker.js"
+      - "routes/**"
+      - "shared/**"
+      - "wrangler.toml"
+      - "package.json"
+      - ".github/workflows/gcm-worker-deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gcm-production-worker
+  cancel-in-progress: false
+
+jobs:
+  test-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Production Tests
+        run: npm test
+
+      - name: Deploy GCM Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy
