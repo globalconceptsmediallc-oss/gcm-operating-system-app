@@ -1,17 +1,17 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.8.0
+   Version: 7.8.1
    Status: Production Road-Test Candidate
-   Source: Production worker.js 7.7.9
-   Sprint: Today / Agency Command Center — Intelligence Processing Route
+   Source: Production worker.js 7.8.0
+   Sprint: Today / Agency Command Center — Activity Intelligence Intake
    Purpose: Preserve every verified production route and add the
-            source-neutral Intelligence processing/correlation action.
+            Activity Record → Intelligence interpretation action.
 
-   Changes in 7.8.0:
-   - Adds process-intelligence to the Worker action allowlist.
-   - Routes process-intelligence to routes/intelligenceProcessing.js.
-   - Preserves all existing production routes and behavior.
+   Changes in 7.8.1:
+   - Adds process-activity-intelligence to the Worker action allowlist.
+   - Routes it to routes/activityIntelligence.js.
+   - Preserves process-intelligence and all existing production behavior.
    ========================================================= */
 
 import {
@@ -47,10 +47,14 @@ import {
   handleIntelligenceProcessing,
   INTELLIGENCE_PROCESSING_ACTION
 } from "./routes/intelligenceProcessing.js";
+import {
+  handleActivityIntelligence,
+  ACTIVITY_INTELLIGENCE_ACTION
+} from "./routes/activityIntelligence.js";
 
 import { handleGmailGet, handleGmailAction } from "./routes/gmailIntegration.js";
 
-const WORKER_FILE_VERSION = "7.8.0";
+const WORKER_FILE_VERSION = "7.8.1";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
@@ -66,6 +70,7 @@ const SUPPORTED_ACTIONS = [
   ACTIONS.OPERATIONAL_REVIEWS,
   AGENCY_COMMAND_ACTION,
   INTELLIGENCE_PROCESSING_ACTION,
+  ACTIVITY_INTELLIGENCE_ACTION,
   ACTIONS.GET_GMAIL_STATUS,
   ACTIONS.PREVIEW_GMAIL_INBOX,
   ACTIONS.APPROVE_GMAIL_MONITORING,
@@ -92,12 +97,13 @@ export default {
         version: VERSION,
         workerFileVersion: WORKER_FILE_VERSION,
         contractVersion: API_CONTRACT_VERSION,
-        sprint: "Today / Agency Command Center — Intelligence Processing Route",
+        sprint: "Today / Agency Command Center — Activity Intelligence Intake",
         architecture:
-          "Modular production router with Agency Command, Intelligence Processing, Prospect Intelligence, Communications analysis, Guided Investigation, and operational processing.",
+          "Modular production router with Agency Command, Activity Intelligence, Intelligence Processing, Prospect Intelligence, Communications analysis, Guided Investigation, and operational processing.",
         actions: SUPPORTED_ACTIONS,
         engines: [
           "agency-command",
+          "activity-intelligence",
           "intelligence-processing",
           "prospect-intelligence",
           "communications-review-adapter",
@@ -120,6 +126,7 @@ export default {
           shared: ["config", "http", "database", "ai"],
           routes: [
             "agency-command",
+            "activity-intelligence",
             "intelligence-processing",
             "prospect-intelligence",
             "communication-analysis",
@@ -182,6 +189,9 @@ export default {
 
         case INTELLIGENCE_PROCESSING_ACTION:
           return await handleIntelligenceProcessing(body, env, requestId);
+
+        case ACTIVITY_INTELLIGENCE_ACTION:
+          return await handleActivityIntelligence(body, env, requestId);
 
         case ACTIONS.ANALYZE_PROSPECT_INTELLIGENCE:
           return await handleProspectIntelligence(body, env, requestId);
