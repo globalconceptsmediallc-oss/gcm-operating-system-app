@@ -1,12 +1,13 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/historicalRehabilitation.js
-   Version: 1.1.0
+   Version: 1.2.0
    Status: Production Road-Test Candidate
    Sprint: Historical Record Rehabilitation
    Purpose:
-   Generate controlled historical rehabilitation proposals and safely apply
-   one human-approved proposal while preserving the durable audit trail.
+   Generate controlled historical rehabilitation proposals, safely apply
+   one human-approved proposal, and bulk-apply a verified proposal class
+   with explicit human approval while preserving the durable audit trail.
 
    Production rules:
    - D1 is production truth.
@@ -23,6 +24,19 @@
    - Does not create Communications, Intelligence, Investigations,
      Work Items, Evidence, Measurements, Media, Calendar, Prospect,
      Finance, Proof, or Case Study records.
+   - Bulk apply is limited to the verified Gmail monitoring minimum class:
+       record_type = activity_record
+       field_name = time_minutes
+       rehabilitation_type = historical_estimate_pow_comparable
+       evidence_reference = gmail_monitoring_verified_minimum
+       proposed_value = 5
+       status = proposed or approved
+   - Bulk apply validates every source record before any write.
+   - If any proposal is stale or invalid, the entire bulk operation refuses
+     to write and returns the blocking records.
+   - Bulk apply requires explicit confirm:true and reviewedBy.
+   - Bulk apply updates Activity Records and rehabilitation audit records
+     in one D1 batch, then verifies the resulting production state.
    - Does not invoke AI.
    ========================================================= */
 
@@ -34,11 +48,13 @@ import {
   jsonResponse
 } from "../shared/http.js";
 
-export const HISTORICAL_REHABILITATION_VERSION = "1.1.0";
+export const HISTORICAL_REHABILITATION_VERSION = "1.2.0";
 export const HISTORICAL_REHABILITATION_PROPOSAL_ACTION =
   "generate-historical-rehabilitation-proposals";
 export const HISTORICAL_REHABILITATION_ACTION =
   "apply-historical-rehabilitation";
+export const HISTORICAL_REHABILITATION_BULK_ACTION =
+  "apply-historical-rehabilitation-bulk";
 
 
 export async function handleHistoricalRehabilitationProposals(body, env, requestId) {
@@ -185,6 +201,343 @@ export async function handleHistoricalRehabilitationProposals(body, env, request
   }
 }
 
+
+export async function handleHistoricalRehabilitationBulk(body, env, requestId) {
+  const startedAt = Date.now();
+  const db = getDatabase(env);
+
+  if (!db || typeof db.prepare !== "function") {
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action: HISTORICAL_REHABILITATION_BULK_ACTION,
+      historicalRehabilitationVersion: HISTORICAL_REHABILITATION_VERSION,
+      error: "The production D1 database binding is unavailable."
+    }, 503);
+  }
+
+  const reviewedBy = clean(
+    body?.reviewedBy ??
+    body?.reviewed_by ??
+    body?.reviewer
+  );
+
+  const confirmApply = body?.confirm === true || body?.apply === true;
+
+  if (!reviewedBy) {
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action: HISTORICAL_REHABILITATION_BULK_ACTION,
+      historicalRehabilitationVersion: HISTORICAL_REHABILITATION_VERSION,
+      error: "A human reviewedBy value is required before bulk rehabilitation can be applied."
+    }, 400);
+  }
+
+  if (!confirmApply) {
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action: HISTORICAL_REHABILITATION_BULK_ACTION,
+      historicalRehabilitationVersion: HISTORICAL_REHABILITATION_VERSION,
+      error: "Explicit confirm:true is required before production data can be changed."
+    }, 400);
+  }
+
+  if (typeof db.batch !== "function") {
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action: HISTORICAL_REHABILITATION_BULK_ACTION,
+      historicalRehabilitationVersion: HISTORICAL_REHABILITATION_VERSION,
+      error: "The production D1 binding does not support batch writes required for safe bulk rehabilitation."
+    }, 503);
+  }
+
+  try {
+    const proposalResult = await db.prepare(`
+      SELECT
+        rr.id AS rehabilitation_id,
+        rr.record_id,
+        rr.client_id,
+        rr.original_value,
+        rr.proposed_value,
+        rr.status AS rehabilitation_status,
+        ar.client_id AS activity_client_id,
+        ar.time_minutes AS current_time_minutes
+      FROM record_rehabilitations rr
+      LEFT JOIN activity_records ar
+        ON ar.id = rr.record_id
+      WHERE rr.record_type = 'activity_record'
+        AND rr.field_name = 'time_minutes'
+        AND rr.rehabilitation_type = 'historical_estimate_pow_comparable'
+        AND rr.evidence_reference = 'gmail_monitoring_verified_minimum'
+        AND rr.proposed_value = '5'
+        AND rr.status IN ('proposed', 'approved')
+      ORDER BY rr.id ASC
+    `).all();
+
+    const rows = Array.isArray(proposalResult?.results)
+      ? proposalResult.results
+      : [];
+
+    if (!rows.length) {
+      return jsonResponse({
+        ok: true,
+        requestId,
+        action: HISTORICAL_REHABILITATION_BULK_ACTION,
+        historicalRehabilitationVersion: HISTORICAL_REHABILITATION_VERSION,
+        processingStatus: "nothing_to_apply",
+        reviewedBy,
+        selected: 0,
+        applied: 0,
+        skipped: 0,
+        writes: {
+          activityRecords: 0,
+          recordRehabilitations: 0
+        },
+        executionTimeMs: Date.now() - startedAt
+      });
+    }
+
+    const blockers = [];
+
+    for (const row of rows) {
+      const rehabilitationId = positiveInt(row.rehabilitation_id);
+      const recordId = positiveInt(row.record_id);
+      const proposedMinutes = positiveInt(row.proposed_value);
+      const expectedOriginal = normalizeOriginalInteger(row.original_value);
+      const currentMinutes = nullableInteger(row.current_time_minutes);
+
+      if (!rehabilitationId || !recordId) {
+        blockers.push({
+          rehabilitationId: rehabilitationId || null,
+          recordId: recordId || null,
+          reason: "invalid_record_reference"
+        });
+        continue;
+      }
+
+      if (row.activity_client_id === null || row.activity_client_id === undefined) {
+        blockers.push({
+          rehabilitationId,
+          recordId,
+          reason: "activity_record_not_found"
+        });
+        continue;
+      }
+
+      if (Number(row.client_id) !== Number(row.activity_client_id)) {
+        blockers.push({
+          rehabilitationId,
+          recordId,
+          reason: "client_id_mismatch",
+          rehabilitationClientId: Number(row.client_id),
+          activityClientId: Number(row.activity_client_id)
+        });
+        continue;
+      }
+
+      if (proposedMinutes !== 5) {
+        blockers.push({
+          rehabilitationId,
+          recordId,
+          reason: "unexpected_proposed_value",
+          proposedValue: proposedMinutes
+        });
+        continue;
+      }
+
+      if (!originalMatchesCurrent(expectedOriginal, currentMinutes)) {
+        blockers.push({
+          rehabilitationId,
+          recordId,
+          reason: "stale_proposal",
+          expectedOriginalValue: expectedOriginal,
+          currentProductionValue: currentMinutes,
+          proposedValue: proposedMinutes
+        });
+      }
+    }
+
+    if (blockers.length) {
+      return jsonResponse({
+        ok: false,
+        requestId,
+        action: HISTORICAL_REHABILITATION_BULK_ACTION,
+        historicalRehabilitationVersion: HISTORICAL_REHABILITATION_VERSION,
+        processingStatus: "blocked_before_write",
+        error: "One or more proposals failed pre-write validation. No production records were changed.",
+        selected: rows.length,
+        blockers,
+        writes: {
+          activityRecords: 0,
+          recordRehabilitations: 0
+        },
+        executionTimeMs: Date.now() - startedAt
+      }, 409);
+    }
+
+    const reviewedAt = new Date().toISOString();
+    const statements = [];
+
+    for (const row of rows) {
+      const rehabilitationId = Number(row.rehabilitation_id);
+      const recordId = Number(row.record_id);
+
+      statements.push(
+        db.prepare(`
+          UPDATE activity_records
+          SET
+            time_minutes = 5,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+            AND (time_minutes IS NULL OR time_minutes = 0)
+        `).bind(recordId)
+      );
+
+      statements.push(
+        db.prepare(`
+          UPDATE record_rehabilitations
+          SET
+            status = 'applied',
+            reviewed_by = ?,
+            reviewed_at = ?,
+            applied_at = ?,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+            AND status IN ('proposed', 'approved')
+        `).bind(
+          reviewedBy,
+          reviewedAt,
+          reviewedAt,
+          rehabilitationId
+        )
+      );
+    }
+
+    const batchResult = await db.batch(statements);
+
+    let activityWrites = 0;
+    let rehabilitationWrites = 0;
+
+    for (let i = 0; i < batchResult.length; i += 2) {
+      activityWrites += batchMeta(batchResult[i]).changes;
+      rehabilitationWrites += batchMeta(batchResult[i + 1]).changes;
+    }
+
+    const verification = await db.prepare(`
+      SELECT
+        SUM(CASE
+          WHEN rr.status = 'applied'
+           AND rr.reviewed_by = ?
+           AND rr.applied_at IS NOT NULL
+           AND ar.time_minutes = 5
+          THEN 1 ELSE 0
+        END) AS verified_applied,
+        SUM(CASE
+          WHEN rr.status IN ('proposed', 'approved')
+          THEN 1 ELSE 0
+        END) AS remaining_proposals,
+        SUM(CASE
+          WHEN ar.time_minutes IS NULL OR ar.time_minutes = 0
+          THEN 1 ELSE 0
+        END) AS remaining_zero_time
+      FROM record_rehabilitations rr
+      JOIN activity_records ar
+        ON ar.id = rr.record_id
+      WHERE rr.record_type = 'activity_record'
+        AND rr.field_name = 'time_minutes'
+        AND rr.rehabilitation_type = 'historical_estimate_pow_comparable'
+        AND rr.evidence_reference = 'gmail_monitoring_verified_minimum'
+        AND rr.proposed_value = '5'
+    `).bind(reviewedBy).first();
+
+    const verifiedApplied = Number(verification?.verified_applied || 0);
+    const remainingProposals = Number(verification?.remaining_proposals || 0);
+    const remainingZeroTime = Number(verification?.remaining_zero_time || 0);
+
+    const verified =
+      activityWrites === rows.length &&
+      rehabilitationWrites === rows.length &&
+      verifiedApplied === rows.length &&
+      remainingProposals === 0 &&
+      remainingZeroTime === 0;
+
+    if (!verified) {
+      return jsonResponse({
+        ok: false,
+        requestId,
+        action: HISTORICAL_REHABILITATION_BULK_ACTION,
+        historicalRehabilitationVersion: HISTORICAL_REHABILITATION_VERSION,
+        processingStatus: "verification_failed",
+        error: "Bulk writes completed but post-write verification did not prove the expected production state.",
+        selected: rows.length,
+        verification: {
+          verifiedApplied,
+          remainingProposals,
+          remainingZeroTime
+        },
+        writes: {
+          activityRecords: activityWrites,
+          recordRehabilitations: rehabilitationWrites
+        },
+        executionTimeMs: Date.now() - startedAt
+      }, 500);
+    }
+
+    return jsonResponse({
+      ok: true,
+      requestId,
+      action: HISTORICAL_REHABILITATION_BULK_ACTION,
+      historicalRehabilitationVersion: HISTORICAL_REHABILITATION_VERSION,
+      processingStatus: "bulk_applied_and_verified",
+      recordPolicy: {
+        humanApprovalRequired: true,
+        reviewedBy,
+        sourceRecordPreserved: true,
+        evidenceTrailPreserved: true,
+        proposalClassLocked: true
+      },
+      selected: rows.length,
+      applied: rows.length,
+      skipped: 0,
+      verification: {
+        verifiedApplied,
+        remainingProposals,
+        remainingZeroTime
+      },
+      writes: {
+        activityRecords: activityWrites,
+        recordRehabilitations: rehabilitationWrites,
+        communications: 0,
+        intelligence: 0,
+        investigations: 0,
+        workItems: 0,
+        evidence: 0,
+        measurements: 0
+      },
+      executionTimeMs: Date.now() - startedAt
+    });
+  } catch (error) {
+    logWorkerError({
+      requestId,
+      route: HISTORICAL_REHABILITATION_BULK_ACTION,
+      stage: "historical_rehabilitation_bulk",
+      error
+    });
+
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action: HISTORICAL_REHABILITATION_BULK_ACTION,
+      historicalRehabilitationVersion: HISTORICAL_REHABILITATION_VERSION,
+      error: safeErrorMessage(error),
+      executionTimeMs: Date.now() - startedAt
+    }, 500);
+  }
+}
+
 export async function handleHistoricalRehabilitation(body, env, requestId) {
   const startedAt = Date.now();
   const db = getDatabase(env);
@@ -298,7 +651,7 @@ export async function handleHistoricalRehabilitation(body, env, requestId) {
         historicalRehabilitationVersion: HISTORICAL_REHABILITATION_VERSION,
         rehabilitationId,
         error:
-          "Version 1.1.0 only supports activity_record.time_minutes rehabilitation."
+          "Version 1.2.0 only supports activity_record.time_minutes rehabilitation."
       }, 400);
     }
 
