@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationIntelligence.js
-   Version: 1.0.1
+   Version: 1.0.2
    Status: Production Road-Test Candidate
    Source: Today / Agency Command Center Rebuild
    Sprint: Communication → Durable Intelligence
@@ -21,9 +21,11 @@
    - Never creates Investigation, Work Item, Evidence, Measurement, Activity,
      Media, Calendar, Prospect, Finance, Proof, or Case Study records.
 
-   Changes in 1.0.1:
-   - Deterministic fallback now reads production communications.ai_summary.
-   - Deterministic fallback now reads production communications.raw_content.
+   Changes in 1.0.2:
+   - Preserves v1.0.1 production evidence extraction from ai_summary/raw_content.
+   - Strengthens generic directional trend detection for compact evidence such as
+     errors/warnings/notices up/down and health/score movement.
+   - Generates evidence-based deterministic business meaning when AI is unavailable.
    - Preserves the verified correlation path and all no-duplicate-write behavior.
    ========================================================= */
 
@@ -33,7 +35,7 @@ import { clean, safeErrorMessage, logWorkerError, jsonResponse } from "../shared
 import { runAiJsonWithRetry } from "../shared/ai.js";
 import { handleIntelligenceProcessing } from "./intelligenceProcessing.js";
 
-export const COMMUNICATION_INTELLIGENCE_VERSION = "1.0.1";
+export const COMMUNICATION_INTELLIGENCE_VERSION = "1.0.2";
 export const COMMUNICATION_INTELLIGENCE_ACTION = "process-communication-intelligence";
 
 export async function handleCommunicationIntelligence(body, env, requestId) {
@@ -246,7 +248,12 @@ function buildDeterministicInterpretation(communication) {
     subject:subject || category || `Communication ${communication.id}`,
     source:source || "Communication",
     whatHappened:summary || subject || `Communication #${communication.id} was recorded.`,
-    businessMeaning:businessMeaning || "This Communication is durable agency evidence and requires correlation with existing client history before new work is justified.",
+    businessMeaning:businessMeaning || buildEvidenceBusinessMeaning({
+      category,
+      subject,
+      summary,
+      trend:inferTrend(text)
+    }),
     trend:inferTrend(text),
     importance:normalizeImportance(firstClean(communication.priority, communication.operational_priority)),
     handlingState:"unhandled",
@@ -281,10 +288,50 @@ function communicationObservedAt(row) { return firstClean(row.communication_date
 
 function inferTrend(value) {
   const text=clean(value).toLowerCase();
-  if (/\b(declin|drop|fall|fell|lost|worse|down|decreas|deteriorat|error[s]?\s+(?:increased|rose)|warning[s]?\s+(?:increased|rose))/.test(text)) return "deteriorating";
-  if (/\b(improv|gain|increase|grew|growth|rose|higher|top 10|top ten|win|resolved|fixed|recovered)/.test(text)) return "improving";
-  if (/\b(stable|unchanged|steady|flat)/.test(text)) return "stable";
+
+  const deteriorationSignals = [
+    /\b(declin|drop|fall|fell|lost|worse|decreas|deteriorat)/,
+    /\b(errors?|warnings?|issues?|failures?|defects?)\s*:\s*up\b/,
+    /\b(errors?|warnings?|issues?|failures?|defects?)\s+(?:increased|rose|grew|higher)\b/,
+    /\b(health|score|visibility|traffic|ranking|rankings)\s*:\s*down\b/,
+    /\b(health|score|visibility|traffic|ranking|rankings)\s+(?:decreased|fell|dropped|lower)\b/
+  ];
+
+  const improvementSignals = [
+    /\b(improv|gain|grew|growth|higher|top 10|top ten|win|resolved|fixed|recovered)/,
+    /\b(errors?|warnings?|issues?|failures?|defects?)\s*:\s*down\b/,
+    /\b(errors?|warnings?|issues?|failures?|defects?)\s+(?:decreased|fell|dropped|lower)\b/,
+    /\b(health|score|visibility|traffic|ranking|rankings)\s*:\s*up\b/,
+    /\b(health|score|visibility|traffic|ranking|rankings)\s+(?:increased|rose|grew|higher)\b/
+  ];
+
+  if (deteriorationSignals.some((pattern) => pattern.test(text))) return "deteriorating";
+  if (improvementSignals.some((pattern) => pattern.test(text))) return "improving";
+  if (/\b(stable|unchanged|steady|flat)\b/.test(text)) return "stable";
   return "unknown";
+}
+
+function buildEvidenceBusinessMeaning({ category, subject, summary, trend }) {
+  const evidence = clean(summary);
+  const topic = clean(category || subject || "client condition");
+
+  if (!evidence) {
+    return "This Communication is durable agency evidence and requires correlation with existing client history before new work is justified.";
+  }
+
+  if (trend === "deteriorating") {
+    return `The saved ${topic} evidence shows deterioration that should be evaluated against existing client history and active handling before additional work is created.`;
+  }
+
+  if (trend === "improving") {
+    return `The saved ${topic} evidence shows improvement that should be correlated with prior work or monitoring before the result is treated as verified progress.`;
+  }
+
+  if (trend === "stable") {
+    return `The saved ${topic} evidence indicates a stable condition and should remain connected to existing monitoring or proof history.`;
+  }
+
+  return `The saved ${topic} evidence contains measurable client information that should be correlated with existing history before new work is justified.`;
 }
 
 function normalizeTrend(value) { const x=key(value); return ["improving","deteriorating","stable","unknown"].includes(x)?x:"unknown"; }
