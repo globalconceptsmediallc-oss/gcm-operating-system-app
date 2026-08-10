@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/intelligenceProcessing.js
-   Version: 1.0.0
+   Version: 1.0.1
    Status: Production Candidate
    Source: Today / Agency Command Center Rebuild
    Sprint: Common Intelligence Correlation Foundation
@@ -20,7 +20,7 @@
 import { getDatabase } from "../shared/database.js";
 import { clean, safeErrorMessage, logWorkerError, jsonResponse } from "../shared/http.js";
 
-export const INTELLIGENCE_PROCESSING_VERSION = "1.0.0";
+export const INTELLIGENCE_PROCESSING_VERSION = "1.0.1";
 export const INTELLIGENCE_PROCESSING_ACTION = "process-intelligence";
 
 const CLOSED = "'complete','completed','closed','resolved','cancelled','canceled','archived','ignored','no_action','published'";
@@ -128,7 +128,15 @@ async function findHandling(db, clientId, v) {
     if (i) return { kind:"investigation", record:i };
   }
 
-  const rows=(await db.prepare(`SELECT 'work_item' record_type,id,title,description,status,priority,communication_id,investigation_id,expected_impact context_text,created_at FROM work_items WHERE client_id=? AND LOWER(REPLACE(REPLACE(COALESCE(status,'open'),'-','_'),' ','_')) NOT IN (${CLOSED}) UNION ALL SELECT 'investigation',id,title,description,status,priority,communication_id,id,recommendation,created_at FROM investigations WHERE client_id=? AND LOWER(REPLACE(REPLACE(COALESCE(status,'open'),'-','_'),' ','_')) NOT IN (${CLOSED}) ORDER BY datetime(created_at) DESC LIMIT 30`).bind(clientId,clientId).all())?.results || [];
+  const rows=(await db.prepare(`SELECT * FROM (
+    SELECT 'work_item' record_type,id,title,description,status,priority,communication_id,investigation_id,expected_impact context_text,created_at
+    FROM work_items
+    WHERE client_id=? AND LOWER(REPLACE(REPLACE(COALESCE(status,'open'),'-','_'),' ','_')) NOT IN (${CLOSED})
+    UNION ALL
+    SELECT 'investigation' record_type,id,title,description,status,priority,communication_id,id AS investigation_id,recommendation AS context_text,created_at
+    FROM investigations
+    WHERE client_id=? AND LOWER(REPLACE(REPLACE(COALESCE(status,'open'),'-','_'),' ','_')) NOT IN (${CLOSED})
+  ) ORDER BY datetime(created_at) DESC LIMIT 30`).bind(clientId,clientId).all())?.results || [];
   const target=tokens(v.subject); let best=null, score=0;
   for (const r of rows) { const s=overlap(target,tokens([r.title,r.description,r.context_text].filter(Boolean).join(" "))); if (s>score) {score=s;best=r;} }
   return best && score>=0.5 ? { kind:best.record_type, record:{...best,id:Number(best.id)}, matchConfidence:score } : null;
