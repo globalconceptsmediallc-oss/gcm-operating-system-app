@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/agencyCommand.js
-   Version: 1.1.0
+   Version: 1.1.1
    Status: Production Road-Test Candidate
    Source: Agency Command Sprint
    Sprint: Intelligent Agency Entry Point — Stage 2
@@ -11,12 +11,15 @@
    from D1, merge any explicitly supplied context, and return a concise
    next-action brief.
 
-   Changes in 1.1.0:
-   - Reads durable Intelligence records directly from D1.
-   - Separates unresolved, investigating, work-underway, monitoring,
-     and historically handled intelligence.
-   - Prevents already-handled Intelligence from being promoted as new work.
-   - Preserves existing intent routing and supplied-context behavior.
+   Changes in 1.1.1:
+   - Preserves verified v1.1.0 direct D1 Intelligence loading.
+   - Makes authoritative handling_state outrank historical record links.
+   - Keeps monitoring Intelligence in Monitoring even when linked to a
+     closed historical Investigation.
+   - Treats active Investigation and Work states as active agency candidates
+     without recreating intake or duplicate work.
+   - Chooses a concrete deterministic next action from active work,
+     active investigation, or unresolved Intelligence.
    - Remains read-only; creates no records.
 
    SAFETY / SCOPE
@@ -48,7 +51,7 @@ import {
   buildOperationalError
 } from "../shared/ai.js";
 
-export const AGENCY_COMMAND_VERSION = "1.1.0";
+export const AGENCY_COMMAND_VERSION = "1.1.1";
 export const AGENCY_COMMAND_ACTION = "agency-command";
 
 const INTENTS = Object.freeze({
@@ -617,22 +620,42 @@ function buildDeterministicAgencyBrief({
     const workItemId = item.workItemId ?? item.work_item_id ?? null;
     const investigationId = item.investigationId ?? item.investigation_id ?? null;
 
-    if (handlingState === "work_underway" || workItemId) {
-      alreadyHandled.push(
-        `${title} — already in active Work${workItemId ? ` Item #${workItemId}` : ""}.`
-      );
-      continue;
-    }
-
-    if (handlingState === "investigating" || investigationId || alreadyBeingHandled) {
-      alreadyHandled.push(
-        `${title} — already under Investigation${investigationId ? ` #${investigationId}` : ""}.`
-      );
-      continue;
-    }
-
+    // Authoritative handling state outranks the existence of historical links.
     if (handlingState === "monitoring" || handlingState === "historical" || handlingState === "handled") {
       monitoring.push(title);
+      continue;
+    }
+
+    if (handlingState === "work_underway") {
+      alreadyHandled.push(
+        `${title} — intake is already handled by active Work${workItemId ? ` Item #${workItemId}` : ""}.`
+      );
+      needsAttention.push({
+        title: workItemId ? `Continue/verify Work Item #${workItemId}` : title,
+        reason: businessMeaning || "Justified work is already underway; evaluate continuation or verification rather than creating duplicate work.",
+        workspace: "work"
+      });
+      continue;
+    }
+
+    if (handlingState === "investigating") {
+      alreadyHandled.push(
+        `${title} — intake is already handled by Investigation${investigationId ? ` #${investigationId}` : ""}.`
+      );
+      needsAttention.push({
+        title: investigationId ? `Advance Investigation #${investigationId}` : title,
+        reason: businessMeaning || "The condition is already under active investigation; advance the bounded question rather than recreating intake.",
+        workspace: "investigations"
+      });
+      continue;
+    }
+
+    // Links alone may be historical. Only use them as a fallback when the
+    // authoritative handling state is absent/unrecognized.
+    if (!handlingState && (workItemId || investigationId || alreadyBeingHandled)) {
+      alreadyHandled.push(
+        `${title} — linked handling exists and should be verified before new work is created.`
+      );
       continue;
     }
 
@@ -707,8 +730,24 @@ function buildDeterministicAgencyBrief({
   }
 
   if (needsAttention.length) {
+    const workspaceOrder = {
+      work: 0,
+      investigations: 1,
+      today: 2,
+      communications: 3,
+      media: 4
+    };
+
+    needsAttention.sort((a, b) => {
+      const aRank = workspaceOrder[a.workspace] ?? 9;
+      const bRank = workspaceOrder[b.workspace] ?? 9;
+      return aRank - bRank;
+    });
+
     recommendedSequence.push(
-      `Start with: ${needsAttention[0].title}`
+      needsAttention[0].workspace === "work"
+        ? needsAttention[0].title
+        : `Start with: ${needsAttention[0].title}`
     );
   }
 
@@ -731,7 +770,7 @@ function buildDeterministicAgencyBrief({
   }
 
   currentState.push(
-    `${contextSummary.totalContextItems} supplied context items were reviewed.`
+    `${contextSummary.totalContextItems} agency context items were reviewed.`
   );
 
   return {
