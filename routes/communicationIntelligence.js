@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationIntelligence.js
-   Version: 1.0.4
+   Version: 1.1.0
    Status: Production Road-Test Candidate
    Source: Today / Agency Command Center Rebuild
    Sprint: Communication → Durable Intelligence
@@ -21,12 +21,16 @@
    - Never creates Investigation, Work Item, Evidence, Measurement, Activity,
      Media, Calendar, Prospect, Finance, Proof, or Case Study records.
 
-   Changes in 1.0.4:
-   - Preserves all verified v1.0.3 evidence extraction and correlation behavior.
-   - Recognizes negated change-detection language such as "haven't detected any
-     significant changes" and "did not detect any material change" as stable.
-   - Keeps explicit no-change evidence ahead of promotional or generic wording.
-   - Preserves the verified correlation path and all no-duplicate-write behavior.
+   Changes in 1.1.0:
+   - Preserves verified v1.0.4 D1 loading, context, correlation, persistence,
+     no-duplicate-write behavior, and explicit no-change handling.
+   - Adds communication-purpose interpretation before condition/trend inference.
+   - Distinguishes proposals/recommendations/plans from evidence that a client
+     condition actually improved, deteriorated, or remained stable.
+   - Proposal/recommendation communications remain durable Intelligence but are
+     treated as communication context rather than measured client-condition change.
+   - Prevents generic future-looking proposal language from creating false
+     improving/deteriorating trend signals or unsupported proof claims.
    ========================================================= */
 
 import { COMMUNICATION_REASONING_MODEL } from "../shared/config.js";
@@ -35,7 +39,7 @@ import { clean, safeErrorMessage, logWorkerError, jsonResponse } from "../shared
 import { runAiJsonWithRetry } from "../shared/ai.js";
 import { handleIntelligenceProcessing } from "./intelligenceProcessing.js";
 
-export const COMMUNICATION_INTELLIGENCE_VERSION = "1.0.4";
+export const COMMUNICATION_INTELLIGENCE_VERSION = "1.1.0";
 export const COMMUNICATION_INTELLIGENCE_ACTION = "process-communication-intelligence";
 
 export async function handleCommunicationIntelligence(body, env, requestId) {
@@ -169,6 +173,10 @@ async function interpretCommunication({ communication, context, fallback, env, r
     "Do not invent metrics, causes, deadlines, work, investigations, or outcomes.",
     "The downstream correlation engine decides novelty and record links.",
     "If an open Investigation or Work Item already addresses the condition, do not recommend duplicate work.",
+    "First determine what the Communication is doing: reporting evidence, proposing/recommending future action, requesting/approving action, acknowledging, or providing status/context.",
+    "Do not treat a proposal, recommendation, plan, budget, forecast, expected result, or future-looking statement as evidence that a client condition changed.",
+    "Trend describes an evidenced client condition, not the direction of a proposed strategy.",
+    "If the Communication does not contain evidence of actual condition change, use trend unknown unless explicit no-change monitoring evidence supports stable.",
     "If the Communication is monitoring evidence, say so.",
     "If deterioration is explicit, trend may be deteriorating.",
     "If improvement is explicit, trend may be improving.",
@@ -242,6 +250,8 @@ function buildDeterministicInterpretation(communication) {
     communication.recommendation
   );
   const text = [category, subject, summary, businessMeaning, recommendedAction].filter(Boolean).join(" ");
+  const communicationPurpose = inferCommunicationPurpose(text);
+  const trend = inferCommunicationTrend(text, communicationPurpose);
 
   return {
     intelligenceType:key(category || "communication intelligence") || "communication_intelligence",
@@ -252,14 +262,23 @@ function buildDeterministicInterpretation(communication) {
       category,
       subject,
       summary,
-      trend:inferTrend(text)
+      trend,
+      communicationPurpose
     }),
-    trend:inferTrend(text),
+    trend,
     importance:normalizeImportance(firstClean(communication.priority, communication.operational_priority)),
-    handlingState:"unhandled",
-    recommendedAction:recommendedAction || "Correlate this Communication with existing Investigation and Work history before deciding whether new work is justified.",
+    handlingState:communicationPurpose === "proposal_or_recommendation" ? "monitoring" : "unhandled",
+    recommendedAction:recommendedAction || (
+      communicationPurpose === "proposal_or_recommendation"
+        ? "Preserve this proposal or recommendation as durable communication context and wait for evidence, approval, response, or a changed condition before treating it as operational work."
+        : "Correlate this Communication with existing Investigation and Work history before deciding whether new work is justified."
+    ),
     whyNow:businessMeaning || summary || "This Communication is now being evaluated against durable client history.",
-    proofRequirement:firstClean(communication.proof_requirement, communication.proof_required) || "Verify the condition against later evidence or completed work and preserve the result against the same Intelligence record."
+    proofRequirement:firstClean(communication.proof_requirement, communication.proof_required) || (
+      communicationPurpose === "proposal_or_recommendation"
+        ? "Preserve any later approval, response, execution evidence, or measured result against this same Intelligence history."
+        : "Verify the condition against later evidence or completed work and preserve the result against the same Intelligence record."
+    )
   };
 }
 
@@ -285,6 +304,40 @@ function communicationCategory(row) { return firstClean(row.category,row.communi
 function communicationSource(row) { return firstClean(row.source,row.platform,row.sender_name,row.from_name,row.from_email); }
 function communicationBody(row) { return firstClean(row.raw_content,row.ai_summary,row.body,row.content,row.message,row.email_text,row.raw_text,row.text); }
 function communicationObservedAt(row) { return firstClean(row.communication_date,row.received_at,row.date,row.occurred_at,row.created_at); }
+
+function inferCommunicationPurpose(value) {
+  const text=clean(value).toLowerCase();
+
+  const proposalSignals = [
+    /\b(i|we)\s+(?:am\s+)?propos(?:e|ing)\b/,
+    /\bproposal\b/,
+    /\brecommend(?:ation|ed|ing)?\b/,
+    /\bproposed\s+(?:plan|budget|campaign|schedule|strategy|spend|allocation)\b/,
+    /\b(?:plan|budget|campaign|schedule|strategy|spend|allocation)\s+(?:i|we)\s+(?:recommend|propose)\b/,
+    /\bwould\s+(?:recommend|propose|suggest)\b/,
+    /\bsuggest(?:ed|ing)?\s+(?:plan|budget|campaign|schedule|strategy|spend|allocation|approach)\b/
+  ];
+
+  if (proposalSignals.some((pattern) => pattern.test(text))) return "proposal_or_recommendation";
+  return "condition_or_context";
+}
+
+function inferCommunicationTrend(value, communicationPurpose) {
+  if (communicationPurpose === "proposal_or_recommendation") {
+    const text=clean(value).toLowerCase();
+    const stableSignals = [
+      /\bno\s+(?:significant|material|meaningful)\s+changes?\b/,
+      /\bno\s+(?:significant|material|meaningful)\s+(?:change|movement)\b/,
+      /\bno\s+change\b/,
+      /\b(?:have|has|had|did)\s+not\s+(?:detected|found|seen|observed)\s+(?:any\s+)?(?:significant|material|meaningful)?\s*changes?\b/,
+      /\b(?:haven't|hasn't|hadn't|didn't)\s+(?:detected|found|seen|observed)\s+(?:any\s+)?(?:significant|material|meaningful)?\s*changes?\b/,
+      /\b(stable|unchanged|steady|flat)\b/
+    ];
+    return stableSignals.some((pattern) => pattern.test(text)) ? "stable" : "unknown";
+  }
+
+  return inferTrend(value);
+}
 
 function inferTrend(value) {
   const text=clean(value).toLowerCase();
@@ -322,12 +375,16 @@ function inferTrend(value) {
   return "unknown";
 }
 
-function buildEvidenceBusinessMeaning({ category, subject, summary, trend }) {
+function buildEvidenceBusinessMeaning({ category, subject, summary, trend, communicationPurpose }) {
   const evidence = clean(summary);
   const topic = clean(category || subject || "client condition");
 
   if (!evidence) {
     return "This Communication is durable agency evidence and requires correlation with existing client history before new work is justified.";
+  }
+
+  if (communicationPurpose === "proposal_or_recommendation") {
+    return `The saved ${topic} is a proposal or recommendation about future action. It is durable agency context, but it does not by itself prove that the client condition improved, deteriorated, or requires new work.`;
   }
 
   if (trend === "deteriorating") {
