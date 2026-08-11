@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/agencyCommand.js
-   Version: 1.2.0
+   Version: 1.3.0
    Status: Production Road-Test Candidate
    Source: Agency Command Sprint
    Sprint: Intelligent Agency Entry Point — Stage 2
@@ -11,14 +11,16 @@
    from D1, merge any explicitly supplied context, and return a concise
    next-action brief.
 
-   Changes in 1.2.0:
-   - Preserves verified v1.1.1 D1 loading and handling-state behavior.
-   - Reads linked Investigation and Work Item priority/status metadata.
-   - Ranks active agency candidates by evidence-supported priority, trend,
-     importance, and handling state instead of fixed workspace ordering.
-   - Returns the ranking reason with each candidate and selects the highest
-     supported next action without creating duplicate intake or work.
-   - Remains read-only; creates no records.
+   Changes in 1.3.0:
+   - Preserves verified v1.2.0 D1 loading, intent routing, AI fallback,
+     linked-record metadata, and read-only behavior.
+   - Removes automatic urgency bonuses for intelligence that is already
+     under active Investigation or active Work.
+   - Active Investigation and Work remain eligible operating context, but
+     workflow existence alone no longer increases business priority.
+   - Unhandled / needs-decision intelligence retains its unresolved-decision
+     weighting.
+   - Response contract and read-only behavior are unchanged; creates no records.
 
    SAFETY / SCOPE
    - Read-only.
@@ -49,7 +51,7 @@ import {
   buildOperationalError
 } from "../shared/ai.js";
 
-export const AGENCY_COMMAND_VERSION = "1.2.0";
+export const AGENCY_COMMAND_VERSION = "1.3.0";
 export const AGENCY_COMMAND_ACTION = "agency-command";
 
 const INTENTS = Object.freeze({
@@ -847,11 +849,9 @@ function scoreAgencyCandidate(item, workspace) {
   }
 
   if (handlingState === "investigating") {
-    score += 12;
-    reasons.push("active investigation");
+    reasons.push("already under active investigation");
   } else if (handlingState === "work_underway") {
-    score += 10;
-    reasons.push("active work");
+    reasons.push("already under active work");
   } else if (handlingState === "unhandled" || handlingState === "needs_decision") {
     score += 15;
     reasons.push("unresolved decision");
