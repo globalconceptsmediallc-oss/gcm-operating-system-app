@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/agencyCommand.js
-   Version: 1.3.0
+   Version: 1.4.0
    Status: Production Road-Test Candidate
    Source: Agency Command Sprint
    Sprint: Intelligent Agency Entry Point — Stage 2
@@ -11,16 +11,15 @@
    from D1, merge any explicitly supplied context, and return a concise
    next-action brief.
 
-   Changes in 1.3.0:
-   - Preserves verified v1.2.0 D1 loading, intent routing, AI fallback,
-     linked-record metadata, and read-only behavior.
-   - Removes automatic urgency bonuses for intelligence that is already
-     under active Investigation or active Work.
-   - Active Investigation and Work remain eligible operating context, but
-     workflow existence alone no longer increases business priority.
-   - Unhandled / needs-decision intelligence retains its unresolved-decision
-     weighting.
-   - Response contract and read-only behavior are unchanged; creates no records.
+   Changes in 1.4.0:
+   - Preserves verified v1.3.0 D1 loading, intent routing, AI fallback,
+     linked-record metadata, scoring, and read-only behavior.
+   - Separates durable agency context from decisions requiring Andy's judgment now.
+   - Intelligence already under active Investigation or active Work remains
+     preserved as handled context and is not inserted into Needs Your Attention.
+   - Monitoring / historical / handled intelligence remains preserved context.
+   - Only unresolved intelligence without active handling enters the ranked queue.
+   - Response contract remains unchanged; creates no records.
 
    SAFETY / SCOPE
    - Read-only.
@@ -51,7 +50,7 @@ import {
   buildOperationalError
 } from "../shared/ai.js";
 
-export const AGENCY_COMMAND_VERSION = "1.3.0";
+export const AGENCY_COMMAND_VERSION = "1.4.0";
 export const AGENCY_COMMAND_ACTION = "agency-command";
 
 const INTENTS = Object.freeze({
@@ -630,12 +629,6 @@ function buildDeterministicAgencyBrief({
       alreadyHandled.push(
         `${title} — intake is already handled by active Work${workItemId ? ` Item #${workItemId}` : ""}.`
       );
-      needsAttention.push(buildRankedAttentionCandidate({
-        title: workItemId ? `Continue/verify Work Item #${workItemId}` : title,
-        reason: businessMeaning || "Justified work is already underway; evaluate continuation or verification rather than creating duplicate work.",
-        workspace: "work",
-        item
-      }));
       continue;
     }
 
@@ -643,12 +636,6 @@ function buildDeterministicAgencyBrief({
       alreadyHandled.push(
         `${title} — intake is already handled by Investigation${investigationId ? ` #${investigationId}` : ""}.`
       );
-      needsAttention.push(buildRankedAttentionCandidate({
-        title: investigationId ? `Advance Investigation #${investigationId}` : title,
-        reason: businessMeaning || "The condition is already under active investigation; advance the bounded question rather than recreating intake.",
-        workspace: "investigations",
-        item
-      }));
       continue;
     }
 
