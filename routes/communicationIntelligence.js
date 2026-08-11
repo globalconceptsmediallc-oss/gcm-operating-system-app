@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationIntelligence.js
-   Version: 1.1.0
+   Version: 1.1.1
    Status: Production Road-Test Candidate
    Source: Today / Agency Command Center Rebuild
    Sprint: Communication → Durable Intelligence
@@ -21,16 +21,17 @@
    - Never creates Investigation, Work Item, Evidence, Measurement, Activity,
      Media, Calendar, Prospect, Finance, Proof, or Case Study records.
 
-   Changes in 1.1.0:
-   - Preserves verified v1.0.4 D1 loading, context, correlation, persistence,
+   Changes in 1.1.1:
+   - Preserves verified v1.1.0 D1 loading, context, correlation, persistence,
      no-duplicate-write behavior, and explicit no-change handling.
-   - Adds communication-purpose interpretation before condition/trend inference.
-   - Distinguishes proposals/recommendations/plans from evidence that a client
-     condition actually improved, deteriorated, or remained stable.
-   - Proposal/recommendation communications remain durable Intelligence but are
-     treated as communication context rather than measured client-condition change.
-   - Prevents generic future-looking proposal language from creating false
-     improving/deteriorating trend signals or unsupported proof claims.
+   - Makes communication-purpose classification authoritative for proposals and
+     recommendations before AI interpretation is accepted.
+   - Uses the full saved Communication body when classifying purpose so proposal
+     language in raw_content cannot be hidden by a shorter saved summary.
+   - Prevents AI output from overriding proposal/recommendation semantics:
+     trend remains unknown (or stable only with explicit no-change evidence),
+     handling remains monitoring, and proposal context cannot become false
+     verified improvement or a new unresolved operational decision.
    ========================================================= */
 
 import { COMMUNICATION_REASONING_MODEL } from "../shared/config.js";
@@ -39,7 +40,7 @@ import { clean, safeErrorMessage, logWorkerError, jsonResponse } from "../shared
 import { runAiJsonWithRetry } from "../shared/ai.js";
 import { handleIntelligenceProcessing } from "./intelligenceProcessing.js";
 
-export const COMMUNICATION_INTELLIGENCE_VERSION = "1.1.0";
+export const COMMUNICATION_INTELLIGENCE_VERSION = "1.1.1";
 export const COMMUNICATION_INTELLIGENCE_ACTION = "process-communication-intelligence";
 
 export async function handleCommunicationIntelligence(body, env, requestId) {
@@ -72,8 +73,13 @@ export async function handleCommunicationIntelligence(body, env, requestId) {
 
     const context = await loadContext(db, communication.client_id);
     const fallback = buildDeterministicInterpretation(communication);
+    const communicationPurpose = inferCommunicationPurpose(communicationPurposeText(communication));
     const aiResult = await interpretCommunication({ communication, context, fallback, env, requestId });
-    const interpretation = aiResult.ok ? normalizeInterpretation(aiResult.data, fallback) : fallback;
+    const interpretation = enforceCommunicationPurpose(
+      aiResult.ok ? normalizeInterpretation(aiResult.data, fallback) : fallback,
+      fallback,
+      communicationPurpose
+    );
 
     const intelligenceResponse = await handleIntelligenceProcessing({
       action:"process-intelligence",
@@ -250,7 +256,7 @@ function buildDeterministicInterpretation(communication) {
     communication.recommendation
   );
   const text = [category, subject, summary, businessMeaning, recommendedAction].filter(Boolean).join(" ");
-  const communicationPurpose = inferCommunicationPurpose(text);
+  const communicationPurpose = inferCommunicationPurpose(communicationPurposeText(communication));
   const trend = inferCommunicationTrend(text, communicationPurpose);
 
   return {
@@ -304,6 +310,49 @@ function communicationCategory(row) { return firstClean(row.category,row.communi
 function communicationSource(row) { return firstClean(row.source,row.platform,row.sender_name,row.from_name,row.from_email); }
 function communicationBody(row) { return firstClean(row.raw_content,row.ai_summary,row.body,row.content,row.message,row.email_text,row.raw_text,row.text); }
 function communicationObservedAt(row) { return firstClean(row.communication_date,row.received_at,row.date,row.occurred_at,row.created_at); }
+
+function communicationPurposeText(row) {
+  return [
+    communicationCategory(row),
+    communicationSubject(row),
+    row?.raw_content,
+    row?.body,
+    row?.content,
+    row?.message,
+    row?.email_text,
+    row?.raw_text,
+    row?.text,
+    row?.operational_summary,
+    row?.ai_summary,
+    row?.summary,
+    row?.analysis_summary,
+    row?.business_impact,
+    row?.business_meaning,
+    row?.expected_impact,
+    row?.reasoning,
+    row?.recommended_action,
+    row?.next_action,
+    row?.recommendation
+  ].map(clean).filter(Boolean).join(" ");
+}
+
+function enforceCommunicationPurpose(interpretation, fallback, communicationPurpose) {
+  if (communicationPurpose !== "proposal_or_recommendation") return interpretation;
+
+  return {
+    ...interpretation,
+    intelligenceType:fallback.intelligenceType,
+    subject:fallback.subject,
+    source:fallback.source,
+    whatHappened:fallback.whatHappened,
+    businessMeaning:fallback.businessMeaning,
+    trend:fallback.trend,
+    handlingState:"monitoring",
+    recommendedAction:fallback.recommendedAction,
+    whyNow:fallback.whyNow,
+    proofRequirement:fallback.proofRequirement
+  };
+}
 
 function inferCommunicationPurpose(value) {
   const text=clean(value).toLowerCase();
