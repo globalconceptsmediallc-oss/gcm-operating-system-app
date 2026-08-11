@@ -1,9 +1,16 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: communications.html
-   Version: 2.8.3
+   Version: 2.9.0
    Source: Production Frontend
    Purpose: Client Communications intake and operational routing.
+
+   Changes in 2.9.0:
+   - Preserves verified v2.8.3 screenshot/text intake and operational routing.
+   - Adds a permanent Reprocess Intelligence control to existing D1 Communication records.
+   - Reuses the production process-communication-intelligence route by Communication ID.
+   - Does not recreate Communications, Investigations, Work Items, Evidence, or Activity.
+   - Shows the returned Intelligence ID, trend, handling state, and business meaning for road-test verification.
    ========================================================= -->
 <!DOCTYPE html>
 <html lang="en">
@@ -106,6 +113,10 @@
     .history-item:first-child{margin-top:0}
     .history-item strong{display:block;color:var(--navy);font-size:.86rem}
     .history-item span,.history-item p{display:block;margin:4px 0 0;color:var(--muted);font-size:.75rem}
+    .history-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
+    .history-actions .button{min-height:34px;padding:0 11px;font-size:.75rem}
+    .intelligence-result{margin-top:10px;padding:10px 12px;border:1px solid #cfe0f8;border-radius:10px;background:var(--info-bg);color:var(--text);font-size:.76rem;line-height:1.45}
+    .intelligence-result.error{border-color:#efcccc;background:var(--danger-bg);color:var(--danger)}
     .empty{margin:0;padding:18px;border:1px dashed var(--border);border-radius:12px;color:var(--muted);text-align:center;font-size:.84rem}
     .debug-image-wrap{margin-top:14px;padding:12px;border:1px solid var(--border);border-radius:12px;background:#0b1626}
     .debug-image{display:block;width:100%;max-height:620px;object-fit:contain;border-radius:8px}
@@ -303,7 +314,7 @@ Backlink Audit update
 (() => {
   "use strict";
 
-  const VERSION = "2.8.3";
+  const VERSION = "2.9.0";
   const ENDPOINT = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const CONTRACT_VERSION = "communications-operational-decision-v3";
   const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -385,11 +396,11 @@ Backlink Audit update
 
   function init() {
     if (!window.GCMOShell) {
-      console.error("Communications 2.8.3: shared/gcm-shell.js did not load.");
+      console.error("Communications 2.9.0: shared/gcm-shell.js did not load.");
     } else {
       window.GCMOShell.mount({
         currentPage: "communications",
-        statusText: "Communications operational · Communications v2.8.3"
+        statusText: "Communications operational · Communications v2.9.0"
       });
     }
 
@@ -1240,16 +1251,98 @@ Backlink Audit update
         return;
       }
 
-      el.history.innerHTML = records.slice(0,10).map(record => `
-        <article class="history-item">
+      el.history.innerHTML = records.slice(0,10).map(record => {
+        const communicationId = Number(record.id || record.communication_id || 0);
+        return `
+        <article class="history-item" data-communication-id="${communicationId || ""}">
           <strong>${escapeHtml(record.subject || record.title || "Communication")}</strong>
-          <span>${escapeHtml(record.source || "Unknown")} · ${escapeHtml(record.status || "saved")}</span>
+          <span>Communication #${communicationId || "?"} · ${escapeHtml(record.source || "Unknown")} · ${escapeHtml(record.status || "saved")}</span>
           <p>${escapeHtml(record.ai_summary || record.communication_summary || record.raw_content || "")}</p>
+          <div class="history-actions">
+            <button class="button secondary reprocess-intelligence" type="button" data-communication-id="${communicationId || ""}" ${communicationId ? "" : "disabled"}>
+              Reprocess Intelligence
+            </button>
+          </div>
+          <div class="intelligence-result" data-intelligence-result="${communicationId || ""}" hidden></div>
         </article>
-      `).join("");
+      `}).join("");
+
+      el.history.querySelectorAll(".reprocess-intelligence").forEach(button => {
+        button.addEventListener("click", () => reprocessCommunicationIntelligence(button));
+      });
     } catch (error) {
       console.error(error);
       el.history.innerHTML = `<p class="empty">${escapeHtml(error.message || "Live records could not be loaded.")}</p>`;
+    }
+  }
+
+  async function reprocessCommunicationIntelligence(button) {
+    const communicationId = Number(button?.dataset?.communicationId || 0);
+    if (!communicationId) return;
+
+    const resultBox = el.history.querySelector(`[data-intelligence-result="${communicationId}"]`);
+    const originalLabel = button.textContent;
+
+    button.disabled = true;
+    button.textContent = "Reprocessing...";
+    if (resultBox) {
+      resultBox.hidden = false;
+      resultBox.classList.remove("error");
+      resultBox.textContent = `Reprocessing Communication #${communicationId} through the current Communication Intelligence engine...`;
+    }
+
+    try {
+      const response = await fetch(ENDPOINT, {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          action:"process-communication-intelligence",
+          communicationId
+        })
+      });
+
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok || payload?.ok !== true) {
+        throw new Error(
+          payload?.error ||
+          `Communication Intelligence failed with HTTP ${response.status}.`
+        );
+      }
+
+      const interpretation = payload?.interpretation || {};
+      const intelligenceResult = payload?.intelligence?.result || {};
+      const intelligenceId =
+        intelligenceResult?.intelligenceId ??
+        payload?.intelligenceId ??
+        null;
+
+      if (resultBox) {
+        const parts = [
+          intelligenceId ? `Intelligence #${intelligenceId}` : "Intelligence processed",
+          interpretation?.trend ? `Trend: ${interpretation.trend}` : "",
+          interpretation?.handlingState ? `Handling: ${interpretation.handlingState}` : "",
+          interpretation?.businessMeaning ? `Meaning: ${interpretation.businessMeaning}` : ""
+        ].filter(Boolean);
+
+        resultBox.textContent = parts.join(" · ");
+      }
+
+      setStatus(
+        `Communication #${communicationId} was reprocessed through the current Intelligence engine. Review the result below, then verify Today.`,
+        "ready"
+      );
+    } catch (error) {
+      console.error(error);
+      if (resultBox) {
+        resultBox.hidden = false;
+        resultBox.classList.add("error");
+        resultBox.textContent = error.message || "Communication Intelligence reprocessing failed.";
+      }
+      setStatus(error.message || "Communication Intelligence reprocessing failed.", "error");
+    } finally {
+      button.disabled = false;
+      button.textContent = originalLabel;
     }
   }
 
