@@ -13,9 +13,10 @@
 <!-- =========================================================
  Global Concepts Media Operating System
  File: proof.html
- Version: 2.2.0
+ Version: 2.2.1
  Status: Production Candidate
  Purpose: Read-only Proof / Client Reporting view over existing D1 records, including completed Work Items and historical activity records, using the shared GCM OS shell.
+ Change Notes: v2.2.1 corrects the This Week preset to use the current rolling 7-day reporting window ending today; no D1 write behavior or reporting logic changed.
  ========================================================= -->
 <div class="shell">
 <aside class="sidebar" data-gcm-shell-sidebar></aside>
@@ -62,14 +63,14 @@ window.addEventListener("DOMContentLoaded", () => {
   if (window.GCMOShell) {
     window.GCMOShell.mount({
       currentPage: "proof",
-      statusText: "Proof reporting operational · Proof v2.2.0"
+      statusText: "Proof reporting operational · Proof v2.2.1"
     });
   }
 });
 </script>
 <script>
 (()=>{"use strict";
-const VERSION="2.2.0",WORKER_URL="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+const VERSION="2.2.1",WORKER_URL="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
 const C=[{code:"SES",name:"Southeast Safes"},{code:"SFS",name:"South Florida Safes"},{code:"A1",name:"A1 Action Safe & Lock"},{code:"HBG",name:"HB Guns"},{code:"PW",name:"Pickett Weaponry"},{code:"NFS",name:"North Florida Safes"},{code:"MAS",name:"Move A Safe"},{code:"GCM",name:"Global Concepts Media"},{code:"LUMI",name:"Lumi Studio"},{code:"4A",name:"1-800 4A Gun Safe"}];
 const $=id=>document.getElementById(id),e={client:$("client"),period:$("period"),outputType:$("outputType"),groupMode:$("groupMode"),dates:$("dates"),startDate:$("startDate"),endDate:$("endDate"),includeWork:$("includeWork"),includeMonitoring:$("includeMonitoring"),generate:$("generate"),refresh:$("refresh"),copy:$("copy"),status:$("status"),recordList:$("recordList"),output:$("output"),outputMeta:$("outputMeta"),completed:$("completed"),results:$("results"),monitoring:$("monitoring"),time:$("time")};
 let W=[],R=[];
@@ -287,7 +288,7 @@ function groups(a){const mode=e.groupMode.value,m=new Map;a.forEach(r=>{const k=
 function subject(r){if(e.period.value==='historical')return`Historical Progress Summary — ${fmt(r.start)} to ${fmt(r.end)}`;if(e.period.value==='this_month'){const d=new Date(`${r.start}T12:00:00`);return`${new Intl.DateTimeFormat('en-US',{month:'long',year:'numeric'}).format(d)} Progress Update`}return`Weekly Progress Update — ${fmt(r.start)} to ${fmt(r.end)}`}
 function period(r){return e.period.value==='historical'?`Historical: ${fmt(r.start)} → ${fmt(r.end)}`:`${fmt(r.start)} → ${fmt(r.end)}`}
 function labelOutput(v){return({client_email:'Client Email',proof_digest:'Proof of Work Digest',internal_summary:'Internal Summary',intelligence_audit:'Intelligence Audit'})[v]||'Report'}
-function setDates(p){const t=new Date(),d=new Date(t.getFullYear(),t.getMonth(),t.getDate());let s=new Date(d),n=new Date(d);if(p==='this_week'){const x=d.getDay(),o=x===0?-6:1-x;s.setDate(d.getDate()+o)}else if(p==='last_7')s.setDate(d.getDate()-6);else if(p==='last_week'){const x=d.getDay(),o=x===0?-6:1-x,m=new Date(d);m.setDate(d.getDate()+o);s=new Date(m);s.setDate(m.getDate()-7);n=new Date(s);n.setDate(s.getDate()+6)}else if(p==='this_month')s=new Date(d.getFullYear(),d.getMonth(),1);e.startDate.value=iso(s);e.endDate.value=iso(n)}
+function setDates(p){const t=new Date(),d=new Date(t.getFullYear(),t.getMonth(),t.getDate());let s=new Date(d),n=new Date(d);if(p==='this_week')s.setDate(d.getDate()-6);else if(p==='last_7')s.setDate(d.getDate()-6);else if(p==='last_week'){const x=d.getDay(),o=x===0?-6:1-x,m=new Date(d);m.setDate(d.getDate()+o);s=new Date(m);s.setDate(m.getDate()-7);n=new Date(s);n.setDate(s.getDate()+6)}else if(p==='this_month')s=new Date(d.getFullYear(),d.getMonth(),1);e.startDate.value=iso(s);e.endDate.value=iso(n)}
 function complete(v){return['completed','complete','closed','done'].includes(clean(v).toLowerCase())}function useful(v){const x=clean(v);return x&&!/^(high|medium|low|none|n\/a|#error!?)$/i.test(x)&&x.length>=8}function inside(d,r){return d&&r.start&&r.end&&d>=r.start&&d<=r.end}function date(v){if(!v)return'';const m=String(v).match(/^(\d{4}-\d{2}-\d{2})/);if(m)return m[1];const d=new Date(v);return Number.isNaN(d.getTime())?'':iso(d)}function fmt(v){if(!v)return'Not recorded';const d=new Date(`${v}T12:00:00`);return Number.isNaN(d.getTime())?v:new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',year:'numeric'}).format(d)}function duration(m){m=Number(m||0);if(!m)return'0 min';if(m<60)return`${m} min`;const h=m/60;return`${h%1===0?h.toFixed(0):h.toFixed(1)} hr`}function num(v){const n=Number(v);return Number.isFinite(n)&&n>0?n:0}function clean(v){return String(v??'').trim()}function iso(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}function short(v,n){const x=clean(v);return x.length<=n?x:`${x.slice(0,n-1).trim()}…`}function lower(v){const x=clean(v);return x?x[0].toLowerCase()+x.slice(1):x}function esc(v){return String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;')}function status(t,m){e.status.className=`status ${t}`;e.status.textContent=m}
 async function copy(){const v=e.output.value.trim();if(!v)return status('error','There is no generated output to copy.');try{await navigator.clipboard.writeText(v);status('ready','Generated output copied to clipboard.')}catch{e.output.focus();e.output.select();status('error','Clipboard access was unavailable. The output is selected for manual copy.')}}
 })();
