@@ -166,7 +166,7 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Use Investigation when the correct action is unknown. Use Create Requested Work when the client need and deliverable are already clear.</p></div>
-        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.15</span>
+        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.16</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -250,7 +250,7 @@
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.15"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.16"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),target:byId("target-banner"),requestedForm:byId("requested-work-form"),requestedClient:byId("requested-client"),requestedMessage:byId("requested-work-message"),createRequested:byId("create-requested-work")};
   let activeClients=[],directoryClients=[],investigations=[],workItems=[],selectedKey="",processing=false,processingWorkItem=false,processingRequestedWork=false;
 
