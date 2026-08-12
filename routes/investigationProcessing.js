@@ -1,15 +1,26 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/investigationProcessing.js
-   Version: 7.3.0
+   Version: 7.4.0
    Status: Production Candidate
-   Source: Production Worker 7.1.1
-   Sprint: Investigation Processing — Road Test #21
+   Source: Production routes/investigationProcessing.js 7.3.0
+   Sprint: Durable Investigation Progress
    Purpose: Process an existing Investigation after review by
             either closing it when no Work Item is required or
             creating one linked Work Item when specific work is
-            required. Specific-work Investigations remain open
-            until the linked work is completed.
+            required, saving evidence-supported progress while the
+            Investigation remains open, or creating one linked Work
+            Item when specific work is required. Specific-work
+            Investigations remain open until linked work is completed.
+
+   Changes in 7.4.0:
+   - Adds the continue_investigation outcome.
+   - Updates the current finding without closing the Investigation.
+   - Appends a dated investigation_progress Evidence record containing
+     What We Know, Next Question, and Next Evidence.
+   - Links every progress record to Client, Communication, and Investigation.
+   - Prevents duplicate progress records from repeated identical saves.
+   - Preserves both final outcomes and Work Item creation unchanged.
    ========================================================= */
 
 import {
@@ -37,8 +48,24 @@ export async function handleProcessInvestigation(body, env, requestId) {
 
   const clientCode = clean(body?.clientCode || body?.client);
   const investigationId = Number(body?.investigationId || body?.investigation_id);
-  const findingSummary = clean(body?.findingSummary || body?.finding_summary);
+  const findingSummary = cleanMultiline(
+    body?.findingSummary || body?.finding_summary
+  );
   const outcome = clean(body?.outcome).toLowerCase();
+
+  const nextQuestion = cleanMultiline(
+    body?.nextQuestion ||
+    body?.next_question ||
+    body?.workTitle ||
+    body?.work_title
+  );
+
+  const nextEvidence = cleanMultiline(
+    body?.nextEvidence ||
+    body?.next_evidence ||
+    body?.workDescription ||
+    body?.work_description
+  );
 
   const workTitle = clean(
     body?.workTitle ||
@@ -103,6 +130,7 @@ export async function handleProcessInvestigation(body, env, requestId) {
   }
 
   if (![
+    "continue_investigation",
     "no_work_required",
     "specific_work_required"
   ].includes(outcome)) {
@@ -111,7 +139,25 @@ export async function handleProcessInvestigation(body, env, requestId) {
       requestId,
       action: ACTIONS.PROCESS_INVESTIGATION,
       error:
-        'Investigation Processing supports outcomes "no_work_required" and "specific_work_required".'
+        'Investigation Processing supports outcomes "continue_investigation", "no_work_required", and "specific_work_required".'
+    }, 400);
+  }
+
+  if (outcome === "continue_investigation" && !nextQuestion) {
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action: ACTIONS.PROCESS_INVESTIGATION,
+      error: "A nextQuestion is required when an Investigation remains open."
+    }, 400);
+  }
+
+  if (outcome === "continue_investigation" && !nextEvidence) {
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action: ACTIONS.PROCESS_INVESTIGATION,
+      error: "A nextEvidence value is required when an Investigation remains open."
     }, 400);
   }
 
@@ -190,6 +236,17 @@ export async function handleProcessInvestigation(body, env, requestId) {
       });
     }
 
+    if (outcome === "continue_investigation") {
+      return await saveInvestigationProgress({
+        db,
+        requestId,
+        investigation,
+        findingSummary,
+        nextQuestion,
+        nextEvidence
+      });
+    }
+
     if (outcome === "no_work_required") {
       return await closeInvestigationWithoutWork({
         db,
@@ -224,6 +281,111 @@ export async function handleProcessInvestigation(body, env, requestId) {
       error: safeErrorMessage(error)
     }, 500);
   }
+}
+
+/* =========================================================
+   Outcome: Continue Investigation
+   ========================================================= */
+
+async function saveInvestigationProgress({
+  db,
+  requestId,
+  investigation,
+  findingSummary,
+  nextQuestion,
+  nextEvidence
+}) {
+  const recordedBy =
+    clean(investigation.assigned_to) ||
+    "Global Concepts Media";
+
+  const description = [
+    `What We Know: ${findingSummary}`,
+    `Next Question: ${nextQuestion}`,
+    `Next Evidence: ${nextEvidence}`
+  ].join("\n\n");
+
+  const rawData = JSON.stringify({
+    schemaVersion: "1.0.0",
+    recordType: "investigation_progress",
+    progressStatus: "investigation_open",
+    findingSummary,
+    nextQuestion,
+    nextEvidence,
+    recordedBy
+  });
+
+  await db.batch([
+    db.prepare(`
+      UPDATE investigations
+      SET
+        finding_summary = ?,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+        AND client_id = ?
+    `).bind(
+      findingSummary,
+      investigation.id,
+      investigation.client_id
+    ),
+
+    db.prepare(`
+      INSERT INTO evidence (
+        client_id,
+        investigation_id,
+        work_item_id,
+        communication_id,
+        evidence_type,
+        source,
+        description,
+        url,
+        raw_data,
+        captured_at
+      )
+      SELECT ?, ?, NULL, ?, 'investigation_progress',
+             'Investigation Progress', ?, NULL, ?, CURRENT_TIMESTAMP
+      WHERE NOT EXISTS (
+        SELECT 1
+        FROM evidence
+        WHERE investigation_id = ?
+          AND evidence_type = 'investigation_progress'
+          AND description = ?
+      )
+    `).bind(
+      investigation.client_id,
+      investigation.id,
+      investigation.communication_id,
+      description,
+      rawData,
+      investigation.id,
+      description
+    )
+  ]);
+
+  const [updated, progress] = await Promise.all([
+    loadInvestigation(db, investigation.id),
+    loadLatestInvestigationProgress(db, investigation.id)
+  ]);
+
+  if (!updated) {
+    throw new Error(
+      `D1 saved the progress update but Investigation #${investigation.id} could not be reloaded.`
+    );
+  }
+
+  return jsonResponse({
+    ok: true,
+    requestId,
+    action: ACTIONS.PROCESS_INVESTIGATION,
+    version: VERSION,
+    source: "D1",
+    updated: true,
+    outcome: "continue_investigation",
+    investigationKeptOpen: true,
+    workItemCreated: false,
+    investigation: mapInvestigation(updated),
+    progress: mapInvestigationProgress(progress)
+  });
 }
 
 /* =========================================================
@@ -487,6 +649,29 @@ async function loadInvestigation(db, investigationId) {
   ).first();
 }
 
+async function loadLatestInvestigationProgress(db, investigationId) {
+  return await db.prepare(`
+    SELECT
+      id,
+      client_id,
+      investigation_id,
+      communication_id,
+      evidence_type,
+      source,
+      description,
+      raw_data,
+      captured_at,
+      created_at
+    FROM evidence
+    WHERE investigation_id = ?
+      AND evidence_type = 'investigation_progress'
+    ORDER BY captured_at DESC, id DESC
+    LIMIT 1
+  `).bind(
+    investigationId
+  ).first();
+}
+
 /* =========================================================
    Route-Specific Mappers
    ========================================================= */
@@ -540,6 +725,25 @@ function mapWorkItem(row) {
   };
 }
 
+function mapInvestigationProgress(row) {
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: row.id,
+    clientId: row.client_id,
+    investigationId: row.investigation_id,
+    communicationId: row.communication_id,
+    evidenceType: row.evidence_type,
+    source: row.source,
+    description: row.description,
+    rawData: row.raw_data,
+    capturedAt: row.captured_at,
+    createdAt: row.created_at
+  };
+}
+
 /* =========================================================
    Route-Specific Helpers
    ========================================================= */
@@ -561,4 +765,14 @@ function isClosedStatus(value) {
     "ignored",
     "no_action"
   ].includes(status);
+}
+
+function cleanMultiline(value) {
+  return String(value ?? "")
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .map(line => line.trim())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
