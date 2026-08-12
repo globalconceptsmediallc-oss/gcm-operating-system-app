@@ -1,19 +1,21 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/workItemProcessing.js
-   Version: 7.4.0
+   Version: 7.4.1
    Status: Production Road-Test Candidate
-   Source: Production routes/workItemProcessing.js 7.3.3
-   Sprint: Direct Requested Work Creation
-   Purpose: Preserve verified Work Item completion behavior and add
-            direct creation of known requested work without requiring
-            an artificial Investigation.
+   Source: Production routes/workItemProcessing.js 7.4.0
+   Sprint: Work Item Date Authority
+   Purpose: Preserve verified Work Item creation/completion behavior while
+            ensuring business-operating timestamps are recorded in the
+            GCM operating timezone (America/New_York).
 
-   Changes in 7.4.0:
-   - Adds create-requested-work.
-   - Creates a normal open Work Item with investigation_id NULL.
-   - Preserves optional Communication provenance.
-   - Preserves all verified completion/evidence behavior.
+   Changes in 7.4.1:
+   - Establishes America/New_York as the business date authority for this route.
+   - Replaces D1 CURRENT_TIMESTAMP writes with one request-scoped Eastern
+     business timestamp generated with Intl.DateTimeFormat.
+   - Applies the same timestamp consistently to Work Item creation/completion,
+     completion evidence, and linked Investigation closure.
+   - Preserves all verified creation, completion, evidence, and D1 behavior.
    ========================================================= */
 
 import { VERSION, ACTIONS } from "../shared/config.js";
@@ -21,6 +23,7 @@ import { clean, safeErrorMessage, logWorkerError, jsonResponse } from "../shared
 import { getDatabase } from "../shared/database.js";
 
 export const CREATE_REQUESTED_WORK_ACTION = "create-requested-work";
+const GCM_BUSINESS_TIME_ZONE = "America/New_York";
 
 export async function handleCreateRequestedWork(body, env, requestId) {
   const db = getDatabase(env);
@@ -47,14 +50,27 @@ export async function handleCreateRequestedWork(body, env, requestId) {
     }
 
     const storedDescription = requestedBy ? `${description}\n\nRequested By: ${requestedBy}` : description;
+    const businessTimestamp = gcmBusinessTimestamp();
     const inserted = await db.prepare(`
       INSERT INTO work_items (
         client_id, investigation_id, communication_id, title, description,
         category, priority, status, owner, expected_impact,
         started_at, created_at, updated_at
-      ) VALUES (?, NULL, ?, ?, ?, ?, ?, 'Open', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      ) VALUES (?, NULL, ?, ?, ?, ?, ?, 'Open', ?, ?, ?, ?, ?)
       RETURNING id
-    `).bind(client.id,communicationId||null,title,storedDescription,category,priority,owner,expectedImpact).first();
+    `).bind(
+      client.id,
+      communicationId||null,
+      title,
+      storedDescription,
+      category,
+      priority,
+      owner,
+      expectedImpact,
+      businessTimestamp,
+      businessTimestamp,
+      businessTimestamp
+    ).first();
 
     const workItemId=Number(inserted?.id||0);
     if(!workItemId) throw new Error("D1 created the requested Work Item but did not return its ID.");
@@ -89,12 +105,15 @@ export async function handleProcessWorkItem(body, env, requestId) {
     const workItem=await db.prepare(`SELECT wi.id,wi.client_id,wi.investigation_id,wi.communication_id,wi.title,wi.description,wi.category,wi.priority,wi.status,wi.owner,wi.expected_impact,wi.actual_impact,wi.started_at,wi.completed_at,wi.created_at,wi.updated_at,c.client_code,c.name AS client_name FROM work_items wi JOIN clients c ON c.id=wi.client_id WHERE wi.id=? AND c.client_code=? COLLATE NOCASE LIMIT 1`).bind(workItemId,clientCode).first();
     if(!workItem) return jsonResponse({ok:false,requestId,action:ACTIONS.PROCESS_WORK_ITEM,error:`Work Item #${workItemId} was not found for client "${clientCode}".`},404);
     if(isCompletedStatus(workItem.status)&&workItem.completed_at){const existingEvidence=await loadWorkItemEvidence(db,workItem.id);return jsonResponse({ok:true,requestId,action:ACTIONS.PROCESS_WORK_ITEM,version:VERSION,source:"D1",updated:false,alreadyCompleted:true,workItem:mapWorkItem(workItem),evidence:existingEvidence.map(mapEvidence),message:`Work Item #${workItem.id} is already completed. No duplicate completion was recorded.`});}
+
     const completedDescription=appendWorkPerformed(workItem.description,workPerformed);
+    const businessTimestamp = gcmBusinessTimestamp();
     const statements=[
-      db.prepare(`UPDATE work_items SET description=?,status='completed',actual_impact=?,started_at=COALESCE(started_at,CURRENT_TIMESTAMP),completed_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=? AND client_id=?`).bind(completedDescription,actualImpact,workItem.id,workItem.client_id),
-      db.prepare(`INSERT INTO evidence (client_id,investigation_id,work_item_id,communication_id,evidence_type,source,description,url,captured_at) SELECT ?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP WHERE NOT EXISTS (SELECT 1 FROM evidence WHERE work_item_id=? AND source=? AND description=?)`).bind(workItem.client_id,workItem.investigation_id,workItem.id,workItem.communication_id,evidenceType,evidenceSource,evidenceDescription,evidenceUrl||null,workItem.id,evidenceSource,evidenceDescription)
+      db.prepare(`UPDATE work_items SET description=?,status='completed',actual_impact=?,started_at=COALESCE(started_at,?),completed_at=?,updated_at=? WHERE id=? AND client_id=?`).bind(completedDescription,actualImpact,businessTimestamp,businessTimestamp,businessTimestamp,workItem.id,workItem.client_id),
+      db.prepare(`INSERT INTO evidence (client_id,investigation_id,work_item_id,communication_id,evidence_type,source,description,url,captured_at) SELECT ?,?,?,?,?,?,?,?,?,? WHERE NOT EXISTS (SELECT 1 FROM evidence WHERE work_item_id=? AND source=? AND description=?)`).bind(workItem.client_id,workItem.investigation_id,workItem.id,workItem.communication_id,evidenceType,evidenceSource,evidenceDescription,evidenceUrl||null,businessTimestamp,workItem.id,evidenceSource,evidenceDescription)
     ];
-    if(workItem.investigation_id) statements.push(db.prepare(`UPDATE investigations SET status='closed',resolved_at=COALESCE(resolved_at,CURRENT_TIMESTAMP),closed_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=? AND client_id=?`).bind(workItem.investigation_id,workItem.client_id));
+    if(workItem.investigation_id) statements.push(db.prepare(`UPDATE investigations SET status='closed',resolved_at=COALESCE(resolved_at,?),closed_at=?,updated_at=? WHERE id=? AND client_id=?`).bind(businessTimestamp,businessTimestamp,businessTimestamp,workItem.investigation_id,workItem.client_id));
+
     await db.batch(statements);
     const [updatedWorkItem,updatedInvestigation,evidence]=await Promise.all([loadWorkItem(db,workItem.id),workItem.investigation_id?loadInvestigation(db,workItem.investigation_id):Promise.resolve(null),loadWorkItemEvidence(db,workItem.id)]);
     if(!updatedWorkItem) throw new Error(`D1 completed the Work Item update but Work Item #${workItem.id} could not be reloaded.`);
@@ -114,3 +133,24 @@ function mapEvidence(r){if(!r)return null;return{id:r.id,clientId:r.client_id,in
 function appendWorkPerformed(existingDescription,workPerformed){const existing=clean(existingDescription);if(!existing)return `Work Performed: ${workPerformed}`;if(existing.includes(`Work Performed: ${workPerformed}`))return existing;return `${existing}\n\nWork Performed: ${workPerformed}`;}
 function isCompletedStatus(value){return String(value||"").trim().toLowerCase().replace(/\s+/g,"_")==="completed";}
 function positiveInt(value){const n=Number(value);return Number.isInteger(n)&&n>0?n:null;}
+
+function gcmBusinessTimestamp(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: GCM_BUSINESS_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23"
+  }).formatToParts(date);
+
+  const values = Object.fromEntries(
+    parts
+      .filter((part) => part.type !== "literal")
+      .map((part) => [part.type, part.value])
+  );
+
+  return `${values.year}-${values.month}-${values.day} ${values.hour}:${values.minute}:${values.second}`;
+}
