@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.15
+   Version: 1.9.16
    Status: FBDT Production Candidate
    Source: Production work.html 1.9.13
    Sprint: Durable Investigation Progress
@@ -68,6 +68,9 @@
    - Opening a saved SEMrush Issues URL now completes Open Evidence Source
      and Review Issues without falsely completing Analyze Evidence.
    - Preserves existing Investigation progress, evidence history, and checklist state.
+   - v1.9.16 makes Safari new-tab evidence clicks deterministic.
+   - Validates the saved per-client SEMrush Issues URL during the capture phase
+     and saves Open Evidence Source plus Review Issues atomically before navigation.
    ========================================================= -->
 <!DOCTYPE html>
 <html lang="en">
@@ -555,11 +558,20 @@
       if(window.confirm("Clear the checklist and all locally locked road-test evidence for this Investigation?"))resetEvidenceWorkflow(item);
     });
     document.querySelectorAll("[data-evidence-tool]").forEach(link=>link.addEventListener("click",()=>{
-      completeEvidenceStep(item,"open_semrush");
-      if(link.dataset.evidenceTool==="semrush"&&validSemrushIssuesUrl(link.href)){
-        completeEvidenceStep(item,"review_issues");
+      const state=getEvidenceWorkflowState(item);
+      state.open_semrush=true;
+
+      const evidenceUrl=link.dataset.evidenceTool==="semrush"
+        ? getSavedSemrushUrl(item.clientCode)||link.href
+        : link.href;
+
+      if(link.dataset.evidenceTool==="semrush"&&validSemrushIssuesUrl(evidenceUrl)){
+        state.review_issues=true;
       }
-    }));
+
+      saveEvidenceWorkflowState(item,state);
+      renderEvidenceWorkflowState(item);
+    },true));
     const finding=byId("finding-summary"),title=byId("work-title"),description=byId("work-description");
     [finding,title,description].forEach(field=>field?.addEventListener("input",()=>{
       if(String(finding?.value||"").trim()&&String(title?.value||"").trim()&&String(description?.value||"").trim())completeEvidenceStep(item,"review_findings");
