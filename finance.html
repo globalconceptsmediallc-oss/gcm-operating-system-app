@@ -1,8 +1,8 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: finance.html
-   Version: 1.7.1
-   Status: Production Candidate — Connected Gmail Billing Delivery
+   Version: 1.7.2
+   Status: Production Candidate — Corrected Service-Line Replacement
    Source: finance.html 1.6.0
    Sprint: Finance / Invoice Correction Control
    Purpose: Manage billing accounts, create fixed-package or additional-service invoices,
@@ -23,6 +23,11 @@
             - Connects invoice and statement delivery to the verified Gmail draft route.
             - Keeps invoice status as Draft until the operator sends it in Gmail.
             - Preserves all Finance 1.7.0 invoice and correction records.
+            - Lets a corrected invoice replace its standard monthly package rows.
+            - Prefills existing additional service rows for correction and removal.
+            - Recalculates corrected totals from only the service rows retained.
+            - Removes the automatic 30-day due date from newly created invoices.
+            - Uses Due upon receipt when no specific due date is entered.
    Production Contract: window.GCMOShell
    ========================================================= -->
 <!DOCTYPE html>
@@ -190,7 +195,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
     <button class="mobile btn" data-gcm-shell-menu-button type="button">Menu</button>
     <header class="top">
       <div><p class="eyebrow">Agency Finance</p><h1>Billing Workspace</h1><p class="sub">Manage billing profiles, create invoices, email them, and record Check or ACH payments.</p></div>
-      <div class="version">Installed version 1.7.1</div>
+      <div class="version">Installed version 1.7.2</div>
     </header>
 
     <section class="shell">
@@ -255,7 +260,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
                 </div>
                 <div class="meta-grid">
                   <div class="meta-box"><span class="label">Invoice Date</span><strong id="paperDate">—</strong></div>
-                  <div class="meta-box"><span class="label">Due Date</span><strong id="paperDueDate">—</strong></div>
+                  <div class="meta-box"><span class="label">Payment Terms</span><strong id="paperDueDate">Due upon receipt</strong></div>
                   <div class="meta-box"><span class="label">Invoice Type</span><strong id="paperType">Monthly Billing</strong></div>
                   <div class="meta-box"><span class="label">Status</span><strong id="paperStatus">Draft</strong></div>
                   <div class="meta-box" id="paperPeriodBox"><span class="label">Service Period</span><strong id="paperBillingPeriod">—</strong></div>
@@ -408,7 +413,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
         <div class="field"><label>Invoice Number</label><input id="invoiceNumber" readonly></div>
         <div class="field"><label>Invoice Type</label><select id="invoiceType"><option value="monthly">Monthly Billing Package</option><option value="additional">Additional Services Only</option></select></div>
         <div class="field"><label>Invoice Date</label><input id="invoiceDate" type="date" required></div>
-        <div class="field"><label>Due Date</label><input id="invoiceDueDate" type="date" required></div>
+        <div class="field"><label>Specific Due Date (optional)</label><input id="invoiceDueDate" type="date"><small>Leave blank for Due upon receipt.</small></div>
         <div class="field full"><label>Billing Period</label><input id="invoiceBillingPeriod" placeholder="Services performed during July 2026"></div>
         <div class="field full"><label>Email Invoice To</label><input id="invoiceEmail" type="email"></div>
       </div>
@@ -434,12 +439,19 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
         <div class="field"><label>Original Invoice</label><input id="correctionOriginalNumber" readonly></div>
         <div class="field"><label>Corrected Invoice</label><input id="correctionNumber" readonly></div>
         <div class="field"><label>Invoice Date</label><input id="correctionDate" type="date" readonly></div>
-        <div class="field"><label>Due Date</label><input id="correctionDueDate" type="date" readonly></div>
+        <div class="field"><label>Specific Due Date (optional)</label><input id="correctionDueDate" type="date"><small>Leave blank for Due upon receipt.</small></div>
         <div class="field full"><label>Billing Period</label><input id="correctionBillingPeriod" required placeholder="Services performed during July 2026"></div>
         <div class="field full"><label>Correction Statement</label><input id="correctionStatement" readonly></div>
       </div>
       <div style="margin-top:18px">
-        <div class="head"><div><h3>Additional Services</h3><p>Add only charges missing from the original invoice. Existing line items are copied automatically.</p></div><button class="btn" id="addCorrectionRow" type="button">Add Service</button></div>
+        <div class="field" style="margin-bottom:14px">
+          <label style="display:flex;align-items:flex-start;gap:10px;font-weight:800">
+            <input id="replaceStandardLines" type="checkbox" style="width:auto;margin-top:3px">
+            Replace the standard monthly package rows with the corrected service lines below
+          </label>
+          <small style="display:block;margin:7px 0 0 25px;color:var(--muted)">Use this when the original invoice contains generic package rows that must be replaced by client- or location-specific co-op service lines.</small>
+        </div>
+        <div class="head"><div><h3>Corrected Service Lines</h3><p>Existing additional service rows are loaded below. Keep, remove, or add rows so this list matches the corrected invoice.</p></div><button class="btn" id="addCorrectionRow" type="button">Add Service</button></div>
         <div class="extra-editor">
           <div class="extra-head"><span>Description</span><span>Amount</span><span></span></div>
           <div id="correctionRows"></div>
@@ -485,7 +497,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
 <script src="shared/gcm-shell.js?v=1.0.2"></script>
 <script>
 (()=>{"use strict";
-const VERSION="1.7.1",KEY="gcm_finance_workspace_v1_7",$=id=>document.getElementById(id);
+const VERSION="1.7.2",KEY="gcm_finance_workspace_v1_7",$=id=>document.getElementById(id);
 const WORKER_ENDPOINT="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev";
 const seed={
   agency:{name:"Global Concepts Media Agency LLC",website:"https://globalconceptsmediallc.com",logoUrl:""},
@@ -724,7 +736,7 @@ function collectCorrectionExtras(){
 }
 function openCreate(){
   const a=account();$("invoiceAccount").textContent=`Create an invoice for ${a.name}.`;$("invoiceNumber").value=state.nextInvoiceNumber;
-  $("invoiceType").value="monthly";$("invoiceDate").value=today();$("invoiceDueDate").value=addDays(today(),Number(a.termsDays||0));
+  $("invoiceType").value="monthly";$("invoiceDate").value=today();$("invoiceDueDate").value="";
   $("invoiceBillingPeriod").value=servicePeriod(today());$("invoiceEmail").value=a.email||"";$("extraRows").innerHTML="";addExtraRow();$("invoiceDialog").showModal();
 }
 function createInvoice(e){
@@ -746,22 +758,30 @@ function openCorrection(){
   const correctedRef=revisionReference(a,i);
   $("correctionAccount").textContent=`Correct invoice #${i.reference} for ${a.name}.`;
   $("correctionOriginalNumber").value=i.reference;$("correctionNumber").value=correctedRef;
-  $("correctionDate").value=i.date;$("correctionDueDate").value=i.dueDate;
+  $("correctionDate").value=i.date;$("correctionDueDate").value="";
   $("correctionBillingPeriod").value=i.billingPeriod||servicePeriod(i.date);
   $("correctionStatement").value=`This corrected invoice replaces invoice #${i.reference}.`;
-  $("correctionRows").innerHTML="";addCorrectionRow();$("correctionDialog").showModal();
+  $("replaceStandardLines").checked=Boolean(i.replaceStandardLines);
+  $("correctionRows").innerHTML="";
+  const editableLines=i.replaceStandardLines?(i.replacementLines||[]):(i.extras||[]);
+  editableLines.forEach(x=>addCorrectionRow(x.description,x.amount));
+  if(!editableLines.length)addCorrectionRow();
+  $("correctionDialog").showModal();
 }
 function createCorrection(e){
   e.preventDefault();const a=account(),i=invoice();
   if(!i||i.status==="superseded"){toast("The original invoice is no longer available for correction.");return}
   if(Number(i.paidAmount||0)>0){toast("A paid invoice must be reconciled before it can be corrected.");return}
-  const additions=collectCorrectionExtras(),billingPeriod=$("correctionBillingPeriod").value.trim();
+  const correctedLines=collectCorrectionExtras(),replaceStandardLines=$("replaceStandardLines").checked,billingPeriod=$("correctionBillingPeriod").value.trim();
   if(!billingPeriod){toast("Enter the service period for the corrected invoice.");return}
+  if(replaceStandardLines&&!correctedLines.length){toast("Add at least one corrected service line when replacing the standard package rows.");return}
   const ref=$("correctionNumber").value,root=String(i.originalReference||i.reference).replace(/-R\d+$/i,""),revision=Number(String(ref).match(/-R(\d+)$/i)?.[1]||1);
-  const existingExtras=clone(i.extras||[]),extras=[...existingExtras,...additions],extraTotal=extras.reduce((s,x)=>s+Number(x.amount||0),0);
+  const correctedTotal=correctedLines.reduce((s,x)=>s+Number(x.amount||0),0);
+  const replacementLines=replaceStandardLines?correctedLines:[],extras=replaceStandardLines?[]:correctedLines;
+  const extraTotal=extras.reduce((s,x)=>s+Number(x.amount||0),0),base=replaceStandardLines?correctedTotal:Number(i.baseAmount||0);
   const record={
-    id:nextId(),date:i.date,dueDate:i.dueDate,type:"invoice",reference:ref,description:"Corrected Monthly Billing Package",
-    invoiceType:i.invoiceType,baseAmount:Number(i.baseAmount||0),extras,amount:Number(i.baseAmount||0)+extraTotal,
+    id:nextId(),date:i.date,dueDate:$("correctionDueDate").value,type:"invoice",reference:ref,description:"Corrected Monthly Billing Package",
+    invoiceType:i.invoiceType,baseAmount:base,extras,replacementLines,amount:base+extraTotal,replaceStandardLines,
     paidAmount:0,status:"draft",email:i.email||a.email||"",billingPeriod,
     originalReference:root,correctsReference:i.reference,revisionNumber:revision,
     correctionStatement:`This corrected invoice replaces invoice #${i.reference}.`,
@@ -774,10 +794,14 @@ function createCorrection(e){
 function paperRows(a,i){
   const source=i.accountSnapshot||a,rows=[];
   if(i.invoiceType==="monthly"){
-    (source.services||[]).forEach(s=>{
-      const v1=Number(s.values?.[0]||0),v2=Number(s.values?.[1]||0);
-      rows.push(`<tr><td>${esc(s.name)}</td><td class="money">${money(v1)}</td><td class="money">${money(v2)}</td><td class="money">${money(v1+v2)}</td></tr>`);
-    });
+    if(i.replaceStandardLines){
+      (i.replacementLines||[]).forEach(x=>rows.push(`<tr><td>${esc(x.description)}</td><td>Monthly service</td><td>—</td><td class="money">${money(x.amount)}</td></tr>`));
+    }else{
+      (source.services||[]).forEach(s=>{
+        const v1=Number(s.values?.[0]||0),v2=Number(s.values?.[1]||0);
+        rows.push(`<tr><td>${esc(s.name)}</td><td class="money">${money(v1)}</td><td class="money">${money(v2)}</td><td class="money">${money(v1+v2)}</td></tr>`);
+      });
+    }
   }
   (i.extras||[]).forEach(x=>rows.push(`<tr><td>${esc(x.description)}</td><td>Additional service</td><td>—</td><td class="money">${money(x.amount)}</td></tr>`));
   return rows.join("");
@@ -789,7 +813,7 @@ function showInvoice(){
   $("paperAgencyName").textContent=agency().name||"Global Concepts Media Agency LLC";
   $("paperInvoiceNumber").textContent=`#${i.reference}`;$("paperBillTo").textContent=source.name||a.name;
   $("paperContact").textContent=source.contact||"";$("paperEmail").textContent=i.email||a.email||"Billing email not set";
-  $("paperAddress").textContent=source.address||"";$("paperDate").textContent=date(i.date);$("paperDueDate").textContent=date(i.dueDate);
+  $("paperAddress").textContent=source.address||"";$("paperDate").textContent=date(i.date);$("paperDueDate").textContent=i.dueDate?date(i.dueDate):"Due upon receipt";
   $("paperType").textContent=i.invoiceType==="monthly"?"Monthly Billing":"Additional Services";
   $("paperStatus").textContent=i.status.charAt(0).toUpperCase()+i.status.slice(1);
   const period=i.billingPeriod||(i.invoiceType==="monthly"?servicePeriod(i.date):"");
@@ -899,7 +923,7 @@ async function emailCurrent(){
 Attached is invoice #${i.reference} for ${money(i.amount)}.
 
 Invoice date: ${date(i.date)}
-Due date: ${date(i.dueDate)}
+Payment terms: ${i.dueDate?`Due ${date(i.dueDate)}`:"Due upon receipt"}
 ${i.billingPeriod?`Service period: ${i.billingPeriod}\n`:""}${i.correctionStatement?`${i.correctionStatement}\n`:""}Bill to: ${a.name}
 
 Thank you,
