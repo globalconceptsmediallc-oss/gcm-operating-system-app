@@ -1,15 +1,22 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: finance.html
-   Version: 1.6.0
-   Status: Production Candidate — Invoice PDF, Statements & Agency Branding
-   Source: finance.html 1.4.0
-   Sprint: Finance / Scalable Billing Profiles
+   Version: 1.7.0
+   Status: Production Candidate — Corrected Invoices & Billing Periods
+   Source: finance.html 1.6.0
+   Sprint: Finance / Invoice Correction Control
    Purpose: Manage billing accounts, create fixed-package or additional-service invoices,
             generate downloadable invoice PDFs, prepare Gmail drafts,
             print account statements, apply account-specific invoice
             language, display agency branding, record Check/ACH
-            payments, and close cycles.
+            payments, close cycles, preserve superseded invoices, and create
+            reviewable corrected invoice revisions with explicit service periods.
+   Change Notes:
+            - Adds a durable Correct Invoice action for existing invoices.
+            - Preserves the original invoice as Superseded and creates #R revisions.
+            - Prevents superseded invoices from inflating balances and statements.
+            - Adds billing-period wording to monthly and corrected invoice PDFs.
+            - Adds correction/replacement wording to revised invoice PDFs.
    Production Contract: window.GCMOShell
    ========================================================= -->
 <!DOCTYPE html>
@@ -76,6 +83,7 @@ h1{margin:4px 0;font-size:38px;letter-spacing:-.04em}
 .pill{padding:5px 9px;border-radius:999px;background:var(--warn-soft);color:var(--warn);font-size:12px;font-weight:900;text-transform:capitalize}
 .pill.sent{background:var(--blue-soft);color:var(--blue)}
 .pill.paid,.pill.closed{background:var(--green-soft);color:var(--green)}
+.pill.superseded,.status.superseded{background:#eef0f3;color:#596475}
 .table{overflow:auto;border:1px solid var(--border);border-radius:12px}
 table{width:100%;min-width:740px;border-collapse:collapse}
 th,td{padding:13px 14px;border-bottom:1px solid var(--border);text-align:left}
@@ -118,6 +126,7 @@ tbody tr:last-child td{border-bottom:0}
 .invoice-total td{padding:9px 12px}
 .invoice-total tr:last-child td{border-top:2px solid var(--navy);font-size:17px;font-weight:900}
 .invoice-note{margin-top:30px;border-top:1px solid var(--border);padding-top:18px;color:var(--muted);font-size:12px}
+.correction-note{margin:0 0 20px;padding:12px 14px;border:1px solid #efcf95;background:#fff8e9;border-radius:9px;color:#704a0b;font-size:13px;font-weight:800}
 dialog{width:min(850px,calc(100vw - 30px));border:0;border-radius:16px;padding:0;box-shadow:0 24px 70px rgba(7,20,38,.35)}
 dialog::backdrop{background:rgba(7,20,38,.55)}
 .dhead,.dactions{display:flex;justify-content:space-between;gap:12px;padding:18px 20px;border-bottom:1px solid var(--border)}
@@ -175,7 +184,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
     <button class="mobile btn" data-gcm-shell-menu-button type="button">Menu</button>
     <header class="top">
       <div><p class="eyebrow">Agency Finance</p><h1>Billing Workspace</h1><p class="sub">Manage billing profiles, create invoices, email them, and record Check or ACH payments.</p></div>
-      <div class="version">Installed version 1.6.0</div>
+      <div class="version">Installed version 1.7.0</div>
     </header>
 
     <section class="shell">
@@ -214,6 +223,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
             <div class="left"><strong id="reviewLabel">Invoice Review</strong><span class="pill" id="invoiceStatus">draft</span></div>
             <div class="right">
               <button class="btn" id="printInvoice" type="button">Generate Invoice PDF</button>
+              <button class="btn" id="correctInvoice" type="button">Correct Invoice</button>
               <button class="btn primary" id="emailFromReview" type="button">Email Invoice</button>
               <button class="btn" id="hideReview" type="button">Return to History</button>
             </div>
@@ -242,8 +252,11 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
                   <div class="meta-box"><span class="label">Due Date</span><strong id="paperDueDate">—</strong></div>
                   <div class="meta-box"><span class="label">Invoice Type</span><strong id="paperType">Monthly Billing</strong></div>
                   <div class="meta-box"><span class="label">Status</span><strong id="paperStatus">Draft</strong></div>
+                  <div class="meta-box" id="paperPeriodBox"><span class="label">Service Period</span><strong id="paperBillingPeriod">—</strong></div>
                 </div>
               </div>
+
+              <div class="correction-note hidden" id="paperCorrectionNote"></div>
 
               <div style="overflow:auto">
                 <table class="invoice-table">
@@ -389,6 +402,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
         <div class="field"><label>Invoice Type</label><select id="invoiceType"><option value="monthly">Monthly Billing Package</option><option value="additional">Additional Services Only</option></select></div>
         <div class="field"><label>Invoice Date</label><input id="invoiceDate" type="date" required></div>
         <div class="field"><label>Due Date</label><input id="invoiceDueDate" type="date" required></div>
+        <div class="field full"><label>Billing Period</label><input id="invoiceBillingPeriod" placeholder="Services performed during July 2026"></div>
         <div class="field full"><label>Email Invoice To</label><input id="invoiceEmail" type="email"></div>
       </div>
 
@@ -401,6 +415,31 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
       </div>
     </div>
     <div class="dactions"><button class="btn" id="cancelInvoice" type="button">Cancel</button><button class="btn primary" type="submit">Create & Review Invoice</button></div>
+  </form>
+</dialog>
+
+<dialog id="correctionDialog">
+  <form id="correctionForm">
+    <div class="dhead"><div><h2>Correct Invoice</h2><p id="correctionAccount"></p></div><button class="close" id="closeCorrectionDialog" type="button">×</button></div>
+    <div class="dbody">
+      <div class="callout"><strong>Permanent record:</strong> The original invoice will remain in Financial History as Superseded. The corrected revision will be created as a draft for review before it is emailed.</div>
+      <div class="grid">
+        <div class="field"><label>Original Invoice</label><input id="correctionOriginalNumber" readonly></div>
+        <div class="field"><label>Corrected Invoice</label><input id="correctionNumber" readonly></div>
+        <div class="field"><label>Invoice Date</label><input id="correctionDate" type="date" readonly></div>
+        <div class="field"><label>Due Date</label><input id="correctionDueDate" type="date" readonly></div>
+        <div class="field full"><label>Billing Period</label><input id="correctionBillingPeriod" required placeholder="Services performed during July 2026"></div>
+        <div class="field full"><label>Correction Statement</label><input id="correctionStatement" readonly></div>
+      </div>
+      <div style="margin-top:18px">
+        <div class="head"><div><h3>Additional Services</h3><p>Add only charges missing from the original invoice. Existing line items are copied automatically.</p></div><button class="btn" id="addCorrectionRow" type="button">Add Service</button></div>
+        <div class="extra-editor">
+          <div class="extra-head"><span>Description</span><span>Amount</span><span></span></div>
+          <div id="correctionRows"></div>
+        </div>
+      </div>
+    </div>
+    <div class="dactions"><button class="btn" id="cancelCorrection" type="button">Cancel</button><button class="btn primary" type="submit">Create Corrected Invoice</button></div>
   </form>
 </dialog>
 
@@ -439,7 +478,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
 <script src="shared/gcm-shell.js?v=1.0.2"></script>
 <script>
 (()=>{"use strict";
-const VERSION="1.6.0",KEY="gcm_finance_workspace_v1_6",$=id=>document.getElementById(id);
+const VERSION="1.7.0",KEY="gcm_finance_workspace_v1_7",$=id=>document.getElementById(id);
 const seed={
   agency:{name:"Global Concepts Media Agency LLC",website:"https://globalconceptsmediallc.com",logoUrl:""},
   selectedAccountId:1,selectedInvoiceId:null,nextInvoiceNumber:2238,nextAccountId:3,
@@ -484,7 +523,8 @@ function migrate(v){
   v.nextAccountId=v.nextAccountId||Math.max(0,...v.accounts.map(a=>Number(a.id)||0))+1;
   v.accounts=v.accounts.map(a=>({
     contact:"",phone:"",address:"",website:"",logoUrl:"",termsDays:30,
-    note:"Payment method: Check or ACH. Thank you for your business.",...a
+    note:"Payment method: Check or ACH. Thank you for your business.",...a,
+    transactions:(a.transactions||[]).map(t=>({...t,revisionNumber:Number(t.revisionNumber||0)}))
   }));
   return v;
 }
@@ -492,6 +532,10 @@ function load(){
   try{
     const current=JSON.parse(localStorage.getItem(KEY));
     if(current)return migrate(current);
+    const previous=JSON.parse(localStorage.getItem("gcm_finance_workspace_v1_6"));
+    if(previous){
+      const migrated=migrate(previous);localStorage.setItem(KEY,JSON.stringify(migrated));return migrated;
+    }
     const old=JSON.parse(localStorage.getItem("gcm_finance_workspace_v1_4"))||JSON.parse(localStorage.getItem("gcm_finance_workspace_v1_3"));
     if(old){
       const migrated=migrate(old);
@@ -519,6 +563,7 @@ function money(v){return new Intl.NumberFormat("en-US",{style:"currency",currenc
 function today(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
 function addDays(v,n){const[y,m,d]=v.split("-").map(Number),x=new Date(y,m-1,d);x.setDate(x.getDate()+n);return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,"0")}-${String(x.getDate()).padStart(2,"0")}`}
 function date(v){if(!v)return"—";const[y,m,d]=String(v).split("-").map(Number);return new Date(y,m-1,d).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})}
+function servicePeriod(v){if(!v)return"";const[y,m]=String(v).split("-").map(Number);return `Services performed during ${new Date(y,m-1,1).toLocaleDateString("en-US",{month:"long",year:"numeric"})}`}
 function esc(v){return String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]))}
 function initials(name){return String(name||"BA").split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join("").toUpperCase()||"BA"}
 function faviconUrl(website){
@@ -541,10 +586,16 @@ function imageBox(el,a,text){
 }
 function nextId(){return Math.max(0,...state.accounts.flatMap(a=>(a.transactions||[]).map(t=>Number(t.id)||0)))+1}
 function baseAmount(a){return (a.services||[]).reduce((s,x)=>s+(x.values||[]).reduce((p,n)=>p+Number(n||0),0),0)}
-function invoiceBalance(i){return i?Math.max(0,Number(i.amount||0)-Number(i.paidAmount||0)):0}
-function accountBalance(a){return (a.transactions||[]).filter(t=>t.type==="invoice").reduce((s,t)=>s+invoiceBalance(t),0)}
+function invoiceBalance(i){return i&&i.status!=="superseded"?Math.max(0,Number(i.amount||0)-Number(i.paidAmount||0)):0}
+function accountBalance(a){return (a.transactions||[]).filter(t=>t.type==="invoice"&&t.status!=="superseded").reduce((s,t)=>s+invoiceBalance(t),0)}
 function latestInvoice(a){return [...(a.transactions||[])].filter(t=>t.type==="invoice").sort((x,y)=>String(y.date).localeCompare(String(x.date))||Number(y.id)-Number(x.id))[0]||null}
 function openInvoice(a){return [...(a.transactions||[])].filter(t=>t.type==="invoice"&&invoiceBalance(t)>0).sort((x,y)=>String(y.date).localeCompare(String(x.date))||Number(y.id)-Number(x.id))[0]||null}
+function revisionReference(a,i){
+  const root=String(i.originalReference||i.reference).replace(/-R\d+$/i,""),used=(a.transactions||[])
+    .filter(t=>t.type==="invoice"&&(String(t.originalReference||"")===root||new RegExp(`^${root.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}-R\\d+$`,"i").test(String(t.reference||""))))
+    .map(t=>Number(String(t.reference||"").match(/-R(\d+)$/i)?.[1]||t.revisionNumber||0));
+  return `${root}-R${Math.max(0,...used)+1}`;
+}
 function toast(m){$("toast").textContent=m;$("toast").classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>$("toast").classList.remove("show"),2800)}
 
 function renderAccounts(){
@@ -577,7 +628,7 @@ function renderHistory(){
     .sort((x,y)=>String(y.date).localeCompare(String(x.date))||Number(y.id)-Number(x.id));
   $("txRows").innerHTML=rows.length?rows.map(t=>`
     <tr><td>${date(t.date)}</td><td>${t.type==="invoice"?"Invoice":"Payment"}</td>
-    <td>${esc(t.reference||"—")}</td><td>${esc(t.description||"—")}</td>
+    <td>${esc(t.reference||"—")}</td><td>${esc(t.status==="superseded"?`${t.description||"Invoice"} — replaced by #${t.replacedBy||"corrected revision"}`:t.description||"—")}</td>
     <td class="money">${money(t.amount)}</td><td><span class="status ${esc(t.status)}">${esc(t.status)}</span></td>
     <td>${t.type==="invoice"?`<button class="btn" data-review="${t.id}" type="button">Review</button>`:""}</td></tr>`).join("")
     :`<tr><td colspan="7" class="empty">No financial history has been recorded for this billing account.</td></tr>`;
@@ -653,10 +704,20 @@ function collectExtras(){
     description:r.querySelector(".extra-description").value.trim(),amount:Number(r.querySelector(".extra-amount").value||0)
   })).filter(x=>x.description&&x.amount>0);
 }
+function addCorrectionRow(description="",amount=""){
+  const row=document.createElement("div");row.className="extra-row";
+  row.innerHTML=`<input class="extra-description" placeholder="Service description" value="${esc(description)}"><input class="extra-amount" type="number" min="0" step=".01" placeholder="0.00" value="${esc(amount)}"><button class="icon-btn" type="button">×</button>`;
+  row.querySelector("button").onclick=()=>row.remove();$("correctionRows").appendChild(row);
+}
+function collectCorrectionExtras(){
+  return [...document.querySelectorAll("#correctionRows .extra-row")].map(r=>({
+    description:r.querySelector(".extra-description").value.trim(),amount:Number(r.querySelector(".extra-amount").value||0)
+  })).filter(x=>x.description&&x.amount>0);
+}
 function openCreate(){
   const a=account();$("invoiceAccount").textContent=`Create an invoice for ${a.name}.`;$("invoiceNumber").value=state.nextInvoiceNumber;
   $("invoiceType").value="monthly";$("invoiceDate").value=today();$("invoiceDueDate").value=addDays(today(),Number(a.termsDays||0));
-  $("invoiceEmail").value=a.email||"";$("extraRows").innerHTML="";addExtraRow();$("invoiceDialog").showModal();
+  $("invoiceBillingPeriod").value=servicePeriod(today());$("invoiceEmail").value=a.email||"";$("extraRows").innerHTML="";addExtraRow();$("invoiceDialog").showModal();
 }
 function createInvoice(e){
   e.preventDefault();const a=account(),type=$("invoiceType").value,extras=collectExtras(),base=type==="monthly"?baseAmount(a):0;
@@ -664,11 +725,43 @@ function createInvoice(e){
   const total=base+extras.reduce((s,x)=>s+x.amount,0),ref=String(state.nextInvoiceNumber);
   const record={id:nextId(),date:$("invoiceDate").value,dueDate:$("invoiceDueDate").value,type:"invoice",reference:ref,
     description:type==="monthly"?"Monthly Billing Package":"Additional Services",invoiceType:type,baseAmount:base,
-    extras,amount:total,paidAmount:0,status:"draft",email:$("invoiceEmail").value.trim(),
+    extras,amount:total,paidAmount:0,status:"draft",email:$("invoiceEmail").value.trim(),billingPeriod:$("invoiceBillingPeriod").value.trim(),
     accountSnapshot:{name:a.name,contact:a.contact,address:a.address,website:a.website,logoUrl:a.logoUrl,locations:clone(a.locations),services:clone(a.services),note:a.note}
   };
   a.transactions.push(record);if(record.email)a.email=record.email;state.selectedInvoiceId=record.id;state.nextInvoiceNumber+=1;
   save();$("invoiceDialog").close();renderAll();showInvoice();toast(`Invoice #${ref} created.`);
+}
+function openCorrection(){
+  const a=account(),i=invoice();if(!i){toast("Select an invoice to correct.");return}
+  if(i.status==="superseded"){toast("This invoice has already been superseded.");return}
+  if(Number(i.paidAmount||0)>0){toast("A paid invoice must be reconciled before it can be corrected.");return}
+  const correctedRef=revisionReference(a,i);
+  $("correctionAccount").textContent=`Correct invoice #${i.reference} for ${a.name}.`;
+  $("correctionOriginalNumber").value=i.reference;$("correctionNumber").value=correctedRef;
+  $("correctionDate").value=i.date;$("correctionDueDate").value=i.dueDate;
+  $("correctionBillingPeriod").value=i.billingPeriod||servicePeriod(i.date);
+  $("correctionStatement").value=`This corrected invoice replaces invoice #${i.reference}.`;
+  $("correctionRows").innerHTML="";addCorrectionRow();$("correctionDialog").showModal();
+}
+function createCorrection(e){
+  e.preventDefault();const a=account(),i=invoice();
+  if(!i||i.status==="superseded"){toast("The original invoice is no longer available for correction.");return}
+  if(Number(i.paidAmount||0)>0){toast("A paid invoice must be reconciled before it can be corrected.");return}
+  const additions=collectCorrectionExtras(),billingPeriod=$("correctionBillingPeriod").value.trim();
+  if(!billingPeriod){toast("Enter the service period for the corrected invoice.");return}
+  const ref=$("correctionNumber").value,root=String(i.originalReference||i.reference).replace(/-R\d+$/i,""),revision=Number(String(ref).match(/-R(\d+)$/i)?.[1]||1);
+  const existingExtras=clone(i.extras||[]),extras=[...existingExtras,...additions],extraTotal=extras.reduce((s,x)=>s+Number(x.amount||0),0);
+  const record={
+    id:nextId(),date:i.date,dueDate:i.dueDate,type:"invoice",reference:ref,description:"Corrected Monthly Billing Package",
+    invoiceType:i.invoiceType,baseAmount:Number(i.baseAmount||0),extras,amount:Number(i.baseAmount||0)+extraTotal,
+    paidAmount:0,status:"draft",email:i.email||a.email||"",billingPeriod,
+    originalReference:root,correctsReference:i.reference,revisionNumber:revision,
+    correctionStatement:`This corrected invoice replaces invoice #${i.reference}.`,
+    accountSnapshot:clone(i.accountSnapshot||{name:a.name,contact:a.contact,address:a.address,website:a.website,logoUrl:a.logoUrl,locations:a.locations,services:a.services,note:a.note})
+  };
+  i.status="superseded";i.replacedBy=ref;i.supersededAt=new Date().toISOString();
+  a.transactions.push(record);state.selectedInvoiceId=record.id;save();$("correctionDialog").close();renderAll();showInvoice();
+  toast(`Corrected invoice #${ref} created for review.`);
 }
 function paperRows(a,i){
   const source=i.accountSnapshot||a,rows=[];
@@ -691,12 +784,18 @@ function showInvoice(){
   $("paperAddress").textContent=source.address||"";$("paperDate").textContent=date(i.date);$("paperDueDate").textContent=date(i.dueDate);
   $("paperType").textContent=i.invoiceType==="monthly"?"Monthly Billing":"Additional Services";
   $("paperStatus").textContent=i.status.charAt(0).toUpperCase()+i.status.slice(1);
+  const period=i.billingPeriod||(i.invoiceType==="monthly"?servicePeriod(i.date):"");
+  $("paperBillingPeriod").textContent=period||"—";$("paperPeriodBox").classList.toggle("hidden",!period);
+  const correctionText=i.correctionStatement||"";$("paperCorrectionNote").textContent=correctionText;$("paperCorrectionNote").classList.toggle("hidden",!correctionText);
   $("paperLoc1").textContent=source.locations?.[0]||"Client";$("paperLoc2").textContent=source.locations?.[1]||"";
   $("paperRows").innerHTML=paperRows(a,i);
   const extra=(i.extras||[]).reduce((s,x)=>s+Number(x.amount||0),0);
   $("paperBaseTotal").textContent=money(i.baseAmount||0);$("paperExtraTotal").textContent=money(extra);$("paperGrandTotal").textContent=money(i.amount);
   $("paperNote").textContent=source.note||"Payment method: Check or ACH. Thank you for your business.";
   $("invoiceStatus").textContent=i.status;$("invoiceStatus").className=`pill ${i.status}`;$("reviewLabel").textContent=`Invoice #${i.reference} Review`;
+  $("correctInvoice").disabled=i.status==="superseded"||Number(i.paidAmount||0)>0;
+  $("correctInvoice").title=i.status==="superseded"?"This invoice has already been superseded.":Number(i.paidAmount||0)>0?"Paid invoices require payment reconciliation before correction.":"Create a corrected revision while preserving this invoice.";
+  $("emailFromReview").disabled=i.status==="superseded";
   $("invoiceStage").classList.remove("hidden");$("invoiceStage").scrollIntoView({behavior:"smooth",block:"start"});
 }
 function hideInvoice(){$("invoiceStage").classList.add("hidden")}
@@ -724,6 +823,7 @@ async function generateInvoicePdf(download=true){
 }
 async function emailCurrent(){
   const a=account(),i=invoice();if(!i){toast("No invoice is available to email.");return}
+  if(i.status==="superseded"){toast("A superseded invoice cannot be emailed. Open its corrected revision instead.");return}
   const recipient=i.email||a.email;if(!recipient){toast("A billing email has not been set for this account.");return}
   try{
     await generateInvoicePdf(true);
@@ -734,7 +834,7 @@ Attached is invoice #${i.reference} for ${money(i.amount)}.
 
 Invoice date: ${date(i.date)}
 Due date: ${date(i.dueDate)}
-Bill to: ${a.name}
+${i.billingPeriod?`Service period: ${i.billingPeriod}\n`:""}${i.correctionStatement?`${i.correctionStatement}\n`:""}Bill to: ${a.name}
 
 The invoice PDF has been downloaded. Please attach it to this Gmail draft before sending.
 
@@ -753,7 +853,7 @@ function renderStatement(){
   const tx=[...(a.transactions||[])].sort((x,y)=>String(x.date).localeCompare(String(y.date))||Number(x.id)-Number(y.id));
   let running=0,billed=0,paid=0;
   $("statementRows").innerHTML=tx.length?tx.map(t=>{
-    const charge=t.type==="invoice"?Number(t.amount||0):0,payment=t.type==="payment"?Number(t.amount||0):0;
+    const charge=t.type==="invoice"&&t.status!=="superseded"?Number(t.amount||0):0,payment=t.type==="payment"?Number(t.amount||0):0;
     billed+=charge;paid+=payment;running+=charge-payment;
     return `<tr><td>${date(t.date)}</td><td>${t.type==="invoice"?"Invoice":"Payment"}</td><td>${esc(t.reference||"—")}</td><td>${esc(t.description||"—")}</td><td class="money">${charge?money(charge):"—"}</td><td class="money">${payment?money(payment):"—"}</td><td class="money">${money(running)}</td></tr>`;
   }).join(""):`<tr><td colspan="7" class="empty">No financial history has been recorded.</td></tr>`;
@@ -812,13 +912,17 @@ $("deleteAccount").onclick=deleteAccount;$("addLocation").onclick=()=>addLocatio
 $("previewLogo").onclick=previewAccountLogo;$("accountWebsite").onchange=previewAccountLogo;$("accountLogoUrl").onchange=previewAccountLogo;
 
 $("createInvoice").onclick=openCreate;$("reviewInvoice").onclick=showInvoice;$("emailInvoice").onclick=emailCurrent;
-$("emailFromReview").onclick=emailCurrent;$("printInvoice").onclick=()=>generateInvoicePdf(true);$("hideReview").onclick=hideInvoice;
+$("emailFromReview").onclick=emailCurrent;$("printInvoice").onclick=()=>generateInvoicePdf(true);$("correctInvoice").onclick=openCorrection;$("hideReview").onclick=hideInvoice;
 $("printStatement").onclick=showStatement;$("printStatementNow").onclick=generateStatementPdf;$("hideStatement").onclick=hideStatement;
 $("agencyBranding").onclick=openBranding;$("brandingForm").onsubmit=saveBranding;
 $("closeBrandingDialog").onclick=$("cancelBranding").onclick=()=>$("brandingDialog").close();
 $("previewAgencyLogo").onclick=previewAgencyLogo;$("agencyWebsite").onchange=previewAgencyLogo;$("agencyLogoUrl").onchange=previewAgencyLogo;
 $("recordPayment").onclick=openPayment;$("closeCycle").onclick=closeCycle;
 $("addExtraRow").onclick=()=>addExtraRow();$("invoiceForm").onsubmit=createInvoice;$("paymentForm").onsubmit=recordPayment;
+$("invoiceDate").onchange=()=>{if($("invoiceType").value==="monthly")$("invoiceBillingPeriod").value=servicePeriod($("invoiceDate").value)};
+$("invoiceType").onchange=()=>{$("invoiceBillingPeriod").value=$("invoiceType").value==="monthly"?servicePeriod($("invoiceDate").value):""};
+$("addCorrectionRow").onclick=()=>addCorrectionRow();$("correctionForm").onsubmit=createCorrection;
+$("closeCorrectionDialog").onclick=$("cancelCorrection").onclick=()=>$("correctionDialog").close();
 $("closeInvoiceDialog").onclick=$("cancelInvoice").onclick=()=>$("invoiceDialog").close();
 $("closePaymentDialog").onclick=$("cancelPayment").onclick=()=>$("paymentDialog").close();
 
