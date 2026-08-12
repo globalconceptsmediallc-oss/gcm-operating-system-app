@@ -1,9 +1,9 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.13.0
+   Version: 7.14.0
    Status: Production Road-Test Candidate
-   Source: Production worker.js 7.12.0
+   Source: Production worker.js 7.13.0
    Sprint: Historical Record Rehabilitation — Bulk Apply
    Purpose: Preserve every verified production route and expose the
             controlled bulk rehabilitation apply action for the verified
@@ -39,7 +39,7 @@ import { handleCommitOperationalDecision } from "./routes/operationalDecision.js
 import { handleMissionControl } from "./routes/missionControl.js";
 import { handleProcessInvestigation } from "./routes/investigationProcessing.js";
 import { handleGuidedInvestigation } from "./routes/guidedInvestigation.js";
-import { handleProcessWorkItem } from "./routes/workItemProcessing.js";
+import { handleProcessWorkItem, handleCreateRequestedWork, CREATE_REQUESTED_WORK_ACTION } from "./routes/workItemProcessing.js";
 import { handleMediaOperations } from "./routes/mediaOperations.js";
 import { handleOperationalReviews } from "./routes/operationalReviews.js";
 import {
@@ -77,7 +77,7 @@ import {
 
 import { handleGmailGet, handleGmailAction } from "./routes/gmailIntegration.js";
 
-const WORKER_FILE_VERSION = "7.13.0";
+const WORKER_FILE_VERSION = "7.14.0";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
@@ -89,6 +89,7 @@ const SUPPORTED_ACTIONS = [
   ACTIONS.GET_GUIDED_INVESTIGATION,
   ACTIONS.PROCESS_INVESTIGATION,
   ACTIONS.PROCESS_WORK_ITEM,
+  CREATE_REQUESTED_WORK_ACTION,
   ACTIONS.GET_MEDIA_OPERATIONS,
   ACTIONS.OPERATIONAL_REVIEWS,
   AGENCY_COMMAND_ACTION,
@@ -278,6 +279,9 @@ export default {
 
         case ACTIONS.PROCESS_WORK_ITEM:
           return await handleProcessWorkItem(body, env, requestId);
+
+        case CREATE_REQUESTED_WORK_ACTION:
+          return await handleCreateRequestedWork(body, env, requestId);
 
         case ACTIONS.GET_MEDIA_OPERATIONS:
           return await handleMediaOperations(body, env, requestId);
