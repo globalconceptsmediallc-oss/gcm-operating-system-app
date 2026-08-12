@@ -1,10 +1,10 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.13
+   Version: 1.9.14
    Status: FBDT Production Candidate
-   Source: Production work.html 1.9.8
-   Sprint: Worker Error Object Normalization + Decision Evidence Synthesis Guard
+   Source: Production work.html 1.9.13
+   Sprint: Durable Investigation Progress
    Purpose: Preserve the complete audited SEMrush evidence and guided
             Investigation workflow while adding a direct D1 entrance for
             known client-requested work that needs no artificial Investigation.
@@ -58,6 +58,12 @@
      the workItem URL target is rendered by exact Work Item ID first, and
      client-code matching is normalized so an open direct Work Item cannot
      disappear from the A1 view because of representation/casing differences.
+   - v1.9.14 makes Save & Continue Investigation a real production action.
+   - Saves What We Know, Next Question, and Next Evidence without closing
+     the Investigation or creating a Work Item.
+   - Reloads the newest saved progress from D1 after refresh.
+   - Displays dated Investigation Progress history from linked Evidence records.
+   - Keeps Root Cause Proven — Create Work separately locked until supported.
    ========================================================= -->
 <!DOCTYPE html>
 <html lang="en">
@@ -138,6 +144,7 @@
     .evidence-step.active .evidence-step-index{background:var(--blue);color:#fff}
     .evidence-step.active .evidence-step-status{color:var(--blue)}
     .evidence-workflow-actions{display:flex;justify-content:flex-end;margin-top:10px}
+    .progress-history{margin-top:14px;padding:14px;border:1px solid #cbdcf4;border-radius:10px;background:#f8fbff}.progress-history h4{margin:0;color:var(--navy);font-size:.82rem}.progress-history p{margin:5px 0 0;color:var(--muted);font-size:.72rem;line-height:1.4}.progress-history-list{display:grid;gap:9px;margin-top:11px}.progress-history-entry{padding:11px;border:1px solid var(--border);border-radius:9px;background:#fff}.progress-history-entry strong{display:block;color:var(--navy);font-size:.75rem}.progress-history-entry dl{display:grid;gap:7px;margin:9px 0 0}.progress-history-entry dt{color:var(--muted);font-size:.65rem;font-weight:900;letter-spacing:.05em;text-transform:uppercase}.progress-history-entry dd{margin:2px 0 0;color:var(--text);font-size:.74rem;line-height:1.45;white-space:pre-wrap}
     @media(max-width:700px){.evidence-step{grid-template-columns:28px minmax(0,1fr)}.evidence-step-status{grid-column:2}.evidence-workflow-header{flex-direction:column}}
 
 
@@ -152,7 +159,7 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Use Investigation when the correct action is unknown. Use Create Requested Work when the client need and deliverable are already clear.</p></div>
-        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.13</span>
+        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.14</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -236,7 +243,7 @@
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.13"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.14"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),target:byId("target-banner"),requestedForm:byId("requested-work-form"),requestedClient:byId("requested-client"),requestedMessage:byId("requested-work-message"),createRequested:byId("create-requested-work")};
   let activeClients=[],directoryClients=[],investigations=[],workItems=[],selectedKey="",processing=false,processingWorkItem=false,processingRequestedWork=false;
 
@@ -260,6 +267,15 @@
         const client=activeClients[index],op=result.value.operational||{};
         const communications=Array.isArray(op.communications)?op.communications:[];
         const communicationById=new Map(communications.map(c=>[Number(c.id),c]));
+        const progressByInvestigation=new Map();
+        (Array.isArray(op.evidence)?op.evidence:[])
+          .filter(entry=>norm(entry.evidence_type)==="investigation_progress"&&positiveInt(entry.investigation_id))
+          .forEach(entry=>{
+            const investigationId=Number(entry.investigation_id);
+            const existing=progressByInvestigation.get(investigationId)||[];
+            existing.push(entry);
+            progressByInvestigation.set(investigationId,existing);
+          });
         const clientWebsite=normalizeWebsite(
           op.client?.website_url ||
           op.client?.website ||
@@ -267,7 +283,7 @@
           op.client?.primary_domain ||
           client.website
         );
-        (Array.isArray(op.investigations)?op.investigations:[]).filter(i=>!closed(i)).forEach(i=>investigations.push({...i,clientCode:op.client?.client_code||client.code,clientName:op.client?.name||client.name,clientWebsite,communication:communicationById.get(Number(i.communication_id))||null}));
+        (Array.isArray(op.investigations)?op.investigations:[]).filter(i=>!closed(i)).forEach(i=>investigations.push({...i,clientCode:op.client?.client_code||client.code,clientName:op.client?.name||client.name,clientWebsite,communication:communicationById.get(Number(i.communication_id))||null,progressUpdates:progressByInvestigation.get(Number(i.id))||[]}));
         (Array.isArray(op.workItems)?op.workItems:[]).filter(i=>!completed(i)).forEach(i=>workItems.push({...i,clientCode:op.client?.client_code||client.code,clientName:op.client?.name||client.name,clientWebsite}));
       });
       investigations.sort(sortInvestigations);
@@ -802,7 +818,53 @@
     });
   }
 
+  function parseInvestigationProgress(entry){
+    let raw={};
+    try{
+      raw=typeof entry?.raw_data==="string"
+        ? JSON.parse(entry.raw_data||"{}")
+        : (entry?.raw_data&&typeof entry.raw_data==="object"?entry.raw_data:{});
+    }catch(error){
+      console.warn("Could not parse Investigation Progress raw_data.",error);
+    }
+
+    const description=String(entry?.description||"");
+    const readDescriptionField=(label,nextLabel)=>{
+      const escaped=label.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+      const next=nextLabel
+        ? `(?=\\n\\n${nextLabel.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}:|$)`
+        : "$";
+      return description.match(new RegExp(`${escaped}:\\s*([\\s\\S]*?)${next}`))?.[1]?.trim()||"";
+    };
+
+    return {
+      id:Number(entry?.id)||0,
+      findingSummary:String(raw.findingSummary||raw.finding_summary||readDescriptionField("What We Know","Next Question")||"").trim(),
+      nextQuestion:String(raw.nextQuestion||raw.next_question||readDescriptionField("Next Question","Next Evidence")||"").trim(),
+      nextEvidence:String(raw.nextEvidence||raw.next_evidence||readDescriptionField("Next Evidence","")||"").trim(),
+      recordedBy:String(raw.recordedBy||raw.recorded_by||"Global Concepts Media").trim(),
+      capturedAt:String(entry?.captured_at||entry?.created_at||"").trim()
+    };
+  }
+
+  function investigationProgressEntries(item){
+    return (Array.isArray(item?.progressUpdates)?item.progressUpdates:[])
+      .map(parseInvestigationProgress)
+      .filter(entry=>entry.findingSummary||entry.nextQuestion||entry.nextEvidence)
+      .sort((a,b)=>String(b.capturedAt).localeCompare(String(a.capturedAt))||b.id-a.id);
+  }
+
+  function buildInvestigationProgressHistory(item){
+    const entries=investigationProgressEntries(item);
+    if(!entries.length)return "";
+    return `<section class="progress-history"><h4>Saved Investigation Progress</h4><p>${entries.length} dated update${entries.length===1?"":"s"} preserved in production D1.</p><div class="progress-history-list">${entries.map(entry=>`<article class="progress-history-entry"><strong>${esc(entry.capturedAt||"Saved update")} · ${esc(entry.recordedBy)}</strong><dl><div><dt>What We Know</dt><dd>${esc(entry.findingSummary)}</dd></div><div><dt>Next Question</dt><dd>${esc(entry.nextQuestion)}</dd></div><div><dt>Next Evidence</dt><dd>${esc(entry.nextEvidence)}</dd></div></dl></article>`).join("")}</div></section>`;
+  }
+
   function renderDetail(item,guidance=null){
+    const latestProgress=investigationProgressEntries(item)[0]||null;
+    const savedFinding=latestProgress?.findingSummary||item.finding_summary||"";
+    const savedQuestion=latestProgress?.nextQuestion||"";
+    const savedEvidence=latestProgress?.nextEvidence||"";
     const communication=item.communication;
     el.detail.innerHTML=`<h2 class="detail-title">${esc(item.title||"Investigation")}</h2><p class="detail-subtitle"><a href="business-workspace.html?business=${encodeURIComponent(item.clientCode)}" style="color:#1f6fd6;font-weight:800">${esc(item.clientName)}</a> · Investigation #${esc(item.id)}${item.communication_id?` · Communication #${esc(item.communication_id)}`:""}</p>
     <section class="detail-section"><h3>Investigation Objective</h3><p>${esc(guidance?.current_objective||item.description||"Determine what the evidence proves.")}</p></section>
@@ -840,11 +902,12 @@
       </div>
     </div>
     <section class="detail-section"><h3>Current Understanding</h3><p>${esc(guidance?.current_understanding||communication?.ai_summary||communication?.raw_content||item.description||"No summary stored.")}</p></section>
-    <section class="detail-section"><h3>Investigation Decision</h3><div class="processing-box"><label>What We Know</label><textarea id="finding-summary">${esc(item.finding_summary||"")}</textarea><label>Next Question to Answer</label><textarea id="work-title"></textarea><label>Next Evidence Needed</label><textarea id="work-description"></textarea><div class="processing-actions"><button id="close-button" class="button">Close — No Work Required</button><button id="create-button" class="button primary">Root Cause Proven — Create Work</button></div><div id="process-message"></div></div></section>`;
+    <section class="detail-section"><h3>Investigation Decision</h3><div class="processing-box"><label>What We Know</label><textarea id="finding-summary">${esc(savedFinding)}</textarea><label>Next Question to Answer</label><textarea id="work-title">${esc(savedQuestion)}</textarea><label>Next Evidence Needed</label><textarea id="work-description">${esc(savedEvidence)}</textarea><div class="processing-actions"><button id="close-button" class="button">Close — No Work Required</button><button id="continue-button" class="button primary">Save &amp; Continue Investigation</button><button id="create-button" class="button">Root Cause Proven — Create Work</button></div><div id="process-message"></div>${buildInvestigationProgressHistory(item)}</div></section>`;
     byId("close-button").addEventListener("click",()=>processInvestigation(item,"no_work_required"));
+    byId("continue-button").addEventListener("click",()=>processInvestigation(item,"continue_investigation"));
     byId("create-button").disabled=true;
     byId("create-button").title="Corrective work remains locked until the root cause is proven.";
-    byId("create-button").textContent="Create Work Locked — Continue Investigation";
+    byId("create-button").textContent="Create Work Locked — Root Cause Not Proven";
     byId("create-button").addEventListener("click",()=>processInvestigation(item,"specific_work_required"));
     bindEvidenceCapture(item);
     bindSemrushLinkSetup(item);
@@ -984,15 +1047,15 @@
     const evidence=byId("work-description");
     const latest=history.at(-1);
 
-    if(finding){
+    if(finding&&!finding.value.trim()){
       finding.value=history
         .map(entry=>`Step ${entry.step}: ${entry.finding}`)
         .join("\n\n");
     }
-    if(question){
+    if(question&&!question.value.trim()){
       question.value=latest.nextQuestion||extractNextQuestion(latest.nextAction);
     }
-    if(evidence){
+    if(evidence&&!evidence.value.trim()){
       evidence.value=latest.nextAction||"";
     }
 
@@ -2018,7 +2081,7 @@
       : "Corrective work remains locked until the root cause is proven.";
     createButton.textContent=decision.rootCauseProven
       ? "Root Cause Proven — Create Work"
-      : "Create Work Locked — Continue Investigation";
+      : "Create Work Locked — Root Cause Not Proven";
   }
 
   async function createRequestedWork(event){
@@ -2089,9 +2152,17 @@
     if(processing)return;
     const finding=byId("finding-summary").value.trim(),title=byId("work-title").value.trim(),description=byId("work-description").value.trim(),message=byId("process-message");
     if(!finding){message.className="status error";message.textContent="Record the evidence-supported Investigation Finding.";return;}
+    if(outcome==="continue_investigation"&&(!title||!description)){message.className="status error";message.textContent="Next Question and Next Evidence are required before saving Investigation progress.";return;}
     if(outcome==="specific_work_required"&&(!title||!description)){message.className="status error";message.textContent="The root cause and corrective action are required before creating work.";return;}
-    processing=true;message.className="status loading";message.textContent="Saving production decision…";
-    try{await post({action:"process-investigation",clientCode:item.clientCode,investigationId:Number(item.id),findingSummary:finding,outcome,workTitle:title,workDescription:description});completeEvidenceStep(item,"complete_investigation");if(outcome==="specific_work_required")completeEvidenceStep(item,"create_work");message.className="status ready";message.textContent=outcome==="no_work_required"?"Investigation closed.":"Specific Work Item created.";await load();}catch(error){message.className="status error";message.textContent=error.message;}finally{processing=false;}
+    processing=true;message.className="status loading";message.textContent=outcome==="continue_investigation"?"Saving Investigation progress to production D1…":"Saving production decision…";
+    try{
+      await post({action:"process-investigation",clientCode:item.clientCode,investigationId:Number(item.id),findingSummary:finding,outcome,workTitle:title,workDescription:description,nextQuestion:title,nextEvidence:description});
+      if(outcome!=="continue_investigation")completeEvidenceStep(item,"complete_investigation");
+      if(outcome==="specific_work_required")completeEvidenceStep(item,"create_work");
+      message.className="status ready";
+      message.textContent=outcome==="continue_investigation"?"Investigation progress saved. The Investigation remains open and no Work Item was created.":outcome==="no_work_required"?"Investigation closed.":"Specific Work Item created.";
+      await load();
+    }catch(error){message.className="status error";message.textContent=error.message;}finally{processing=false;}
   }
   function normalizedClientCode(value){
     return String(value||"").trim().toUpperCase();
