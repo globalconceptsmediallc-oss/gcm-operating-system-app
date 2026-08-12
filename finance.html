@@ -1,12 +1,13 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: finance.html
-   Version: 1.7.0
-   Status: Production Candidate — Corrected Invoices & Billing Periods
+   Version: 1.7.1
+   Status: Production Candidate — Connected Gmail Billing Delivery
    Source: finance.html 1.6.0
    Sprint: Finance / Invoice Correction Control
    Purpose: Manage billing accounts, create fixed-package or additional-service invoices,
-            generate downloadable invoice PDFs, prepare Gmail drafts,
+            generate invoice and statement PDFs, create connected Gmail drafts
+            with the correct PDF physically attached,
             print account statements, apply account-specific invoice
             language, display agency branding, record Check/ACH
             payments, close cycles, preserve superseded invoices, and create
@@ -17,6 +18,11 @@
             - Prevents superseded invoices from inflating balances and statements.
             - Adds billing-period wording to monthly and corrected invoice PDFs.
             - Adds correction/replacement wording to revised invoice PDFs.
+            - Repairs invoice emailing when a PDF CDN does not load.
+            - Adds automatic multi-source loading for html2canvas and jsPDF.
+            - Connects invoice and statement delivery to the verified Gmail draft route.
+            - Keeps invoice status as Draft until the operator sends it in Gmail.
+            - Preserves all Finance 1.7.0 invoice and correction records.
    Production Contract: window.GCMOShell
    ========================================================= -->
 <!DOCTYPE html>
@@ -184,7 +190,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
     <button class="mobile btn" data-gcm-shell-menu-button type="button">Menu</button>
     <header class="top">
       <div><p class="eyebrow">Agency Finance</p><h1>Billing Workspace</h1><p class="sub">Manage billing profiles, create invoices, email them, and record Check or ACH payments.</p></div>
-      <div class="version">Installed version 1.7.0</div>
+      <div class="version">Installed version 1.7.1</div>
     </header>
 
     <section class="shell">
@@ -210,7 +216,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
         <div class="actions">
           <button class="btn primary" id="createInvoice">Create Invoice</button>
           <button class="btn" id="reviewInvoice">Invoice Preview</button>
-          <button class="btn" id="emailInvoice">Email Invoice</button>
+          <button class="btn" id="emailInvoice">Create Gmail Draft</button>
           <button class="btn success" id="recordPayment">Record Payment</button>
           <button class="btn" id="closeCycle">Close Billing Cycle</button>
           <button class="btn" id="printStatement">Print Statement</button>
@@ -224,7 +230,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
             <div class="right">
               <button class="btn" id="printInvoice" type="button">Generate Invoice PDF</button>
               <button class="btn" id="correctInvoice" type="button">Correct Invoice</button>
-              <button class="btn primary" id="emailFromReview" type="button">Email Invoice</button>
+              <button class="btn primary" id="emailFromReview" type="button">Create Gmail Draft</button>
               <button class="btn" id="hideReview" type="button">Return to History</button>
             </div>
           </div>
@@ -282,7 +288,8 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
           <div class="invoice-toolbar">
             <div class="left"><strong id="statementReviewLabel">Account Statement</strong></div>
             <div class="right">
-              <button class="btn primary" id="printStatementNow" type="button">Print / Save Statement PDF</button>
+              <button class="btn" id="printStatementNow" type="button">Download Statement PDF</button>
+              <button class="btn primary" id="emailStatement" type="button">Create Gmail Draft</button>
               <button class="btn" id="hideStatement" type="button">Return to History</button>
             </div>
           </div>
@@ -474,11 +481,12 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
 
 <div class="toast" id="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/4.2.1/jspdf.umd.min.js"></script>
 <script src="shared/gcm-shell.js?v=1.0.2"></script>
 <script>
 (()=>{"use strict";
-const VERSION="1.7.0",KEY="gcm_finance_workspace_v1_7",$=id=>document.getElementById(id);
+const VERSION="1.7.1",KEY="gcm_finance_workspace_v1_7",$=id=>document.getElementById(id);
+const WORKER_ENDPOINT="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev";
 const seed={
   agency:{name:"Global Concepts Media Agency LLC",website:"https://globalconceptsmediallc.com",logoUrl:""},
   selectedAccountId:1,selectedInvoiceId:null,nextInvoiceNumber:2238,nextAccountId:3,
@@ -799,8 +807,44 @@ function showInvoice(){
   $("invoiceStage").classList.remove("hidden");$("invoiceStage").scrollIntoView({behavior:"smooth",block:"start"});
 }
 function hideInvoice(){$("invoiceStage").classList.add("hidden")}
+function loadExternalScript(src,test){
+  return new Promise(resolve=>{
+    if(test()){resolve(true);return}
+    const script=document.createElement("script");
+    script.src=src;script.async=true;
+    script.onload=()=>resolve(Boolean(test()));script.onerror=()=>resolve(false);
+    document.head.appendChild(script);
+  });
+}
+async function ensurePdfLibraries(){
+  const dependencies=[
+    {
+      ready:()=>Boolean(window.html2canvas),
+      sources:[
+        "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js",
+        "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js",
+        "https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js"
+      ]
+    },
+    {
+      ready:()=>Boolean(window.jspdf?.jsPDF),
+      sources:[
+        "https://cdnjs.cloudflare.com/ajax/libs/jspdf/4.2.1/jspdf.umd.min.js",
+        "https://cdn.jsdelivr.net/npm/jspdf@4.2.1/dist/jspdf.umd.min.js",
+        "https://unpkg.com/jspdf@4.2.1/dist/jspdf.umd.min.js"
+      ]
+    }
+  ];
+  for(const dependency of dependencies){
+    if(dependency.ready())continue;
+    for(const source of dependency.sources){
+      if(await loadExternalScript(source,dependency.ready))break;
+    }
+    if(!dependency.ready())throw new Error("The PDF generator could not load. Check the internet connection, refresh Finance, and try again.");
+  }
+}
 async function createPdfBlob(element,filename){
-  if(!window.html2canvas||!window.jspdf?.jsPDF)throw new Error("PDF libraries did not load.");
+  await ensurePdfLibraries();
   const canvas=await window.html2canvas(element,{scale:2,useCORS:true,backgroundColor:"#ffffff"});
   const img=canvas.toDataURL("image/jpeg",0.95),{jsPDF}=window.jspdf;
   const pdf=new jsPDF({orientation:"portrait",unit:"pt",format:"letter"});
@@ -812,6 +856,26 @@ async function createPdfBlob(element,filename){
 function downloadBlob(blob,filename){
   const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=filename;
   document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
+function bytesToBase64(bytes){
+  let binary="";const chunkSize=0x8000;
+  for(let offset=0;offset<bytes.length;offset+=chunkSize)binary+=String.fromCharCode(...bytes.subarray(offset,offset+chunkSize));
+  return btoa(binary);
+}
+async function createAttachedGmailDraft({to,subject,body,attachment}){
+  const bytes=new Uint8Array(await attachment.blob.arrayBuffer());
+  const response=await fetch(WORKER_ENDPOINT,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      action:"create-gmail-draft",to,subject,body,
+      attachment:{fileName:attachment.filename,mimeType:"application/pdf",base64:bytesToBase64(bytes)}
+    })
+  });
+  const payload=await response.json().catch(()=>({}));
+  if(!response.ok||payload?.ok!==true)throw new Error(typeof payload?.error==="string"?payload.error:payload?.error?.message||`Gmail draft creation failed (${response.status}).`);
+  window.open(payload.gmailUrl||"https://mail.google.com/mail/u/0/#drafts","_blank");
+  return payload;
 }
 async function generateInvoicePdf(download=true){
   const a=account(),i=invoice();if(!i){toast("No invoice is available.");return null}
@@ -826,9 +890,11 @@ async function emailCurrent(){
   if(i.status==="superseded"){toast("A superseded invoice cannot be emailed. Open its corrected revision instead.");return}
   const recipient=i.email||a.email;if(!recipient){toast("A billing email has not been set for this account.");return}
   try{
-    await generateInvoicePdf(true);
-    const subject=encodeURIComponent(`Invoice #${i.reference} from ${agency().name||"Global Concepts Media Agency LLC"}`);
-    const body=encodeURIComponent(`Hello${a.contact?` ${a.contact}`:""},
+    toast("Generating the invoice PDF and creating the connected Gmail draft…");
+    const result=await generateInvoicePdf(false);
+    if(!result)throw new Error("The invoice PDF could not be generated.");
+    const subject=`Invoice #${i.reference} from ${agency().name||"Global Concepts Media Agency LLC"}`;
+    const body=`Hello${a.contact?` ${a.contact}`:""},
 
 Attached is invoice #${i.reference} for ${money(i.amount)}.
 
@@ -836,13 +902,11 @@ Invoice date: ${date(i.date)}
 Due date: ${date(i.dueDate)}
 ${i.billingPeriod?`Service period: ${i.billingPeriod}\n`:""}${i.correctionStatement?`${i.correctionStatement}\n`:""}Bill to: ${a.name}
 
-The invoice PDF has been downloaded. Please attach it to this Gmail draft before sending.
-
 Thank you,
-${agency().name||"Global Concepts Media Agency LLC"}`);
-    i.status="sent";save();renderAll();showInvoice();
-    window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(recipient)}&su=${subject}&body=${body}`,"_blank");
-    toast("Invoice PDF downloaded and Gmail draft opened. Attach the downloaded PDF before sending.");
+${agency().name||"Global Concepts Media Agency LLC"}`;
+    const payload=await createAttachedGmailDraft({to:recipient,subject,body,attachment:result});
+    i.gmailDraftCreatedAt=new Date().toISOString();i.gmailDraftUrl=payload.gmailUrl||"";save();renderAll();showInvoice();
+    toast(`Gmail draft created for ${recipient} with ${result.filename} attached. Nothing has been sent.`);
   }catch(err){console.error(err);toast(err.message||"Invoice PDF could not be generated.");}
 }
 function renderStatement(){
@@ -867,12 +931,35 @@ function showStatement(){
   $("statementStage").scrollIntoView({behavior:"smooth",block:"start"});
 }
 function hideStatement(){$("statementStage").classList.add("hidden")}
-async function generateStatementPdf(){
+async function generateStatementPdf(download=true){
   try{
     renderStatement();
     const a=account(),result=await createPdfBlob($("statementPaper"),`GCM-Statement-${a.name.replace(/[^a-z0-9]+/gi,"-")}-${today()}.pdf`);
-    downloadBlob(result.blob,result.filename);toast("Statement PDF downloaded.");
+    if(download)downloadBlob(result.blob,result.filename);
+    toast(`Statement PDF ${download?"downloaded":"generated"}.`);return result;
   }catch(err){console.error(err);toast(err.message||"Statement PDF could not be generated.");}
+}
+async function emailCurrentStatement(){
+  const a=account(),recipient=a.email;
+  if(!recipient){toast("A billing email has not been set for this account.");return}
+  try{
+    toast("Generating the statement PDF and creating the connected Gmail draft…");
+    const result=await generateStatementPdf(false);
+    if(!result)throw new Error("The statement PDF could not be generated.");
+    const current=accountBalance(a);
+    const subject=`Account Statement from ${agency().name||"Global Concepts Media Agency LLC"}`;
+    const body=`Hello${a.contact?` ${a.contact}`:""},
+
+Attached is the current account statement for ${a.name}.
+
+Statement date: ${date(today())}
+Current balance: ${money(current)}
+
+Thank you,
+${agency().name||"Global Concepts Media Agency LLC"}`;
+    await createAttachedGmailDraft({to:recipient,subject,body,attachment:result});
+    toast(`Gmail draft created for ${recipient} with ${result.filename} attached. Nothing has been sent.`);
+  }catch(err){console.error(err);toast(err.message||"Statement Gmail draft could not be created.");}
 }
 function previewAgencyLogo(){
   const test={name:$("agencyName").value||"Global Concepts Media Agency LLC",website:$("agencyWebsite").value,logoUrl:$("agencyLogoUrl").value};
@@ -913,7 +1000,7 @@ $("previewLogo").onclick=previewAccountLogo;$("accountWebsite").onchange=preview
 
 $("createInvoice").onclick=openCreate;$("reviewInvoice").onclick=showInvoice;$("emailInvoice").onclick=emailCurrent;
 $("emailFromReview").onclick=emailCurrent;$("printInvoice").onclick=()=>generateInvoicePdf(true);$("correctInvoice").onclick=openCorrection;$("hideReview").onclick=hideInvoice;
-$("printStatement").onclick=showStatement;$("printStatementNow").onclick=generateStatementPdf;$("hideStatement").onclick=hideStatement;
+$("printStatement").onclick=showStatement;$("printStatementNow").onclick=()=>generateStatementPdf(true);$("emailStatement").onclick=emailCurrentStatement;$("hideStatement").onclick=hideStatement;
 $("agencyBranding").onclick=openBranding;$("brandingForm").onsubmit=saveBranding;
 $("closeBrandingDialog").onclick=$("cancelBranding").onclick=()=>$("brandingDialog").close();
 $("previewAgencyLogo").onclick=previewAgencyLogo;$("agencyWebsite").onchange=previewAgencyLogo;$("agencyLogoUrl").onchange=previewAgencyLogo;
