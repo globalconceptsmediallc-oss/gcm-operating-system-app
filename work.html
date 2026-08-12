@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.12
+   Version: 1.9.13
    Status: FBDT Production Candidate
    Source: Production work.html 1.9.8
    Sprint: Worker Error Object Normalization + Decision Evidence Synthesis Guard
@@ -54,6 +54,10 @@
    - Loads the D1 client directory for requested-work selection.
    - Preserves Investigation-created work and supports direct Work Items
      whose investigation_id is NULL.
+   - v1.9.13 hardens direct requested Work Item retrieval after creation:
+     the workItem URL target is rendered by exact Work Item ID first, and
+     client-code matching is normalized so an open direct Work Item cannot
+     disappear from the A1 view because of representation/casing differences.
    ========================================================= -->
 <!DOCTYPE html>
 <html lang="en">
@@ -148,7 +152,7 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Use Investigation when the correct action is unknown. Use Create Requested Work when the client need and deliverable are already clear.</p></div>
-        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.9</span>
+        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.13</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -232,7 +236,7 @@
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.9"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.13"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),target:byId("target-banner"),requestedForm:byId("requested-work-form"),requestedClient:byId("requested-client"),requestedMessage:byId("requested-work-message"),createRequested:byId("create-requested-work")};
   let activeClients=[],directoryClients=[],investigations=[],workItems=[],selectedKey="",processing=false,processingWorkItem=false,processingRequestedWork=false;
 
@@ -2089,16 +2093,39 @@
     processing=true;message.className="status loading";message.textContent="Saving production decision…";
     try{await post({action:"process-investigation",clientCode:item.clientCode,investigationId:Number(item.id),findingSummary:finding,outcome,workTitle:title,workDescription:description});completeEvidenceStep(item,"complete_investigation");if(outcome==="specific_work_required")completeEvidenceStep(item,"create_work");message.className="status ready";message.textContent=outcome==="no_work_required"?"Investigation closed.":"Specific Work Item created.";await load();}catch(error){message.className="status error";message.textContent=error.message;}finally{processing=false;}
   }
+  function normalizedClientCode(value){
+    return String(value||"").trim().toUpperCase();
+  }
+
+  function directWorkInvestigationId(item){
+    const raw=item?.investigation_id ?? item?.investigationId ?? null;
+    if(raw===null||raw===undefined||raw==="")return null;
+    const numeric=Number(raw);
+    return Number.isFinite(numeric)&&numeric>0?numeric:null;
+  }
+
   function renderWorkItems(selectedInvestigation){
     const linkedWorkItems=selectedInvestigation
       ? workItems.filter(item=>
-          Number(item.investigation_id)===Number(selectedInvestigation.id) &&
-          String(item.clientCode)===String(selectedInvestigation.clientCode)
+          Number(item.investigation_id ?? item.investigationId)===Number(selectedInvestigation.id) &&
+          normalizedClientCode(item.clientCode)===normalizedClientCode(selectedInvestigation.clientCode)
         )
-      : workItems.filter(item=>
-          !item.investigation_id &&
-          (!el.filter.value||String(item.clientCode)===String(el.filter.value))
-        );
+      : (()=> {
+          const exactTarget=requestedWorkItemId
+            ? workItems.find(item=>
+                Number(item.id)===Number(requestedWorkItemId) &&
+                directWorkInvestigationId(item)===null
+              )
+            : null;
+
+          if(exactTarget)return [exactTarget];
+
+          const selectedClient=normalizedClientCode(el.filter.value);
+          return workItems.filter(item=>
+            directWorkInvestigationId(item)===null &&
+            (!selectedClient||normalizedClientCode(item.clientCode)===selectedClient)
+          );
+        })();
 
     if(!linkedWorkItems.length){
       el.openWork.innerHTML=selectedInvestigation
