@@ -1,7 +1,7 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gcm-worker-deploy.yml
-# Version: 1.1.1
+# Version: 1.1.2
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Cloudflare Worker from main.
 # =========================================================
@@ -41,7 +41,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install Dependencies
         run: npm install
