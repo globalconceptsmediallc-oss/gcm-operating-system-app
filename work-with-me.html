@@ -1,0 +1,107 @@
+<!doctype html>
+<!-- ========================================================
+  Global Concepts Media Operating System
+  File: work-with-me.html
+  Version: 1.0.0
+  Status: OS 2.0 Production Candidate
+  Purpose: Authenticated human-led Operating Sessions with durable proof.
+========================================================= -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Work With Me | GCM OS</title>
+  <style>
+    :root{color-scheme:light;--navy:#0b1d33;--blue:#246bd8;--gold:#d6a94a;--ink:#132238;--muted:#66758a;--line:#dce3ec;--bg:#f4f7fb;--ok:#18794e;--danger:#b42318}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.app{display:grid;grid-template-columns:260px minmax(0,1fr);min-height:100vh}.content{padding:28px;min-width:0}.topbar,.row,.split,.actions{display:flex;gap:12px;align-items:center}.topbar{justify-content:space-between;margin-bottom:24px}.eyebrow{margin:0;color:var(--blue);font-weight:850;text-transform:uppercase;letter-spacing:.11em;font-size:.72rem}h1{margin:3px 0 0;font-size:clamp(1.7rem,3vw,2.45rem);letter-spacing:-.035em}h2,h3{margin-top:0}.muted{color:var(--muted)}.grid{display:grid;grid-template-columns:minmax(270px,.72fr) minmax(0,1.55fr);gap:20px}.stack{display:grid;gap:16px}.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 8px 30px rgba(11,29,51,.045)}label{display:grid;gap:6px;font-weight:750;color:#324155}input,select,textarea,button{font:inherit}input,select,textarea{width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:10px 12px;background:#fff;color:var(--ink)}textarea{min-height:94px;resize:vertical}.fields{display:grid;gap:12px}.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}button,.button{border:0;border-radius:10px;padding:10px 15px;background:var(--blue);color:#fff;font-weight:800;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}.secondary{background:#eaf1fc;color:#174e9e}.danger{background:#fff0ee;color:var(--danger)}button:disabled{opacity:.55;cursor:not-allowed}.notice{border-radius:12px;padding:12px 14px;background:#edf4ff;color:#174e9e}.notice.error{background:#fff0ee;color:var(--danger)}.session-list{display:grid;gap:9px}.session{width:100%;text-align:left;background:#fff;color:var(--ink);border:1px solid var(--line);padding:12px}.session.active{border-color:var(--blue);box-shadow:0 0 0 2px rgba(36,107,216,.12)}.badge{display:inline-flex;border-radius:999px;padding:3px 8px;background:#eaf1fc;color:#174e9e;font-size:.72rem;font-weight:850;text-transform:uppercase}.entry,.evidence{border-top:1px solid var(--line);padding:14px 0}.entry:first-child,.evidence:first-child{border-top:0}.proof-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.proof-box{border:1px solid var(--line);border-radius:12px;padding:12px;overflow-wrap:anywhere}.proof-box strong{display:block;margin-bottom:5px}.empty{text-align:center;padding:38px 16px;color:var(--muted)}dialog{width:min(720px,calc(100% - 28px));border:0;border-radius:18px;padding:0;box-shadow:0 24px 80px rgba(0,0,0,.25)}dialog::backdrop{background:rgba(5,17,31,.58)}dialog .card{box-shadow:none;border:0}.menu{display:none}.hidden{display:none!important}@media(max-width:900px){.app{display:block}.content{padding:20px}.grid{grid-template-columns:1fr}.menu{display:inline-flex}.two,.proof-grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside data-gcm-shell-sidebar></aside>
+    <main class="content">
+      <header class="topbar">
+        <div><p class="eyebrow">OS 2.0 · Operating Sessions</p><h1>Work With Me</h1><p class="muted">Fix the issue, preserve the evidence, record the decision, and verify the result.</p></div>
+        <div class="actions"><button class="secondary menu" data-gcm-shell-menu-button type="button">Menu</button><button id="sign-out" class="danger hidden" type="button">Sign out</button></div>
+      </header>
+
+      <section id="auth-card" class="card">
+        <h2>Sign in to begin</h2>
+        <p>Use the connected GCM Google account. The login token stays in this browser tab and expires automatically.</p>
+        <a id="sign-in" class="button" href="#">Verify with Google</a>
+      </section>
+
+      <div id="workspace" class="grid hidden">
+        <section class="stack">
+          <div class="card">
+            <div class="topbar"><div><h2>Operating Sessions</h2><span id="session-count" class="muted"></span></div><button id="new-session" type="button">New</button></div>
+            <div id="session-list" class="session-list"><div class="empty">Loading…</div></div>
+          </div>
+        </section>
+        <section id="detail" class="card"><div class="empty"><h2>Select a session</h2><p>Choose an existing issue or open a new Operating Session.</p></div></section>
+      </div>
+      <p id="message" class="notice hidden" role="status"></p>
+    </main>
+  </div>
+
+  <dialog id="session-dialog">
+    <form id="session-form" class="card">
+      <div class="topbar"><h2>Open Operating Session</h2><button class="secondary" data-close type="button">Close</button></div>
+      <div class="fields">
+        <label>Proven client<select id="client-id" required><option value="">Loading clients…</option></select></label>
+        <label>Session title<input id="session-title" required maxlength="160" placeholder="What are we fixing?"></label>
+        <label>Issue summary<textarea id="issue-summary" required placeholder="State the pressing issue and what is known."></textarea></label>
+        <label>Why this matters<textarea id="business-reason" placeholder="Business impact, deadline, or risk."></textarea></label>
+        <div class="two"><label>Priority<select id="priority"><option>critical</option><option>high</option><option selected>normal</option><option>low</option></select></label><label>Starting status<select id="starting-status"><option value="detected">detected</option><option value="needs_decision">needs decision</option><option value="working_with_ai">working with AI</option></select></label></div>
+        <button type="submit">Open session</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="evidence-dialog">
+    <form id="evidence-form" class="card">
+      <div class="topbar"><h2>Add proof</h2><button class="secondary" data-close type="button">Close</button></div>
+      <div class="fields">
+        <div class="two"><label>Evidence type<select id="evidence-type"><option>email</option><option>link</option><option>written</option><option>file</option><option>screenshot</option><option>test_result</option><option>verification</option></select></label><label>Verification<select id="verification-status"><option>unverified</option><option>verified</option><option>limited</option><option>rejected</option></select></label></div>
+        <label>Source label<input id="source-label" required placeholder="Email subject, link title, file name…"></label>
+        <label>Source link or locator<input id="source-locator" placeholder="URL, Gmail message ID, or file reference"></label>
+        <label>Original content<textarea id="raw-content" placeholder="Paste the exact email, written evidence, test output, or other original content."></textarea></label>
+        <label>Optional file or screenshot<input id="proof-file" type="file"></label>
+        <label>Facts directly proven by this source<textarea id="source-facts" placeholder="One fact per line. Do not add assumptions."></textarea></label>
+        <label>AI interpretation, if used<textarea id="ai-interpretation" placeholder="Keep interpretation separate from source facts."></textarea></label>
+        <label>Human verification note<textarea id="human-verification" placeholder="What did you personally confirm?"></textarea></label>
+        <button type="submit">Preserve proof</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="shared/gcm-shell.js"></script>
+  <script>
+  (()=>{"use strict";
+    const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/",TOKEN_KEY="gcm_os_session";
+    const $=id=>document.getElementById(id),esc=value=>String(value??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+    let token=sessionStorage.getItem(TOKEN_KEY)||"",sessions=[],selected=null,clients=[];
+    window.GCMOShell?.mount({currentPage:"work",statusText:"OS 2.0 Phase 1"});
+    const fragment=new URLSearchParams(location.hash.slice(1));if(fragment.get(TOKEN_KEY)){token=fragment.get(TOKEN_KEY);sessionStorage.setItem(TOKEN_KEY,token);history.replaceState(null,"",location.pathname+location.search)}
+    $("sign-in").href=`${WORKER}auth/google?return_to=${encodeURIComponent(location.href.split("#")[0])}&reauthorize=1&os_login=1`;
+    function message(text,error=false){const box=$("message");box.textContent=text;box.className=`notice${error?" error":""}`;box.classList.toggle("hidden",!text)}
+    async function request(action,extra={},authenticated=true){const response=await fetch(WORKER,{method:"POST",headers:{"Content-Type":"application/json",...(authenticated&&token?{Authorization:`Bearer ${token}`}:{})},body:JSON.stringify({action,...extra})});let payload={};try{payload=await response.json()}catch{}if(!response.ok||payload.ok!==true){if(response.status===401)signOut(false);throw new Error(payload.error||`Request failed with HTTP ${response.status}.`)}return payload}
+    function signOut(show=true){token="";sessionStorage.removeItem(TOKEN_KEY);$("workspace").classList.add("hidden");$("auth-card").classList.remove("hidden");$("sign-out").classList.add("hidden");if(show)message("Signed out.")}
+    async function boot(){if(!token)return signOut(false);$("auth-card").classList.add("hidden");$("workspace").classList.remove("hidden");$("sign-out").classList.remove("hidden");try{const [directory,list]=await Promise.all([request("get-client-directory",{},false),request("list-operating-sessions")]);clients=directory.clients||[];sessions=list.sessions||[];renderClients();renderSessions();if(sessions[0])await openSession(sessions[0].id)}catch(error){message(error.message,true)}}
+    function renderClients(){$("client-id").innerHTML='<option value="">Choose the authoritative client</option>'+clients.map(c=>`<option value="${Number(c.id||c.clientId)}">${esc(c.name)} (${esc(c.clientCode||c.client_code||"")})</option>`).join("")}
+    function renderSessions(){$("session-count").textContent=`${sessions.length} open or recorded`;$("session-list").innerHTML=sessions.length?sessions.map(s=>`<button class="session ${selected?.id===s.id?"active":""}" data-session="${s.id}" type="button"><strong>${esc(s.title)}</strong><br><span class="muted">${esc(s.clientName||s.clientCode)} · ${esc(s.priority)}</span> <span class="badge">${esc(s.status.replaceAll("_"," "))}</span></button>`).join(""):'<div class="empty">No Operating Sessions yet.</div>';document.querySelectorAll("[data-session]").forEach(button=>button.onclick=()=>openSession(Number(button.dataset.session)))}
+    async function openSession(id){try{const payload=await request("get-operating-session",{operatingSessionId:id});selected=payload.session;renderSessions();renderDetail(payload)}catch(error){message(error.message,true)}}
+    function renderDetail(data){const s=data.session,evidence=data.evidence||[],entries=data.entries||[];$("detail").innerHTML=`<div class="topbar"><div><p class="eyebrow">${esc(s.clientName||s.clientCode)}</p><h2>${esc(s.title)}</h2></div><span class="badge">${esc(s.status.replaceAll("_"," "))}</span></div><p>${esc(s.issueSummary)}</p>${s.businessReason?`<p class="muted"><strong>Why it matters:</strong> ${esc(s.businessReason)}</p>`:""}<div class="two"><label>Status<select id="status-select">${["detected","needs_decision","working_with_ai","awaiting_verification","verified","proof_recorded","closed"].map(v=>`<option value="${v}" ${v===s.status?"selected":""}>${v.replaceAll("_"," ")}</option>`).join("")}</select></label><div class="actions" style="align-self:end"><button id="add-proof" type="button">Add proof</button></div></div><h3 style="margin-top:24px">Proof (${evidence.length})</h3>${evidence.length?evidence.map(renderEvidence).join(""):'<p class="muted">No proof preserved yet.</p>'}<h3 style="margin-top:24px">Work log</h3><form id="entry-form" class="fields"><div class="two"><label>Entry type<select id="entry-type"><option>human_note</option><option>decision</option><option>action</option><option>result</option><option>verification</option></select></label><label>Evidence ID, if referenced<input id="entry-evidence" inputmode="numeric"></label></div><label>What we did or decided<textarea id="entry-content" required></textarea></label><button type="submit">Add to work log</button></form><div style="margin-top:18px">${entries.map(renderEntry).join("")}</div>`;$("add-proof").onclick=()=>$("evidence-dialog").showModal();$("status-select").onchange=updateStatus;$("entry-form").onsubmit=addEntry}
+    function safeLink(value){try{const url=new URL(value);return ["https:","http:","mailto:"].includes(url.protocol)?url.href:null}catch{return null}}
+    function originalEvidence(e){const value=e.rawContent||"";const image=/^data:image\/(?:png|jpeg|gif|webp);base64,/i.test(value);if(image)return `<div class="proof-box"><strong>Original screenshot</strong><img src="${esc(value)}" alt="Uploaded evidence: ${esc(e.sourceLabel)}" style="display:block;max-width:100%;margin-top:8px;border-radius:8px"></div>`;if(/^data:/i.test(value))return '<div class="proof-box"><strong>Original file</strong>File content is preserved in D1. Its integrity is identified by the SHA-256 hash below.</div>';return value?`<div class="proof-box"><strong>Original evidence</strong><pre style="white-space:pre-wrap;margin:0">${esc(value)}</pre></div>`:""}
+    function renderEvidence(e){const link=safeLink(e.sourceLocator);return `<article class="evidence"><div class="topbar"><strong>#${e.id} · ${esc(e.sourceLabel)}</strong><span class="badge">${esc(e.evidenceType)}</span></div>${e.sourceLocator?`<p>${link?`<a href="${esc(link)}" target="_blank" rel="noreferrer">${esc(e.sourceLocator)}</a>`:esc(e.sourceLocator)}</p>`:""}${originalEvidence(e)}<div class="proof-grid" style="margin-top:10px"><div class="proof-box"><strong>Source facts</strong>${(e.sourceFacts||[]).map(f=>`<div>• ${esc(f)}</div>`).join("")||"None recorded"}</div><div class="proof-box"><strong>AI interpretation</strong>${esc(e.aiInterpretation||"None recorded")}</div></div>${e.humanVerificationNote?`<p><strong>Human verification:</strong> ${esc(e.humanVerificationNote)}</p>`:""}<span class="muted">${esc(e.verificationStatus)} · SHA-256 ${esc(e.contentSha256||"not available")}</span></article>`}
+    function renderEntry(e){return `<article class="entry"><strong>${esc(e.entryType.replaceAll("_"," "))}</strong> · <span class="muted">${esc(e.authorName||e.authorType)} · ${esc(e.createdAt)}</span><p>${esc(e.content)}</p>${e.sourceEvidenceId?`<span class="badge">Evidence #${e.sourceEvidenceId}</span>`:""}</article>`}
+    async function updateStatus(event){try{await request("update-operating-session-status",{operatingSessionId:selected.id,status:event.target.value});message("Session status updated.");await reload()}catch(error){message(error.message,true);await openSession(selected.id)}}
+    async function reload(){const list=await request("list-operating-sessions");sessions=list.sessions||[];renderSessions();if(selected)await openSession(selected.id)}
+    $("session-form").onsubmit=async event=>{event.preventDefault();try{const payload=await request("create-operating-session",{clientId:Number($("client-id").value),title:$("session-title").value,issueSummary:$("issue-summary").value,businessReason:$("business-reason").value,priority:$("priority").value,status:$("starting-status").value});$("session-dialog").close();event.target.reset();message("Operating Session opened with the proven client identity fixed.");selected=payload.session;await reload()}catch(error){message(error.message,true)}};
+    $("evidence-form").onsubmit=async event=>{event.preventDefault();try{let raw=$("raw-content").value;const file=$("proof-file").files[0];if(file){if(file.size>700000)throw new Error("Phase 1 files must be 700 KB or smaller.");raw=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error("The file could not be read."));reader.readAsDataURL(file)});if(!$("source-label").value)$("source-label").value=file.name}await request("add-operating-session-evidence",{operatingSessionId:selected.id,clientId:selected.clientId,evidenceType:$("evidence-type").value,sourceLabel:$("source-label").value,sourceLocator:$("source-locator").value,rawContent:raw,sourceFacts:$("source-facts").value.split(/\n+/).filter(Boolean),aiInterpretation:$("ai-interpretation").value,humanVerificationNote:$("human-verification").value,verificationStatus:$("verification-status").value});$("evidence-dialog").close();event.target.reset();message("Proof preserved under the selected client and Operating Session.");await openSession(selected.id)}catch(error){message(error.message,true)}};
+    async function addEntry(event){event.preventDefault();try{await request("add-operating-session-entry",{operatingSessionId:selected.id,clientId:selected.clientId,entryType:$("entry-type").value,authorType:"human",content:$("entry-content").value,sourceEvidenceId:$("entry-evidence").value||null});message("Work log entry recorded.");await openSession(selected.id)}catch(error){message(error.message,true)}}
+    $("new-session").onclick=()=>$("session-dialog").showModal();$("sign-out").onclick=()=>signOut();document.querySelectorAll("[data-close]").forEach(button=>button.onclick=()=>button.closest("dialog").close());boot();
+  })();
+  </script>
+</body>
+</html>
