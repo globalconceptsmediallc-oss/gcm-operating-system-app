@@ -1,8 +1,8 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.14.0
-   Status: Production Road-Test Candidate
+   Version: 7.15.0
+   Status: OS 2.0 Phase 1 Production Candidate
    Source: Production worker.js 7.13.0
    Sprint: Historical Record Rehabilitation — Bulk Apply
    Purpose: Preserve every verified production route and expose the
@@ -76,8 +76,12 @@ import {
 } from "./routes/historicalRehabilitation.js";
 
 import { handleGmailGet, handleGmailAction } from "./routes/gmailIntegration.js";
+import {
+  handleOperatingSessions,
+  OPERATING_SESSION_ACTION_LIST
+} from "./routes/operatingSessions.js";
 
-const WORKER_FILE_VERSION = "7.14.0";
+const WORKER_FILE_VERSION = "7.15.0";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
@@ -105,7 +109,8 @@ const SUPPORTED_ACTIONS = [
   ACTIONS.PREVIEW_GMAIL_INBOX,
   ACTIONS.APPROVE_GMAIL_MONITORING,
   ACTIONS.APPROVE_GMAIL_INVESTIGATION,
-  ACTIONS.CREATE_GMAIL_DRAFT
+  ACTIONS.CREATE_GMAIL_DRAFT,
+  ...OPERATING_SESSION_ACTION_LIST
 ].filter(Boolean);
 
 export default {
@@ -214,6 +219,9 @@ export default {
     const action = clean(body?.action);
 
     try {
+      if (OPERATING_SESSION_ACTION_LIST.includes(action)) {
+        return await handleOperatingSessions(body, env, requestId, request);
+      }
       switch (action) {
         case ACTIONS.GET_GMAIL_STATUS:
         case ACTIONS.PREVIEW_GMAIL_INBOX:
