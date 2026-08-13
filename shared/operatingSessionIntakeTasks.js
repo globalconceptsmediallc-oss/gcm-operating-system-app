@@ -1,13 +1,13 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/operatingSessionIntakeTasks.js
-   Version: 1.0.0
+   Version: 1.0.1
    Status: OS 2.0 AI Intake Candidate
    Purpose: Validate intake input and structured AI operating briefs.
    ========================================================= */
 
 export const PREPARE_OPERATING_SESSION_ACTION = "prepare-operating-session";
-export const OPERATING_INTAKE_MODEL = "gpt-5.6";
+export const OPERATING_INTAKE_MODEL = "gpt-5.4";
 
 export const OPERATING_BRIEF_SCHEMA = Object.freeze({
   type:"object",
