@@ -2,7 +2,7 @@
 <!-- ========================================================
   Global Concepts Media Operating System
   File: work-with-me.html
-  Version: 1.0.0
+  Version: 1.1.0
   Status: OS 2.0 Production Candidate
   Purpose: Authenticated human-led Operating Sessions with durable proof.
 ========================================================= -->
@@ -48,11 +48,19 @@
       <div class="topbar"><h2>Open Operating Session</h2><button class="secondary" data-close type="button">Close</button></div>
       <div class="fields">
         <label>Proven client<select id="client-id" required><option value="">Loading clients…</option></select></label>
-        <label>Session title<input id="session-title" required maxlength="160" placeholder="What are we fixing?"></label>
-        <label>Issue summary<textarea id="issue-summary" required placeholder="State the pressing issue and what is known."></textarea></label>
-        <label>Why this matters<textarea id="business-reason" placeholder="Business impact, deadline, or risk."></textarea></label>
-        <div class="two"><label>Priority<select id="priority"><option>critical</option><option>high</option><option selected>normal</option><option>low</option></select></label><label>Starting status<select id="starting-status"><option value="detected">detected</option><option value="needs_decision">needs decision</option><option value="working_with_ai">working with AI</option></select></label></div>
-        <button type="submit">Open session</button>
+        <label>Tell me what happened<textarea id="intake-issue" required placeholder="Use your own words. For example: six internal images are broken."></textarea></label>
+        <label>Optional supporting material<textarea id="intake-evidence" placeholder="Paste an email, link, report text, test result, or written observation. Screenshots and files can also be added after the session opens."></textarea></label>
+        <button id="prepare-session" type="submit">Prepare session with AI</button>
+        <p id="intake-status" class="notice hidden" role="status"></p>
+        <section id="intake-proposal" class="hidden">
+          <p class="eyebrow">Prepared for your approval</p>
+          <label>Session title<input id="proposal-title" maxlength="240"></label>
+          <label>Issue summary<textarea id="proposal-summary"></textarea></label>
+          <label>Why this matters<textarea id="proposal-reason"></textarea></label>
+          <label>Recommended priority<select id="proposal-priority"><option>critical</option><option>high</option><option>normal</option><option>low</option></select></label>
+          <div id="proposal-rich" class="stack"></div>
+          <button id="approve-session" type="button">Approve and work with AI</button>
+        </section>
       </div>
     </form>
   </dialog>
@@ -79,8 +87,8 @@
   (()=>{"use strict";
     const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/",TOKEN_KEY="gcm_os_session";
     const $=id=>document.getElementById(id),esc=value=>String(value??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
-    let token=sessionStorage.getItem(TOKEN_KEY)||"",sessions=[],selected=null,clients=[];
-    window.GCMOShell?.mount({currentPage:"work",statusText:"OS 2.0 Phase 1"});
+    let token=sessionStorage.getItem(TOKEN_KEY)||"",sessions=[],selected=null,clients=[],aiProposal=null,aiMeta=null;
+    window.GCMOShell?.mount({currentPage:"work",statusText:"OS 2.0 AI Intake"});
     const fragment=new URLSearchParams(location.hash.slice(1));if(fragment.get(TOKEN_KEY)){token=fragment.get(TOKEN_KEY);sessionStorage.setItem(TOKEN_KEY,token);history.replaceState(null,"",location.pathname+location.search)}
     $("sign-in").href=`${WORKER}auth/google?return_to=${encodeURIComponent(location.href.split("#")[0])}&reauthorize=1&os_login=1`;
     function message(text,error=false){const box=$("message");box.textContent=text;box.className=`notice${error?" error":""}`;box.classList.toggle("hidden",!text)}
@@ -95,12 +103,16 @@
     function originalEvidence(e){const value=e.rawContent||"";const image=/^data:image\/(?:png|jpeg|gif|webp);base64,/i.test(value);if(image)return `<div class="proof-box"><strong>Original screenshot</strong><img src="${esc(value)}" alt="Uploaded evidence: ${esc(e.sourceLabel)}" style="display:block;max-width:100%;margin-top:8px;border-radius:8px"></div>`;if(/^data:/i.test(value))return '<div class="proof-box"><strong>Original file</strong>File content is preserved in D1. Its integrity is identified by the SHA-256 hash below.</div>';return value?`<div class="proof-box"><strong>Original evidence</strong><pre style="white-space:pre-wrap;margin:0">${esc(value)}</pre></div>`:""}
     function renderEvidence(e){const link=safeLink(e.sourceLocator);return `<article class="evidence"><div class="topbar"><strong>#${e.id} · ${esc(e.sourceLabel)}</strong><span class="badge">${esc(e.evidenceType)}</span></div>${e.sourceLocator?`<p>${link?`<a href="${esc(link)}" target="_blank" rel="noreferrer">${esc(e.sourceLocator)}</a>`:esc(e.sourceLocator)}</p>`:""}${originalEvidence(e)}<div class="proof-grid" style="margin-top:10px"><div class="proof-box"><strong>Source facts</strong>${(e.sourceFacts||[]).map(f=>`<div>• ${esc(f)}</div>`).join("")||"None recorded"}</div><div class="proof-box"><strong>AI interpretation</strong>${esc(e.aiInterpretation||"None recorded")}</div></div>${e.humanVerificationNote?`<p><strong>Human verification:</strong> ${esc(e.humanVerificationNote)}</p>`:""}<span class="muted">${esc(e.verificationStatus)} · SHA-256 ${esc(e.contentSha256||"not available")}</span></article>`}
     function renderEntry(e){return `<article class="entry"><strong>${esc(e.entryType.replaceAll("_"," "))}</strong> · <span class="muted">${esc(e.authorName||e.authorType)} · ${esc(e.createdAt)}</span><p>${esc(e.content)}</p>${e.sourceEvidenceId?`<span class="badge">Evidence #${e.sourceEvidenceId}</span>`:""}</article>`}
+    function intakeMessage(text,error=false){const box=$("intake-status");box.textContent=text;box.className=`notice${error?" error":""}`;box.classList.toggle("hidden",!text)}
+    function listCard(label,items){return `<div class="proof-box"><strong>${esc(label)}</strong>${(items||[]).map(item=>`<div>• ${esc(item)}</div>`).join("")||'<span class="muted">None identified</span>'}</div>`}
+    function renderProposal(proposal){aiProposal=proposal;$("proposal-title").value=proposal.title;$("proposal-summary").value=proposal.issueSummary;$("proposal-reason").value=proposal.businessReason;$("proposal-priority").value=proposal.priority;$("proposal-rich").innerHTML=`<div class="proof-grid">${listCard("Known facts",proposal.knownFacts)}${listCard("Unknowns",proposal.unknowns)}</div><div class="proof-grid">${listCard("Assumptions",proposal.assumptions)}${listCard("Possible causes — not findings",proposal.potentialCauses)}</div>${listCard("Client impact",[proposal.clientImpact])}${listCard("Recommended first action",[proposal.recommendedFirstAction])}<div class="proof-grid">${listCard("Evidence still needed",proposal.evidenceNeeded)}${listCard("How we will verify it",proposal.verificationStandard)}</div>${listCard("Relevant client history",proposal.relevantHistory)}${listCard("Business record and Proof value",[proposal.proofValue])}${listCard("Questions for us to resolve",proposal.followUpQuestions)}<p class="muted">AI confidence: ${esc(proposal.confidence)} · Category: ${esc(proposal.operationalCategory)}</p>`;$("intake-proposal").classList.remove("hidden")}
     async function updateStatus(event){try{await request("update-operating-session-status",{operatingSessionId:selected.id,status:event.target.value});message("Session status updated.");await reload()}catch(error){message(error.message,true);await openSession(selected.id)}}
     async function reload(){const list=await request("list-operating-sessions");sessions=list.sessions||[];renderSessions();if(selected)await openSession(selected.id)}
-    $("session-form").onsubmit=async event=>{event.preventDefault();try{const payload=await request("create-operating-session",{clientId:Number($("client-id").value),title:$("session-title").value,issueSummary:$("issue-summary").value,businessReason:$("business-reason").value,priority:$("priority").value,status:$("starting-status").value});$("session-dialog").close();event.target.reset();message("Operating Session opened with the proven client identity fixed.");selected=payload.session;await reload()}catch(error){message(error.message,true)}};
+    $("session-form").onsubmit=async event=>{event.preventDefault();const button=$("prepare-session");button.disabled=true;intakeMessage("Preparing the operating brief. No record will be saved until you approve it.");try{const payload=await request("prepare-operating-session",{clientId:Number($("client-id").value),issue:$("intake-issue").value,supportingEvidence:$("intake-evidence").value});aiMeta=payload.ai||null;renderProposal(payload.proposal);intakeMessage("Review the prepared facts, unknowns, business impact, and next action. Edit the main fields if needed, then approve.")}catch(error){intakeMessage(error.message,true)}finally{button.disabled=false}};
+    $("approve-session").onclick=async()=>{if(!aiProposal)return;const button=$("approve-session");button.disabled=true;try{const approved={...aiProposal,title:$("proposal-title").value,issueSummary:$("proposal-summary").value,businessReason:$("proposal-reason").value,priority:$("proposal-priority").value};const payload=await request("create-operating-session",{clientId:Number($("client-id").value),title:approved.title,issueSummary:approved.issueSummary,businessReason:approved.businessReason,priority:approved.priority,status:"working_with_ai",intakeSource:{issue:$("intake-issue").value,supportingEvidence:$("intake-evidence").value},intakeBrief:approved,aiMeta});$("session-dialog").close();$("session-form").reset();$("intake-proposal").classList.add("hidden");aiProposal=null;aiMeta=null;message("Operating Session opened with the enriched operating brief. Now we work the issue.");selected=payload.session;await reload()}catch(error){intakeMessage(error.message,true)}finally{button.disabled=false}};
     $("evidence-form").onsubmit=async event=>{event.preventDefault();try{let raw=$("raw-content").value;const file=$("proof-file").files[0];if(file){if(file.size>700000)throw new Error("Phase 1 files must be 700 KB or smaller.");raw=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error("The file could not be read."));reader.readAsDataURL(file)});if(!$("source-label").value)$("source-label").value=file.name}await request("add-operating-session-evidence",{operatingSessionId:selected.id,clientId:selected.clientId,evidenceType:$("evidence-type").value,sourceLabel:$("source-label").value,sourceLocator:$("source-locator").value,rawContent:raw,sourceFacts:$("source-facts").value.split(/\n+/).filter(Boolean),aiInterpretation:$("ai-interpretation").value,humanVerificationNote:$("human-verification").value,verificationStatus:$("verification-status").value});$("evidence-dialog").close();event.target.reset();message("Proof preserved under the selected client and Operating Session.");await openSession(selected.id)}catch(error){message(error.message,true)}};
     async function addEntry(event){event.preventDefault();try{await request("add-operating-session-entry",{operatingSessionId:selected.id,clientId:selected.clientId,entryType:$("entry-type").value,authorType:"human",content:$("entry-content").value,sourceEvidenceId:$("entry-evidence").value||null});message("Work log entry recorded.");await openSession(selected.id)}catch(error){message(error.message,true)}}
-    $("new-session").onclick=()=>$("session-dialog").showModal();$("sign-out").onclick=()=>signOut();document.querySelectorAll("[data-close]").forEach(button=>button.onclick=()=>button.closest("dialog").close());boot();
+    $("new-session").onclick=()=>{aiProposal=null;aiMeta=null;$("intake-proposal").classList.add("hidden");intakeMessage("");$("session-dialog").showModal()};$("sign-out").onclick=()=>signOut();document.querySelectorAll("[data-close]").forEach(button=>button.onclick=()=>button.closest("dialog").close());boot();
   })();
   </script>
 </body>

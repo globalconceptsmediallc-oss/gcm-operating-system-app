@@ -4,8 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "npm run test:website-intelligence && npm run test:code-intelligence",
+    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions",
     "test:website-intelligence": "node tests/websiteIntelligence.test.js",
-    "test:code-intelligence": "node tests/codeIntelligence.test.js"
+    "test:code-intelligence": "node tests/codeIntelligence.test.js",
+    "test:operating-sessions": "node tests/operatingSessionTasks.test.js && node tests/osAuth.test.js && node tests/operatingSessionIntake.test.js"
   }
 }

@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.15.0
+   Version: 7.16.0
    Status: OS 2.0 Phase 1 Production Candidate
    Source: Production worker.js 7.13.0
    Sprint: Historical Record Rehabilitation — Bulk Apply
@@ -80,8 +80,12 @@ import {
   handleOperatingSessions,
   OPERATING_SESSION_ACTION_LIST
 } from "./routes/operatingSessions.js";
+import {
+  handleOperatingSessionIntake,
+  PREPARE_OPERATING_SESSION_ACTION
+} from "./routes/operatingSessionIntake.js";
 
-const WORKER_FILE_VERSION = "7.15.0";
+const WORKER_FILE_VERSION = "7.16.0";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
@@ -110,6 +114,7 @@ const SUPPORTED_ACTIONS = [
   ACTIONS.APPROVE_GMAIL_MONITORING,
   ACTIONS.APPROVE_GMAIL_INVESTIGATION,
   ACTIONS.CREATE_GMAIL_DRAFT,
+  PREPARE_OPERATING_SESSION_ACTION,
   ...OPERATING_SESSION_ACTION_LIST
 ].filter(Boolean);
 
@@ -219,6 +224,9 @@ export default {
     const action = clean(body?.action);
 
     try {
+      if (action === PREPARE_OPERATING_SESSION_ACTION) {
+        return await handleOperatingSessionIntake(body, env, requestId, request);
+      }
       if (OPERATING_SESSION_ACTION_LIST.includes(action)) {
         return await handleOperatingSessions(body, env, requestId, request);
       }

@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/config.js
-   Version: 7.8.1
+   Version: 7.9.0
    Status: Production Candidate
    Source: shared/config.js 7.7.9
    Sprint: Media â€” Gmail Attached Draft Creation
@@ -10,7 +10,7 @@
             action contract.
    ========================================================= */
 
-export const VERSION = "7.8.1";
+export const VERSION = "7.9.0";
 export const API_CONTRACT_VERSION = "communications-operational-decision-v3";
 export const COMMUNICATION_ANALYSIS_ENGINE_VERSION = "3.4.1";
 
@@ -45,6 +45,7 @@ export const ACTIONS = Object.freeze({
   ADD_OPERATING_SESSION_EVIDENCE: "add-operating-session-evidence",
   ADD_OPERATING_SESSION_ENTRY: "add-operating-session-entry",
   UPDATE_OPERATING_SESSION_STATUS: "update-operating-session-status",
+  PREPARE_OPERATING_SESSION: "prepare-operating-session",
 
   GET_CALENDAR_APPOINTMENTS: "get-calendar-appointments",
   CREATE_CALENDAR_APPOINTMENT: "create-calendar-appointment",

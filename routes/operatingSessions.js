@@ -18,6 +18,7 @@ import {
   prepareAddEvidenceTask,
   prepareAddSessionEntryTask
 } from "../shared/operatingSessionTasks.js";
+import { formatOperatingBrief, validateOperatingBrief } from "../shared/operatingSessionIntakeTasks.js";
 
 export const OPERATING_SESSIONS_VERSION = "1.0.0";
 export const OPERATING_SESSION_ACTIONS = Object.freeze({
@@ -107,7 +108,18 @@ async function createSession(body, db, requestId, user) {
     content:`Operating Session opened by ${user.email}.`,
     sourceEvidenceId:null
   });
-  return jsonResponse(baseResponse(requestId, user, { session:mapSession(session), writesPerformed:2 }), 201);
+  let writesPerformed=2;
+  const intakeSource=body?.intakeSource;
+  if(intakeSource?.issue){
+    await insertEntry(db,{operatingSessionId:session.id,clientId:session.client_id,entryType:"human_note",authorType:"human",authorName:user.email,content:formatIntakeSource(intakeSource),sourceEvidenceId:null});
+    writesPerformed+=1;
+  }
+  if(body?.intakeBrief){
+    const brief=validateOperatingBrief(body.intakeBrief);
+    await insertEntry(db,{operatingSessionId:session.id,clientId:session.client_id,entryType:"ai_interpretation",authorType:"ai",authorName:`OpenAI ${String(body?.aiMeta?.model||"").trim()||"operating partner"}`,content:formatOperatingBrief(brief),sourceEvidenceId:null});
+    writesPerformed+=1;
+  }
+  return jsonResponse(baseResponse(requestId, user, { session:mapSession(session), writesPerformed }), 201);
 }
 
 async function addEvidence(body, db, requestId, user) {
@@ -207,3 +219,9 @@ function parseFacts(value) { try { const data=JSON.parse(value||"[]"); return Ar
 function positiveInteger(value) { const number=Number(value); return Number.isInteger(number)&&number>0?number:null; }
 function nullableNumber(value) { const number=Number(value); return Number.isFinite(number)&&number>0?number:null; }
 async function sha256(value) { const bytes=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(String(value||""))); return [...new Uint8Array(bytes)].map(byte=>byte.toString(16).padStart(2,"0")).join(""); }
+
+function formatIntakeSource(value){
+  const issue=String(value?.issue||"").trim();
+  const support=String(value?.supportingEvidence||"").trim();
+  return [`Original issue provided by the operator:\n${issue}`,support?`Original supporting material:\n${support}`:null].filter(Boolean).join("\n\n");
+}
