@@ -1,10 +1,10 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailIntegration.js
-   Version: 1.6.0
-   Status: Production Candidate — Human Operational Intelligence
+   Version: 1.7.0
+   Status: Production Candidate â€” Human Operational Intelligence
    Source: routes/gmailIntegration.js 1.5.4
-   Sprint: Media — Gmail Attached Draft Creation
+   Sprint: Media â€” Gmail Attached Draft Creation
    Purpose: Preserve the verified Gmail intelligence and monitoring approval
             workflow, add human-approved Communication + Investigation
             processing through the existing operational decision commit route,
@@ -53,7 +53,8 @@ import { clean, safeErrorMessage, logWorkerError, jsonResponse } from "../shared
 import { getDatabase } from "../shared/database.js";
 import { handleCommunicationAnalysis } from "./communicationAnalysis.js";
 import { handleCommitOperationalDecision } from "./operationalDecision.js";
-export const GMAIL_INTEGRATION_VERSION = "1.6.0";
+import { createOsSessionToken } from "../shared/osAuth.js";
+export const GMAIL_INTEGRATION_VERSION = "1.7.0";
 export const GMAIL_PATHS = Object.freeze({ CONNECT: "/auth/google", CALLBACK: "/auth/google/callback" });
 const AUTH_URL="https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL="https://oauth2.googleapis.com/token";
@@ -78,7 +79,8 @@ export async function handleGmailAction(body,env,requestId){
 async function beginAuth(url,env){
   requireSecrets(env);
   const returnTo=safeReturn(url.searchParams.get("return_to"));
-  const state=await makeState({returnTo,issuedAt:Date.now()},env.GOOGLE_CLIENT_SECRET);
+  const osLogin=url.searchParams.get("os_login")==="1";
+  const state=await makeState({returnTo,issuedAt:Date.now(),osLogin},env.GOOGLE_CLIENT_SECRET);
   const target=new URL(AUTH_URL);
   target.searchParams.set("client_id",env.GOOGLE_CLIENT_ID);
   target.searchParams.set("redirect_uri",REDIRECT);
@@ -110,7 +112,10 @@ async function finishAuth(url,env,requestId){
     const db=requireDb(env);await ensureTable(db);
     const encrypted=await encrypt(token.refresh_token,env.GOOGLE_CLIENT_SECRET);
     await db.prepare(`INSERT INTO gmail_connections(account_email,encrypted_refresh_token,scope,connected_at,updated_at) VALUES(?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP) ON CONFLICT(account_email) DO UPDATE SET encrypted_refresh_token=excluded.encrypted_refresh_token,scope=excluded.scope,updated_at=CURRENT_TIMESTAMP`).bind(profile.emailAddress,encrypted,clean(token.scope)||SCOPE).run();
-    return callbackPage(true,"Gmail connected",`${profile.emailAddress} is connected. Approved monitoring can be marked read after D1 preservation.`,state.returnTo,200);
+    const osSessionToken=state.osLogin
+      ? await createOsSessionToken({email:profile.emailAddress,secret:env.GOOGLE_CLIENT_SECRET})
+      : null;
+    return callbackPage(true,state.osLogin?"GCM OS sign-in complete":"Gmail connected",state.osLogin?`${profile.emailAddress} is verified. Continue to Work With Me.`:`${profile.emailAddress} is connected. Approved monitoring can be marked read after D1 preservation.`,state.returnTo,200,osSessionToken);
   }catch(error){logWorkerError({requestId,route:"gmail-oauth-callback",stage:"gmail_oauth",error});return callbackPage(false,"Gmail connection failed",safeErrorMessage(error),state.returnTo,500);}
 }
 async function status(env,requestId){
@@ -645,7 +650,7 @@ function buildGmailRecommendation(message,analysis){
     return{
       communicationFamily:"Google Analytics Performance",
       notificationType:"analytics",
-      client:verifiedClient?client:"Unassigned — Human Review",
+      client:verifiedClient?client:"Unassigned â€” Human Review",
       businessMeaning:verifiedClient
         ? `Google Analytics performance for ${client}: ${metricParts.join(", ")||"report metrics received"}. Preserve these metrics as monitoring evidence for future growth or decline comparison.`
         : `Google Analytics performance report received${hasMetrics?`: ${metricParts.join(", ")}`:""}, but the Gmail evidence does not prove which GCM client/property owns the report.`,
@@ -662,7 +667,7 @@ function buildGmailRecommendation(message,analysis){
       archive:false,
       proposedRoute:verifiedClient?"Monitoring":"Manual Review",
       confidence:verifiedClient&&hasMetrics?"High":hasMetrics?"Medium":"Low",
-      decisionReliability:verifiedClient?"Reliable — Analytics report and client/property matched":"Review Required — Analytics metrics found but client/property is unverified",
+      decisionReliability:verifiedClient?"Reliable â€” Analytics report and client/property matched":"Review Required â€” Analytics metrics found but client/property is unverified",
       evidenceSufficiency:verifiedClient?"Sufficient for monitoring and future trend comparison":"Insufficient for client assignment",
       evidenceComparedAgainst:"Current Gmail message; future reports can compare against an approved saved monitoring record",
       verificationRequired:verifiedClient?"No investigation required. Human approval saves the current Analytics metrics as the comparison reference.":"Open the Analytics report or verify the property identity before approving any client monitoring record.",
@@ -673,7 +678,7 @@ function buildGmailRecommendation(message,analysis){
   }
   if(youtubeMonthly){
     const metrics=extractYouTubeMonthlyMetrics(message.bodyText);
-    const client=inferYouTubeClient(message)||analysis?.client?.name||"Unassigned — Human Review";
+    const client=inferYouTubeClient(message)||analysis?.client?.name||"Unassigned â€” Human Review";
     const metricParts=[
       metrics.newSubscribers!==null?`${metrics.newSubscribers} new subscriber${metrics.newSubscribers===1?"":"s"}`:"",
       metrics.minutesWatched!==null?`${metrics.minutesWatched} minutes watched`:"",
@@ -698,7 +703,7 @@ function buildGmailRecommendation(message,analysis){
       archive:false,
       proposedRoute:"Monitoring",
       confidence:hasMetrics?"High":"Medium",
-      decisionReliability:hasMetrics?"Reliable — monthly metrics extracted":"Moderate — monthly report recognized",
+      decisionReliability:hasMetrics?"Reliable â€” monthly metrics extracted":"Moderate â€” monthly report recognized",
       evidenceSufficiency:hasMetrics?"Sufficient for monitoring and future trend comparison":"Sufficient to retain as monitoring evidence",
       evidenceComparedAgainst:"Current Gmail message; future reports can compare against this saved monitoring record",
       verificationRequired:"No investigation required. Human approval saves the current monthly metrics as the comparison reference.",
@@ -731,7 +736,7 @@ function buildGmailRecommendation(message,analysis){
       archive:false,
       proposedRoute:"Investigation",
       confidence:"High",
-      decisionReliability:"Reliable — Merchant Center account and HBG identity verified by human review",
+      decisionReliability:"Reliable â€” Merchant Center account and HBG identity verified by human review",
       evidenceSufficiency:"Sufficient to open an investigation; insufficient to prescribe corrective work",
       evidenceComparedAgainst:"Gmail Merchant Center notice plus human verification of Merchant Center account 5611556858",
       verificationRequired:"Investigate the existing Merchant Center configuration and product eligibility before making setup changes.",
@@ -741,7 +746,7 @@ function buildGmailRecommendation(message,analysis){
         ...decision,
         source:"Google Merchant Center",
         communicationType:"Merchant Center Configuration",
-        title:"HBG — Google Merchant Center configuration and product feed investigation",
+        title:"HBG â€” Google Merchant Center configuration and product feed investigation",
         operationalSummary:"Harry Beckwith Guns & Range has Merchant Center account 5611556858. Human verification found setup incomplete, no product data source, and zero product clicks.",
         businessImpact:"Potential unused Google product-distribution opportunity; current value and required configuration are not yet proven.",
         importance:"Normal",
@@ -758,7 +763,7 @@ function buildGmailRecommendation(message,analysis){
     return{
       communicationFamily:"GitHub / Development Operations",
       notificationType:githubFailure?"production_or_build_failure":"routine_repository_notification",
-      client:analysis?.client?.name||"GCM — Internal",
+      client:analysis?.client?.name||"GCM â€” Internal",
       businessMeaning:githubFailure
         ? "A development or production failure was explicitly reported. The email proves a failed run, but it does not by itself prove client impact, root cause, or required corrective work."
         : "Routine repository activity does not establish client impact or operational work.",
@@ -773,7 +778,7 @@ function buildGmailRecommendation(message,analysis){
       archive:!githubFailure,
       proposedRoute:githubFailure?"Review Required":"Archive",
       confidence:"High",
-      decisionReliability:githubFailure?"Provisional — failure confirmed, impact unverified":"Reliable — routine notice",
+      decisionReliability:githubFailure?"Provisional â€” failure confirmed, impact unverified":"Reliable â€” routine notice",
       evidenceSufficiency:githubFailure?"Partial":"Sufficient",
       evidenceComparedAgainst:"Current Gmail message only",
       verificationRequired:githubFailure?"Open the GitHub run and confirm failure scope, environment, and impact before creating any OS record.":"Confirm the notice is routine and archive it.",
@@ -794,7 +799,7 @@ function buildGmailRecommendation(message,analysis){
   return{
     communicationFamily:classification.notificationFamily||decision.notificationFamily||"Unknown",
     notificationType:classification.notificationType||"unknown",
-    client:verifiedMonitoringClient||analysis?.client?.name||"Unassigned — Human Review",
+    client:verifiedMonitoringClient||analysis?.client?.name||"Unassigned â€” Human Review",
     businessMeaning:previewMeaning,
     operationalPriority:decision.operationalPriority||decision.importance||"Low",
     recommendedAction:previewAction,
@@ -823,7 +828,7 @@ function buildKnownHumanRecommendation(message,analysis,decision){
   const subject=clean(message?.subject);
   const body=clean(message?.bodyText);
   const text=`${subject}\n${body}`;
-  const client=inferHumanClient(message)||analysis?.client?.name||"Unassigned — Human Review";
+  const client=inferHumanClient(message)||analysis?.client?.name||"Unassigned â€” Human Review";
   const base={
     shouldCreateCommunication:false,
     shouldCreateInvestigation:false,
@@ -833,7 +838,7 @@ function buildKnownHumanRecommendation(message,analysis,decision){
     archive:false,
     proposedRoute:"Human Review",
     confidence:"High",
-    decisionReliability:"Role-aware preview — human judgment retained",
+    decisionReliability:"Role-aware preview â€” human judgment retained",
     evidenceSufficiency:"Current human email analyzed in sender-role context",
     evidenceComparedAgainst:"Current Gmail message and known sender role; existing OS records are not yet automatically matched",
     humanReviewRequired:true,
@@ -850,7 +855,7 @@ function buildKnownHumanRecommendation(message,analysis,decision){
     const mediaForge=/(media\s*forge|premium.*(?:image|photo)|accessor(?:y|ies)|liberty.*accessor)/i.test(text);
     const showCalendar=/(calendar of shows|show calendar|gun show|shows?\b.*(?:calendar|schedule|date))/i.test(text);
     const correctiveWork=/(canonical|sitemap|weebly|square platform|permalink|redirect|internal link|we move safes|shopify)/i.test(text)&&/(updated|added|verified|fixed|looked into|changed|rebuil|consolidat|cannot|can't|limitation)/i.test(text);
-    const activeResearch=/(i(?:'|’)ll|i will|i need to|i(?:'|’)m going to|look back through|research|check into|look into)/i.test(text);
+    const activeResearch=/(i(?:'|â€™)ll|i will|i need to|i(?:'|â€™)m going to|look back through|research|check into|look into)/i.test(text);
     const completedWork=/(i (?:updated|added|changed|fixed|created|built|rebuilt|consolidated)|has been updated|now outputs|i looked into)/i.test(text);
     const crossChannel=/(google (?:business )?profile|facebook|instagram|youtube|social|website|web site)/i.test(text);
 
@@ -886,21 +891,21 @@ function buildKnownHumanRecommendation(message,analysis,decision){
       verification="Separate Kristy's executed work from Andy/GCM's possible cross-channel next action.";
     }
 
-    return{...base,communicationFamily:"Human — Website / Content Operations",notificationType,client,businessMeaning:meaning,operationalPriority:(activeResearch||mediaForge)?"Normal":"Low",recommendedAction:action,verificationRequired:verification};
+    return{...base,communicationFamily:"Human â€” Website / Content Operations",notificationType,client,businessMeaning:meaning,operationalPriority:(activeResearch||mediaForge)?"Normal":"Low",recommendedAction:action,verificationRequired:verification};
   }
 
   if(isAdrianne){
     const crossChannel=/(google (?:business )?profile|facebook|instagram|youtube|social|website|web site)/i.test(text);
-    return{...base,communicationFamily:"Human — Leadership / Client Operations",notificationType:crossChannel?"content_coordination_signal":"operational_heads_up",client,businessMeaning:crossChannel?`Adrianne is participating in a human client/operations conversation${client&&!/unassigned/i.test(client)?` for ${client}`:""}. Platform names inside the thread are context, not proof that the email itself is a Google or social-platform notification.`:"Adrianne is providing client/operations context. Treat the human conversation by its business meaning rather than by platform words quoted inside the thread.",operationalPriority:"Normal",recommendedAction:crossChannel?"Review the underlying website/content change and decide what cross-channel coordination Andy/GCM owns. Do not reclassify Adrianne's human reply as a Google Business Profile notification merely because the thread mentions Google or social channels.":"Read the operational context, identify any explicit decision or follow-up Andy owns, and otherwise preserve it as human client context.",verificationRequired:"Create work only when the human conversation proves a concrete action, deadline, unresolved issue, or coordination responsibility."};
+    return{...base,communicationFamily:"Human â€” Leadership / Client Operations",notificationType:crossChannel?"content_coordination_signal":"operational_heads_up",client,businessMeaning:crossChannel?`Adrianne is participating in a human client/operations conversation${client&&!/unassigned/i.test(client)?` for ${client}`:""}. Platform names inside the thread are context, not proof that the email itself is a Google or social-platform notification.`:"Adrianne is providing client/operations context. Treat the human conversation by its business meaning rather than by platform words quoted inside the thread.",operationalPriority:"Normal",recommendedAction:crossChannel?"Review the underlying website/content change and decide what cross-channel coordination Andy/GCM owns. Do not reclassify Adrianne's human reply as a Google Business Profile notification merely because the thread mentions Google or social channels.":"Read the operational context, identify any explicit decision or follow-up Andy owns, and otherwise preserve it as human client context.",verificationRequired:"Create work only when the human conversation proves a concrete action, deadline, unresolved issue, or coordination responsibility."};
   }
 
   if(isFrank){
-    return{...base,communicationFamily:"Human — Leadership / Client Operations",notificationType:"operational_heads_up",client,businessMeaning:"Frank is providing an operational heads-up or client/business context. The message should inform Andy's coordination, but it is not automatically website-content work or a new investigation.",operationalPriority:"Normal",recommendedAction:"Read the heads-up in context, identify any explicit decision or follow-up Andy owns, and otherwise preserve it as relationship/operational context rather than inventing work.",verificationRequired:"Only create work when Frank's message contains or proves a concrete action, decision, deadline, or issue."};
+    return{...base,communicationFamily:"Human â€” Leadership / Client Operations",notificationType:"operational_heads_up",client,businessMeaning:"Frank is providing an operational heads-up or client/business context. The message should inform Andy's coordination, but it is not automatically website-content work or a new investigation.",operationalPriority:"Normal",recommendedAction:"Read the heads-up in context, identify any explicit decision or follow-up Andy owns, and otherwise preserve it as relationship/operational context rather than inventing work.",verificationRequired:"Only create work when Frank's message contains or proves a concrete action, decision, deadline, or issue."};
   }
 
   if(isTed){
     const visit=/\bvisit|coming|meet(?:ing)?|stop(?:ping)? by|scorecards?/i.test(text);
-    return{...base,communicationFamily:"Human — Liberty Corporate / Regional Sales",notificationType:visit?"manufacturer_visit_preparation":"manufacturer_relationship_update",client:client&&!/unassigned/i.test(client)?client:"Southeast Safes",businessMeaning:visit?"Ted, Liberty Safe's regional sales manager, is signaling an upcoming visit/meeting. His communications can cover new/upcoming Liberty products, programs, scorecards, dealer matters, and other Liberty corporate business.":"Ted is providing Liberty corporate/regional sales relationship intelligence.",operationalPriority:visit?"Normal":"Low",recommendedAction:visit?"Prepare for the visit by surfacing relevant Liberty issues, upcoming products, MediaForge dependencies, dealer/co-op matters, performance questions, and other open items already known to GCM. Review any attached scorecards.":"Preserve the Liberty relationship context and surface any concrete follow-up Andy should prepare.",verificationRequired:visit?"Confirm visit timing and review attachments/context before deciding what should be raised with Ted.":"Determine whether the update creates a concrete preparation or follow-up action."};
+    return{...base,communicationFamily:"Human â€” Liberty Corporate / Regional Sales",notificationType:visit?"manufacturer_visit_preparation":"manufacturer_relationship_update",client:client&&!/unassigned/i.test(client)?client:"Southeast Safes",businessMeaning:visit?"Ted, Liberty Safe's regional sales manager, is signaling an upcoming visit/meeting. His communications can cover new/upcoming Liberty products, programs, scorecards, dealer matters, and other Liberty corporate business.":"Ted is providing Liberty corporate/regional sales relationship intelligence.",operationalPriority:visit?"Normal":"Low",recommendedAction:visit?"Prepare for the visit by surfacing relevant Liberty issues, upcoming products, MediaForge dependencies, dealer/co-op matters, performance questions, and other open items already known to GCM. Review any attached scorecards.":"Preserve the Liberty relationship context and surface any concrete follow-up Andy should prepare.",verificationRequired:visit?"Confirm visit timing and review attachments/context before deciding what should be raised with Ted.":"Determine whether the update creates a concrete preparation or follow-up action."};
   }
   return null;
 }
@@ -913,15 +918,15 @@ function buildBillingRecommendation(message,analysis,decision){
   const isIheart=/iheartmedia|iheart media|hanselmann/i.test(`${sender}\n${text}`);
   if(!isInvoice||!isIheart)return null;
   const explicitClient=inferHumanClient(message);
-  const client=explicitClient||analysis?.client?.name||"Unassigned — Human Review";
+  const client=explicitClient||analysis?.client?.name||"Unassigned â€” Human Review";
   return{
-    communicationFamily:"Human — Finance / Media Operations",
+    communicationFamily:"Human â€” Finance / Media Operations",
     notificationType:"billing_coop_coordination",
     client,
     businessMeaning:`iHeartMedia sent an invoice${client&&!/unassigned/i.test(client)?` explicitly tied to ${client}`:""}. This is operational finance/media evidence: Adrianne handles payment and Kristy needs the invoice for co-op reporting.`,
     operationalPriority:"Normal",
     recommendedAction:"Route the invoice context to Adrianne for payment and Kristy for co-op reporting. Preserve the client association from the explicit invoice subject/body; do not assign it from unrelated account history.",
-    shouldCreateCommunication:false,shouldCreateInvestigation:false,investigationCandidate:false,shouldCreateWorkItem:false,monitoringOnly:false,archive:false,proposedRoute:"Human Review",confidence:explicitClient?"High":"Medium",decisionReliability:explicitClient?"Reliable — invoice and client identity explicitly matched":"Review Required — invoice recognized but client identity is not explicit",evidenceSufficiency:"Sufficient for finance/co-op coordination; not evidence of completed client work",evidenceComparedAgainst:"Current Gmail invoice subject/body and known operational roles",verificationRequired:"Confirm the invoice attachment/details before payment or co-op submission. No investigation is implied by receipt of a normal invoice.",humanReviewRequired:true,productionDecisionReady:false,sourceAnalysis:decision
+    shouldCreateCommunication:false,shouldCreateInvestigation:false,investigationCandidate:false,shouldCreateWorkItem:false,monitoringOnly:false,archive:false,proposedRoute:"Human Review",confidence:explicitClient?"High":"Medium",decisionReliability:explicitClient?"Reliable â€” invoice and client identity explicitly matched":"Review Required â€” invoice recognized but client identity is not explicit",evidenceSufficiency:"Sufficient for finance/co-op coordination; not evidence of completed client work",evidenceComparedAgainst:"Current Gmail invoice subject/body and known operational roles",verificationRequired:"Confirm the invoice attachment/details before payment or co-op submission. No investigation is implied by receipt of a normal invoice.",humanReviewRequired:true,productionDecisionReady:false,sourceAnalysis:decision
   };
 }
 function buildPromotionalRecommendation(message,analysis,decision){
@@ -933,11 +938,11 @@ function buildPromotionalRecommendation(message,analysis,decision){
   const promo=/(last chance|\$\d+ off|promo(?:tion)?|discount|agents week|offer expires|register now)/i.test(text);
   if(!cloudflare||!promo)return null;
   return{
-    communicationFamily:"Vendor — Promotional / Non-Operational",
+    communicationFamily:"Vendor â€” Promotional / Non-Operational",
     notificationType:"vendor_promotion",
-    client:"GCM — Internal",
+    client:"GCM â€” Internal",
     businessMeaning:"Cloudflare promotional/marketing email. It does not establish a client issue, production failure, deadline, or operational work.",
-    operationalPriority:"Low",recommendedAction:"Archive as non-operational promotional mail. Do not create a Communication, Investigation, Work Item, or monitoring record.",shouldCreateCommunication:false,shouldCreateInvestigation:false,investigationCandidate:false,shouldCreateWorkItem:false,monitoringOnly:false,archive:true,proposedRoute:"Archive",confidence:"High",decisionReliability:"Reliable — promotional language detected",evidenceSufficiency:"Sufficient to exclude from operational review",evidenceComparedAgainst:"Current Gmail sender, subject, and body",verificationRequired:"None unless the message separately reports a production/security/account issue.",humanReviewRequired:false,productionDecisionReady:true,sourceAnalysis:decision
+    operationalPriority:"Low",recommendedAction:"Archive as non-operational promotional mail. Do not create a Communication, Investigation, Work Item, or monitoring record.",shouldCreateCommunication:false,shouldCreateInvestigation:false,investigationCandidate:false,shouldCreateWorkItem:false,monitoringOnly:false,archive:true,proposedRoute:"Archive",confidence:"High",decisionReliability:"Reliable â€” promotional language detected",evidenceSufficiency:"Sufficient to exclude from operational review",evidenceComparedAgainst:"Current Gmail sender, subject, and body",verificationRequired:"None unless the message separately reports a production/security/account issue.",humanReviewRequired:false,productionDecisionReady:true,sourceAnalysis:decision
   };
 }
 function inferHumanClient(message){
@@ -1107,7 +1112,7 @@ function buildDecisionCalibration({message,analysis,classification,decision,moni
     const adverseSignal=/(rankings? declined|rankings? decreased|lost rankings?|visibility[^\n]{0,40}-\d|traffic[^\n]{0,40}-\d)/i.test(evidenceText);
     const routineMonitoringReady=Boolean(verifiedMonitoringClient)&&hasKeywordMovement&&!adverseSignal;
     return{
-      decisionReliability:routineMonitoringReady?"Reliable — verified client and current ranking movement detected":hasKeywordMovement?"Moderate — current movement detected":"Low — movement detail incomplete",
+      decisionReliability:routineMonitoringReady?"Reliable â€” verified client and current ranking movement detected":hasKeywordMovement?"Moderate â€” current movement detected":"Low â€” movement detail incomplete",
       evidenceSufficiency:routineMonitoringReady?"Sufficient for monitoring; no adverse escalation signal proven":hasKeywordMovement?"Current report sufficient for monitoring; insufficient for escalation":"Insufficient for production decision",
       evidenceComparedAgainst:"Current Gmail message only; no prior Position Tracking record, investigation, baseline, or proof compared",
       verificationRequired:routineMonitoringReady?"No investigation required. Human approval may save this Position Tracking update as monitoring evidence.":"Compare the affected keyword, direction, current position, and prior report. Then decide whether to save monitoring evidence, attach it to existing work, or investigate.",
@@ -1116,7 +1121,7 @@ function buildDecisionCalibration({message,analysis,classification,decision,moni
     };
   }
   if(type==="search_performance")return{
-    decisionReliability:hasSearchMetrics?"Moderate — current metrics detected":"Low — metric detail incomplete",
+    decisionReliability:hasSearchMetrics?"Moderate â€” current metrics detected":"Low â€” metric detail incomplete",
     evidenceSufficiency:hasSearchMetrics?"Current report sufficient for monitoring; insufficient for trend decision":"Insufficient for production decision",
     evidenceComparedAgainst:"Current Gmail message only; no prior Search Console period, baseline, investigation, or proof compared",
     verificationRequired:"Compare clicks, impressions, CTR, and position with the prior reporting period before approving monitoring or escalation.",
@@ -1124,7 +1129,7 @@ function buildDecisionCalibration({message,analysis,classification,decision,moni
     proposedRoute:"Calibration Required"
   };
   if(type==="site_audit"||type==="backlink_audit")return{
-    decisionReliability:hasAuditMetrics?"Moderate — current condition detected":"Low — issue detail incomplete",
+    decisionReliability:hasAuditMetrics?"Moderate â€” current condition detected":"Low â€” issue detail incomplete",
     evidenceSufficiency:"Current report is evidence, but change, cause, and client impact are not yet verified",
     evidenceComparedAgainst:"Current Gmail message only; no prior audit, open investigation, completed work, or proof compared",
     verificationRequired:"Compare the current issue counts and changes with the prior audit and any open investigation before approving a production route.",
@@ -1132,7 +1137,7 @@ function buildDecisionCalibration({message,analysis,classification,decision,moni
     proposedRoute:"Calibration Required"
   };
   return{
-    decisionReliability:createInvestigation?"Provisional — escalation suggested":"Provisional — human judgment required",
+    decisionReliability:createInvestigation?"Provisional â€” escalation suggested":"Provisional â€” human judgment required",
     evidenceSufficiency:"Current email analyzed; broader client context not compared",
     evidenceComparedAgainst:"Current Gmail message only",
     verificationRequired:"Review the source email and compare it with relevant client records before approving any production action.",
@@ -1192,7 +1197,7 @@ function buildFallbackRecommendation(message,error){
   return{
     communicationFamily:"Manual Review",
     notificationType:"analysis_unavailable",
-    client:"Unassigned — Human Review",
+    client:"Unassigned â€” Human Review",
     businessMeaning:"The email was retrieved successfully, but operational intelligence could not be completed.",
     operationalPriority:"Normal",
     recommendedAction:`Review this email manually. Analysis error: ${safeErrorMessage(error)}`,
@@ -1321,4 +1326,4 @@ async function decrypt(value,secret){const[iv,data]=value.split(".");const bytes
 function encode(bytes){let binary="";for(const byte of bytes)binary+=String.fromCharCode(byte);return btoa(binary).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"");}
 function decode(value){const normalized=value.replace(/-/g,"+").replace(/_/g,"/");const padded=normalized+"=".repeat((4-normalized.length%4)%4);return Uint8Array.from(atob(padded),character=>character.charCodeAt(0));}
 function escapeHtml(value){return String(value||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");}
-function callbackPage(ok,title,message,returnTo,status){return new Response(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${escapeHtml(title)}</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f5f7fb;font-family:system-ui;color:#132238}.card{max-width:560px;padding:32px;border:1px solid #dbe2ec;border-radius:22px;background:#fff}a{display:inline-block;padding:12px 18px;border-radius:11px;background:#1f68d8;color:#fff;text-decoration:none;font-weight:800}</style></head><body><main class="card"><h1>${escapeHtml(title)}</h1><p>${escapeHtml(message)}</p><a href="${escapeHtml(safeReturn(returnTo))}">Return to Today</a></main></body></html>`,{status,headers:{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store"}});}
+function callbackPage(ok,title,message,returnTo,status,osSessionToken=null){const destination=new URL(safeReturn(returnTo));if(osSessionToken)destination.hash=`gcm_os_session=${encodeURIComponent(osSessionToken)}`;return new Response(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${escapeHtml(title)}</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f5f7fb;font-family:system-ui;color:#132238}.card{max-width:560px;padding:32px;border:1px solid #dbe2ec;border-radius:22px;background:#fff}a{display:inline-block;padding:12px 18px;border-radius:11px;background:#1f68d8;color:#fff;text-decoration:none;font-weight:800}</style></head><body><main class="card"><h1>${escapeHtml(title)}</h1><p>${escapeHtml(message)}</p><a href="${escapeHtml(destination.toString())}">${osSessionToken?"Open Work With Me":"Return to Today"}</a></main></body></html>`,{status,headers:{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store"}});}
