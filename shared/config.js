@@ -1,16 +1,16 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/config.js
-   Version: 7.8.0
+   Version: 7.8.1
    Status: Production Candidate
    Source: shared/config.js 7.7.9
-   Sprint: Media — Gmail Attached Draft Creation
+   Sprint: Media â€” Gmail Attached Draft Creation
    Purpose: Preserve all existing production constants and add
             the human-approved Gmail Communication + Investigation
             action contract.
    ========================================================= */
 
-export const VERSION = "7.8.0";
+export const VERSION = "7.8.1";
 export const API_CONTRACT_VERSION = "communications-operational-decision-v3";
 export const COMMUNICATION_ANALYSIS_ENGINE_VERSION = "3.4.1";
 
@@ -38,6 +38,13 @@ export const ACTIONS = Object.freeze({
   CREATE_REQUESTED_WORK: "create-requested-work",
   GET_MEDIA_OPERATIONS: "get-media-operations",
   OPERATIONAL_REVIEWS: "operational-reviews",
+
+  LIST_OPERATING_SESSIONS: "list-operating-sessions",
+  GET_OPERATING_SESSION: "get-operating-session",
+  CREATE_OPERATING_SESSION: "create-operating-session",
+  ADD_OPERATING_SESSION_EVIDENCE: "add-operating-session-evidence",
+  ADD_OPERATING_SESSION_ENTRY: "add-operating-session-entry",
+  UPDATE_OPERATING_SESSION_STATUS: "update-operating-session-status",
 
   GET_CALENDAR_APPOINTMENTS: "get-calendar-appointments",
   CREATE_CALENDAR_APPOINTMENT: "create-calendar-appointment",
@@ -69,6 +76,6 @@ export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers":
-    "Content-Type, X-GCM-Contract-Version",
+    "Content-Type, Authorization, X-GCM-Contract-Version",
   "Content-Type": "application/json; charset=utf-8"
 };
