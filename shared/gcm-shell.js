@@ -1,18 +1,18 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gcm-shell.js
-   Version: 2.0.0
+   Version: 2.0.1
    Status: Production Candidate
    Purpose: Shared internal GCM OS application shell foundation.
-   Source: gcm-shell.js 1.0.2 production navigation
-   Sprint: OS 2.0 Phase 1
-   Change: Simplifies the primary workspace and routes Work to Work With Me.
+   Source: gcm-shell.js 2.0.0 production navigation
+   Sprint: OS 2.0 Phase 1 Stabilization
+   Change: Restores Media to the primary GCM OS workspace navigation.
    ========================================================= */
 
 (() => {
   "use strict";
 
-  const SHELL_VERSION = "2.0.0";
+  const SHELL_VERSION = "2.0.1";
 
   const PAGE_MAP = {
     today: {
@@ -29,6 +29,11 @@
       label: "Work With Me",
       href: "work-with-me.html",
       icon: "✓"
+    },
+    media: {
+      label: "Media",
+      href: "media.html",
+      icon: "◉"
     },
     prospects: {
       label: "Prospects",
