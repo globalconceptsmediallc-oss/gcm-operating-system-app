@@ -1,7 +1,7 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gcm-worker-deploy.yml
-# Version: 1.1.2
+# Version: 1.2.0
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Cloudflare Worker from main.
 # =========================================================
@@ -64,3 +64,37 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: "4.122.0"
           command: deploy
+
+      - name: Verify Live OS 2.0 Worker
+        env:
+          WORKER_URL: https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/
+        run: |
+          node <<'NODE'
+          const url = process.env.WORKER_URL;
+          const healthResponse = await fetch(url);
+          if (!healthResponse.ok) throw new Error(`Worker health returned HTTP ${healthResponse.status}`);
+          const health = await healthResponse.json();
+          if (health.workerFileVersion !== "7.15.0") {
+            throw new Error(`Expected Worker 7.15.0, received ${health.workerFileVersion || "unknown"}`);
+          }
+          const requiredActions = [
+            "list-operating-sessions",
+            "get-operating-session",
+            "create-operating-session",
+            "add-operating-session-evidence",
+            "add-operating-session-entry",
+            "update-operating-session-status"
+          ];
+          for (const action of requiredActions) {
+            if (!health.actions?.includes(action)) throw new Error(`Live Worker is missing ${action}`);
+          }
+          const protectedResponse = await fetch(url, {
+            method:"POST",
+            headers:{ "Content-Type":"application/json" },
+            body:JSON.stringify({ action:"list-operating-sessions" })
+          });
+          if (protectedResponse.status !== 401) {
+            throw new Error(`Expected authentication boundary HTTP 401, received ${protectedResponse.status}`);
+          }
+          console.log("PASS live Worker 7.15.0, Operating Session routes, and authentication boundary");
+          NODE
