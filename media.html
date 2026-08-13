@@ -1,22 +1,25 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media.html
-   Version: 2.3.1
+   Version: 2.4.0
    Status: Production Candidate
-   Source: Production media.html 1.9.0
-   Sprint: Media Operations — Placement Detail Filtering
-   Purpose: Preserve the working Media operator workspace and add a
-            controlled entry into Media Insertion, truthful stage queues,
-            clickable campaign records, and a compact Placement Detail filter.
+   Source: Production media.html 2.3.1
+   Sprint: Media Operations — Creative Rotation + Historical Planning
+   Purpose: Preserve the working Media operator workspace while extending it
+            to all client media, creative-age monitoring, production workflow,
+            and reusable historical planning without changing D1 authority.
 
    Production rules:
    - D1 media_records remains authoritative.
-   - No campaign records are invented or written.
-   - Queue stages are derived conservatively from explicit state.
-   - Pending/planned records remain Preparing until readiness is explicit.
-   - Expired records are removed from active queues and available through Placement Detail filtering.
-   - Priority and campaign cards open the existing insertion order.
-   - The page answers: What media work should be done next?
+   - No campaign records are invented or written from this dashboard.
+   - Existing placement status, traffic status, confirmation state, filters,
+     stage queues, insertion-order links, and historical records are preserved.
+   - Media Type is derived from explicit record data when available and falls
+     back conservatively from outlet/campaign text for legacy records.
+   - Creative freshness is an operating signal only; it never blocks a placement.
+   - Radio creative review signals: Fresh 0–30 days, Watch 31–45,
+     Refresh Due 46–60, Stale 61+.
+   - Historical placements remain first-class planning intelligence.
    ========================================================= -->
 <!DOCTYPE html>
 <html lang="en">
@@ -35,274 +38,85 @@
     }
     *{box-sizing:border-box}
     body{margin:0;background:var(--soft);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5}
-    button,select{font:inherit}
-    .shell{min-height:100vh;display:grid;grid-template-columns:250px 1fr}
-    aside{position:sticky;top:0;height:100vh;padding:24px 18px;background:linear-gradient(180deg,var(--navy2),var(--navy));color:#fff}
-    .brand{display:flex;gap:12px;align-items:center;padding:0 8px 22px;border-bottom:1px solid rgba(255,255,255,.12)}
-    .mark{width:42px;height:42px;display:grid;place-items:center;border-radius:13px;background:rgba(255,255,255,.08);color:var(--gold);font-weight:900}
-    .brand strong,.brand span{display:block}.brand span{font-size:.72rem;color:rgba(255,255,255,.6);letter-spacing:.12em;text-transform:uppercase}
-    nav{display:grid;gap:6px;margin-top:24px}
-    nav a{padding:12px 13px;border-radius:11px;color:rgba(255,255,255,.72);font-weight:750;text-decoration:none}
-    nav a.active{background:rgba(52,124,232,.2);color:#fff;box-shadow:inset 3px 0 0 var(--gold)}
-    main{padding:30px}
-    .page{max-width:1480px;margin:auto}
+    button,input,select{font:inherit}a{color:inherit;text-decoration:none}
+    .shell{min-height:100vh;display:grid;grid-template-columns:250px minmax(0,1fr)}
+    main{min-width:0;padding:30px}.page{max-width:1480px;margin:auto}
     header{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:20px}
     .eyebrow{margin:0 0 6px;color:var(--blue);font-size:.72rem;font-weight:900;letter-spacing:.14em;text-transform:uppercase}
     h1{margin:0;color:var(--navy);font-size:clamp(2rem,4vw,3rem);line-height:1}
     .subtitle{margin:10px 0 0;color:var(--muted)}
-    .controls{display:flex;gap:10px;flex-wrap:wrap}
-    select,.button{min-height:42px;padding:0 13px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--navy2);font-weight:800}
-    .button{cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
-    .button-primary{background:var(--blue);border-color:var(--blue);color:#fff}
+    .controls{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+    select,.button,input[type="search"]{min-height:42px;padding:0 13px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--navy2);font-weight:800}
+    .button{cursor:pointer;display:inline-flex;align-items:center;justify-content:center}.button-primary{background:var(--blue);border-color:var(--blue);color:#fff}
     .version{display:inline-flex;align-items:center;min-height:42px;padding:0 13px;border-radius:10px;background:var(--navy);color:#fff;font-size:.78rem;font-weight:900}
     .panel{margin-bottom:18px;border:1px solid var(--border);border-radius:var(--radius);background:#fff;box-shadow:var(--shadow);overflow:hidden}
-    .panel-head{display:flex;justify-content:space-between;gap:16px;padding:20px 22px 16px;border-bottom:1px solid var(--border)}
-    .panel-head h2{margin:0;font-size:1rem;color:var(--navy)}
-    .panel-head p{margin:5px 0 0;color:var(--muted);font-size:.82rem}
-    .priority{border-color:#b9cfee}
-    .priority .panel-head{background:linear-gradient(180deg,#edf5ff,#fff)}
-    .priority-body{padding:22px}
-    .decision-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
-    .decision{padding:15px;border:1px solid var(--border);border-radius:13px;background:var(--soft)}
-    .decision span{display:block;margin-bottom:6px;color:var(--blue);font-size:.68rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase}
-    .decision strong{display:block;color:var(--navy);font-size:.9rem}
-    .next{grid-column:1/-1;background:var(--navy);color:#fff;border-color:var(--navy)}
-    .next span{color:#8fb8ff}.next strong{color:#fff;font-size:1rem}
-    .queue-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;padding:18px}
-    .lane{min-width:0;border:1px solid var(--border);border-radius:14px;background:var(--soft);overflow:hidden}
-    .lane-head{padding:14px 15px;border-bottom:1px solid var(--border);background:#fff}
-    .lane-head strong{display:block;color:var(--navy)}.lane-head span{font-size:.72rem;color:var(--muted)}
-    .lane-list{display:grid;gap:10px;padding:12px}
-    .card{padding:14px;border:1px solid var(--border);border-radius:12px;background:#fff}
-    .card strong{display:block;color:var(--navy);font-size:.86rem}
-    .meta{margin-top:5px;color:var(--muted);font-size:.75rem}
-    .action{margin-top:9px;padding-top:9px;border-top:1px solid var(--border);color:var(--navy2);font-size:.76rem;font-weight:850}
-    .badge{display:inline-flex;align-items:center;min-height:23px;padding:0 8px;margin-bottom:8px;border-radius:999px;font-size:.64rem;font-weight:900;text-transform:uppercase}
-    .b-critical{background:var(--critical-soft);color:var(--critical)}
-    .b-warning{background:var(--warning-soft);color:var(--warning)}
-    .b-success{background:var(--success-soft);color:var(--success)}
-    .b-info{background:var(--info-soft);color:var(--info)}
+    .priority{border-color:#b9cfee}.priority-body{padding:22px}
     .summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
     .summary article{padding:17px;border:1px solid var(--border);border-radius:14px;background:#fff;box-shadow:var(--shadow)}
-    .summary span{display:block;color:var(--muted);font-size:.7rem;font-weight:900;text-transform:uppercase}
-    .summary strong{display:block;margin-top:7px;color:var(--navy);font-size:1.8rem}
+    .summary span{display:block;color:var(--muted);font-size:.7rem;font-weight:900;text-transform:uppercase}.summary strong{display:block;margin-top:7px;color:var(--navy);font-size:1.8rem}
     .summary-detail{margin-top:7px;color:var(--muted);font-size:.74rem;line-height:1.35;text-transform:none!important;font-weight:700!important}
-    .clickable-record{cursor:pointer;transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease}
-    .clickable-record:hover{transform:translateY(-1px);border-color:#aac4eb;box-shadow:0 10px 22px rgba(31,104,216,.1)}
-    .clickable-record:focus-visible{outline:3px solid rgba(31,104,216,.24);outline-offset:2px}
-    .open-record{margin-top:8px;color:var(--blue);font-size:.7rem;font-weight:900;text-transform:uppercase;letter-spacing:.05em}
-    .empty,.loading,.error{padding:22px;color:var(--muted);font-size:.84rem}
-    .error{color:var(--critical);background:var(--critical-soft)}
-    .table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:900px}
-    .table th,.table td{padding:12px 14px;border-bottom:1px solid var(--border);text-align:left;font-size:.76rem;vertical-align:top}
-    .table th{background:#fbfcfe;color:var(--muted);font-size:.66rem;text-transform:uppercase;letter-spacing:.07em}
-
-    .filter-bar{
-      display:grid;
-      grid-template-columns:repeat(6,minmax(0,1fr));
-      gap:10px;
-      padding:16px 18px;
-      border-bottom:1px solid var(--border);
-      background:#fbfcfe
-    }
-    .filter-group{display:grid;gap:5px}
-    .filter-group label{
-      color:var(--muted);
-      font-size:.64rem;
-      font-weight:900;
-      letter-spacing:.07em;
-      text-transform:uppercase
-    }
-    .filter-group input,.filter-group select{
-      width:100%;
-      min-height:40px;
-      padding:0 11px;
-      border:1px solid var(--border);
-      border-radius:9px;
-      background:#fff;
-      color:var(--navy2);
-      font:inherit
-    }
-    .filter-check{
-      display:flex;
-      align-items:end;
-      gap:8px;
-      padding-bottom:8px;
-      color:var(--navy2);
-      font-size:.76rem;
-      font-weight:850
-    }
-    .filter-check input{width:17px;height:17px}
-    .section-toggle{
-      width:100%;
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:14px;
-      padding:20px 22px 16px;
-      border:0;
-      border-bottom:1px solid var(--border);
-      background:#fff;
-      color:inherit;
-      text-align:left;
-      cursor:pointer
-    }
-    .section-toggle:hover{background:#fbfcfe}
-    .section-toggle .title-wrap h2{margin:0;font-size:1rem;color:var(--navy)}
-    .section-toggle .title-wrap p{margin:5px 0 0;color:var(--muted);font-size:.82rem}
-    .chevron{
-      flex:0 0 auto;
-      width:30px;height:30px;
-      display:grid;place-items:center;
-      border:1px solid var(--border);
-      border-radius:9px;
-      color:var(--navy);
-      background:#fff;
-      font-weight:900;
-      transition:transform .18s ease
-    }
-    .section-toggle[aria-expanded="false"] .chevron{transform:rotate(-90deg)}
-    .collapsible[hidden]{display:none!important}
-    .lane-toggle{
-      width:100%;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      padding:14px 15px;
-      border:0;
-      border-bottom:1px solid var(--border);
-      background:#fff;
-      text-align:left;
-      cursor:pointer
-    }
-    .lane-toggle strong{display:block;color:var(--navy)}
-    .lane-toggle span{font-size:.72rem;color:var(--muted)}
-    .lane-count{
-      display:inline-grid!important;
-      place-items:center;
-      min-width:25px;height:25px;
-      padding:0 7px;
-      border-radius:999px;
-      background:var(--blue-soft);
-      color:var(--blue)!important;
-      font-size:.66rem!important;
-      font-weight:900
-    }
-    .queue-grid{align-items:start}
-    .placement-filter-bar{grid-template-columns:minmax(220px,320px) 1fr;align-items:end}
-    .placement-filter-summary{padding:10px 0;color:var(--muted);font-size:.78rem;font-weight:800}
-
-    @media(max-width:1100px){.decision-grid{grid-template-columns:repeat(2,1fr)}.queue-grid{grid-template-columns:repeat(2,1fr)}.filter-bar{grid-template-columns:repeat(3,1fr)}}
-    @media(max-width:800px){.shell{grid-template-columns:1fr}aside{display:none}main{padding:18px}.summary,.queue-grid,.decision-grid,.filter-bar{grid-template-columns:1fr}header{flex-direction:column}.next{grid-column:auto}}
+    .filter-bar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px;padding:16px 18px;border-bottom:1px solid var(--border);background:#fbfcfe}
+    .filter-group{display:grid;gap:5px}.filter-group label{color:var(--muted);font-size:.64rem;font-weight:900;letter-spacing:.07em;text-transform:uppercase}
+    .filter-group input,.filter-group select{width:100%;min-height:40px;padding:0 11px;border:1px solid var(--border);border-radius:9px;background:#fff;color:var(--navy2);font:inherit}
+    .filter-check{display:flex;align-items:end;gap:8px;padding-bottom:8px;color:var(--navy2);font-size:.76rem;font-weight:850}.filter-check input{width:17px;height:17px}
+    .section-toggle{width:100%;display:flex;justify-content:space-between;align-items:center;gap:14px;padding:20px 22px 16px;border:0;border-bottom:1px solid var(--border);background:#fff;color:inherit;text-align:left;cursor:pointer}
+    .section-toggle:hover{background:#fbfcfe}.section-toggle .title-wrap h2{margin:0;font-size:1rem;color:var(--navy)}.section-toggle .title-wrap p{margin:5px 0 0;color:var(--muted);font-size:.82rem}
+    .chevron{flex:0 0 auto;width:30px;height:30px;display:grid;place-items:center;border:1px solid var(--border);border-radius:9px;color:var(--navy);background:#fff;font-weight:900;transition:transform .18s ease}
+    .section-toggle[aria-expanded="false"] .chevron{transform:rotate(-90deg)}.collapsible[hidden]{display:none!important}
+    .decision-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}.decision{padding:15px;border:1px solid var(--border);border-radius:13px;background:var(--soft)}
+    .decision span{display:block;margin-bottom:6px;color:var(--blue);font-size:.68rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase}.decision strong{display:block;color:var(--navy);font-size:.9rem}
+    .next{grid-column:1/-1;background:var(--navy);color:#fff;border-color:var(--navy)}.next span{color:#8fb8ff}.next strong{color:#fff;font-size:1rem}
+    .workflow-strip{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;padding:18px}.workflow-step{padding:14px;border:1px solid var(--border);border-radius:12px;background:var(--soft)}
+    .workflow-step span{display:block;color:var(--blue);font-size:.65rem;font-weight:900;text-transform:uppercase}.workflow-step strong{display:block;margin-top:5px;color:var(--navy);font-size:.82rem}.workflow-step small{display:block;margin-top:5px;color:var(--muted);font-size:.7rem;line-height:1.35}
+    .queue-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;padding:18px;align-items:start}.lane{min-width:0;border:1px solid var(--border);border-radius:14px;background:var(--soft);overflow:hidden}
+    .lane-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 15px;border:0;border-bottom:1px solid var(--border);background:#fff;text-align:left;cursor:pointer}.lane-toggle strong{display:block;color:var(--navy)}.lane-toggle span{font-size:.72rem;color:var(--muted)}
+    .lane-count{display:inline-grid!important;place-items:center;min-width:25px;height:25px;padding:0 7px;border-radius:999px;background:var(--blue-soft);color:var(--blue)!important;font-size:.66rem!important;font-weight:900}
+    .lane-list{display:grid;gap:10px;padding:12px}.card{padding:14px;border:1px solid var(--border);border-radius:12px;background:#fff}.card strong{display:block;color:var(--navy);font-size:.86rem}.meta{margin-top:5px;color:var(--muted);font-size:.75rem}.action{margin-top:9px;padding-top:9px;border-top:1px solid var(--border);color:var(--navy2);font-size:.76rem;font-weight:850}
+    .badge{display:inline-flex;align-items:center;min-height:23px;padding:0 8px;margin:0 6px 8px 0;border-radius:999px;font-size:.64rem;font-weight:900;text-transform:uppercase}.b-critical{background:var(--critical-soft);color:var(--critical)}.b-warning{background:var(--warning-soft);color:var(--warning)}.b-success{background:var(--success-soft);color:var(--success)}.b-info{background:var(--info-soft);color:var(--info)}
+    .clickable-record{cursor:pointer;transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease}.clickable-record:hover{transform:translateY(-1px);border-color:#aac4eb;box-shadow:0 10px 22px rgba(31,104,216,.1)}.clickable-record:focus-visible{outline:3px solid rgba(31,104,216,.24);outline-offset:2px}.open-record{margin-top:8px;color:var(--blue);font-size:.7rem;font-weight:900;text-transform:uppercase;letter-spacing:.05em}
+    .empty,.loading,.error{padding:22px;color:var(--muted);font-size:.84rem}.error{color:var(--critical);background:var(--critical-soft)}
+    .history-tools{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:16px 18px;border-bottom:1px solid var(--border);background:#fbfcfe}.history-button{min-height:40px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--navy2);font-weight:850;cursor:pointer}.history-button:hover{border-color:#aac4eb;background:var(--blue-soft)}
+    .placement-filter-bar{display:grid;grid-template-columns:minmax(220px,320px) 1fr;align-items:end;gap:10px;padding:16px 18px;border-bottom:1px solid var(--border);background:#fbfcfe}.placement-filter-summary{padding:10px 0;color:var(--muted);font-size:.78rem;font-weight:800}
+    .table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:1080px}.table th,.table td{padding:12px 14px;border-bottom:1px solid var(--border);text-align:left;font-size:.76rem;vertical-align:top}.table th{background:#fbfcfe;color:var(--muted);font-size:.66rem;text-transform:uppercase;letter-spacing:.07em}
+    @media(max-width:1200px){.filter-bar{grid-template-columns:repeat(4,1fr)}.workflow-strip{grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:1100px){.decision-grid{grid-template-columns:repeat(2,1fr)}.queue-grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:800px){.shell{grid-template-columns:1fr}main{padding:18px}.summary,.queue-grid,.decision-grid,.filter-bar,.history-tools,.workflow-strip{grid-template-columns:1fr}header{flex-direction:column}.next{grid-column:auto}.controls{justify-content:flex-start}}
   </style>
 </head>
 <body>
 <div class="shell">
-  <aside>
-    <div class="brand"><div class="mark">G</div><div><strong>GCM OS</strong><span>Agency Infrastructure</span></div></div>
-    <nav>
-      <a href="today.html">Today</a>
-      <a href="clients.html">Clients</a>
-      <a href="communications.html">Communications</a>
-      <a href="work.html">Work</a>
-      <a href="proof.html">Proof</a>
-      <a class="active" href="media.html">Media</a>
-      <a href="client-pre-research.html">Prospects</a>
-    </nav>
-  </aside>
-
+  <aside data-gcm-shell-sidebar aria-label="Primary navigation"></aside>
   <main>
     <div class="page">
       <header>
         <div>
           <p class="eyebrow">Media Operations</p>
           <h1>Operator Workspace</h1>
-          <p class="subtitle">What needs to be prepared, launched, confirmed, or monitored next?</p>
+          <p class="subtitle">Plan, produce, traffic, monitor, refresh, and reuse media history across every client and outlet.</p>
         </div>
         <div class="controls">
           <a class="button button-primary" href="media-insertion.html">Create Media Campaign</a>
           <button class="button" id="expand-all" type="button">Expand All</button>
           <button class="button" id="collapse-all" type="button">Collapse All</button>
           <button class="button" id="refresh" type="button">Refresh</button>
-          <span class="version">media.html · v2.3.1</span>
+          <span class="version">media.html · v2.4.0</span>
         </div>
       </header>
-
       <section class="summary">
         <article><span>Needs Action</span><strong id="count-action">—</strong><span class="summary-detail" id="detail-action">Records requiring an operating decision.</span></article>
-        <article><span>Upcoming Campaigns</span><strong id="count-preparing">—</strong><span class="summary-detail" id="detail-preparing">Preparing and explicitly ready campaigns.</span></article>
+        <article><span>In Production / Upcoming</span><strong id="count-preparing">—</strong><span class="summary-detail" id="detail-preparing">Creative or placement work before launch.</span></article>
         <article><span>Running</span><strong id="count-running">—</strong><span class="summary-detail" id="detail-running">Confirmed placements currently active.</span></article>
-        <article><span>Expired</span><strong id="count-history">—</strong><span class="summary-detail" id="detail-history">Past placements kept outside active queues.</span></article>
+        <article><span>History</span><strong id="count-history">—</strong><span class="summary-detail" id="detail-history">Past placements available for planning.</span></article>
       </section>
-
-
-      <section class="panel">
-        <button class="section-toggle" type="button" aria-expanded="true" data-target="filters-body">
-          <span class="title-wrap"><h2>Filters</h2><p>Limit every queue, count, priority decision, and detail record together.</p></span>
-          <span class="chevron">⌄</span>
-        </button>
-        <div class="collapsible" id="filters-body">
-          <div class="filter-bar">
-            <div class="filter-group"><label for="client">Client</label><select id="client"><option value="">All clients</option></select></div>
-            <div class="filter-group"><label for="status-filter">Status</label><select id="status-filter"><option value="">All statuses</option></select></div>
-            <div class="filter-group"><label for="market-filter">Market</label><select id="market-filter"><option value="">All markets</option></select></div>
-            <div class="filter-group"><label for="outlet-filter">Station / Outlet</label><select id="outlet-filter"><option value="">All stations</option></select></div>
-            <div class="filter-group"><label for="date-filter">Date View</label><select id="date-filter"><option value="">All dates</option><option value="upcoming">Upcoming</option><option value="running">Running now</option><option value="history">History</option></select></div>
-            <div class="filter-group"><label for="search-filter">Search</label><input id="search-filter" type="search" placeholder="Campaign, creative, station…" /></div>
-            <label class="filter-check"><input id="needs-action-filter" type="checkbox" /> Needs action only</label>
-            <button class="button" id="clear-filters" type="button">Clear Filters</button>
-          </div>
-        </div>
-      </section>
-
-      <section class="panel priority">
-        <button class="section-toggle" type="button" aria-expanded="true" data-target="priority-body">
-          <span class="title-wrap"><h2>Highest-Priority Media Action</h2><p>Derived from confirmed placement dates, traffic deadlines, attention state, and confirmation state.</p></span>
-          <span class="chevron">⌄</span>
-        </button>
-        <div class="priority-body collapsible" id="priority-body"><div id="priority"><div class="loading">Loading operational decision…</div></div></div>
-      </section>
-
-      <section class="panel">
-        <button class="section-toggle" type="button" aria-expanded="true" data-target="queue-body">
-          <span class="title-wrap"><h2>Campaign Preparation Queue</h2><p>Existing placement records organised by operational stage.</p></span>
-          <span class="chevron">⌄</span>
-        </button>
-        <div class="queue-grid collapsible" id="queue-body">
-          <section class="lane"><button class="lane-toggle" type="button" aria-expanded="true" data-target="lane-preparing"><span><strong>Preparing</strong><span>Upcoming placements requiring readiness</span></span><span class="lane-count" id="lane-preparing-count">0</span></button><div class="lane-list collapsible" id="lane-preparing"></div></section>
-          <section class="lane"><button class="lane-toggle" type="button" aria-expanded="true" data-target="lane-ready"><span><strong>Ready to Launch</strong><span>Only records explicitly marked ready</span></span><span class="lane-count" id="lane-ready-count">0</span></button><div class="lane-list collapsible" id="lane-ready"></div></section>
-          <section class="lane"><button class="lane-toggle" type="button" aria-expanded="false" data-target="lane-running"><span><strong>Running</strong><span>Active placements and next operating step</span></span><span class="lane-count" id="lane-running-count">0</span></button><div class="lane-list collapsible" id="lane-running" hidden></div></section>
-          <section class="lane"><button class="lane-toggle" type="button" aria-expanded="true" data-target="lane-awaiting"><span><strong>Awaiting Confirmation</strong><span>Sent instructions waiting for station proof</span></span><span class="lane-count" id="lane-awaiting-count">0</span></button><div class="lane-list collapsible" id="lane-awaiting"></div></section>
-        </div>
-      </section>
-
-
-      <section class="panel">
-        <button class="section-toggle" type="button" aria-expanded="false" data-target="placement-detail-body">
-          <span class="title-wrap"><h2>Placement Detail</h2><p>Active records by default, with Pending, Expired, and All available when needed.</p></span>
-          <span class="chevron">⌄</span>
-        </button>
-        <div id="placement-detail-body" class="collapsible" hidden>
-          <div class="filter-bar placement-filter-bar">
-            <div class="filter-group">
-              <label for="placement-view-filter">Placement View</label>
-              <select id="placement-view-filter">
-                <option value="active" selected>Active</option>
-                <option value="pending">Pending</option>
-                <option value="expired">Expired</option>
-                <option value="all">All</option>
-              </select>
-            </div>
-            <div class="placement-filter-summary" id="placement-filter-summary">Active placements shown.</div>
-          </div>
-          <div id="records"><div class="loading">Loading media records…</div></div>
-        </div>
-      </section>
+      <section class="panel"><button class="section-toggle" type="button" aria-expanded="true" data-target="filters-body"><span class="title-wrap"><h2>Filters</h2><p>Limit the entire workspace by client, media type, status, market, outlet, date, or search.</p></span><span class="chevron">⌄</span></button><div class="collapsible" id="filters-body"><div class="filter-bar"><div class="filter-group"><label for="client">Client</label><select id="client"><option value="">All clients</option></select></div><div class="filter-group"><label for="media-type-filter">Media Type</label><select id="media-type-filter"><option value="">All media types</option></select></div><div class="filter-group"><label for="status-filter">Status</label><select id="status-filter"><option value="">All statuses</option></select></div><div class="filter-group"><label for="market-filter">Market</label><select id="market-filter"><option value="">All markets</option></select></div><div class="filter-group"><label for="outlet-filter">Station / Outlet</label><select id="outlet-filter"><option value="">All outlets</option></select></div><div class="filter-group"><label for="date-filter">Date View</label><select id="date-filter"><option value="">All dates</option><option value="upcoming">Upcoming</option><option value="running">Running now</option><option value="history">History</option><option value="last-year">Last calendar year</option><option value="same-period-last-year">Same period last year</option></select></div><div class="filter-group"><label for="search-filter">Search</label><input id="search-filter" type="search" placeholder="Campaign, creative, outlet…" /></div><label class="filter-check"><input id="needs-action-filter" type="checkbox" /> Needs action only</label><button class="button" id="clear-filters" type="button">Clear Filters</button></div></div></section>
+      <section class="panel priority"><button class="section-toggle" type="button" aria-expanded="true" data-target="priority-body"><span class="title-wrap"><h2>Highest-Priority Media Action</h2><p>Traffic deadlines, production state, confirmation, active rotation, and creative-age signals.</p></span><span class="chevron">⌄</span></button><div class="priority-body collapsible" id="priority-body"><div id="priority"><div class="loading">Loading operational decision…</div></div></div></section>
+      <section class="panel"><button class="section-toggle" type="button" aria-expanded="true" data-target="workflow-body"><span class="title-wrap"><h2>Creative + Production Workflow</h2><p>The Media record remains the anchor from topic through traffic package and running rotation.</p></span><span class="chevron">⌄</span></button><div class="workflow-strip collapsible" id="workflow-body"><div class="workflow-step"><span>1 · Direction</span><strong>Topic + objective</strong><small>Client need, event, offer, co-op direction, or campaign idea.</small></div><div class="workflow-step"><span>2 · Script</span><strong>Draft → approved</strong><small>Polish the working script and preserve the approved copy.</small></div><div class="workflow-step"><span>3 · Recording</span><strong>Talent + revisions</strong><small>Track recording received, review notes, and final voice approval.</small></div><div class="workflow-step"><span>4 · Production</span><strong>Final creative</strong><small>Produce the final :30/:60 or other media asset and permanent identifier.</small></div><div class="workflow-step"><span>5 · Traffic Package</span><strong>Co-op + insertion</strong><small>Final script, production, insertion order, schedule, and station/outlet instructions.</small></div><div class="workflow-step"><span>6 · Rotation</span><strong>Run + refresh</strong><small>Monitor live dates, confirmation, creative age, replacement, and history.</small></div></div></section>
+      <section class="panel"><button class="section-toggle" type="button" aria-expanded="true" data-target="queue-body"><span class="title-wrap"><h2>Campaign + Creative Queue</h2><p>Existing D1 placement records organized by operating stage. Cards open the production/insertion record.</p></span><span class="chevron">⌄</span></button><div class="queue-grid collapsible" id="queue-body"><section class="lane"><button class="lane-toggle" type="button" aria-expanded="true" data-target="lane-preparing"><span><strong>Preparing / Producing</strong><span>Creative, traffic, or launch work in progress</span></span><span class="lane-count" id="lane-preparing-count">0</span></button><div class="lane-list collapsible" id="lane-preparing"></div></section><section class="lane"><button class="lane-toggle" type="button" aria-expanded="true" data-target="lane-ready"><span><strong>Ready to Launch</strong><span>Records explicitly ready for the next traffic step</span></span><span class="lane-count" id="lane-ready-count">0</span></button><div class="lane-list collapsible" id="lane-ready"></div></section><section class="lane"><button class="lane-toggle" type="button" aria-expanded="false" data-target="lane-running"><span><strong>Running / Rotation</strong><span>Active media and creative freshness</span></span><span class="lane-count" id="lane-running-count">0</span></button><div class="lane-list collapsible" id="lane-running" hidden></div></section><section class="lane"><button class="lane-toggle" type="button" aria-expanded="true" data-target="lane-awaiting"><span><strong>Awaiting Confirmation</strong><span>Traffic sent; authoritative confirmation pending</span></span><span class="lane-count" id="lane-awaiting-count">0</span></button><div class="lane-list collapsible" id="lane-awaiting"></div></section></div></section>
+      <section class="panel"><button class="section-toggle" type="button" aria-expanded="false" data-target="placement-detail-body"><span class="title-wrap"><h2>History + Placement Detail</h2><p>Use past run dates and creative history for next-year planning without losing the current operating view.</p></span><span class="chevron">⌄</span></button><div id="placement-detail-body" class="collapsible" hidden><div class="history-tools"><button class="history-button" type="button" data-history-view="last-year">Last Calendar Year</button><button class="history-button" type="button" data-history-view="same-period-last-year">Same Period Last Year</button><button class="history-button" type="button" data-history-view="history">All Historical Runs</button><button class="history-button" type="button" data-history-view="">All Dates</button></div><div class="placement-filter-bar"><div class="filter-group"><label for="placement-view-filter">Placement View</label><select id="placement-view-filter"><option value="active" selected>Active</option><option value="pending">Pending</option><option value="expired">History</option><option value="all">All</option></select></div><div class="placement-filter-summary" id="placement-filter-summary">Active placements shown.</div></div><div id="records"><div class="loading">Loading media records…</div></div></div></section>
     </div>
   </main>
 </div>
-
+<script src="shared/gcm-shell.js?v=2.0.1"></script>
 <script>
 (() => {
   "use strict";
@@ -310,347 +124,40 @@
   const $ = id => document.getElementById(id);
   let rawRecords = [];
   let records = [];
-
-  const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({
-    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
-  }[c]));
-
-  const dateText = value => {
-    if (!value) return "Not set";
-    const d = new Date(String(value).slice(0,10) + "T12:00:00");
-    return Number.isNaN(d.getTime()) ? esc(value) : d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
-  };
-
+  const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
   const lower = value => String(value || "").trim().toLowerCase();
-  const isAwaiting = r => ["awaiting","awaiting_confirmation","pending_confirmation"].includes(lower(r.confirmationStatus))
-    || lower(r.trafficStatus).includes("awaiting");
-  const needsAttention = r => r.needsAttention === true
-    || ["attention","needs_attention"].includes(lower(r.attentionStatus))
-    || Boolean(r.attentionReason);
-  const isExpired = r => lower(r.status) === "expired" || dateRelation(r) === "history";
-  const isExplicitlyReady = r => ["ready","ready_to_launch","ready-to-launch"].includes(lower(r.status))
-    || ["ready","ready_to_launch","ready-to-launch"].includes(lower(r.trafficStatus));
-  const isPendingPlacement = r => !isExpired(r) && (
-    isAwaiting(r) ||
-    ["pending","planned","preparing"].includes(lower(r.status)) ||
-    isExplicitlyReady(r)
-  );
-  const isActivePlacement = r => !isExpired(r) && !isPendingPlacement(r) && (
-    ["active","running","confirmed"].includes(lower(r.status)) ||
-    ["confirmed","active","running"].includes(lower(r.confirmationStatus))
-  );
-  const recordUrl = r => `media-insertion.html?mediaRecordId=${encodeURIComponent(r.id)}`;
-  const openRecord = r => { if (r?.id) window.location.href = recordUrl(r); };
-
-
+  const dateText = value => { if (!value) return "Not set"; const d = new Date(String(value).slice(0,10) + "T12:00:00"); return Number.isNaN(d.getTime()) ? esc(value) : d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}); };
+  const toDate = value => { if (!value) return null; const d = new Date(String(value).slice(0,10) + "T12:00:00"); return Number.isNaN(d.getTime()) ? null : d; };
   const uniqueSorted = values => [...new Set(values.filter(Boolean).map(v => String(v).trim()))].sort((a,b) => a.localeCompare(b));
   const optionHtml = (values, emptyLabel) => `<option value="">${esc(emptyLabel)}</option>` + values.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join("");
-
-  function dateRelation(r) {
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    const start = r.startDate ? new Date(String(r.startDate).slice(0,10) + "T00:00:00") : null;
-    const end = r.endDate ? new Date(String(r.endDate).slice(0,10) + "T23:59:59") : null;
-    if (end && end < today) return "history";
-    if (start && start > today) return "upcoming";
-    if ((!start || start <= today) && (!end || end >= today)) return "running";
-    return "";
-  }
-
-  function applyFilters() {
-    const status = lower($("status-filter").value);
-    const market = lower($("market-filter").value);
-    const outlet = lower($("outlet-filter").value);
-    const dateView = $("date-filter").value;
-    const search = lower($("search-filter").value);
-    const actionOnly = $("needs-action-filter").checked;
-
-    records = rawRecords.filter(r => {
-      if (status && lower(r.status) !== status) return false;
-      if (market && lower(r.market) !== market) return false;
-      if (outlet && lower(r.outletName) !== outlet) return false;
-      if (dateView && dateRelation(r) !== dateView) return false;
-      if (actionOnly && !(needsAttention(r) || isAwaiting(r))) return false;
-      if (search) {
-        const haystack = [
-          r.clientName,r.clientCode,r.campaignName,r.creativeName,r.fileName,
-          r.market,r.outletName,r.status,r.trafficStatus,r.confirmationStatus,
-          r.attentionReason
-        ].map(lower).join(" ");
-        if (!haystack.includes(search)) return false;
-      }
-      return true;
-    });
-    render();
-  }
-
-  function populateFilterOptions() {
-    const preserve = {
-      status:$("status-filter").value,
-      market:$("market-filter").value,
-      outlet:$("outlet-filter").value
-    };
-    $("status-filter").innerHTML = optionHtml(uniqueSorted(rawRecords.map(r => r.status)), "All statuses");
-    $("market-filter").innerHTML = optionHtml(uniqueSorted(rawRecords.map(r => r.market)), "All markets");
-    $("outlet-filter").innerHTML = optionHtml(uniqueSorted(rawRecords.map(r => r.outletName)), "All stations");
-    $("status-filter").value = preserve.status;
-    $("market-filter").value = preserve.market;
-    $("outlet-filter").value = preserve.outlet;
-  }
-
-  function daysSince(value) {
-    if (!value) return null;
-    const date = new Date(`${String(value).slice(0,10)}T12:00:00`);
-    if (Number.isNaN(date.getTime())) return null;
-    return Math.max(0, Math.floor((Date.now() - date.getTime()) / 86400000));
-  }
-
-  function creativeFreshness(r) {
-    if (lower(r.status) !== "active") return null;
-    const age = daysSince(r.startDate);
-    if (age === null) return {level:"unknown",label:"Freshness unknown",days:null,className:"b-info",recommendation:"No creative start date is available for a freshness review."};
-    if (age <= 60) return {level:"fresh",label:"Creative fresh",days:age,className:"b-success",recommendation:"No creative refresh is currently suggested."};
-    if (age <= 120) return {level:"aging",label:"Creative aging",days:age,className:"b-warning",recommendation:"Consider reviewing the spot for a fresh version before it becomes stale."};
-    if (age <= 180) return {level:"stale",label:"Creative stale",days:age,className:"b-warning",recommendation:"Recommend planning refreshed creative while the placement continues to run."};
-    return {level:"very-stale",label:"Creative very stale",days:age,className:"b-critical",recommendation:"Prioritize a creative review unless this spot is intentionally evergreen."};
-  }
-
-  function urgency(r) {
-    if (isExpired(r)) return 0;
-    if (isAwaiting(r)) return 100;
-    if (needsAttention(r)) return 90;
-    if (["pending","planned","preparing"].includes(lower(r.status))) return 60;
-    return 0;
-  }
-
-  function nextAction(r) {
-    if (isAwaiting(r)) return "Review the expected station response and process confirmation evidence when it arrives.";
-    if (needsAttention(r)) return r.attentionReason || "Open the production Media page and complete the required traffic action.";
-    if (["pending","planned","preparing"].includes(lower(r.status))) return "Confirm creative, dates, website banner, and social support before traffic is due.";
-    if (isExplicitlyReady(r)) return "Launch package is explicitly ready. Send traffic or complete the next confirmed launch step.";
-    if (lower(r.status) === "active") {
-      const freshness = creativeFreshness(r);
-      if (freshness && ["aging","stale","very-stale"].includes(freshness.level)) return freshness.recommendation;
-      return "No immediate media action required. Placement is confirmed and running normally.";
-    }
-    return "Retain as completed operational history.";
-  }
-
-  function card(r, badgeClass, badgeText) {
-    const freshness = creativeFreshness(r);
-    const freshnessHtml = freshness ? `<div class="meta"><span class="badge ${freshness.className}">${esc(freshness.label)}</span>${freshness.days === null ? "" : ` ${esc(freshness.days)} days since placement start`}</div>` : "";
-    return `<article class="card clickable-record" role="link" tabindex="0" data-record-id="${esc(r.id)}" aria-label="Open media record ${esc(r.id)}">
-      <span class="badge ${badgeClass}">${esc(badgeText)}</span>
-      <strong>${esc(r.clientName || r.clientCode || "Client")} · ${esc(r.campaignName || r.creativeName || r.outletName || "Media placement")}</strong>
-      <div class="meta">${esc(r.market || "Market not set")} · ${esc(r.outletName || "Outlet not set")}</div>
-      <div class="meta">${dateText(r.startDate)} – ${dateText(r.endDate)}</div>
-      ${r.stationDeadline ? `<div class="meta"><strong>Traffic deadline:</strong> ${dateText(r.stationDeadline)}</div>` : ""}
-      ${freshnessHtml}
-      <div class="action">${esc(nextAction(r))}</div>
-      <div class="open-record">Open insertion order →</div>
-    </article>`;
-  }
-
-  function renderLane(id, items, badgeClass, badgeText) {
-    $(id).innerHTML = items.length ? items.map(r => card(r,badgeClass,badgeText)).join("") : `<div class="empty">No records in this stage.</div>`;
-  }
-
-  function renderPriority() {
-    const operational = records.filter(r => urgency(r) > 0).sort((a,b) => urgency(b) - urgency(a));
-    const chosen = operational[0];
-
-    if (!chosen) {
-      const optimization = records
-        .filter(r => lower(r.status) === "active")
-        .map(r => ({record:r,freshness:creativeFreshness(r)}))
-        .filter(item => item.freshness && ["aging","stale","very-stale"].includes(item.freshness.level))
-        .sort((a,b) => (b.freshness.days || 0) - (a.freshness.days || 0))[0];
-
-      if (optimization) {
-        const r = optimization.record;
-        const f = optimization.freshness;
-        $("priority").innerHTML = `<div class="decision-grid clickable-record" role="link" tabindex="0" data-record-id="${esc(r.id)}" aria-label="Open media record ${esc(r.id)}">
-          <div class="decision"><span>Status</span><strong>No immediate media action required</strong></div>
-          <div class="decision"><span>Optimization Opportunity</span><strong>${esc(r.clientName || r.clientCode || "Client")} · ${esc(r.campaignName || r.creativeName || "Media placement")}</strong></div>
-          <div class="decision"><span>Creative Freshness</span><strong>${esc(f.label)}${f.days === null ? "" : ` · ${esc(f.days)} days since placement start`}</strong></div>
-          <div class="decision"><span>Why</span><strong>The placement is confirmed and running normally, but the current creative may be getting stale.</strong></div>
-          <div class="decision"><span>Evidence</span><strong>Media Record #${esc(r.id)} · ${esc(r.trafficStatus || "traffic status unknown")} · ${esc(r.confirmationStatus || "confirmation status unknown")}</strong></div>
-          <div class="decision next"><span>Recommended Review</span><strong>${esc(f.recommendation)}</strong></div>
-        </div>`;
-        return;
-      }
-
-      $("priority").innerHTML = `<div class="decision-grid">
-        <div class="decision"><span>Status</span><strong>No immediate media action required</strong></div>
-        <div class="decision"><span>Why</span><strong>All visible active placements are confirmed and running normally.</strong></div>
-        <div class="decision next"><span>Next Review</span><strong>Review the campaign preparation queue for upcoming work.</strong></div>
-      </div>`;
-      return;
-    }
-
-    let when = chosen.stationDeadline ? `Traffic deadline ${dateText(chosen.stationDeadline)}` :
-      chosen.startDate ? `Starts ${dateText(chosen.startDate)}` :
-      chosen.endDate ? `Ends ${dateText(chosen.endDate)}` : "No date established";
-    let why = isAwaiting(chosen) ? "A station instruction was sent and authoritative placement data must not change until confirmation is reviewed." :
-      needsAttention(chosen) ? (chosen.attentionReason || "The placement is inside its operating attention window.") :
-      "The placement is approaching launch and campaign readiness must be confirmed.";
-
-    $("priority").innerHTML = `<div class="decision-grid clickable-record" role="link" tabindex="0" data-record-id="${esc(chosen.id)}" aria-label="Open media record ${esc(chosen.id)}">
-      <div class="decision"><span>Who</span><strong>${esc(chosen.clientName || chosen.clientCode || "Client")}</strong></div>
-      <div class="decision"><span>What</span><strong>${esc(chosen.campaignName || chosen.creativeName || "Media placement")} · ${esc(chosen.outletName || "Outlet not set")}</strong></div>
-      <div class="decision"><span>When</span><strong>${esc(when)}</strong></div>
-      <div class="decision"><span>Why</span><strong>${esc(why)}</strong></div>
-      <div class="decision"><span>Evidence</span><strong>Media Record #${esc(chosen.id)} · ${esc(chosen.status || "status unknown")}</strong></div>
-      <div class="decision next"><span>Next Action</span><strong>${esc(nextAction(chosen))}</strong><div class="open-record">Open insertion order →</div></div>
-    </div>`;
-  }
-
-  function renderTable() {
-    const view = $("placement-view-filter").value || "active";
-    let detailRecords = records;
-
-    if (view === "active") detailRecords = records.filter(isActivePlacement);
-    if (view === "pending") detailRecords = records.filter(isPendingPlacement);
-    if (view === "expired") detailRecords = records.filter(isExpired);
-
-    const activeCount = records.filter(isActivePlacement).length;
-    const pendingCount = records.filter(isPendingPlacement).length;
-    const expiredCount = records.filter(isExpired).length;
-    const labels = {active:"Active",pending:"Pending",expired:"Expired",all:"All"};
-    $("placement-filter-summary").textContent = `${labels[view]}: ${detailRecords.length} shown · Active ${activeCount} · Pending ${pendingCount} · Expired ${expiredCount}`;
-
-    const rows = detailRecords.map(r => `<tr class="clickable-record" data-record-id="${esc(r.id)}" tabindex="0" role="link">
-      <td><strong>${esc(r.clientName || r.clientCode || "")}</strong><br><span class="meta">#${esc(r.id)}</span></td>
-      <td>${esc(r.campaignName || "—")}<br><span class="meta">${esc(r.creativeName || r.fileName || "")}</span></td>
-      <td>${esc(r.market || "—")}<br><span class="meta">${esc(r.outletName || "—")}</span></td>
-      <td>${dateText(r.startDate)}<br>${dateText(r.endDate)}</td>
-      <td>${esc(r.status || "—")}</td>
-      <td>${esc(r.trafficStatus || "—")}<br><span class="meta">${esc(r.confirmationStatus || "")}</span></td>
-      <td>${esc(nextAction(r))}</td>
-    </tr>`).join("");
-    $("records").innerHTML = detailRecords.length ? `<div class="table-wrap"><table class="table"><thead><tr>
-      <th>Client</th><th>Campaign / Creative</th><th>Market / Outlet</th><th>Dates</th><th>Status</th><th>Traffic / Confirmation</th><th>Operating Next Action</th>
-    </tr></thead><tbody>${rows}</tbody></table></div>` : `<div class="empty">No ${labels[view].toLowerCase()} placement records found.</div>`;
-  }
-
-  function render() {
-    const expired = records.filter(isExpired);
-    const activeRecords = records.filter(r => !isExpired(r));
-    const awaiting = activeRecords.filter(isAwaiting);
-    const ready = activeRecords.filter(r => isExplicitlyReady(r) && !isAwaiting(r));
-    const preparing = activeRecords.filter(r => !isAwaiting(r) && !isExplicitlyReady(r) && ["pending","planned","preparing"].includes(lower(r.status)));
-    const running = activeRecords.filter(r => lower(r.status) === "active" && !isAwaiting(r));
-    const actionCount = activeRecords.filter(r => needsAttention(r) || isAwaiting(r) || preparing.includes(r)).length;
-    const upcoming = [...preparing, ...ready];
-
-    $("count-action").textContent = actionCount;
-    $("count-preparing").textContent = upcoming.length;
-    $("count-running").textContent = running.length;
-    $("count-history").textContent = expired.length;
-    $("lane-preparing-count").textContent = preparing.length;
-    $("lane-ready-count").textContent = ready.length;
-    $("lane-running-count").textContent = running.length;
-    $("lane-awaiting-count").textContent = awaiting.length;
-
-    const nextUpcoming = [...upcoming].sort((a,b) => String(a.stationDeadline || a.startDate || "9999").localeCompare(String(b.stationDeadline || b.startDate || "9999")))[0];
-    $("detail-preparing").textContent = nextUpcoming
-      ? `${nextUpcoming.clientName || nextUpcoming.clientCode || "Client"} · ${nextUpcoming.campaignName || nextUpcoming.creativeName || "Campaign"} · ${nextUpcoming.outletName || "Outlet not set"}${nextUpcoming.stationDeadline ? ` · traffic ${dateText(nextUpcoming.stationDeadline)}` : ""}`
-      : "No upcoming campaigns in the current view.";
-    $("detail-action").textContent = actionCount ? `${actionCount} record${actionCount === 1 ? "" : "s"} require preparation, attention, or confirmation.` : "No immediate operating action in the current view.";
-    $("detail-running").textContent = running.length ? `${running.length} confirmed placement${running.length === 1 ? " is" : "s are"} currently active.` : "No confirmed placements are currently running.";
-    $("detail-history").textContent = expired.length ? `${expired.length} past placement${expired.length === 1 ? "" : "s"} kept outside active queues.` : "No expired placements in the current view.";
-
-    renderPriority();
-    renderLane("lane-preparing", preparing, "b-warning", "Preparing");
-    renderLane("lane-ready", ready, "b-success", "Ready");
-    renderLane("lane-running", running, "b-info", "Running");
-    renderLane("lane-awaiting", awaiting, "b-critical", "Awaiting");
-    renderTable();
-  }
-
-  async function load() {
-    $("priority").innerHTML = `<div class="loading">Loading operational decision…</div>`;
-    try {
-      const body = {action:"get-media-operations"};
-      if ($("client").value) body.clientId = Number($("client").value);
-      const response = await fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok || payload?.ok !== true) throw new Error(payload?.error || payload?.details || "Media Operations could not load.");
-      rawRecords = Array.isArray(payload?.mediaOperations?.records) ? payload.mediaOperations.records : [];
-      const clients = Array.isArray(payload?.mediaOperations?.clients) ? payload.mediaOperations.clients : [];
-      const selected = $("client").value;
-      $("client").innerHTML = `<option value="">All clients</option>` + clients.map(c => `<option value="${esc(c.clientId)}">${esc(c.clientName)}</option>`).join("");
-      $("client").value = selected;
-      populateFilterOptions();
-      applyFilters();
-    } catch (error) {
-      const message = esc(error?.message || "Media Operations could not load.");
-      $("priority").innerHTML = `<div class="error">${message}</div>`;
-      ["lane-preparing","lane-ready","lane-running","lane-awaiting"].forEach(id => $(id).innerHTML = `<div class="error">${message}</div>`);
-      $("records").innerHTML = `<div class="error">${message}</div>`;
-    }
-  }
-
-  document.addEventListener("click", event => {
-    const record = event.target.closest("[data-record-id]");
-    if (record) {
-      const found = rawRecords.find(r => String(r.id) === String(record.dataset.recordId));
-      if (found) openRecord(found);
-      return;
-    }
-    const toggle = event.target.closest("[data-target]");
-    if (!toggle) return;
-    const target = $(toggle.dataset.target);
-    if (!target) return;
-    const expanded = toggle.getAttribute("aria-expanded") !== "false";
-    toggle.setAttribute("aria-expanded", String(!expanded));
-    target.hidden = expanded;
-  });
-
-  document.addEventListener("keydown", event => {
-    if (!['Enter',' '].includes(event.key)) return;
-    const record = event.target.closest("[data-record-id]");
-    if (!record) return;
-    event.preventDefault();
-    const found = rawRecords.find(r => String(r.id) === String(record.dataset.recordId));
-    if (found) openRecord(found);
-  });
-
-  $("client").addEventListener("change", load);
-  $("refresh").addEventListener("click", load);
-  ["status-filter","market-filter","outlet-filter","date-filter","needs-action-filter"].forEach(id => $(id).addEventListener("change", applyFilters));
-  $("search-filter").addEventListener("input", applyFilters);
-  $("placement-view-filter").addEventListener("change", renderTable);
-
-  $("clear-filters").addEventListener("click", () => {
-    $("status-filter").value = "";
-    $("market-filter").value = "";
-    $("outlet-filter").value = "";
-    $("date-filter").value = "";
-    $("search-filter").value = "";
-    $("needs-action-filter").checked = false;
-    applyFilters();
-  });
-
-  $("expand-all").addEventListener("click", () => {
-    document.querySelectorAll("[data-target]").forEach(toggle => {
-      const target = $(toggle.dataset.target);
-      if (!target) return;
-      toggle.setAttribute("aria-expanded","true");
-      target.hidden = false;
-    });
-  });
-
-  $("collapse-all").addEventListener("click", () => {
-    document.querySelectorAll("[data-target]").forEach(toggle => {
-      const target = $(toggle.dataset.target);
-      if (!target) return;
-      toggle.setAttribute("aria-expanded","false");
-      target.hidden = true;
-    });
-  });
-
-  load();
+  function mediaType(r) { const explicit = r.mediaType || r.media_type || r.channel || r.medium || r.outletType || r.outlet_type; if (explicit) return String(explicit).trim(); const text = lower([r.outletName,r.station,r.campaignName,r.creativeName,r.fileName].filter(Boolean).join(" ")); if (/\b(wmmb|wfla|radio|am\b|fm\b|spot|isci)\b/.test(text)) return "Radio"; if (/\b(tv|television|cable)\b/.test(text)) return "TV / Cable"; if (/\b(billboard|outdoor|ooh)\b/.test(text)) return "Outdoor"; if (/\b(print|magazine|newspaper)\b/.test(text)) return "Print"; if (/\b(sponsor|sponsorship)\b/.test(text)) return "Sponsorship"; if (/\b(streaming|podcast|audio)\b/.test(text)) return "Streaming / Audio"; if (/\b(digital|display|social|google|meta|facebook)\b/.test(text)) return "Digital"; return "Other Media"; }
+  function dateRelation(r) { const today = new Date(); today.setHours(0,0,0,0); const start = toDate(r.startDate); const end = toDate(r.endDate); if (end && end < today) return "history"; if (start && start > today) return "upcoming"; if ((!start || start <= today) && (!end || end >= today)) return "running"; return ""; }
+  function inLastCalendarYear(r) { const year = new Date().getFullYear() - 1; const start = toDate(r.startDate); const end = toDate(r.endDate); return (start && start.getFullYear() === year) || (end && end.getFullYear() === year); }
+  function inSamePeriodLastYear(r) { const today = new Date(); const targetStart = new Date(today.getFullYear()-1,today.getMonth(),1); const targetEnd = new Date(today.getFullYear()-1,today.getMonth()+1,0,23,59,59); const start = toDate(r.startDate); const end = toDate(r.endDate) || start; if (!start && !end) return false; return start && start <= targetEnd && (!end || end >= targetStart); }
+  const isAwaiting = r => ["awaiting","awaiting_confirmation","pending_confirmation"].includes(lower(r.confirmationStatus)) || lower(r.trafficStatus).includes("awaiting");
+  const needsAttention = r => r.needsAttention === true || ["attention","needs_attention"].includes(lower(r.attentionStatus)) || Boolean(r.attentionReason);
+  const isExpired = r => lower(r.status) === "expired" || dateRelation(r) === "history";
+  const isExplicitlyReady = r => ["ready","ready_to_launch","ready-to-launch"].includes(lower(r.status)) || ["ready","ready_to_launch","ready-to-launch"].includes(lower(r.trafficStatus));
+  const isPendingPlacement = r => !isExpired(r) && (isAwaiting(r) || ["pending","planned","preparing"].includes(lower(r.status)) || isExplicitlyReady(r));
+  const isActivePlacement = r => !isExpired(r) && !isPendingPlacement(r) && (["active","running","confirmed"].includes(lower(r.status)) || ["confirmed","active","running"].includes(lower(r.confirmationStatus)));
+  const recordUrl = r => `media-insertion.html?mediaRecordId=${encodeURIComponent(r.id)}`;
+  const openRecord = r => { if (r?.id) window.location.href = recordUrl(r); };
+  function daysSince(value) { const date = toDate(value); if (!date) return null; return Math.max(0,Math.floor((Date.now()-date.getTime())/86400000)); }
+  function creativeFreshness(r) { if (!isActivePlacement(r)) return null; const age = daysSince(r.creativeStartDate || r.creative_start_date || r.lastCreativeDate || r.last_creative_date || r.startDate); if (age === null) return {level:"unknown",label:"Creative age unknown",days:null,className:"b-info",recommendation:"Add or verify the creative start date during the next media review."}; if (age <= 30) return {level:"fresh",label:"Fresh",days:age,className:"b-success",recommendation:"No creative refresh is currently suggested."}; if (age <= 45) return {level:"watch",label:"Watch",days:age,className:"b-info",recommendation:"Creative is entering the review window. Start thinking about the next message or replacement."}; if (age <= 60) return {level:"refresh",label:"Refresh Due",days:age,className:"b-warning",recommendation:"Prepare or schedule refreshed creative before listener/viewer fatigue increases."}; return {level:"stale",label:"Stale",days:age,className:"b-critical",recommendation:"Prioritize replacement creative while the placement continues to run."}; }
+  function urgency(r) { if (isExpired(r)) return 0; if (isAwaiting(r)) return 120; if (needsAttention(r)) return 110; const f = creativeFreshness(r); if (f?.level === "stale") return 95; if (f?.level === "refresh") return 85; if (["pending","planned","preparing"].includes(lower(r.status))) return 70; if (f?.level === "watch") return 40; return 0; }
+  function nextAction(r) { if (isAwaiting(r)) return "Review the expected station/outlet response and process confirmation evidence when it arrives."; if (needsAttention(r)) return r.attentionReason || "Open the Media production record and complete the required action."; if (["pending","planned","preparing"].includes(lower(r.status))) return "Continue creative, production, co-op, schedule, or traffic preparation for this campaign."; if (isExplicitlyReady(r)) return "Launch package is explicitly ready. Send traffic or complete the next confirmed launch step."; if (isActivePlacement(r)) { const f = creativeFreshness(r); if (f && ["watch","refresh","stale"].includes(f.level)) return f.recommendation; return "Placement is confirmed and running normally. Continue monitoring dates, rotation, and creative age."; } return "Retain as historical planning intelligence for future campaigns."; }
+  function applyFilters() { const type=lower($("media-type-filter").value),status=lower($("status-filter").value),market=lower($("market-filter").value),outlet=lower($("outlet-filter").value),dateView=$("date-filter").value,search=lower($("search-filter").value),actionOnly=$("needs-action-filter").checked; records=rawRecords.filter(r=>{ if(type&&lower(mediaType(r))!==type)return false;if(status&&lower(r.status)!==status)return false;if(market&&lower(r.market)!==market)return false;if(outlet&&lower(r.outletName)!==outlet)return false;if(dateView==="upcoming"&&dateRelation(r)!=="upcoming")return false;if(dateView==="running"&&dateRelation(r)!=="running")return false;if(dateView==="history"&&dateRelation(r)!=="history")return false;if(dateView==="last-year"&&!inLastCalendarYear(r))return false;if(dateView==="same-period-last-year"&&!inSamePeriodLastYear(r))return false;if(actionOnly&&urgency(r)<=0)return false;if(search){const h=[r.clientName,r.clientCode,r.campaignName,r.creativeName,r.fileName,r.market,r.outletName,r.status,r.trafficStatus,r.confirmationStatus,r.attentionReason,mediaType(r)].map(lower).join(" ");if(!h.includes(search))return false;}return true;});render(); }
+  function populateFilterOptions() { const p={type:$("media-type-filter").value,status:$("status-filter").value,market:$("market-filter").value,outlet:$("outlet-filter").value}; $("media-type-filter").innerHTML=optionHtml(uniqueSorted(rawRecords.map(mediaType)),"All media types"); $("status-filter").innerHTML=optionHtml(uniqueSorted(rawRecords.map(r=>r.status)),"All statuses"); $("market-filter").innerHTML=optionHtml(uniqueSorted(rawRecords.map(r=>r.market)),"All markets"); $("outlet-filter").innerHTML=optionHtml(uniqueSorted(rawRecords.map(r=>r.outletName)),"All outlets"); $("media-type-filter").value=p.type;$("status-filter").value=p.status;$("market-filter").value=p.market;$("outlet-filter").value=p.outlet; }
+  function card(r,badgeClass,badgeText){const f=creativeFreshness(r);const fh=f?`<div class="meta"><span class="badge ${f.className}">${esc(f.label)}</span>${f.days===null?"":`${esc(f.days)} days in current creative rotation`}</div>`:"";return `<article class="card clickable-record" role="link" tabindex="0" data-record-id="${esc(r.id)}"><span class="badge ${badgeClass}">${esc(badgeText)}</span><span class="badge b-info">${esc(mediaType(r))}</span><strong>${esc(r.clientName||r.clientCode||"Client")} · ${esc(r.campaignName||r.creativeName||r.outletName||"Media placement")}</strong><div class="meta">${esc(r.market||"Market not set")} · ${esc(r.outletName||"Outlet not set")}</div><div class="meta">${dateText(r.startDate)} – ${dateText(r.endDate)}</div>${r.creativeName||r.fileName?`<div class="meta"><strong>Creative:</strong> ${esc(r.creativeName||r.fileName)}</div>`:""}${r.stationDeadline?`<div class="meta"><strong>Traffic deadline:</strong> ${dateText(r.stationDeadline)}</div>`:""}${fh}<div class="action">${esc(nextAction(r))}</div><div class="open-record">Open media record →</div></article>`;}
+  function renderLane(id,items,badgeClass,badgeText){$(id).innerHTML=items.length?items.map(r=>card(r,badgeClass,badgeText)).join(""):`<div class="empty">No records in this stage.</div>`;}
+  function renderPriority(){const chosen=[...records].filter(r=>urgency(r)>0).sort((a,b)=>urgency(b)-urgency(a))[0];if(!chosen){$("priority").innerHTML=`<div class="decision-grid"><div class="decision"><span>Status</span><strong>No immediate media action required</strong></div><div class="decision"><span>Why</span><strong>Visible placements are running normally or retained as history.</strong></div><div class="decision next"><span>Next Review</span><strong>Review running creative age and the preparation queue for the next production or traffic obligation.</strong></div></div>`;return;}const f=creativeFreshness(chosen);const when=chosen.stationDeadline?`Traffic deadline ${dateText(chosen.stationDeadline)}`:chosen.startDate?`Starts ${dateText(chosen.startDate)}`:chosen.endDate?`Ends ${dateText(chosen.endDate)}`:"No date established";const why=isAwaiting(chosen)?"Traffic was sent and authoritative placement data is waiting on confirmation.":needsAttention(chosen)?(chosen.attentionReason||"The placement is inside an attention window."):f&&["watch","refresh","stale"].includes(f.level)?`${f.label}: ${f.days} days in current creative rotation.`:"The campaign is approaching launch and readiness must be confirmed.";$("priority").innerHTML=`<div class="decision-grid clickable-record" role="link" tabindex="0" data-record-id="${esc(chosen.id)}"><div class="decision"><span>Who</span><strong>${esc(chosen.clientName||chosen.clientCode||"Client")}</strong></div><div class="decision"><span>What</span><strong>${esc(chosen.campaignName||chosen.creativeName||"Media placement")} · ${esc(chosen.outletName||"Outlet not set")}</strong></div><div class="decision"><span>Media Type</span><strong>${esc(mediaType(chosen))}</strong></div><div class="decision"><span>When</span><strong>${esc(when)}</strong></div><div class="decision"><span>Why</span><strong>${esc(why)}</strong></div><div class="decision next"><span>Next Action</span><strong>${esc(nextAction(chosen))}</strong><div class="open-record">Open media record →</div></div></div>`;}
+  function renderTable(){const view=$("placement-view-filter").value||"active";let detailRecords=records;if(view==="active")detailRecords=records.filter(isActivePlacement);if(view==="pending")detailRecords=records.filter(isPendingPlacement);if(view==="expired")detailRecords=records.filter(isExpired);const activeCount=records.filter(isActivePlacement).length,pendingCount=records.filter(isPendingPlacement).length,expiredCount=records.filter(isExpired).length;const labels={active:"Active",pending:"Pending",expired:"History",all:"All"};$("placement-filter-summary").textContent=`${labels[view]}: ${detailRecords.length} shown · Active ${activeCount} · Pending ${pendingCount} · History ${expiredCount}`;const rows=detailRecords.map(r=>{const f=creativeFreshness(r);return `<tr class="clickable-record" data-record-id="${esc(r.id)}" tabindex="0" role="link"><td><strong>${esc(r.clientName||r.clientCode||"")}</strong><br><span class="meta">#${esc(r.id)}</span></td><td>${esc(mediaType(r))}</td><td>${esc(r.campaignName||"—")}<br><span class="meta">${esc(r.creativeName||r.fileName||"")}</span></td><td>${esc(r.market||"—")}<br><span class="meta">${esc(r.outletName||"—")}</span></td><td>${dateText(r.startDate)}<br>${dateText(r.endDate)}</td><td>${f?`${esc(f.label)}${f.days===null?"":`<br><span class="meta">${esc(f.days)} days</span>`}`:"—"}</td><td>${esc(r.status||"—")}</td><td>${esc(r.trafficStatus||"—")}<br><span class="meta">${esc(r.confirmationStatus||"")}</span></td><td>${esc(nextAction(r))}</td></tr>`;}).join("");$("records").innerHTML=detailRecords.length?`<div class="table-wrap"><table class="table"><thead><tr><th>Client</th><th>Media Type</th><th>Campaign / Creative</th><th>Market / Outlet</th><th>Run Dates</th><th>Creative Age</th><th>Status</th><th>Traffic / Confirmation</th><th>Operating Next Action</th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">No ${labels[view].toLowerCase()} placement records found.</div>`;}
+  function render(){const expired=records.filter(isExpired),activeRecords=records.filter(r=>!isExpired(r));const awaiting=activeRecords.filter(isAwaiting),ready=activeRecords.filter(r=>isExplicitlyReady(r)&&!isAwaiting(r)),preparing=activeRecords.filter(r=>!isAwaiting(r)&&!isExplicitlyReady(r)&&["pending","planned","preparing"].includes(lower(r.status))),running=activeRecords.filter(r=>isActivePlacement(r)&&!isAwaiting(r));const actionCount=activeRecords.filter(r=>urgency(r)>=70).length,upcoming=[...preparing,...ready];$("count-action").textContent=actionCount;$("count-preparing").textContent=upcoming.length;$("count-running").textContent=running.length;$("count-history").textContent=expired.length;$("lane-preparing-count").textContent=preparing.length;$("lane-ready-count").textContent=ready.length;$("lane-running-count").textContent=running.length;$("lane-awaiting-count").textContent=awaiting.length;const nextUpcoming=[...upcoming].sort((a,b)=>String(a.stationDeadline||a.startDate||"9999").localeCompare(String(b.stationDeadline||b.startDate||"9999")))[0];$("detail-preparing").textContent=nextUpcoming?`${nextUpcoming.clientName||nextUpcoming.clientCode||"Client"} · ${nextUpcoming.campaignName||nextUpcoming.creativeName||"Campaign"} · ${nextUpcoming.outletName||"Outlet not set"}`:"No upcoming production or placement work in the current view.";$("detail-action").textContent=actionCount?`${actionCount} record${actionCount===1?"":"s"} require preparation, confirmation, or creative refresh.`:"No immediate operating action in the current view.";const refreshDue=running.filter(r=>["refresh","stale"].includes(creativeFreshness(r)?.level)).length;$("detail-running").textContent=running.length?`${running.length} active placement${running.length===1?"":"s"} · ${refreshDue} creative refresh${refreshDue===1?"":"es"} due/stale.`:"No confirmed placements are currently running.";$("detail-history").textContent=expired.length?`${expired.length} past placement${expired.length===1?"":"s"} available for next-year and seasonal planning.`:"No historical placements in the current view.";renderPriority();renderLane("lane-preparing",preparing,"b-warning","Preparing");renderLane("lane-ready",ready,"b-success","Ready");renderLane("lane-running",running,"b-info","Running");renderLane("lane-awaiting",awaiting,"b-critical","Awaiting");renderTable();}
+  async function load(){$("priority").innerHTML=`<div class="loading">Loading operational decision…</div>`;try{const body={action:"get-media-operations"};if($("client").value)body.clientId=Number($("client").value);const response=await fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});const payload=await response.json().catch(()=>({}));if(!response.ok||payload?.ok!==true)throw new Error(payload?.error||payload?.details||"Media Operations could not load.");rawRecords=Array.isArray(payload?.mediaOperations?.records)?payload.mediaOperations.records:[];const clients=Array.isArray(payload?.mediaOperations?.clients)?payload.mediaOperations.clients:[];const selected=$("client").value;$("client").innerHTML=`<option value="">All clients</option>`+clients.map(c=>`<option value="${esc(c.clientId)}">${esc(c.clientName)}</option>`).join("");$("client").value=selected;populateFilterOptions();applyFilters();}catch(error){const message=esc(error?.message||"Media Operations could not load.");$("priority").innerHTML=`<div class="error">${message}</div>`;["lane-preparing","lane-ready","lane-running","lane-awaiting"].forEach(id=>$(id).innerHTML=`<div class="error">${message}</div>`);$("records").innerHTML=`<div class="error">${message}</div>`;}}
+  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"media",statusText:"D1 Media connected · Media v2.4.0"});else console.error("Media 2.4.0: shared/gcm-shell.js did not load.");
+  document.addEventListener("click",event=>{const history=event.target.closest("[data-history-view]");if(history){$("date-filter").value=history.dataset.historyView;if(history.dataset.historyView==="history")$("placement-view-filter").value="expired";else $("placement-view-filter").value="all";applyFilters();return;}const record=event.target.closest("[data-record-id]");if(record){const found=rawRecords.find(r=>String(r.id)===String(record.dataset.recordId));if(found)openRecord(found);return;}const toggle=event.target.closest("[data-target]");if(!toggle)return;const target=$(toggle.dataset.target);if(!target)return;const expanded=toggle.getAttribute("aria-expanded")!=="false";toggle.setAttribute("aria-expanded",String(!expanded));target.hidden=expanded;});
+  document.addEventListener("keydown",event=>{if(!["Enter"," "].includes(event.key))return;const record=event.target.closest("[data-record-id]");if(!record)return;event.preventDefault();const found=rawRecords.find(r=>String(r.id)===String(record.dataset.recordId));if(found)openRecord(found);});
+  $("client").addEventListener("change",load);$("refresh").addEventListener("click",load);["media-type-filter","status-filter","market-filter","outlet-filter","date-filter","needs-action-filter"].forEach(id=>$(id).addEventListener("change",applyFilters));$("search-filter").addEventListener("input",applyFilters);$("placement-view-filter").addEventListener("change",renderTable);$("clear-filters").addEventListener("click",()=>{["media-type-filter","status-filter","market-filter","outlet-filter","date-filter","search-filter"].forEach(id=>$(id).value="");$("needs-action-filter").checked=false;applyFilters();});$("expand-all").addEventListener("click",()=>document.querySelectorAll("[data-target]").forEach(toggle=>{const target=$(toggle.dataset.target);if(target){toggle.setAttribute("aria-expanded","true");target.hidden=false;}}));$("collapse-all").addEventListener("click",()=>document.querySelectorAll("[data-target]").forEach(toggle=>{const target=$(toggle.dataset.target);if(target){toggle.setAttribute("aria-expanded","false");target.hidden=true;}}));load();
 })();
 </script>
 </body>
