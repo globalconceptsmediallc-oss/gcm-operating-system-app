@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/media-dashboard-creatives.js
-   Version: 1.0.1
+   Version: 1.0.2
    Status: Production Candidate
    Sprint: Media Dashboard Creative Queue Connection
    Purpose: Add new media_creatives workflow records to the existing Media
@@ -12,7 +12,7 @@
    - New media_creatives are read through get_creative_workflow only.
    - Creative cards are additive; no D1 writes occur from this dashboard layer.
    - A creative can appear before it has a market/placement assignment.
-   - Creative links carry creativeId so the saved Production record opens directly.
+   - Creative links carry creativeId and preserve a session handoff fallback.
    ========================================================= */
 
 (() => {
@@ -33,6 +33,13 @@
   let lastCreativeActionCount = 0;
   let lastActionOutput = null;
   let applyTimer = null;
+
+  function openCreativeRecord(creativeId) {
+    const id = Number(creativeId || 0);
+    if (!id) return;
+    try { sessionStorage.setItem("gcmMediaCreativeId", String(id)); } catch {}
+    window.location.assign(creativeUrl(id));
+  }
 
   async function fetchWorkflow() {
     const response = await fetch(ENDPOINT, {
@@ -160,7 +167,7 @@
         <div class="meta"><strong>Creative #${esc(creative.id)}</strong> · ${esc(stage)} · ${esc(length)}${esc(voice)}</div>
         <div class="meta">${esc(assignmentText)}</div>
         <div class="action">${esc(nextAction(creative))}</div>
-        <a class="open-record" href="${creativeUrl(creative.id)}">Open production record →</a>
+        <a class="open-record" data-open-creative="${esc(creative.id)}" href="${creativeUrl(creative.id)}">Open production record →</a>
       </article>`;
   }
 
@@ -191,7 +198,7 @@
         <div class="decision"><span>Media Type</span><strong>${esc(chosen.mediaType || "Media")}</strong></div>
         <div class="decision"><span>Stage</span><strong>${esc(chosen.currentStage || "Idea / Direction")}</strong></div>
         <div class="decision"><span>Markets</span><strong>${esc(where)}</strong></div>
-        <div class="decision next"><span>Next Action</span><strong>${esc(nextAction(chosen))}</strong><a class="open-record" href="${creativeUrl(chosen.id)}">Open production record →</a></div>
+        <div class="decision next"><span>Next Action</span><strong>${esc(nextAction(chosen))}</strong><a class="open-record" data-open-creative="${esc(chosen.id)}" href="${creativeUrl(chosen.id)}">Open production record →</a></div>
       </div>`;
   }
 
@@ -263,7 +270,7 @@
       await fetchWorkflow();
       scheduleReconcile(650);
     } catch (error) {
-      console.error("Media Dashboard Creative Queue 1.0.1:", error);
+      console.error("Media Dashboard Creative Queue 1.0.2:", error);
     }
   }
 
@@ -278,6 +285,13 @@
       if (event.target?.id === "search-filter") scheduleReconcile(80);
     }, true);
     document.addEventListener("click", event => {
+      const creativeLink = event.target.closest("[data-open-creative]");
+      if (creativeLink) {
+        event.preventDefault();
+        event.stopPropagation();
+        openCreativeRecord(creativeLink.dataset.openCreative);
+        return;
+      }
       if (event.target?.id === "refresh") setTimeout(refreshAndReconcile, 350);
       if (event.target?.id === "clear-filters") scheduleReconcile(100);
     }, true);
