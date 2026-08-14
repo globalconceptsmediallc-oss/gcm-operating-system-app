@@ -1,242 +1,44 @@
 <!-- =========================================================
-   Global Concepts Media Operating System
-   File: media-production.html
-   Version: 1.0.0
-   Status: Production Candidate
-   Source: Media Operations v2.4.0 + routes/mediaOperations.js v7.9.0
-   Sprint: Media Production Recordkeeping
-   Purpose: Add and preserve production work on the same authoritative
-            media_records record used for placement, traffic, confirmation,
-            creative rotation, and historical planning.
-   ========================================================= -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Media Production Record | GCM OS</title>
-<style>
-:root{--navy:#071426;--navy2:#0b1d33;--blue:#1f68d8;--blue-soft:#eaf2ff;--gold:#d6a94a;--surface:#fff;--soft:#f5f7fb;--muted:#637083;--border:#dbe2ec;--text:#132238;--success:#1f7a4f;--success-soft:#e9f7f0;--warning:#9a6414;--warning-soft:#fff4dd;--critical:#b33a3a;--critical-soft:#fff0f0;--shadow:0 8px 24px rgba(7,20,38,.07);--radius:18px}
-*{box-sizing:border-box}body{margin:0;background:var(--soft);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5}
-.app-shell{min-height:100vh;display:grid;grid-template-columns:250px minmax(0,1fr)}main{padding:30px;min-width:0}.page{max-width:1480px;margin:auto}
-header{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-bottom:20px}.eyebrow{margin:0 0 6px;color:var(--blue);font-size:.72rem;font-weight:900;letter-spacing:.14em;text-transform:uppercase}
-h1{margin:0;color:var(--navy);font-size:clamp(2rem,4vw,3rem);line-height:1}.subtitle{margin:10px 0 0;color:var(--muted)}
-.controls{display:flex;gap:10px;flex-wrap:wrap}.button{min-height:42px;padding:0 14px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--navy2);font-weight:850;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}.button-primary{background:var(--blue);border-color:var(--blue);color:#fff}.button:disabled{opacity:.5;cursor:not-allowed}.version{display:inline-flex;align-items:center;min-height:42px;padding:0 13px;border-radius:10px;background:var(--navy);color:#fff;font-size:.78rem;font-weight:900}
-.summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}.summary article,.panel{background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}.summary article{padding:17px}.summary span{display:block;color:var(--muted);font-size:.7rem;font-weight:900;text-transform:uppercase}.summary strong{display:block;margin-top:7px;color:var(--navy);font-size:1rem}
-.panel{margin-bottom:18px;overflow:hidden}.panel-head{padding:20px 22px 16px;border-bottom:1px solid var(--border)}.panel-head h2{margin:0;font-size:1rem;color:var(--navy)}.panel-head p{margin:5px 0 0;color:var(--muted);font-size:.82rem}.body{padding:20px 22px}
-.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.span-2{grid-column:span 2}.span-3{grid-column:1/-1}
-label{display:block;color:var(--navy2);font-size:.75rem;font-weight:850}input,select,textarea{width:100%;margin-top:6px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--text);padding:10px 11px;font:inherit}input,select{min-height:43px}textarea{min-height:110px;resize:vertical}.script{min-height:190px}
-.help{margin:6px 0 0;color:var(--muted);font-size:.72rem}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}.status{margin-top:14px;padding:12px 14px;border-radius:10px;background:#edf1f7;color:var(--muted);font-size:.8rem;font-weight:800}.status.ok{background:var(--success-soft);color:var(--success)}.status.error{background:var(--critical-soft);color:var(--critical)}
-.history{display:grid;gap:10px}.history-item{padding:13px;border:1px solid var(--border);border-radius:11px;background:var(--soft)}.history-item strong{display:block;color:var(--navy);font-size:.8rem}.history-item span{display:block;margin-top:4px;color:var(--muted);font-size:.76rem}.empty{padding:18px;color:var(--muted)}
-@media(max-width:1000px){.app-shell{grid-template-columns:1fr}.grid,.summary{grid-template-columns:1fr 1fr}.span-2,.span-3{grid-column:1/-1}}@media(max-width:680px){main{padding:18px}.grid,.summary{grid-template-columns:1fr}.span-2,.span-3{grid-column:auto}header{flex-direction:column}}
-</style>
-</head>
-<body>
-<div class="app-shell">
-  <aside data-gcm-shell-sidebar></aside>
-  <main>
-    <div class="page">
-      <header>
-        <div>
-          <p class="eyebrow">Media Operations</p>
-          <h1>Production Record</h1>
-          <p class="subtitle">Record the creative work as it happens without changing the placement or traffic state.</p>
-        </div>
-        <div class="controls">
-          <a class="button" href="media.html">Back to Media</a>
-          <a class="button" id="campaign-link" href="media-insertion.html">Campaign / Traffic Record</a>
-          <span class="version">media-production.html · v1.0.0</span>
-        </div>
-      </header>
-
-      <section class="panel">
-        <div class="panel-head"><h2>Select Media Record</h2><p>Choose the placement or campaign whose creative is being produced.</p></div>
-        <div class="body grid">
-          <label class="span-2">Media Record
-            <select id="record-select"><option value="">Loading media records…</option></select>
-          </label>
-          <div><p class="help">Production state is stored on this same D1 Media record.</p></div>
-        </div>
-      </section>
-
-      <section class="summary">
-        <article><span>Client</span><strong id="sum-client">—</strong></article>
-        <article><span>Campaign</span><strong id="sum-campaign">—</strong></article>
-        <article><span>Market / Outlet</span><strong id="sum-market">—</strong></article>
-        <article><span>Placement Status</span><strong id="sum-status">—</strong></article>
-      </section>
-
-      <section class="panel">
-        <div class="panel-head"><h2>Production State</h2><p>Current state of the creative being developed or refreshed for this media record.</p></div>
-        <div class="body grid">
-          <label>Production Stage
-            <select id="stage">
-              <option value="">Not set</option>
-              <option>Direction</option><option>Script Draft</option><option>Script Review</option><option>Script Approved</option>
-              <option>Recording Requested</option><option>Recording Received</option><option>Recording Review</option>
-              <option>Production</option><option>Co-op / Traffic Package</option><option>Ready to Traffic</option><option>Complete</option>
-            </select>
-          </label>
-          <label>Script Stage
-            <select id="script-stage">
-              <option value="">Not set</option><option>Direction</option><option>Draft</option><option>Review</option><option>Approved</option><option>Final</option>
-            </select>
-          </label>
-          <label>Voice Talent<input id="voice-talent" placeholder="Monica, station talent, client, etc."></label>
-
-          <label class="span-3">Topic / Direction<textarea id="topic" placeholder="What is the spot about? What direction did the client or agency give?"></textarea></label>
-          <label class="span-3">Working / Approved Script<textarea id="working-script" class="script" placeholder="Paste the current working or approved script here."></textarea></label>
-
-          <label>Recording Received Date<input id="recording-date" type="date"></label>
-          <label>Recording Status
-            <select id="recording-status">
-              <option value="">Not set</option><option>Not requested</option><option>Requested</option><option>Received</option><option>Needs changes</option><option>Approved</option>
-            </select>
-          </label>
-          <label>Production Status
-            <select id="production-status">
-              <option value="">Not set</option><option>Not started</option><option>Editing</option><option>Revision needed</option><option>Approved</option><option>Final produced</option>
-            </select>
-          </label>
-
-          <label class="span-3">Recording Review / Revision Notes<textarea id="revision-notes" placeholder="What needs to change in the read, timing, copy, music, tags, or final production?"></textarea></label>
-
-          <label>Final Production Date<input id="final-production-date" type="date"></label>
-          <label>Co-op Script Status
-            <select id="coop-status">
-              <option value="">Not set</option><option>Not needed</option><option>Needed</option><option>Drafting</option><option>Ready</option><option>Sent / Filed</option>
-            </select>
-          </label>
-          <label>Traffic Package Status
-            <select id="traffic-package-status">
-              <option value="">Not set</option><option>Not started</option><option>Building</option><option>Ready</option><option>Trafficked</option>
-            </select>
-          </label>
-
-          <label class="span-3">Creative Being Replaced<input id="replacement-for" placeholder="Existing spot / ISCI / creative this new production will replace"></label>
-        </div>
-        <div class="body" style="padding-top:0">
-          <div class="actions">
-            <button class="button button-primary" id="save-production" type="button">Save Production Record</button>
-          </div>
-          <div class="status" id="save-status">Select a Media record to begin.</div>
-        </div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-head"><h2>Dated Production History</h2><p>Add short dated notes as work happens. Prior entries are preserved.</p></div>
-        <div class="body">
-          <label>Add Production Note<textarea id="new-note" placeholder="Example: Monica recording received. Timing is good; revise the final price line and produce V2."></textarea></label>
-          <div class="actions"><button class="button" id="add-note" type="button">Add Dated Note</button></div>
-          <div class="history" id="history"><div class="empty">No record selected.</div></div>
-        </div>
-      </section>
-    </div>
-  </main>
-</div>
-
-<script src="shared/gcm-shell.js?v=2.0.1"></script>
-<script>
-(() => {
-"use strict";
-const ENDPOINT="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
-const $=id=>document.getElementById(id);
-let records=[];
-let current=null;
-const requestedId=Number(new URLSearchParams(location.search).get("mediaRecordId")||0);
-
-function esc(value){return String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));}
-function setValue(id,value){$(id).value=value||"";}
-function fmt(value){if(!value)return "—";const d=new Date(String(value));return Number.isNaN(d.getTime())?String(value):d.toLocaleString("en-US",{month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit"});}
-
-function renderRecord(){
-  if(!current)return;
-  const p=current.production||{};
-  $("sum-client").textContent=current.clientName||current.clientCode||"—";
-  $("sum-campaign").textContent=current.campaignName||current.creativeName||"—";
-  $("sum-market").textContent=[current.market,current.outletName].filter(Boolean).join(" / ")||"—";
-  $("sum-status").textContent=current.status||"—";
-  $("campaign-link").href=`media-insertion.html?mediaRecordId=${encodeURIComponent(current.id)}`;
-  setValue("stage",p.stage);setValue("topic",p.topic);setValue("script-stage",p.scriptStage);
-  setValue("working-script",p.workingScript);setValue("voice-talent",p.voiceTalent);
-  setValue("recording-date",p.recordingReceivedDate);setValue("recording-status",p.recordingStatus);
-  setValue("revision-notes",p.revisionNotes);setValue("production-status",p.productionStatus);
-  setValue("final-production-date",p.finalProductionDate);setValue("coop-status",p.coopScriptStatus);
-  setValue("traffic-package-status",p.trafficPackageStatus);setValue("replacement-for",p.replacementFor);
-  const history=Array.isArray(current.productionHistory)?current.productionHistory:[];
-  $("history").innerHTML=history.length?history.slice().reverse().map(item=>`
-    <div class="history-item"><strong>${esc(item.author||"GCM")} · ${esc(fmt(item.timestamp))}</strong><span>${esc(item.note||"")}</span></div>
-  `).join(""):`<div class="empty">No production history recorded yet.</div>`;
-  $("save-status").className="status ok";
-  $("save-status").textContent=`Loaded Media record ${current.id}. Saving here will not change traffic or confirmation status.`;
-}
-
-function choose(id){
-  current=records.find(r=>Number(r.id)===Number(id))||null;
-  if(!current)return;
-  $("record-select").value=String(current.id);
-  renderRecord();
-}
-
-async function load(){
-  try{
-    const response=await fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"get-media-operations",operation:"get"})});
-    const payload=await response.json().catch(()=>({}));
-    if(!response.ok||payload?.ok!==true)throw new Error(payload?.error||payload?.details||`Worker returned ${response.status}`);
-    records=Array.isArray(payload?.mediaOperations?.records)?payload.mediaOperations.records:[];
-    $("record-select").innerHTML=`<option value="">Select a Media record…</option>`+records.map(r=>
-      `<option value="${esc(r.id)}">${esc(r.clientName||r.clientCode||"Client")} · ${esc(r.campaignName||r.creativeName||"Media")} · ${esc(r.market||"")} ${esc(r.outletName||"")} · #${esc(r.id)}</option>`
-    ).join("");
-    if(requestedId&&records.some(r=>Number(r.id)===requestedId))choose(requestedId);
-    else if(records.length)choose(records[0].id);
-  }catch(error){
-    $("save-status").className="status error";$("save-status").textContent=`Media records could not load: ${error.message}`;
-  }
-}
-
-$("record-select").addEventListener("change",()=>choose($("record-select").value));
-
-$("save-production").addEventListener("click",async()=>{
-  if(!current)return;
-  $("save-production").disabled=true;$("save-status").className="status";$("save-status").textContent="Saving production record…";
-  try{
-    const production={
-      stage:$("stage").value,topic:$("topic").value.trim(),scriptStage:$("script-stage").value,
-      workingScript:$("working-script").value.trim(),voiceTalent:$("voice-talent").value.trim(),
-      recordingReceivedDate:$("recording-date").value,recordingStatus:$("recording-status").value,
-      revisionNotes:$("revision-notes").value.trim(),productionStatus:$("production-status").value,
-      finalProductionDate:$("final-production-date").value,coopScriptStatus:$("coop-status").value,
-      trafficPackageStatus:$("traffic-package-status").value,replacementFor:$("replacement-for").value.trim()
-    };
-    const id=current.id;
-    const response=await fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"get-media-operations",operation:"update_production_record",mediaRecordId:id,production})});
-    const payload=await response.json().catch(()=>({}));
-    if(!response.ok||payload?.ok!==true)throw new Error(payload?.error||payload?.details||`Worker returned ${response.status}`);
-    $("save-status").className="status ok";$("save-status").textContent=`Production record saved to Media record ${id}. Placement and traffic state were not changed.`;
-    await load(); choose(id);
-  }catch(error){$("save-status").className="status error";$("save-status").textContent=`Production record was not saved: ${error.message}`;}
-  finally{$("save-production").disabled=false;}
-});
-
-$("add-note").addEventListener("click",async()=>{
-  if(!current)return;
-  const note=$("new-note").value.trim();
-  if(!note){$("save-status").className="status error";$("save-status").textContent="Enter a production note first.";return;}
-  $("add-note").disabled=true;
-  try{
-    const id=current.id;
-    const response=await fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"get-media-operations",operation:"append_production_note",mediaRecordId:id,note,author:"Andy"})});
-    const payload=await response.json().catch(()=>({}));
-    if(!response.ok||payload?.ok!==true)throw new Error(payload?.error||payload?.details||`Worker returned ${response.status}`);
-    $("new-note").value="";$("save-status").className="status ok";$("save-status").textContent="Dated production note added.";
-    await load();choose(id);
-  }catch(error){$("save-status").className="status error";$("save-status").textContent=`Production note was not saved: ${error.message}`;}
-  finally{$("add-note").disabled=false;}
-});
-
-if(window.GCMOShell)window.GCMOShell.mount({currentPage:"media",statusText:"Media production recordkeeping · v1.0.0"});
-load();
-})();
-</script>
-</body>
-</html>
+Global Concepts Media Operating System
+File: media-production.html
+Version: 2.0.0
+Status: Production Candidate
+Sprint: Natural Creative Chain + Multi-Market Traffic Confirmation
+Purpose: Operator-controlled creative production from idea through station confirmation.
+========================================================= -->
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Media Production | GCM OS</title><style>
+:root{--n:#071426;--b:#1f68d8;--bg:#f5f7fb;--bd:#dbe2ec;--m:#637083;--ok:#1f7a4f;--bad:#b33a3a}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#132238;font:14px Inter,system-ui,sans-serif}.shell{min-height:100vh;display:grid;grid-template-columns:250px 1fr}main{padding:28px}.page{max-width:1400px;margin:auto}header,.actions,.row,.checks{display:flex;gap:10px;flex-wrap:wrap;align-items:center}header{justify-content:space-between;align-items:flex-start;margin-bottom:16px}h1{margin:0;color:var(--n);font-size:38px}.sub{color:var(--m)}.btn{min-height:40px;padding:0 13px;border:1px solid var(--bd);border-radius:9px;background:#fff;color:var(--n);font-weight:800;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}.primary{background:var(--b);border-color:var(--b);color:#fff}.dark{background:var(--n);border-color:var(--n);color:#fff}.chain{display:grid;grid-template-columns:repeat(8,1fr);gap:7px;margin:15px 0}.chain b{padding:9px;border:1px solid var(--bd);border-radius:9px;background:#fff;text-align:center;font-size:11px}.panel{background:#fff;border:1px solid var(--bd);border-radius:14px;margin:0 0 15px;overflow:hidden}.ph{padding:15px 18px;border-bottom:1px solid var(--bd)}.ph h2{margin:0;color:var(--n);font-size:16px}.body{padding:18px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.all{grid-column:1/-1}.two{grid-column:span 2}label{font-weight:750;color:var(--n)}input,select,textarea{width:100%;margin-top:5px;padding:9px 10px;border:1px solid var(--bd);border-radius:8px;font:inherit}textarea{min-height:95px;resize:vertical}.script{min-height:150px}.status{margin-top:10px;padding:10px;border-radius:8px;background:#eef1f6;color:var(--m);font-weight:700}.ok{background:#e9f7f0;color:var(--ok)}.err{background:#fff0f0;color:var(--bad)}.markets{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.market,.hist{padding:11px;border:1px solid var(--bd);border-radius:10px;background:var(--bg)}.market .top{display:flex;gap:8px;align-items:center}.market .top input,.checks input,.pkgmarket input{width:18px;height:18px;margin:0}.market .mini{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-top:8px}.history{display:grid;gap:8px}.hist small{display:block;color:var(--m);margin-top:3px}.pkgmarket{display:flex;gap:8px;align-items:center;margin:6px 0}@media(max-width:1000px){.chain{grid-template-columns:repeat(4,1fr)}.grid{grid-template-columns:repeat(2,1fr)}.all{grid-column:1/-1}.markets{grid-template-columns:1fr}}@media(max-width:700px){.shell{grid-template-columns:1fr}main{padding:16px}.chain,.grid{grid-template-columns:1fr}.two,.all{grid-column:auto}}
+</style></head><body><div class="shell"><aside data-gcm-shell-sidebar></aside><main><div class="page">
+<header><div><div class="sub">MEDIA OPERATIONS</div><h1>Creative Production + Traffic</h1><p class="sub">You control every step. Save and stop anywhere.</p></div><div class="actions"><a class="btn" href="media.html">Back to Media</a><button class="btn" id="new">New Creative</button><span class="btn dark">v2.0.0</span></div></header>
+<div class="chain"><b>Idea</b><b>Script</b><b>Recording</b><b>Production</b><b>Co-op</b><b>Markets</b><b>Station Email</b><b>Confirmation</b></div>
+<section class="panel"><div class="ph"><h2>Creative Record</h2><div class="sub">Create the commercial once; use it in as many markets as needed.</div></div><div class="body grid">
+<label class="two">Open Creative<select id="creative"><option value="">New Creative</option></select></label><label>Client<select id="client"></select></label><label>Spot Name<input id="name"></label>
+<label>Media Type<select id="type"><option>Radio</option><option>TV / Cable</option><option>Streaming / Audio</option><option>Digital</option><option>Print</option><option>Outdoor</option><option>Other Media</option></select></label><label>Length<input id="length" type="number" min="1" placeholder="30"></label><label>ISCI / ID<input id="isci"></label><label>Owner<input id="owner" value="Andy"></label>
+<label>Current Stage<select id="stage"><option>Idea / Direction</option><option>Working Script</option><option>Approved Script</option><option>Recording</option><option>Recording Review</option><option>Final Production</option><option>Co-op Script</option><option>Market Assignment</option><option>Station Email Package</option><option>Station Confirmation</option><option>Running / Rotation</option><option>Retired</option></select></label><label>Status<select id="cstatus"><option value="draft">Draft</option><option value="working">Working</option><option value="ready">Ready</option><option value="trafficked">Trafficked</option><option value="running">Running</option><option value="hold">Hold</option><option value="retired">Retired</option></select></label>
+<label class="all">Idea / Direction<textarea id="idea"></textarea></label><label class="all">Working Script<textarea id="working" class="script"></textarea></label><label class="all">Approved Script<textarea id="approved" class="script"></textarea></label>
+<label>Voice Talent<input id="voice"></label><label>Recording Status<select id="rstatus"><option value="">Not set</option><option>Not requested</option><option>Requested</option><option>Received</option><option>Needs changes</option><option>Approved</option></select></label><label>Recording Received<input id="rdate" type="date"></label><label>Production Status<select id="pstatus"><option value="">Not set</option><option>Not started</option><option>Editing</option><option>Revision needed</option><option>Approved</option><option>Final produced</option></select></label>
+<label class="all">Recording Review / Revisions<textarea id="rnotes"></textarea></label><label class="all">Final Script<textarea id="final" class="script"></textarea></label><label class="two">Final Audio Filename<input id="audio"></label><label class="two">Co-op Script<textarea id="coop"></textarea></label>
+</div><div class="body"><button class="btn primary" id="saveCreative">Save Creative</button><div class="status" id="cmsg">New creative ready.</div></div></section>
+<section class="panel"><div class="ph"><h2>Dated Production History</h2></div><div class="body grid"><label>Stage<select id="hstage"><option>Idea / Direction</option><option>Working Script</option><option>Approved Script</option><option>Recording</option><option>Recording Review</option><option>Final Production</option><option>Co-op Script</option><option>Market Assignment</option><option>Station Email Package</option><option>Station Confirmation</option></select></label><label>Type<select id="htype"><option value="production_note">Production Note</option><option value="decision">Decision</option><option value="revision">Revision</option><option value="approval">Approval</option><option value="traffic">Traffic</option><option value="confirmation">Confirmation</option></select></label><label class="two">What Happened<textarea id="hnote"></textarea></label></div><div class="body"><button class="btn" id="addHistory">Add Dated Entry</button><div id="history" class="history"></div></div></section>
+<section class="panel"><div class="ph"><h2>Market / Rotation Assignments</h2><div class="sub">Add to rotation is the default. Replace only when you choose it.</div></div><div class="body"><div id="markets" class="markets"></div><button class="btn primary" id="saveMarkets">Save Market Assignments</button><div class="status" id="mmsg">No assignments saved yet.</div></div></section>
+<section class="panel"><div class="ph"><h2>Station Email Package</h2><div class="sub">Build, review, save, then create a Gmail draft. Nothing sends automatically.</div></div><div class="body grid"><label class="two">Traffic Package<select id="pkg"><option value="">New Package</option></select></label><div class="two" id="pkgMarkets"></div><label>To<input id="to"></label><label>CC<input id="cc"></label><label class="two">Subject<input id="subject"></label><label class="all">Email Body<textarea id="body" class="script"></textarea></label><label class="two">Insertion Order Reference<input id="io"></label><label class="two">Commercial Schedule<input id="schedule"></label><label class="all">Special Instructions<textarea id="special"></textarea></label><label>Package Status<select id="pkgStatus"><option value="draft">Draft</option><option value="ready">Ready</option><option value="gmail_draft">Gmail Draft</option><option value="sent">Sent</option><option value="received_confirmed">Received Confirmed</option><option value="confirmed">Trafficked Confirmed</option></select></label><label class="two">Final Audio Attachment<input id="file" type="file" accept="audio/*,.mp3,.wav,.m4a"></label></div><div class="body actions"><button class="btn" id="build">Build Email Package</button><button class="btn primary" id="savePkg">Save Package</button><button class="btn dark" id="draft">Create Gmail Draft</button><button class="btn" id="sent">Mark Email Sent</button></div><div class="body"><div class="status" id="pmsg">No station package saved yet.</div></div></section>
+<section class="panel"><div class="ph"><h2>Station Confirmation Email</h2><div class="sub">Preserve the exact station email and your confirmation decision.</div></div><div class="body grid"><label class="two">Traffic Package<select id="confirmPkg"></select></label><label>Gmail Message ID<input id="gm"></label><label>Gmail Thread ID<input id="gt"></label><label>From<input id="from"></label><label>To<input id="cto"></label><label class="two">Subject<input id="csubject"></label><label>Received Date / Time<input id="cdate" type="datetime-local"></label><div></div><label class="all">Confirmation Email Text<textarea id="ctext" class="script"></textarea></label><div class="all checks"><label><input id="received" type="checkbox"> Station confirms received</label><label><input id="trafficked" type="checkbox"> Station confirms trafficked</label></div></div><div class="body"><button class="btn primary" id="saveConfirm">Save Confirmation Evidence</button><div class="status" id="cfmsg">Nothing recorded yet.</div><div id="confirms" class="history"></div></div></section>
+</div></main></div><script src="shared/gcm-shell.js?v=2.0.1"></script><script>
+(()=>{"use strict";const E="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/",$=x=>document.getElementById(x);let D={clients:[],placements:[],creatives:[],assignments:[],history:[],trafficPackages:[],trafficPackageAssignments:[],confirmations:[]},CID=null,PID=null;const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c])),lo=v=>String(v||"").toLowerCase(),set=(i,v)=>$(i).value=v??"",fmt=v=>{if(!v)return"—";const d=new Date(v);return isNaN(d)?v:d.toLocaleString()};
+async function api(operation,x={}){const r=await fetch(E,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"get-media-operations",operation,...x})}),j=await r.json().catch(()=>({}));if(!r.ok||j.ok!==true)throw Error(j.error||j.details||`HTTP ${r.status}`);return j}async function reload(id=CID){D=(await api("get_creative_workflow")).creativeWorkflow;clients();creativeList();id&&D.creatives.some(c=>+c.id===+id)?openCreative(id):markets()}
+function clients(){const v=$("client").value;$("client").innerHTML='<option value="">Select client…</option>'+D.clients.map(c=>`<option value="${c.clientId}">${esc(c.clientName)}</option>`).join("");if(v)$("client").value=v}function creativeList(){$("creative").innerHTML='<option value="">New Creative</option>'+D.creatives.map(c=>`<option value="${c.id}">${esc(c.clientName)} · ${esc(c.creativeName)} · ${esc(c.currentStage||"Draft")}</option>`).join("");if(CID)$("creative").value=CID}
+function blank(){CID=PID=null;$("creative").value="";["client","name","length","isci","idea","working","approved","voice","rstatus","rdate","pstatus","rnotes","final","audio","coop"].forEach(i=>set(i,""));set("type","Radio");set("owner","Andy");set("stage","Idea / Direction");set("cstatus","draft");$("history").innerHTML="";markets();packageArea();confirmArea();msg("cmsg","New creative ready.")}
+function openCreative(id){const c=D.creatives.find(x=>+x.id===+id);if(!c)return;CID=+id;set("creative",id);set("client",c.clientId);set("name",c.creativeName);set("type",c.mediaType||"Radio");set("length",c.lengthSeconds);set("isci",c.isci);set("owner",c.owner||"Andy");set("stage",c.currentStage||"Idea / Direction");set("cstatus",c.status||"draft");set("idea",c.ideaDirection);set("working",c.workingScript);set("approved",c.approvedScript);set("voice",c.voiceTalent);set("rstatus",c.recordingStatus);set("rdate",c.recordingReceivedDate);set("pstatus",c.productionStatus);set("rnotes",c.recordingReviewNotes);set("final",c.finalScript);set("audio",c.finalAudioFileName);set("coop",c.coopScript);set("hstage",c.currentStage||"Idea / Direction");history();markets();packageArea();confirmArea();msg("cmsg",`Creative #${CID} loaded. Nothing advances automatically.`,1)}
+function payload(){return{clientId:+$("client").value,creativeName:$("name").value.trim(),mediaType:$("type").value,lengthSeconds:+$("length").value||null,isci:$("isci").value.trim(),currentStage:$("stage").value,status:$("cstatus").value,ideaDirection:$("idea").value.trim(),workingScript:$("working").value.trim(),approvedScript:$("approved").value.trim(),finalScript:$("final").value.trim(),voiceTalent:$("voice").value.trim(),recordingStatus:$("rstatus").value,recordingReceivedDate:$("rdate").value,recordingReviewNotes:$("rnotes").value.trim(),productionStatus:$("pstatus").value,finalAudioFileName:$("audio").value.trim(),coopScript:$("coop").value.trim(),owner:$("owner").value.trim()||"Andy"}}
+function history(){const a=D.history.filter(h=>+h.creativeId===+CID);$("history").innerHTML=a.map(h=>`<div class="hist"><b>${esc(h.stage||h.entryType)} · ${esc(h.author||"GCM")}</b><small>${esc(fmt(h.createdAt))}</small><div>${esc(h.content)}</div></div>`).join("")}
+function groups(){const id=+$("client").value,m=new Map();D.placements.filter(p=>+p.clientId===id).forEach(p=>{const k=lo(p.market)+"|"+lo(p.outletName),e=m.get(k),score=x=>["active","running","confirmed"].includes(lo(x.status))?3:["planned","pending","preparing"].includes(lo(x.status))?2:1;if(!e||score(p)>score(e))m.set(k,p)});return[...m.values()]}
+function markets(){const g=groups(),a=D.assignments.filter(x=>+x.creativeId===+CID);$("markets").innerHTML=g.length?g.map(p=>{const x=a.find(q=>lo(q.market)===lo(p.market)&&lo(q.outletName)===lo(p.outletName)),on=x&&lo(x.assignmentStatus)!=="removed";return`<div class="market" data-id="${p.id}" data-market="${esc(p.market||"")}" data-outlet="${esc(p.outletName||"")}" data-type="${esc(p.mediaType||"Radio")}"><div class="top"><input class="mc" type="checkbox" ${on?"checked":""}><b>${esc(p.market||"Market")} · ${esc(p.outletName||"Outlet")}</b></div><small>${esc(p.status||"")} · anchor #${p.id}</small><div class="mini"><select class="act"><option value="add_to_rotation" ${!x||x.rotationAction==="add_to_rotation"?"selected":""}>Add to Rotation</option><option value="replace_existing" ${x?.rotationAction==="replace_existing"?"selected":""}>Replace Existing</option><option value="hold_future" ${x?.rotationAction==="hold_future"?"selected":""}>Hold / Future</option><option value="remove_from_rotation" ${x?.rotationAction==="remove_from_rotation"?"selected":""}>Remove</option></select><select class="ast"><option value="planned" ${!x||x.assignmentStatus==="planned"?"selected":""}>Planned</option><option value="active" ${x?.assignmentStatus==="active"?"selected":""}>Active</option><option value="hold" ${x?.assignmentStatus==="hold"?"selected":""}>Hold</option><option value="removed" ${x?.assignmentStatus==="removed"?"selected":""}>Removed</option></select><input class="start" type="date" value="${esc(x?.rotationStartDate||"")}"></div></div>`}).join(""):'<div class="status">Choose a client with Media records.</div>';pkgMarkets()}
+function chosenMarkets(){return[...document.querySelectorAll(".market")].filter(c=>c.querySelector(".mc").checked).map(c=>({mediaRecordId:+c.dataset.id,mediaType:c.dataset.type,market:c.dataset.market,outletName:c.dataset.outlet,placementReference:`Media record #${c.dataset.id}`,rotationAction:c.querySelector(".act").value,assignmentStatus:c.querySelector(".ast").value,rotationStartDate:c.querySelector(".start").value}))}function currentAssignments(){return D.assignments.filter(a=>+a.creativeId===+CID&&lo(a.assignmentStatus)!=="removed")}
+function pkgMarkets(){const a=currentAssignments();$("pkgMarkets").innerHTML=a.length?'<b>Markets in this email</b>'+a.map(x=>`<label class="pkgmarket"><input class="pa" type="checkbox" value="${x.id}" checked>${esc(x.market)} · ${esc(x.outletName)}</label>`).join(""):'<div class="status">Save market assignments first.</div>'}function packageArea(){const a=D.trafficPackages.filter(p=>+p.creativeId===+CID);$("pkg").innerHTML='<option value="">New Package</option>'+a.map(p=>`<option value="${p.id}">#${p.id} · ${esc(p.packageStatus||"draft")} · ${esc(p.subject||"")}</option>`).join("");PID=null;["to","cc","subject","body","io","schedule","special"].forEach(i=>set(i,""));set("pkgStatus","draft");pkgMarkets();confirmArea()}
+function openPkg(id){const p=D.trafficPackages.find(x=>+x.id===+id);if(!p)return;PID=+id;set("to",p.toEmail);set("cc",p.ccEmail);set("subject",p.subject);set("body",p.bodyText);set("io",p.insertionOrderReference);set("schedule",p.scheduleReference);set("special",p.specialInstructions);set("pkgStatus",p.packageStatus||"draft");pkgMarkets();const ids=D.trafficPackageAssignments.filter(x=>+x.trafficPackageId===PID).map(x=>+x.assignmentId);document.querySelectorAll(".pa").forEach(x=>x.checked=ids.includes(+x.value));set("confirmPkg",PID);confirmList();msg("pmsg",`Package #${PID} loaded. Gmail draft ${p.gmailDraftId||"not created"}.`,1)}function aids(){return[...document.querySelectorAll(".pa:checked")].map(x=>+x.value)}function pkgPayload(extra={}){return{creativeId:CID,toEmail:$("to").value.trim(),ccEmail:$("cc").value.trim(),subject:$("subject").value.trim(),bodyText:$("body").value.trim(),specialInstructions:$("special").value.trim(),insertionOrderReference:$("io").value.trim(),scheduleReference:$("schedule").value.trim(),packageStatus:$("pkgStatus").value,...extra}}
+function build(){const c=D.creatives.find(x=>+x.id===+CID),a=currentAssignments().filter(x=>aids().includes(+x.id));if(!c)throw Error("Save the creative first.");if(!$("subject").value.trim())set("subject",`Traffic — ${c.clientName} — ${c.creativeName}`);const b=["Hi,","",`Please traffic the following ${c.mediaType||"media"} creative for ${c.clientName}:`,"",`Creative: ${c.creativeName}`,c.lengthSeconds?`Length: :${c.lengthSeconds}`:null,c.isci?`ISCI: ${c.isci}`:null,a.length?`Markets / Stations: ${a.map(x=>`${x.market} / ${x.outletName}`).join("; ")}`:null,$("schedule").value.trim()?`Schedule: ${$("schedule").value.trim()}`:null,$("io").value.trim()?`Insertion Order: ${$("io").value.trim()}`:null];if(c.coopScript)b.push("","Co-op Script:","",c.coopScript);if($("special").value.trim())b.push("","Special Instructions:","",$("special").value.trim());b.push("","The final production audio is attached. Please confirm receipt and that the spots have been trafficked.","","Thank you,","Andy","Global Concepts Media");set("body",b.filter(x=>x!==null).join("\n"))}
+function confirmArea(){const a=D.trafficPackages.filter(p=>+p.creativeId===+CID);$("confirmPkg").innerHTML='<option value="">Select package…</option>'+a.map(p=>`<option value="${p.id}">#${p.id} · ${esc(p.subject||p.packageStatus)}</option>`).join("");if(PID)set("confirmPkg",PID);confirmList()}function confirmList(){const id=+$("confirmPkg").value||PID||0,a=D.confirmations.filter(c=>+c.trafficPackageId===id);$("confirms").innerHTML=a.map(c=>`<div class="hist"><b>${esc(c.subject||"Station confirmation")}</b><small>${esc(fmt(c.receivedAt||c.createdAt))}</small><div>Received: ${c.stationReceivedConfirmed?"Yes":"No"} · Trafficked: ${c.stationTraffickedConfirmed?"Yes":"No"}</div></div>`).join("")}
+async function b64(f){const a=new Uint8Array(await f.arrayBuffer());let s="";for(let i=0;i<a.length;i+=32768)s+=String.fromCharCode(...a.subarray(i,i+32768));return btoa(s)}function msg(id,t,ok=0){$(id).className="status "+(ok?"ok":"");$(id).textContent=t}function fail(id,e){$(id).className="status err";$(id).textContent=e.message||String(e)}
+$("new").onclick=blank;$("creative").onchange=()=>$("creative").value?openCreative($("creative").value):blank();$("client").onchange=markets;$("saveCreative").onclick=async()=>{try{const j=await api("save_creative",{creativeId:CID,creative:payload()});CID=+j.creativeId;await reload(CID);msg("cmsg",`Creative #${CID} saved. Stage stayed exactly where you set it.`,1)}catch(e){fail("cmsg",e)}};$("addHistory").onclick=async()=>{try{if(!CID)throw Error("Save the creative first.");await api("append_creative_history",{creativeId:CID,stage:$("hstage").value,entryType:$("htype").value,content:$("hnote").value.trim(),author:"Andy"});set("hnote","");await reload(CID)}catch(e){fail("cmsg",e)}};$("saveMarkets").onclick=async()=>{try{if(!CID)throw Error("Save the creative first.");const a=chosenMarkets();await api("save_creative_assignments",{creativeId:CID,assignments:a});await reload(CID);msg("mmsg",`${a.length} market assignment${a.length===1?"":"s"} saved.`,1)}catch(e){fail("mmsg",e)}};$("pkg").onchange=()=>$("pkg").value?openPkg($("pkg").value):(PID=null,packageArea());$("build").onclick=()=>{try{build();msg("pmsg","Email package built. Review every line before saving.",1)}catch(e){fail("pmsg",e)}};$("savePkg").onclick=async()=>{try{if(!CID)throw Error("Save the creative first.");const j=await api("save_traffic_package",{trafficPackageId:PID,creativeId:CID,assignmentIds:aids(),trafficPackage:pkgPayload()});PID=+j.trafficPackageId;await reload(CID);openPkg(PID);msg("pmsg",`Package #${PID} saved.`,1)}catch(e){fail("pmsg",e)}};$("draft").onclick=async()=>{try{if(!PID)throw Error("Save the package first.");const f=$("file").files[0];if(!f)throw Error("Choose the final audio file.");const r=await fetch(E,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"create-gmail-draft",to:$("to").value.trim(),subject:$("subject").value.trim(),body:$("body").value.trim(),attachment:{fileName:f.name,mimeType:f.type||"audio/mpeg",base64:await b64(f)}})}),j=await r.json();if(!r.ok||j.ok!==true)throw Error(j.error||`HTTP ${r.status}`);await api("save_traffic_package",{trafficPackageId:PID,creativeId:CID,assignmentIds:aids(),trafficPackage:pkgPayload({packageStatus:"gmail_draft",gmailDraftId:j.draftId,gmailThreadId:j.threadId})});await reload(CID);openPkg(PID);$("pmsg").className="status ok";$("pmsg").innerHTML=`Gmail draft created. <a href="${esc(j.gmailUrl||"https://mail.google.com/mail/u/0/#drafts")}" target="_blank">Open Draft</a>. Nothing sent.`}catch(e){fail("pmsg",e)}};$("sent").onclick=async()=>{try{if(!PID)throw Error("Select a package first.");await api("mark_traffic_package_sent",{trafficPackageId:PID,sentAt:new Date().toISOString()});await reload(CID);openPkg(PID);msg("pmsg",`Package #${PID} marked sent by you.`,1)}catch(e){fail("pmsg",e)}};$("confirmPkg").onchange=confirmList;$("saveConfirm").onclick=async()=>{try{const id=+$("confirmPkg").value;if(!id)throw Error("Select the package this email confirms.");const j=await api("record_station_confirmation",{trafficPackageId:id,confirmation:{gmailMessageId:$("gm").value.trim(),gmailThreadId:$("gt").value.trim(),fromEmail:$("from").value.trim(),toEmail:$("cto").value.trim(),subject:$("csubject").value.trim(),receivedAt:$("cdate").value?new Date($("cdate").value).toISOString():new Date().toISOString(),bodyText:$("ctext").value.trim(),stationReceivedConfirmed:$("received").checked,stationTraffickedConfirmed:$("trafficked").checked,approvedBy:"Andy"}});await reload(CID);set("confirmPkg",id);confirmList();msg("cfmsg",`Confirmation saved. Package status: ${j.packageStatus}.`,1)}catch(e){fail("cfmsg",e)}};
+if(window.GCMOShell)window.GCMOShell.mount({currentPage:"media",statusText:"Media creative workflow · v2.0.0"});reload().catch(e=>fail("cmsg",e));})();
+</script></body></html>
