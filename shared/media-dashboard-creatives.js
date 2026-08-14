@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/media-dashboard-creatives.js
-   Version: 1.0.0
+   Version: 1.0.1
    Status: Production Candidate
    Sprint: Media Dashboard Creative Queue Connection
    Purpose: Add new media_creatives workflow records to the existing Media
@@ -12,6 +12,7 @@
    - New media_creatives are read through get_creative_workflow only.
    - Creative cards are additive; no D1 writes occur from this dashboard layer.
    - A creative can appear before it has a market/placement assignment.
+   - Creative links carry creativeId so the saved Production record opens directly.
    ========================================================= */
 
 (() => {
@@ -26,6 +27,7 @@
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+  const creativeUrl = creativeId => `media-production.html?creativeId=${encodeURIComponent(creativeId)}`;
 
   let workflow = null;
   let lastCreativeActionCount = 0;
@@ -68,25 +70,17 @@
     const stage = lower(creative.currentStage);
     const status = lower(creative.status);
 
-    if (packageStatuses.some(value => ["sent", "received_confirmed"].includes(value))) {
-      return "awaiting";
-    }
+    if (packageStatuses.some(value => ["sent", "received_confirmed"].includes(value))) return "awaiting";
     if (
       status === "running" ||
       stage === "running / rotation" ||
       assignmentsFor(creative.id).some(item => lower(item.assignmentStatus) === "active")
-    ) {
-      return "running";
-    }
+    ) return "running";
     if (
       status === "ready" ||
       (stage === "station email package" && assignmentsFor(creative.id).length > 0)
-    ) {
-      return "ready";
-    }
-    if (["retired"].includes(status) || stage === "retired") {
-      return "history";
-    }
+    ) return "ready";
+    if (status === "retired" || stage === "retired") return "history";
     return "preparing";
   }
 
@@ -111,7 +105,6 @@
 
   function visibleCreatives() {
     if (!workflow) return [];
-
     const clientId = Number($("client")?.value || 0);
     const type = lower($("media-type-filter")?.value);
     const status = lower($("status-filter")?.value);
@@ -125,32 +118,23 @@
       if (clientId && Number(creative.clientId) !== clientId) return false;
       if (type && lower(creative.mediaType) !== type) return false;
       if (status && lower(creative.status) !== status) return false;
-
       const assignments = assignmentsFor(creative.id);
       if (market && !assignments.some(item => lower(item.market) === market)) return false;
       if (outlet && !assignments.some(item => lower(item.outletName) === outlet)) return false;
-
       const lane = laneFor(creative);
       if (dateView === "running" && lane !== "running") return false;
       if (dateView === "upcoming" && !["preparing", "ready", "awaiting"].includes(lane)) return false;
       if (["history", "last-year", "same-period-last-year"].includes(dateView) && lane !== "history") return false;
       if (actionOnly && !["preparing", "ready", "awaiting"].includes(lane)) return false;
-
       if (search) {
         const haystack = [
-          creative.clientName,
-          creative.clientCode,
-          creative.creativeName,
-          creative.mediaType,
-          creative.currentStage,
-          creative.status,
-          creative.voiceTalent,
-          creative.finalAudioFileName,
+          creative.clientName, creative.clientCode, creative.creativeName,
+          creative.mediaType, creative.currentStage, creative.status,
+          creative.voiceTalent, creative.finalAudioFileName,
           ...assignments.flatMap(item => [item.market, item.outletName])
         ].map(lower).join(" ");
         if (!haystack.includes(search)) return false;
       }
-
       return true;
     });
   }
@@ -169,14 +153,14 @@
     const voice = creative.voiceTalent ? ` · Voice: ${creative.voiceTalent}` : "";
 
     return `
-      <article class="card gcm-creative-card">
+      <article class="card gcm-creative-card" data-creative-id="${esc(creative.id)}">
         <span class="badge ${badge[0]}">${badge[1]}</span>
         <span class="badge b-info">${esc(creative.mediaType || "Media")}</span>
         <strong>${esc(creative.clientName || creative.clientCode || "Client")} · ${esc(creative.creativeName || "Creative")}</strong>
         <div class="meta"><strong>Creative #${esc(creative.id)}</strong> · ${esc(stage)} · ${esc(length)}${esc(voice)}</div>
         <div class="meta">${esc(assignmentText)}</div>
         <div class="action">${esc(nextAction(creative))}</div>
-        <a class="open-record" href="media-production.html">Open production record →</a>
+        <a class="open-record" href="${creativeUrl(creative.id)}">Open production record →</a>
       </article>`;
   }
 
@@ -195,7 +179,6 @@
     if (!creatives.length || baseVisibleCards > 0) return;
     const chosen = creatives.find(item => ["awaiting", "ready", "preparing"].includes(laneFor(item))) || creatives[0];
     if (!chosen || !$("priority")) return;
-
     const assignments = assignmentsFor(chosen.id);
     const where = assignments.length
       ? assignments.map(item => `${item.market || "Market"} / ${item.outletName || "Outlet"}`).join("; ")
@@ -208,7 +191,7 @@
         <div class="decision"><span>Media Type</span><strong>${esc(chosen.mediaType || "Media")}</strong></div>
         <div class="decision"><span>Stage</span><strong>${esc(chosen.currentStage || "Idea / Direction")}</strong></div>
         <div class="decision"><span>Markets</span><strong>${esc(where)}</strong></div>
-        <div class="decision next"><span>Next Action</span><strong>${esc(nextAction(chosen))}</strong><a class="open-record" href="media-production.html">Open production record →</a></div>
+        <div class="decision next"><span>Next Action</span><strong>${esc(nextAction(chosen))}</strong><a class="open-record" href="${creativeUrl(chosen.id)}">Open production record →</a></div>
       </div>`;
   }
 
@@ -216,16 +199,12 @@
     const queueHeading = [...document.querySelectorAll(".section-toggle .title-wrap h2")]
       .find(node => node.textContent.trim() === "Campaign + Creative Queue");
     const paragraph = queueHeading?.parentElement?.querySelector("p");
-    if (paragraph) {
-      paragraph.textContent = "D1 placement records and Creative Production records organized together by operating stage.";
-    }
+    if (paragraph) paragraph.textContent = "D1 placement records and Creative Production records organized together by operating stage.";
   }
 
   function reconcile() {
     if (!workflow || !$("lane-preparing")) return;
-
     document.querySelectorAll(".gcm-creative-card").forEach(node => node.remove());
-
     const creatives = visibleCreatives();
     const lanes = {
       preparing: creatives.filter(item => laneFor(item) === "preparing"),
@@ -233,26 +212,17 @@
       running: creatives.filter(item => laneFor(item) === "running"),
       awaiting: creatives.filter(item => laneFor(item) === "awaiting")
     };
-
-    const laneMap = {
-      preparing: "lane-preparing",
-      ready: "lane-ready",
-      running: "lane-running",
-      awaiting: "lane-awaiting"
-    };
+    const laneMap = {preparing:"lane-preparing",ready:"lane-ready",running:"lane-running",awaiting:"lane-awaiting"};
     for (const [laneName, laneItems] of Object.entries(lanes)) {
       const laneNode = $(laneMap[laneName]);
       if (laneItems.length) laneNode?.querySelectorAll(".empty").forEach(node => node.remove());
-      for (const creative of laneItems) {
-        laneNode?.insertAdjacentHTML("beforeend", creativeCard(creative, laneName));
-      }
+      for (const creative of laneItems) laneNode?.insertAdjacentHTML("beforeend", creativeCard(creative, laneName));
     }
 
     const basePreparing = setLaneCount("lane-preparing", "lane-preparing-count", lanes.preparing.length);
     const baseReady = setLaneCount("lane-ready", "lane-ready-count", lanes.ready.length);
     const baseRunning = setLaneCount("lane-running", "lane-running-count", lanes.running.length);
     const baseAwaiting = setLaneCount("lane-awaiting", "lane-awaiting-count", lanes.awaiting.length);
-
     if ($("count-preparing")) $("count-preparing").textContent = String(basePreparing + baseReady + lanes.preparing.length + lanes.ready.length);
     if ($("count-running")) $("count-running").textContent = String(baseRunning + lanes.running.length);
 
@@ -293,30 +263,23 @@
       await fetchWorkflow();
       scheduleReconcile(650);
     } catch (error) {
-      console.error("Media Dashboard Creative Queue 1.0.0:", error);
+      console.error("Media Dashboard Creative Queue 1.0.1:", error);
     }
   }
 
   function start() {
     refreshAndReconcile();
-
     document.addEventListener("change", event => {
       if (["client", "media-type-filter", "status-filter", "market-filter", "outlet-filter", "date-filter", "needs-action-filter"].includes(event.target?.id)) {
         scheduleReconcile(event.target.id === "client" ? 900 : 80);
       }
     }, true);
-
     document.addEventListener("input", event => {
       if (event.target?.id === "search-filter") scheduleReconcile(80);
     }, true);
-
     document.addEventListener("click", event => {
-      if (event.target?.id === "refresh") {
-        setTimeout(refreshAndReconcile, 350);
-      }
-      if (event.target?.id === "clear-filters") {
-        scheduleReconcile(100);
-      }
+      if (event.target?.id === "refresh") setTimeout(refreshAndReconcile, 350);
+      if (event.target?.id === "clear-filters") scheduleReconcile(100);
     }, true);
   }
 
