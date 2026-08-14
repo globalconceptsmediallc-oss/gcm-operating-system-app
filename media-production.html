@@ -1,0 +1,242 @@
+<!-- =========================================================
+   Global Concepts Media Operating System
+   File: media-production.html
+   Version: 1.0.0
+   Status: Production Candidate
+   Source: Media Operations v2.4.0 + routes/mediaOperations.js v7.9.0
+   Sprint: Media Production Recordkeeping
+   Purpose: Add and preserve production work on the same authoritative
+            media_records record used for placement, traffic, confirmation,
+            creative rotation, and historical planning.
+   ========================================================= -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Media Production Record | GCM OS</title>
+<style>
+:root{--navy:#071426;--navy2:#0b1d33;--blue:#1f68d8;--blue-soft:#eaf2ff;--gold:#d6a94a;--surface:#fff;--soft:#f5f7fb;--muted:#637083;--border:#dbe2ec;--text:#132238;--success:#1f7a4f;--success-soft:#e9f7f0;--warning:#9a6414;--warning-soft:#fff4dd;--critical:#b33a3a;--critical-soft:#fff0f0;--shadow:0 8px 24px rgba(7,20,38,.07);--radius:18px}
+*{box-sizing:border-box}body{margin:0;background:var(--soft);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5}
+.app-shell{min-height:100vh;display:grid;grid-template-columns:250px minmax(0,1fr)}main{padding:30px;min-width:0}.page{max-width:1480px;margin:auto}
+header{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-bottom:20px}.eyebrow{margin:0 0 6px;color:var(--blue);font-size:.72rem;font-weight:900;letter-spacing:.14em;text-transform:uppercase}
+h1{margin:0;color:var(--navy);font-size:clamp(2rem,4vw,3rem);line-height:1}.subtitle{margin:10px 0 0;color:var(--muted)}
+.controls{display:flex;gap:10px;flex-wrap:wrap}.button{min-height:42px;padding:0 14px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--navy2);font-weight:850;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}.button-primary{background:var(--blue);border-color:var(--blue);color:#fff}.button:disabled{opacity:.5;cursor:not-allowed}.version{display:inline-flex;align-items:center;min-height:42px;padding:0 13px;border-radius:10px;background:var(--navy);color:#fff;font-size:.78rem;font-weight:900}
+.summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}.summary article,.panel{background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}.summary article{padding:17px}.summary span{display:block;color:var(--muted);font-size:.7rem;font-weight:900;text-transform:uppercase}.summary strong{display:block;margin-top:7px;color:var(--navy);font-size:1rem}
+.panel{margin-bottom:18px;overflow:hidden}.panel-head{padding:20px 22px 16px;border-bottom:1px solid var(--border)}.panel-head h2{margin:0;font-size:1rem;color:var(--navy)}.panel-head p{margin:5px 0 0;color:var(--muted);font-size:.82rem}.body{padding:20px 22px}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.span-2{grid-column:span 2}.span-3{grid-column:1/-1}
+label{display:block;color:var(--navy2);font-size:.75rem;font-weight:850}input,select,textarea{width:100%;margin-top:6px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--text);padding:10px 11px;font:inherit}input,select{min-height:43px}textarea{min-height:110px;resize:vertical}.script{min-height:190px}
+.help{margin:6px 0 0;color:var(--muted);font-size:.72rem}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}.status{margin-top:14px;padding:12px 14px;border-radius:10px;background:#edf1f7;color:var(--muted);font-size:.8rem;font-weight:800}.status.ok{background:var(--success-soft);color:var(--success)}.status.error{background:var(--critical-soft);color:var(--critical)}
+.history{display:grid;gap:10px}.history-item{padding:13px;border:1px solid var(--border);border-radius:11px;background:var(--soft)}.history-item strong{display:block;color:var(--navy);font-size:.8rem}.history-item span{display:block;margin-top:4px;color:var(--muted);font-size:.76rem}.empty{padding:18px;color:var(--muted)}
+@media(max-width:1000px){.app-shell{grid-template-columns:1fr}.grid,.summary{grid-template-columns:1fr 1fr}.span-2,.span-3{grid-column:1/-1}}@media(max-width:680px){main{padding:18px}.grid,.summary{grid-template-columns:1fr}.span-2,.span-3{grid-column:auto}header{flex-direction:column}}
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <aside data-gcm-shell-sidebar></aside>
+  <main>
+    <div class="page">
+      <header>
+        <div>
+          <p class="eyebrow">Media Operations</p>
+          <h1>Production Record</h1>
+          <p class="subtitle">Record the creative work as it happens without changing the placement or traffic state.</p>
+        </div>
+        <div class="controls">
+          <a class="button" href="media.html">Back to Media</a>
+          <a class="button" id="campaign-link" href="media-insertion.html">Campaign / Traffic Record</a>
+          <span class="version">media-production.html · v1.0.0</span>
+        </div>
+      </header>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Select Media Record</h2><p>Choose the placement or campaign whose creative is being produced.</p></div>
+        <div class="body grid">
+          <label class="span-2">Media Record
+            <select id="record-select"><option value="">Loading media records…</option></select>
+          </label>
+          <div><p class="help">Production state is stored on this same D1 Media record.</p></div>
+        </div>
+      </section>
+
+      <section class="summary">
+        <article><span>Client</span><strong id="sum-client">—</strong></article>
+        <article><span>Campaign</span><strong id="sum-campaign">—</strong></article>
+        <article><span>Market / Outlet</span><strong id="sum-market">—</strong></article>
+        <article><span>Placement Status</span><strong id="sum-status">—</strong></article>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Production State</h2><p>Current state of the creative being developed or refreshed for this media record.</p></div>
+        <div class="body grid">
+          <label>Production Stage
+            <select id="stage">
+              <option value="">Not set</option>
+              <option>Direction</option><option>Script Draft</option><option>Script Review</option><option>Script Approved</option>
+              <option>Recording Requested</option><option>Recording Received</option><option>Recording Review</option>
+              <option>Production</option><option>Co-op / Traffic Package</option><option>Ready to Traffic</option><option>Complete</option>
+            </select>
+          </label>
+          <label>Script Stage
+            <select id="script-stage">
+              <option value="">Not set</option><option>Direction</option><option>Draft</option><option>Review</option><option>Approved</option><option>Final</option>
+            </select>
+          </label>
+          <label>Voice Talent<input id="voice-talent" placeholder="Monica, station talent, client, etc."></label>
+
+          <label class="span-3">Topic / Direction<textarea id="topic" placeholder="What is the spot about? What direction did the client or agency give?"></textarea></label>
+          <label class="span-3">Working / Approved Script<textarea id="working-script" class="script" placeholder="Paste the current working or approved script here."></textarea></label>
+
+          <label>Recording Received Date<input id="recording-date" type="date"></label>
+          <label>Recording Status
+            <select id="recording-status">
+              <option value="">Not set</option><option>Not requested</option><option>Requested</option><option>Received</option><option>Needs changes</option><option>Approved</option>
+            </select>
+          </label>
+          <label>Production Status
+            <select id="production-status">
+              <option value="">Not set</option><option>Not started</option><option>Editing</option><option>Revision needed</option><option>Approved</option><option>Final produced</option>
+            </select>
+          </label>
+
+          <label class="span-3">Recording Review / Revision Notes<textarea id="revision-notes" placeholder="What needs to change in the read, timing, copy, music, tags, or final production?"></textarea></label>
+
+          <label>Final Production Date<input id="final-production-date" type="date"></label>
+          <label>Co-op Script Status
+            <select id="coop-status">
+              <option value="">Not set</option><option>Not needed</option><option>Needed</option><option>Drafting</option><option>Ready</option><option>Sent / Filed</option>
+            </select>
+          </label>
+          <label>Traffic Package Status
+            <select id="traffic-package-status">
+              <option value="">Not set</option><option>Not started</option><option>Building</option><option>Ready</option><option>Trafficked</option>
+            </select>
+          </label>
+
+          <label class="span-3">Creative Being Replaced<input id="replacement-for" placeholder="Existing spot / ISCI / creative this new production will replace"></label>
+        </div>
+        <div class="body" style="padding-top:0">
+          <div class="actions">
+            <button class="button button-primary" id="save-production" type="button">Save Production Record</button>
+          </div>
+          <div class="status" id="save-status">Select a Media record to begin.</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Dated Production History</h2><p>Add short dated notes as work happens. Prior entries are preserved.</p></div>
+        <div class="body">
+          <label>Add Production Note<textarea id="new-note" placeholder="Example: Monica recording received. Timing is good; revise the final price line and produce V2."></textarea></label>
+          <div class="actions"><button class="button" id="add-note" type="button">Add Dated Note</button></div>
+          <div class="history" id="history"><div class="empty">No record selected.</div></div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script src="shared/gcm-shell.js?v=2.0.1"></script>
+<script>
+(() => {
+"use strict";
+const ENDPOINT="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+const $=id=>document.getElementById(id);
+let records=[];
+let current=null;
+const requestedId=Number(new URLSearchParams(location.search).get("mediaRecordId")||0);
+
+function esc(value){return String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));}
+function setValue(id,value){$(id).value=value||"";}
+function fmt(value){if(!value)return "—";const d=new Date(String(value));return Number.isNaN(d.getTime())?String(value):d.toLocaleString("en-US",{month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit"});}
+
+function renderRecord(){
+  if(!current)return;
+  const p=current.production||{};
+  $("sum-client").textContent=current.clientName||current.clientCode||"—";
+  $("sum-campaign").textContent=current.campaignName||current.creativeName||"—";
+  $("sum-market").textContent=[current.market,current.outletName].filter(Boolean).join(" / ")||"—";
+  $("sum-status").textContent=current.status||"—";
+  $("campaign-link").href=`media-insertion.html?mediaRecordId=${encodeURIComponent(current.id)}`;
+  setValue("stage",p.stage);setValue("topic",p.topic);setValue("script-stage",p.scriptStage);
+  setValue("working-script",p.workingScript);setValue("voice-talent",p.voiceTalent);
+  setValue("recording-date",p.recordingReceivedDate);setValue("recording-status",p.recordingStatus);
+  setValue("revision-notes",p.revisionNotes);setValue("production-status",p.productionStatus);
+  setValue("final-production-date",p.finalProductionDate);setValue("coop-status",p.coopScriptStatus);
+  setValue("traffic-package-status",p.trafficPackageStatus);setValue("replacement-for",p.replacementFor);
+  const history=Array.isArray(current.productionHistory)?current.productionHistory:[];
+  $("history").innerHTML=history.length?history.slice().reverse().map(item=>`
+    <div class="history-item"><strong>${esc(item.author||"GCM")} · ${esc(fmt(item.timestamp))}</strong><span>${esc(item.note||"")}</span></div>
+  `).join(""):`<div class="empty">No production history recorded yet.</div>`;
+  $("save-status").className="status ok";
+  $("save-status").textContent=`Loaded Media record ${current.id}. Saving here will not change traffic or confirmation status.`;
+}
+
+function choose(id){
+  current=records.find(r=>Number(r.id)===Number(id))||null;
+  if(!current)return;
+  $("record-select").value=String(current.id);
+  renderRecord();
+}
+
+async function load(){
+  try{
+    const response=await fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"get-media-operations",operation:"get"})});
+    const payload=await response.json().catch(()=>({}));
+    if(!response.ok||payload?.ok!==true)throw new Error(payload?.error||payload?.details||`Worker returned ${response.status}`);
+    records=Array.isArray(payload?.mediaOperations?.records)?payload.mediaOperations.records:[];
+    $("record-select").innerHTML=`<option value="">Select a Media record…</option>`+records.map(r=>
+      `<option value="${esc(r.id)}">${esc(r.clientName||r.clientCode||"Client")} · ${esc(r.campaignName||r.creativeName||"Media")} · ${esc(r.market||"")} ${esc(r.outletName||"")} · #${esc(r.id)}</option>`
+    ).join("");
+    if(requestedId&&records.some(r=>Number(r.id)===requestedId))choose(requestedId);
+    else if(records.length)choose(records[0].id);
+  }catch(error){
+    $("save-status").className="status error";$("save-status").textContent=`Media records could not load: ${error.message}`;
+  }
+}
+
+$("record-select").addEventListener("change",()=>choose($("record-select").value));
+
+$("save-production").addEventListener("click",async()=>{
+  if(!current)return;
+  $("save-production").disabled=true;$("save-status").className="status";$("save-status").textContent="Saving production record…";
+  try{
+    const production={
+      stage:$("stage").value,topic:$("topic").value.trim(),scriptStage:$("script-stage").value,
+      workingScript:$("working-script").value.trim(),voiceTalent:$("voice-talent").value.trim(),
+      recordingReceivedDate:$("recording-date").value,recordingStatus:$("recording-status").value,
+      revisionNotes:$("revision-notes").value.trim(),productionStatus:$("production-status").value,
+      finalProductionDate:$("final-production-date").value,coopScriptStatus:$("coop-status").value,
+      trafficPackageStatus:$("traffic-package-status").value,replacementFor:$("replacement-for").value.trim()
+    };
+    const id=current.id;
+    const response=await fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"get-media-operations",operation:"update_production_record",mediaRecordId:id,production})});
+    const payload=await response.json().catch(()=>({}));
+    if(!response.ok||payload?.ok!==true)throw new Error(payload?.error||payload?.details||`Worker returned ${response.status}`);
+    $("save-status").className="status ok";$("save-status").textContent=`Production record saved to Media record ${id}. Placement and traffic state were not changed.`;
+    await load(); choose(id);
+  }catch(error){$("save-status").className="status error";$("save-status").textContent=`Production record was not saved: ${error.message}`;}
+  finally{$("save-production").disabled=false;}
+});
+
+$("add-note").addEventListener("click",async()=>{
+  if(!current)return;
+  const note=$("new-note").value.trim();
+  if(!note){$("save-status").className="status error";$("save-status").textContent="Enter a production note first.";return;}
+  $("add-note").disabled=true;
+  try{
+    const id=current.id;
+    const response=await fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"get-media-operations",operation:"append_production_note",mediaRecordId:id,note,author:"Andy"})});
+    const payload=await response.json().catch(()=>({}));
+    if(!response.ok||payload?.ok!==true)throw new Error(payload?.error||payload?.details||`Worker returned ${response.status}`);
+    $("new-note").value="";$("save-status").className="status ok";$("save-status").textContent="Dated production note added.";
+    await load();choose(id);
+  }catch(error){$("save-status").className="status error";$("save-status").textContent=`Production note was not saved: ${error.message}`;}
+  finally{$("add-note").disabled=false;}
+});
+
+if(window.GCMOShell)window.GCMOShell.mount({currentPage:"media",statusText:"Media production recordkeeping · v1.0.0"});
+load();
+})();
+</script>
+</body>
+</html>
