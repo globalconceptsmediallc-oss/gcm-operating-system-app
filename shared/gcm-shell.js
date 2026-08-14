@@ -1,19 +1,19 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gcm-shell.js
-   Version: 2.0.4
+   Version: 2.0.5
    Status: Production Candidate
    Purpose: Shared internal GCM OS application shell foundation.
-   Source: gcm-shell.js 2.0.3 production navigation
-   Sprint: Media Creative Handoff + Process Stage Indicator
-   Change: Preserves production navigation and loads the current Media
-           dashboard and production workflow enhancements with cache-safe versions.
+   Source: gcm-shell.js 2.0.4 production navigation
+   Sprint: Media Creative Handoff Hardening
+   Change: Preserves production navigation, restores a saved Media Creative ID
+           before Production enhancements load, and uses cache-safe Media assets.
    ========================================================= */
 
 (() => {
   "use strict";
 
-  const SHELL_VERSION = "2.0.4";
+  const SHELL_VERSION = "2.0.5";
 
   const PAGE_MAP = {
     today: { label: "Today", href: "today.html", icon: "⌂" },
@@ -87,10 +87,23 @@
     document.head.appendChild(script);
   }
 
+  function restoreMediaCreativeHandoff() {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("creativeId")) return;
+    let saved = "";
+    try { saved = sessionStorage.getItem("gcmMediaCreativeId") || ""; } catch {}
+    if (!/^\d+$/.test(saved)) return;
+    url.searchParams.set("creativeId", saved);
+    history.replaceState(null, "", url);
+  }
+
   function loadPageEnhancements() {
     const path=window.location.pathname;
-    if(/\/media-production\.html$/i.test(path))appendScript("shared/media-production-package.js?v=1.1.0","data-gcm-media-production-package");
-    if(/\/media\.html$/i.test(path))appendScript("shared/media-dashboard-creatives.js?v=1.0.1","data-gcm-media-dashboard-creatives");
+    if(/\/media-production\.html$/i.test(path)) {
+      restoreMediaCreativeHandoff();
+      appendScript("shared/media-production-package.js?v=1.1.0","data-gcm-media-production-package");
+    }
+    if(/\/media\.html$/i.test(path))appendScript("shared/media-dashboard-creatives.js?v=1.0.2","data-gcm-media-dashboard-creatives");
   }
 
   function mount(options={}) {
