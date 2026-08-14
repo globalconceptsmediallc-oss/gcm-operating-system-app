@@ -1,20 +1,19 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gcm-shell.js
-   Version: 2.0.2
+   Version: 2.0.3
    Status: Production Candidate
    Purpose: Shared internal GCM OS application shell foundation.
-   Source: gcm-shell.js 2.0.1 production navigation
-   Sprint: Media Station Package Connection
-   Change: Preserves production navigation and conditionally loads the
-           Media Production station-package enhancement only on
-           media-production.html.
+   Source: gcm-shell.js 2.0.2 production navigation
+   Sprint: Media Dashboard Creative Queue Connection
+   Change: Preserves production navigation and conditionally loads Media
+           enhancements on media.html and media-production.html.
    ========================================================= */
 
 (() => {
   "use strict";
 
-  const SHELL_VERSION = "2.0.2";
+  const SHELL_VERSION = "2.0.3";
 
   const PAGE_MAP = {
     today: {
@@ -371,15 +370,31 @@
     });
   }
 
-  function loadPageEnhancements() {
-    if (!/\/media-production\.html$/i.test(window.location.pathname)) return;
-    if (document.querySelector("script[data-gcm-media-production-package]")) return;
-
+  function appendScript(src, marker) {
+    if (document.querySelector(`script[${marker}]`)) return;
     const script = document.createElement("script");
-    script.src = "shared/media-production-package.js?v=1.0.0";
-    script.dataset.gcmMediaProductionPackage = "1";
+    script.src = src;
+    script.setAttribute(marker, "1");
     script.async = true;
     document.head.appendChild(script);
+  }
+
+  function loadPageEnhancements() {
+    const path = window.location.pathname;
+
+    if (/\/media-production\.html$/i.test(path)) {
+      appendScript(
+        "shared/media-production-package.js?v=1.0.0",
+        "data-gcm-media-production-package"
+      );
+    }
+
+    if (/\/media\.html$/i.test(path)) {
+      appendScript(
+        "shared/media-dashboard-creatives.js?v=1.0.0",
+        "data-gcm-media-dashboard-creatives"
+      );
+    }
   }
 
   function mount(options = {}) {
