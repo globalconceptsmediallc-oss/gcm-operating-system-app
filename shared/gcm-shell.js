@@ -1,18 +1,20 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gcm-shell.js
-   Version: 2.0.1
+   Version: 2.0.2
    Status: Production Candidate
    Purpose: Shared internal GCM OS application shell foundation.
-   Source: gcm-shell.js 2.0.0 production navigation
-   Sprint: OS 2.0 Phase 1 Stabilization
-   Change: Restores Media to the primary GCM OS workspace navigation.
+   Source: gcm-shell.js 2.0.1 production navigation
+   Sprint: Media Station Package Connection
+   Change: Preserves production navigation and conditionally loads the
+           Media Production station-package enhancement only on
+           media-production.html.
    ========================================================= */
 
 (() => {
   "use strict";
 
-  const SHELL_VERSION = "2.0.1";
+  const SHELL_VERSION = "2.0.2";
 
   const PAGE_MAP = {
     today: {
@@ -369,6 +371,17 @@
     });
   }
 
+  function loadPageEnhancements() {
+    if (!/\/media-production\.html$/i.test(window.location.pathname)) return;
+    if (document.querySelector("script[data-gcm-media-production-package]")) return;
+
+    const script = document.createElement("script");
+    script.src = "shared/media-production-package.js?v=1.0.0";
+    script.dataset.gcmMediaProductionPackage = "1";
+    script.async = true;
+    document.head.appendChild(script);
+  }
+
   function mount(options = {}) {
     injectStyles();
 
@@ -403,6 +416,7 @@
 
     const menuButton = document.querySelector(mobileMenuSelector);
     configureMobileMenu(sidebar, menuButton);
+    loadPageEnhancements();
 
     return true;
   }
