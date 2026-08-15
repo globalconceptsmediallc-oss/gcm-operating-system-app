@@ -1,0 +1,80 @@
+<!-- =========================================================
+Global Concepts Media Operating System
+File: media-existing.html
+Version: 1.0.0
+Status: Production Candidate
+Sprint: Existing / Already-Trafficked Media Recovery
+Purpose: Record real Media work that already happened outside the OS without
+inventing earlier Creative workflow stages.
+========================================================= -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Record Existing Media | GCM OS</title>
+<style>
+:root{--n:#071426;--b:#1f68d8;--bg:#f5f7fb;--bd:#dbe2ec;--m:#637083;--ok:#1f7a4f;--okbg:#e9f7f0;--bad:#b33a3a;--badbg:#fff0f0;--gold:#d6a94a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#132238;font:14px Inter,system-ui,sans-serif}.shell{min-height:100vh;display:grid;grid-template-columns:250px 1fr}main{padding:28px}.page{max-width:1380px;margin:auto}header{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-bottom:18px}h1{margin:3px 0 8px;color:var(--n);font-size:38px;line-height:1}.eyebrow{color:var(--b);font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase}.sub{color:var(--m)}.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.btn{min-height:40px;padding:0 14px;border:1px solid var(--bd);border-radius:9px;background:#fff;color:var(--n);font-weight:850;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}.primary{background:var(--b);border-color:var(--b);color:#fff}.dark{background:var(--n);border-color:var(--n);color:#fff}.panel{background:#fff;border:1px solid var(--bd);border-radius:14px;margin-bottom:15px;overflow:hidden}.ph{padding:15px 18px;border-bottom:1px solid var(--bd)}.ph h2{margin:0;color:var(--n);font-size:17px}.body{padding:18px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.two{grid-column:span 2}.all{grid-column:1/-1}label{font-weight:780;color:var(--n)}input,select,textarea{width:100%;margin-top:5px;padding:9px 10px;border:1px solid var(--bd);border-radius:8px;background:#fff;color:#132238;font:inherit}textarea{min-height:120px;resize:vertical}.email{min-height:190px}.helper{padding:12px 14px;border-radius:10px;background:#eef4ff;color:#415675;margin-bottom:15px}.warning{background:#fff4dd;color:#785416}.checks{display:flex;gap:20px;flex-wrap:wrap;padding:12px;border:1px solid var(--bd);border-radius:10px;background:#fafbfd}.checks label{display:flex;align-items:center;gap:8px}.checks input{width:18px;height:18px;margin:0}.status{padding:12px 14px;border-radius:10px;background:#eef1f6;color:var(--m);font-weight:800}.status.ok{background:var(--okbg);color:var(--ok)}.status.err{background:var(--badbg);color:var(--bad)}@media(max-width:1000px){.grid{grid-template-columns:repeat(2,1fr)}.two,.all{grid-column:1/-1}}@media(max-width:760px){.shell{grid-template-columns:1fr}main{padding:16px}header{flex-direction:column}.grid{grid-template-columns:1fr}.two,.all{grid-column:auto}}
+</style>
+</head>
+<body>
+<div class="shell"><aside data-gcm-shell-sidebar></aside><main><div class="page">
+<header><div><div class="eyebrow">Media Operations</div><h1>Record Existing Media</h1><div class="sub">Use this only when the real media work already happened outside the OS. Preserve what actually happened; do not replay fake production stages.</div></div><div class="actions"><a class="btn" href="media.html">Back to Media</a><span class="btn dark">v1.0.0</span></div></header>
+
+<section class="panel"><div class="ph"><h2>1. Authoritative Media Record</h2><div class="sub">The placement that actually ran, is scheduled to run, or has already completed.</div></div><div class="body"><div class="helper warning"><b>Recovery rule:</b> this path creates the permanent Media record directly as traffic sent + station confirmed. Use the normal Creative workflow for new work.</div><div class="grid">
+<label>Client<select id="client"><option value="">Select client…</option></select></label>
+<label>Current State<select id="currentState"><option value="scheduled">Scheduled — confirmed, not running yet</option><option value="running">Running / Rotation</option><option value="completed">Completed / Historical</option></select></label>
+<label>Media Type<select id="mediaType"><option>Radio</option><option>TV / Cable</option><option>Streaming / Audio</option><option>Digital</option><option>Print</option><option>Outdoor</option><option>Other Media</option></select></label>
+<label>Owner<input id="owner" value="Andy"></label>
+<label class="two">Campaign Name<input id="campaignName" placeholder="Liberty Co-op — Melbourne Scratch & Dent Gun Show"></label>
+<label>Creative Name<input id="creativeName" placeholder="Melbourne Gun Show V1"></label>
+<label>ISCI / ID<input id="isci" placeholder="SESLM2601"></label>
+<label>Market<input id="market" placeholder="Melbourne"></label>
+<label>Station / Outlet<input id="outlet" placeholder="WMMB"></label>
+<label>First Air Date<input id="startDate" type="date"></label>
+<label>Last Air Date<input id="endDate" type="date"></label>
+<label>Event Start Date<input id="eventStartDate" type="date"></label>
+<label>Event End Date<input id="eventEndDate" type="date"></label>
+<label>Co-op Partner<input id="coop" placeholder="Liberty"></label>
+<label class="two">Production Filename<input id="fileName" placeholder="SESLM2601_Liberty_GunShow_30_V1.mp3"></label>
+<label class="all">Final / Approved Script (optional)<textarea id="script"></textarea></label>
+</div></div></section>
+
+<section class="panel"><div class="ph"><h2>2. Sent Traffic Evidence</h2><div class="sub">Preserve the traffic message that was actually sent to the station.</div></div><div class="body grid">
+<label>Sent Date / Time<input id="trafficSentAt" type="datetime-local"></label>
+<label>From<input id="trafficFrom" value="globalconceptsmediallc@gmail.com"></label>
+<label>To<input id="trafficTo"></label>
+<label class="two">Subject<input id="trafficSubject"></label>
+<label>Gmail Message ID (optional)<input id="trafficMessageId"></label>
+<label>Gmail Thread ID (optional)<input id="trafficThreadId"></label>
+<label class="all">Exact Sent Email Body<textarea id="trafficBody" class="email"></textarea></label>
+</div></section>
+
+<section class="panel"><div class="ph"><h2>3. Station Confirmation Evidence</h2><div class="sub">Preserve the station reply and explicitly confirm what the station proved.</div></div><div class="body grid">
+<label>Received Date / Time<input id="confirmationReceivedAt" type="datetime-local"></label>
+<label>From<input id="confirmationFrom"></label>
+<label>To<input id="confirmationTo" value="globalconceptsmediallc@gmail.com"></label>
+<label class="two">Subject<input id="confirmationSubject"></label>
+<label>Gmail Message ID (optional)<input id="confirmationMessageId"></label>
+<label>Gmail Thread ID (optional)<input id="confirmationThreadId"></label>
+<label class="all">Exact Confirmation Email Body<textarea id="confirmationBody" class="email"></textarea></label>
+<div class="all checks"><label><input id="receivedConfirmed" type="checkbox"> Station confirms traffic / materials were received</label><label><input id="traffickedConfirmed" type="checkbox"> Station confirms the schedule was entered / trafficked</label></div>
+</div></section>
+
+<section class="panel"><div class="body"><div class="actions"><button class="btn primary" id="save">Record Existing & Confirmed Media</button><a class="btn" href="media.html">Cancel</a></div><div class="status" id="msg" style="margin-top:12px">Nothing has been written yet.</div></div></section>
+</div></main></div>
+<script src="shared/gcm-shell.js?v=2.0.6"></script>
+<script>
+(()=>{"use strict";
+const ENDPOINT="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/",$=id=>document.getElementById(id),clean=v=>String(v||"").trim();
+function msg(text,type=""){const n=$("msg");n.className=`status${type?` ${type}`:""}`;n.textContent=text}
+async function api(operation,extra={}){const r=await fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"get-media-operations",operation,...extra})}),j=await r.json().catch(()=>({}));if(!r.ok||j.ok!==true)throw Error(j.error||j.details||`HTTP ${r.status}`);return j}
+async function loadClients(){const j=await api("get");const clients=j.mediaOperations?.clients||[];$("client").innerHTML='<option value="">Select client…</option>'+clients.map(c=>`<option value="${c.clientId}">${String(c.clientName||c.clientCode||"Client").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")}</option>`).join("");const q=new URLSearchParams(location.search).get("clientId");if(q&&clients.some(c=>String(c.clientId)===q))$("client").value=q}
+function recordPayload(){return{record:{clientId:+$("client").value||null,currentState:$("currentState").value,mediaType:$("mediaType").value,owner:clean($("owner").value),campaignName:clean($("campaignName").value),creativeName:clean($("creativeName").value),isci:clean($("isci").value),market:clean($("market").value),outletName:clean($("outlet").value),startDate:$("startDate").value,endDate:$("endDate").value,eventStartDate:$("eventStartDate").value,eventEndDate:$("eventEndDate").value,coopPartner:clean($("coop").value),fileName:clean($("fileName").value),scriptText:clean($("script").value)},trafficEvidence:{sentAt:$("trafficSentAt").value,gmailMessageId:clean($("trafficMessageId").value),gmailThreadId:clean($("trafficThreadId").value),fromEmail:clean($("trafficFrom").value),toEmail:clean($("trafficTo").value),subject:clean($("trafficSubject").value),bodyText:clean($("trafficBody").value)},confirmationEvidence:{receivedAt:$("confirmationReceivedAt").value,gmailMessageId:clean($("confirmationMessageId").value),gmailThreadId:clean($("confirmationThreadId").value),fromEmail:clean($("confirmationFrom").value),toEmail:clean($("confirmationTo").value),subject:clean($("confirmationSubject").value),bodyText:clean($("confirmationBody").value),receivedConfirmed:$("receivedConfirmed").checked,traffickedConfirmed:$("traffickedConfirmed").checked}}}
+$("save").onclick=async e=>{e.currentTarget.disabled=true;msg("Saving recovered Media record…");try{const j=await api("record_existing_media",recordPayload());msg(`Media record #${j.mediaRecordId} recovered. Traffic sent and station confirmation are preserved.`,"ok");e.currentTarget.textContent="Recovered";e.currentTarget.disabled=true}catch(err){msg(err.message||String(err),"err");e.currentTarget.disabled=false}};
+if(window.GCMOShell)window.GCMOShell.mount({currentPage:"media",statusText:"Existing Media recovery · v1.0.0"});
+loadClients().catch(err=>msg(err.message||String(err),"err"));
+})();
+</script>
+</body></html>
