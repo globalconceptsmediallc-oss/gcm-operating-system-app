@@ -1,11 +1,13 @@
 <!-- =========================================================
 Global Concepts Media Operating System
 File: media-existing.html
-Version: 1.0.0
+Version: 1.0.1
 Status: Production Candidate
 Sprint: Existing / Already-Trafficked Media Recovery
 Purpose: Record real Media work that already happened outside the OS without
 inventing earlier Creative workflow stages.
+Change: Preserve the Save button reference across async requests so a successful
+D1 recovery cannot be reported as a browser event error.
 ========================================================= -->
 <!doctype html>
 <html lang="en">
@@ -20,7 +22,7 @@ inventing earlier Creative workflow stages.
 </head>
 <body>
 <div class="shell"><aside data-gcm-shell-sidebar></aside><main><div class="page">
-<header><div><div class="eyebrow">Media Operations</div><h1>Record Existing Media</h1><div class="sub">Use this only when the real media work already happened outside the OS. Preserve what actually happened; do not replay fake production stages.</div></div><div class="actions"><a class="btn" href="media.html">Back to Media</a><span class="btn dark">v1.0.0</span></div></header>
+<header><div><div class="eyebrow">Media Operations</div><h1>Record Existing Media</h1><div class="sub">Use this only when the real media work already happened outside the OS. Preserve what actually happened; do not replay fake production stages.</div></div><div class="actions"><a class="btn" href="media.html">Back to Media</a><span class="btn dark">v1.0.1</span></div></header>
 
 <section class="panel"><div class="ph"><h2>1. Authoritative Media Record</h2><div class="sub">The placement that actually ran, is scheduled to run, or has already completed.</div></div><div class="body"><div class="helper warning"><b>Recovery rule:</b> this path creates the permanent Media record directly as traffic sent + station confirmed. Use the normal Creative workflow for new work.</div><div class="grid">
 <label>Client<select id="client"><option value="">Select client…</option></select></label>
@@ -72,8 +74,8 @@ function msg(text,type=""){const n=$("msg");n.className=`status${type?` ${type}`
 async function api(operation,extra={}){const r=await fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"get-media-operations",operation,...extra})}),j=await r.json().catch(()=>({}));if(!r.ok||j.ok!==true)throw Error(j.error||j.details||`HTTP ${r.status}`);return j}
 async function loadClients(){const j=await api("get");const clients=j.mediaOperations?.clients||[];$("client").innerHTML='<option value="">Select client…</option>'+clients.map(c=>`<option value="${c.clientId}">${String(c.clientName||c.clientCode||"Client").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")}</option>`).join("");const q=new URLSearchParams(location.search).get("clientId");if(q&&clients.some(c=>String(c.clientId)===q))$("client").value=q}
 function recordPayload(){return{record:{clientId:+$("client").value||null,currentState:$("currentState").value,mediaType:$("mediaType").value,owner:clean($("owner").value),campaignName:clean($("campaignName").value),creativeName:clean($("creativeName").value),isci:clean($("isci").value),market:clean($("market").value),outletName:clean($("outlet").value),startDate:$("startDate").value,endDate:$("endDate").value,eventStartDate:$("eventStartDate").value,eventEndDate:$("eventEndDate").value,coopPartner:clean($("coop").value),fileName:clean($("fileName").value),scriptText:clean($("script").value)},trafficEvidence:{sentAt:$("trafficSentAt").value,gmailMessageId:clean($("trafficMessageId").value),gmailThreadId:clean($("trafficThreadId").value),fromEmail:clean($("trafficFrom").value),toEmail:clean($("trafficTo").value),subject:clean($("trafficSubject").value),bodyText:clean($("trafficBody").value)},confirmationEvidence:{receivedAt:$("confirmationReceivedAt").value,gmailMessageId:clean($("confirmationMessageId").value),gmailThreadId:clean($("confirmationThreadId").value),fromEmail:clean($("confirmationFrom").value),toEmail:clean($("confirmationTo").value),subject:clean($("confirmationSubject").value),bodyText:clean($("confirmationBody").value),receivedConfirmed:$("receivedConfirmed").checked,traffickedConfirmed:$("traffickedConfirmed").checked}}}
-$("save").onclick=async e=>{e.currentTarget.disabled=true;msg("Saving recovered Media record…");try{const j=await api("record_existing_media",recordPayload());msg(`Media record #${j.mediaRecordId} recovered. Traffic sent and station confirmation are preserved.`,"ok");e.currentTarget.textContent="Recovered";e.currentTarget.disabled=true}catch(err){msg(err.message||String(err),"err");e.currentTarget.disabled=false}};
-if(window.GCMOShell)window.GCMOShell.mount({currentPage:"media",statusText:"Existing Media recovery · v1.0.0"});
+$("save").onclick=async()=>{const button=$("save");button.disabled=true;msg("Saving recovered Media record…");try{const j=await api("record_existing_media",recordPayload());msg(`Media record #${j.mediaRecordId} recovered. Traffic sent and station confirmation are preserved.`,"ok");button.textContent="Recovered";button.disabled=true}catch(err){msg(err.message||String(err),"err");button.disabled=false}};
+if(window.GCMOShell)window.GCMOShell.mount({currentPage:"media",statusText:"Existing Media recovery · v1.0.1"});
 loadClients().catch(err=>msg(err.message||String(err),"err"));
 })();
 </script>
