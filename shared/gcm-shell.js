@@ -1,19 +1,19 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gcm-shell.js
-   Version: 2.0.5
+   Version: 2.0.6
    Status: Production Candidate
    Purpose: Shared internal GCM OS application shell foundation.
-   Source: gcm-shell.js 2.0.4 production navigation
-   Sprint: Media Creative Handoff Hardening
-   Change: Preserves production navigation, restores a saved Media Creative ID
-           before Production enhancements load, and uses cache-safe Media assets.
+   Source: gcm-shell.js 2.0.5 production navigation
+   Sprint: Existing / Already-Trafficked Media Recovery
+   Change: Preserves production navigation and Media Creative handoff while
+           loading the Record Existing Media entry path on media.html.
    ========================================================= */
 
 (() => {
   "use strict";
 
-  const SHELL_VERSION = "2.0.5";
+  const SHELL_VERSION = "2.0.6";
 
   const PAGE_MAP = {
     today: { label: "Today", href: "today.html", icon: "⌂" },
@@ -103,7 +103,10 @@
       restoreMediaCreativeHandoff();
       appendScript("shared/media-production-package.js?v=1.1.0","data-gcm-media-production-package");
     }
-    if(/\/media\.html$/i.test(path))appendScript("shared/media-dashboard-creatives.js?v=1.0.2","data-gcm-media-dashboard-creatives");
+    if(/\/media\.html$/i.test(path)) {
+      appendScript("shared/media-dashboard-creatives.js?v=1.0.2","data-gcm-media-dashboard-creatives");
+      appendScript("shared/media-existing-entry.js?v=1.0.0","data-gcm-media-existing-entry");
+    }
   }
 
   function mount(options={}) {
