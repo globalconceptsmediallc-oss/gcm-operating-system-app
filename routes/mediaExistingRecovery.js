@@ -1,11 +1,11 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/mediaExistingRecovery.js
-   Version: 1.0.1
+   Version: 1.1.0
    Status: Production Candidate
    Sprint: Existing / Already-Trafficked Media Recovery
-   Purpose: Create an authoritative Media record when real media work already
-            happened outside the OS, without inventing earlier workflow stages.
+   Purpose: Create or upgrade an authoritative Media record when real media work
+            already happened outside the OS, without inventing earlier workflow stages.
 
    Production rules:
    - Never creates fake Creative workflow history.
@@ -13,7 +13,10 @@
    - Preserves sent-traffic and station-confirmation evidence in the record.
    - Recovered records are traffic sent + station confirmed by definition.
    - Scheduled + confirmed recovered media is stored as ready, not planned.
-   - Duplicate flight protection remains mandatory.
+   - Exact duplicate flight protection remains mandatory.
+   - When the exact flight already exists, upgrade that record in place instead
+     of creating a duplicate or replaying an earlier traffic state.
+   - Existing notes are preserved; identical confirmation evidence is not appended twice.
    ========================================================= */
 
 import { VERSION, ACTIONS } from "../shared/config.js";
@@ -137,7 +140,7 @@ async function recordExistingMedia(body, db, requestId) {
     }
 
     const duplicate = rowsOf(await db.prepare(`
-      SELECT id, campaign_name, creative_version
+      SELECT id, campaign_name, creative_version, notes
       FROM media_records
       WHERE client_id = ?
         AND LOWER(COALESCE(creative_version,'')) = LOWER(?)
@@ -148,20 +151,88 @@ async function recordExistingMedia(body, db, requestId) {
       LIMIT 1
     `).bind(clientId,isci,market,outletName,startDate,endDate).all())[0];
 
+    const recoveryNotes = buildRecoveryNotes({
+      currentState, owner, eventStartDate, eventEndDate, isci, traffic, confirmation
+    });
+
     if (duplicate) {
+      const existingNotes = clean(duplicate.notes);
+      const confirmationMessageId = clean(confirmation.gmailMessageId);
+      const evidenceAlreadyPresent = confirmationMessageId
+        ? existingNotes.includes(`Gmail Message ID: ${confirmationMessageId}`)
+        : existingNotes.includes("=== STATION CONFIRMATION EVIDENCE ===") &&
+          existingNotes.includes(clean(confirmation.subject));
+      const mergedNotes = evidenceAlreadyPresent
+        ? existingNotes
+        : [existingNotes, recoveryNotes].filter(Boolean).join("\n\n");
+
+      await db.prepare(`
+        UPDATE media_records
+        SET media_type = ?,
+            market = ?,
+            outlet_name = ?,
+            campaign_name = ?,
+            creative_name = ?,
+            creative_version = ?,
+            file_name = ?,
+            coop_partner = ?,
+            start_date = ?,
+            end_date = ?,
+            status = ?,
+            script_text = ?,
+            notes = ?,
+            traffic_status = 'sent',
+            confirmation_status = 'confirmed',
+            attention_status = 'clear',
+            attention_reason = NULL,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).bind(
+        mediaType,
+        market,
+        outletName,
+        campaignName,
+        creativeName,
+        isci,
+        fileName,
+        coopPartner || null,
+        startDate,
+        endDate,
+        status,
+        scriptText || null,
+        mergedNotes || null,
+        Number(duplicate.id)
+      ).run();
+
       return jsonResponse({
-        ok:false,
+        ok:true,
         requestId,
         action:ACTIONS.GET_MEDIA_OPERATIONS,
         version:VERSION,
-        error:`This recovered flight already exists as Media record ${duplicate.id}.`,
-        mediaRecordId:Number(duplicate.id)
-      },409);
+        operation:"record_existing_media",
+        mediaRecordId:Number(duplicate.id),
+        updatedExisting:true,
+        evidenceAlreadyPresent,
+        recoveredMedia:{
+          clientId,
+          clientCode:String(client.client_code || ""),
+          clientName:String(client.name || client.client_code || "Unknown Client"),
+          campaignName,
+          creativeName,
+          isci,
+          fileName,
+          mediaType,
+          market,
+          outletName,
+          startDate,
+          endDate,
+          currentState,
+          status,
+          trafficStatus:"sent",
+          confirmationStatus:"confirmed"
+        }
+      });
     }
-
-    const notes = buildRecoveryNotes({
-      currentState, owner, eventStartDate, eventEndDate, isci, traffic, confirmation
-    });
 
     const result = await db.prepare(`
       INSERT INTO media_records (
@@ -177,7 +248,7 @@ async function recordExistingMedia(body, db, requestId) {
     `).bind(
       clientId, mediaType, market, outletName, campaignName,
       creativeName, isci, fileName, coopPartner || null,
-      startDate, endDate, status, scriptText || null, notes
+      startDate, endDate, status, scriptText || null, recoveryNotes
     ).run();
 
     const mediaRecordId = Number(result?.meta?.last_row_id || result?.meta?.lastRowId || 0) || null;
@@ -189,6 +260,7 @@ async function recordExistingMedia(body, db, requestId) {
       version:VERSION,
       operation:"record_existing_media",
       mediaRecordId,
+      updatedExisting:false,
       recoveredMedia:{
         clientId,
         clientCode:String(client.client_code || ""),
