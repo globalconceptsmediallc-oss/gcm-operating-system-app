@@ -1,26 +1,33 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/mediaOperations.js
-   Version: 8.1.0
+   Version: 8.2.0
    Status: Production Candidate
-   Source: routes/mediaOperations.js 8.0.0
-   Sprint: Complete Station Email Package
+   Source: routes/mediaOperations.js 8.1.0
+   Sprint: Existing / Already-Trafficked Media Recovery
    Purpose: Preserve legacy placement operations and the creative workflow
-            while routing Media-specific Gmail draft + attachment operations.
+            while routing Media-specific Gmail draft, attachment, and recovered
+            existing-media operations.
 
    Production rules:
    - Existing media_records behavior remains unchanged in the legacy module.
    - Creative workflow operations remain additive and separate from placements.
    - Station email draft operations preserve attachment metadata and never send.
+   - Existing Media recovery creates authoritative placement records only after
+     explicit operator submission and never invents earlier Creative stages.
    - Nothing in the creative chain automatically changes a placement record.
    ========================================================= */
 
 import { handleMediaOperations as handleLegacyMediaOperations } from "./mediaOperationsLegacy.js";
 import { handleMediaCreativeWorkflow, MEDIA_CREATIVE_OPERATIONS } from "./mediaCreativeWorkflow.js";
 import { handleMediaStationDraft, MEDIA_STATION_DRAFT_OPERATIONS } from "./mediaStationDraft.js";
+import { handleMediaExistingRecovery, MEDIA_EXISTING_RECOVERY_OPERATIONS } from "./mediaExistingRecovery.js";
 
 export async function handleMediaOperations(body,env,requestId){
   const operation=String(body?.operation||"get").trim().toLowerCase();
+  if(MEDIA_EXISTING_RECOVERY_OPERATIONS.includes(operation)){
+    return handleMediaExistingRecovery(operation,body,env,requestId);
+  }
   if(MEDIA_STATION_DRAFT_OPERATIONS.includes(operation)){
     return handleMediaStationDraft(operation,body,env,requestId);
   }
