@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/mediaExistingRecovery.js
-   Version: 1.0.0
+   Version: 1.0.1
    Status: Production Candidate
    Sprint: Existing / Already-Trafficked Media Recovery
    Purpose: Create an authoritative Media record when real media work already
@@ -12,6 +12,7 @@
    - Creates one media_records row only after explicit operator submission.
    - Preserves sent-traffic and station-confirmation evidence in the record.
    - Recovered records are traffic sent + station confirmed by definition.
+   - Scheduled + confirmed recovered media is stored as ready, not planned.
    - Duplicate flight protection remains mandatory.
    ========================================================= */
 
@@ -115,7 +116,7 @@ async function recordExistingMedia(body, db, requestId) {
     },400);
   }
 
-  const status = currentState === "running" ? "active" : currentState === "completed" ? "completed" : "planned";
+  const status = currentState === "running" ? "active" : currentState === "completed" ? "completed" : "ready";
 
   try {
     const client = await db.prepare(`
