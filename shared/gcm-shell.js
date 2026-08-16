@@ -1,20 +1,19 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gcm-shell.js
-   Version: 2.0.15
+   Version: 2.0.16
    Status: Production Candidate
    Purpose: Shared internal GCM OS application shell foundation.
-   Source: gcm-shell.js 2.0.14 production navigation
-   Sprint: Media Dashboard Simplification
-   Change: Loads Media dashboard cleanup v1.0.0 so the Operator Workspace
-           stays focused on current decisions and queue work while the full
-           Creative + Production Workflow remains on media-production.html.
+   Source: gcm-shell.js 2.0.15 production navigation
+   Sprint: Media Work State / Waiting + Scheduled
+   Change: Loads durable Creative Work State controls and updates the Media
+           dashboard so Needs Action means work that actually needs attention now.
    ========================================================= */
 
 (() => {
   "use strict";
 
-  const SHELL_VERSION = "2.0.15";
+  const SHELL_VERSION = "2.0.16";
 
   const PAGE_MAP = {
     today: { label: "Today", href: "today.html", icon: "⌂" },
@@ -104,14 +103,15 @@
       restoreMediaCreativeHandoff();
       appendScript("shared/media-production-package.js?v=1.1.0","data-gcm-media-production-package");
       appendScript("shared/media-market-traffic-ids.js?v=1.0.1","data-gcm-media-market-traffic-ids");
+      appendScript("shared/media-work-state.js?v=1.0.0","data-gcm-media-work-state");
     }
     if(/\/media\.html$/i.test(path)) {
-      appendScript("shared/media-dashboard-creatives.js?v=1.0.2","data-gcm-media-dashboard-creatives");
+      appendScript("shared/media-dashboard-creatives.js?v=1.1.0","data-gcm-media-dashboard-creatives");
       appendScript("shared/media-existing-entry.js?v=1.0.0","data-gcm-media-existing-entry");
       appendScript("shared/media-recovery-dashboard.js?v=1.0.0","data-gcm-media-recovery-dashboard");
       appendScript("shared/media-placement-disposition.js?v=1.1.0","data-gcm-media-placement-disposition");
       appendScript("shared/media-decision-context.js?v=1.0.0","data-gcm-media-decision-context");
-      appendScript("shared/media-needs-action.js?v=1.0.0","data-gcm-media-needs-action");
+      appendScript("shared/media-needs-action.js?v=1.1.0","data-gcm-media-needs-action");
       appendScript("shared/media-summary-navigation.js?v=1.0.0","data-gcm-media-summary-navigation");
       appendScript("shared/media-dashboard-cleanup.js?v=1.0.0","data-gcm-media-dashboard-cleanup");
     }
