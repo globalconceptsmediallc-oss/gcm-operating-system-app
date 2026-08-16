@@ -1,0 +1,249 @@
+# =========================================================
+# Global Concepts Media Operating System
+# File: .github/workflows/mission-control-authoritative-queue-once.yml
+# Version: 1.0.0
+# Status: One-Time Production Maintenance
+# Purpose: Apply and live-verify the Mission Control authoritative client queue fix.
+# =========================================================
+
+name: Mission Control authoritative queue one-time fix
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/mission-control-authoritative-queue-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-verify-cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out production
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Patch Mission Control client ordering
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("routes/missionControl.js")
+          text = path.read_text(encoding="utf-8")
+
+          old_header = '''/* =========================================================
+             Global Concepts Media Operating System
+             File: routes/missionControl.js
+             Version: 7.7.3
+             Status: Production Candidate
+             Source: Production routes/missionControl.js 7.1.0
+             Sprint: Today Road Test — Highest-Value Decision Context
+             Purpose: Preserve the live client-attention list while also
+                      returning one evidence-grounded highest-priority
+                      operational decision for the Today command card.
+
+             Production rules:
+             - Mission Control reads operational state; it does not own it.
+             - Existing clientsRequiringAttention output remains compatible.
+             - One highestPriorityDecision is selected from unresolved
+               Investigations and Work Items.
+             - No recommendation or evidence is manufactured.
+             ========================================================= */'''
+
+          new_header = '''/* =========================================================
+             Global Concepts Media Operating System
+             File: routes/missionControl.js
+             Version: 7.7.4
+             Status: Production Candidate
+             Source: Production routes/missionControl.js 7.7.3
+             Sprint: Today Road Test — Authoritative Client Queue
+             Purpose: Preserve the live Mission Control contract while ranking
+                      the client-attention queue from the same durable operational
+                      priorities used by highestPriorityDecision.
+
+             Production rules:
+             - Mission Control reads operational state; it does not own it.
+             - Existing clientsRequiringAttention output remains compatible.
+             - Each client is represented once by its strongest unresolved record.
+             - Client queue order uses the same priority, record type, and recency
+               rules as highestPriorityDecision, so both views agree on what is first.
+             - No recommendation or evidence is manufactured.
+             ========================================================= */'''
+
+          old_function = '''async function loadClientsRequiringAttention(db) {
+            return db.prepare(`
+              SELECT
+                c.id,
+                c.client_code,
+                c.name
+              FROM clients c
+              WHERE
+                EXISTS (
+                  SELECT 1
+                  FROM investigations i
+                  WHERE i.client_id = c.id
+                    AND ${normalizedStatus("i.status", "open")}
+                      NOT IN (${CLOSED_INVESTIGATION_STATUSES})
+                )
+                OR EXISTS (
+                  SELECT 1
+                  FROM work_items w
+                  WHERE w.client_id = c.id
+                    AND ${normalizedStatus("w.status", "open")}
+                      NOT IN (${CLOSED_WORK_STATUSES})
+                )
+              ORDER BY
+                LOWER(c.name) ASC,
+                c.id ASC
+            `).all();
+          }'''
+
+          new_function = '''async function loadClientsRequiringAttention(db) {
+            return db.prepare(`
+              WITH unresolved_records AS (
+                SELECT
+                  i.client_id,
+                  c.client_code,
+                  c.name AS client_name,
+                  i.id AS record_id,
+                  CASE LOWER(COALESCE(i.priority, 'normal'))
+                    WHEN 'urgent' THEN 0
+                    WHEN 'critical' THEN 0
+                    WHEN 'highest' THEN 0
+                    WHEN 'high' THEN 1
+                    WHEN 'normal' THEN 2
+                    WHEN 'medium' THEN 2
+                    WHEN 'low' THEN 3
+                    ELSE 4
+                  END AS priority_rank,
+                  1 AS record_type_rank,
+                  i.opened_at AS attention_at,
+                  i.created_at
+                FROM investigations i
+                INNER JOIN clients c ON c.id = i.client_id
+                WHERE ${normalizedStatus("i.status", "open")}
+                  NOT IN (${CLOSED_INVESTIGATION_STATUSES})
+
+                UNION ALL
+
+                SELECT
+                  w.client_id,
+                  c.client_code,
+                  c.name AS client_name,
+                  w.id AS record_id,
+                  CASE LOWER(COALESCE(w.priority, 'normal'))
+                    WHEN 'urgent' THEN 0
+                    WHEN 'critical' THEN 0
+                    WHEN 'highest' THEN 0
+                    WHEN 'high' THEN 1
+                    WHEN 'normal' THEN 2
+                    WHEN 'medium' THEN 2
+                    WHEN 'low' THEN 3
+                    ELSE 4
+                  END AS priority_rank,
+                  0 AS record_type_rank,
+                  COALESCE(w.started_at, w.created_at) AS attention_at,
+                  w.created_at
+                FROM work_items w
+                INNER JOIN clients c ON c.id = w.client_id
+                WHERE ${normalizedStatus("w.status", "open")}
+                  NOT IN (${CLOSED_WORK_STATUSES})
+              ),
+              ranked_client_records AS (
+                SELECT
+                  *,
+                  ROW_NUMBER() OVER (
+                    PARTITION BY client_id
+                    ORDER BY
+                      priority_rank ASC,
+                      record_type_rank ASC,
+                      datetime(COALESCE(attention_at, created_at)) DESC,
+                      record_id DESC
+                  ) AS client_record_rank
+                FROM unresolved_records
+              )
+              SELECT
+                client_id AS id,
+                client_code,
+                client_name AS name
+              FROM ranked_client_records
+              WHERE client_record_rank = 1
+              ORDER BY
+                priority_rank ASC,
+                record_type_rank ASC,
+                datetime(COALESCE(attention_at, created_at)) DESC,
+                record_id DESC,
+                LOWER(client_name) ASC,
+                client_id ASC
+            `).all();
+          }'''
+
+          for old, new, label in [
+              (old_header, new_header, "header"),
+              (old_function, new_function, "client attention query"),
+          ]:
+              if old not in text:
+                  raise SystemExit(f"Expected production {label} not found; refusing partial patch.")
+              text = text.replace(old, new, 1)
+
+          path.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Syntax check
+        run: node --check routes/missionControl.js
+
+      - name: Commit production route
+        run: |
+          git config user.name "gcm-os-production"
+          git config user.email "actions@users.noreply.github.com"
+          git add routes/missionControl.js
+          git commit -m "Fix Mission Control authoritative client queue"
+          git push
+
+      - name: Verify live Mission Control agreement
+        env:
+          WORKER_URL: https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/
+        run: |
+          node <<'NODE'
+          const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+          const url = process.env.WORKER_URL;
+
+          for (let attempt = 1; attempt <= 40; attempt += 1) {
+            try {
+              const response = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "get-mission-control" })
+              });
+              const payload = await response.json();
+              const mission = payload?.missionControl;
+              const first = mission?.clientsRequiringAttention?.[0];
+              const highest = mission?.highestPriorityDecision;
+              const firstCode = first?.clientCode || "";
+              const highestCode = highest?.clientCode || "";
+              console.log(`Attempt ${attempt}: queue=${first?.clientName || "none"} highest=${highest?.clientName || "none"}`);
+
+              if (response.ok && payload?.ok === true && firstCode && highestCode && firstCode === highestCode) {
+                console.log(`PASS Mission Control agreement: ${first.clientName} is first in both outputs.`);
+                process.exit(0);
+              }
+            } catch (error) {
+              console.log(`Attempt ${attempt}: ${error.message}`);
+            }
+            await sleep(15000);
+          }
+
+          throw new Error("Live Mission Control did not converge to one authoritative first client within the verification window.");
+          NODE
+
+      - name: Remove one-time workflow
+        run: |
+          git pull --rebase
+          git rm .github/workflows/mission-control-authoritative-queue-once.yml
+          git commit -m "Remove one-time Mission Control queue workflow"
+          git push
