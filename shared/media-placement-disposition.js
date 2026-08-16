@@ -1,25 +1,26 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/media-placement-disposition.js
-   Version: 1.0.0
+   Version: 1.1.0
    Status: Production Candidate
-   Sprint: Media Rotation End-of-Run Decision
-   Purpose: Add the explicit Run Through End → Retire / No Replacement
-            operating decision to legacy placement records without routing the
-            operator through the old Media Insertion editor.
+   Source: shared/media-placement-disposition.js 1.0.0
+   Sprint: Media Replacement-in-Progress Linkage
+   Purpose: Let the operator explicitly choose whether a live placement will
+            retire without replacement or remain live while a specific new
+            Creative is developed as its replacement.
 
    Production rules:
-   - Reads authoritative placement records through get-media-operations.
-   - Writes only through set_placement_disposition after an explicit click.
-   - A retire-at-end decision suppresses creative-replacement urgency only.
-   - Traffic, confirmation, dates, current placement status, and history remain.
-   - The placement continues to display as Running until its scheduled end date.
+   - Reads authoritative placement records and Creative workflow records.
+   - Writes only after an explicit operator click.
+   - Retire-at-end and replacement-in-progress suppress stale-creative urgency.
+   - Traffic, confirmation, dates, placement status, and Creative stage remain.
+   - A linked replacement remains visible in Creative Production until finished.
    ========================================================= */
 
 (() => {
   "use strict";
 
-  const VERSION = "1.0.0";
+  const VERSION = "1.1.0";
   const ENDPOINT = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const $ = id => document.getElementById(id);
   const lower = value => String(value || "").trim().toLowerCase();
@@ -31,6 +32,7 @@
     .replaceAll("'", "&#039;");
 
   let records = [];
+  let creatives = [];
   let reconcileTimer = null;
 
   function noteValue(notes, label) {
@@ -44,6 +46,8 @@
     return {
       disposition: noteValue(record?.notes, "Placement Disposition:"),
       replacementRequired: noteValue(record?.notes, "Replacement Required:"),
+      replacementCreativeId: noteValue(record?.notes, "Replacement Creative ID:"),
+      replacementCreativeName: noteValue(record?.notes, "Replacement Creative Name:"),
       endDate: noteValue(record?.notes, "Disposition End Date:"),
       reason: noteValue(record?.notes, "Disposition Reason:")
     };
@@ -52,6 +56,17 @@
   function retiresAtEnd(record) {
     const value = disposition(record);
     return lower(value.disposition) === "retire_at_end" && lower(value.replacementRequired) === "no";
+  }
+
+  function replacementInProgress(record) {
+    const value = disposition(record);
+    return lower(value.disposition) === "replacement_in_progress" &&
+      lower(value.replacementRequired) === "yes" &&
+      /^\d+$/.test(String(value.replacementCreativeId || ""));
+  }
+
+  function placementDecisionHandled(record) {
+    return retiresAtEnd(record) || replacementInProgress(record);
   }
 
   function toDate(value) {
@@ -103,7 +118,7 @@
     if (isExpired(record)) return 0;
     if (isAwaiting(record)) return 120;
     if (needsAttention(record)) return 110;
-    if (retiresAtEnd(record)) return 0;
+    if (placementDecisionHandled(record)) return 0;
     const currentFreshness = freshness(record);
     if (currentFreshness?.level === "stale") return 95;
     if (currentFreshness?.level === "refresh") return 85;
@@ -116,16 +131,64 @@
     if (isAwaiting(record)) return "Review the expected station/outlet response and process confirmation evidence when it arrives.";
     if (needsAttention(record)) return record.attentionReason || "Open the Media production record and complete the required action.";
     if (retiresAtEnd(record)) {
-      return `Continue the current rotation through ${dateText(record.endDate)}, then retire this placement. No replacement creative is required.`;
+      return `Continue the current rotation through ${dateText(record.endDate)}, then retire this placement. No replacement Creative is required.`;
+    }
+    if (replacementInProgress(record)) {
+      const value = disposition(record);
+      return `Replacement Creative #${value.replacementCreativeId} — ${value.replacementCreativeName || "Creative"} is in progress. Keep the current placement running while the replacement is developed.`;
     }
     if (["pending", "planned", "preparing"].includes(lower(record?.status))) return "Continue creative, production, co-op, schedule, or traffic preparation for this campaign.";
     if (isExplicitlyReady(record)) return "Launch package is explicitly ready. Send traffic or complete the next confirmed launch step.";
     const currentFreshness = freshness(record);
+    const candidate = replacementCandidate(record);
+    if (candidate && ["watch", "refresh", "stale"].includes(currentFreshness?.level)) {
+      return `A matching replacement Creative already exists: #${candidate.id} — ${candidate.creativeName}. Link it to this live placement or choose a different end-of-run decision.`;
+    }
     if (currentFreshness?.level === "watch") return "Creative is entering the review window. Decide whether it should refresh, continue, or retire at the end of its run.";
-    if (currentFreshness?.level === "refresh") return "Decide whether to refresh the creative or let this placement finish and retire without replacement.";
-    if (currentFreshness?.level === "stale") return "Decide whether to replace the creative or let this placement finish and retire without replacement.";
+    if (currentFreshness?.level === "refresh") return "Decide whether to refresh the Creative or let this placement finish and retire without replacement.";
+    if (currentFreshness?.level === "stale") return "Decide whether to replace the Creative or let this placement finish and retire without replacement.";
     if (isActive(record)) return "Placement is confirmed and running normally. Continue monitoring dates, rotation, and creative age.";
     return "Retain as historical planning intelligence for future campaigns.";
+  }
+
+  function creativeKey(value) {
+    return lower(value)
+      .replace(/\bv(?:ersion)?\s*\d+$/i, "")
+      .replace(/\s+\d+$/i, "")
+      .replace(/[^a-z0-9]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function replacementCandidate(record) {
+    if (!record || placementDecisionHandled(record)) return null;
+    const keys = [record.campaignName, record.creativeName]
+      .map(creativeKey)
+      .filter(Boolean);
+    if (!keys.length) return null;
+
+    const candidates = creatives
+      .filter(creative => Number(creative.clientId) === Number(record.clientId))
+      .filter(creative => !["retired", "archived", "deleted"].includes(lower(creative.status)))
+      .map(creative => {
+        const key = creativeKey(creative.creativeName);
+        let score = 0;
+        for (const target of keys) {
+          if (key && key === target) score = Math.max(score, 100);
+          else if (key && target && (key.startsWith(target + " ") || target.startsWith(key + " "))) score = Math.max(score, 80);
+        }
+        return { creative, score };
+      })
+      .filter(item => item.score >= 80)
+      .sort((a, b) => b.score - a.score || Number(b.creative.id) - Number(a.creative.id));
+
+    if (!candidates.length) return null;
+    if (candidates.length > 1 && candidates[0].score === candidates[1].score) {
+      const firstKey = creativeKey(candidates[0].creative.creativeName);
+      const secondKey = creativeKey(candidates[1].creative.creativeName);
+      if (firstKey === secondKey) return candidates[0].creative;
+    }
+    return candidates[0].creative;
   }
 
   function matchesFilters(record) {
@@ -148,11 +211,13 @@
     if (dateView === "history" && dateRelation(record) !== "history") return false;
     if (actionOnly && urgency(record) <= 0) return false;
     if (search) {
+      const value = disposition(record);
       const haystack = [
         record.clientName, record.clientCode, record.campaignName, record.creativeName,
         record.fileName, record.market, record.outletName, record.status,
         record.trafficStatus, record.confirmationStatus, record.attentionReason,
-        disposition(record).reason, record.mediaType
+        value.reason, value.replacementCreativeName, value.replacementCreativeId,
+        record.mediaType
       ].map(lower).join(" ");
       if (!haystack.includes(search)) return false;
     }
@@ -163,17 +228,30 @@
     return records.filter(matchesFilters);
   }
 
-  async function fetchRecords() {
+  async function post(body) {
     const response = await fetch(ENDPOINT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "get-media-operations" })
+      body: JSON.stringify(body)
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok || payload?.ok !== true) {
       throw new Error(payload?.error || payload?.details || `Worker returned ${response.status}`);
     }
-    records = Array.isArray(payload?.mediaOperations?.records) ? payload.mediaOperations.records : [];
+    return payload;
+  }
+
+  async function fetchData() {
+    const [placementPayload, creativePayload] = await Promise.all([
+      post({ action: "get-media-operations" }),
+      post({ action: "get-media-operations", operation: "get_creative_workflow" })
+    ]);
+    records = Array.isArray(placementPayload?.mediaOperations?.records)
+      ? placementPayload.mediaOperations.records
+      : [];
+    creatives = Array.isArray(creativePayload?.creativeWorkflow?.creatives)
+      ? creativePayload.creativeWorkflow.creatives
+      : [];
   }
 
   function setText(node, value) {
@@ -184,12 +262,21 @@
     const byId = new Map(records.map(record => [String(record.id), record]));
     document.querySelectorAll(".card[data-record-id]").forEach(card => {
       const record = byId.get(String(card.dataset.recordId));
-      if (!record || !retiresAtEnd(record)) return;
-      if (!card.querySelector("[data-gcm-disposition-badge]")) {
+      if (!record) return;
+      const handled = retiresAtEnd(record) || replacementInProgress(record);
+      if (!handled) return;
+
+      const existingBadge = card.querySelector("[data-gcm-disposition-badge]");
+      const label = retiresAtEnd(record)
+        ? "Retire at End · No Replacement"
+        : `Replacement #${disposition(record).replacementCreativeId} In Progress`;
+      if (!existingBadge) {
         card.querySelector(".action")?.insertAdjacentHTML(
           "beforebegin",
-          '<div class="meta"><span class="badge b-success" data-gcm-disposition-badge="1">Retire at End · No Replacement</span></div>'
+          `<div class="meta"><span class="badge b-success" data-gcm-disposition-badge="1">${esc(label)}</span></div>`
         );
+      } else {
+        setText(existingBadge, label);
       }
       const action = card.querySelector(".action");
       if (action) setText(action, nextAction(record));
@@ -211,12 +298,13 @@
         const link = creativeCard.querySelector("[data-open-creative]")?.getAttribute("href") || "media-production.html";
         priority.innerHTML = `<div class="decision-grid"><div class="decision"><span>Status</span><strong>Creative workflow action pending</strong></div><div class="decision"><span>What</span><strong>${esc(what)}</strong></div><div class="decision next"><span>Next Action</span><strong>${esc(action)}</strong><a class="open-record" href="${esc(link)}">Open production record →</a></div></div>`;
       } else {
-        priority.innerHTML = '<div class="decision-grid"><div class="decision"><span>Status</span><strong>No immediate media action required</strong></div><div class="decision"><span>Why</span><strong>Visible placements are running normally, intentionally finishing, or retained as history.</strong></div><div class="decision next"><span>Next Review</span><strong>Review the next production, traffic, confirmation, or scheduled end-of-run obligation.</strong></div></div>';
+        priority.innerHTML = '<div class="decision-grid"><div class="decision"><span>Status</span><strong>No immediate media action required</strong></div><div class="decision"><span>Why</span><strong>Visible placements are running normally, intentionally finishing, linked to replacement work, or retained as history.</strong></div><div class="decision next"><span>Next Review</span><strong>Review the next production, traffic, confirmation, or scheduled end-of-run obligation.</strong></div></div>';
       }
       return;
     }
 
     const currentFreshness = freshness(chosen);
+    const candidate = replacementCandidate(chosen);
     const when = chosen.stationDeadline
       ? `Traffic deadline ${dateText(chosen.stationDeadline)}`
       : chosen.startDate
@@ -231,11 +319,16 @@
         : currentFreshness && ["watch", "refresh", "stale"].includes(currentFreshness.level)
           ? `${currentFreshness.label}: ${currentFreshness.days} days in current creative rotation.`
           : "The campaign is approaching launch and readiness must be confirmed.";
-    const retirementChoice = isActive(chosen) && currentFreshness && ["watch", "refresh", "stale"].includes(currentFreshness.level) && !retiresAtEnd(chosen)
+
+    const canDecide = isActive(chosen) && currentFreshness && ["watch", "refresh", "stale"].includes(currentFreshness.level) && !placementDecisionHandled(chosen);
+    const replacementChoice = canDecide && candidate
+      ? `<button class="gcm-replacement-choice" data-link-replacement="${esc(chosen.id)}" data-creative-id="${esc(candidate.id)}" type="button">Replacement In Progress → ${esc(candidate.creativeName)}</button>`
+      : "";
+    const retirementChoice = canDecide
       ? `<button class="gcm-retire-choice" data-retire-no-replacement="${esc(chosen.id)}" type="button">Run Through End → Retire / No Replacement</button>`
       : "";
 
-    priority.innerHTML = `<div class="decision-grid clickable-record" role="link" tabindex="0" data-record-id="${esc(chosen.id)}"><div class="decision"><span>Who</span><strong>${esc(chosen.clientName || chosen.clientCode || "Client")}</strong></div><div class="decision"><span>What</span><strong>${esc(chosen.campaignName || chosen.creativeName || "Media placement")} · ${esc(chosen.outletName || "Outlet not set")}</strong></div><div class="decision"><span>Media Type</span><strong>${esc(chosen.mediaType || "Media")}</strong></div><div class="decision"><span>When</span><strong>${esc(when)}</strong></div><div class="decision"><span>Why</span><strong>${esc(why)}</strong></div><div class="decision next"><span>Next Action</span><strong>${esc(nextAction(chosen))}</strong>${retirementChoice}<div class="open-record production-link" data-production-id="${esc(chosen.id)}">Open production record →</div><div class="open-record">Open campaign / traffic record →</div><div class="gcm-disposition-message" data-disposition-message="${esc(chosen.id)}"></div></div></div>`;
+    priority.innerHTML = `<div class="decision-grid clickable-record" role="link" tabindex="0" data-record-id="${esc(chosen.id)}"><div class="decision"><span>Who</span><strong>${esc(chosen.clientName || chosen.clientCode || "Client")}</strong></div><div class="decision"><span>What</span><strong>${esc(chosen.campaignName || chosen.creativeName || "Media placement")} · ${esc(chosen.outletName || "Outlet not set")}</strong></div><div class="decision"><span>Media Type</span><strong>${esc(chosen.mediaType || "Media")}</strong></div><div class="decision"><span>When</span><strong>${esc(when)}</strong></div><div class="decision"><span>Why</span><strong>${esc(why)}</strong></div><div class="decision next"><span>Next Action</span><strong>${esc(nextAction(chosen))}</strong>${replacementChoice}${retirementChoice}<div class="open-record production-link" data-production-id="${esc(chosen.id)}">Open production record →</div><div class="open-record">Open campaign / traffic record →</div><div class="gcm-disposition-message" data-disposition-message="${esc(chosen.id)}"></div></div></div>`;
   }
 
   function reconcileSummary() {
@@ -251,12 +344,14 @@
     }
 
     const runningLegacy = visible.filter(record => isActive(record));
-    const refreshDue = runningLegacy.filter(record => !retiresAtEnd(record) && ["refresh", "stale"].includes(freshness(record)?.level)).length;
+    const refreshDue = runningLegacy.filter(record => !placementDecisionHandled(record) && ["refresh", "stale"].includes(freshness(record)?.level)).length;
     const retiring = runningLegacy.filter(retiresAtEnd).length;
+    const replacing = runningLegacy.filter(replacementInProgress).length;
     const displayedRunning = Number($("count-running")?.textContent || runningLegacy.length);
     if ($("detail-running") && displayedRunning) {
       const parts = [`${displayedRunning} active placement${displayedRunning === 1 ? "" : "s"}`];
       if (refreshDue) parts.push(`${refreshDue} creative refresh${refreshDue === 1 ? "" : "es"} due/stale`);
+      if (replacing) parts.push(`${replacing} linked to replacement work in progress`);
       if (retiring) parts.push(`${retiring} scheduled to retire at end without replacement`);
       setText($("detail-running"), parts.join(" · ") + ".");
     }
@@ -267,42 +362,50 @@
     const style = document.createElement("style");
     style.id = "gcm-media-placement-disposition-styles";
     style.textContent = `
-      .gcm-retire-choice{display:inline-flex;align-items:center;justify-content:center;min-height:40px;margin:12px 12px 2px 0;padding:0 14px;border:1px solid #d6a94a;border-radius:10px;background:#d6a94a;color:#071426;font:inherit;font-size:.76rem;font-weight:900;cursor:pointer}
-      .gcm-retire-choice:hover{filter:brightness(.97)}
-      .gcm-retire-choice:disabled{opacity:.55;cursor:wait}
+      .gcm-retire-choice,.gcm-replacement-choice{display:inline-flex;align-items:center;justify-content:center;min-height:40px;margin:12px 12px 2px 0;padding:0 14px;border-radius:10px;font:inherit;font-size:.76rem;font-weight:900;cursor:pointer}
+      .gcm-retire-choice{border:1px solid #d6a94a;background:#d6a94a;color:#071426}
+      .gcm-replacement-choice{border:1px solid #5fd397;background:#e9f7f0;color:#145b3b}
+      .gcm-retire-choice:hover,.gcm-replacement-choice:hover{filter:brightness(.97)}
+      .gcm-retire-choice:disabled,.gcm-replacement-choice:disabled{opacity:.55;cursor:wait}
       .gcm-disposition-message{margin-top:8px;color:#cfe6d9;font-size:.72rem;font-weight:800}
     `;
     document.head.appendChild(style);
   }
 
-  async function saveRetireAtEnd(recordId, button) {
+  async function saveDecision({ recordId, button, dispositionName, creativeId = null }) {
     const record = records.find(item => String(item.id) === String(recordId));
     if (!record) return;
     button.disabled = true;
     const original = button.textContent;
     button.textContent = "Saving decision…";
-    const message = document.querySelector(`[data-disposition-message="${CSS.escape(String(recordId))}"]`);
-    if (message) message.textContent = "Saving the end-of-run decision to the existing Media record…";
+    const message = document.querySelector(`[data-disposition-message="${String(recordId).replaceAll('"', '\\"')}"]`);
+    if (message) message.textContent = "Saving the placement decision to the existing Media record…";
 
     try {
-      const response = await fetch(ENDPOINT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "get-media-operations",
-          operation: "set_placement_disposition",
-          mediaRecordId: Number(recordId),
-          disposition: "retire_at_end_no_replacement",
-          author: "Andy",
-          reason: "Other approved commercials remain in rotation; no replacement creative is required."
-        })
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok || payload?.ok !== true) {
-        throw new Error(payload?.error || payload?.details || `Worker returned ${response.status}`);
+      const body = {
+        action: "get-media-operations",
+        operation: "set_placement_disposition",
+        mediaRecordId: Number(recordId),
+        disposition: dispositionName,
+        author: "Andy"
+      };
+      if (dispositionName === "retire_at_end_no_replacement") {
+        body.reason = "Other approved commercials remain in rotation; no replacement Creative is required.";
+      } else {
+        const creative = creatives.find(item => Number(item.id) === Number(creativeId));
+        body.creativeId = Number(creativeId);
+        body.reason = creative
+          ? `Replacement Creative #${creative.id} — ${creative.creativeName} is already in production. Keep the current placement live while the replacement is developed.`
+          : "A replacement Creative is already in production. Keep the current placement live while the replacement is developed.";
       }
-      if (message) message.textContent = `Saved. Run through ${dateText(record.endDate)}, then retire. No replacement required.`;
-      await fetchRecords();
+
+      await post(body);
+      if (message) {
+        message.textContent = dispositionName === "retire_at_end_no_replacement"
+          ? `Saved. Run through ${dateText(record.endDate)}, then retire. No replacement required.`
+          : `Saved. The current placement remains live and is linked to replacement Creative #${creativeId}.`;
+      }
+      await fetchData();
       const refresh = $("refresh");
       if (refresh) refresh.click();
       scheduleReconcile(450);
@@ -329,7 +432,7 @@
 
   async function refreshData() {
     try {
-      await fetchRecords();
+      await fetchData();
       scheduleReconcile(250);
       setTimeout(reconcile, 850);
       setTimeout(reconcile, 1700);
@@ -343,13 +446,31 @@
     refreshData();
 
     document.addEventListener("click", event => {
+      const replacementButton = event.target.closest("[data-link-replacement]");
+      if (replacementButton) {
+        event.preventDefault();
+        event.stopPropagation();
+        saveDecision({
+          recordId: replacementButton.dataset.linkReplacement,
+          creativeId: replacementButton.dataset.creativeId,
+          dispositionName: "replacement_in_progress",
+          button: replacementButton
+        });
+        return;
+      }
+
       const retireButton = event.target.closest("[data-retire-no-replacement]");
       if (retireButton) {
         event.preventDefault();
         event.stopPropagation();
-        saveRetireAtEnd(retireButton.dataset.retireNoReplacement, retireButton);
+        saveDecision({
+          recordId: retireButton.dataset.retireNoReplacement,
+          dispositionName: "retire_at_end_no_replacement",
+          button: retireButton
+        });
         return;
       }
+
       if (event.target?.id === "refresh") setTimeout(refreshData, 450);
       if (event.target?.id === "clear-filters") scheduleReconcile(500);
     }, true);
