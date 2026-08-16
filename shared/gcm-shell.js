@@ -1,19 +1,19 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gcm-shell.js
-   Version: 2.0.7
+   Version: 2.0.8
    Status: Production Candidate
    Purpose: Shared internal GCM OS application shell foundation.
-   Source: gcm-shell.js 2.0.6 production navigation
-   Sprint: Existing / Already-Trafficked Media Recovery
-   Change: Preserves existing Media recovery entry and adds the read-only
-           scheduled-confirmed dashboard state enhancement.
+   Source: gcm-shell.js 2.0.7 production navigation
+   Sprint: Market-Level Traffic ID / ISCI
+   Change: Loads the market-level Traffic ID enhancement on Media Production
+           while preserving all existing Media and recovery enhancements.
    ========================================================= */
 
 (() => {
   "use strict";
 
-  const SHELL_VERSION = "2.0.7";
+  const SHELL_VERSION = "2.0.8";
 
   const PAGE_MAP = {
     today: { label: "Today", href: "today.html", icon: "⌂" },
@@ -102,6 +102,7 @@
     if(/\/media-production\.html$/i.test(path)) {
       restoreMediaCreativeHandoff();
       appendScript("shared/media-production-package.js?v=1.1.0","data-gcm-media-production-package");
+      appendScript("shared/media-market-traffic-ids.js?v=1.0.0","data-gcm-media-market-traffic-ids");
     }
     if(/\/media\.html$/i.test(path)) {
       appendScript("shared/media-dashboard-creatives.js?v=1.0.2","data-gcm-media-dashboard-creatives");
