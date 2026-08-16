@@ -1,19 +1,20 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/missionControl.js
-   Version: 7.7.3
+   Version: 7.7.4
    Status: Production Candidate
-   Source: Production routes/missionControl.js 7.1.0
-   Sprint: Today Road Test — Highest-Value Decision Context
-   Purpose: Preserve the live client-attention list while also
-            returning one evidence-grounded highest-priority
-            operational decision for the Today command card.
+   Source: Production routes/missionControl.js 7.7.3
+   Sprint: Today Road Test — Authoritative Client Queue
+   Purpose: Preserve the live Mission Control contract while ranking
+            the client-attention queue from the same durable operational
+            priorities used by highestPriorityDecision.
 
    Production rules:
    - Mission Control reads operational state; it does not own it.
    - Existing clientsRequiringAttention output remains compatible.
-   - One highestPriorityDecision is selected from unresolved
-     Investigations and Work Items.
+   - Each client is represented once by its strongest unresolved record.
+   - Client queue order uses the same priority, record type, and recency
+     rules as highestPriorityDecision, so both views agree on what is first.
    - No recommendation or evidence is manufactured.
    ========================================================= */
 
@@ -133,29 +134,81 @@ export async function handleMissionControl(body, env, requestId) {
 
 async function loadClientsRequiringAttention(db) {
   return db.prepare(`
+    WITH unresolved_records AS (
+      SELECT
+        i.client_id,
+        c.client_code,
+        c.name AS client_name,
+        i.id AS record_id,
+        CASE LOWER(COALESCE(i.priority, 'normal'))
+          WHEN 'urgent' THEN 0
+          WHEN 'critical' THEN 0
+          WHEN 'highest' THEN 0
+          WHEN 'high' THEN 1
+          WHEN 'normal' THEN 2
+          WHEN 'medium' THEN 2
+          WHEN 'low' THEN 3
+          ELSE 4
+        END AS priority_rank,
+        1 AS record_type_rank,
+        i.opened_at AS attention_at,
+        i.created_at
+      FROM investigations i
+      INNER JOIN clients c ON c.id = i.client_id
+      WHERE ${normalizedStatus("i.status", "open")}
+        NOT IN (${CLOSED_INVESTIGATION_STATUSES})
+
+      UNION ALL
+
+      SELECT
+        w.client_id,
+        c.client_code,
+        c.name AS client_name,
+        w.id AS record_id,
+        CASE LOWER(COALESCE(w.priority, 'normal'))
+          WHEN 'urgent' THEN 0
+          WHEN 'critical' THEN 0
+          WHEN 'highest' THEN 0
+          WHEN 'high' THEN 1
+          WHEN 'normal' THEN 2
+          WHEN 'medium' THEN 2
+          WHEN 'low' THEN 3
+          ELSE 4
+        END AS priority_rank,
+        0 AS record_type_rank,
+        COALESCE(w.started_at, w.created_at) AS attention_at,
+        w.created_at
+      FROM work_items w
+      INNER JOIN clients c ON c.id = w.client_id
+      WHERE ${normalizedStatus("w.status", "open")}
+        NOT IN (${CLOSED_WORK_STATUSES})
+    ),
+    ranked_client_records AS (
+      SELECT
+        *,
+        ROW_NUMBER() OVER (
+          PARTITION BY client_id
+          ORDER BY
+            priority_rank ASC,
+            record_type_rank ASC,
+            datetime(COALESCE(attention_at, created_at)) DESC,
+            record_id DESC
+        ) AS client_record_rank
+      FROM unresolved_records
+    )
     SELECT
-      c.id,
-      c.client_code,
-      c.name
-    FROM clients c
-    WHERE
-      EXISTS (
-        SELECT 1
-        FROM investigations i
-        WHERE i.client_id = c.id
-          AND ${normalizedStatus("i.status", "open")}
-            NOT IN (${CLOSED_INVESTIGATION_STATUSES})
-      )
-      OR EXISTS (
-        SELECT 1
-        FROM work_items w
-        WHERE w.client_id = c.id
-          AND ${normalizedStatus("w.status", "open")}
-            NOT IN (${CLOSED_WORK_STATUSES})
-      )
+      client_id AS id,
+      client_code,
+      client_name AS name
+    FROM ranked_client_records
+    WHERE client_record_rank = 1
     ORDER BY
-      LOWER(c.name) ASC,
-      c.id ASC
+      priority_rank ASC,
+      record_type_rank ASC,
+      datetime(COALESCE(attention_at, created_at)) DESC,
+      record_id DESC,
+      LOWER(client_name) ASC,
+      client_id ASC
   `).all();
 }
 
