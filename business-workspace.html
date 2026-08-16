@@ -1,14 +1,15 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: business-workspace.html
-   Version: 1.2.0
+   Version: 1.3.0
    Status: Production Candidate
-   Change: Executable Next Best Action
-   Source: Production business-workspace.html
-   Shared Shell: shared/gcm-shell.js 1.0.0
+   Change: Shared Shell Consolidation
+   Source: Production business-workspace.html 1.2.0
+   Shared Shell: shared/gcm-shell.js 2.0.16
    Purpose: Preserve the existing Business Workspace engine,
-            live get-client-workspace retrieval, and shared shell while
-            making investigation and work-item next actions executable.
+            live get-client-workspace retrieval, Business Record intelligence,
+            and executable next actions while consolidating the page into the
+            authoritative shared GCM OS application shell.
    ========================================================= -->
 
 <!DOCTYPE html>
@@ -29,699 +30,745 @@
 
   <style>
     :root {
-      --page-background: #f3f6fb;
-      --panel-background: #ffffff;
-      --panel-muted: #f8fafc;
-      --border-color: #dbe3ef;
-      --text-primary: #142033;
-      --text-secondary: #5c6a7f;
-      --brand-blue: #0868b8;
-      --brand-blue-dark: #04538f;
-      --brand-blue-light: #e9f3fd;
-      --success: #16813f;
-      --success-light: #e9f7ef;
-      --warning: #a86600;
-      --warning-light: #fff4dc;
-      --danger: #b42318;
-      --danger-light: #fff0ee;
-      --critical: #7a1712;
-      --shadow: 0 16px 40px rgba(20, 32, 51, 0.08);
-      --radius-large: 20px;
-      --radius-medium: 14px;
-      --radius-small: 9px;
-      --content-width: 1440px;
+      --page-background:#f5f7fb;
+      --panel-background:#ffffff;
+      --panel-muted:#f8fafc;
+      --border-color:#dbe3ef;
+      --text-primary:#142033;
+      --text-secondary:#5c6a7f;
+      --text-soft:#8290a3;
+      --brand-blue:#1f68d8;
+      --brand-blue-dark:#174f9f;
+      --brand-blue-light:#edf5ff;
+      --navy-950:#071426;
+      --navy-900:#0b1d33;
+      --success:#16813f;
+      --success-light:#e9f7ef;
+      --warning:#a86600;
+      --warning-light:#fff4dc;
+      --danger:#b42318;
+      --danger-light:#fff0ee;
+      --critical:#7a1712;
+      --shadow:0 8px 24px rgba(7,20,38,.07);
+      --radius-large:20px;
+      --radius-medium:14px;
+      --radius-small:9px;
+      --content-width:1480px;
     }
 
     * {
-      box-sizing: border-box;
+      box-sizing:border-box;
     }
 
     [hidden] {
-      display: none !important;
+      display:none !important;
     }
 
     html {
-      scroll-behavior: smooth;
+      scroll-behavior:smooth;
     }
 
     body {
-      margin: 0;
-      background: var(--page-background);
-      color: var(--text-primary);
-      font-family:
-        Inter,
-        ui-sans-serif,
-        system-ui,
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        sans-serif;
+      margin:0;
+      min-height:100vh;
+      background:var(--page-background);
+      color:var(--text-primary);
+      font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      line-height:1.5;
     }
 
     button,
     input,
     select,
     textarea {
-      font: inherit;
+      font:inherit;
     }
 
     a {
-      color: inherit;
-    }
-
-    .workspace-app {
-      min-height: 100vh;
+      color:inherit;
+      text-decoration:none;
     }
 
     .gcm-shell-layout {
-      min-height: 100vh;
-      display: grid;
-      grid-template-columns: 250px minmax(0, 1fr);
+      min-height:100vh;
+      display:grid;
+      grid-template-columns:250px minmax(0,1fr);
     }
 
-    @media (max-width: 860px) {
-      .gcm-shell-layout {
-        grid-template-columns: 1fr;
-      }
+    .workspace-app {
+      min-width:0;
+      min-height:100vh;
+      padding:28px 32px 48px;
     }
 
-    .topbar {
-      position: sticky;
-      top: 0;
-      z-index: 50;
-      background: rgba(255, 255, 255, 0.96);
-      border-bottom: 1px solid var(--border-color);
-      backdrop-filter: blur(14px);
+    .main-inner {
+      width:min(100%,var(--content-width));
+      margin:0 auto;
     }
 
-    .topbar-inner {
-      width: min(calc(100% - 40px), var(--content-width));
-      min-height: 72px;
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 24px;
+    .page-header {
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:24px;
+      margin-bottom:24px;
     }
 
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 14px;
+    .page-header-copy {
+      min-width:0;
     }
 
-    .brand-mark {
-      width: 42px;
-      height: 42px;
-      display: grid;
-      place-items: center;
-      border-radius: 12px;
-      background: var(--brand-blue);
-      color: #ffffff;
-      font-weight: 800;
-      letter-spacing: 0.04em;
+    .breadcrumb {
+      display:flex;
+      align-items:center;
+      gap:8px;
+      margin:0 0 6px;
+      color:var(--brand-blue);
+      font-size:.72rem;
+      font-weight:900;
+      text-transform:uppercase;
+      letter-spacing:.14em;
     }
 
-    .brand-copy {
-      display: grid;
-      gap: 2px;
+    .breadcrumb a:hover,
+    .breadcrumb a:focus-visible {
+      text-decoration:underline;
+      outline:none;
     }
 
-    .brand-name {
-      margin: 0;
-      font-size: 0.95rem;
-      font-weight: 800;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--brand-blue);
+    .page-title {
+      margin:0;
+      color:var(--navy-950);
+      font-size:clamp(2rem,4vw,3.15rem);
+      line-height:1;
+      letter-spacing:-.045em;
     }
 
-    .brand-product {
-      margin: 0;
-      font-size: 0.88rem;
-      color: var(--text-secondary);
+    .page-subtitle {
+      margin:10px 0 0;
+      max-width:820px;
+      color:var(--text-secondary);
     }
 
-    .topbar-status {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      color: var(--text-secondary);
-      font-size: 0.9rem;
+    .page-header-actions {
+      display:flex;
+      align-items:center;
+      justify-content:flex-end;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .button {
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-height:42px;
+      padding:0 16px;
+      border:1px solid transparent;
+      border-radius:11px;
+      background:#fff;
+      color:var(--navy-900);
+      cursor:pointer;
+      font-size:.86rem;
+      font-weight:850;
+    }
+
+    .button-secondary {
+      border-color:var(--border-color);
+      box-shadow:var(--shadow);
+    }
+
+    .button:hover,
+    .button:focus-visible {
+      border-color:#b9c6d8;
+      outline:none;
+    }
+
+    .mobile-menu-button {
+      display:none;
+    }
+
+    .runtime-chip {
+      display:inline-flex;
+      align-items:center;
+      gap:9px;
+      min-height:42px;
+      padding:0 14px;
+      border:1px solid var(--border-color);
+      border-radius:999px;
+      background:#fff;
+      color:var(--text-secondary);
+      box-shadow:var(--shadow);
+      font-size:.8rem;
+      font-weight:800;
+      white-space:nowrap;
     }
 
     .status-indicator {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: #a6b0bf;
+      width:9px;
+      height:9px;
+      flex:0 0 auto;
+      border-radius:50%;
+      background:#a6b0bf;
     }
 
     .status-indicator.ready {
-      background: var(--success);
+      background:var(--success);
     }
 
     .status-indicator.loading {
-      background: var(--warning);
+      background:var(--warning);
     }
 
     .status-indicator.error {
-      background: var(--danger);
-    }
-
-    .page {
-      width: min(calc(100% - 40px), var(--content-width));
-      margin: 0 auto;
-      padding: 38px 0 64px;
+      background:var(--danger);
     }
 
     .loading-panel,
     .error-panel {
-      min-height: 320px;
-      display: grid;
-      place-items: center;
-      padding: 40px;
-      background: var(--panel-background);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-large);
-      box-shadow: var(--shadow);
-      text-align: center;
+      min-height:320px;
+      display:grid;
+      place-items:center;
+      padding:40px;
+      background:var(--panel-background);
+      border:1px solid var(--border-color);
+      border-radius:var(--radius-large);
+      box-shadow:var(--shadow);
+      text-align:center;
     }
 
     .loading-copy,
     .error-copy {
-      max-width: 620px;
+      max-width:620px;
     }
 
-    .loading-copy h1,
-    .error-copy h1 {
-      margin: 0 0 12px;
-      font-size: clamp(2rem, 4vw, 3.4rem);
-      line-height: 1.04;
+    .loading-copy h2,
+    .error-copy h2 {
+      margin:0 0 12px;
+      color:var(--navy-950);
+      font-size:clamp(1.8rem,4vw,2.8rem);
+      line-height:1.04;
     }
 
     .loading-copy p,
     .error-copy p {
-      margin: 0;
-      color: var(--text-secondary);
-      font-size: 1.05rem;
-      line-height: 1.7;
+      margin:0;
+      color:var(--text-secondary);
+      font-size:1.02rem;
+      line-height:1.7;
     }
 
     .error-details {
-      margin-top: 20px;
-      padding: 16px;
-      border-radius: var(--radius-small);
-      background: var(--danger-light);
-      color: var(--danger);
-      text-align: left;
-      overflow-wrap: anywhere;
+      margin-top:20px;
+      padding:16px;
+      border-radius:var(--radius-small);
+      background:var(--danger-light);
+      color:var(--danger);
+      text-align:left;
+      overflow-wrap:anywhere;
     }
 
     .workspace {
-      display: none;
+      display:none;
     }
 
     .workspace.visible {
-      display: block;
+      display:block;
     }
 
     .hero {
-      display: grid;
-      grid-template-columns: minmax(0, 1.7fr) minmax(300px, 0.8fr);
-      gap: 24px;
-      align-items: stretch;
-      margin-bottom: 24px;
+      display:grid;
+      grid-template-columns:minmax(0,1.7fr) minmax(300px,.8fr);
+      gap:24px;
+      align-items:stretch;
+      margin-bottom:24px;
     }
 
     .hero-main,
     .hero-side {
-      background: var(--panel-background);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-large);
-      box-shadow: var(--shadow);
+      background:var(--panel-background);
+      border:1px solid var(--border-color);
+      border-radius:var(--radius-large);
+      box-shadow:var(--shadow);
     }
 
     .hero-main {
-      padding: 34px;
+      padding:34px;
     }
 
     .hero-side {
-      padding: 28px;
-      display: grid;
-      align-content: start;
-      gap: 18px;
+      padding:28px;
+      display:grid;
+      align-content:start;
+      gap:18px;
     }
 
     .eyebrow {
-      margin: 0 0 10px;
-      color: var(--brand-blue);
-      font-size: 0.78rem;
-      font-weight: 800;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
+      margin:0 0 10px;
+      color:var(--brand-blue);
+      font-size:.78rem;
+      font-weight:800;
+      letter-spacing:.12em;
+      text-transform:uppercase;
     }
 
     .hero-title {
-      margin: 0;
-      font-size: clamp(2.4rem, 5vw, 4.7rem);
-      line-height: 0.98;
-      letter-spacing: -0.045em;
+      margin:0;
+      color:var(--navy-950);
+      font-size:clamp(2.4rem,5vw,4.7rem);
+      line-height:.98;
+      letter-spacing:-.045em;
     }
 
     .hero-summary {
-      max-width: 900px;
-      margin: 22px 0 0;
-      color: var(--text-secondary);
-      font-size: 1.06rem;
-      line-height: 1.75;
+      max-width:900px;
+      margin:22px 0 0;
+      color:var(--text-secondary);
+      font-size:1.06rem;
+      line-height:1.75;
     }
 
     .hero-meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 24px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top:24px;
     }
 
     .pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      min-height: 34px;
-      padding: 7px 12px;
-      border-radius: 999px;
-      background: var(--brand-blue-light);
-      color: var(--brand-blue-dark);
-      font-size: 0.86rem;
-      font-weight: 700;
+      display:inline-flex;
+      align-items:center;
+      gap:7px;
+      min-height:34px;
+      padding:7px 12px;
+      border-radius:999px;
+      background:var(--brand-blue-light);
+      color:var(--brand-blue-dark);
+      font-size:.86rem;
+      font-weight:700;
     }
 
     .health-card {
-      display: grid;
-      gap: 8px;
+      display:grid;
+      gap:8px;
+    }
+
+    .health-card + .health-card {
+      padding-top:18px;
+      border-top:1px solid var(--border-color);
     }
 
     .health-label {
-      color: var(--text-secondary);
-      font-size: 0.78rem;
-      font-weight: 800;
-      letter-spacing: 0.09em;
-      text-transform: uppercase;
+      color:var(--text-secondary);
+      font-size:.78rem;
+      font-weight:800;
+      letter-spacing:.09em;
+      text-transform:uppercase;
     }
 
     .health-value {
-      font-size: 1.55rem;
-      font-weight: 800;
+      font-size:1.55rem;
+      font-weight:800;
     }
 
     .health-reason {
-      color: var(--text-secondary);
-      line-height: 1.55;
+      color:var(--text-secondary);
+      line-height:1.55;
     }
 
     .metric-strip {
-      display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: 16px;
-      margin-bottom: 24px;
+      display:grid;
+      grid-template-columns:repeat(5,minmax(0,1fr));
+      gap:16px;
+      margin-bottom:24px;
     }
 
     .metric-card {
-      min-height: 126px;
-      padding: 22px;
-      background: var(--panel-background);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-medium);
-      box-shadow: var(--shadow);
+      min-height:126px;
+      padding:22px;
+      background:var(--panel-background);
+      border:1px solid var(--border-color);
+      border-radius:var(--radius-medium);
+      box-shadow:var(--shadow);
     }
 
     .metric-label {
-      margin: 0;
-      color: var(--text-secondary);
-      font-size: 0.76rem;
-      font-weight: 800;
-      letter-spacing: 0.09em;
-      text-transform: uppercase;
+      margin:0;
+      color:var(--text-secondary);
+      font-size:.76rem;
+      font-weight:800;
+      letter-spacing:.09em;
+      text-transform:uppercase;
     }
 
     .metric-value {
-      margin: 12px 0 0;
-      font-size: 2rem;
-      font-weight: 850;
-      line-height: 1;
+      margin:12px 0 0;
+      color:var(--navy-950);
+      font-size:2rem;
+      font-weight:850;
+      line-height:1;
     }
 
     .dashboard-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.75fr);
-      gap: 24px;
-      align-items: start;
+      display:grid;
+      grid-template-columns:minmax(0,1.45fr) minmax(320px,.75fr);
+      gap:24px;
+      align-items:start;
     }
 
     .primary-column,
     .secondary-column {
-      display: grid;
-      gap: 24px;
+      display:grid;
+      gap:24px;
     }
 
     .panel {
-      background: var(--panel-background);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-large);
-      box-shadow: var(--shadow);
-      overflow: hidden;
+      background:var(--panel-background);
+      border:1px solid var(--border-color);
+      border-radius:var(--radius-large);
+      box-shadow:var(--shadow);
+      overflow:hidden;
     }
 
     .panel-header {
-      padding: 24px 26px 18px;
-      border-bottom: 1px solid var(--border-color);
+      padding:24px 26px 18px;
+      border-bottom:1px solid var(--border-color);
     }
 
     .panel-title {
-      margin: 0;
-      font-size: 1.35rem;
-      letter-spacing: -0.02em;
+      margin:0;
+      color:var(--navy-950);
+      font-size:1.35rem;
+      letter-spacing:-.02em;
     }
 
     .panel-description {
-      margin: 7px 0 0;
-      color: var(--text-secondary);
-      line-height: 1.55;
+      margin:7px 0 0;
+      color:var(--text-secondary);
+      line-height:1.55;
     }
 
     .panel-body {
-      padding: 22px 26px 26px;
+      padding:22px 26px 26px;
     }
 
     .next-action {
-      padding: 26px;
-      border-radius: var(--radius-medium);
-      background: linear-gradient(
-        135deg,
-        var(--brand-blue) 0%,
-        var(--brand-blue-dark) 100%
-      );
-      color: #ffffff;
+      padding:26px;
+      border-radius:var(--radius-medium);
+      background:linear-gradient(135deg,var(--brand-blue) 0%,var(--brand-blue-dark) 100%);
+      color:#fff;
     }
 
     .next-action-label {
-      margin: 0 0 10px;
-      font-size: 0.76rem;
-      font-weight: 800;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      opacity: 0.78;
+      margin:0 0 10px;
+      font-size:.76rem;
+      font-weight:800;
+      letter-spacing:.1em;
+      text-transform:uppercase;
+      opacity:.78;
     }
 
     .next-action-title {
-      margin: 0;
-      font-size: clamp(1.7rem, 3vw, 2.7rem);
-      line-height: 1.08;
-      letter-spacing: -0.025em;
+      margin:0;
+      font-size:clamp(1.7rem,3vw,2.7rem);
+      line-height:1.08;
+      letter-spacing:-.025em;
     }
 
     .next-action-reason {
-      margin: 14px 0 0;
-      max-width: 850px;
-      font-size: 1rem;
-      line-height: 1.65;
-      opacity: 0.88;
+      margin:14px 0 0;
+      max-width:850px;
+      font-size:1rem;
+      line-height:1.65;
+      opacity:.88;
     }
 
     .next-action-meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 9px;
-      margin-top: 20px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:9px;
+      margin-top:20px;
     }
 
     .next-action-meta .pill {
-      background: rgba(255, 255, 255, 0.16);
-      color: #ffffff;
+      background:rgba(255,255,255,.16);
+      color:#fff;
     }
 
     .next-action-controls {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-top: 22px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      margin-top:22px;
     }
 
     .next-action-button {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 44px;
-      padding: 11px 18px;
-      border: 1px solid rgba(255, 255, 255, 0.38);
-      border-radius: 10px;
-      background: #ffffff;
-      color: var(--brand-blue-dark);
-      font-weight: 800;
-      text-decoration: none;
-      cursor: pointer;
-      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-height:44px;
+      padding:11px 18px;
+      border:1px solid rgba(255,255,255,.38);
+      border-radius:10px;
+      background:#fff;
+      color:var(--brand-blue-dark);
+      font-weight:800;
+      text-decoration:none;
+      cursor:pointer;
+      box-shadow:0 10px 24px rgba(0,0,0,.12);
     }
 
     .next-action-button:hover,
     .next-action-button:focus-visible {
-      background: var(--brand-blue-light);
-      outline: none;
+      background:var(--brand-blue-light);
+      outline:none;
     }
 
     .list {
-      display: grid;
-      gap: 14px;
+      display:grid;
+      gap:14px;
     }
 
     .list-empty {
-      padding: 20px;
-      border: 1px dashed var(--border-color);
-      border-radius: var(--radius-medium);
-      background: var(--panel-muted);
-      color: var(--text-secondary);
-      text-align: center;
-      line-height: 1.6;
+      padding:20px;
+      border:1px dashed var(--border-color);
+      border-radius:var(--radius-medium);
+      background:var(--panel-muted);
+      color:var(--text-secondary);
+      text-align:center;
+      line-height:1.6;
     }
 
     .work-item,
     .priority-item,
     .activity-item,
     .alert-item {
-      padding: 18px;
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-medium);
-      background: #ffffff;
+      padding:18px;
+      border:1px solid var(--border-color);
+      border-radius:var(--radius-medium);
+      background:#fff;
     }
 
     .work-item-header,
     .priority-item-header,
     .activity-item-header,
     .alert-item-header {
-      display: flex;
-      justify-content: space-between;
-      gap: 16px;
-      align-items: flex-start;
+      display:flex;
+      justify-content:space-between;
+      gap:16px;
+      align-items:flex-start;
     }
 
     .item-title {
-      margin: 0;
-      font-size: 1rem;
-      line-height: 1.4;
+      margin:0;
+      font-size:1rem;
+      line-height:1.4;
     }
 
     .item-meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 12px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:12px;
     }
 
     .item-copy {
-      margin: 10px 0 0;
-      color: var(--text-secondary);
-      line-height: 1.6;
+      margin:10px 0 0;
+      color:var(--text-secondary);
+      line-height:1.6;
     }
 
     .badge {
-      display: inline-flex;
-      align-items: center;
-      min-height: 28px;
-      padding: 5px 9px;
-      border-radius: 999px;
-      background: var(--panel-muted);
-      color: var(--text-secondary);
-      font-size: 0.76rem;
-      font-weight: 800;
-      white-space: nowrap;
+      display:inline-flex;
+      align-items:center;
+      min-height:28px;
+      padding:5px 9px;
+      border-radius:999px;
+      background:var(--panel-muted);
+      color:var(--text-secondary);
+      font-size:.76rem;
+      font-weight:800;
+      white-space:nowrap;
     }
 
     .badge.critical {
-      background: var(--danger-light);
-      color: var(--critical);
+      background:var(--danger-light);
+      color:var(--critical);
     }
 
     .badge.high {
-      background: var(--warning-light);
-      color: var(--warning);
+      background:var(--warning-light);
+      color:var(--warning);
     }
 
     .badge.medium {
-      background: var(--brand-blue-light);
-      color: var(--brand-blue-dark);
+      background:var(--brand-blue-light);
+      color:var(--brand-blue-dark);
     }
 
     .badge.complete {
-      background: var(--success-light);
-      color: var(--success);
+      background:var(--success-light);
+      color:var(--success);
     }
 
     .alert-item {
-      border-left-width: 5px;
+      border-left-width:5px;
     }
 
     .alert-item.critical {
-      border-left-color: var(--critical);
+      border-left-color:var(--critical);
     }
 
     .alert-item.high {
-      border-left-color: var(--danger);
+      border-left-color:var(--danger);
     }
 
     .alert-item.medium {
-      border-left-color: var(--warning);
+      border-left-color:var(--warning);
     }
 
     .alert-action {
-      margin: 12px 0 0;
-      font-weight: 700;
-      line-height: 1.5;
+      margin:12px 0 0;
+      font-weight:700;
+      line-height:1.5;
     }
 
     .section-tabs {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 18px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-bottom:18px;
     }
 
     .tab-button {
-      border: 0;
-      border-radius: 999px;
-      padding: 10px 15px;
-      background: var(--panel-muted);
-      color: var(--text-secondary);
-      font-weight: 750;
-      cursor: pointer;
+      border:0;
+      border-radius:999px;
+      padding:10px 15px;
+      background:var(--panel-muted);
+      color:var(--text-secondary);
+      font-weight:750;
+      cursor:pointer;
     }
 
     .tab-button.active {
-      background: var(--brand-blue);
-      color: #ffffff;
+      background:var(--brand-blue);
+      color:#fff;
     }
 
     .tab-panel {
-      display: none;
+      display:none;
     }
 
     .tab-panel.active {
-      display: block;
+      display:block;
     }
 
     .detail-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:14px;
     }
 
     .detail-card {
-      padding: 18px;
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-medium);
-      background: var(--panel-muted);
+      padding:18px;
+      border:1px solid var(--border-color);
+      border-radius:var(--radius-medium);
+      background:var(--panel-muted);
     }
 
     .detail-label {
-      margin: 0;
-      color: var(--text-secondary);
-      font-size: 0.75rem;
-      font-weight: 800;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
+      margin:0;
+      color:var(--text-secondary);
+      font-size:.75rem;
+      font-weight:800;
+      letter-spacing:.08em;
+      text-transform:uppercase;
     }
 
     .detail-value {
-      margin: 9px 0 0;
-      font-weight: 750;
-      line-height: 1.5;
-      overflow-wrap: anywhere;
+      margin:9px 0 0;
+      font-weight:750;
+      line-height:1.5;
+      overflow-wrap:anywhere;
     }
 
     .footer-note {
-      margin-top: 28px;
-      color: var(--text-secondary);
-      font-size: 0.88rem;
-      text-align: center;
+      margin-top:28px;
+      color:var(--text-secondary);
+      font-size:.88rem;
+      text-align:center;
     }
 
-    @media (max-width: 1100px) {
+    @media(max-width:1100px) {
       .hero,
       .dashboard-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns:1fr;
       }
 
       .metric-strip {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns:repeat(3,minmax(0,1fr));
       }
     }
 
-    @media (max-width: 760px) {
-      .topbar-inner,
-      .page {
-        width: min(calc(100% - 24px), var(--content-width));
+    @media(max-width:860px) {
+      .gcm-shell-layout {
+        grid-template-columns:1fr;
       }
 
-      .topbar-inner {
-        min-height: 64px;
+      .workspace-app {
+        padding:20px;
       }
 
-      .brand-product,
-      .topbar-status span:last-child {
-        display: none;
+      .mobile-menu-button {
+        display:inline-flex;
+      }
+    }
+
+    @media(max-width:760px) {
+      .workspace-app {
+        padding:16px;
       }
 
-      .page {
-        padding-top: 22px;
+      .page-header {
+        flex-direction:column;
+      }
+
+      .page-header-actions {
+        width:100%;
+        justify-content:flex-start;
       }
 
       .hero-main,
       .hero-side,
       .panel-header,
       .panel-body {
-        padding-left: 20px;
-        padding-right: 20px;
+        padding-left:20px;
+        padding-right:20px;
       }
 
       .metric-strip {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns:repeat(2,minmax(0,1fr));
       }
 
       .detail-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns:1fr;
       }
     }
 
-    @media (max-width: 500px) {
+    @media(max-width:500px) {
       .metric-strip {
-        grid-template-columns: 1fr;
+        grid-template-columns:1fr;
       }
 
       .work-item-header,
       .priority-item-header,
       .activity-item-header,
       .alert-item-header {
-        display: grid;
+        display:grid;
+      }
+
+      .runtime-chip {
+        white-space:normal;
       }
     }
   </style>
@@ -731,301 +778,319 @@
   <div class="gcm-shell-layout">
     <aside data-gcm-shell-sidebar aria-label="Primary navigation"></aside>
 
-    <div class="workspace-app">
-    <header class="topbar">
-      <div class="topbar-inner">
-        <div class="brand">
-          <div class="brand-copy">
-            <p class="brand-name">Client Operations</p>
-            <p class="brand-product">
-              <a href="clients.html">Clients</a> / Business Workspace
+    <main class="workspace-app">
+      <div class="main-inner">
+        <header class="page-header">
+          <div class="page-header-copy">
+            <p class="breadcrumb">
+              <a href="clients.html">Clients</a>
+              <span aria-hidden="true">/</span>
+              <span>Client Workspace</span>
+            </p>
+
+            <h1 class="page-title">Business Workspace</h1>
+
+            <p class="page-subtitle">
+              Live client operating record, current work, priorities, proof,
+              alerts, and the next executable action in one workspace.
             </p>
           </div>
-        </div>
 
-        <div class="topbar-status">
-          <span
-            id="runtime-status-indicator"
-            class="status-indicator loading"
-            aria-hidden="true"
-          ></span>
+          <div class="page-header-actions">
+            <button
+              class="button button-secondary mobile-menu-button"
+              data-gcm-shell-menu-button
+              type="button"
+              aria-expanded="false"
+            >
+              Menu
+            </button>
 
-          <span id="runtime-status-text">Loading Business Record</span>
-        </div>
-      </div>
-    </header>
+            <a class="button button-secondary" href="clients.html">
+              Back to Clients
+            </a>
 
-    <main class="page">
-      <section id="loading-panel" class="loading-panel">
-        <div class="loading-copy">
-          <p class="eyebrow">GCM OS</p>
-          <h1>Loading Business Workspace</h1>
-          <p>
-            The Business Record is being loaded and the executive workspace
-            is being generated.
-          </p>
-        </div>
-      </section>
-
-      <section id="error-panel" class="error-panel" hidden>
-        <div class="error-copy">
-          <p class="eyebrow">Workspace Error</p>
-          <h1>Business Record could not be loaded</h1>
-          <p>
-            Review the error below, confirm the required files are deployed,
-            and reload this page.
-          </p>
-
-          <div id="error-details" class="error-details"></div>
-        </div>
-      </section>
-
-      <div id="workspace" class="workspace">
-        <section class="hero">
-          <div class="hero-main">
-            <p class="eyebrow">Business Workspace</p>
-
-            <h1 id="business-name" class="hero-title">
-              Business
-            </h1>
-
-            <p id="business-summary" class="hero-summary"></p>
-
-            <div id="business-tags" class="hero-meta"></div>
+            <div class="runtime-chip" role="status" aria-live="polite">
+              <span
+                id="runtime-status-indicator"
+                class="status-indicator loading"
+                aria-hidden="true"
+              ></span>
+              <span id="runtime-status-text">Loading Business Record</span>
+            </div>
           </div>
+        </header>
 
-          <aside class="hero-side">
-            <div class="health-card">
-              <span class="health-label">Account Health</span>
-              <span id="account-health" class="health-value"></span>
-              <span id="account-health-reason" class="health-reason"></span>
-            </div>
-
-            <div class="health-card">
-              <span class="health-label">Current Stage</span>
-              <span id="relationship-stage" class="health-value"></span>
-            </div>
-
-            <div class="health-card">
-              <span class="health-label">Monthly Agreement</span>
-              <span id="monthly-agreement" class="health-value"></span>
-            </div>
-          </aside>
+        <section id="loading-panel" class="loading-panel">
+          <div class="loading-copy">
+            <p class="eyebrow">GCM OS</p>
+            <h2>Loading Business Workspace</h2>
+            <p>
+              The Business Record is being loaded and the executive workspace
+              is being generated.
+            </p>
+          </div>
         </section>
 
-        <section class="metric-strip">
-          <article class="metric-card">
-            <p class="metric-label">Open Work</p>
-            <p id="metric-open-work" class="metric-value">0</p>
-          </article>
+        <section id="error-panel" class="error-panel" hidden>
+          <div class="error-copy">
+            <p class="eyebrow">Workspace Error</p>
+            <h2>Business Record could not be loaded</h2>
+            <p>
+              Review the error below, confirm the required files are deployed,
+              and reload this page.
+            </p>
 
-          <article class="metric-card">
-            <p class="metric-label">Overdue</p>
-            <p id="metric-overdue" class="metric-value">0</p>
-          </article>
-
-          <article class="metric-card">
-            <p class="metric-label">Active Alerts</p>
-            <p id="metric-alerts" class="metric-value">0</p>
-          </article>
-
-          <article class="metric-card">
-            <p class="metric-label">Proof of Work</p>
-            <p id="metric-proof" class="metric-value">0</p>
-          </article>
-
-          <article class="metric-card">
-            <p class="metric-label">Verified Results</p>
-            <p id="metric-results" class="metric-value">0</p>
-          </article>
+            <div id="error-details" class="error-details"></div>
+          </div>
         </section>
 
-        <section class="dashboard-grid">
-          <div class="primary-column">
-            <section class="panel">
-              <div class="panel-header">
-                <h2 class="panel-title">Next Best Action</h2>
-                <p class="panel-description">
-                  The highest-value action derived from the Business Record.
-                </p>
+        <div id="workspace" class="workspace">
+          <section class="hero">
+            <div class="hero-main">
+              <p class="eyebrow">Client Operating Record</p>
+
+              <h2 id="business-name" class="hero-title">
+                Business
+              </h2>
+
+              <p id="business-summary" class="hero-summary"></p>
+
+              <div id="business-tags" class="hero-meta"></div>
+            </div>
+
+            <aside class="hero-side">
+              <div class="health-card">
+                <span class="health-label">Account Health</span>
+                <span id="account-health" class="health-value"></span>
+                <span id="account-health-reason" class="health-reason"></span>
               </div>
 
-              <div class="panel-body">
-                <div class="next-action">
-                  <p class="next-action-label">Recommended action</p>
+              <div class="health-card">
+                <span class="health-label">Current Stage</span>
+                <span id="relationship-stage" class="health-value"></span>
+              </div>
 
-                  <h3
-                    id="next-action-title"
-                    class="next-action-title"
-                  ></h3>
+              <div class="health-card">
+                <span class="health-label">Monthly Agreement</span>
+                <span id="monthly-agreement" class="health-value"></span>
+              </div>
+            </aside>
+          </section>
 
-                  <p
-                    id="next-action-reason"
-                    class="next-action-reason"
-                  ></p>
+          <section class="metric-strip" aria-label="Client workspace summary">
+            <article class="metric-card">
+              <p class="metric-label">Open Work</p>
+              <p id="metric-open-work" class="metric-value">0</p>
+            </article>
 
-                  <div id="next-action-meta" class="next-action-meta"></div>
+            <article class="metric-card">
+              <p class="metric-label">Overdue</p>
+              <p id="metric-overdue" class="metric-value">0</p>
+            </article>
 
-                  <div
-                    id="next-action-controls"
-                    class="next-action-controls"
-                    hidden
-                  >
-                    <a
-                      id="next-action-link"
-                      class="next-action-button"
-                      href="#"
+            <article class="metric-card">
+              <p class="metric-label">Active Alerts</p>
+              <p id="metric-alerts" class="metric-value">0</p>
+            </article>
+
+            <article class="metric-card">
+              <p class="metric-label">Proof of Work</p>
+              <p id="metric-proof" class="metric-value">0</p>
+            </article>
+
+            <article class="metric-card">
+              <p class="metric-label">Verified Results</p>
+              <p id="metric-results" class="metric-value">0</p>
+            </article>
+          </section>
+
+          <section class="dashboard-grid">
+            <div class="primary-column">
+              <section class="panel">
+                <div class="panel-header">
+                  <h2 class="panel-title">Next Best Action</h2>
+                  <p class="panel-description">
+                    The highest-value action derived from the Business Record.
+                  </p>
+                </div>
+
+                <div class="panel-body">
+                  <div class="next-action">
+                    <p class="next-action-label">Recommended action</p>
+
+                    <h3
+                      id="next-action-title"
+                      class="next-action-title"
+                    ></h3>
+
+                    <p
+                      id="next-action-reason"
+                      class="next-action-reason"
+                    ></p>
+
+                    <div id="next-action-meta" class="next-action-meta"></div>
+
+                    <div
+                      id="next-action-controls"
+                      class="next-action-controls"
+                      hidden
                     >
-                      Resume Action
-                    </a>
+                      <a
+                        id="next-action-link"
+                        class="next-action-button"
+                        href="#"
+                      >
+                        Resume Action
+                      </a>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </section>
+              </section>
 
-            <section class="panel">
-              <div class="panel-header">
-                <h2 class="panel-title">Current Work</h2>
-                <p class="panel-description">
-                  Active work ranked by priority, status, and due date.
-                </p>
-              </div>
-
-              <div class="panel-body">
-                <div id="current-work-list" class="list"></div>
-              </div>
-            </section>
-
-            <section class="panel">
-              <div class="panel-header">
-                <h2 class="panel-title">Business Intelligence</h2>
-                <p class="panel-description">
-                  Operational details stored in the Business Record.
-                </p>
-              </div>
-
-              <div class="panel-body">
-                <div class="section-tabs" role="tablist">
-                  <button
-                    class="tab-button active"
-                    type="button"
-                    data-tab="advertising"
-                  >
-                    Advertising
-                  </button>
-
-                  <button
-                    class="tab-button"
-                    type="button"
-                    data-tab="seo"
-                  >
-                    SEO
-                  </button>
-
-                  <button
-                    class="tab-button"
-                    type="button"
-                    data-tab="website"
-                  >
-                    Website
-                  </button>
-
-                  <button
-                    class="tab-button"
-                    type="button"
-                    data-tab="social"
-                  >
-                    Social
-                  </button>
-
-                  <button
-                    class="tab-button"
-                    type="button"
-                    data-tab="case-study"
-                  >
-                    Case Study
-                  </button>
+              <section class="panel">
+                <div class="panel-header">
+                  <h2 class="panel-title">Current Work</h2>
+                  <p class="panel-description">
+                    Active work ranked by priority, status, and due date.
+                  </p>
                 </div>
 
-                <div
-                  id="tab-advertising"
-                  class="tab-panel active"
-                  data-tab-panel="advertising"
-                ></div>
+                <div class="panel-body">
+                  <div id="current-work-list" class="list"></div>
+                </div>
+              </section>
 
-                <div
-                  id="tab-seo"
-                  class="tab-panel"
-                  data-tab-panel="seo"
-                ></div>
+              <section class="panel">
+                <div class="panel-header">
+                  <h2 class="panel-title">Business Intelligence</h2>
+                  <p class="panel-description">
+                    Operational details stored in the Business Record.
+                  </p>
+                </div>
 
-                <div
-                  id="tab-website"
-                  class="tab-panel"
-                  data-tab-panel="website"
-                ></div>
+                <div class="panel-body">
+                  <div class="section-tabs" role="tablist">
+                    <button
+                      class="tab-button active"
+                      type="button"
+                      data-tab="advertising"
+                    >
+                      Advertising
+                    </button>
 
-                <div
-                  id="tab-social"
-                  class="tab-panel"
-                  data-tab-panel="social"
-                ></div>
+                    <button
+                      class="tab-button"
+                      type="button"
+                      data-tab="seo"
+                    >
+                      SEO
+                    </button>
 
-                <div
-                  id="tab-case-study"
-                  class="tab-panel"
-                  data-tab-panel="case-study"
-                ></div>
-              </div>
-            </section>
-          </div>
+                    <button
+                      class="tab-button"
+                      type="button"
+                      data-tab="website"
+                    >
+                      Website
+                    </button>
 
-          <aside class="secondary-column">
-            <section class="panel">
-              <div class="panel-header">
-                <h2 class="panel-title">Alerts</h2>
-                <p class="panel-description">
-                  Conditions requiring attention.
-                </p>
-              </div>
+                    <button
+                      class="tab-button"
+                      type="button"
+                      data-tab="social"
+                    >
+                      Social
+                    </button>
 
-              <div class="panel-body">
-                <div id="alerts-list" class="list"></div>
-              </div>
-            </section>
+                    <button
+                      class="tab-button"
+                      type="button"
+                      data-tab="case-study"
+                    >
+                      Case Study
+                    </button>
+                  </div>
 
-            <section class="panel">
-              <div class="panel-header">
-                <h2 class="panel-title">Business Priorities</h2>
-                <p class="panel-description">
-                  Current strategic priorities for this business.
-                </p>
-              </div>
+                  <div
+                    id="tab-advertising"
+                    class="tab-panel active"
+                    data-tab-panel="advertising"
+                  ></div>
 
-              <div class="panel-body">
-                <div id="priorities-list" class="list"></div>
-              </div>
-            </section>
+                  <div
+                    id="tab-seo"
+                    class="tab-panel"
+                    data-tab-panel="seo"
+                  ></div>
 
-            <section class="panel">
-              <div class="panel-header">
-                <h2 class="panel-title">Recent Activity</h2>
-                <p class="panel-description">
-                  Recent history, completed work, and recorded results.
-                </p>
-              </div>
+                  <div
+                    id="tab-website"
+                    class="tab-panel"
+                    data-tab-panel="website"
+                  ></div>
 
-              <div class="panel-body">
-                <div id="recent-activity-list" class="list"></div>
-              </div>
-            </section>
-          </aside>
-        </section>
+                  <div
+                    id="tab-social"
+                    class="tab-panel"
+                    data-tab-panel="social"
+                  ></div>
 
-        <p id="footer-note" class="footer-note"></p>
+                  <div
+                    id="tab-case-study"
+                    class="tab-panel"
+                    data-tab-panel="case-study"
+                  ></div>
+                </div>
+              </section>
+            </div>
+
+            <aside class="secondary-column">
+              <section class="panel">
+                <div class="panel-header">
+                  <h2 class="panel-title">Alerts</h2>
+                  <p class="panel-description">
+                    Conditions requiring attention.
+                  </p>
+                </div>
+
+                <div class="panel-body">
+                  <div id="alerts-list" class="list"></div>
+                </div>
+              </section>
+
+              <section class="panel">
+                <div class="panel-header">
+                  <h2 class="panel-title">Business Priorities</h2>
+                  <p class="panel-description">
+                    Current strategic priorities for this business.
+                  </p>
+                </div>
+
+                <div class="panel-body">
+                  <div id="priorities-list" class="list"></div>
+                </div>
+              </section>
+
+              <section class="panel">
+                <div class="panel-header">
+                  <h2 class="panel-title">Recent Activity</h2>
+                  <p class="panel-description">
+                    Recent history, completed work, and recorded results.
+                  </p>
+                </div>
+
+                <div class="panel-body">
+                  <div id="recent-activity-list" class="list"></div>
+                </div>
+              </section>
+            </aside>
+          </section>
+
+          <p id="footer-note" class="footer-note"></p>
+        </div>
       </div>
     </main>
-    </div>
   </div>
 
   <script src="shared/gcm-shell.js"></script>
@@ -1052,12 +1117,12 @@
 
       if (!window.GCMOShell) {
         console.error(
-          "Business Workspace 1.2.0: shared/gcm-shell.js did not load."
+          "Business Workspace 1.3.0: shared/gcm-shell.js did not load."
         );
       } else {
         window.GCMOShell.mount({
-          currentPage: "clients",
-          statusText: "Client workspace connected · Business Workspace v1.2.0"
+          currentPage:"clients",
+          statusText:"Client workspace connected · Business Workspace v1.3.0"
         });
       }
 
@@ -1071,13 +1136,13 @@
             getBusinessIdFromUrl() || DEFAULT_BUSINESS_ID;
 
           const response = await fetch(WORKER_URL, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Accept: "application/json"
+            method:"POST",
+            headers:{
+              "Content-Type":"application/json",
+              Accept:"application/json"
             },
-            body: JSON.stringify({
-              action: "get-client-workspace",
+            body:JSON.stringify({
+              action:"get-client-workspace",
               clientCode:
                 businessId === "southeast-safes"
                   ? "SES"
@@ -1101,8 +1166,8 @@
           }
 
           BusinessWorkspace.loadFromObject(payload.record, {
-            requestedBusinessId: businessId,
-            recordUrl: WORKER_URL
+            requestedBusinessId:businessId,
+            recordUrl:WORKER_URL
           });
 
           renderWorkspace();
@@ -1461,7 +1526,7 @@
           return;
         }
 
-        activity.slice(0, 8).forEach((entry) => {
+        activity.slice(0,8).forEach((entry) => {
           const article = document.createElement("article");
           article.className = "activity-item";
 
@@ -1637,7 +1702,7 @@
         const grid = document.createElement("div");
         grid.className = "detail-grid";
 
-        details.forEach(([label, value]) => {
+        details.forEach(([label,value]) => {
           const card = document.createElement("article");
           card.className = "detail-card";
 
@@ -1702,14 +1767,14 @@
         return parameters.get("business");
       }
 
-      function setRuntimeStatus(status, message) {
+      function setRuntimeStatus(status,message) {
         statusIndicator.className =
           `status-indicator ${normalizeClassName(status)}`;
 
         statusText.textContent = message;
       }
 
-      function setText(elementId, value) {
+      function setText(elementId,value) {
         const element = document.getElementById(elementId);
 
         if (element) {
@@ -1752,8 +1817,8 @@
         return String(value || "")
           .trim()
           .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-+|-+$/g, "");
+          .replace(/[^a-z0-9]+/g,"-")
+          .replace(/^-+|-+$/g,"");
       }
 
       function formatCurrency(value) {
@@ -1767,9 +1832,9 @@
         }
 
         return new Intl.NumberFormat("en-US", {
-          style: "currency",
-          currency: "USD",
-          maximumFractionDigits: 0
+          style:"currency",
+          currency:"USD",
+          maximumFractionDigits:0
         }).format(Number(value));
       }
 
@@ -1778,16 +1843,16 @@
           return "Unknown";
         }
 
-        const date = new Date(`${String(value).slice(0, 10)}T12:00:00`);
+        const date = new Date(`${String(value).slice(0,10)}T12:00:00`);
 
         if (Number.isNaN(date.getTime())) {
           return String(value);
         }
 
         return new Intl.DateTimeFormat("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric"
+          month:"short",
+          day:"numeric",
+          year:"numeric"
         }).format(date);
       }
 
@@ -1803,11 +1868,11 @@
         }
 
         return new Intl.DateTimeFormat("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-          hour: "numeric",
-          minute: "2-digit"
+          month:"short",
+          day:"numeric",
+          year:"numeric",
+          hour:"numeric",
+          minute:"2-digit"
         }).format(date);
       }
 
@@ -1850,11 +1915,11 @@
 
       function escapeHtml(value) {
         return String(value ?? "")
-          .replaceAll("&", "&amp;")
-          .replaceAll("<", "&lt;")
-          .replaceAll(">", "&gt;")
-          .replaceAll('"', "&quot;")
-          .replaceAll("'", "&#039;");
+          .replaceAll("&","&amp;")
+          .replaceAll("<","&lt;")
+          .replaceAll(">","&gt;")
+          .replaceAll('"',"&quot;")
+          .replaceAll("'","&#039;");
       }
     })();
   </script>
