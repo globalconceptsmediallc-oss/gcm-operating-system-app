@@ -1,22 +1,19 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.5.1
+   Version: 3.5.2
    Status: Production Candidate
-   Source: Production today.html 3.5.0
-   Sprint: Today / Agency Command Center — Authoritative Decision Priority
+   Source: Production today.html 3.5.1
+   Sprint: Today / Agency Command Center — Authoritative Attention Queue
    Purpose: Preserve the locked Today layout, Gmail approvals, Mission Control,
-            Media logic, and operating workflow while ensuring specific durable
-            D1 decisions outrank generic Agency Command summaries.
+            Media logic, and operating workflow while keeping Mission Control's
+            durable D1 ranking authoritative across both decision and queue views.
 
-   Production changes in 3.5.1:
-   - Keeps deadline-sensitive Media action first.
-   - Makes Mission Control highestPriorityDecision the primary client decision.
-   - Keeps other live client-attention records ahead of generic Agency Command fallback.
-   - Uses Agency Command as decision support/fallback rather than allowing a generic
-     Agency Operating State card to outrank a real Investigation or Work Item.
-   - Replaces joined monitoring-history evidence in the generic Agency Command fallback
-     with a concise preserved-monitoring count.
+   Production changes in 3.5.2:
+   - Keeps Mission Control's clientsRequiringAttention ordering authoritative.
+   - Prevents a later Agency Command response from repainting a successful Mission Control queue.
+   - Allows Agency Command queue rendering only as a fallback while Mission Control is unavailable.
+   - Preserves the v3.5.1 highest-value decision priority and concise monitoring evidence.
    - Preserves Gmail preview/approval, Media, DO, COMMUNICATE, PREPARE, shell, Worker,
      D1, and local fallback behavior unchanged.
    ========================================================= -->
@@ -2115,7 +2112,7 @@
         }).join("");
 
         attentionCount.textContent = String(items.length);
-        attentionNote.textContent = "Ordered by the live Agency Command brief.";
+        attentionNote.textContent = "Agency Command fallback while Mission Control is unavailable.";
         briefAttention.textContent =
           items.length === 1
             ? "1 agency decision waiting"
@@ -2218,7 +2215,9 @@
           agencyCommandLoaded = true;
           agencyCommandUnavailable = false;
 
-          renderAgencyAttentionQueue(payload.brief);
+          if (!missionControlLoaded || missionControlUnavailable) {
+            renderAgencyAttentionQueue(payload.brief);
+          }
           updatePriority();
           renderOperationalBriefing();
         } catch (error) {
@@ -2957,11 +2956,11 @@
       });
 
       if (!window.GCMOShell) {
-        console.error("Today 3.5.1: shared/gcm-shell.js did not load.");
+        console.error("Today 3.5.2: shared/gcm-shell.js did not load.");
       } else {
         window.GCMOShell.mount({
           currentPage: "today",
-          statusText: "Agency Command Center operational · Today v3.5.1"
+          statusText: "Agency Command Center operational · Today v3.5.2"
         });
       }
 
