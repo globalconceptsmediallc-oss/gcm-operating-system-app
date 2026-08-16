@@ -1,22 +1,24 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.5.0
+   Version: 3.5.1
    Status: Production Candidate
-   Source: Production today.html 3.4.6
-   Sprint: Today / Agency Command Center — Live Agency Command
+   Source: Production today.html 3.5.0
+   Sprint: Today / Agency Command Center — Authoritative Decision Priority
    Purpose: Preserve the locked Today layout, Gmail approvals, Mission Control,
-            Media logic, and operating workflow while making the verified
-            agency-command route the primary live consulting brief for Today.
+            Media logic, and operating workflow while ensuring specific durable
+            D1 decisions outrank generic Agency Command summaries.
 
-   Production changes in 3.5.0:
-   - Adds read-only agency-command request: "What needs my attention today?"
-   - Uses the returned D1 Intelligence brief to drive Today's Command Brief.
-   - Uses agency-command needsAttention to populate the ordered attention queue.
-   - Uses agency-command nextBestAction as the primary decision when no Media deadline outranks it.
-   - Preserves existing Gmail preview/approval behavior unchanged.
-   - Preserves existing Mission Control, Media, DO, COMMUNICATE, PREPARE, shell, and local fallbacks.
-   - Creates zero records from the new Agency Command read path.
+   Production changes in 3.5.1:
+   - Keeps deadline-sensitive Media action first.
+   - Makes Mission Control highestPriorityDecision the primary client decision.
+   - Keeps other live client-attention records ahead of generic Agency Command fallback.
+   - Uses Agency Command as decision support/fallback rather than allowing a generic
+     Agency Operating State card to outrank a real Investigation or Work Item.
+   - Replaces joined monitoring-history evidence in the generic Agency Command fallback
+     with a concise preserved-monitoring count.
+   - Preserves Gmail preview/approval, Media, DO, COMMUNICATE, PREPARE, shell, Worker,
+     D1, and local fallback behavior unchanged.
    ========================================================= -->
 <!DOCTYPE html>
 
@@ -2129,6 +2131,10 @@
         const first = items[0] || null;
 
         if (!first) {
+          const monitoringCount = Array.isArray(brief?.monitoring)
+            ? brief.monitoring.filter(Boolean).length
+            : 0;
+
           setDecisionBrief({
             badge: "Review",
             type: "Agency Command",
@@ -2143,10 +2149,9 @@
               Array.isArray(brief?.currentState) ? brief.currentState.join(" · ") : "",
               "Agency Command found no stronger unresolved decision."
             ),
-            evidence: cleanDisplay(
-              Array.isArray(brief?.monitoring) ? brief.monitoring.join(" · ") : "",
-              "Durable Intelligence and linked operating records were reviewed."
-            ),
+            evidence: monitoringCount
+              ? `${pluralize(monitoringCount, "monitoring signal")} preserved in D1 for trend intelligence.`
+              : "Durable Intelligence and linked operating records were reviewed.",
             evidenceReferences: "Agency Command · D1 Intelligence",
             actionGuidance: cleanDisplay(
               brief?.nextBestAction,
@@ -2238,7 +2243,13 @@
 
         const statusParts = [];
 
-        if (agencyCommandLoaded && agencyCommandState) {
+        if (
+          agencyCommandLoaded &&
+          agencyCommandState &&
+          mediaAttentionState === 0 &&
+          !highestPriorityDecisionState &&
+          attentionClientsState.length === 0
+        ) {
           const brief = agencyCommandState;
           const currentState = Array.isArray(brief.currentState)
             ? brief.currentState.filter(Boolean)
@@ -2811,11 +2822,6 @@
           return;
         }
 
-        if (agencyCommandLoaded && agencyCommandState) {
-          renderAgencyCommandDecision(agencyCommandState);
-          return;
-        }
-
         if (highestPriorityDecisionState) {
           renderHighestPriorityDecision(highestPriorityDecisionState);
           return;
@@ -2852,6 +2858,11 @@
               ? "One client decision requires your attention."
               : `${attentionClientsState.length} client decisions require your attention.`;
           commandBriefCopy.textContent = "Resolve the strongest live client decision before adding more work.";
+          return;
+        }
+
+        if (agencyCommandLoaded && agencyCommandState) {
+          renderAgencyCommandDecision(agencyCommandState);
           return;
         }
 
@@ -2946,11 +2957,11 @@
       });
 
       if (!window.GCMOShell) {
-        console.error("Today 3.2.0: shared/gcm-shell.js did not load.");
+        console.error("Today 3.5.1: shared/gcm-shell.js did not load.");
       } else {
         window.GCMOShell.mount({
           currentPage: "today",
-          statusText: "Agency Command Center operational · Today v3.5.0"
+          statusText: "Agency Command Center operational · Today v3.5.1"
         });
       }
 
