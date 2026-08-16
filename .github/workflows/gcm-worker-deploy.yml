@@ -1,11 +1,11 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gcm-worker-deploy.yml
-# Version: 1.3.2
+# Version: 1.3.3
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Cloudflare Worker from main.
-# Change: Validate the stored OpenAI service key without rewriting the existing
-#         Cloudflare Worker secret on every deployment.
+# Change: Production deployment refresh for Mission Control 7.7.4 authoritative
+#         client queue ordering; deployment logic remains unchanged.
 # =========================================================
 
 name: GCM Worker Deploy
