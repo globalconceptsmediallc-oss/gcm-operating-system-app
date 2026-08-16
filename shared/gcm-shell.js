@@ -1,20 +1,20 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gcm-shell.js
-   Version: 2.0.12
+   Version: 2.0.13
    Status: Production Candidate
    Purpose: Shared internal GCM OS application shell foundation.
-   Source: gcm-shell.js 2.0.11 production navigation
-   Sprint: Media Commercial-Level Decision Context
-   Change: Loads Media decision context v1.0.0 so the operator can compare
-           the same commercial across markets, reuse an existing market
-           decision explicitly, and review stored spot audio/copy before deciding.
+   Source: gcm-shell.js 2.0.12 production navigation
+   Sprint: Media Needs-Action Transparency
+   Change: Loads Media needs-action v1.0.0 so the summary count can be opened
+           to show every placement and Creative contributing to the current
+           action total, while preserving commercial-level decision context.
    ========================================================= */
 
 (() => {
   "use strict";
 
-  const SHELL_VERSION = "2.0.12";
+  const SHELL_VERSION = "2.0.13";
 
   const PAGE_MAP = {
     today: { label: "Today", href: "today.html", icon: "⌂" },
@@ -111,6 +111,7 @@
       appendScript("shared/media-recovery-dashboard.js?v=1.0.0","data-gcm-media-recovery-dashboard");
       appendScript("shared/media-placement-disposition.js?v=1.1.0","data-gcm-media-placement-disposition");
       appendScript("shared/media-decision-context.js?v=1.0.0","data-gcm-media-decision-context");
+      appendScript("shared/media-needs-action.js?v=1.0.0","data-gcm-media-needs-action");
     }
   }
 
