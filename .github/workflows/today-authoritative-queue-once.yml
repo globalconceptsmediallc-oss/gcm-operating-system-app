@@ -1,0 +1,89 @@
+name: Today authoritative queue one-time fix
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/today-authoritative-queue-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-today:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out production
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch Today queue authority
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("today.html")
+          text = path.read_text(encoding="utf-8")
+
+          replacements = [
+              (
+                  "Version: 3.5.1",
+                  "Version: 3.5.2",
+              ),
+              (
+                  "Source: Production today.html 3.5.0",
+                  "Source: Production today.html 3.5.1",
+              ),
+              (
+                  "Sprint: Today / Agency Command Center — Authoritative Decision Priority",
+                  "Sprint: Today / Agency Command Center — Authoritative Attention Queue",
+              ),
+              (
+                  "Purpose: Preserve the locked Today layout, Gmail approvals, Mission Control,\n            Media logic, and operating workflow while ensuring specific durable\n            D1 decisions outrank generic Agency Command summaries.",
+                  "Purpose: Preserve the locked Today layout, Gmail approvals, Mission Control,\n            Media logic, and operating workflow while keeping Mission Control's\n            durable D1 ranking authoritative across both decision and queue views.",
+              ),
+              (
+                  "Production changes in 3.5.1:\n   - Keeps deadline-sensitive Media action first.\n   - Makes Mission Control highestPriorityDecision the primary client decision.\n   - Keeps other live client-attention records ahead of generic Agency Command fallback.\n   - Uses Agency Command as decision support/fallback rather than allowing a generic\n     Agency Operating State card to outrank a real Investigation or Work Item.\n   - Replaces joined monitoring-history evidence in the generic Agency Command fallback\n     with a concise preserved-monitoring count.\n   - Preserves Gmail preview/approval, Media, DO, COMMUNICATE, PREPARE, shell, Worker,\n     D1, and local fallback behavior unchanged.",
+                  "Production changes in 3.5.2:\n   - Keeps Mission Control's clientsRequiringAttention ordering authoritative.\n   - Prevents a later Agency Command response from repainting a successful Mission Control queue.\n   - Allows Agency Command queue rendering only as a fallback while Mission Control is unavailable.\n   - Preserves the v3.5.1 highest-value decision priority and concise monitoring evidence.\n   - Preserves Gmail preview/approval, Media, DO, COMMUNICATE, PREPARE, shell, Worker,\n     D1, and local fallback behavior unchanged.",
+              ),
+              (
+                  'attentionNote.textContent = "Ordered by the live Agency Command brief.";',
+                  'attentionNote.textContent = "Agency Command fallback while Mission Control is unavailable.";',
+              ),
+              (
+                  "          renderAgencyAttentionQueue(payload.brief);\n          updatePriority();",
+                  "          if (!missionControlLoaded || missionControlUnavailable) {\n            renderAgencyAttentionQueue(payload.brief);\n          }\n          updatePriority();",
+              ),
+              (
+                  'console.error("Today 3.5.1: shared/gcm-shell.js did not load.");',
+                  'console.error("Today 3.5.2: shared/gcm-shell.js did not load.");',
+              ),
+              (
+                  'statusText: "Agency Command Center operational · Today v3.5.1"',
+                  'statusText: "Agency Command Center operational · Today v3.5.2"',
+              ),
+          ]
+
+          for old, new in replacements:
+              if old not in text:
+                  raise SystemExit(f"Expected production text not found: {old[:120]!r}")
+              text = text.replace(old, new, 1)
+
+          path.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Commit production file
+        shell: bash
+        run: |
+          if git diff --quiet -- today.html; then
+            echo "No Today changes were required."
+            exit 0
+          fi
+          git config user.name "gcm-os-production"
+          git config user.email "actions@users.noreply.github.com"
+          git add today.html
+          git commit -m "Fix Today authoritative attention queue"
+          git push
