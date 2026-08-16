@@ -1,20 +1,20 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gcm-shell.js
-   Version: 2.0.13
+   Version: 2.0.14
    Status: Production Candidate
    Purpose: Shared internal GCM OS application shell foundation.
-   Source: gcm-shell.js 2.0.12 production navigation
-   Sprint: Media Needs-Action Transparency
-   Change: Loads Media needs-action v1.0.0 so the summary count can be opened
-           to show every placement and Creative contributing to the current
-           action total, while preserving commercial-level decision context.
+   Source: gcm-shell.js 2.0.13 production navigation
+   Sprint: Media Natural Workflow Navigation
+   Change: Loads Media summary navigation v1.0.0 so operating summary cards
+           navigate directly to their work, while History is retained below
+           as Planning Intelligence instead of a top-level operating KPI.
    ========================================================= */
 
 (() => {
   "use strict";
 
-  const SHELL_VERSION = "2.0.13";
+  const SHELL_VERSION = "2.0.14";
 
   const PAGE_MAP = {
     today: { label: "Today", href: "today.html", icon: "⌂" },
@@ -112,6 +112,7 @@
       appendScript("shared/media-placement-disposition.js?v=1.1.0","data-gcm-media-placement-disposition");
       appendScript("shared/media-decision-context.js?v=1.0.0","data-gcm-media-decision-context");
       appendScript("shared/media-needs-action.js?v=1.0.0","data-gcm-media-needs-action");
+      appendScript("shared/media-summary-navigation.js?v=1.0.0","data-gcm-media-summary-navigation");
     }
   }
 
