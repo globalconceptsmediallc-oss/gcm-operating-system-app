@@ -1,19 +1,22 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/mediaPlacementDisposition.js
-   Version: 1.0.0
+   Version: 1.1.0
    Status: Production Candidate
-   Sprint: Media Rotation End-of-Run Decision
-   Purpose: Preserve an explicit operator decision that a live placement will
-            run through its scheduled end date and then retire without a
-            replacement creative being required.
+   Source: routes/mediaPlacementDisposition.js 1.0.0
+   Sprint: Media Replacement-in-Progress Linkage
+   Purpose: Preserve explicit operator decisions for live placements that will
+            either retire at end without replacement or remain live while a
+            specific replacement Creative is developed.
 
    Production rules:
-   - The existing media_records row remains authoritative.
-   - The current placement status and scheduled dates are not changed.
-   - The decision is stored in notes and appended to permanent decision history.
+   - The existing media_records row remains authoritative for the live placement.
+   - Current placement status and scheduled dates are never changed here.
+   - Replacement-in-progress requires a real media_creatives row for the same client.
+   - The placement decision is stored in notes and appended to permanent history.
+   - A replacement link is also appended to the Creative history for traceability.
    - The action clears only obsolete Media attention flags; it does not send,
-     traffic, confirm, create, replace, or retire anything early.
+     traffic, confirm, replace, retire, or advance a Creative.
    ========================================================= */
 
 import { VERSION, ACTIONS } from "../shared/config.js";
@@ -27,6 +30,8 @@ export const MEDIA_PLACEMENT_DISPOSITION_OPERATIONS = Object.freeze([
 const MANAGED_PREFIXES = Object.freeze([
   "Placement Disposition:",
   "Replacement Required:",
+  "Replacement Creative ID:",
+  "Replacement Creative Name:",
   "Disposition End Date:",
   "Disposition Reason:",
   "Disposition Recorded By:",
@@ -35,142 +40,59 @@ const MANAGED_PREFIXES = Object.freeze([
 
 export async function handleMediaPlacementDisposition(operation, body, env, requestId) {
   if (operation !== "set_placement_disposition") {
-    return jsonResponse({
+    return reply({
       ok: false,
-      requestId,
-      action: ACTIONS.GET_MEDIA_OPERATIONS,
-      version: VERSION,
       error: `Unsupported Media placement disposition operation: ${operation}`
     }, 400);
   }
 
   const db = getDatabase(env);
   if (!db || typeof db.prepare !== "function") {
-    return jsonResponse({
-      ok: false,
-      requestId,
-      action: ACTIONS.GET_MEDIA_OPERATIONS,
-      version: VERSION,
-      error: "The D1 binding is unavailable."
-    }, 503);
+    return reply({ ok: false, error: "The D1 binding is unavailable." }, 503);
   }
 
-  const mediaRecordId = normalizePositiveInteger(body?.mediaRecordId ?? body?.recordId ?? body?.id);
+  const mediaRecordId = positiveInteger(body?.mediaRecordId ?? body?.recordId ?? body?.id);
   const requestedDisposition = clean(body?.disposition || "retire_at_end_no_replacement").toLowerCase();
   const author = clean(body?.author) || "Andy";
-  const reason = clean(body?.reason) || "Other approved creative remains in rotation; no replacement is required.";
 
   if (!mediaRecordId) {
-    return jsonResponse({
-      ok: false,
-      requestId,
-      action: ACTIONS.GET_MEDIA_OPERATIONS,
-      version: VERSION,
-      error: "mediaRecordId must be a positive integer."
-    }, 400);
+    return reply({ ok: false, error: "mediaRecordId must be a positive integer." }, 400);
   }
 
-  if (requestedDisposition !== "retire_at_end_no_replacement") {
-    return jsonResponse({
+  if (!["retire_at_end_no_replacement", "replacement_in_progress"].includes(requestedDisposition)) {
+    return reply({
       ok: false,
-      requestId,
-      action: ACTIONS.GET_MEDIA_OPERATIONS,
-      version: VERSION,
-      error: "The supported placement disposition is retire_at_end_no_replacement."
+      error: "Supported placement dispositions are retire_at_end_no_replacement and replacement_in_progress."
     }, 400);
   }
 
   try {
-    const result = await db.prepare(`
-      SELECT id, status, end_date, notes
+    const recordResult = await db.prepare(`
+      SELECT id, client_id, campaign_name, creative_name, market, outlet_name,
+             status, end_date, notes
       FROM media_records
       WHERE id = ?
       LIMIT 1
     `).bind(mediaRecordId).all();
 
-    const record = rowsOf(result)[0];
+    const record = rowsOf(recordResult)[0];
     if (!record) {
-      return jsonResponse({
-        ok: false,
-        requestId,
-        action: ACTIONS.GET_MEDIA_OPERATIONS,
-        version: VERSION,
-        error: `Media record ${mediaRecordId} was not found.`
-      }, 404);
+      return reply({ ok: false, error: `Media record ${mediaRecordId} was not found.` }, 404);
     }
 
     const endDate = normalizeDateOnly(record.end_date);
     if (!endDate) {
-      return jsonResponse({
+      return reply({
         ok: false,
-        requestId,
-        action: ACTIONS.GET_MEDIA_OPERATIONS,
-        version: VERSION,
-        error: "A scheduled end date is required before a placement can be set to retire at end."
+        error: "A scheduled end date is required before a placement disposition can be saved."
       }, 400);
     }
 
-    const existing = parseDisposition(record.notes);
-    if (
-      existing.disposition === "retire_at_end" &&
-      existing.replacementRequired === "no" &&
-      existing.endDate === endDate
-    ) {
-      return jsonResponse({
-        ok: true,
-        requestId,
-        action: ACTIONS.GET_MEDIA_OPERATIONS,
-        version: VERSION,
-        operation,
-        mediaRecordId,
-        alreadySaved: true,
-        disposition: existing
-      });
+    if (requestedDisposition === "retire_at_end_no_replacement") {
+      return saveRetireAtEnd({ db, record, mediaRecordId, endDate, author, body });
     }
 
-    const recordedAt = new Date().toISOString();
-    const preservedLines = String(record.notes || "")
-      .split(/\r?\n/)
-      .filter(line => !MANAGED_PREFIXES.some(prefix => line.toLowerCase().startsWith(prefix.toLowerCase())))
-      .filter(Boolean);
-
-    const managedLines = [
-      "Placement Disposition: retire_at_end",
-      "Replacement Required: no",
-      `Disposition End Date: ${endDate}`,
-      `Disposition Reason: ${reason}`,
-      `Disposition Recorded By: ${author}`,
-      `Disposition Recorded At: ${recordedAt}`,
-      `Placement Decision History | ${recordedAt} | ${author} | Run through scheduled end date ${endDate}, then retire. No replacement creative required. ${reason}`
-    ];
-
-    const notes = [...preservedLines, ...managedLines].join("\n");
-
-    await db.prepare(`
-      UPDATE media_records
-      SET notes = ?,
-          attention_status = 'clear',
-          attention_reason = NULL,
-          updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `).bind(notes, mediaRecordId).run();
-
-    return jsonResponse({
-      ok: true,
-      requestId,
-      action: ACTIONS.GET_MEDIA_OPERATIONS,
-      version: VERSION,
-      operation,
-      mediaRecordId,
-      disposition: {
-        disposition: "retire_at_end",
-        replacementRequired: "no",
-        endDate,
-        reason,
-        recordedBy: author,
-        recordedAt
-      }
-    });
+    return saveReplacementInProgress({ db, record, mediaRecordId, endDate, author, body });
   } catch (error) {
     logWorkerError({
       requestId,
@@ -179,15 +101,172 @@ export async function handleMediaPlacementDisposition(operation, body, env, requ
       error
     });
 
-    return jsonResponse({
+    return reply({
       ok: false,
-      requestId,
-      action: ACTIONS.GET_MEDIA_OPERATIONS,
-      version: VERSION,
       error: "The Media placement disposition could not be saved.",
       details: safeErrorMessage(error)
     }, 500);
   }
+
+  function reply(payload, status = 200) {
+    return jsonResponse({
+      requestId,
+      action: ACTIONS.GET_MEDIA_OPERATIONS,
+      version: VERSION,
+      operation,
+      ...payload
+    }, status);
+  }
+}
+
+async function saveRetireAtEnd({ db, record, mediaRecordId, endDate, author, body }) {
+  const reason = clean(body?.reason) || "Other approved creative remains in rotation; no replacement is required.";
+  const existing = parseDisposition(record.notes);
+
+  if (
+    existing.disposition === "retire_at_end" &&
+    existing.replacementRequired === "no" &&
+    existing.endDate === endDate
+  ) {
+    return response({
+      ok: true,
+      mediaRecordId,
+      alreadySaved: true,
+      disposition: existing
+    });
+  }
+
+  const recordedAt = new Date().toISOString();
+  const managedLines = [
+    "Placement Disposition: retire_at_end",
+    "Replacement Required: no",
+    `Disposition End Date: ${endDate}`,
+    `Disposition Reason: ${reason}`,
+    `Disposition Recorded By: ${author}`,
+    `Disposition Recorded At: ${recordedAt}`,
+    `Placement Decision History | ${recordedAt} | ${author} | Run through scheduled end date ${endDate}, then retire. No replacement creative required. ${reason}`
+  ];
+
+  await updateRecordNotes(db, record, mediaRecordId, managedLines);
+
+  return response({
+    ok: true,
+    mediaRecordId,
+    disposition: {
+      disposition: "retire_at_end",
+      replacementRequired: "no",
+      endDate,
+      reason,
+      recordedBy: author,
+      recordedAt
+    }
+  });
+}
+
+async function saveReplacementInProgress({ db, record, mediaRecordId, endDate, author, body }) {
+  const creativeId = positiveInteger(body?.creativeId ?? body?.replacementCreativeId);
+  if (!creativeId) {
+    return response({
+      ok: false,
+      error: "creativeId is required for replacement_in_progress."
+    }, 400);
+  }
+
+  const creativeResult = await db.prepare(`
+    SELECT id, client_id, creative_name, current_stage, status
+    FROM media_creatives
+    WHERE id = ?
+    LIMIT 1
+  `).bind(creativeId).all();
+  const creative = rowsOf(creativeResult)[0];
+
+  if (!creative) {
+    return response({ ok: false, error: `Creative ${creativeId} was not found.` }, 404);
+  }
+  if (Number(creative.client_id) !== Number(record.client_id)) {
+    return response({
+      ok: false,
+      error: `Creative ${creativeId} does not belong to the same client as Media record ${mediaRecordId}.`
+    }, 409);
+  }
+
+  const creativeName = clean(creative.creative_name) || `Creative #${creativeId}`;
+  const reason = clean(body?.reason) || `Replacement Creative #${creativeId} — ${creativeName} is in production.`;
+  const existing = parseDisposition(record.notes);
+
+  if (
+    existing.disposition === "replacement_in_progress" &&
+    existing.replacementRequired === "yes" &&
+    Number(existing.replacementCreativeId) === creativeId
+  ) {
+    return response({
+      ok: true,
+      mediaRecordId,
+      alreadySaved: true,
+      disposition: existing
+    });
+  }
+
+  const recordedAt = new Date().toISOString();
+  const placementLabel = clean(record.campaign_name || record.creative_name) || `Media record #${mediaRecordId}`;
+  const locationLabel = [clean(record.market), clean(record.outlet_name)].filter(Boolean).join(" / ");
+  const managedLines = [
+    "Placement Disposition: replacement_in_progress",
+    "Replacement Required: yes",
+    `Replacement Creative ID: ${creativeId}`,
+    `Replacement Creative Name: ${creativeName}`,
+    `Disposition End Date: ${endDate}`,
+    `Disposition Reason: ${reason}`,
+    `Disposition Recorded By: ${author}`,
+    `Disposition Recorded At: ${recordedAt}`,
+    `Placement Decision History | ${recordedAt} | ${author} | Replacement Creative #${creativeId} — ${creativeName} linked to ${placementLabel}${locationLabel ? ` · ${locationLabel}` : ""}. Current placement remains live while replacement work is in progress.`
+  ];
+
+  await updateRecordNotes(db, record, mediaRecordId, managedLines);
+
+  await db.prepare(`
+    INSERT INTO media_creative_history(
+      creative_id, entry_type, stage, author, content, created_at
+    ) VALUES(?, 'placement_link', ?, ?, ?, CURRENT_TIMESTAMP)
+  `).bind(
+    creativeId,
+    clean(creative.current_stage),
+    author,
+    `Linked as the replacement Creative for Media record #${mediaRecordId} — ${placementLabel}${locationLabel ? ` · ${locationLabel}` : ""}. The existing placement remains live while this Creative is developed.`
+  ).run();
+
+  return response({
+    ok: true,
+    mediaRecordId,
+    disposition: {
+      disposition: "replacement_in_progress",
+      replacementRequired: "yes",
+      replacementCreativeId: creativeId,
+      replacementCreativeName: creativeName,
+      endDate,
+      reason,
+      recordedBy: author,
+      recordedAt
+    }
+  });
+}
+
+async function updateRecordNotes(db, record, mediaRecordId, managedLines) {
+  const preservedLines = String(record.notes || "")
+    .split(/\r?\n/)
+    .filter(line => !MANAGED_PREFIXES.some(prefix => line.toLowerCase().startsWith(prefix.toLowerCase())))
+    .filter(Boolean);
+
+  const notes = [...preservedLines, ...managedLines].join("\n");
+
+  await db.prepare(`
+    UPDATE media_records
+    SET notes = ?,
+        attention_status = 'clear',
+        attention_reason = NULL,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `).bind(notes, mediaRecordId).run();
 }
 
 function parseDisposition(notes) {
@@ -195,6 +274,8 @@ function parseDisposition(notes) {
   return {
     disposition: noteValue(text, "Placement Disposition:"),
     replacementRequired: noteValue(text, "Replacement Required:"),
+    replacementCreativeId: noteValue(text, "Replacement Creative ID:"),
+    replacementCreativeName: noteValue(text, "Replacement Creative Name:"),
     endDate: noteValue(text, "Disposition End Date:"),
     reason: noteValue(text, "Disposition Reason:"),
     recordedBy: noteValue(text, "Disposition Recorded By:"),
@@ -209,7 +290,7 @@ function noteValue(notes, label) {
   return line ? line.slice(label.length).trim() : "";
 }
 
-function normalizePositiveInteger(value) {
+function positiveInteger(value) {
   const numeric = Number(value);
   return Number.isInteger(numeric) && numeric > 0 ? numeric : null;
 }
@@ -227,4 +308,13 @@ function normalizeDateOnly(value) {
 
 function clean(value) {
   return String(value ?? "").trim();
+}
+
+function response(payload, status = 200) {
+  return jsonResponse({
+    action: ACTIONS.GET_MEDIA_OPERATIONS,
+    version: VERSION,
+    operation: "set_placement_disposition",
+    ...payload
+  }, status);
 }
