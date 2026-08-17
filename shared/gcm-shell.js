@@ -1,20 +1,20 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gcm-shell.js
-   Version: 2.0.17
+   Version: 2.0.18
    Status: Production Candidate
    Purpose: Shared internal GCM OS application shell foundation.
-   Source: gcm-shell.js 2.0.16 production navigation
+   Source: gcm-shell.js 2.0.17 production navigation
    Sprint: Work Navigation + Verified Investigation Completion
    Change: Points the primary Work navigation to work.html, removes Work With Me
-           from the primary shell, and loads the verified Investigation completion
-           control on the operational Work page.
+           from the primary shell, and loads the hardened verified Investigation
+           completion control on the operational Work page.
    ========================================================= */
 
 (() => {
   "use strict";
 
-  const SHELL_VERSION = "2.0.17";
+  const SHELL_VERSION = "2.0.18";
 
   const PAGE_MAP = {
     today: { label: "Today", href: "today.html", icon: "⌂" },
@@ -101,7 +101,7 @@
   function loadPageEnhancements() {
     const path=window.location.pathname;
     if(/\/work\.html$/i.test(path)) {
-      appendScript("shared/work-investigation-completion.js?v=1.0.0","data-gcm-work-investigation-completion");
+      appendScript("shared/work-investigation-completion.js?v=1.0.1","data-gcm-work-investigation-completion");
     }
     if(/\/media-production\.html$/i.test(path)) {
       restoreMediaCreativeHandoff();
