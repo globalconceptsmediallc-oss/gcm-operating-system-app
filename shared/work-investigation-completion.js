@@ -1,0 +1,192 @@
+/* =========================================================
+   Global Concepts Media Operating System
+   File: shared/work-investigation-completion.js
+   Version: 1.0.0
+   Status: Production Candidate
+   Purpose: Add a valid human-approved completion path when an
+            Investigation reaches Complete Investigation after the
+            corrective work was already performed and verified during
+            the Investigation itself, without creating a duplicate Work Item.
+   ========================================================= */
+
+(() => {
+  "use strict";
+
+  const FILE_VERSION = "1.0.0";
+  const WORKER_URL = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+  const BUTTON_ID = "gcm-complete-verified-investigation";
+  let processing = false;
+
+  function workerErrorMessage(value, fallback = "Worker request failed.") {
+    if (value == null || value === "") return fallback;
+    if (typeof value === "string") return value.trim() || fallback;
+    if (value instanceof Error) return String(value.message || fallback).trim() || fallback;
+    if (typeof value === "object") {
+      const direct = [value.message, value.error, value.details, value.reason, value.code]
+        .find(candidate => typeof candidate === "string" && candidate.trim());
+      if (direct) return direct.trim();
+      try {
+        const json = JSON.stringify(value);
+        if (json && json !== "{}") return json;
+      } catch {}
+    }
+    return String(value || fallback).trim() || fallback;
+  }
+
+  async function post(body) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60000);
+
+    try {
+      const response = await fetch(WORKER_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(body),
+        signal: controller.signal
+      });
+
+      const raw = await response.text();
+      let payload = {};
+      try {
+        payload = raw ? JSON.parse(raw) : {};
+      } catch {
+        throw new Error(`Worker returned non-JSON output (HTTP ${response.status}).`);
+      }
+
+      if (!response.ok || payload.ok !== true) {
+        throw new Error(workerErrorMessage(
+          payload.error ?? payload.details ?? payload.message,
+          `Worker request failed (HTTP ${response.status}).`
+        ));
+      }
+
+      return payload;
+    } catch (error) {
+      if (error?.name === "AbortError") {
+        throw new Error("The Worker request timed out after 60 seconds.");
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  function activeStepIsCompletion() {
+    return [...document.querySelectorAll(".evidence-step.active")]
+      .some(step => /complete investigation/i.test(step.textContent || ""));
+  }
+
+  function currentInvestigationId() {
+    const params = new URLSearchParams(location.search);
+    const direct = Number(params.get("investigation"));
+    if (Number.isInteger(direct) && direct > 0) return direct;
+
+    const subtitle = document.querySelector("#detail-panel .detail-subtitle");
+    const match = String(subtitle?.textContent || "").match(/Investigation\s+#(\d+)/i);
+    const parsed = Number(match?.[1]);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : 0;
+  }
+
+  function currentClientCode() {
+    const params = new URLSearchParams(location.search);
+    const direct = String(params.get("client") || "").trim();
+    if (direct) return direct;
+
+    const link = document.querySelector('#detail-panel .detail-subtitle a[href*="business-workspace.html?business="]');
+    if (!link) return "";
+
+    try {
+      return new URL(link.href, location.href).searchParams.get("business") || "";
+    } catch {
+      return "";
+    }
+  }
+
+  function setMessage(type, text) {
+    const message = document.getElementById("process-message");
+    if (!message) return;
+    message.className = `status ${type}`;
+    message.textContent = text;
+  }
+
+  async function completeVerifiedInvestigation(button) {
+    if (processing) return;
+
+    const investigationId = currentInvestigationId();
+    const clientCode = currentClientCode();
+    const findingSummary = String(document.getElementById("finding-summary")?.value || "").trim();
+
+    if (!investigationId || !clientCode) {
+      setMessage("error", "The selected Investigation could not be identified. Refresh the page and select the Investigation again.");
+      return;
+    }
+
+    if (!findingSummary) {
+      setMessage("error", "Record the evidence-supported Investigation Finding before completion.");
+      return;
+    }
+
+    if (!window.confirm(
+      `Complete Investigation #${investigationId} as Work Performed & Verified?\n\nThis closes the Investigation without creating a duplicate Work Item.`
+    )) return;
+
+    processing = true;
+    button.disabled = true;
+    setMessage("loading", `Completing Investigation #${investigationId} in production D1…`);
+
+    try {
+      /*
+       * The current process-investigation contract closes an Investigation
+       * without creating a Work Item through the no_work_required branch.
+       * Here the human-facing meaning is different: the work was already
+       * performed during the Investigation and the verified result is preserved
+       * in findingSummary / Investigation Progress before closure.
+       */
+      await post({
+        action: "process-investigation",
+        clientCode,
+        investigationId,
+        findingSummary,
+        outcome: "no_work_required"
+      });
+
+      setMessage("ready", `Investigation #${investigationId} completed. Work performed and verified; no duplicate Work Item was created.`);
+      button.textContent = "Completed — Work Verified";
+      setTimeout(() => location.reload(), 700);
+    } catch (error) {
+      button.disabled = false;
+      setMessage("error", error.message || "The Investigation could not be completed.");
+    } finally {
+      processing = false;
+    }
+  }
+
+  function installButton() {
+    if (!/\/work\.html$/i.test(location.pathname)) return;
+    if (!activeStepIsCompletion()) return;
+    if (document.getElementById(BUTTON_ID)) return;
+
+    const actions = document.querySelector("#detail-panel .processing-actions");
+    const continueButton = document.getElementById("continue-button");
+    if (!actions || !continueButton) return;
+
+    const button = document.createElement("button");
+    button.id = BUTTON_ID;
+    button.type = "button";
+    button.className = "button primary";
+    button.textContent = "Complete — Work Performed & Verified";
+    button.title = `Close this Investigation after verified corrective work. Completion control v${FILE_VERSION}.`;
+    button.addEventListener("click", () => completeVerifiedInvestigation(button));
+
+    continueButton.insertAdjacentElement("afterend", button);
+  }
+
+  const observer = new MutationObserver(installButton);
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", installButton, { once: true });
+  } else {
+    installButton();
+  }
+})();
