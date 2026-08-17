@@ -1,25 +1,28 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/work-investigation-completion.js
-   Version: 1.0.1
+   Version: 1.1.0
    Status: Production Candidate
-   Purpose: Add a valid human-approved completion path when an
-            Investigation reaches Complete Investigation after the
-            corrective work was already performed and verified during
-            the Investigation itself, without creating a duplicate Work Item.
+   Purpose: Add human-approved Investigation resolution controls for
+            (1) corrective work already performed and verified during the
+            Investigation, and (2) unresolved Investigations that are now
+            waiting on an external validation or monitoring result.
 
-   Changes in 1.0.1:
-   - Resolves the currently rendered Investigation and client before URL fallbacks.
-   - Prevents a stale deep-link query string from closing the wrong Investigation
-     after the operator selects a different Investigation from the queue.
+   Changes in 1.1.0:
+   - Preserves the hardened Work Performed & Verified completion path.
+   - Adds Monitoring — Await External Validation as a distinct durable state.
+   - Uses the currently rendered Investigation/client before URL fallbacks.
+   - Preserves the finding plus next question/evidence when entering monitoring.
+   - Does not create a Work Item or close a monitoring Investigation.
    ========================================================= */
 
 (() => {
   "use strict";
 
-  const FILE_VERSION = "1.0.1";
+  const FILE_VERSION = "1.1.0";
   const WORKER_URL = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
-  const BUTTON_ID = "gcm-complete-verified-investigation";
+  const COMPLETE_BUTTON_ID = "gcm-complete-verified-investigation";
+  const MONITOR_BUTTON_ID = "gcm-monitor-investigation";
   let processing = false;
 
   function workerErrorMessage(value, fallback = "Worker request failed.") {
@@ -110,12 +113,20 @@
     message.textContent = text;
   }
 
+  function currentDecisionFields() {
+    return {
+      findingSummary: String(document.getElementById("finding-summary")?.value || "").trim(),
+      nextQuestion: String(document.getElementById("work-title")?.value || "").trim(),
+      nextEvidence: String(document.getElementById("work-description")?.value || "").trim()
+    };
+  }
+
   async function completeVerifiedInvestigation(button) {
     if (processing) return;
 
     const investigationId = currentInvestigationId();
     const clientCode = currentClientCode();
-    const findingSummary = String(document.getElementById("finding-summary")?.value || "").trim();
+    const { findingSummary } = currentDecisionFields();
 
     if (!investigationId || !clientCode) {
       setMessage("error", "The selected Investigation could not be identified. Refresh the page and select the Investigation again.");
@@ -136,13 +147,6 @@
     setMessage("loading", `Completing Investigation #${investigationId} in production D1…`);
 
     try {
-      /*
-       * The current process-investigation contract closes an Investigation
-       * without creating a Work Item through the no_work_required branch.
-       * Here the human-facing meaning is different: the work was already
-       * performed during the Investigation and the verified result is preserved
-       * in findingSummary / Investigation Progress before closure.
-       */
       await post({
         action: "process-investigation",
         clientCode,
@@ -162,32 +166,95 @@
     }
   }
 
-  function installButton() {
+  async function moveInvestigationToMonitoring(button) {
+    if (processing) return;
+
+    const investigationId = currentInvestigationId();
+    const clientCode = currentClientCode();
+    const fields = currentDecisionFields();
+
+    if (!investigationId || !clientCode) {
+      setMessage("error", "The selected Investigation could not be identified. Refresh the page and select the Investigation again.");
+      return;
+    }
+
+    if (!fields.findingSummary) {
+      setMessage("error", "Record what is currently known before moving the Investigation to monitoring.");
+      return;
+    }
+
+    const nextQuestion = fields.nextQuestion || "Did the external validation or monitoring result pass or fail?";
+    const nextEvidence = fields.nextEvidence || "Wait for the external validation or monitoring result before taking additional corrective action.";
+
+    if (!window.confirm(
+      `Move Investigation #${investigationId} to Monitoring — Await External Validation?\n\nIt remains preserved in D1 but is removed from active Work and Today until a new result requires action.`
+    )) return;
+
+    processing = true;
+    button.disabled = true;
+    setMessage("loading", `Moving Investigation #${investigationId} to monitoring in production D1…`);
+
+    try {
+      await post({
+        action: "process-investigation",
+        clientCode,
+        investigationId,
+        findingSummary: fields.findingSummary,
+        outcome: "monitoring_external_validation",
+        nextQuestion,
+        nextEvidence
+      });
+
+      setMessage("ready", `Investigation #${investigationId} is now Monitoring — Awaiting External Validation. It is preserved but no longer active work.`);
+      button.textContent = "Monitoring — Awaiting Result";
+      setTimeout(() => location.reload(), 700);
+    } catch (error) {
+      button.disabled = false;
+      setMessage("error", error.message || "The Investigation could not be moved to monitoring.");
+    } finally {
+      processing = false;
+    }
+  }
+
+  function installButtons() {
     if (!/\/work\.html$/i.test(location.pathname)) return;
-    if (!activeStepIsCompletion()) return;
-    if (document.getElementById(BUTTON_ID)) return;
 
     const actions = document.querySelector("#detail-panel .processing-actions");
     const continueButton = document.getElementById("continue-button");
     if (!actions || !continueButton) return;
 
-    const button = document.createElement("button");
-    button.id = BUTTON_ID;
-    button.type = "button";
-    button.className = "button primary";
-    button.textContent = "Complete — Work Performed & Verified";
-    button.title = `Close this Investigation after verified corrective work. Completion control v${FILE_VERSION}.`;
-    button.addEventListener("click", () => completeVerifiedInvestigation(button));
+    let monitorButton = document.getElementById(MONITOR_BUTTON_ID);
+    if (!monitorButton) {
+      monitorButton = document.createElement("button");
+      monitorButton.id = MONITOR_BUTTON_ID;
+      monitorButton.type = "button";
+      monitorButton.className = "button";
+      monitorButton.textContent = "Monitoring — Await External Validation";
+      monitorButton.title = `Preserve this Investigation in D1 while removing it from active attention. Resolution control v${FILE_VERSION}.`;
+      monitorButton.addEventListener("click", () => moveInvestigationToMonitoring(monitorButton));
+      continueButton.insertAdjacentElement("afterend", monitorButton);
+    }
 
-    continueButton.insertAdjacentElement("afterend", button);
+    if (!activeStepIsCompletion()) return;
+    if (document.getElementById(COMPLETE_BUTTON_ID)) return;
+
+    const completeButton = document.createElement("button");
+    completeButton.id = COMPLETE_BUTTON_ID;
+    completeButton.type = "button";
+    completeButton.className = "button primary";
+    completeButton.textContent = "Complete — Work Performed & Verified";
+    completeButton.title = `Close this Investigation after verified corrective work. Resolution control v${FILE_VERSION}.`;
+    completeButton.addEventListener("click", () => completeVerifiedInvestigation(completeButton));
+
+    monitorButton.insertAdjacentElement("afterend", completeButton);
   }
 
-  const observer = new MutationObserver(installButton);
+  const observer = new MutationObserver(installButtons);
   observer.observe(document.documentElement, { childList: true, subtree: true });
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", installButton, { once: true });
+    document.addEventListener("DOMContentLoaded", installButtons, { once: true });
   } else {
-    installButton();
+    installButtons();
   }
 })();

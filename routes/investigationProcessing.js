@@ -1,26 +1,24 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/investigationProcessing.js
-   Version: 7.4.0
+   Version: 7.5.0
    Status: Production Candidate
-   Source: Production routes/investigationProcessing.js 7.3.0
-   Sprint: Durable Investigation Progress
+   Source: Production routes/investigationProcessing.js 7.4.0
+   Sprint: Durable Investigation Monitoring State
    Purpose: Process an existing Investigation after review by
-            either closing it when no Work Item is required or
-            creating one linked Work Item when specific work is
-            required, saving evidence-supported progress while the
-            Investigation remains open, or creating one linked Work
-            Item when specific work is required. Specific-work
-            Investigations remain open until linked work is completed.
+            continuing active evidence work, moving it to monitoring while
+            an external result is pending, closing it when no Work Item is
+            required, or creating one linked Work Item when specific work
+            is required.
 
-   Changes in 7.4.0:
-   - Adds the continue_investigation outcome.
-   - Updates the current finding without closing the Investigation.
-   - Appends a dated investigation_progress Evidence record containing
-     What We Know, Next Question, and Next Evidence.
-   - Links every progress record to Client, Communication, and Investigation.
-   - Prevents duplicate progress records from repeated identical saves.
-   - Preserves both final outcomes and Work Item creation unchanged.
+   Changes in 7.5.0:
+   - Adds the monitoring_external_validation outcome.
+   - Persists Investigation status = monitoring without closing the record.
+   - Preserves What We Know, Next Question, and Next Evidence in D1 Evidence.
+   - Marks monitoring progress as awaiting_external_validation.
+   - Continue Investigation explicitly restores status = open so a monitored
+     Investigation can be reactivated when a new result requires work.
+   - Preserves existing final outcomes, duplicate protection, and Work creation.
    ========================================================= */
 
 import {
@@ -131,6 +129,7 @@ export async function handleProcessInvestigation(body, env, requestId) {
 
   if (![
     "continue_investigation",
+    "monitoring_external_validation",
     "no_work_required",
     "specific_work_required"
   ].includes(outcome)) {
@@ -139,25 +138,25 @@ export async function handleProcessInvestigation(body, env, requestId) {
       requestId,
       action: ACTIONS.PROCESS_INVESTIGATION,
       error:
-        'Investigation Processing supports outcomes "continue_investigation", "no_work_required", and "specific_work_required".'
+        'Investigation Processing supports outcomes "continue_investigation", "monitoring_external_validation", "no_work_required", and "specific_work_required".'
     }, 400);
   }
 
-  if (outcome === "continue_investigation" && !nextQuestion) {
+  if (["continue_investigation", "monitoring_external_validation"].includes(outcome) && !nextQuestion) {
     return jsonResponse({
       ok: false,
       requestId,
       action: ACTIONS.PROCESS_INVESTIGATION,
-      error: "A nextQuestion is required when an Investigation remains open."
+      error: "A nextQuestion is required when an Investigation remains unresolved."
     }, 400);
   }
 
-  if (outcome === "continue_investigation" && !nextEvidence) {
+  if (["continue_investigation", "monitoring_external_validation"].includes(outcome) && !nextEvidence) {
     return jsonResponse({
       ok: false,
       requestId,
       action: ACTIONS.PROCESS_INVESTIGATION,
-      error: "A nextEvidence value is required when an Investigation remains open."
+      error: "A nextEvidence value is required when an Investigation remains unresolved."
     }, 400);
   }
 
@@ -247,6 +246,17 @@ export async function handleProcessInvestigation(body, env, requestId) {
       });
     }
 
+    if (outcome === "monitoring_external_validation") {
+      return await saveInvestigationMonitoring({
+        db,
+        requestId,
+        investigation,
+        findingSummary,
+        nextQuestion,
+        nextEvidence
+      });
+    }
+
     if (outcome === "no_work_required") {
       return await closeInvestigationWithoutWork({
         db,
@@ -299,11 +309,11 @@ async function saveInvestigationProgress({
     clean(investigation.assigned_to) ||
     "Global Concepts Media";
 
-  const description = [
-    `What We Know: ${findingSummary}`,
-    `Next Question: ${nextQuestion}`,
-    `Next Evidence: ${nextEvidence}`
-  ].join("\n\n");
+  const description = buildProgressDescription({
+    findingSummary,
+    nextQuestion,
+    nextEvidence
+  });
 
   const rawData = JSON.stringify({
     schemaVersion: "1.0.0",
@@ -320,6 +330,7 @@ async function saveInvestigationProgress({
       UPDATE investigations
       SET
         finding_summary = ?,
+        status = 'open',
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
         AND client_id = ?
@@ -329,37 +340,12 @@ async function saveInvestigationProgress({
       investigation.client_id
     ),
 
-    db.prepare(`
-      INSERT INTO evidence (
-        client_id,
-        investigation_id,
-        work_item_id,
-        communication_id,
-        evidence_type,
-        source,
-        description,
-        url,
-        raw_data,
-        captured_at
-      )
-      SELECT ?, ?, NULL, ?, 'investigation_progress',
-             'Investigation Progress', ?, NULL, ?, CURRENT_TIMESTAMP
-      WHERE NOT EXISTS (
-        SELECT 1
-        FROM evidence
-        WHERE investigation_id = ?
-          AND evidence_type = 'investigation_progress'
-          AND description = ?
-      )
-    `).bind(
-      investigation.client_id,
-      investigation.id,
-      investigation.communication_id,
+    buildProgressEvidenceInsert({
+      db,
+      investigation,
       description,
-      rawData,
-      investigation.id,
-      description
-    )
+      rawData
+    })
   ]);
 
   const [updated, progress] = await Promise.all([
@@ -383,6 +369,89 @@ async function saveInvestigationProgress({
     outcome: "continue_investigation",
     investigationKeptOpen: true,
     workItemCreated: false,
+    investigation: mapInvestigation(updated),
+    progress: mapInvestigationProgress(progress)
+  });
+}
+
+/* =========================================================
+   Outcome: Monitoring / Await External Validation
+   ========================================================= */
+
+async function saveInvestigationMonitoring({
+  db,
+  requestId,
+  investigation,
+  findingSummary,
+  nextQuestion,
+  nextEvidence
+}) {
+  const recordedBy =
+    clean(investigation.assigned_to) ||
+    "Global Concepts Media";
+
+  const description = buildProgressDescription({
+    findingSummary,
+    nextQuestion,
+    nextEvidence
+  });
+
+  const rawData = JSON.stringify({
+    schemaVersion: "1.0.0",
+    recordType: "investigation_progress",
+    progressStatus: "awaiting_external_validation",
+    findingSummary,
+    nextQuestion,
+    nextEvidence,
+    recordedBy
+  });
+
+  await db.batch([
+    db.prepare(`
+      UPDATE investigations
+      SET
+        finding_summary = ?,
+        status = 'monitoring',
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+        AND client_id = ?
+    `).bind(
+      findingSummary,
+      investigation.id,
+      investigation.client_id
+    ),
+
+    buildProgressEvidenceInsert({
+      db,
+      investigation,
+      description,
+      rawData
+    })
+  ]);
+
+  const [updated, progress] = await Promise.all([
+    loadInvestigation(db, investigation.id),
+    loadLatestInvestigationProgress(db, investigation.id)
+  ]);
+
+  if (!updated) {
+    throw new Error(
+      `D1 saved the monitoring state but Investigation #${investigation.id} could not be reloaded.`
+    );
+  }
+
+  return jsonResponse({
+    ok: true,
+    requestId,
+    action: ACTIONS.PROCESS_INVESTIGATION,
+    version: VERSION,
+    source: "D1",
+    updated: true,
+    outcome: "monitoring_external_validation",
+    investigationKeptOpen: true,
+    workItemCreated: false,
+    attentionRequired: false,
+    monitoring: true,
     investigation: mapInvestigation(updated),
     progress: mapInvestigationProgress(progress)
   });
@@ -448,11 +517,6 @@ async function createSpecificWorkItem({
   workCategory,
   expectedImpact
 }) {
-  /*
-   * Duplicate protection:
-   * one Investigation should not create multiple Work Items from
-   * repeated clicks or retries during this road-tested workflow.
-   */
   const existingWorkItem = await db.prepare(`
     SELECT
       id,
@@ -483,6 +547,7 @@ async function createSpecificWorkItem({
       UPDATE investigations
       SET
         finding_summary = ?,
+        status = 'open',
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
         AND client_id = ?
@@ -524,6 +589,7 @@ async function createSpecificWorkItem({
       SET
         finding_summary = ?,
         recommendation = ?,
+        status = 'open',
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
         AND client_id = ?
@@ -747,6 +813,50 @@ function mapInvestigationProgress(row) {
 /* =========================================================
    Route-Specific Helpers
    ========================================================= */
+
+function buildProgressDescription({ findingSummary, nextQuestion, nextEvidence }) {
+  return [
+    `What We Know: ${findingSummary}`,
+    `Next Question: ${nextQuestion}`,
+    `Next Evidence: ${nextEvidence}`
+  ].join("\n\n");
+}
+
+function buildProgressEvidenceInsert({ db, investigation, description, rawData }) {
+  return db.prepare(`
+    INSERT INTO evidence (
+      client_id,
+      investigation_id,
+      work_item_id,
+      communication_id,
+      evidence_type,
+      source,
+      description,
+      url,
+      raw_data,
+      captured_at
+    )
+    SELECT ?, ?, NULL, ?, 'investigation_progress',
+           'Investigation Progress', ?, NULL, ?, CURRENT_TIMESTAMP
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM evidence
+      WHERE investigation_id = ?
+        AND evidence_type = 'investigation_progress'
+        AND description = ?
+        AND raw_data = ?
+    )
+  `).bind(
+    investigation.client_id,
+    investigation.id,
+    investigation.communication_id,
+    description,
+    rawData,
+    investigation.id,
+    description,
+    rawData
+  );
+}
 
 function isClosedStatus(value) {
   const status = String(value || "")

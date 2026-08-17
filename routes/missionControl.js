@@ -1,20 +1,21 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/missionControl.js
-   Version: 7.7.4
+   Version: 7.7.5
    Status: Production Candidate
-   Source: Production routes/missionControl.js 7.7.3
-   Sprint: Today Road Test — Authoritative Client Queue
+   Source: Production routes/missionControl.js 7.7.4
+   Sprint: Durable Investigation Monitoring State
    Purpose: Preserve the live Mission Control contract while ranking
-            the client-attention queue from the same durable operational
-            priorities used by highestPriorityDecision.
+            only records that require current human action.
 
    Production rules:
    - Mission Control reads operational state; it does not own it.
    - Existing clientsRequiringAttention output remains compatible.
-   - Each client is represented once by its strongest unresolved record.
+   - Each client is represented once by its strongest actionable record.
    - Client queue order uses the same priority, record type, and recency
      rules as highestPriorityDecision, so both views agree on what is first.
+   - Monitoring / awaiting-external-validation Investigations remain durable
+     D1 history but do not appear as current attention or highest-value work.
    - No recommendation or evidence is manufactured.
    ========================================================= */
 
@@ -34,7 +35,7 @@ import {
   rowsOf
 } from "../shared/database.js";
 
-const CLOSED_INVESTIGATION_STATUSES = `
+const NON_ACTION_INVESTIGATION_STATUSES = `
   'complete',
   'completed',
   'closed',
@@ -43,7 +44,11 @@ const CLOSED_INVESTIGATION_STATUSES = `
   'canceled',
   'archived',
   'ignored',
-  'no_action'
+  'no_action',
+  'monitoring',
+  'awaiting_external_validation',
+  'waiting_external',
+  'waiting_on_external'
 `;
 
 const CLOSED_WORK_STATUSES = `
@@ -156,7 +161,7 @@ async function loadClientsRequiringAttention(db) {
       FROM investigations i
       INNER JOIN clients c ON c.id = i.client_id
       WHERE ${normalizedStatus("i.status", "open")}
-        NOT IN (${CLOSED_INVESTIGATION_STATUSES})
+        NOT IN (${NON_ACTION_INVESTIGATION_STATUSES})
 
       UNION ALL
 
@@ -222,7 +227,7 @@ async function loadClientsRequiringAttention(db) {
    4. Low / Unspecified
 
    At equal priority, unresolved Work Items rank before
-   Investigations because work is already committed.
+   actionable Investigations because work is already committed.
    Newer records break any remaining tie.
    ========================================================= */
 
@@ -261,7 +266,7 @@ async function loadHighestPriorityDecision(db) {
       FROM investigations i
       INNER JOIN clients c ON c.id = i.client_id
       WHERE ${normalizedStatus("i.status", "open")}
-        NOT IN (${CLOSED_INVESTIGATION_STATUSES})
+        NOT IN (${NON_ACTION_INVESTIGATION_STATUSES})
 
       UNION ALL
 

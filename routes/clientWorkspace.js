@@ -1,20 +1,23 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/clientWorkspace.js
-   Version: 7.2.0
+   Version: 7.3.0
    Status: Production Candidate
-   Source: Production routes/clientWorkspace.js 7.1.1
-   Sprint: Unified Client Operational State
+   Source: Production routes/clientWorkspace.js 7.2.0
+   Sprint: Durable Investigation Monitoring State
    Purpose: Preserve the complete live D1 client workspace and client tool
-            router while making open Investigations authoritative in the
-            Business Workspace before unstarted Work Items, alerts, and
-            fallback planning.
+            router while separating actionable Investigations from durable
+            monitoring / awaiting-external-validation history.
+
    Production changes:
-   - Open Investigations now drive account health, current priority, next
-     action, Business Priorities, and operational counts.
-   - Investigation priority is ranked before Work Items and alerts.
+   - Monitoring Investigations remain preserved in the full Investigation history.
+   - Monitoring Investigations no longer drive account health, current priority,
+     next action, Business Priorities, or active Investigation counts.
+   - operational.investigations now represents the active Work queue.
+   - operational.investigationHistory preserves all Investigation records.
+   - operational.monitoringInvestigations exposes unresolved waiting records.
    - Existing communications, work items, evidence, proof, tools, history,
-     clientToolRouter, response shape, and D1 queries are preserved.
+     clientToolRouter, and D1 queries are preserved.
    ========================================================= */
 
 import {
@@ -197,6 +200,7 @@ export async function handleClientWorkspace(body, env, requestId) {
     });
 
     const openInvestigations = investigations.filter(isOpenInvestigation);
+    const monitoringInvestigations = investigations.filter(isMonitoringInvestigation);
     const openWorkItems = workItems.filter(isOpenWorkItem);
     const activeAlerts = alerts.filter(isActiveAlert);
 
@@ -216,7 +220,9 @@ export async function handleClientWorkspace(body, env, requestId) {
       operational: {
         client,
         communications,
-        investigations,
+        investigations: openInvestigations,
+        investigationHistory: investigations,
+        monitoringInvestigations,
         workItems,
         evidence,
         alerts,
@@ -232,6 +238,7 @@ export async function handleClientWorkspace(body, env, requestId) {
         ).length,
         investigations: investigations.length,
         openInvestigations: openInvestigations.length,
+        monitoringInvestigations: monitoringInvestigations.length,
         workItems: workItems.length,
         openWorkItems: openWorkItems.length,
         proofOfWork: proofOfWork.length,
@@ -242,7 +249,7 @@ export async function handleClientWorkspace(body, env, requestId) {
 
       diagnostics: {
         unifiedOperationalState: {
-          version: "1.0.0",
+          version: "1.1.0",
           firstRecordType:
             openInvestigations.length > 0
               ? "investigation"
@@ -257,6 +264,7 @@ export async function handleClientWorkspace(body, env, requestId) {
             activeAlerts[0]?.id ||
             null,
           openInvestigationCount: openInvestigations.length,
+          monitoringInvestigationCount: monitoringInvestigations.length,
           openWorkItemCount: openWorkItems.length,
           activeAlertCount: activeAlerts.length
         },
@@ -534,6 +542,7 @@ function buildClientWorkspaceRecord({
         communications: communications.length,
         investigations: investigations.length,
         openInvestigations: openInvestigations.length,
+        monitoringInvestigations: investigations.filter(isMonitoringInvestigation).length,
         workItems: workItems.length,
         openWorkItems: openWork.length,
         proofOfWork: proofOfWork.length,
@@ -556,15 +565,33 @@ function buildClientWorkspaceRecord({
   };
 }
 
+function isMonitoringInvestigation(item) {
+  return [
+    "monitoring",
+    "awaiting_external_validation",
+    "waiting_external",
+    "waiting_on_external"
+  ].includes(normalizeStatus(item?.status));
+}
+
 function isOpenInvestigation(item) {
+  const status = normalizeStatus(item?.status);
+
+  if (isMonitoringInvestigation(item)) {
+    return false;
+  }
+
   return ![
     "resolved",
     "closed",
     "complete",
     "completed",
     "cancelled",
-    "archived"
-  ].includes(normalizeStatus(item?.status));
+    "canceled",
+    "archived",
+    "ignored",
+    "no_action"
+  ].includes(status);
 }
 
 function isOpenWorkItem(item) {
@@ -572,6 +599,7 @@ function isOpenWorkItem(item) {
     "completed",
     "complete",
     "cancelled",
+    "canceled",
     "closed",
     "archived"
   ].includes(normalizeStatus(item?.status));
@@ -842,7 +870,7 @@ function normalizeStatus(value) {
   return String(value || "")
     .trim()
     .toLowerCase()
-    .replace(/\s+/g, "_");
+    .replace(/[-\s]+/g, "_");
 }
 
 function workspaceStatus(value) {
@@ -853,14 +881,19 @@ function workspaceStatus(value) {
     blocked: "Blocked",
     implemented: "In Progress",
     verifying: "Waiting",
+    monitoring: "Waiting",
+    awaiting_external_validation: "Waiting",
+    waiting_external: "Waiting",
+    waiting_on_external: "Waiting",
     completed: "Complete",
     complete: "Complete",
     closed: "Complete",
-    cancelled: "Deferred"
+    cancelled: "Deferred",
+    canceled: "Deferred"
   };
 
   return (
-    statuses[String(value || "").toLowerCase()] ||
+    statuses[normalizeStatus(value)] ||
     titleCase(value || "Not Started")
   );
 }
