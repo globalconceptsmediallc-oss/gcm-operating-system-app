@@ -1,18 +1,23 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/work-investigation-completion.js
-   Version: 1.0.0
+   Version: 1.0.1
    Status: Production Candidate
    Purpose: Add a valid human-approved completion path when an
             Investigation reaches Complete Investigation after the
             corrective work was already performed and verified during
             the Investigation itself, without creating a duplicate Work Item.
+
+   Changes in 1.0.1:
+   - Resolves the currently rendered Investigation and client before URL fallbacks.
+   - Prevents a stale deep-link query string from closing the wrong Investigation
+     after the operator selects a different Investigation from the queue.
    ========================================================= */
 
 (() => {
   "use strict";
 
-  const FILE_VERSION = "1.0.0";
+  const FILE_VERSION = "1.0.1";
   const WORKER_URL = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const BUTTON_ID = "gcm-complete-verified-investigation";
   let processing = false;
@@ -77,29 +82,25 @@
   }
 
   function currentInvestigationId() {
-    const params = new URLSearchParams(location.search);
-    const direct = Number(params.get("investigation"));
-    if (Number.isInteger(direct) && direct > 0) return direct;
-
     const subtitle = document.querySelector("#detail-panel .detail-subtitle");
     const match = String(subtitle?.textContent || "").match(/Investigation\s+#(\d+)/i);
-    const parsed = Number(match?.[1]);
-    return Number.isInteger(parsed) && parsed > 0 ? parsed : 0;
+    const rendered = Number(match?.[1]);
+    if (Number.isInteger(rendered) && rendered > 0) return rendered;
+
+    const direct = Number(new URLSearchParams(location.search).get("investigation"));
+    return Number.isInteger(direct) && direct > 0 ? direct : 0;
   }
 
   function currentClientCode() {
-    const params = new URLSearchParams(location.search);
-    const direct = String(params.get("client") || "").trim();
-    if (direct) return direct;
-
     const link = document.querySelector('#detail-panel .detail-subtitle a[href*="business-workspace.html?business="]');
-    if (!link) return "";
-
-    try {
-      return new URL(link.href, location.href).searchParams.get("business") || "";
-    } catch {
-      return "";
+    if (link) {
+      try {
+        const rendered = String(new URL(link.href, location.href).searchParams.get("business") || "").trim();
+        if (rendered) return rendered;
+      } catch {}
     }
+
+    return String(new URLSearchParams(location.search).get("client") || "").trim();
   }
 
   function setMessage(type, text) {
