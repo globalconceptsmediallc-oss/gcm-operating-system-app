@@ -1,24 +1,25 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gcm-shell.js
-   Version: 2.0.16
+   Version: 2.0.17
    Status: Production Candidate
    Purpose: Shared internal GCM OS application shell foundation.
-   Source: gcm-shell.js 2.0.15 production navigation
-   Sprint: Media Work State / Waiting + Scheduled
-   Change: Loads durable Creative Work State controls and updates the Media
-           dashboard so Needs Action means work that actually needs attention now.
+   Source: gcm-shell.js 2.0.16 production navigation
+   Sprint: Work Navigation + Verified Investigation Completion
+   Change: Points the primary Work navigation to work.html, removes Work With Me
+           from the primary shell, and loads the verified Investigation completion
+           control on the operational Work page.
    ========================================================= */
 
 (() => {
   "use strict";
 
-  const SHELL_VERSION = "2.0.16";
+  const SHELL_VERSION = "2.0.17";
 
   const PAGE_MAP = {
     today: { label: "Today", href: "today.html", icon: "⌂" },
     clients: { label: "Clients", href: "clients.html", icon: "◫" },
-    work: { label: "Work With Me", href: "work-with-me.html", icon: "✓" },
+    work: { label: "Work", href: "work.html", icon: "✓" },
     media: { label: "Media", href: "media.html", icon: "◉" },
     prospects: { label: "Prospects", href: "client-pre-research.html", icon: "◎" },
     calendar: { label: "Calendar", href: "calendar.html", icon: "▦" },
@@ -99,6 +100,9 @@
 
   function loadPageEnhancements() {
     const path=window.location.pathname;
+    if(/\/work\.html$/i.test(path)) {
+      appendScript("shared/work-investigation-completion.js?v=1.0.0","data-gcm-work-investigation-completion");
+    }
     if(/\/media-production\.html$/i.test(path)) {
       restoreMediaCreativeHandoff();
       appendScript("shared/media-production-package.js?v=1.1.0","data-gcm-media-production-package");
