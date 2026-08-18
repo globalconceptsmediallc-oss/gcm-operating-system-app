@@ -1,13 +1,20 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/workItemProcessing.js
-   Version: 7.5.0
+   Version: 7.5.1
    Status: Production Road-Test Candidate
-   Source: Production routes/workItemProcessing.js 7.4.1
+   Source: Production routes/workItemProcessing.js 7.5.0
    Sprint: Work Item Responsibility Disposition
    Purpose: Preserve verified Work Item creation/completion behavior while
             adding a non-proof closure path when responsibility has been
             reassigned outside GCM.
+
+   Changes in 7.5.1:
+   - Fixes both Evidence INSERT statements so 9 named columns receive 9 values.
+   - Repairs reassigned Work Item closure that previously failed with
+     "10 values for 9 columns" from D1.
+   - Repairs the same placeholder mismatch in normal Work Item completion.
+   - Preserves all existing Work Item, Investigation, Evidence, and proof rules.
 
    Changes in 7.5.0:
    - Extends the existing process-work-item action; no new route or schema.
@@ -143,7 +150,7 @@ export async function handleProcessWorkItem(body, env, requestId) {
       const dispositionEvidenceType="work_disposition";
       const statements=[
         db.prepare(`UPDATE work_items SET description=?,status='closed',actual_impact=?,updated_at=? WHERE id=? AND client_id=?`).bind(dispositionDescription,dispositionImpact,businessTimestamp,workItem.id,workItem.client_id),
-        db.prepare(`INSERT INTO evidence (client_id,investigation_id,work_item_id,communication_id,evidence_type,source,description,url,captured_at) SELECT ?,?,?,?,?,?,?,?,?,? WHERE NOT EXISTS (SELECT 1 FROM evidence WHERE work_item_id=? AND evidence_type=? AND source=? AND description=?)`).bind(workItem.client_id,workItem.investigation_id,workItem.id,workItem.communication_id,dispositionEvidenceType,dispositionSource,dispositionNote,null,businessTimestamp,workItem.id,dispositionEvidenceType,dispositionSource,dispositionNote)
+        db.prepare(`INSERT INTO evidence (client_id,investigation_id,work_item_id,communication_id,evidence_type,source,description,url,captured_at) SELECT ?,?,?,?,?,?,?,?,? WHERE NOT EXISTS (SELECT 1 FROM evidence WHERE work_item_id=? AND evidence_type=? AND source=? AND description=?)`).bind(workItem.client_id,workItem.investigation_id,workItem.id,workItem.communication_id,dispositionEvidenceType,dispositionSource,dispositionNote,null,businessTimestamp,workItem.id,dispositionEvidenceType,dispositionSource,dispositionNote)
       ];
       if(workItem.investigation_id) statements.push(db.prepare(`UPDATE investigations SET status='closed',resolved_at=COALESCE(resolved_at,?),closed_at=?,updated_at=? WHERE id=? AND client_id=?`).bind(businessTimestamp,businessTimestamp,businessTimestamp,workItem.investigation_id,workItem.client_id));
 
@@ -172,7 +179,7 @@ export async function handleProcessWorkItem(body, env, requestId) {
     const businessTimestamp = gcmBusinessTimestamp();
     const statements=[
       db.prepare(`UPDATE work_items SET description=?,status='completed',actual_impact=?,started_at=COALESCE(started_at,?),completed_at=?,updated_at=? WHERE id=? AND client_id=?`).bind(completedDescription,actualImpact,businessTimestamp,businessTimestamp,businessTimestamp,workItem.id,workItem.client_id),
-      db.prepare(`INSERT INTO evidence (client_id,investigation_id,work_item_id,communication_id,evidence_type,source,description,url,captured_at) SELECT ?,?,?,?,?,?,?,?,?,? WHERE NOT EXISTS (SELECT 1 FROM evidence WHERE work_item_id=? AND source=? AND description=?)`).bind(workItem.client_id,workItem.investigation_id,workItem.id,workItem.communication_id,evidenceType,evidenceSource,evidenceDescription,evidenceUrl||null,businessTimestamp,workItem.id,evidenceSource,evidenceDescription)
+      db.prepare(`INSERT INTO evidence (client_id,investigation_id,work_item_id,communication_id,evidence_type,source,description,url,captured_at) SELECT ?,?,?,?,?,?,?,?,? WHERE NOT EXISTS (SELECT 1 FROM evidence WHERE work_item_id=? AND source=? AND description=?)`).bind(workItem.client_id,workItem.investigation_id,workItem.id,workItem.communication_id,evidenceType,evidenceSource,evidenceDescription,evidenceUrl||null,businessTimestamp,workItem.id,evidenceSource,evidenceDescription)
     ];
     if(workItem.investigation_id) statements.push(db.prepare(`UPDATE investigations SET status='closed',resolved_at=COALESCE(resolved_at,?),closed_at=?,updated_at=? WHERE id=? AND client_id=?`).bind(businessTimestamp,businessTimestamp,businessTimestamp,workItem.investigation_id,workItem.client_id));
 
