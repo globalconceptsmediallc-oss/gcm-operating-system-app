@@ -4,7 +4,7 @@
 **Client:** Pickett Weaponry  
 **Website:** https://pickettweaponry.com/  
 **Record Type:** Signal → Investigation → Work → Result / Proof  
-**Status:** Fix deployed and live-source proof passed; Ahrefs verification crawl still pending
+**Status:** **RESOLVED / PROVEN**
 
 ---
 
@@ -238,13 +238,43 @@ returned:
 
 **Not found**
 
-### Proof Status
+### Live Proof Status
 
 - Correct homepage canonical visible live: **PASS**
 - Bad revision canonical absent from live source: **PASS**
 - WordPress core canonical calculation: **PASS**
 - Yoast canonical control restored: **PASS**
-- Ahrefs recrawl after final fix: **PENDING**
+
+---
+
+## Final Ahrefs Verification — 2026-08-18
+
+A fresh Ahrefs Site Audit was run after the production fix.
+
+### Final Crawl Results
+
+- **Health Score: 92** — up from 74 at the original alert
+- **Errors: 19** — down from 62 at the earlier crawl
+- **Warnings: 157**
+- **Notices: 22**
+- **URLs without errors: 223**
+- **URLs with errors: 19**
+
+Most importantly, the Ahrefs **All issues** screen no longer listed **Non-canonical page in sitemap** as a current issue.
+
+The fresh crawl also showed **Canonical URL changed** with a large downward change, consistent with the canonical cleanup being recognized by Ahrefs.
+
+### Final Proof Status
+
+- Live source correct: **PASS**
+- Bad `?p=2665` canonical absent: **PASS**
+- Fresh Ahrefs crawl completed after fix: **PASS**
+- `Non-canonical page in sitemap` absent from current Ahrefs All Issues: **PASS**
+- Site Health improved from 74 to 92: **PASS**
+
+**Final disposition: RESOLVED / PROVEN.**
+
+The original REPORTS-SEO alert can be treated as processed and closed. No new Pickett canonical Work Item is required.
 
 ---
 
@@ -298,17 +328,16 @@ The crawl showed multiple JPEG images over 250 KB, with a cluster of older files
    - With Yoast active, legacy custom canonical systems should not independently disable and replace Yoast without a documented reason.
 
 8. **Fix → Build → Deploy → Test → Proof.**
-   - The fix was not considered proven until the live source showed the correct canonical and `?p=2665` returned no match.
+   - The fix was not considered complete at live-source proof alone.
+   - The final Ahrefs recrawl was required to prove that the originating monitoring system also cleared the issue.
+
+9. **Do not create unnecessary work from neighboring issues.**
+   - Image optimization and homepage safe positioning were observed but deliberately deferred because they were not part of the canonical failure.
 
 ---
 
-## Next Verification
+## Closure
 
-Run a new Ahrefs Site Audit after the production fix.
+This canonical investigation is closed as **Resolved / Proven**.
 
-Expected result:
-
-- `Non-canonical page in sitemap` should no longer show the homepage as canonicalizing to `?p=2665`.
-- If the issue count reaches zero, close this record as **Resolved / Proven**.
-
-Do not reopen the original 61-page remediation path unless fresh crawl evidence shows those URLs failing again.
+Do not reopen the original 61-page canonical remediation path unless fresh crawl evidence shows the problem has returned.
