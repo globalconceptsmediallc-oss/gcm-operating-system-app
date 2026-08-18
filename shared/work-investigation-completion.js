@@ -1,12 +1,22 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/work-investigation-completion.js
-   Version: 1.1.0
+   Version: 1.1.1
    Status: Production Candidate
    Purpose: Add human-approved Investigation resolution controls for
             (1) corrective work already performed and verified during the
             Investigation, and (2) unresolved Investigations that are now
             waiting on an external validation or monitoring result.
+
+   Changes in 1.1.1:
+   - Keeps the existing active Complete Investigation step as the primary gate.
+   - Adds a safe fallback when the evidence checklist is stale but the operator
+     has explicitly recorded that no further root-cause question or evidence
+     remains and the Investigation is ready to close.
+   - Removes the verified-completion button again if those explicit closing
+     statements are edited away before completion.
+   - Re-evaluates completion eligibility while the decision fields are edited.
+   - Does not change D1 schemas, Worker routes, or processing payload fields.
 
    Changes in 1.1.0:
    - Preserves the hardened Work Performed & Verified completion path.
@@ -19,7 +29,7 @@
 (() => {
   "use strict";
 
-  const FILE_VERSION = "1.1.0";
+  const FILE_VERSION = "1.1.1";
   const WORKER_URL = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const COMPLETE_BUTTON_ID = "gcm-complete-verified-investigation";
   const MONITOR_BUTTON_ID = "gcm-monitor-investigation";
@@ -121,6 +131,31 @@
     };
   }
 
+  function decisionExplicitlySupportsCompletion() {
+    const fields = currentDecisionFields();
+    if (!fields.findingSummary || !fields.nextQuestion || !fields.nextEvidence) return false;
+
+    const question = fields.nextQuestion.toLowerCase();
+    const evidence = fields.nextEvidence.toLowerCase();
+
+    const questionClosed =
+      /no further(?: root[- ]cause)? question/.test(question) ||
+      /no .*question .*remain/.test(question) ||
+      /root cause .* (?:confirmed|proven|verified)/.test(question);
+
+    const evidenceClosed =
+      /none required to close/.test(evidence) ||
+      /no further evidence/.test(evidence) ||
+      /verification evidence .* (?:final|verified|sufficient)/.test(evidence) ||
+      /evidence .* sufficient .* close/.test(evidence);
+
+    return questionClosed && evidenceClosed;
+  }
+
+  function completionIsEligible() {
+    return activeStepIsCompletion() || decisionExplicitlySupportsCompletion();
+  }
+
   async function completeVerifiedInvestigation(button) {
     if (processing) return;
 
@@ -135,6 +170,11 @@
 
     if (!findingSummary) {
       setMessage("error", "Record the evidence-supported Investigation Finding before completion.");
+      return;
+    }
+
+    if (!completionIsEligible()) {
+      setMessage("error", "Completion is not available until the Investigation is at the completion step or the decision fields explicitly state that no further root-cause question or evidence remains.");
       return;
     }
 
@@ -235,10 +275,15 @@
       continueButton.insertAdjacentElement("afterend", monitorButton);
     }
 
-    if (!activeStepIsCompletion()) return;
-    if (document.getElementById(COMPLETE_BUTTON_ID)) return;
+    let completeButton = document.getElementById(COMPLETE_BUTTON_ID);
+    if (!completionIsEligible()) {
+      if (completeButton) completeButton.remove();
+      return;
+    }
 
-    const completeButton = document.createElement("button");
+    if (completeButton) return;
+
+    completeButton = document.createElement("button");
     completeButton.id = COMPLETE_BUTTON_ID;
     completeButton.type = "button";
     completeButton.className = "button primary";
@@ -251,6 +296,18 @@
 
   const observer = new MutationObserver(installButtons);
   observer.observe(document.documentElement, { childList: true, subtree: true });
+
+  document.addEventListener("input", event => {
+    if (["finding-summary", "work-title", "work-description"].includes(event.target?.id)) {
+      installButtons();
+    }
+  });
+
+  document.addEventListener("change", event => {
+    if (["finding-summary", "work-title", "work-description"].includes(event.target?.id)) {
+      installButtons();
+    }
+  });
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", installButtons, { once: true });
