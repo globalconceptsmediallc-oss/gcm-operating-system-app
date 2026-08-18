@@ -1,23 +1,22 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gcm-shell.js
-   Version: 2.0.21
+   Version: 2.0.22
    Status: Production Road-Test Candidate
    Purpose: Shared internal GCM OS application shell foundation.
-   Source: gcm-shell.js 2.0.20 production navigation
-   Sprint: Calendar — Durable Appointment Records
+   Source: gcm-shell.js 2.0.21 production navigation
+   Sprint: Work — Durable Due Dates
    Change:
    - Preserves the durable red/yellow/green navigation urgency contract.
-   - Loads the Calendar D1 durability bridge only on calendar.html.
-   - Exposes refreshNavAttention so Calendar can refresh its deadline marker
-     immediately after a durable appointment synchronization.
-   - Preserves all existing Work and Media page enhancements.
+   - Preserves Calendar D1 durability and refreshNavAttention.
+   - Loads the optional Work due-date enhancement only on work.html.
+   - Preserves all existing Work Investigation and Media enhancements.
    ========================================================= */
 
 (() => {
   "use strict";
 
-  const SHELL_VERSION = "2.0.21";
+  const SHELL_VERSION = "2.0.22";
   const WORKER_ENDPOINT =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const MISSION_CONTROL_ACTION = "get-mission-control";
@@ -288,6 +287,11 @@
       appendScript(
         "shared/work-investigation-completion.js?v=1.1.0",
         "data-gcm-work-investigation-completion"
+      );
+
+      appendScript(
+        "shared/work-due-date.js?v=1.0.0",
+        "data-gcm-work-due-date"
       );
     }
 

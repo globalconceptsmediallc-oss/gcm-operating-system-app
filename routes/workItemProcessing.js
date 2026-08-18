@@ -1,13 +1,20 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/workItemProcessing.js
-   Version: 7.5.1
+   Version: 7.6.0
    Status: Production Road-Test Candidate
-   Source: Production routes/workItemProcessing.js 7.5.0
-   Sprint: Work Item Responsibility Disposition
+   Source: Production routes/workItemProcessing.js 7.5.1
+   Sprint: Work — Durable Due Dates
    Purpose: Preserve verified Work Item creation/completion behavior while
-            adding a non-proof closure path when responsibility has been
-            reassigned outside GCM.
+            adding an optional durable due date for real commitments so
+            Mission Control and shared navigation can expose deadline urgency.
+
+   Changes in 7.6.0:
+   - Accepts optional dueDate / due_date on create-requested-work.
+   - Validates due dates as real YYYY-MM-DD calendar dates.
+   - Stores due_date on the Work Item without inventing a deadline when blank.
+   - Returns dueDate in Work Item responses.
+   - Preserves completion, reassignment, Evidence, Investigation, and Proof rules.
 
    Changes in 7.5.1:
    - Fixes both Evidence INSERT statements so 9 named columns receive 9 values.
@@ -51,9 +58,12 @@ export async function handleCreateRequestedWork(body, env, requestId) {
   const owner = clean(body?.owner) || "Andy";
   const category = clean(body?.category) || "Client Requested Work";
   const communicationId = positiveInt(body?.communicationId || body?.communication_id);
+  const dueDateInput = clean(body?.dueDate || body?.due_date);
+  const dueDate = normalizeDueDate(dueDateInput);
 
   if (!db || typeof db.prepare !== "function") return jsonResponse({ok:false,requestId,action:CREATE_REQUESTED_WORK_ACTION,error:"The production D1 database binding is unavailable."},503);
   if (!clientCode || !title || !description || !expectedImpact) return jsonResponse({ok:false,requestId,action:CREATE_REQUESTED_WORK_ACTION,error:"clientCode, title, description, and expectedImpact are required."},400);
+  if (dueDateInput && !dueDate) return jsonResponse({ok:false,requestId,action:CREATE_REQUESTED_WORK_ACTION,error:"dueDate must be a valid calendar date in YYYY-MM-DD format."},400);
 
   try {
     const client = await db.prepare(`SELECT id, client_code, name FROM clients WHERE client_code = ? COLLATE NOCASE LIMIT 1`).bind(clientCode).first();
@@ -69,9 +79,9 @@ export async function handleCreateRequestedWork(body, env, requestId) {
     const inserted = await db.prepare(`
       INSERT INTO work_items (
         client_id, investigation_id, communication_id, title, description,
-        category, priority, status, owner, expected_impact,
+        category, priority, status, owner, expected_impact, due_date,
         started_at, created_at, updated_at
-      ) VALUES (?, NULL, ?, ?, ?, ?, ?, 'Open', ?, ?, ?, ?, ?)
+      ) VALUES (?, NULL, ?, ?, ?, ?, ?, 'Open', ?, ?, ?, ?, ?, ?)
       RETURNING id
     `).bind(
       client.id,
@@ -82,6 +92,7 @@ export async function handleCreateRequestedWork(body, env, requestId) {
       priority,
       owner,
       expectedImpact,
+      dueDate||null,
       businessTimestamp,
       businessTimestamp,
       businessTimestamp
@@ -121,7 +132,7 @@ export async function handleProcessWorkItem(body, env, requestId) {
   if(!isReassignment&&!evidenceDescription) return jsonResponse({ok:false,requestId,action:ACTIONS.PROCESS_WORK_ITEM,error:"Completion evidence is required before a Work Item can be completed."},400);
 
   try {
-    const workItem=await db.prepare(`SELECT wi.id,wi.client_id,wi.investigation_id,wi.communication_id,wi.title,wi.description,wi.category,wi.priority,wi.status,wi.owner,wi.expected_impact,wi.actual_impact,wi.started_at,wi.completed_at,wi.created_at,wi.updated_at,c.client_code,c.name AS client_name FROM work_items wi JOIN clients c ON c.id=wi.client_id WHERE wi.id=? AND c.client_code=? COLLATE NOCASE LIMIT 1`).bind(workItemId,clientCode).first();
+    const workItem=await db.prepare(`SELECT wi.id,wi.client_id,wi.investigation_id,wi.communication_id,wi.title,wi.description,wi.category,wi.priority,wi.status,wi.owner,wi.expected_impact,wi.actual_impact,wi.due_date,wi.started_at,wi.completed_at,wi.created_at,wi.updated_at,c.client_code,c.name AS client_name FROM work_items wi JOIN clients c ON c.id=wi.client_id WHERE wi.id=? AND c.client_code=? COLLATE NOCASE LIMIT 1`).bind(workItemId,clientCode).first();
     if(!workItem) return jsonResponse({ok:false,requestId,action:ACTIONS.PROCESS_WORK_ITEM,error:`Work Item #${workItemId} was not found for client "${clientCode}".`},404);
 
     if(isReassignment){
@@ -193,10 +204,10 @@ export async function handleProcessWorkItem(body, env, requestId) {
   }
 }
 
-async function loadWorkItem(db,id){return await db.prepare(`SELECT wi.id,wi.client_id,wi.investigation_id,wi.communication_id,wi.title,wi.description,wi.category,wi.priority,wi.status,wi.owner,wi.expected_impact,wi.actual_impact,wi.started_at,wi.completed_at,wi.created_at,wi.updated_at,c.client_code,c.name AS client_name FROM work_items wi JOIN clients c ON c.id=wi.client_id WHERE wi.id=? LIMIT 1`).bind(id).first();}
+async function loadWorkItem(db,id){return await db.prepare(`SELECT wi.id,wi.client_id,wi.investigation_id,wi.communication_id,wi.title,wi.description,wi.category,wi.priority,wi.status,wi.owner,wi.expected_impact,wi.actual_impact,wi.due_date,wi.started_at,wi.completed_at,wi.created_at,wi.updated_at,c.client_code,c.name AS client_name FROM work_items wi JOIN clients c ON c.id=wi.client_id WHERE wi.id=? LIMIT 1`).bind(id).first();}
 async function loadInvestigation(db,id){return await db.prepare(`SELECT i.id,i.client_id,i.communication_id,i.title,i.description,i.priority,i.status,i.assigned_to,i.finding_summary,i.recommendation,i.opened_at,i.resolved_at,i.closed_at,i.created_at,i.updated_at,c.client_code,c.name AS client_name FROM investigations i JOIN clients c ON c.id=i.client_id WHERE i.id=? LIMIT 1`).bind(id).first();}
 async function loadWorkItemEvidence(db,id){const result=await db.prepare(`SELECT id,client_id,investigation_id,work_item_id,communication_id,evidence_type,source,description,url,raw_data,captured_at,created_at FROM evidence WHERE work_item_id=? ORDER BY captured_at DESC,id DESC`).bind(id).all();return Array.isArray(result?.results)?result.results:[];}
-function mapWorkItem(r){if(!r)return null;return{id:r.id,clientId:r.client_id,clientCode:r.client_code,clientName:r.client_name,investigationId:r.investigation_id,communicationId:r.communication_id,title:r.title,description:r.description,category:r.category,priority:r.priority,status:r.status,owner:r.owner,expectedImpact:r.expected_impact,actualImpact:r.actual_impact,startedAt:r.started_at,completedAt:r.completed_at,createdAt:r.created_at,updatedAt:r.updated_at};}
+function mapWorkItem(r){if(!r)return null;return{id:r.id,clientId:r.client_id,clientCode:r.client_code,clientName:r.client_name,investigationId:r.investigation_id,communicationId:r.communication_id,title:r.title,description:r.description,category:r.category,priority:r.priority,status:r.status,owner:r.owner,expectedImpact:r.expected_impact,actualImpact:r.actual_impact,dueDate:r.due_date,startedAt:r.started_at,completedAt:r.completed_at,createdAt:r.created_at,updatedAt:r.updated_at};}
 function mapInvestigation(r){if(!r)return null;return{id:r.id,clientId:r.client_id,clientCode:r.client_code,clientName:r.client_name,communicationId:r.communication_id,title:r.title,description:r.description,priority:r.priority,status:r.status,assignedTo:r.assigned_to,findingSummary:r.finding_summary,recommendation:r.recommendation,openedAt:r.opened_at,resolvedAt:r.resolved_at,closedAt:r.closed_at,createdAt:r.created_at,updatedAt:r.updated_at};}
 function mapEvidence(r){if(!r)return null;return{id:r.id,clientId:r.client_id,investigationId:r.investigation_id,workItemId:r.work_item_id,communicationId:r.communication_id,evidenceType:r.evidence_type,source:r.source,description:r.description,url:r.url,capturedAt:r.captured_at,createdAt:r.created_at};}
 function appendWorkPerformed(existingDescription,workPerformed){const existing=clean(existingDescription);if(!existing)return `Work Performed: ${workPerformed}`;if(existing.includes(`Work Performed: ${workPerformed}`))return existing;return `${existing}\n\nWork Performed: ${workPerformed}`;}
@@ -205,6 +216,17 @@ function normalizeDisposition(value){return clean(value).toLowerCase().replace(/
 function isCompletedStatus(value){return String(value||"").trim().toLowerCase().replace(/\s+/g,"_")==="completed";}
 function isTerminalWorkItemStatus(value){return ["complete","completed","closed","resolved","cancelled","canceled"].includes(String(value||"").trim().toLowerCase().replace(/\s+/g,"_"));}
 function positiveInt(value){const n=Number(value);return Number.isInteger(n)&&n>0?n:null;}
+
+export function normalizeDueDate(value) {
+  const text=clean(value);
+  if(!text)return null;
+  const match=text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!match)return null;
+  const year=Number(match[1]),month=Number(match[2]),day=Number(match[3]);
+  const date=new Date(Date.UTC(year,month-1,day,12));
+  if(date.getUTCFullYear()!==year||date.getUTCMonth()!==month-1||date.getUTCDate()!==day)return null;
+  return text;
+}
 
 function gcmBusinessTimestamp(date = new Date()) {
   const parts = new Intl.DateTimeFormat("en-US", {

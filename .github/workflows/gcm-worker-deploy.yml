@@ -1,11 +1,11 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gcm-worker-deploy.yml
-# Version: 1.3.4
+# Version: 1.3.5
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Cloudflare Worker from main.
-# Change: Verify Worker 7.17.0 and the durable Calendar Operations route after
-#         additive D1 Calendar migration and production deployment.
+# Change: Preserve Worker 7.17.0/Calendar verification and also verify that
+#         Mission Control sees work_items.due_date after additive migration.
 # =========================================================
 
 name: GCM Worker Deploy
@@ -122,6 +122,27 @@ jobs:
             throw new Error("Calendar Operations live read contract is invalid.");
           }
 
+          const missionResponse = await fetch(url, {
+            method:"POST",
+            headers:{ "Content-Type":"application/json" },
+            body:JSON.stringify({ action:"get-mission-control" })
+          });
+          if (!missionResponse.ok) {
+            throw new Error(`Mission Control returned HTTP ${missionResponse.status}`);
+          }
+          const mission = await missionResponse.json();
+          const workAttention = mission?.missionControl?.navAttention?.sections?.work;
+          if (workAttention?.supported !== true) {
+            throw new Error("Mission Control does not recognize a durable Work deadline source.");
+          }
+          const dueDateSource = Array.isArray(workAttention?.supportedSources)
+            && workAttention.supportedSources.some(source =>
+              source?.table === "work_items" && source?.dateColumn === "due_date"
+            );
+          if (!dueDateSource) {
+            throw new Error("Mission Control does not see work_items.due_date after migration.");
+          }
+
           const protectedResponse = await fetch(url, {
             method:"POST",
             headers:{ "Content-Type":"application/json" },
@@ -130,5 +151,5 @@ jobs:
           if (protectedResponse.status !== 401) {
             throw new Error(`Expected authentication boundary HTTP 401, received ${protectedResponse.status}`);
           }
-          console.log("PASS live Worker 7.17.0, Calendar Operations, Operating Session routes, and authentication boundary");
+          console.log("PASS live Worker 7.17.0, Calendar Operations, Work due-date source, Operating Session routes, and authentication boundary");
           NODE
