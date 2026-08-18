@@ -1,12 +1,19 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/missionControl.js
-   Version: 7.7.5
-   Status: Production Candidate
-   Source: Production routes/missionControl.js 7.7.4
-   Sprint: Durable Investigation Monitoring State
+   Version: 7.8.0
+   Status: Production Road-Test Candidate
+   Source: Production routes/missionControl.js 7.7.5
+   Sprint: Shared Navigation — Durable Deadline Urgency
    Purpose: Preserve the live Mission Control contract while ranking
-            only records that require current human action.
+            only records that require current human action and expose
+            one read-only deadline-urgency contract for the shared shell.
+
+   Production changes — v7.8.0:
+   - Preserves clientsRequiringAttention and highestPriorityDecision.
+   - Adds missionControl.navAttention from durable D1 scheduling/deadline state.
+   - Uses the same Mission Control response for Today and shared-nav urgency.
+   - No D1 writes, new operational records, or priority-ranking changes.
 
    Production rules:
    - Mission Control reads operational state; it does not own it.
@@ -16,6 +23,8 @@
      rules as highestPriorityDecision, so both views agree on what is first.
    - Monitoring / awaiting-external-validation Investigations remain durable
      D1 history but do not appear as current attention or highest-value work.
+   - Navigation urgency is derived only from durable dated records; unsupported
+     sections remain neutral rather than inventing deadlines.
    - No recommendation or evidence is manufactured.
    ========================================================= */
 
@@ -34,6 +43,10 @@ import {
   getDatabase,
   rowsOf
 } from "../shared/database.js";
+
+import {
+  buildNavAttention
+} from "./navAttention.js";
 
 const NON_ACTION_INVESTIGATION_STATUSES = `
   'complete',
@@ -83,9 +96,10 @@ export async function handleMissionControl(body, env, requestId) {
   }
 
   try {
-    const [clientsResult, decisionResult] = await Promise.all([
+    const [clientsResult, decisionResult, navAttention] = await Promise.all([
       loadClientsRequiringAttention(db),
-      loadHighestPriorityDecision(db)
+      loadHighestPriorityDecision(db),
+      buildNavAttention(db)
     ]);
 
     const clientsRequiringAttention = rowsOf(clientsResult).map((client) => ({
@@ -111,7 +125,8 @@ export async function handleMissionControl(body, env, requestId) {
       version: VERSION,
       missionControl: {
         clientsRequiringAttention,
-        highestPriorityDecision
+        highestPriorityDecision,
+        navAttention
       }
     });
   } catch (error) {
