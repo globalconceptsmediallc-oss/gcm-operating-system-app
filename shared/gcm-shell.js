@@ -1,23 +1,23 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gcm-shell.js
-   Version: 2.0.20
+   Version: 2.0.21
    Status: Production Road-Test Candidate
    Purpose: Shared internal GCM OS application shell foundation.
-   Source: gcm-shell.js 2.0.19 production navigation
-   Sprint: Shared Navigation — Durable Deadline Urgency
+   Source: gcm-shell.js 2.0.20 production navigation
+   Sprint: Calendar — Durable Appointment Records
    Change:
-   - Preserves all existing navigation and page enhancements.
-   - Reads the existing Mission Control contract after shell mount.
-   - Shows one section-level urgency marker from durable D1 deadlines:
-       red 0–2 days / overdue, yellow 3–6 days, green 7+ days.
-   - Leaves sections neutral when no durable dated obligation is provable.
+   - Preserves the durable red/yellow/green navigation urgency contract.
+   - Loads the Calendar D1 durability bridge only on calendar.html.
+   - Exposes refreshNavAttention so Calendar can refresh its deadline marker
+     immediately after a durable appointment synchronization.
+   - Preserves all existing Work and Media page enhancements.
    ========================================================= */
 
 (() => {
   "use strict";
 
-  const SHELL_VERSION = "2.0.20";
+  const SHELL_VERSION = "2.0.21";
   const WORKER_ENDPOINT =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const MISSION_CONTROL_ACTION = "get-mission-control";
@@ -188,12 +188,21 @@
           navAttention?.error || ""
         );
       }
+
+      return navAttention || null;
     } catch (error) {
       console.warn(
         `GCM OS Shell ${SHELL_VERSION}: nav attention unavailable.`,
         error
       );
+      return null;
     }
+  }
+
+  async function refreshNavAttention() {
+    const sidebar = document.querySelector(".gcm-shell-sidebar");
+    if (!sidebar) return null;
+    return loadNavAttention(sidebar);
   }
 
   function configureMobileMenu(sidebar, menuButton) {
@@ -267,6 +276,13 @@
 
   function loadPageEnhancements() {
     const path = window.location.pathname;
+
+    if (/\/calendar\.html$/i.test(path)) {
+      appendScript(
+        "shared/calendar-durable-sync.js?v=1.0.0",
+        "data-gcm-calendar-durable-sync"
+      );
+    }
 
     if (/\/work\.html$/i.test(path)) {
       appendScript(
@@ -381,6 +397,7 @@
 
   window.GCMOShell = Object.freeze({
     version: SHELL_VERSION,
-    mount
+    mount,
+    refreshNavAttention
   });
 })();
