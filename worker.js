@@ -1,20 +1,19 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.16.0
-   Status: OS 2.0 Phase 1 Production Candidate
-   Source: Production worker.js 7.13.0
-   Sprint: Historical Record Rehabilitation — Bulk Apply
-   Purpose: Preserve every verified production route and expose the
-            controlled bulk rehabilitation apply action for the verified
-            Gmail monitoring proposal class.
+   Version: 7.17.0
+   Status: OS 2.0 Production Road-Test Candidate
+   Source: Production worker.js 7.16.0
+   Sprint: Calendar — Durable Appointment Records
+   Purpose: Preserve every verified production route while exposing the
+            durable Calendar appointment operations required by Calendar,
+            Mission Control, and shared navigation urgency.
 
-   Changes in 7.13.0:
-   - Adds apply-historical-rehabilitation-bulk to the Worker action allowlist.
-   - Routes it to routes/historicalRehabilitation.js v1.2.0.
-   - Preserves single-record apply and proposal-generation behavior.
-   - Leaves Intelligence Backlog v1.0.1 and Intelligence Refresh v1.2.0 unchanged.
-   - Preserves all existing production behavior.
+   Changes in 7.17.0:
+   - Adds calendar-operations to the Worker action allowlist.
+   - Routes Calendar list/snapshot synchronization to calendarOperations.js v1.0.0.
+   - Preserves Historical Rehabilitation, Operating Sessions, Gmail,
+     Mission Control, Media, Work, and all existing production behavior.
    ========================================================= */
 
 import {
@@ -37,6 +36,10 @@ import { handleClientWorkspace } from "./routes/clientWorkspace.js";
 import { handleClientDirectory } from "./routes/clientDirectory.js";
 import { handleCommitOperationalDecision } from "./routes/operationalDecision.js";
 import { handleMissionControl } from "./routes/missionControl.js";
+import {
+  handleCalendarOperations,
+  CALENDAR_OPERATIONS_ACTION
+} from "./routes/calendarOperations.js";
 import { handleProcessInvestigation } from "./routes/investigationProcessing.js";
 import { handleGuidedInvestigation } from "./routes/guidedInvestigation.js";
 import { handleProcessWorkItem, handleCreateRequestedWork, CREATE_REQUESTED_WORK_ACTION } from "./routes/workItemProcessing.js";
@@ -85,7 +88,7 @@ import {
   PREPARE_OPERATING_SESSION_ACTION
 } from "./routes/operatingSessionIntake.js";
 
-const WORKER_FILE_VERSION = "7.16.0";
+const WORKER_FILE_VERSION = "7.17.0";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
@@ -94,6 +97,7 @@ const SUPPORTED_ACTIONS = [
   ACTIONS.GET_CLIENT_DIRECTORY,
   ACTIONS.COMMIT_OPERATIONAL_DECISION,
   ACTIONS.GET_MISSION_CONTROL,
+  CALENDAR_OPERATIONS_ACTION,
   ACTIONS.GET_GUIDED_INVESTIGATION,
   ACTIONS.PROCESS_INVESTIGATION,
   ACTIONS.PROCESS_WORK_ITEM,
@@ -137,12 +141,13 @@ export default {
         version: VERSION,
         workerFileVersion: WORKER_FILE_VERSION,
         contractVersion: API_CONTRACT_VERSION,
-        sprint: "Historical Record Rehabilitation — Bulk Apply",
+        sprint: "Calendar — Durable Appointment Records",
         architecture:
-          "Modular production router with Agency Command, Historical Rehabilitation, Intelligence Backlog, Intelligence Refresh, Communication Intelligence, Activity Intelligence, Intelligence Processing, Prospect Intelligence, Communications analysis, Guided Investigation, and operational processing.",
+          "Modular production router with Agency Command, Calendar Operations, Historical Rehabilitation, Intelligence Backlog, Intelligence Refresh, Communication Intelligence, Activity Intelligence, Intelligence Processing, Prospect Intelligence, Communications analysis, Guided Investigation, and operational processing.",
         actions: SUPPORTED_ACTIONS,
         engines: [
           "agency-command",
+          "calendar-operations",
           "historical-rehabilitation",
           "intelligence-backlog",
           "intelligence-refresh",
@@ -170,6 +175,7 @@ export default {
           shared: ["config", "http", "database", "ai"],
           routes: [
             "agency-command",
+            "calendar-operations",
             "historical-rehabilitation",
             "intelligence-backlog",
             "intelligence-refresh",
@@ -286,6 +292,9 @@ export default {
 
         case ACTIONS.GET_MISSION_CONTROL:
           return await handleMissionControl(body, env, requestId);
+
+        case CALENDAR_OPERATIONS_ACTION:
+          return await handleCalendarOperations(body, env, requestId);
 
         case ACTIONS.GET_GUIDED_INVESTIGATION:
           return await handleGuidedInvestigation(body, env, requestId);
