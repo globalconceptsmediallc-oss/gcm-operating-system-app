@@ -1,12 +1,22 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/work-investigation-completion.js
-   Version: 1.1.1
+   Version: 1.2.0
    Status: Production Candidate
    Purpose: Add human-approved Investigation resolution controls for
             (1) corrective work already performed and verified during the
-            Investigation, and (2) unresolved Investigations that are now
-            waiting on an external validation or monitoring result.
+            Investigation, (2) unresolved Investigations waiting on external
+            validation, and (3) linked Work Items whose responsibility has
+            been reassigned outside GCM without claiming completion proof.
+
+   Changes in 1.2.0:
+   - Adds Close — Reassigned / No Longer GCM Responsibility to linked Work Items.
+   - Shows reassignment only when the saved Investigation decision explicitly
+     states that responsibility transferred/reassigned outside GCM.
+   - Uses the existing process-work-item route with disposition=reassigned.
+   - Closes the Work Item and linked Investigation without work completion proof.
+   - Preserves the saved Investigation finding as the responsibility note.
+   - Does not add a new Worker route or D1 schema.
 
    Changes in 1.1.1:
    - Keeps the existing active Complete Investigation step as the primary gate.
@@ -29,10 +39,11 @@
 (() => {
   "use strict";
 
-  const FILE_VERSION = "1.1.1";
+  const FILE_VERSION = "1.2.0";
   const WORKER_URL = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const COMPLETE_BUTTON_ID = "gcm-complete-verified-investigation";
   const MONITOR_BUTTON_ID = "gcm-monitor-investigation";
+  const REASSIGN_BUTTON_ATTR = "data-close-reassigned-work";
   let processing = false;
 
   function workerErrorMessage(value, fallback = "Worker request failed.") {
@@ -123,6 +134,13 @@
     message.textContent = text;
   }
 
+  function setWorkItemMessage(workItemId, type, text) {
+    const message = document.getElementById(`work-message-${workItemId}`);
+    if (!message) return;
+    message.className = `status ${type}`;
+    message.textContent = text;
+  }
+
   function currentDecisionFields() {
     return {
       findingSummary: String(document.getElementById("finding-summary")?.value || "").trim(),
@@ -150,6 +168,24 @@
       /evidence .* sufficient .* close/.test(evidence);
 
     return questionClosed && evidenceClosed;
+  }
+
+  function decisionExplicitlySupportsReassignment() {
+    const fields = currentDecisionFields();
+    if (!fields.findingSummary) return false;
+
+    const text = [fields.findingSummary, fields.nextQuestion, fields.nextEvidence]
+      .join(" ")
+      .toLowerCase()
+      .replace(/\s+/g, " ");
+
+    return (
+      /responsibility.{0,120}(?:transferred|reassigned)/.test(text) ||
+      /(?:transferred|reassigned).{0,120}responsibility/.test(text) ||
+      /no longer active implementation work for.{0,40}gcm/.test(text) ||
+      /no longer.{0,80}gcm responsibility/.test(text) ||
+      /removed from.{0,80}active work queue without falsely recording.{0,40}completed/.test(text)
+    );
   }
 
   function completionIsEligible() {
@@ -256,8 +292,93 @@
     }
   }
 
+  async function closeReassignedWorkItem(button, workItemId) {
+    if (processing) return;
+
+    const investigationId = currentInvestigationId();
+    const clientCode = currentClientCode();
+    const fields = currentDecisionFields();
+
+    if (!investigationId || !clientCode || !Number.isInteger(workItemId) || workItemId <= 0) {
+      setWorkItemMessage(workItemId, "error", "The selected Work Item or Investigation could not be identified. Refresh the page and select the Investigation again.");
+      return;
+    }
+
+    if (!decisionExplicitlySupportsReassignment()) {
+      setWorkItemMessage(workItemId, "error", "Reassignment closure requires a saved Investigation decision explicitly stating that responsibility transferred or is no longer GCM work.");
+      return;
+    }
+
+    if (!window.confirm(
+      `Close Work Item #${workItemId} as Reassigned / No Longer GCM Responsibility?\n\nThis closes the Work Item and linked Investigation as transition history. It does NOT record work completion or create completion proof.`
+    )) return;
+
+    processing = true;
+    button.disabled = true;
+    setWorkItemMessage(workItemId, "loading", `Closing Work Item #${workItemId} as reassigned in production D1…`);
+
+    try {
+      const payload = await post({
+        action: "process-work-item",
+        clientCode,
+        workItemId,
+        disposition: "reassigned",
+        dispositionNote: fields.findingSummary
+      });
+
+      if (payload.proofOfWorkEligible !== false) {
+        throw new Error("The Worker did not confirm the non-proof reassignment disposition.");
+      }
+
+      setWorkItemMessage(workItemId, "ready", `Work Item #${workItemId} and Investigation #${investigationId} were closed as reassigned. No work-completion proof was created.`);
+      button.textContent = "Closed — Reassigned";
+      setTimeout(() => location.reload(), 700);
+    } catch (error) {
+      button.disabled = false;
+      setWorkItemMessage(workItemId, "error", error.message || "The Work Item could not be closed as reassigned.");
+    } finally {
+      processing = false;
+    }
+  }
+
+  function installWorkDispositionButtons() {
+    const investigationId = currentInvestigationId();
+    const eligible = decisionExplicitlySupportsReassignment();
+
+    document.querySelectorAll(`[${REASSIGN_BUTTON_ATTR}]`).forEach(button => {
+      const card = button.closest(".work-card");
+      if (!eligible || !card || !new RegExp(`Investigation\\s+#${investigationId}\\b`, "i").test(card.textContent || "")) {
+        button.remove();
+      }
+    });
+
+    if (!eligible || !investigationId) return;
+
+    document.querySelectorAll(".work-card").forEach(card => {
+      if (!new RegExp(`Investigation\\s+#${investigationId}\\b`, "i").test(card.textContent || "")) return;
+
+      const completeButton = card.querySelector("[data-complete-work]");
+      if (!completeButton) return;
+
+      const workItemId = Number(completeButton.getAttribute("data-complete-work"));
+      if (!Number.isInteger(workItemId) || workItemId <= 0) return;
+      if (card.querySelector(`[${REASSIGN_BUTTON_ATTR}="${workItemId}"]`)) return;
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "button";
+      button.setAttribute(REASSIGN_BUTTON_ATTR, String(workItemId));
+      button.textContent = "Close — Reassigned / No Longer GCM Responsibility";
+      button.title = `Close this Work Item as transferred responsibility without completion proof. Resolution control v${FILE_VERSION}.`;
+      button.addEventListener("click", () => closeReassignedWorkItem(button, workItemId));
+      completeButton.insertAdjacentElement("afterend", button);
+    });
+  }
+
   function installButtons() {
     if (!/\/work\.html$/i.test(location.pathname)) return;
+
+    installWorkDispositionButtons();
 
     const actions = document.querySelector("#detail-panel .processing-actions");
     const continueButton = document.getElementById("continue-button");
