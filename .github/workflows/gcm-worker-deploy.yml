@@ -1,11 +1,11 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gcm-worker-deploy.yml
-# Version: 1.3.3
+# Version: 1.3.4
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Cloudflare Worker from main.
-# Change: Production deployment refresh for Mission Control 7.7.4 authoritative
-#         client queue ordering; deployment logic remains unchanged.
+# Change: Verify Worker 7.17.0 and the durable Calendar Operations route after
+#         additive D1 Calendar migration and production deployment.
 # =========================================================
 
 name: GCM Worker Deploy
@@ -92,10 +92,11 @@ jobs:
           const healthResponse = await fetch(url);
           if (!healthResponse.ok) throw new Error(`Worker health returned HTTP ${healthResponse.status}`);
           const health = await healthResponse.json();
-          if (health.workerFileVersion !== "7.16.0") {
-            throw new Error(`Expected Worker 7.16.0, received ${health.workerFileVersion || "unknown"}`);
+          if (health.workerFileVersion !== "7.17.0") {
+            throw new Error(`Expected Worker 7.17.0, received ${health.workerFileVersion || "unknown"}`);
           }
           const requiredActions = [
+            "calendar-operations",
             "prepare-operating-session",
             "list-operating-sessions",
             "get-operating-session",
@@ -107,6 +108,20 @@ jobs:
           for (const action of requiredActions) {
             if (!health.actions?.includes(action)) throw new Error(`Live Worker is missing ${action}`);
           }
+
+          const calendarResponse = await fetch(url, {
+            method:"POST",
+            headers:{ "Content-Type":"application/json" },
+            body:JSON.stringify({ action:"calendar-operations", operation:"list" })
+          });
+          if (!calendarResponse.ok) {
+            throw new Error(`Calendar Operations returned HTTP ${calendarResponse.status}`);
+          }
+          const calendar = await calendarResponse.json();
+          if (calendar?.ok !== true || !Array.isArray(calendar?.calendarAppointments)) {
+            throw new Error("Calendar Operations live read contract is invalid.");
+          }
+
           const protectedResponse = await fetch(url, {
             method:"POST",
             headers:{ "Content-Type":"application/json" },
@@ -115,5 +130,5 @@ jobs:
           if (protectedResponse.status !== 401) {
             throw new Error(`Expected authentication boundary HTTP 401, received ${protectedResponse.status}`);
           }
-          console.log("PASS live Worker 7.16.0, Operating Session routes, and authentication boundary");
+          console.log("PASS live Worker 7.17.0, Calendar Operations, Operating Session routes, and authentication boundary");
           NODE
