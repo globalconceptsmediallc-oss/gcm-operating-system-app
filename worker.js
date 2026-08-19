@@ -1,13 +1,20 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.18.0
+   Version: 7.19.0
    Status: OS 2.0 Production Road-Test Candidate
-   Source: Production worker.js 7.17.0
-   Sprint: Gmail — Operator Decision Routes
+   Source: Production worker.js 7.18.0
+   Sprint: Prospecting + CRM — Durable Relationship Record
    Purpose: Preserve every verified production route while exposing the
-            durable Gmail decision paths required for Delete / Information /
-            Monitoring / Requested Work / Investigation processing.
+            durable Prospecting Radar + CRM operations required to connect
+            scheduled prospects, discovery, proposals, follow-up, agreements,
+            payments, and eventual Client handoff.
+
+   Changes in 7.19.0:
+   - Adds prospect-crm to the Worker action allowlist and router.
+   - Connects routes/prospectCrm.js v1.0.0 without changing Prospect Intelligence.
+   - Preserves every verified Gmail, Calendar, Historical Rehabilitation,
+     Operating Session, Mission Control, Media, Work, and Investigation route.
 
    Changes in 7.18.0:
    - Adds read-only Gmail direct-Work candidate evaluation.
@@ -40,6 +47,10 @@ import {
 
 import { handleCommunicationAnalysis } from "./routes/communicationAnalysis.js";
 import { handleProspectIntelligence } from "./routes/prospectIntelligence.js";
+import {
+  handleProspectCrm,
+  PROSPECT_CRM_ACTION
+} from "./routes/prospectCrm.js";
 import { handleClientWorkspace } from "./routes/clientWorkspace.js";
 import { handleClientDirectory } from "./routes/clientDirectory.js";
 import { handleCommitOperationalDecision } from "./routes/operationalDecision.js";
@@ -104,11 +115,12 @@ import {
   PREPARE_OPERATING_SESSION_ACTION
 } from "./routes/operatingSessionIntake.js";
 
-const WORKER_FILE_VERSION = "7.18.0";
+const WORKER_FILE_VERSION = "7.19.0";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
   ACTIONS.ANALYZE_PROSPECT_INTELLIGENCE,
+  PROSPECT_CRM_ACTION,
   ACTIONS.GET_CLIENT_WORKSPACE,
   ACTIONS.GET_CLIENT_DIRECTORY,
   ACTIONS.COMMIT_OPERATIONAL_DECISION,
@@ -159,11 +171,12 @@ export default {
         version: VERSION,
         workerFileVersion: WORKER_FILE_VERSION,
         contractVersion: API_CONTRACT_VERSION,
-        sprint: "Gmail — Operator Decision Routes",
+        sprint: "Prospecting + CRM — Durable Relationship Record",
         architecture:
-          "Modular production router with Agency Command, Calendar Operations, Gmail operator decisions, Historical Rehabilitation, Intelligence Backlog, Intelligence Refresh, Communication Intelligence, Activity Intelligence, Intelligence Processing, Prospect Intelligence, Communications analysis, Guided Investigation, and operational processing.",
+          "Modular production router with Prospect CRM, Agency Command, Calendar Operations, Gmail operator decisions, Historical Rehabilitation, Intelligence Backlog, Intelligence Refresh, Communication Intelligence, Activity Intelligence, Intelligence Processing, Prospect Intelligence, Communications analysis, Guided Investigation, and operational processing.",
         actions: SUPPORTED_ACTIONS,
         engines: [
+          "prospect-crm",
           "agency-command",
           "calendar-operations",
           "gmail-work-requests",
@@ -194,6 +207,7 @@ export default {
         modules: {
           shared: ["config", "http", "database", "ai"],
           routes: [
+            "prospect-crm",
             "agency-command",
             "calendar-operations",
             "gmail-work-requests",
@@ -301,6 +315,9 @@ export default {
 
         case ACTIONS.ANALYZE_PROSPECT_INTELLIGENCE:
           return await handleProspectIntelligence(body, env, requestId);
+
+        case PROSPECT_CRM_ACTION:
+          return await handleProspectCrm(body, env, requestId);
 
         case ACTIONS.ANALYZE_COMMUNICATION:
           return await handleCommunicationAnalysisWithReviewAdapter(
