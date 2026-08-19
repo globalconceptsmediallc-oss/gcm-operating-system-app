@@ -1,13 +1,17 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailWorkRequestIntelligence.js
-   Version: 1.0.0
+   Version: 1.0.1
    Status: Production Road-Test Candidate
    Sprint: Gmail — Direct Requested Work
    Purpose:
    Determine when a known operational human email contains a concrete client
    request that is specific enough to become a direct Work Item without an
    artificial Investigation.
+
+   Change notes — v1.0.1:
+   - Exposes the same verified client-alias resolver for other Gmail disposition
+     paths so Information and Work do not invent competing client mappings.
 
    Change notes — v1.0.0:
    - Requires a known operational sender, a verified client, and an explicit
@@ -59,7 +63,7 @@ export function evaluateExplicitHumanWorkRequest(message = {}) {
   const role = knownHumanRole(sender);
   if (!role) return notCandidate("Sender is not a known GCM operational human.");
 
-  const client = inferClient(text);
+  const client = inferClientFromText(text);
   if (!client) return notCandidate("The email does not prove which production client owns the request.", { role });
 
   const explicitRequest = extractExplicitRequest(body || text);
@@ -130,18 +134,19 @@ export function extractExplicitRequest(value) {
   return "";
 }
 
+export function inferClientFromText(text) {
+  const value = clean(text);
+  for (const rule of CLIENT_RULES) {
+    if (rule.pattern.test(value)) return { name: rule.name, code: rule.code };
+  }
+  return null;
+}
+
 function knownHumanRole(sender) {
   for (const rule of KNOWN_HUMAN_ROLES) {
     if (rule.pattern.test(sender)) return rule.role;
   }
   return "";
-}
-
-function inferClient(text) {
-  for (const rule of CLIENT_RULES) {
-    if (rule.pattern.test(text)) return { name: rule.name, code: rule.code };
-  }
-  return null;
 }
 
 function buildAnalyticsAction(client, explicitRequest) {
