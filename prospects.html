@@ -1,26 +1,32 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: prospects.html
-   Version: 2.0.0
+   Version: 3.0.0
    Status: Production Road-Test Candidate
-   Source: Production prospects.html 1.1.0 + Prospect CRM route 1.0.0
-   Sprint: Prospecting + CRM — Real D1 Pipeline
+   Source: Production prospects.html 2.0.0 + client-pre-research.html 1.1.0
+   Backend: Prospect CRM 1.2.0
+   Sprint: Prospecting Natural Workflow
    Purpose:
-   Replace the static sample prospect pipeline with the durable GCM CRM.
-   Radar remains pre-appointment intelligence. Formal Prospects are created
-   only when a real appointment is scheduled.
+   One operating workspace for GCM prospecting from first evidence through
+   Radar, outreach, appointment, CRM, services, signed scope, startup package,
+   and the eventual Client handoff.
 
-   Change Notes — 2.0.0
-   - Removes all fake ABC Roofing / sample prospect records.
-   - Reads formal Prospects from D1 through prospect-crm list_prospects.
-   - Reads pre-appointment Radar records through prospect-crm list_radar.
-   - Adds durable "Add to Radar" and "Add Scheduled Prospect" workflows.
-   - Enforces the backend appointment boundary instead of manufacturing Prospects.
-   - Displays stage, primary contact, opportunity, value, Next Action, due state,
-     and unmanaged warnings from production CRM data.
-   - Opens a read-only CRM detail view backed by prospect-crm get_prospect.
-   - Preserves shared GCM OS shell and existing Client Pre-Research workflow.
-   - Does not alter Today, Client Health, Work, Gmail, Calendar, Media, or Proof.
+   Change Notes — 3.0.0
+   - Combines the verified Prospect Intelligence workflow and durable CRM UI.
+   - Removes the need to move between a research page and a separate CRM page.
+   - Research can save to a new Radar record, an existing Radar record, or an
+     existing formal Prospect without duplicate re-entry.
+   - Preserves pre-appointment intelligence and outreach in durable Radar history.
+   - Promoting Radar after a real appointment carries intelligence/outreach forward.
+   - Adds Radar outreach with a required dated Next Action.
+   - Adds Prospect relationship activity, proposal, agreement, payment, and
+     explicit Next Action controls.
+   - Adds proposed service checkboxes and signed-service confirmation.
+   - Generates and manages the service-specific startup package.
+   - Startup requirements track Needed → Requested → Received → Verified.
+   - Produces a simple client-facing startup checklist from agreed services.
+   - Preserves shared GCM OS shell.
+   - Does not yet change shared navigation; page is road-tested directly first.
    ========================================================= -->
 
 <!DOCTYPE html>
@@ -28,1384 +34,571 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Prospects & CRM | GCM OS</title>
-  <meta
-    name="description"
-    content="Durable prospecting radar and CRM pipeline for Global Concepts Media."
-  />
+  <meta name="robots" content="noindex, nofollow, noarchive" />
+  <title>Prospects | GCM OS</title>
+  <meta name="description" content="Natural prospecting and CRM operating workflow for Global Concepts Media." />
 
   <style>
-    :root {
-      --gcm-navy-950:#071426;
-      --gcm-navy-900:#0b1d33;
-      --gcm-navy-800:#112a47;
-      --gcm-blue-600:#1f68d8;
-      --gcm-blue-500:#347ce8;
-      --gcm-blue-100:#eaf2ff;
-      --gcm-gold-500:#d6a94a;
-      --gcm-gold-100:#fff7df;
-      --surface:#ffffff;
-      --surface-soft:#f5f7fb;
-      --surface-muted:#edf1f7;
-      --border:#dbe2ec;
-      --text:#132238;
-      --text-muted:#637083;
-      --text-soft:#8290a3;
-      --success:#1f7a4f;
-      --success-soft:#e9f7f0;
-      --warning:#9a6414;
-      --warning-soft:#fff4dd;
-      --critical:#b33a3a;
-      --critical-soft:#fff0f0;
-      --info:#245fae;
-      --info-soft:#edf5ff;
-      --shadow-sm:0 8px 24px rgba(7,20,38,.07);
-      --shadow-md:0 16px 42px rgba(7,20,38,.11);
-      --radius-sm:10px;
-      --radius-md:16px;
-      --radius-lg:22px;
-      --content-width:1480px;
+    :root{
+      --navy-950:#071426;--navy-900:#0b1d33;--navy-800:#112a47;
+      --blue-600:#1f68d8;--blue-500:#347ce8;--blue-100:#eaf2ff;
+      --gold-500:#d6a94a;--gold-100:#fff7df;
+      --surface:#fff;--surface-soft:#f5f7fb;--surface-muted:#edf1f7;
+      --border:#dbe2ec;--text:#132238;--muted:#637083;--soft:#8290a3;
+      --success:#1f7a4f;--success-soft:#e9f7f0;
+      --warning:#9a6414;--warning-soft:#fff4dd;
+      --critical:#b33a3a;--critical-soft:#fff0f0;
+      --info:#245fae;--info-soft:#edf5ff;
+      --shadow:0 8px 24px rgba(7,20,38,.07);--shadow-lg:0 18px 48px rgba(7,20,38,.12);
+      --r-sm:10px;--r-md:16px;--r-lg:22px;--content:1480px;
     }
-
     *{box-sizing:border-box}
     html{scroll-behavior:smooth}
-    body{
-      margin:0;
-      min-height:100vh;
-      background:var(--surface-soft);
-      color:var(--text);
-      font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-      line-height:1.5
-    }
-    button,input,select,textarea{font:inherit}
-    button{cursor:pointer}
-    a{color:inherit;text-decoration:none}
+    body{margin:0;min-height:100vh;background:var(--surface-soft);color:var(--text);
+      font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5}
+    button,input,select,textarea{font:inherit} button{cursor:pointer} a{color:inherit;text-decoration:none}
     [hidden]{display:none!important}
-
-    .skip-link{
-      position:absolute;top:-48px;left:16px;z-index:1000;
-      padding:10px 14px;border-radius:8px;background:#fff;
-      color:var(--gcm-navy-950);font-weight:800
-    }
-    .skip-link:focus{top:16px}
-
-    .app-shell{
-      min-height:100vh;
-      display:grid;
-      grid-template-columns:250px minmax(0,1fr)
-    }
-    .main{min-width:0;padding:28px 32px 48px}
-    .main-inner{width:min(100%,var(--content-width));margin:0 auto}
-
-    .topbar{
-      display:flex;align-items:flex-start;justify-content:space-between;
-      gap:24px;margin-bottom:22px
-    }
-    .eyebrow{
-      margin:0 0 6px;color:var(--gcm-blue-600);font-size:.72rem;
-      font-weight:900;text-transform:uppercase;letter-spacing:.14em
-    }
-    .page-title{
-      margin:0;color:var(--gcm-navy-950);font-size:clamp(2rem,4vw,3.15rem);
-      line-height:1;letter-spacing:-.045em
-    }
-    .page-subtitle{margin:10px 0 0;color:var(--text-muted);font-size:1rem;max-width:790px}
-    .topbar-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
-
-    .button{
-      display:inline-flex;align-items:center;justify-content:center;gap:8px;
-      min-height:42px;padding:0 16px;border:1px solid transparent;
-      border-radius:11px;font-size:.84rem;font-weight:850;
-      transition:transform 160ms ease,box-shadow 160ms ease,background 160ms ease,border-color 160ms ease
-    }
-    .button:hover{transform:translateY(-1px)}
-    .button:focus-visible{outline:3px solid rgba(52,124,232,.26);outline-offset:2px}
-    .button-primary{background:var(--gcm-blue-600);color:#fff;box-shadow:0 10px 24px rgba(31,104,216,.22)}
-    .button-primary:hover{background:#185fc8}
-    .button-secondary{border-color:var(--border);background:var(--surface);color:var(--gcm-navy-900)}
-    .button-secondary:hover{border-color:#c3cfde;box-shadow:var(--shadow-sm)}
-    .button-gold{background:var(--gcm-gold-500);color:var(--gcm-navy-950)}
-    .button-small{min-height:36px;padding:0 12px;font-size:.76rem}
-    .button:disabled{opacity:.52;cursor:not-allowed;transform:none}
-
-    .system-banner{
-      display:flex;align-items:flex-start;justify-content:space-between;gap:18px;
-      margin-bottom:18px;padding:14px 16px;border:1px solid #cfe0fb;
-      border-radius:var(--radius-md);background:var(--info-soft);color:#173d72
-    }
-    .system-banner strong{display:block;font-size:.86rem}
-    .system-banner p{margin:3px 0 0;font-size:.78rem}
-    .system-state{white-space:nowrap;font-size:.73rem;font-weight:900}
-
-    .summary-grid{
-      display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
-      gap:14px;margin-bottom:18px
-    }
-    .summary-card{
-      min-height:116px;padding:18px;border:1px solid var(--border);
-      border-radius:var(--radius-md);background:var(--surface);box-shadow:var(--shadow-sm)
-    }
-    .summary-label{
-      margin:0;color:var(--text-muted);font-size:.72rem;font-weight:850;
-      text-transform:uppercase;letter-spacing:.08em
-    }
-    .summary-value{
-      margin:8px 0 0;color:var(--gcm-navy-950);font-size:2rem;
-      font-weight:900;line-height:1;letter-spacing:-.04em
-    }
-    .summary-note{margin:8px 0 0;color:var(--text-soft);font-size:.76rem}
-
-    .toolbar{
-      display:grid;grid-template-columns:minmax(220px,1fr) minmax(170px,.35fr) auto;
-      gap:12px;padding:16px;margin-bottom:18px;border:1px solid var(--border);
-      border-radius:var(--radius-lg);background:var(--surface);box-shadow:var(--shadow-sm)
-    }
-    .field{display:grid;gap:7px}
-    .field label,.field-label{
-      color:var(--text-muted);font-size:.7rem;font-weight:850;
-      text-transform:uppercase;letter-spacing:.08em
-    }
-    .input,.select,.textarea{
-      width:100%;border:1px solid var(--border);border-radius:11px;
-      background:#fff;color:var(--text);outline:none
-    }
-    .input,.select{min-height:43px;padding:0 13px}
-    .textarea{min-height:96px;padding:11px 13px;resize:vertical}
-    .input:focus,.select:focus,.textarea:focus{
-      border-color:var(--gcm-blue-500);
-      box-shadow:0 0 0 3px rgba(52,124,232,.12)
-    }
-
-    .workspace-grid{
-      display:grid;grid-template-columns:minmax(0,1.45fr) minmax(330px,.55fr);
-      gap:18px;align-items:start
-    }
-    .panel{
-      border:1px solid var(--border);border-radius:var(--radius-lg);
-      background:var(--surface);box-shadow:var(--shadow-sm);overflow:hidden
-    }
-    .panel + .panel{margin-top:18px}
-    .panel-header{
-      display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
-      padding:20px 22px 16px;border-bottom:1px solid var(--border)
-    }
-    .panel-title{margin:0;color:var(--gcm-navy-950);font-size:1rem;font-weight:900;letter-spacing:-.015em}
-    .panel-description{margin:5px 0 0;color:var(--text-muted);font-size:.8rem}
-    .panel-count{
-      min-width:34px;height:30px;display:grid;place-items:center;padding:0 9px;
-      border-radius:999px;background:var(--surface-muted);color:var(--text-muted);
-      font-size:.72rem;font-weight:900
-    }
-
-    .pipeline-list{display:grid}
-    .prospect-card{
-      display:grid;grid-template-columns:minmax(0,1fr) minmax(235px,.55fr) auto;
-      gap:18px;align-items:center;padding:20px 22px;border-bottom:1px solid var(--border);
-      transition:background 160ms ease
-    }
-    .prospect-card:last-child{border-bottom:0}
-    .prospect-card:hover{background:#fbfcfe}
-    .prospect-name{margin:0;color:var(--gcm-navy-950);font-size:1.02rem;font-weight:900}
-    .prospect-meta{margin:4px 0 0;color:var(--text-soft);font-size:.74rem}
-    .prospect-insight{margin:9px 0 0;color:var(--text-muted);font-size:.8rem}
-    .tag-row{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
-    .tag,.badge{
-      display:inline-flex;align-items:center;min-height:26px;padding:0 9px;
-      border-radius:999px;font-size:.67rem;font-weight:850
-    }
-    .tag{background:var(--surface-muted);color:var(--text-muted)}
-    .badge-blue{background:var(--gcm-blue-100);color:var(--info)}
-    .badge-green{background:var(--success-soft);color:var(--success)}
-    .badge-yellow{background:var(--warning-soft);color:var(--warning)}
-    .badge-red{background:var(--critical-soft);color:var(--critical)}
-    .badge-gray{background:var(--surface-muted);color:var(--text-muted)}
-
-    .next-action-block{min-width:0}
-    .next-label{
-      margin:0;color:var(--text-soft);font-size:.67rem;font-weight:850;
-      text-transform:uppercase;letter-spacing:.07em
-    }
-    .next-title{margin:5px 0 0;color:var(--gcm-navy-900);font-size:.8rem;font-weight:850}
-    .next-due{margin:5px 0 0;font-size:.72rem;font-weight:800}
-    .due-overdue{color:var(--critical)}
-    .due-today{color:var(--critical)}
-    .due-upcoming{color:var(--warning)}
-    .due-future{color:var(--success)}
-    .due-none{color:var(--critical)}
-    .card-actions{display:flex;justify-content:flex-end}
-
-    .empty-state{
-      padding:38px 22px;text-align:center;color:var(--text-muted)
-    }
-    .empty-state strong{display:block;color:var(--gcm-navy-900);font-size:.94rem}
-    .empty-state p{margin:7px auto 0;max-width:560px;font-size:.8rem}
-
-    .side-stack{display:grid;gap:18px}
-    .priority-card{
-      padding:22px;border-radius:var(--radius-lg);
-      background:linear-gradient(155deg,var(--gcm-navy-900),var(--gcm-navy-950));
-      color:#fff;box-shadow:var(--shadow-md)
-    }
-    .priority-card .eyebrow{color:#a8c9ff}
-    .priority-card h2{margin:3px 0 8px;font-size:1.22rem}
-    .priority-card p{margin:0;color:rgba(255,255,255,.72);font-size:.82rem}
-    .priority-card .button{margin-top:15px;background:#fff;color:var(--gcm-navy-950)}
-
-    .radar-list{display:grid}
-    .radar-item{padding:15px 18px;border-bottom:1px solid var(--border)}
-    .radar-item:last-child{border-bottom:0}
-    .radar-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-    .radar-name{margin:0;font-size:.86rem;font-weight:900;color:var(--gcm-navy-900)}
-    .radar-meta{margin:4px 0 0;color:var(--text-soft);font-size:.7rem}
-    .radar-source{margin:8px 0 0;color:var(--text-muted);font-size:.76rem}
-
-    .detail-shell{padding:0}
-    .detail-body{padding:20px 22px}
-    .detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-    .detail-item{
-      min-width:0;padding:13px;border:1px solid var(--border);
-      border-radius:12px;background:#fbfcfe
-    }
-    .detail-item span{
-      display:block;color:var(--text-soft);font-size:.66rem;font-weight:850;
-      text-transform:uppercase;letter-spacing:.07em
-    }
-    .detail-item strong{display:block;margin-top:5px;color:var(--gcm-navy-900);font-size:.79rem;word-break:break-word}
-    .timeline{display:grid;gap:10px;margin-top:18px}
-    .timeline-item{
-      padding:12px 14px;border-left:3px solid var(--gcm-blue-500);
-      border-radius:0 10px 10px 0;background:var(--surface-soft)
-    }
-    .timeline-item strong{display:block;font-size:.77rem;color:var(--gcm-navy-900)}
-    .timeline-item p{margin:4px 0 0;color:var(--text-muted);font-size:.73rem}
-    .timeline-item time{display:block;margin-top:5px;color:var(--text-soft);font-size:.66rem}
-
-    dialog{
-      width:min(760px,calc(100vw - 32px));max-height:calc(100vh - 40px);
-      padding:0;border:0;border-radius:20px;background:#fff;
-      box-shadow:0 28px 90px rgba(7,20,38,.28)
-    }
-    dialog::backdrop{background:rgba(7,20,38,.55);backdrop-filter:blur(3px)}
-    .modal-header{
-      display:flex;align-items:flex-start;justify-content:space-between;gap:18px;
-      padding:20px 22px 16px;border-bottom:1px solid var(--border)
-    }
-    .modal-title{margin:0;color:var(--gcm-navy-950);font-size:1.12rem;font-weight:900}
-    .modal-copy{margin:5px 0 0;color:var(--text-muted);font-size:.79rem}
-    .modal-close{
-      width:36px;height:36px;border:1px solid var(--border);border-radius:10px;
-      background:#fff;color:var(--text-muted);font-weight:900
-    }
-    .modal-body{padding:20px 22px;overflow:auto}
-    .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
-    .form-grid .span-2{grid-column:1/-1}
-    .form-actions{
-      display:flex;justify-content:flex-end;gap:10px;margin-top:18px;
-      padding-top:16px;border-top:1px solid var(--border)
-    }
-    .form-note{
-      grid-column:1/-1;padding:11px 13px;border-radius:11px;
-      background:var(--gcm-gold-100);color:#654a0a;font-size:.76rem
-    }
-    .error-box{
-      margin-bottom:14px;padding:11px 13px;border:1px solid #f0c3c3;
-      border-radius:11px;background:var(--critical-soft);color:var(--critical);
-      font-size:.78rem;font-weight:700
-    }
-
-    .loading-skeleton{
-      margin:18px 22px;height:92px;border-radius:14px;
-      background:linear-gradient(90deg,#eef2f7 25%,#f8fafc 37%,#eef2f7 63%);
-      background-size:400% 100%;animation:pulse 1.4s ease infinite
-    }
-    @keyframes pulse{0%{background-position:100% 50%}100%{background-position:0 50%}}
-
-    @media(max-width:1180px){
-      .summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-      .workspace-grid{grid-template-columns:1fr}
-    }
-    @media(max-width:920px){
-      .prospect-card{grid-template-columns:1fr}
-      .card-actions{justify-content:flex-start}
-    }
-    @media(max-width:860px){
-      .app-shell{grid-template-columns:1fr}
-      .main{padding:20px}
-    }
-    @media(max-width:720px){
-      .topbar{flex-direction:column}
-      .topbar-actions{justify-content:flex-start}
-      .toolbar{grid-template-columns:1fr}
-      .form-grid,.detail-grid{grid-template-columns:1fr}
-      .form-grid .span-2{grid-column:auto}
-    }
-    @media(max-width:640px){
-      .main{padding:16px}
-      .summary-grid{grid-template-columns:1fr}
-      .system-banner{flex-direction:column}
-    }
+    .app-shell{min-height:100vh;display:grid;grid-template-columns:250px minmax(0,1fr)}
+    .main{min-width:0;padding:28px 32px 56px}.main-inner{width:min(100%,var(--content));margin:0 auto}
+    .topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:22px;margin-bottom:18px}
+    .eyebrow{margin:0 0 6px;color:var(--blue-600);font-size:.7rem;font-weight:900;text-transform:uppercase;letter-spacing:.13em}
+    h1{margin:0;color:var(--navy-950);font-size:clamp(2rem,4vw,3.1rem);line-height:1;letter-spacing:-.045em}
+    .subtitle{margin:10px 0 0;max-width:880px;color:var(--muted);font-size:.98rem}
+    .actions{display:flex;gap:9px;flex-wrap:wrap;justify-content:flex-end}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:41px;padding:0 15px;
+      border:1px solid transparent;border-radius:11px;font-size:.82rem;font-weight:850;background:#fff;color:var(--navy-900)}
+    .btn:hover{transform:translateY(-1px)} .btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+    .btn-primary{background:var(--blue-600);color:#fff}.btn-secondary{border-color:var(--border)}
+    .btn-gold{background:var(--gold-500);color:var(--navy-950)}.btn-small{min-height:34px;padding:0 11px;font-size:.73rem}
+    .banner{display:flex;justify-content:space-between;gap:18px;padding:13px 16px;margin-bottom:16px;
+      border:1px solid #cfe0fb;border-radius:var(--r-md);background:var(--info-soft);color:#173d72}
+    .banner strong{display:block;font-size:.84rem}.banner p{margin:3px 0 0;font-size:.76rem}.system-state{font-size:.72rem;font-weight:900;white-space:nowrap}
+    .lifecycle{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px;padding:10px;border:1px solid var(--border);
+      border-radius:var(--r-md);background:#fff;box-shadow:var(--shadow)}
+    .life-step{padding:7px 10px;border-radius:999px;background:var(--surface-muted);color:var(--muted);font-size:.7rem;font-weight:850}
+    .life-arrow{align-self:center;color:var(--soft);font-weight:900}
+    .summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
+    .summary-card{padding:17px;border:1px solid var(--border);border-radius:var(--r-md);background:#fff;box-shadow:var(--shadow)}
+    .summary-card span{display:block;color:var(--muted);font-size:.68rem;font-weight:850;text-transform:uppercase;letter-spacing:.08em}
+    .summary-card strong{display:block;margin-top:7px;font-size:1.9rem;line-height:1;color:var(--navy-950)}
+    .summary-card small{display:block;margin-top:7px;color:var(--soft);font-size:.72rem}
+    .tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
+    .tab{min-height:38px;padding:0 14px;border:1px solid var(--border);border-radius:999px;background:#fff;color:var(--muted);font-weight:850;font-size:.76rem}
+    .tab.active{background:var(--navy-900);border-color:var(--navy-900);color:#fff}
+    .panel{border:1px solid var(--border);border-radius:var(--r-lg);background:#fff;box-shadow:var(--shadow);overflow:hidden;margin-bottom:16px}
+    .panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:19px 21px 15px;border-bottom:1px solid var(--border)}
+    .panel-head h2,.panel-head h3{margin:0;color:var(--navy-950);font-size:1rem;font-weight:900}.panel-head p{margin:5px 0 0;color:var(--muted);font-size:.78rem}
+    .panel-body{padding:20px 21px}
+    .count{min-width:32px;height:29px;display:grid;place-items:center;padding:0 8px;border-radius:999px;background:var(--surface-muted);color:var(--muted);font-size:.7rem;font-weight:900}
+    .workspace{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(330px,.55fr);gap:16px;align-items:start}
+    .toolbar{display:grid;grid-template-columns:minmax(220px,1fr) minmax(180px,.35fr) auto;gap:10px;padding:14px;border-bottom:1px solid var(--border)}
+    .field{display:grid;gap:6px}.field label{color:var(--muted);font-size:.68rem;font-weight:850;text-transform:uppercase;letter-spacing:.07em}
+    .input,.select,.textarea{width:100%;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--text);outline:none}
+    .input,.select{min-height:42px;padding:0 12px}.textarea{min-height:92px;padding:10px 12px;resize:vertical}
+    .input:focus,.select:focus,.textarea:focus{border-color:var(--blue-500);box-shadow:0 0 0 3px rgba(52,124,232,.1)}
+    .list{display:grid}.record{display:grid;grid-template-columns:minmax(0,1fr) minmax(230px,.55fr) auto;gap:16px;align-items:center;padding:18px 21px;border-bottom:1px solid var(--border)}
+    .record:last-child{border-bottom:0}.record:hover{background:#fbfcfe}.record h3{margin:0;font-size:1rem;color:var(--navy-950)}
+    .meta{margin:4px 0 0;color:var(--soft);font-size:.72rem}.insight{margin:8px 0 0;color:var(--muted);font-size:.78rem}
+    .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}.chip,.badge{display:inline-flex;align-items:center;min-height:25px;padding:0 8px;border-radius:999px;font-size:.65rem;font-weight:850}
+    .chip{background:var(--surface-muted);color:var(--muted)}.blue{background:var(--blue-100);color:var(--info)}.green{background:var(--success-soft);color:var(--success)}
+    .yellow{background:var(--warning-soft);color:var(--warning)}.red{background:var(--critical-soft);color:var(--critical)}.gray{background:var(--surface-muted);color:var(--muted)}
+    .next-label{margin:0;color:var(--soft);font-size:.64rem;text-transform:uppercase;font-weight:850;letter-spacing:.07em}.next-title{margin:5px 0 0;font-size:.78rem;font-weight:850}
+    .next-due{margin:4px 0 0;font-size:.7rem;font-weight:800}.empty{padding:34px 20px;text-align:center;color:var(--muted);font-size:.78rem}.empty strong{display:block;color:var(--navy-900);font-size:.9rem}
+    .priority{padding:20px;border-radius:var(--r-lg);background:linear-gradient(155deg,var(--navy-900),var(--navy-950));color:#fff;box-shadow:var(--shadow-lg)}
+    .priority .eyebrow{color:#a8c9ff}.priority h2{margin:3px 0 8px;font-size:1.2rem}.priority p{margin:0;color:rgba(255,255,255,.72);font-size:.8rem}.priority .btn{margin-top:14px}
+    .detail-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+    .detail-card{padding:12px;border:1px solid var(--border);border-radius:11px;background:#fbfcfe}.detail-card span{display:block;color:var(--soft);font-size:.62rem;text-transform:uppercase;font-weight:850;letter-spacing:.07em}.detail-card strong{display:block;margin-top:5px;font-size:.76rem;color:var(--navy-900);word-break:break-word}
+    .section-title{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:20px 0 10px}.section-title h3{margin:0;font-size:.9rem;color:var(--navy-950)}.section-title p{margin:0;color:var(--muted);font-size:.72rem}
+    .quick-actions{display:flex;gap:7px;flex-wrap:wrap}
+    .timeline{display:grid;gap:8px}.timeline-item{padding:11px 13px;border-left:3px solid var(--blue-500);border-radius:0 9px 9px 0;background:var(--surface-soft)}
+    .timeline-item strong{display:block;font-size:.75rem;color:var(--navy-900)}.timeline-item p{margin:3px 0 0;color:var(--muted);font-size:.71rem}.timeline-item time{display:block;margin-top:4px;color:var(--soft);font-size:.64rem}
+    .service-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.service-option{display:flex;gap:9px;align-items:flex-start;padding:11px;border:1px solid var(--border);border-radius:11px;background:#fbfcfe}
+    .service-option input{margin-top:3px}.service-option strong{display:block;font-size:.76rem}.service-option span{display:block;margin-top:2px;color:var(--muted);font-size:.68rem}
+    .startup-summary{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}.requirement{display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--border)}
+    .requirement:last-child{border-bottom:0}.requirement strong{display:block;font-size:.75rem}.requirement p{margin:3px 0 0;color:var(--muted);font-size:.68rem}
+    .research-shell{padding:0}.research-intro{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(300px,.7fr);gap:14px;margin-bottom:14px}
+    .research-hero{padding:26px;border-radius:var(--r-lg);background:linear-gradient(135deg,var(--navy-900),var(--navy-800));color:#fff}.research-hero h2{margin:0;font-size:1.6rem}.research-hero p{margin:10px 0 0;color:rgba(255,255,255,.76);font-size:.86rem}
+    .research-context{padding:20px;border:1px solid var(--border);border-radius:var(--r-lg);background:#fff}.research-context strong{display:block}.research-context p{margin:6px 0 0;color:var(--muted);font-size:.76rem}
+    .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.span-2{grid-column:1/-1}
+    .upload{padding:14px;border:1px dashed #9fc7e5;border-radius:11px;background:#f5fbff}.upload input{width:100%}.preview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:10px}.preview{overflow:hidden;border:1px solid var(--border);border-radius:9px;background:#fff}.preview img{display:block;width:100%;height:180px;object-fit:contain;background:#f1f4f7}
+    .status{margin-top:11px;padding:10px 12px;border-radius:9px;font-size:.75rem}.status-working{background:var(--info-soft);color:var(--info)}.status-error{background:var(--critical-soft);color:var(--critical)}.status-success{background:var(--success-soft);color:var(--success)}
+    .research-results{display:grid;gap:12px}.result-summary{display:grid;grid-template-columns:minmax(0,1.4fr) repeat(2,minmax(150px,.3fr));gap:10px}.result-card{padding:17px;border:1px solid var(--border);border-radius:var(--r-md);background:#fff}.result-card h3{margin:0;font-size:.9rem}.result-card p{margin:9px 0 0;color:#34475c;font-size:.76rem;line-height:1.6}.result-card ul{margin:9px 0 0;padding-left:18px;color:#34475c;font-size:.75rem}.result-card li{margin:5px 0}
+    .result-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.full{grid-column:1/-1}.email-block,.script-block{margin-top:9px;padding:12px;border-radius:9px;background:#f6f8fa;white-space:pre-wrap;font-size:.75rem;line-height:1.55}.script-block{border-left:3px solid var(--blue-500)}
+    details.engine{margin-top:8px;border:1px solid var(--border);border-radius:9px;overflow:hidden}details.engine summary{padding:11px 12px;background:#f6f8fa;font-size:.73rem;font-weight:850;cursor:pointer}.json{max-height:420px;margin:0;padding:12px;overflow:auto;background:#0b1e32;color:#d7e7f7;font:11px/1.5 "SFMono-Regular",Consolas,monospace;white-space:pre-wrap;word-break:break-word}
+    dialog{width:min(760px,calc(100vw - 28px));max-height:calc(100vh - 32px);padding:0;border:0;border-radius:18px;box-shadow:0 28px 90px rgba(7,20,38,.28)}
+    dialog::backdrop{background:rgba(7,20,38,.55);backdrop-filter:blur(3px)}.modal-head{display:flex;justify-content:space-between;gap:14px;padding:18px 20px 14px;border-bottom:1px solid var(--border)}.modal-head h2{margin:0;font-size:1rem}.modal-head p{margin:4px 0 0;color:var(--muted);font-size:.73rem}.modal-body{padding:18px 20px;overflow:auto}.modal-close{width:34px;height:34px;border:1px solid var(--border);border-radius:9px;background:#fff}.form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:15px;padding-top:14px;border-top:1px solid var(--border)}
+    .note{padding:10px 12px;border-radius:9px;background:var(--gold-100);color:#654a0a;font-size:.72rem}.error{padding:10px 12px;border-radius:9px;background:var(--critical-soft);color:var(--critical);font-size:.74rem;font-weight:700;margin-bottom:10px}
+    @media(max-width:1180px){.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.workspace{grid-template-columns:1fr}.detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:900px){.record{grid-template-columns:1fr}.research-intro,.result-summary{grid-template-columns:1fr}}
+    @media(max-width:860px){.app-shell{grid-template-columns:1fr}.main{padding:20px}}
+    @media(max-width:720px){.topbar{flex-direction:column}.actions{justify-content:flex-start}.toolbar,.form-grid,.service-grid,.result-grid{grid-template-columns:1fr}.span-2,.full{grid-column:auto}.requirement{grid-template-columns:1fr}}
+    @media(max-width:620px){.main{padding:14px}.summary-grid,.detail-grid{grid-template-columns:1fr}.banner{flex-direction:column}}
   </style>
 </head>
-
 <body>
-  <a class="skip-link" href="#main-content">Skip to main content</a>
+<div class="app-shell">
+  <aside data-gcm-shell-sidebar aria-label="Primary navigation"></aside>
+  <main class="main">
+    <div class="main-inner">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Acquire</p>
+          <h1>Prospects</h1>
+          <p class="subtitle">One continuous workflow from the first thing that catches GCM's attention through research, outreach, appointment, proposal, signed scope, startup, and Client handoff.</p>
+        </div>
+        <div class="actions">
+          <button class="btn btn-gold" id="research-new" type="button">Research a Business</button>
+          <button class="btn btn-secondary" id="add-radar" type="button">Add to Radar</button>
+          <button class="btn btn-primary" id="add-prospect" type="button">Add Scheduled Prospect</button>
+        </div>
+      </header>
 
-  <div class="app-shell">
-    <aside data-gcm-shell-sidebar aria-label="Primary navigation"></aside>
+      <section class="banner">
+        <div><strong>Natural workflow rule</strong><p>Research and relationship history stay attached to the same business. A formal Prospect begins only when a real appointment is scheduled.</p></div>
+        <span class="system-state" id="system-state">Connecting…</span>
+      </section>
 
-    <main class="main" id="main-content">
-      <div class="main-inner">
-        <header class="topbar">
-          <div>
-            <p class="eyebrow">Acquire</p>
-            <h1 class="page-title">Prospects & CRM</h1>
-            <p class="page-subtitle">
-              Preserve how a business entered GCM's orbit, manage every real opportunity,
-              and make sure no active prospect sits without a dated next action.
-            </p>
-          </div>
+      <div class="lifecycle" aria-label="Prospect lifecycle">
+        <span class="life-step">Find</span><span class="life-arrow">→</span><span class="life-step">Research</span><span class="life-arrow">→</span>
+        <span class="life-step">Radar</span><span class="life-arrow">→</span><span class="life-step">Outreach</span><span class="life-arrow">→</span>
+        <span class="life-step">Appointment</span><span class="life-arrow">→</span><span class="life-step">Discovery</span><span class="life-arrow">→</span>
+        <span class="life-step">Services / Proposal</span><span class="life-arrow">→</span><span class="life-step">Signed Scope</span><span class="life-arrow">→</span>
+        <span class="life-step">Startup</span><span class="life-arrow">→</span><span class="life-step">Client</span>
+      </div>
 
-          <div class="topbar-actions">
-            <a class="button button-secondary" href="client-pre-research.html">Research New Business</a>
-            <button class="button button-secondary" id="open-radar" type="button">Add to Radar</button>
-            <button class="button button-primary" id="open-prospect" type="button">Add Scheduled Prospect</button>
-          </div>
-        </header>
+      <section class="summary-grid">
+        <article class="summary-card"><span>Active Prospects</span><strong id="active-count">—</strong><small>Formal opportunities being managed.</small></article>
+        <article class="summary-card"><span>Due / Overdue</span><strong id="due-count">—</strong><small>Relationship actions requiring attention.</small></article>
+        <article class="summary-card"><span>Unmanaged</span><strong id="unmanaged-count">—</strong><small>Active Prospect or outreach record without a dated action.</small></article>
+        <article class="summary-card"><span>Radar</span><strong id="radar-count">—</strong><small>Pre-appointment businesses and opportunities.</small></article>
+      </section>
 
-        <section class="system-banner" aria-live="polite">
-          <div>
-            <strong>CRM operating rule</strong>
-            <p>Radar holds pre-appointment intelligence. A formal Prospect exists only after a real appointment is scheduled.</p>
-          </div>
-          <span class="system-state" id="system-state">Connecting to D1…</span>
-        </section>
+      <div class="tabs">
+        <button class="tab active" data-view="pipeline" type="button">Active Opportunities</button>
+        <button class="tab" data-view="radar" type="button">Radar & Outreach</button>
+        <button class="tab" data-view="nurture" type="button">Nurture</button>
+        <button class="tab" data-view="research" type="button">Research</button>
+      </div>
 
-        <section class="summary-grid" aria-label="CRM summary">
-          <article class="summary-card">
-            <p class="summary-label">Active Prospects</p>
-            <p class="summary-value" id="active-count">—</p>
-            <p class="summary-note">Formal opportunities currently being managed.</p>
-          </article>
-
-          <article class="summary-card">
-            <p class="summary-label">Due / Overdue</p>
-            <p class="summary-value" id="due-count">—</p>
-            <p class="summary-note">Prospect actions requiring attention now.</p>
-          </article>
-
-          <article class="summary-card">
-            <p class="summary-label">Unmanaged</p>
-            <p class="summary-value" id="unmanaged-count">—</p>
-            <p class="summary-note">Active relationship records missing a dated Next Action.</p>
-          </article>
-
-          <article class="summary-card">
-            <p class="summary-label">Radar</p>
-            <p class="summary-value" id="radar-count">—</p>
-            <p class="summary-note">Businesses or verticals on GCM's radar before an appointment.</p>
-          </article>
-        </section>
-
-        <section class="toolbar" aria-label="Prospect filters">
-          <div class="field">
-            <label for="prospect-search">Search CRM</label>
-            <input class="input" id="prospect-search" type="search" placeholder="Business, contact, market, opportunity, next action" />
-          </div>
-
-          <div class="field">
-            <label for="stage-filter">Stage</label>
-            <select class="select" id="stage-filter">
-              <option value="all">All stages</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label>&nbsp;</label>
-            <button class="button button-secondary" id="refresh-crm" type="button">Refresh</button>
-          </div>
-        </section>
-
-        <section class="workspace-grid">
+      <section id="view-pipeline">
+        <div class="workspace">
           <div>
             <article class="panel">
-              <div class="panel-header">
-                <div>
-                  <h2 class="panel-title">Active CRM Pipeline</h2>
-                  <p class="panel-description">
-                    Production relationship records from D1. The next action is the operating priority.
-                  </p>
-                </div>
-                <span class="panel-count" id="pipeline-visible-count">0</span>
+              <div class="toolbar">
+                <div class="field"><label for="search">Search</label><input class="input" id="search" type="search" placeholder="Business, contact, opportunity, next action" /></div>
+                <div class="field"><label for="stage-filter">Stage</label><select class="select" id="stage-filter"><option value="all">All stages</option></select></div>
+                <div class="field"><label>&nbsp;</label><button class="btn btn-secondary" id="refresh" type="button">Refresh</button></div>
               </div>
-
-              <div id="pipeline-loading">
-                <div class="loading-skeleton"></div>
-                <div class="loading-skeleton"></div>
-              </div>
-
-              <div class="pipeline-list" id="pipeline-list" hidden></div>
-
-              <div class="empty-state" id="pipeline-empty" hidden>
-                <strong>No formal CRM Prospects yet.</strong>
-                <p>
-                  A business belongs here only after a real appointment is scheduled.
-                  Use Radar before that point.
-                </p>
-              </div>
+              <div class="panel-head"><div><h2>Active Opportunities</h2><p>D1 relationship records. The dated Next Action controls what happens next.</p></div><span class="count" id="pipeline-count">0</span></div>
+              <div class="list" id="pipeline-list"></div>
+              <div class="empty" id="pipeline-empty" hidden><strong>No active formal opportunities.</strong>Scheduled appointments and active sales relationships will appear here.</div>
             </article>
-
-            <article class="panel detail-shell" id="detail-panel" hidden>
-              <div class="panel-header">
-                <div>
-                  <p class="eyebrow">CRM Record</p>
-                  <h2 class="panel-title" id="detail-title">Prospect</h2>
-                  <p class="panel-description" id="detail-subtitle"></p>
-                </div>
-                <button class="button button-secondary button-small" id="close-detail" type="button">Close</button>
-              </div>
-              <div class="detail-body" id="detail-body"></div>
+            <article class="panel" id="prospect-detail" hidden>
+              <div class="panel-head"><div><p class="eyebrow">Relationship Workspace</p><h2 id="prospect-title">Prospect</h2><p id="prospect-subtitle"></p></div><button class="btn btn-secondary btn-small" id="close-prospect" type="button">Close</button></div>
+              <div class="panel-body" id="prospect-body"></div>
             </article>
           </div>
-
-          <aside class="side-stack" aria-label="Prospect operating support">
-            <article class="priority-card">
-              <p class="eyebrow">Highest-Value Prospect Action</p>
-              <h2 id="priority-title">Loading CRM…</h2>
-              <p id="priority-copy">The CRM will surface the earliest due or unmanaged active relationship.</p>
-              <button class="button" id="priority-open" type="button" disabled>Open Record</button>
-            </article>
-
-            <article class="panel">
-              <div class="panel-header">
-                <div>
-                  <h2 class="panel-title">Prospecting Radar</h2>
-                  <p class="panel-description">Durable lead intelligence before a scheduled appointment.</p>
-                </div>
-                <span class="panel-count" id="radar-side-count">0</span>
-              </div>
-
-              <div id="radar-loading">
-                <div class="loading-skeleton"></div>
-              </div>
-
-              <div class="radar-list" id="radar-list" hidden></div>
-
-              <div class="empty-state" id="radar-empty" hidden>
-                <strong>Radar is clear.</strong>
-                <p>Advertisements, referrals, business cards, vertical targets, and research leads can be preserved here.</p>
-              </div>
-            </article>
-
-            <article class="panel">
-              <div class="panel-header">
-                <div>
-                  <h2 class="panel-title">Lifecycle</h2>
-                  <p class="panel-description">The durable relationship handoff built into GCM OS.</p>
-                </div>
-              </div>
-              <div class="detail-body">
-                <div class="timeline">
-                  <div class="timeline-item"><strong>Radar → Outreach</strong><p>Preserve why the business matters and every attempt to earn the appointment.</p></div>
-                  <div class="timeline-item"><strong>Appointment → Prospect</strong><p>Create the formal CRM relationship and prepare consultant-grade intelligence.</p></div>
-                  <div class="timeline-item"><strong>Discovery → Proposal</strong><p>Preserve objectives, scope, economics, proposal, and every meaningful contact.</p></div>
-                  <div class="timeline-item"><strong>Signed Scope → Payment Gate</strong><p>Agreement defines responsibility; work begins only after required initial payment.</p></div>
-                  <div class="timeline-item"><strong>Client Handoff</strong><p>Client conversion remains a separate verified handoff after the CRM arm passes road test.</p></div>
-                </div>
-              </div>
-            </article>
+          <aside>
+            <article class="priority"><p class="eyebrow">Highest-Value Prospect Action</p><h2 id="priority-title">Loading…</h2><p id="priority-copy">GCM OS is evaluating the active relationship queue.</p><button class="btn" id="priority-open" type="button" disabled>Open Record</button></article>
           </aside>
-        </section>
-      </div>
-    </main>
-  </div>
-
-  <dialog id="radar-dialog">
-    <form id="radar-form" method="dialog">
-      <div class="modal-header">
-        <div>
-          <h2 class="modal-title">Add to Prospecting Radar</h2>
-          <p class="modal-copy">Preserve lead intelligence without manufacturing a formal CRM Prospect.</p>
         </div>
-        <button class="modal-close" type="button" data-close-dialog="radar-dialog" aria-label="Close">×</button>
-      </div>
+      </section>
 
-      <div class="modal-body">
-        <div class="error-box" id="radar-error" hidden></div>
-        <div class="form-grid">
-          <div class="field">
-            <label for="radar-business">Business Name</label>
-            <input class="input" id="radar-business" name="businessName" />
-          </div>
+      <section id="view-radar" hidden>
+        <article class="panel">
+          <div class="panel-head"><div><h2>Radar & Outreach</h2><p>Pre-appointment intelligence. Once outreach begins, the record must have a dated follow-up.</p></div><span class="count" id="radar-list-count">0</span></div>
+          <div class="list" id="radar-list"></div>
+          <div class="empty" id="radar-empty" hidden><strong>Radar is clear.</strong>Research, referrals, business cards, advertisements, and target verticals can enter here.</div>
+        </article>
+        <article class="panel" id="radar-detail" hidden>
+          <div class="panel-head"><div><p class="eyebrow">Pre-Appointment Record</p><h2 id="radar-title">Radar</h2><p id="radar-subtitle"></p></div><button class="btn btn-secondary btn-small" id="close-radar" type="button">Close</button></div>
+          <div class="panel-body" id="radar-body"></div>
+        </article>
+      </section>
 
-          <div class="field">
-            <label for="radar-website">Website</label>
-            <input class="input" id="radar-website" name="website" placeholder="https://example.com" />
-          </div>
+      <section id="view-nurture" hidden>
+        <article class="panel">
+          <div class="panel-head"><div><h2>Nurture</h2><p>Good opportunities that are not being actively chased. Re-enter active outreach only when there is a useful reason.</p></div><span class="count" id="nurture-count">0</span></div>
+          <div class="list" id="nurture-list"></div>
+          <div class="empty" id="nurture-empty" hidden><strong>No nurture records.</strong>Opportunities moved out of active chase will stay visible here.</div>
+        </article>
+      </section>
 
-          <div class="field">
-            <label for="radar-vertical">Vertical / Industry</label>
-            <input class="input" id="radar-vertical" name="vertical" placeholder="Aviation, roofing, healthcare…" />
-          </div>
-
-          <div class="field">
-            <label for="radar-market">Market</label>
-            <input class="input" id="radar-market" name="market" placeholder="Melbourne, Florida" />
-          </div>
-
-          <div class="field">
-            <label for="radar-source">Source *</label>
-            <select class="select" id="radar-source" name="sourceType" required>
-              <option value="">Choose source</option>
-              <option value="advertisement">Advertisement</option>
-              <option value="business_card">Business Card</option>
-              <option value="referral">Referral / Relationship</option>
-              <option value="vertical">Target Vertical</option>
-              <option value="research">Research</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="radar-contact">Contact Name</label>
-            <input class="input" id="radar-contact" name="contactName" />
-          </div>
-
-          <div class="field span-2">
-            <label for="radar-source-description">Why is this on GCM's radar?</label>
-            <textarea class="textarea" id="radar-source-description" name="sourceDescription" placeholder="Visible ad, referral context, market opportunity, relationship, or reason to pursue."></textarea>
-          </div>
-
-          <div class="field span-2">
-            <label for="radar-notes">Notes</label>
-            <textarea class="textarea" id="radar-notes" name="notes"></textarea>
-          </div>
-
-          <div class="form-note">
-            This record stays in Radar. It does not become a formal CRM Prospect until a real appointment is scheduled.
-          </div>
+      <section id="view-research" hidden>
+        <div class="research-intro">
+          <div class="research-hero"><p class="eyebrow">Prospect Intelligence</p><h2>Research without losing the relationship.</h2><p>Run the same website + advertisement intelligence workflow, then save the result to the business already in GCM OS or create a Radar record when it is new.</p></div>
+          <div class="research-context"><strong id="research-context-title">New business research</strong><p id="research-context-copy">No existing record selected. If the website already matches Radar or CRM, the result will attach to that record instead of creating a duplicate.</p></div>
         </div>
+        <article class="panel research-shell">
+          <div class="panel-head"><div><h2>Run Prospect Intelligence</h2><p>Website required. Up to two advertisement images can be analyzed with the public site.</p></div></div>
+          <div class="panel-body">
+            <form id="research-form">
+              <div class="form-grid">
+                <div class="field span-2"><label for="research-website">Business Website *</label><input class="input" id="research-website" type="url" required placeholder="https://examplebusiness.com" /></div>
+                <div class="field"><label for="research-business">Business Name</label><input class="input" id="research-business" /></div>
+                <div class="field"><label for="research-source">Prospect Source</label>
+                  <select class="select" id="research-source"><option value="">Select source</option><option>Google Search</option><option>Google Maps</option><option>Referral</option><option>Networking</option><option>Existing Relationship</option><option>Direct Mail Postcard</option><option>Magazine Advertisement</option><option>Flyer</option><option>Billboard</option><option>Vehicle Graphic</option><option>Other</option></select>
+                </div>
+                <div class="field"><label for="research-contact">Known Contact</label><input class="input" id="research-contact" /></div>
+                <div class="field"><label for="research-location">Market / Location</label><input class="input" id="research-location" /></div>
+                <div class="field span-2 upload"><label for="research-images">Advertisement Evidence</label><input id="research-images" type="file" accept="image/png,image/jpeg,image/webp" multiple /><p class="meta">Up to two PNG/JPEG/WebP files, 4 MB each.</p><div class="preview-grid" id="preview-grid" hidden></div><p class="meta" id="image-summary">No advertisement images selected.</p></div>
+                <div class="field span-2"><label for="research-evidence">What caught your attention?</label><textarea class="textarea" id="research-evidence"></textarea></div>
+                <div class="field span-2"><label for="research-notes">Initial Notes</label><textarea class="textarea" id="research-notes"></textarea></div>
+              </div>
+              <div class="form-actions"><button class="btn btn-secondary" id="clear-research" type="button">Clear</button><button class="btn btn-primary" id="run-research" type="submit">Run Prospect Intelligence</button></div>
+              <div class="status" id="research-status" hidden></div>
+            </form>
+          </div>
+        </article>
+        <div class="research-results" id="research-results" hidden></div>
+      </section>
+    </div>
+  </main>
+</div>
 
-        <div class="form-actions">
-          <button class="button button-secondary" type="button" data-close-dialog="radar-dialog">Cancel</button>
-          <button class="button button-primary" id="save-radar" type="submit">Save Radar Record</button>
-        </div>
-      </div>
+<!-- Basic add Radar -->
+<dialog id="radar-dialog"><form id="radar-form">
+  <div class="modal-head"><div><h2>Add to Radar</h2><p>Use when GCM knows the business is worth remembering but has not scheduled a real appointment.</p></div><button class="modal-close" type="button" data-close="radar-dialog">×</button></div>
+  <div class="modal-body"><div class="error" id="radar-error" hidden></div><div class="form-grid">
+    <div class="field"><label>Business Name</label><input class="input" name="businessName" /></div>
+    <div class="field"><label>Website</label><input class="input" name="website" /></div>
+    <div class="field"><label>Vertical / Industry</label><input class="input" name="vertical" /></div>
+    <div class="field"><label>Market</label><input class="input" name="market" /></div>
+    <div class="field"><label>Source *</label><select class="select" name="sourceType" required><option value="">Choose</option><option value="advertisement">Advertisement</option><option value="business_card">Business Card</option><option value="referral">Referral / Relationship</option><option value="vertical">Target Vertical</option><option value="research">Research</option><option value="other">Other</option></select></div>
+    <div class="field"><label>Contact</label><input class="input" name="contactName" /></div>
+    <div class="field span-2"><label>Why is this on GCM's radar?</label><textarea class="textarea" name="sourceDescription"></textarea></div>
+    <div class="field span-2"><label>Notes</label><textarea class="textarea" name="notes"></textarea></div>
+  </div><div class="form-actions"><button class="btn btn-secondary" type="button" data-close="radar-dialog">Cancel</button><button class="btn btn-primary" type="submit">Save Radar Record</button></div></div>
+</form></dialog>
+
+<!-- Scheduled Prospect -->
+<dialog id="prospect-dialog"><form id="prospect-form">
+  <div class="modal-head"><div><h2>Add Scheduled Prospect</h2><p>For an existing real appointment that needs to enter CRM directly.</p></div><button class="modal-close" type="button" data-close="prospect-dialog">×</button></div>
+  <div class="modal-body"><div class="error" id="prospect-error" hidden></div><div class="form-grid">
+    <div class="field"><label>Business Name *</label><input class="input" name="businessName" required /></div>
+    <div class="field"><label>Current Stage</label><select class="select" name="stage"><option value="appointment_scheduled">Appointment Scheduled</option><option value="discovery_completed">Discovery Completed</option><option value="qualified">Qualified</option><option value="proposal_preparing">Proposal Preparing</option><option value="proposal_sent">Proposal Sent</option><option value="awaiting_decision">Awaiting Decision</option><option value="verbal_commitment">Verbal Commitment</option><option value="contract_pending">Contract Pending</option><option value="awaiting_signature">Awaiting Signature</option><option value="awaiting_initial_payment">Awaiting Initial Payment</option><option value="work_authorized">Work Authorized</option></select></div>
+    <div class="field"><label>Appointment Date *</label><input class="input" type="date" name="appointmentDate" required /></div>
+    <div class="field"><label>Appointment Time *</label><input class="input" type="time" name="appointmentTime" required /></div>
+    <div class="field"><label>Website</label><input class="input" name="website" /></div><div class="field"><label>Industry</label><input class="input" name="industry" /></div>
+    <div class="field"><label>Market</label><input class="input" name="market" /></div><div class="field"><label>Source</label><input class="input" name="sourceType" /></div>
+    <div class="field"><label>Primary Contact</label><input class="input" name="contactName" /></div><div class="field"><label>Email</label><input class="input" type="email" name="contactEmail" /></div>
+    <div class="field"><label>Last Meaningful Contact Date</label><input class="input" type="date" name="lastContactDate" /></div><div class="field"><label>Time</label><input class="input" type="time" name="lastContactTime" /></div>
+    <div class="field"><label>Opportunity Low ($)</label><input class="input" type="number" min="0" step=".01" name="estimatedValueLow" /></div><div class="field"><label>Opportunity High ($)</label><input class="input" type="number" min="0" step=".01" name="estimatedValueHigh" /></div>
+    <div class="field"><label>Recurring Value ($)</label><input class="input" type="number" min="0" step=".01" name="recurringValue" /></div><div class="field"><label>Period</label><select class="select" name="recurringPeriod"><option value="">None</option><option value="month">Monthly</option><option value="quarter">Quarterly</option><option value="year">Annual</option></select></div>
+    <div class="field span-2"><label>Opportunity / Business Reason</label><textarea class="textarea" name="opportunitySummary"></textarea></div><div class="field span-2"><label>Notes</label><textarea class="textarea" name="notes"></textarea></div>
+  </div><div class="form-actions"><button class="btn btn-secondary" type="button" data-close="prospect-dialog">Cancel</button><button class="btn btn-primary" type="submit">Create Prospect</button></div></div>
+</form></dialog>
+
+<!-- Radar outreach -->
+<dialog id="outreach-dialog"><form id="outreach-form">
+  <div class="modal-head"><div><h2>Record Radar Outreach</h2><p>Every active pre-appointment chase leaves a durable contact record and dated follow-up.</p></div><button class="modal-close" type="button" data-close="outreach-dialog">×</button></div>
+  <div class="modal-body"><div class="error" id="outreach-error" hidden></div><input type="hidden" name="radarId" />
+  <div class="form-grid">
+    <div class="field"><label>Method *</label><select class="select" name="activityType" required><option value="outreach_email">Email</option><option value="phone_call">Phone Call</option><option value="voicemail">Voicemail</option><option value="linkedin">LinkedIn</option><option value="text_message">Text</option></select></div>
+    <div class="field"><label>Outcome</label><input class="input" name="outcome" placeholder="Sent, spoke, no answer…" /></div>
+    <div class="field"><label>Date *</label><input class="input" type="date" name="date" required /></div><div class="field"><label>Time *</label><input class="input" type="time" name="time" required /></div>
+    <div class="field span-2"><label>What happened? *</label><textarea class="textarea" name="summary" required></textarea></div>
+    <div class="field"><label>Next Action *</label><input class="input" name="nextActionTitle" required value="Follow up with prospect" /></div><div class="field"><label>Follow-up Due *</label><input class="input" type="date" name="nextActionDueDate" required /></div>
+  </div><div class="form-actions"><button class="btn btn-secondary" type="button" data-close="outreach-dialog">Cancel</button><button class="btn btn-primary" type="submit">Record Outreach</button></div></div>
+</form></dialog>
+
+<!-- Promote Radar -->
+<dialog id="promote-dialog"><form id="promote-form">
+  <div class="modal-head"><div><h2>Appointment Scheduled</h2><p>This is the boundary that promotes Radar into the formal CRM relationship.</p></div><button class="modal-close" type="button" data-close="promote-dialog">×</button></div>
+  <div class="modal-body"><div class="error" id="promote-error" hidden></div><input type="hidden" name="radarId" /><div class="form-grid">
+    <div class="field"><label>Appointment Date *</label><input class="input" type="date" name="date" required /></div><div class="field"><label>Appointment Time *</label><input class="input" type="time" name="time" required /></div>
+    <div class="field span-2"><label>Opportunity / Reason for Meeting</label><textarea class="textarea" name="opportunitySummary"></textarea></div>
+  </div><div class="note">Radar intelligence and outreach history will carry into the new formal Prospect automatically.</div><div class="form-actions"><button class="btn btn-secondary" type="button" data-close="promote-dialog">Cancel</button><button class="btn btn-primary" type="submit">Promote to Prospect</button></div></div>
+</form></dialog>
+
+<!-- Prospect activity -->
+<dialog id="activity-dialog"><form id="activity-form">
+  <div class="modal-head"><div><h2>Record Contact / Activity</h2><p>Preserve the relationship event and, when appropriate, move the stage.</p></div><button class="modal-close" type="button" data-close="activity-dialog">×</button></div>
+  <div class="modal-body"><div class="error" id="activity-error" hidden></div><input type="hidden" name="prospectId" /><div class="form-grid">
+    <div class="field"><label>Type *</label><select class="select" name="activityType" required><option value="follow_up_email">Follow-up Email</option><option value="phone_call">Phone Call</option><option value="voicemail">Voicemail</option><option value="meeting">Meeting</option><option value="discovery_meeting">Discovery Meeting</option><option value="note">Internal Note</option></select></div>
+    <div class="field"><label>Outcome</label><input class="input" name="outcome" /></div>
+    <div class="field"><label>Date *</label><input class="input" type="date" name="date" required /></div><div class="field"><label>Time *</label><input class="input" type="time" name="time" required /></div>
+    <div class="field"><label>Stage After</label><select class="select" name="stageAfter"><option value="">No change</option><option value="discovery_completed">Discovery Completed</option><option value="qualified">Qualified</option><option value="proposal_preparing">Proposal Preparing</option><option value="awaiting_decision">Awaiting Decision</option><option value="verbal_commitment">Verbal Commitment</option><option value="contract_pending">Contract Pending</option><option value="awaiting_signature">Awaiting Signature</option><option value="nurture">Nurture</option><option value="lost">Lost</option></select></div>
+    <div class="field"><label>Meaningful Contact</label><select class="select" name="meaningfulContact"><option value="true">Yes</option><option value="false">No</option></select></div>
+    <div class="field span-2"><label>Summary *</label><textarea class="textarea" name="summary" required></textarea></div>
+  </div><div class="form-actions"><button class="btn btn-secondary" type="button" data-close="activity-dialog">Cancel</button><button class="btn btn-primary" type="submit">Save Activity</button></div></div>
+</form></dialog>
+
+<!-- Proposal -->
+<dialog id="proposal-dialog"><form id="proposal-form">
+  <div class="modal-head"><div><h2>Record Proposal Sent</h2><p>This starts the active proposal follow-up cadence.</p></div><button class="modal-close" type="button" data-close="proposal-dialog">×</button></div>
+  <div class="modal-body"><div class="error" id="proposal-error" hidden></div><input type="hidden" name="prospectId" /><div class="form-grid">
+    <div class="field span-2"><label>Proposal Title</label><input class="input" name="title" value="GCM Proposal" /></div>
+    <div class="field"><label>Sent Date *</label><input class="input" type="date" name="date" required /></div><div class="field"><label>Sent Time *</label><input class="input" type="time" name="time" required /></div>
+    <div class="field"><label>Value Low ($)</label><input class="input" type="number" min="0" step=".01" name="valueLow" /></div><div class="field"><label>Value High ($)</label><input class="input" type="number" min="0" step=".01" name="valueHigh" /></div>
+    <div class="field"><label>Recurring ($)</label><input class="input" type="number" min="0" step=".01" name="recurringValue" /></div><div class="field"><label>Recurring Period</label><select class="select" name="recurringPeriod"><option value="">None</option><option value="month">Monthly</option><option value="quarter">Quarterly</option><option value="year">Annual</option></select></div>
+    <div class="field span-2"><label>Scope Summary</label><textarea class="textarea" name="scopeSummary"></textarea></div>
+  </div><div class="form-actions"><button class="btn btn-secondary" type="button" data-close="proposal-dialog">Cancel</button><button class="btn btn-primary" type="submit">Record Proposal</button></div></div>
+</form></dialog>
+
+<!-- Agreement -->
+<dialog id="agreement-dialog"><form id="agreement-form">
+  <div class="modal-head"><div><h2>Record Signed Scope</h2><p>A signed agreement with defined work marks the Client-conversion point; the formal Client-record handoff is the next verified OS step, while payment still controls when project work begins.</p></div><button class="modal-close" type="button" data-close="agreement-dialog">×</button></div>
+  <div class="modal-body"><div class="error" id="agreement-error" hidden></div><input type="hidden" name="prospectId" /><div class="form-grid">
+    <div class="field"><label>Signed Date *</label><input class="input" type="date" name="date" required /></div><div class="field"><label>Signed Time *</label><input class="input" type="time" name="time" required /></div>
+    <div class="field"><label>Contract Value ($) *</label><input class="input" type="number" min=".01" step=".01" name="contractValue" required /></div><div class="field"><label>Initial Payment Required ($)</label><input class="input" type="number" min="0" step=".01" name="initialPaymentRequired" placeholder="Blank = 25% minimum" /></div>
+    <div class="field span-2"><label>Defined Scope *</label><textarea class="textarea" name="scopeSummary" required></textarea></div>
+  </div><div class="form-actions"><button class="btn btn-secondary" type="button" data-close="agreement-dialog">Cancel</button><button class="btn btn-primary" type="submit">Record Signed Agreement</button></div></div>
+</form></dialog>
+
+<!-- Payment -->
+<dialog id="payment-dialog"><form id="payment-form">
+  <div class="modal-head"><div><h2>Record Initial Payment</h2><p>GCM requires at least the agreed initial payment before project work begins.</p></div><button class="modal-close" type="button" data-close="payment-dialog">×</button></div>
+  <div class="modal-body"><div class="error" id="payment-error" hidden></div><input type="hidden" name="prospectId" /><div class="form-grid">
+    <div class="field"><label>Amount ($) *</label><input class="input" type="number" min=".01" step=".01" name="amount" required /></div><div class="field"><label>Method</label><input class="input" name="paymentMethod" /></div>
+    <div class="field"><label>Received Date *</label><input class="input" type="date" name="date" required /></div><div class="field"><label>Received Time *</label><input class="input" type="time" name="time" required /></div>
+  </div><div class="form-actions"><button class="btn btn-secondary" type="button" data-close="payment-dialog">Cancel</button><button class="btn btn-primary" type="submit">Record Payment</button></div></div>
+</form></dialog>
+
+<script src="shared/gcm-shell.js"></script>
+<script>
+(() => {
+  "use strict";
+  const FILE_VERSION="3.0.0";
+  const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+  const state={prospects:[],radar:[],services:[],selectedProspect:null,selectedRadar:null,view:"pipeline",
+    researchTarget:{type:"new",id:null},researchResult:null,researchContext:null,images:[]};
+
+  const $=id=>document.getElementById(id);
+  const clean=v=>String(v??"").trim();
+  const esc=v=>String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+  const formObj=f=>Object.fromEntries(new FormData(f).entries());
+  const localDT=(d,t)=>clean(d)&&clean(t)?`${clean(d)}T${clean(t)}:00`:null;
+  const today=()=>new Intl.DateTimeFormat("en-CA",{timeZone:"America/New_York",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+  const nowTime=()=>new Intl.DateTimeFormat("en-US",{timeZone:"America/New_York",hour:"2-digit",minute:"2-digit",hour12:false}).format(new Date()).replace("24:","00:");
+  const stageLabel=v=>({appointment_scheduled:"Appointment Scheduled",discovery_completed:"Discovery Completed",qualified:"Qualified Opportunity",proposal_preparing:"Proposal Preparing",proposal_sent:"Proposal Sent",awaiting_decision:"Awaiting Decision",verbal_commitment:"Verbal Commitment",contract_pending:"Contract Pending",awaiting_signature:"Awaiting Signature",contracted:"Contracted",awaiting_initial_payment:"Awaiting Initial Payment",work_authorized:"Work Authorized",nurture:"Nurture",lost:"Lost",converted:"Converted"}[v]||clean(v).replaceAll("_"," ")||"Unknown");
+  const fmtDate=(v,time=true)=>{if(!v)return"Unknown";const d=new Date(String(v).length===10?`${v}T12:00:00`:v);if(Number.isNaN(d.getTime()))return String(v);return new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric",year:"numeric",...(time?{hour:"numeric",minute:"2-digit"}:{})}).format(d)};
+  const money=c=>{const n=Number(c);if(!Number.isFinite(n))return null;return new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:2}).format(n/100)};
+  function valueSummary(p){const l=money(p?.estimatedValueLowCents),h=money(p?.estimatedValueHighCents),r=money(p?.recurringValueCents);const a=[];if(l&&h&&l!==h)a.push(`${l}–${h}`);else if(l||h)a.push(l||h);if(r)a.push(`${r}/${p.recurringPeriod||"period"}`);return a.join(" + ")||"Value not recorded"}
+  function dueText(a,unmanaged=false){if(unmanaged)return"No dated Next Action";if(!a?.dueDate)return"No due date";const d=fmtDate(a.dueDate,false);return a.dueState==="overdue"?`Overdue · ${d}`:a.dueState==="due_today"?`Due today · ${d}`:`Due ${d}`}
+  function statusClass(p){if(p?.isUnmanaged)return"red";if(p?.status==="nurture")return"yellow";if(p?.status==="converted")return"green";return"blue"}
+  function normalizeUrl(v){const x=clean(v);if(!x)return"";return /^https?:\/\//i.test(x)?x:`https://${x}`}
+  function hostname(v){try{return new URL(normalizeUrl(v)).hostname.replace(/^www\./,"").toLowerCase()}catch{return""}}
+  function safeArray(v){if(Array.isArray(v))return v.map(x=>clean(x)).filter(Boolean);if(clean(v))return[clean(v)];return[]}
+  function nested(o,path,f=""){return path.split(".").reduce((v,k)=>v&&typeof v==="object"&&Object.prototype.hasOwnProperty.call(v,k)?v[k]:undefined,o)??f}
+
+  async function api(operation,payload={}){
+    const r=await fetch(WORKER,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"prospect-crm",operation,...payload})});
+    const data=await r.json().catch(()=>({}));
+    if(!r.ok||data?.ok!==true)throw new Error(data?.error||`CRM HTTP ${r.status}`);
+    return data;
+  }
+  async function researchApi(payload){
+    const r=await fetch(WORKER,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+    const txt=await r.text();let data;try{data=JSON.parse(txt)}catch{throw new Error(`Prospect Intelligence returned unreadable HTTP ${r.status}.`)}
+    if(!r.ok)throw new Error(data?.error||data?.message||`Research HTTP ${r.status}`);
+    if(data?.businessRecordData&&typeof data.businessRecordData==="object")return{...data.businessRecordData,businessRecord:data.businessRecord||data.businessRecordData.businessRecord};
+    return data;
+  }
+
+  function showView(view){
+    state.view=view;
+    document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
+    ["pipeline","radar","nurture","research"].forEach(v=>$(`view-${v}`).hidden=v!==view);
+    if(view==="research")$("research-website").focus();
+  }
+  document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>showView(b.dataset.view)));
+
+  async function load(){
+    $("system-state").textContent="Connecting to D1…";
+    try{
+      const [p,r,s]=await Promise.all([api("list_prospects"),api("list_radar"),api("list_service_catalog")]);
+      state.prospects=p.prospects||[];state.radar=r.radar||[];state.services=s.services||[];
+      if(p.prospectCrmVersion!=="1.2.0")throw new Error(`This page requires Prospect CRM 1.2.0; live version is ${p.prospectCrmVersion||"unknown"}.`);
+      renderSummary(p.counts||{});renderPipeline();renderRadar();renderNurture();renderPriority();populateStages();
+      $("system-state").textContent=`D1 connected · CRM ${p.prospectCrmVersion}`;
+    }catch(e){$("system-state").textContent=`CRM unavailable · ${e.message}`;console.error(e)}
+  }
+  function renderSummary(c){
+    $("active-count").textContent=Number(c.active||0);
+    $("due-count").textContent=Number(c.overdue||0)+Number(c.dueToday||0)+state.radar.filter(x=>x.nextAction?.dueState==="overdue"||x.nextAction?.dueState==="due_today").length;
+    $("unmanaged-count").textContent=Number(c.unmanaged||0)+state.radar.filter(x=>x.isUnmanaged).length;
+    $("radar-count").textContent=state.radar.filter(x=>x.status!=="promoted").length;
+  }
+  function populateStages(){const cur=$("stage-filter").value||"all";const vals=[...new Set(state.prospects.filter(p=>p.status==="active").map(p=>p.stage))];$("stage-filter").innerHTML='<option value="all">All stages</option>'+vals.map(x=>`<option value="${esc(x)}">${esc(stageLabel(x))}</option>`).join("");$("stage-filter").value=vals.includes(cur)?cur:"all"}
+  function prospectSearch(p){return[p.businessName,p.website,p.industry,p.market,p.opportunitySummary,p.primaryContact?.name,p.primaryContact?.email,p.nextAction?.title,stageLabel(p.stage)].filter(Boolean).join(" ").toLowerCase()}
+  function renderRecord(p){
+    return `<article class="record"><div><h3>${esc(p.businessName)}</h3><p class="meta">${esc(p.primaryContact?.name||"Contact not recorded")} · ${esc(p.market||p.industry||"Market not recorded")}</p><p class="insight">${esc(p.opportunitySummary||"Opportunity summary not recorded.")}</p><div class="chips"><span class="badge ${statusClass(p)}">${esc(stageLabel(p.stage))}</span><span class="chip">${esc(valueSummary(p))}</span></div></div>
+    <div><p class="next-label">Next Action</p><p class="next-title">${esc(p.isUnmanaged?"Active relationship has no dated Next Action":p.nextAction?.title||"No open action")}</p><p class="next-due">${esc(dueText(p.nextAction,p.isUnmanaged))}</p></div>
+    <div><button class="btn btn-secondary btn-small" data-open-prospect="${p.id}" type="button">Open</button></div></article>`;
+  }
+  function bindProspectOpens(container){container.querySelectorAll("[data-open-prospect]").forEach(b=>b.addEventListener("click",()=>openProspect(Number(b.dataset.openProspect))))}
+  function renderPipeline(){
+    const q=clean($("search").value).toLowerCase(),stage=$("stage-filter").value;
+    const list=state.prospects.filter(p=>p.status==="active"&&(!q||prospectSearch(p).includes(q))&&(stage==="all"||p.stage===stage));
+    $("pipeline-count").textContent=list.length;$("pipeline-list").innerHTML=list.map(renderRecord).join("");$("pipeline-empty").hidden=list.length>0;bindProspectOpens($("pipeline-list"))
+  }
+  $("search").addEventListener("input",renderPipeline);$("stage-filter").addEventListener("change",renderPipeline);$("refresh").addEventListener("click",load);
+
+  function renderRadar(){
+    const list=state.radar.filter(r=>r.status!=="promoted");$("radar-list-count").textContent=list.length;
+    $("radar-list").innerHTML=list.map(r=>`<article class="record"><div><h3>${esc(r.businessName||r.vertical||"Radar Record")}</h3><p class="meta">${esc(r.contactName||"Contact not recorded")} · ${esc(r.market||r.vertical||"Market not recorded")}</p><p class="insight">${esc(r.sourceDescription||"Lead source preserved in Radar.")}</p><div class="chips"><span class="badge ${r.isUnmanaged?"red":r.status==="outreach"?"blue":"gray"}">${esc(r.isUnmanaged?"Unmanaged Outreach":r.status==="outreach"?"Outreach":"Radar")}</span><span class="chip">${esc(r.sourceType||"source unknown")}</span></div></div>
+    <div><p class="next-label">Next Action</p><p class="next-title">${esc(r.isUnmanaged?"Outreach has no dated follow-up":r.nextAction?.title||"Not in active outreach")}</p><p class="next-due">${esc(dueText(r.nextAction,r.isUnmanaged))}</p></div>
+    <div><button class="btn btn-secondary btn-small" data-open-radar="${r.id}" type="button">Open</button></div></article>`).join("");
+    $("radar-empty").hidden=list.length>0;$("radar-list").querySelectorAll("[data-open-radar]").forEach(b=>b.addEventListener("click",()=>openRadar(Number(b.dataset.openRadar))))
+  }
+  function renderNurture(){const list=state.prospects.filter(p=>p.status==="nurture");$("nurture-count").textContent=list.length;$("nurture-list").innerHTML=list.map(renderRecord).join("");$("nurture-empty").hidden=list.length>0;bindProspectOpens($("nurture-list"))}
+  function renderPriority(){
+    const formal=state.prospects.filter(p=>p.status==="active").map(p=>({kind:"prospect",record:p}));
+    const radar=state.radar.filter(r=>r.status==="outreach").map(r=>({kind:"radar",record:r}));
+    const all=[...formal,...radar].sort((a,b)=>{const ra=a.record,rb=b.record;if(ra.isUnmanaged!==rb.isUnmanaged)return ra.isUnmanaged?-1:1;const rank={overdue:0,due_today:1,upcoming:2};const ar=rank[ra.nextAction?.dueState]??9,br=rank[rb.nextAction?.dueState]??9;if(ar!==br)return ar-br;return String(ra.nextAction?.dueDate||"9999").localeCompare(String(rb.nextAction?.dueDate||"9999"))});
+    const x=all[0];if(!x){$("priority-title").textContent="No active prospect action";$("priority-copy").textContent="Research and Radar can create the next prospecting move."; $("priority-open").disabled=true;return}
+    $("priority-title").textContent=x.record.businessName||x.record.vertical||"Radar";$("priority-copy").textContent=x.record.isUnmanaged?"This active relationship is missing a dated Next Action.":`${x.record.nextAction?.title||"Review relationship"} · ${dueText(x.record.nextAction)}`;
+    $("priority-open").disabled=false;$("priority-open").dataset.kind=x.kind;$("priority-open").dataset.id=x.record.id;
+  }
+  $("priority-open").addEventListener("click",()=>{const id=Number($("priority-open").dataset.id),kind=$("priority-open").dataset.kind;if(kind==="radar"){showView("radar");openRadar(id)}else{showView("pipeline");openProspect(id)}});
+
+  async function openProspect(id){
+    showView("pipeline");
+    $("prospect-detail").hidden=false;$("prospect-title").textContent="Loading…";$("prospect-body").innerHTML="";
+    try{const d=await api("get_prospect",{prospectId:id});state.selectedProspect=d.prospect;renderProspect(d.prospect);$("prospect-detail").scrollIntoView({behavior:"smooth",block:"start"})}catch(e){$("prospect-body").innerHTML=`<div class="error">${esc(e.message)}</div>`}
+  }
+  function renderProspect(p){
+    $("prospect-title").textContent=p.businessName;$("prospect-subtitle").textContent=`${stageLabel(p.stage)} · ${p.primaryContact?.name||"Contact not recorded"}`;
+    const services=p.services||[],proposed=new Set(services.filter(s=>s.status==="proposed"||s.status==="contracted").map(s=>s.serviceKey));
+    const agreements=p.agreements||[],agreement=agreements[0],startup=p.startupPackage;
+    $("prospect-body").innerHTML=`
+    <div class="detail-grid">
+      ${detail("Stage",stageLabel(p.stage))}${detail("Primary Contact",p.primaryContact?.name||"Not recorded")}${detail("Last Contact",fmtDate(p.lastMeaningfulContactAt))}${detail("Opportunity",valueSummary(p))}
+      ${detail("Next Action",p.nextAction?.title||(p.isUnmanaged?"MISSING":"No open action"))}${detail("Due",dueText(p.nextAction,p.isUnmanaged))}${detail("Proposal",(p.proposals||[])[0]?.title||"No proposal recorded")}${detail("Agreement",agreement?`${agreement.status} · ${money(agreement.contractValueCents)||""}`:"No signed agreement")}
+    </div>
+    <div class="section-title"><div><h3>Relationship Actions</h3><p>Do the work from the record instead of remembering it elsewhere.</p></div></div>
+    <div class="quick-actions">
+      <button class="btn btn-secondary btn-small" data-prospect-action="research">Research More</button>
+      <button class="btn btn-secondary btn-small" data-prospect-action="activity">Record Contact</button>
+      <button class="btn btn-secondary btn-small" data-prospect-action="proposal">Record Proposal</button>
+      <button class="btn btn-secondary btn-small" data-prospect-action="agreement">Signed Agreement</button>
+      <button class="btn btn-secondary btn-small" data-prospect-action="payment">Record Payment</button>
+    </div>
+    <div class="section-title"><div><h3>Services</h3><p>Discussion stays proposed until signed scope proves responsibility.</p></div></div>
+    <form id="services-form"><div class="service-grid">${state.services.map(s=>`<label class="service-option"><input type="checkbox" name="service" value="${esc(s.key)}" ${proposed.has(s.key)?"checked":""}/><span><strong>${esc(s.name)}</strong><span>${esc(s.description||s.category||"")}</span></span></label>`).join("")}</div>
+      <div class="form-actions"><button class="btn btn-secondary btn-small" type="submit">Save Proposed Services</button>${agreement?'<button class="btn btn-primary btn-small" id="confirm-services" type="button">Confirm Signed Services & Build Startup Package</button>':""}</div>
+      ${agreement?"":'<div class="note">Contracted services cannot be confirmed until a signed agreement with defined scope is recorded.</div>'}
     </form>
-  </dialog>
-
-  <dialog id="prospect-dialog">
-    <form id="prospect-form" method="dialog">
-      <div class="modal-header">
-        <div>
-          <h2 class="modal-title">Add Scheduled Prospect</h2>
-          <p class="modal-copy">Create the formal CRM relationship only because a real appointment exists.</p>
-        </div>
-        <button class="modal-close" type="button" data-close-dialog="prospect-dialog" aria-label="Close">×</button>
-      </div>
-
-      <div class="modal-body">
-        <div class="error-box" id="prospect-error" hidden></div>
-
-        <div class="form-grid">
-          <div class="field">
-            <label for="prospect-business">Business Name *</label>
-            <input class="input" id="prospect-business" name="businessName" required />
-          </div>
-
-          <div class="field">
-            <label for="prospect-stage">Current Stage</label>
-            <select class="select" id="prospect-stage" name="stage">
-              <option value="appointment_scheduled">Appointment Scheduled</option>
-              <option value="discovery_completed">Discovery Completed</option>
-              <option value="qualified">Qualified Opportunity</option>
-              <option value="proposal_preparing">Proposal Preparing</option>
-              <option value="proposal_sent">Proposal Sent</option>
-              <option value="awaiting_decision">Awaiting Decision</option>
-              <option value="verbal_commitment">Verbal Commitment</option>
-              <option value="contract_pending">Contract Pending</option>
-              <option value="awaiting_signature">Awaiting Signature</option>
-              <option value="contracted">Contracted</option>
-              <option value="awaiting_initial_payment">Awaiting Initial Payment</option>
-              <option value="work_authorized">Work Authorized</option>
-              <option value="nurture">Nurture</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="prospect-date">Appointment Date *</label>
-            <input class="input" id="prospect-date" name="appointmentDate" type="date" required />
-          </div>
-
-          <div class="field">
-            <label for="prospect-time">Appointment Time *</label>
-            <input class="input" id="prospect-time" name="appointmentTime" type="time" required />
-          </div>
-
-          <div class="field">
-            <label for="prospect-website">Website</label>
-            <input class="input" id="prospect-website" name="website" placeholder="https://example.com" />
-          </div>
-
-          <div class="field">
-            <label for="prospect-industry">Industry</label>
-            <input class="input" id="prospect-industry" name="industry" />
-          </div>
-
-          <div class="field">
-            <label for="prospect-market">Market</label>
-            <input class="input" id="prospect-market" name="market" />
-          </div>
-
-          <div class="field">
-            <label for="prospect-source">Origin</label>
-            <input class="input" id="prospect-source" name="sourceType" placeholder="Referral, relationship, research…" />
-          </div>
-
-          <div class="field">
-            <label for="prospect-contact-name">Primary Contact</label>
-            <input class="input" id="prospect-contact-name" name="contactName" />
-          </div>
-
-          <div class="field">
-            <label for="prospect-contact-email">Contact Email</label>
-            <input class="input" id="prospect-contact-email" name="contactEmail" type="email" />
-          </div>
-
-          <div class="field">
-            <label for="prospect-last-contact-date">Last Meaningful Contact</label>
-            <input class="input" id="prospect-last-contact-date" name="lastContactDate" type="date" />
-          </div>
-
-          <div class="field">
-            <label for="prospect-last-contact-time">Contact Time</label>
-            <input class="input" id="prospect-last-contact-time" name="lastContactTime" type="time" />
-          </div>
-
-          <div class="field">
-            <label for="prospect-low">Opportunity Low ($)</label>
-            <input class="input" id="prospect-low" name="estimatedValueLow" type="number" min="0" step="0.01" />
-          </div>
-
-          <div class="field">
-            <label for="prospect-high">Opportunity High ($)</label>
-            <input class="input" id="prospect-high" name="estimatedValueHigh" type="number" min="0" step="0.01" />
-          </div>
-
-          <div class="field">
-            <label for="prospect-recurring">Recurring Value ($)</label>
-            <input class="input" id="prospect-recurring" name="recurringValue" type="number" min="0" step="0.01" />
-          </div>
-
-          <div class="field">
-            <label for="prospect-recurring-period">Recurring Period</label>
-            <select class="select" id="prospect-recurring-period" name="recurringPeriod">
-              <option value="">None / Unknown</option>
-              <option value="month">Monthly</option>
-              <option value="quarter">Quarterly</option>
-              <option value="year">Annual</option>
-            </select>
-          </div>
-
-          <div class="field span-2">
-            <label for="prospect-opportunity">Opportunity / Business Reason</label>
-            <textarea class="textarea" id="prospect-opportunity" name="opportunitySummary" placeholder="What business opportunity or problem did discovery reveal?"></textarea>
-          </div>
-
-          <div class="field span-2">
-            <label for="prospect-notes">Notes</label>
-            <textarea class="textarea" id="prospect-notes" name="notes"></textarea>
-          </div>
-
-          <div class="form-note">
-            For Proposal Sent / Awaiting Decision, enter the latest meaningful contact so GCM OS can calculate the 3-business-day follow-up automatically.
-          </div>
-        </div>
-
-        <div class="form-actions">
-          <button class="button button-secondary" type="button" data-close-dialog="prospect-dialog">Cancel</button>
-          <button class="button button-primary" id="save-prospect" type="submit">Create CRM Prospect</button>
-        </div>
-      </div>
-    </form>
-  </dialog>
-
-  <script src="shared/gcm-shell.js"></script>
-
-  <script>
-    (() => {
-      "use strict";
-
-      const FILE_VERSION = "2.0.0";
-      const WORKER_ENDPOINT =
-        "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
-      const CRM_ACTION = "prospect-crm";
-
-      const state = {
-        prospects: [],
-        radar: [],
-        selectedProspect: null
-      };
-
-      const els = {
-        systemState: document.getElementById("system-state"),
-        activeCount: document.getElementById("active-count"),
-        dueCount: document.getElementById("due-count"),
-        unmanagedCount: document.getElementById("unmanaged-count"),
-        radarCount: document.getElementById("radar-count"),
-        radarSideCount: document.getElementById("radar-side-count"),
-        pipelineVisibleCount: document.getElementById("pipeline-visible-count"),
-        search: document.getElementById("prospect-search"),
-        stage: document.getElementById("stage-filter"),
-        refresh: document.getElementById("refresh-crm"),
-        pipelineLoading: document.getElementById("pipeline-loading"),
-        pipelineList: document.getElementById("pipeline-list"),
-        pipelineEmpty: document.getElementById("pipeline-empty"),
-        radarLoading: document.getElementById("radar-loading"),
-        radarList: document.getElementById("radar-list"),
-        radarEmpty: document.getElementById("radar-empty"),
-        priorityTitle: document.getElementById("priority-title"),
-        priorityCopy: document.getElementById("priority-copy"),
-        priorityOpen: document.getElementById("priority-open"),
-        detailPanel: document.getElementById("detail-panel"),
-        detailTitle: document.getElementById("detail-title"),
-        detailSubtitle: document.getElementById("detail-subtitle"),
-        detailBody: document.getElementById("detail-body"),
-        closeDetail: document.getElementById("close-detail"),
-        radarDialog: document.getElementById("radar-dialog"),
-        prospectDialog: document.getElementById("prospect-dialog"),
-        radarForm: document.getElementById("radar-form"),
-        prospectForm: document.getElementById("prospect-form"),
-        radarError: document.getElementById("radar-error"),
-        prospectError: document.getElementById("prospect-error"),
-        saveRadar: document.getElementById("save-radar"),
-        saveProspect: document.getElementById("save-prospect")
-      };
-
-      function clean(value) {
-        return String(value ?? "").trim();
-      }
-
-      function escapeHtml(value) {
-        return String(value ?? "")
-          .replaceAll("&", "&amp;")
-          .replaceAll("<", "&lt;")
-          .replaceAll(">", "&gt;")
-          .replaceAll('"', "&quot;")
-          .replaceAll("'", "&#039;");
-      }
-
-      function stageLabel(value) {
-        const labels = {
-          appointment_scheduled: "Appointment Scheduled",
-          discovery_completed: "Discovery Completed",
-          qualified: "Qualified Opportunity",
-          proposal_preparing: "Proposal Preparing",
-          proposal_sent: "Proposal Sent",
-          awaiting_decision: "Awaiting Decision",
-          verbal_commitment: "Verbal Commitment",
-          contract_pending: "Contract Pending",
-          awaiting_signature: "Awaiting Signature",
-          contracted: "Contracted",
-          awaiting_initial_payment: "Awaiting Initial Payment",
-          work_authorized: "Work Authorized",
-          nurture: "Nurture",
-          lost: "Lost",
-          converted: "Converted"
-        };
-        return labels[value] || clean(value).replaceAll("_", " ") || "Unknown";
-      }
-
-      function statusBadgeClass(status) {
-        if (status === "converted") return "badge-green";
-        if (status === "lost") return "badge-gray";
-        if (status === "nurture") return "badge-yellow";
-        return "badge-blue";
-      }
-
-      function dueBadgeClass(dueState) {
-        if (dueState === "overdue" || dueState === "due_today") return "badge-red";
-        if (dueState === "upcoming") return "badge-green";
-        return "badge-gray";
-      }
-
-      function dueText(nextAction, unmanaged) {
-        if (unmanaged) return "No dated Next Action";
-        if (!nextAction?.dueDate) return "No due date";
-        const date = formatDate(nextAction.dueDate, false);
-        const labels = {
-          overdue: `Overdue · ${date}`,
-          due_today: `Due today · ${date}`,
-          upcoming: `Due ${date}`
-        };
-        return labels[nextAction.dueState] || `Due ${date}`;
-      }
-
-      function formatDate(value, includeTime = true) {
-        const text = clean(value);
-        if (!text) return "Unknown";
-        const normalized = text.length === 10 ? `${text}T12:00:00` : text;
-        const date = new Date(normalized);
-        if (Number.isNaN(date.getTime())) return text;
-        return new Intl.DateTimeFormat("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-          ...(includeTime ? { hour: "numeric", minute: "2-digit" } : {})
-        }).format(date);
-      }
-
-      function money(cents) {
-        const value = Number(cents);
-        if (!Number.isFinite(value)) return null;
-        return new Intl.NumberFormat("en-US", {
-          style: "currency",
-          currency: "USD",
-          maximumFractionDigits: value % 100 === 0 ? 0 : 2
-        }).format(value / 100);
-      }
-
-      function valueSummary(prospect) {
-        const low = money(prospect?.estimatedValueLowCents);
-        const high = money(prospect?.estimatedValueHighCents);
-        const recurring = money(prospect?.recurringValueCents);
-        const period = prospect?.recurringPeriod ? `/${prospect.recurringPeriod}` : "";
-
-        const parts = [];
-        if (low && high && low !== high) parts.push(`${low}–${high}`);
-        else if (high || low) parts.push(high || low);
-        if (recurring) parts.push(`${recurring}${period}`);
-        return parts.join(" + ") || "Value not recorded";
-      }
-
-      function buildSearchText(prospect) {
-        return [
-          prospect.businessName,
-          prospect.website,
-          prospect.industry,
-          prospect.market,
-          prospect.sourceType,
-          prospect.opportunitySummary,
-          prospect.primaryContact?.name,
-          prospect.primaryContact?.email,
-          prospect.nextAction?.title,
-          stageLabel(prospect.stage)
-        ].filter(Boolean).join(" ").toLowerCase();
-      }
-
-      async function crm(operation, payload = {}) {
-        const response = await fetch(WORKER_ENDPOINT, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: CRM_ACTION,
-            operation,
-            ...payload
-          })
-        });
-
-        let data = null;
-        try {
-          data = await response.json();
-        } catch {
-          data = {};
-        }
-
-        if (!response.ok || data?.ok !== true) {
-          throw new Error(data?.error || `CRM request failed with HTTP ${response.status}.`);
-        }
-
-        return data;
-      }
-
-      async function loadCrm() {
-        els.systemState.textContent = "Connecting to D1…";
-        els.refresh.disabled = true;
-        els.pipelineLoading.hidden = false;
-        els.radarLoading.hidden = false;
-
-        try {
-          const [prospectPayload, radarPayload] = await Promise.all([
-            crm("list_prospects"),
-            crm("list_radar")
-          ]);
-
-          state.prospects = Array.isArray(prospectPayload.prospects)
-            ? prospectPayload.prospects
-            : [];
-          state.radar = Array.isArray(radarPayload.radar)
-            ? radarPayload.radar
-            : [];
-
-          populateStageFilter();
-          renderSummary(prospectPayload.counts || {});
-          renderPipeline();
-          renderRadar();
-          renderPriority();
-
-          els.systemState.textContent =
-            `D1 connected · CRM ${prospectPayload.prospectCrmVersion || "1.0.0"}`;
-        } catch (error) {
-          console.error(`Prospects ${FILE_VERSION}: CRM load failed`, error);
-          els.systemState.textContent = "CRM unavailable";
-          els.pipelineLoading.hidden = true;
-          els.radarLoading.hidden = true;
-          els.pipelineList.hidden = true;
-          els.radarList.hidden = true;
-          els.pipelineEmpty.hidden = false;
-          els.pipelineEmpty.innerHTML = `
-            <strong>CRM could not load from D1.</strong>
-            <p>${escapeHtml(error.message || "Unknown CRM error")}</p>
-          `;
-          els.radarEmpty.hidden = false;
-          els.radarEmpty.innerHTML = `
-            <strong>Radar could not load.</strong>
-            <p>Fix the CRM connection before adding or changing prospect records.</p>
-          `;
-        } finally {
-          els.refresh.disabled = false;
-        }
-      }
-
-      function renderSummary(counts) {
-        const due = Number(counts.overdue || 0) + Number(counts.dueToday || 0);
-        els.activeCount.textContent = Number(counts.active || 0);
-        els.dueCount.textContent = due;
-        els.unmanagedCount.textContent = Number(counts.unmanaged || 0);
-        els.radarCount.textContent = state.radar.length;
-        els.radarSideCount.textContent = state.radar.length;
-      }
-
-      function populateStageFilter() {
-        const existing = els.stage.value || "all";
-        const stages = [...new Set(state.prospects.map(p => p.stage).filter(Boolean))];
-
-        els.stage.innerHTML =
-          `<option value="all">All stages</option>` +
-          stages.map(stage =>
-            `<option value="${escapeHtml(stage)}">${escapeHtml(stageLabel(stage))}</option>`
-          ).join("");
-
-        els.stage.value = stages.includes(existing) ? existing : "all";
-      }
-
-      function renderPipeline() {
-        const query = clean(els.search.value).toLowerCase();
-        const stage = els.stage.value;
-
-        const visible = state.prospects.filter(prospect => {
-          const matchesSearch = !query || buildSearchText(prospect).includes(query);
-          const matchesStage = stage === "all" || prospect.stage === stage;
-          return matchesSearch && matchesStage;
-        });
-
-        els.pipelineLoading.hidden = true;
-        els.pipelineVisibleCount.textContent = visible.length;
-
-        if (!visible.length) {
-          els.pipelineList.hidden = true;
-          els.pipelineEmpty.hidden = false;
-
-          if (state.prospects.length && (query || stage !== "all")) {
-            els.pipelineEmpty.innerHTML = `
-              <strong>No CRM records match this filter.</strong>
-              <p>Clear the search or stage filter to see the full pipeline.</p>
-            `;
-          } else {
-            els.pipelineEmpty.innerHTML = `
-              <strong>No formal CRM Prospects yet.</strong>
-              <p>A business belongs here only after a real appointment is scheduled. Use Radar before that point.</p>
-            `;
-          }
-          return;
-        }
-
-        els.pipelineEmpty.hidden = true;
-        els.pipelineList.hidden = false;
-        els.pipelineList.innerHTML = visible.map(renderProspectCard).join("");
-
-        els.pipelineList.querySelectorAll("[data-open-prospect]").forEach(button => {
-          button.addEventListener("click", () => openProspect(Number(button.dataset.openProspect)));
-        });
-      }
-
-      function renderProspectCard(prospect) {
-        const unmanaged = prospect.isUnmanaged === true;
-        const due = prospect.nextAction?.dueState || "";
-        const badge = unmanaged ? "badge-red" : dueBadgeClass(due);
-        const nextTitle = unmanaged
-          ? "Active prospect has no dated Next Action"
-          : prospect.nextAction?.title || "No open Next Action";
-        const contact = prospect.primaryContact?.name || "Contact not recorded";
-        const market = prospect.market || prospect.industry || "Market not recorded";
-        const insight = prospect.opportunitySummary || "Opportunity summary has not been recorded yet.";
-
-        return `
-          <article class="prospect-card">
-            <div>
-              <h3 class="prospect-name">${escapeHtml(prospect.businessName)}</h3>
-              <p class="prospect-meta">${escapeHtml(contact)} · ${escapeHtml(market)}</p>
-              <p class="prospect-insight">${escapeHtml(insight)}</p>
-              <div class="tag-row">
-                <span class="badge ${statusBadgeClass(prospect.status)}">${escapeHtml(stageLabel(prospect.stage))}</span>
-                <span class="tag">${escapeHtml(valueSummary(prospect))}</span>
-                ${prospect.sourceType ? `<span class="tag">${escapeHtml(prospect.sourceType)}</span>` : ""}
-              </div>
-            </div>
-
-            <div class="next-action-block">
-              <p class="next-label">Highest-Value Next Action</p>
-              <p class="next-title">${escapeHtml(nextTitle)}</p>
-              <p class="next-due ${unmanaged ? "due-none" : due === "overdue" || due === "due_today" ? "due-overdue" : "due-future"}">
-                ${escapeHtml(dueText(prospect.nextAction, unmanaged))}
-              </p>
-              <div class="tag-row">
-                <span class="badge ${badge}">
-                  ${escapeHtml(unmanaged ? "Unmanaged" : prospect.managementState === "managed" ? "Managed" : "Closed")}
-                </span>
-              </div>
-            </div>
-
-            <div class="card-actions">
-              <button class="button button-secondary button-small" type="button" data-open-prospect="${prospect.id}">
-                Open Record
-              </button>
-            </div>
-          </article>
-        `;
-      }
-
-      function renderRadar() {
-        els.radarLoading.hidden = true;
-
-        if (!state.radar.length) {
-          els.radarList.hidden = true;
-          els.radarEmpty.hidden = false;
-          return;
-        }
-
-        els.radarEmpty.hidden = true;
-        els.radarList.hidden = false;
-        els.radarList.innerHTML = state.radar.slice(0, 12).map(record => `
-          <div class="radar-item">
-            <div class="radar-top">
-              <div>
-                <h3 class="radar-name">${escapeHtml(record.businessName || record.vertical || record.sourceDescription || "Radar Record")}</h3>
-                <p class="radar-meta">
-                  ${escapeHtml(record.market || record.vertical || "Market not recorded")}
-                  ${record.contactName ? ` · ${escapeHtml(record.contactName)}` : ""}
-                </p>
-              </div>
-              <span class="badge badge-gray">${escapeHtml(clean(record.status || "radar").replaceAll("_", " "))}</span>
-            </div>
-            <p class="radar-source">
-              <strong>${escapeHtml(record.sourceType || "Source")}</strong>
-              ${record.sourceDescription ? ` · ${escapeHtml(record.sourceDescription)}` : ""}
-            </p>
-          </div>
-        `).join("");
-      }
-
-      function sortPriorityCandidates() {
-        const candidates = state.prospects.filter(p =>
-          p.status === "active" || p.status === "nurture"
-        );
-
-        return candidates.sort((a, b) => {
-          if (a.isUnmanaged && !b.isUnmanaged) return -1;
-          if (!a.isUnmanaged && b.isUnmanaged) return 1;
-
-          const rank = { overdue: 0, due_today: 1, upcoming: 2 };
-          const aRank = rank[a.nextAction?.dueState] ?? 9;
-          const bRank = rank[b.nextAction?.dueState] ?? 9;
-          if (aRank !== bRank) return aRank - bRank;
-
-          const aDate = a.nextAction?.dueDate || "9999-12-31";
-          const bDate = b.nextAction?.dueDate || "9999-12-31";
-          return aDate.localeCompare(bDate);
-        });
-      }
-
-      function renderPriority() {
-        const prospect = sortPriorityCandidates()[0];
-
-        if (!prospect) {
-          els.priorityTitle.textContent = "No active prospect action";
-          els.priorityCopy.textContent =
-            "When an active CRM opportunity exists, its highest-value dated action will appear here.";
-          els.priorityOpen.disabled = true;
-          els.priorityOpen.removeAttribute("data-prospect-id");
-          return;
-        }
-
-        els.priorityTitle.textContent = prospect.businessName;
-        els.priorityCopy.textContent = prospect.isUnmanaged
-          ? "This active relationship has no dated Next Action. That is the first CRM problem to fix."
-          : `${prospect.nextAction?.title || "Review CRM record"} · ${dueText(prospect.nextAction, false)}`;
-
-        els.priorityOpen.disabled = false;
-        els.priorityOpen.dataset.prospectId = prospect.id;
-      }
-
-      async function openProspect(prospectId) {
-        if (!prospectId) return;
-        els.detailPanel.hidden = false;
-        els.detailTitle.textContent = "Loading record…";
-        els.detailSubtitle.textContent = "";
-        els.detailBody.innerHTML = `<div class="loading-skeleton"></div>`;
-        els.detailPanel.scrollIntoView({ behavior: "smooth", block: "start" });
-
-        try {
-          const payload = await crm("get_prospect", { prospectId });
-          state.selectedProspect = payload.prospect || null;
-          renderDetail(state.selectedProspect);
-        } catch (error) {
-          els.detailTitle.textContent = "CRM record unavailable";
-          els.detailBody.innerHTML = `<div class="error-box">${escapeHtml(error.message)}</div>`;
-        }
-      }
-
-      function renderDetail(prospect) {
-        if (!prospect) return;
-
-        els.detailTitle.textContent = prospect.businessName;
-        els.detailSubtitle.textContent =
-          `${stageLabel(prospect.stage)} · ${prospect.primaryContact?.name || "Contact not recorded"}`;
-
-        const contacts = Array.isArray(prospect.contacts) ? prospect.contacts : [];
-        const activities = Array.isArray(prospect.activities) ? prospect.activities : [];
-        const proposals = Array.isArray(prospect.proposals) ? prospect.proposals : [];
-        const agreements = Array.isArray(prospect.agreements) ? prospect.agreements : [];
-        const intelligence = Array.isArray(prospect.intelligence) ? prospect.intelligence : [];
-
-        const latestProposal = proposals[0];
-        const latestAgreement = agreements[0];
-        const latestIntel = intelligence[0];
-
-        els.detailBody.innerHTML = `
-          <div class="detail-grid">
-            <div class="detail-item">
-              <span>Current Stage</span>
-              <strong>${escapeHtml(stageLabel(prospect.stage))}</strong>
-            </div>
-            <div class="detail-item">
-              <span>Appointment</span>
-              <strong>${escapeHtml(formatDate(prospect.appointmentAt))}</strong>
-            </div>
-            <div class="detail-item">
-              <span>Primary Contact</span>
-              <strong>${escapeHtml(contacts[0]?.name || prospect.primaryContact?.name || "Not recorded")}</strong>
-            </div>
-            <div class="detail-item">
-              <span>Contact Email</span>
-              <strong>${escapeHtml(contacts[0]?.email || prospect.primaryContact?.email || "Not recorded")}</strong>
-            </div>
-            <div class="detail-item">
-              <span>Opportunity Value</span>
-              <strong>${escapeHtml(valueSummary(prospect))}</strong>
-            </div>
-            <div class="detail-item">
-              <span>Last Meaningful Contact</span>
-              <strong>${escapeHtml(formatDate(prospect.lastMeaningfulContactAt))}</strong>
-            </div>
-            <div class="detail-item">
-              <span>Next Action</span>
-              <strong>${escapeHtml(prospect.nextAction?.title || (prospect.isUnmanaged ? "MISSING — active record is unmanaged" : "No open action"))}</strong>
-            </div>
-            <div class="detail-item">
-              <span>Due</span>
-              <strong>${escapeHtml(dueText(prospect.nextAction, prospect.isUnmanaged))}</strong>
-            </div>
-            <div class="detail-item">
-              <span>Latest Proposal</span>
-              <strong>${escapeHtml(latestProposal?.title || "No proposal recorded")}</strong>
-            </div>
-            <div class="detail-item">
-              <span>Agreement</span>
-              <strong>${escapeHtml(latestAgreement ? `${latestAgreement.status} · ${money(latestAgreement.contractValueCents) || ""}` : "No signed agreement")}</strong>
-            </div>
-            <div class="detail-item">
-              <span>Latest Intelligence</span>
-              <strong>${escapeHtml(latestIntel?.title || "No durable intelligence brief recorded")}</strong>
-            </div>
-            <div class="detail-item">
-              <span>Management State</span>
-              <strong>${escapeHtml(prospect.isUnmanaged ? "Unmanaged — action required" : prospect.managementState || "Unknown")}</strong>
-            </div>
-          </div>
-
-          <div class="timeline">
-            ${activities.length ? activities.slice(0, 8).map(activity => `
-              <div class="timeline-item">
-                <strong>${escapeHtml(activity.subject || clean(activity.activityType).replaceAll("_", " "))}</strong>
-                <p>${escapeHtml(activity.summary || "")}</p>
-                <time>${escapeHtml(formatDate(activity.occurredAt))}${activity.outcome ? ` · ${escapeHtml(activity.outcome.replaceAll("_", " "))}` : ""}</time>
-              </div>
-            `).join("") : `
-              <div class="timeline-item">
-                <strong>No relationship activity recorded yet.</strong>
-                <p>The Prospect record exists, but its communication and discovery history still needs to be connected.</p>
-              </div>
-            `}
-          </div>
-        `;
-      }
-
-      function openDialog(dialog, errorBox) {
-        if (errorBox) {
-          errorBox.hidden = true;
-          errorBox.textContent = "";
-        }
-        if (typeof dialog.showModal === "function") {
-          dialog.showModal();
-        } else {
-          dialog.setAttribute("open", "");
-        }
-      }
-
-      function closeDialog(dialog) {
-        if (typeof dialog.close === "function") dialog.close();
-        else dialog.removeAttribute("open");
-      }
-
-      function formObject(form) {
-        return Object.fromEntries(new FormData(form).entries());
-      }
-
-      function localDateTime(date, time) {
-        const d = clean(date);
-        const t = clean(time);
-        return d && t ? `${d}T${t}:00` : null;
-      }
-
-      async function saveRadar(event) {
-        event.preventDefault();
-        els.radarError.hidden = true;
-        els.saveRadar.disabled = true;
-
-        try {
-          const values = formObject(els.radarForm);
-          const payload = {
-            businessName: clean(values.businessName) || null,
-            website: clean(values.website) || null,
-            vertical: clean(values.vertical) || null,
-            market: clean(values.market) || null,
-            sourceType: clean(values.sourceType),
-            sourceDescription: clean(values.sourceDescription) || null,
-            contactName: clean(values.contactName) || null,
-            notes: clean(values.notes) || null
-          };
-
-          await crm("create_radar", payload);
-          closeDialog(els.radarDialog);
-          els.radarForm.reset();
-          await loadCrm();
-        } catch (error) {
-          els.radarError.textContent = error.message || "Radar record could not be saved.";
-          els.radarError.hidden = false;
-        } finally {
-          els.saveRadar.disabled = false;
-        }
-      }
-
-      async function saveProspect(event) {
-        event.preventDefault();
-        els.prospectError.hidden = true;
-        els.saveProspect.disabled = true;
-
-        try {
-          const values = formObject(els.prospectForm);
-          const appointmentAt = localDateTime(values.appointmentDate, values.appointmentTime);
-
-          if (!appointmentAt) {
-            throw new Error("A real appointment date and time are required before a formal CRM Prospect can be created.");
-          }
-
-          const lastMeaningfulContactAt =
-            clean(values.lastContactDate)
-              ? localDateTime(values.lastContactDate, clean(values.lastContactTime) || "12:00")
-              : null;
-
-          const contactName = clean(values.contactName);
-
-          const payload = {
-            businessName: clean(values.businessName),
-            stage: clean(values.stage) || "appointment_scheduled",
-            appointmentAt,
-            website: clean(values.website) || null,
-            industry: clean(values.industry) || null,
-            market: clean(values.market) || null,
-            sourceType: clean(values.sourceType) || null,
-            opportunitySummary: clean(values.opportunitySummary) || null,
-            lastMeaningfulContactAt,
-            estimatedValueLow: clean(values.estimatedValueLow) || null,
-            estimatedValueHigh: clean(values.estimatedValueHigh) || null,
-            recurringValue: clean(values.recurringValue) || null,
-            recurringPeriod: clean(values.recurringPeriod) || null,
-            notes: clean(values.notes) || null,
-            primaryContact: contactName ? {
-              name: contactName,
-              email: clean(values.contactEmail) || null,
-              role: "decision_maker"
-            } : null
-          };
-
-          const result = await crm("create_prospect", payload);
-          closeDialog(els.prospectDialog);
-          els.prospectForm.reset();
-          await loadCrm();
-
-          if (result?.prospect?.id) {
-            await openProspect(result.prospect.id);
-          }
-        } catch (error) {
-          els.prospectError.textContent = error.message || "CRM Prospect could not be created.";
-          els.prospectError.hidden = false;
-        } finally {
-          els.saveProspect.disabled = false;
-        }
-      }
-
-      document.getElementById("open-radar").addEventListener("click", () =>
-        openDialog(els.radarDialog, els.radarError)
-      );
-      document.getElementById("open-prospect").addEventListener("click", () =>
-        openDialog(els.prospectDialog, els.prospectError)
-      );
-
-      document.querySelectorAll("[data-close-dialog]").forEach(button => {
-        button.addEventListener("click", () => {
-          const dialog = document.getElementById(button.dataset.closeDialog);
-          if (dialog) closeDialog(dialog);
-        });
-      });
-
-      els.radarForm.addEventListener("submit", saveRadar);
-      els.prospectForm.addEventListener("submit", saveProspect);
-      els.search.addEventListener("input", renderPipeline);
-      els.stage.addEventListener("change", renderPipeline);
-      els.refresh.addEventListener("click", loadCrm);
-
-      els.priorityOpen.addEventListener("click", () => {
-        const id = Number(els.priorityOpen.dataset.prospectId);
-        if (id) openProspect(id);
-      });
-
-      els.closeDetail.addEventListener("click", () => {
-        els.detailPanel.hidden = true;
-        state.selectedProspect = null;
-      });
-
-      if (!window.GCMOShell) {
-        console.error(`Prospects ${FILE_VERSION}: shared/gcm-shell.js did not load.`);
-      } else {
-        window.GCMOShell.mount({
-          currentPage: "prospects",
-          statusText: `CRM D1 pipeline · Prospects v${FILE_VERSION}`
-        });
-      }
-
-      loadCrm();
-    })();
-  </script>
+    ${renderStartup(startup)}
+    <div class="section-title"><div><h3>Latest Intelligence</h3><p>${(p.intelligence||[]).length} durable intelligence record(s).</p></div></div>
+    <div class="timeline">${(p.intelligence||[]).slice(0,4).map(i=>`<div class="timeline-item"><strong>${esc(i.title)}</strong><p>${esc(i.summary||"Durable prospect intelligence.")}</p><time>${esc(fmtDate(i.capturedAt))}</time></div>`).join("")||'<div class="timeline-item"><strong>No durable intelligence yet.</strong><p>Use Research More and save the result to this Prospect.</p></div>'}</div>
+    <div class="section-title"><div><h3>Relationship History</h3></div></div>
+    <div class="timeline">${(p.activities||[]).slice(0,10).map(a=>`<div class="timeline-item"><strong>${esc(a.subject||clean(a.activityType).replaceAll("_"," "))}</strong><p>${esc(a.summary||"")}</p><time>${esc(fmtDate(a.occurredAt))}${a.outcome?` · ${esc(a.outcome.replaceAll("_"," "))}`:""}</time></div>`).join("")}</div>`;
+    bindProspectDetailActions(p);
+  }
+  function detail(k,v){return`<div class="detail-card"><span>${esc(k)}</span><strong>${esc(v||"Unknown")}</strong></div>`}
+  function renderStartup(pkg){
+    if(!pkg)return`<div class="section-title"><div><h3>Startup Package</h3><p>Generated after signed services are confirmed.</p></div></div><div class="note">No startup package yet.</div>`;
+    const c=pkg.counts||{};return`<div class="section-title"><div><h3>Startup Package</h3><p>${pkg.readyToStart?"All startup requirements verified.":"Collect and verify what the signed services require."}</p></div><button class="btn btn-secondary btn-small" id="copy-startup" type="button">Copy Client Startup Package</button></div>
+    <div class="startup-summary"><span class="badge ${pkg.readyToStart?"green":"yellow"}">${pkg.readyToStart?"Ready to Start":"Startup Active"}</span><span class="chip">${Number(c.verified||0)}/${Number(c.total||0)} verified</span><span class="chip">${Number(c.clientOutstanding||0)} client/mutual outstanding</span><span class="chip">${Number(c.gcmOutstanding||0)} GCM outstanding</span></div>
+    <div>${(pkg.requirements||[]).filter(x=>x.status!=="not_required").map(x=>`<div class="requirement"><div><strong>${esc(x.title)}</strong><p>${esc(x.clientRequest||"")} · ${esc(x.responsibleParty||"")}</p></div><select class="select startup-status" data-requirement="${x.id}"><option value="needed" ${x.status==="needed"?"selected":""}>Needed</option><option value="requested" ${x.status==="requested"?"selected":""}>Requested</option><option value="received" ${x.status==="received"?"selected":""}>Received</option><option value="verified" ${x.status==="verified"?"selected":""}>Verified</option><option value="not_required" ${x.status==="not_required"?"selected":""}>Not Required</option></select></div>`).join("")}</div>`;
+  }
+  function bindProspectDetailActions(p){
+    document.querySelectorAll("[data-prospect-action]").forEach(b=>b.addEventListener("click",()=>openProspectAction(b.dataset.prospectAction,p)));
+    $("services-form")?.addEventListener("submit",async e=>{e.preventDefault();const keys=[...e.currentTarget.querySelectorAll('input[name="service"]:checked')].map(x=>x.value);await busy(async()=>{const d=await api("set_proposed_services",{prospectId:p.id,serviceKeys:keys});state.selectedProspect=d.prospect;renderProspect(d.prospect);await load()})});
+    $("confirm-services")?.addEventListener("click",async()=>{const keys=[...$("services-form").querySelectorAll('input[name="service"]:checked')].map(x=>x.value);if(!keys.length)return alert("Select at least one service from the signed scope.");await busy(async()=>{const d=await api("confirm_contracted_services",{prospectId:p.id,serviceKeys:keys});state.selectedProspect=d.prospect;renderProspect(d.prospect);await load()})});
+    document.querySelectorAll(".startup-status").forEach(s=>s.addEventListener("change",async()=>{await busy(async()=>{const d=await api("update_startup_requirement",{requirementId:Number(s.dataset.requirement),status:s.value});state.selectedProspect=d.prospect;renderProspect(d.prospect);await load()})}));
+    $("copy-startup")?.addEventListener("click",()=>copyStartup(p));
+  }
+  function copyStartup(p){
+    const items=(p.startupPackage?.clientRequestItems||[]).filter(x=>x.status!=="not_required");
+    if(!items.length)return alert("There are no client startup requirements in this package.");
+    const lines=[`${p.businessName} — Getting Started`,"","To begin the agreed work, please help us with the following:",...items.map(x=>`- ${x.title}: ${x.clientRequest}`),"","GCM will verify each item as it is received."];
+    navigator.clipboard.writeText(lines.join("\n")).then(()=>alert("Client startup package copied.")).catch(()=>alert("The browser could not copy the startup package."));
+  }
+  function openProspectAction(type,p){
+    if(type==="research"){startResearch({type:"prospect",id:p.id,record:p});return}
+    const map={activity:"activity-dialog",proposal:"proposal-dialog",agreement:"agreement-dialog",payment:"payment-dialog"};const id=map[type];if(!id)return;const f=$(id).querySelector("form");f.elements.prospectId.value=p.id;setDefaults(f);openDialog($(id));
+  }
+  $("close-prospect").addEventListener("click",()=>{$("prospect-detail").hidden=true;state.selectedProspect=null});
+
+  async function openRadar(id){
+    showView("radar");$("radar-detail").hidden=false;$("radar-title").textContent="Loading…";$("radar-body").innerHTML="";
+    try{const d=await api("get_radar",{radarId:id});state.selectedRadar=d.radar;renderRadarDetail(d.radar);$("radar-detail").scrollIntoView({behavior:"smooth",block:"start"})}catch(e){$("radar-body").innerHTML=`<div class="error">${esc(e.message)}</div>`}
+  }
+  function renderRadarDetail(r){
+    $("radar-title").textContent=r.businessName||r.vertical||"Radar Record";$("radar-subtitle").textContent=`${r.status==="outreach"?"Outreach":"Radar"} · ${r.contactName||"Contact not recorded"}`;
+    $("radar-body").innerHTML=`<div class="detail-grid">${detail("Source",r.sourceType||"Unknown")}${detail("Market",r.market||r.vertical||"Unknown")}${detail("Last Outreach",fmtDate(r.lastOutreachAt))}${detail("Next Action",r.isUnmanaged?"MISSING":r.nextAction?.title||"Not in active outreach")}</div>
+    <div class="section-title"><div><h3>Radar Actions</h3><p>Move naturally from evidence to outreach to appointment.</p></div></div>
+    <div class="quick-actions"><button class="btn btn-secondary btn-small" id="radar-research" type="button">Research / Update Intelligence</button><button class="btn btn-secondary btn-small" id="radar-outreach" type="button">Record Outreach</button><button class="btn btn-primary btn-small" id="radar-promote" type="button">Appointment Scheduled</button></div>
+    <div class="section-title"><div><h3>Intelligence</h3><p>${(r.intelligence||[]).length} durable record(s).</p></div></div><div class="timeline">${(r.intelligence||[]).slice(0,5).map(i=>`<div class="timeline-item"><strong>${esc(i.title)}</strong><p>${esc(i.summary||"Prospect intelligence saved in Radar.")}</p><time>${esc(fmtDate(i.capturedAt))}</time></div>`).join("")||'<div class="timeline-item"><strong>No research saved yet.</strong><p>Run Research / Update Intelligence.</p></div>'}</div>
+    <div class="section-title"><div><h3>Outreach History</h3></div></div><div class="timeline">${(r.activities||[]).slice(0,10).map(a=>`<div class="timeline-item"><strong>${esc(a.subject||a.activityType.replaceAll("_"," "))}</strong><p>${esc(a.summary)}</p><time>${esc(fmtDate(a.occurredAt))}${a.outcome?` · ${esc(a.outcome)}`:""}</time></div>`).join("")||'<div class="timeline-item"><strong>No outreach yet.</strong><p>Radar can remain passive until GCM decides to pursue it.</p></div>'}</div>`;
+    $("radar-research").addEventListener("click",()=>startResearch({type:"radar",id:r.id,record:r}));
+    $("radar-outreach").addEventListener("click",()=>{const f=$("outreach-form");f.elements.radarId.value=r.id;setDefaults(f);openDialog($("outreach-dialog"))});
+    $("radar-promote").addEventListener("click",()=>{const f=$("promote-form");f.elements.radarId.value=r.id;setDefaults(f);openDialog($("promote-dialog"))});
+  }
+  $("close-radar").addEventListener("click",()=>{$("radar-detail").hidden=true;state.selectedRadar=null});
+
+  function openDialog(d){d.querySelectorAll(".error").forEach(x=>x.hidden=true);d.showModal?d.showModal():d.setAttribute("open","")}
+  function closeDialog(d){d.close?d.close():d.removeAttribute("open")}
+  document.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",()=>closeDialog($(b.dataset.close))));
+  function setDefaults(form){if(form.elements.date&&!form.elements.date.value)form.elements.date.value=today();if(form.elements.time&&!form.elements.time.value)form.elements.time.value=nowTime()}
+  async function busy(fn){$("system-state").textContent="Saving…";try{await fn();$("system-state").textContent="Saved"}catch(e){alert(e.message);$("system-state").textContent="Save failed";throw e}}
+
+  $("add-radar").addEventListener("click",()=>openDialog($("radar-dialog")));$("add-prospect").addEventListener("click",()=>openDialog($("prospect-dialog")));$("research-new").addEventListener("click",()=>startResearch({type:"new",id:null,record:null}));
+  $("radar-form").addEventListener("submit",async e=>{e.preventDefault();const v=formObj(e.currentTarget);try{await api("create_radar",v);closeDialog($("radar-dialog"));e.currentTarget.reset();await load();showView("radar")}catch(err){$("radar-error").textContent=err.message;$("radar-error").hidden=false}});
+  $("prospect-form").addEventListener("submit",async e=>{e.preventDefault();const v=formObj(e.currentTarget),appointmentAt=localDT(v.appointmentDate,v.appointmentTime);const last=v.lastContactDate?localDT(v.lastContactDate,v.lastContactTime||"12:00"):null;try{const d=await api("create_prospect",{businessName:v.businessName,stage:v.stage,appointmentAt,website:v.website||null,industry:v.industry||null,market:v.market||null,sourceType:v.sourceType||null,opportunitySummary:v.opportunitySummary||null,lastMeaningfulContactAt:last,estimatedValueLow:v.estimatedValueLow||null,estimatedValueHigh:v.estimatedValueHigh||null,recurringValue:v.recurringValue||null,recurringPeriod:v.recurringPeriod||null,notes:v.notes||null,primaryContact:v.contactName?{name:v.contactName,email:v.contactEmail||null,role:"decision_maker"}:null});closeDialog($("prospect-dialog"));e.currentTarget.reset();await load();openProspect(d.prospect.id)}catch(err){$("prospect-error").textContent=err.message;$("prospect-error").hidden=false}});
+  $("outreach-form").addEventListener("submit",async e=>{e.preventDefault();const v=formObj(e.currentTarget);try{const d=await api("add_radar_activity",{radarId:Number(v.radarId),activityType:v.activityType,occurredAt:localDT(v.date,v.time),summary:v.summary,outcome:v.outcome||null,meaningfulContact:true,nextActionTitle:v.nextActionTitle,nextActionDueDate:v.nextActionDueDate});closeDialog($("outreach-dialog"));await load();renderRadarDetail(d.radar)}catch(err){$("outreach-error").textContent=err.message;$("outreach-error").hidden=false}});
+  $("promote-form").addEventListener("submit",async e=>{e.preventDefault();const v=formObj(e.currentTarget);try{const d=await api("promote_radar",{radarId:Number(v.radarId),appointmentAt:localDT(v.date,v.time),opportunitySummary:v.opportunitySummary||null});closeDialog($("promote-dialog"));await load();openProspect(d.prospect.id)}catch(err){$("promote-error").textContent=err.message;$("promote-error").hidden=false}});
+  $("activity-form").addEventListener("submit",async e=>{e.preventDefault();const v=formObj(e.currentTarget);try{const d=await api("add_activity",{prospectId:Number(v.prospectId),activityType:v.activityType,occurredAt:localDT(v.date,v.time),summary:v.summary,outcome:v.outcome||null,meaningfulContact:v.meaningfulContact==="true",stageAfter:v.stageAfter||null});closeDialog($("activity-dialog"));renderProspect(d.prospect);await load()}catch(err){$("activity-error").textContent=err.message;$("activity-error").hidden=false}});
+  $("proposal-form").addEventListener("submit",async e=>{e.preventDefault();const v=formObj(e.currentTarget);try{const d=await api("record_proposal",{prospectId:Number(v.prospectId),title:v.title||"GCM Proposal",sentAt:localDT(v.date,v.time),scopeSummary:v.scopeSummary||null,valueLow:v.valueLow||null,valueHigh:v.valueHigh||null,recurringValue:v.recurringValue||null,recurringPeriod:v.recurringPeriod||null});closeDialog($("proposal-dialog"));renderProspect(d.prospect);await load()}catch(err){$("proposal-error").textContent=err.message;$("proposal-error").hidden=false}});
+  $("agreement-form").addEventListener("submit",async e=>{e.preventDefault();const v=formObj(e.currentTarget);try{const d=await api("record_agreement",{prospectId:Number(v.prospectId),signedAt:localDT(v.date,v.time),scopeSummary:v.scopeSummary,contractValue:v.contractValue,initialPaymentRequired:v.initialPaymentRequired||null});closeDialog($("agreement-dialog"));renderProspect(d.prospect);await load()}catch(err){$("agreement-error").textContent=err.message;$("agreement-error").hidden=false}});
+  $("payment-form").addEventListener("submit",async e=>{e.preventDefault();const v=formObj(e.currentTarget);try{const d=await api("record_payment",{prospectId:Number(v.prospectId),amount:v.amount,receivedAt:localDT(v.date,v.time),paymentMethod:v.paymentMethod||null});closeDialog($("payment-dialog"));renderProspect(d.prospect);await load()}catch(err){$("payment-error").textContent=err.message;$("payment-error").hidden=false}});
+
+  // Research workflow
+  const MAX_IMAGES=2,MAX_BYTES=4*1024*1024;
+  function fileData(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result||""));r.onerror=()=>rej(new Error(`Could not read ${file.name}.`));r.readAsDataURL(file)})}
+  $("research-images").addEventListener("change",async e=>{try{const files=[...e.target.files].slice(0,MAX_IMAGES);for(const f of files){if(!/^image\/(png|jpeg|webp)$/i.test(f.type))throw new Error(`${f.name} is not supported.`);if(f.size>MAX_BYTES)throw new Error(`${f.name} is larger than 4 MB.`)}state.images=await Promise.all(files.map(async f=>({fileName:f.name,mimeType:f.type,dataUrl:await fileData(f)})));renderPreviews()}catch(err){state.images=[];e.target.value="";renderPreviews();researchStatus(err.message,"error")}})
+  function renderPreviews(){const g=$("preview-grid");g.innerHTML=state.images.map(i=>`<div class="preview"><img src="${i.dataUrl}" alt="${esc(i.fileName)}"/></div>`).join("");g.hidden=!state.images.length;$("image-summary").textContent=state.images.length?`${state.images.length} advertisement image${state.images.length===1?"":"s"} ready.`:"No advertisement images selected."}
+  function researchStatus(msg,type){const el=$("research-status");el.textContent=msg;el.className=`status status-${type}`;el.hidden=false}
+  function startResearch(target){
+    state.researchTarget={type:target.type,id:target.id||null};state.researchResult=null;state.researchContext=null;showView("research");
+    const r=target.record;if(r){$("research-website").value=r.website||"";$("research-business").value=r.businessName||"";$("research-contact").value=r.primaryContact?.name||r.contactName||"";$("research-location").value=r.market||"";$("research-source").value="Existing Relationship";$("research-context-title").textContent=`Researching ${r.businessName||r.vertical||"existing record"}`;$("research-context-copy").textContent=target.type==="prospect"?"The completed research will save directly to this formal Prospect.":"The completed research will save directly to this Radar record and carry forward if an appointment is scheduled."}else{clearResearch(false)}
+    $("research-results").hidden=true;$("research-website").focus();
+  }
+  function clearResearch(resetTarget=true){$("research-form").reset();state.images=[];renderPreviews();$("research-results").hidden=true;$("research-status").hidden=true;state.researchResult=null;state.researchContext=null;if(resetTarget)state.researchTarget={type:"new",id:null};$("research-context-title").textContent="New business research";$("research-context-copy").textContent="No existing record selected. If the website already matches Radar or CRM, the result will attach to that record instead of creating a duplicate."}
+  $("clear-research").addEventListener("click",()=>clearResearch());
+  $("research-form").addEventListener("submit",async e=>{e.preventDefault();let website=normalizeUrl($("research-website").value);try{new URL(website)}catch{return researchStatus("Enter a valid website URL.","error")}const ctx={websiteUrl:website,businessName:clean($("research-business").value),prospectSource:$("research-source").value,contactName:clean($("research-contact").value),location:clean($("research-location").value),researchNotes:clean($("research-notes").value),evidenceDescription:clean($("research-evidence").value),advertisementEvidence:state.images.map(i=>({fileName:i.fileName,mimeType:i.mimeType}))};state.researchContext=ctx;
+    const h=hostname(website);if(state.researchTarget.type==="new"&&h){const p=state.prospects.find(x=>hostname(x.website)===h),r=state.radar.find(x=>x.status!=="promoted"&&hostname(x.website)===h);if(p)state.researchTarget={type:"prospect",id:p.id};else if(r)state.researchTarget={type:"radar",id:r.id}}
+    $("run-research").disabled=true;researchStatus("Analyzing the advertisement and public website together. This may take up to a minute.","working");
+    try{const result=await researchApi({action:"analyze-prospect-intelligence",websiteUrl:website,businessName:ctx.businessName,prospectContext:{source:ctx.prospectSource,contactName:ctx.contactName,location:ctx.location,notes:ctx.researchNotes,evidenceDescription:ctx.evidenceDescription},advertisementImages:state.images});if(!result||typeof result!=="object")throw new Error("The Worker did not return a valid Business Record.");state.researchResult=result;renderResearchResults(result,ctx);researchStatus("Prospect intelligence completed. Review it, then save it into the relationship record.","success")}catch(err){researchStatus(err.message,"error")}finally{$("run-research").disabled=false}
+  });
+  function renderResearchResults(r,c){
+    const target=state.researchTarget.type;const targetName=target==="prospect"?state.prospects.find(x=>x.id===state.researchTarget.id)?.businessName:target==="radar"?state.radar.find(x=>x.id===state.researchTarget.id)?.businessName:null;
+    const saveLabel=target==="prospect"?`Save Intelligence to ${targetName||"Prospect"}`:target==="radar"?`Save Intelligence to ${targetName||"Radar"}`:"Save Research to Radar";
+    $("research-results").innerHTML=`<div class="result-summary"><article class="result-card"><span class="next-label">Prospect</span><h3>${esc(r.businessName||c.businessName||"Prospective Business")}</h3><p>${esc((r.industry||"Industry requires verification")+" · "+(r.geographicMarket||c.location||"Market requires verification"))}</p></article><article class="result-card"><span class="next-label">Qualification</span><h3>${esc(r.qualificationScore?`${r.qualificationScore}/10`:"—")}</h3></article><article class="result-card"><span class="next-label">Outreach Readiness</span><h3>${esc(r.outreachReadiness||"Needs Verification")}</h3></article></div>
+    <div class="result-grid">
+      ${resultCard("Business Summary",r.businessSummary,true)}${resultList("Products and Services",r.productsAndServices)}${resultCard("Target Customer / Market",`${r.targetCustomer||"Requires verification"}\n${r.geographicMarket||"Requires verification"}`)}
+      ${resultList("Observable Trust Signals",r.trustSignals)}${resultList("Website Observations",r.websiteObservations)}${resultList("Conversation Opportunities",r.growthOpportunities)}
+      ${resultList("Verification Required",r.missingInformation)}${resultList("Personalized Outreach Insights",r.personalizedOutreachInsights,true)}
+      <article class="result-card full"><h3>First Contact Email</h3><div class="email-block"><strong>${esc(nested(r,"firstContactEmail.subject","Subject requires review."))}</strong>\n\n${esc(nested(r,"firstContactEmail.body","Email requires review."))}</div></article>
+      <article class="result-card full"><h3>Pre-Call Opening</h3><div class="script-block">${esc(nested(r,"discoveryCallScript.opening","Requires review."))}</div></article>
+      ${resultList("Discovery Questions",nested(r,"discoveryCallScript.questions",[]))}${resultCard("Positioning / Next Step",`${nested(r,"discoveryCallScript.positioningStatement","Requires review.")}\n${nested(r,"discoveryCallScript.nextStep","Requires review.")}`)}
+      ${resultList("Human Verification Checklist",r.humanVerificationChecklist,true)}
+      <article class="result-card full"><h3>Relationship Action</h3><p>Save this intelligence so it becomes part of the permanent relationship record instead of ending on this screen.</p><div class="quick-actions"><button class="btn btn-primary" id="save-research" type="button">${esc(saveLabel)}</button><button class="btn btn-secondary" id="copy-brief" type="button">Copy Brief</button></div>
+      <details class="engine"><summary>View complete Worker response</summary><pre class="json">${esc(JSON.stringify(r,null,2))}</pre></details></article>
+    </div>`;$("research-results").hidden=false;$("save-research").addEventListener("click",saveResearch);$("copy-brief").addEventListener("click",copyResearchBrief);$("research-results").scrollIntoView({behavior:"smooth",block:"start"});
+  }
+  function resultCard(title,text,full=false){return`<article class="result-card ${full?"full":""}"><h3>${esc(title)}</h3><p style="white-space:pre-wrap">${esc(clean(text)||"Not established from public evidence.")}</p></article>`}
+  function resultList(title,items,full=false){const a=safeArray(items);return`<article class="result-card ${full?"full":""}"><h3>${esc(title)}</h3><ul>${(a.length?a:["No verified items returned."]).map(x=>`<li>${esc(x)}</li>`).join("")}</ul></article>`}
+  async function saveResearch(){
+    const r=state.researchResult,c=state.researchContext;if(!r||!c)return;
+    const intelligence={...r,prospectContext:{...c,advertisementImages:c.advertisementEvidence}};
+    try{
+      if(state.researchTarget.type==="prospect"){const d=await api("add_intelligence",{prospectId:state.researchTarget.id,intelligenceType:"prospect_research",title:`Prospect Intelligence — ${r.businessName||c.businessName||"Business"}`,summary:r.businessSummary||"Prospect research preserved.",intelligence,capturedAt:new Date().toISOString(),sourceType:"prospect_intelligence"});await load();openProspect(d.prospect.id);return}
+      if(state.researchTarget.type==="radar"){await api("add_radar_intelligence",{radarId:state.researchTarget.id,intelligenceType:"prospect_research",title:`Prospect Intelligence — ${r.businessName||c.businessName||"Business"}`,summary:r.businessSummary||"Prospect research preserved.",intelligence,capturedAt:new Date().toISOString(),sourceType:"prospect_intelligence"});await load();openRadar(state.researchTarget.id);return}
+      const d=await api("create_radar",{businessName:r.businessName||c.businessName||null,website:c.websiteUrl,vertical:r.industry||null,market:r.geographicMarket||c.location||null,sourceType:c.prospectSource||"research",sourceDescription:c.evidenceDescription||"Created from GCM Prospect Intelligence.",contactName:c.contactName||null,notes:c.researchNotes||null});
+      await api("add_radar_intelligence",{radarId:d.radar.id,intelligenceType:"prospect_research",title:`Prospect Intelligence — ${r.businessName||c.businessName||"Business"}`,summary:r.businessSummary||"Prospect research preserved.",intelligence,capturedAt:new Date().toISOString(),sourceType:"prospect_intelligence"});
+      await load();openRadar(d.radar.id);
+    }catch(e){researchStatus(e.message,"error")}
+  }
+  function copyResearchBrief(){const r=state.researchResult,c=state.researchContext;if(!r||!c)return;const lines=["GCM PROSPECT INTELLIGENCE","",`Business: ${r.businessName||c.businessName||"Prospective Business"}`,`Website: ${c.websiteUrl}`,"",r.businessSummary||"", "", "CONVERSATION OPPORTUNITIES",...safeArray(r.growthOpportunities).map(x=>`- ${x}`),"","DISCOVERY QUESTIONS",...safeArray(nested(r,"discoveryCallScript.questions",[])).map(x=>`- ${x}`)];navigator.clipboard.writeText(lines.join("\n")).then(()=>researchStatus("Brief copied.","success")).catch(()=>researchStatus("Browser could not copy the brief.","error"))}
+
+  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"prospects",statusText:`Prospecting cycle · Prospects v${FILE_VERSION}`});
+  else console.error("GCM OS shared shell did not load.");
+  load();
+})();
+</script>
 </body>
 </html>
