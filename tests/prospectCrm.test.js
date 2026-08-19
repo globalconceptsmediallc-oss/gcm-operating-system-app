@@ -1,10 +1,15 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/prospectCrm.test.js
-   Version: 1.1.0
+   Version: 1.2.0
    Status: Production Test Candidate
-   Purpose: Verify locked CRM timing/payment rules plus service-selection and
-            startup-package generation without production D1 writes.
+   Purpose: Verify locked CRM timing/payment rules, Radar continuity,
+            service-selection, and startup-package generation without production D1 writes.
+   Change Notes — 1.2.0:
+   - Verifies pre-appointment outreach without a dated Next Action is unmanaged.
+   - Verifies a dated Radar follow-up returns the record to managed state.
+   - Preserves every CRM 1.1.0 timing, payment, service, and startup test.
+
    Change Notes — 1.1.0:
    - Preserves proposal follow-up and 25% payment-gate tests.
    - Verifies the standard GCM service catalog is available.
@@ -20,6 +25,7 @@ import {
   minimumInitialPaymentCents,
   normalizeProspectStage,
   normalizeProspectStatus,
+  radarManagementState,
   serviceCatalogForResponse
 } from "../routes/prospectCrm.js";
 
@@ -57,6 +63,24 @@ assert.equal(normalizeProspectStage("Proposal Sent"), "proposal_sent");
 assert.equal(normalizeProspectStage("Awaiting Decision"), "awaiting_decision");
 assert.equal(normalizeProspectStatus("Active"), "active");
 assert.equal(normalizeProspectStatus("NURTURE"), "nurture");
+
+assert.equal(
+  radarManagementState("Outreach", null),
+  "unmanaged",
+  "A pre-appointment outreach record without a dated Next Action must be surfaced as unmanaged."
+);
+
+assert.equal(
+  radarManagementState("Outreach", "2026-08-24"),
+  "managed",
+  "A pre-appointment outreach record with a dated Next Action must be managed."
+);
+
+assert.equal(
+  radarManagementState("Radar", null),
+  "radar",
+  "A lead that has not entered outreach remains Radar rather than an unmanaged active chase."
+);
 
 const catalog = serviceCatalogForResponse();
 assert.ok(catalog.length >= 12, "GCM service catalog should contain the standard service families.");
@@ -107,4 +131,4 @@ const custom = buildStartupRequirements(["custom_other"], [
 ]);
 assert.ok(custom.some(item => item.key === "hangar_asset_inventory"), "Custom signed scope must be able to add a specific startup requirement.");
 
-console.log("PASS Prospect CRM business rules + service startup package");
+console.log("PASS Prospect CRM business rules + Radar continuity + service startup package");
