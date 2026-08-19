@@ -1,10 +1,13 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/gmailOperationalIntake.test.js
-   Version: 1.0.0
+   Version: 1.0.1
    Status: Production Regression Test
    Purpose: Verify Morning Command uses GCM OS disposition state rather than
             Gmail read/unread state when surfacing operational email.
+   Change notes — 1.0.1:
+   - Validates the JavaScript dataset contract that creates the rendered
+     data-gcm-backlog attribute instead of requiring rendered HTML in source.
    ========================================================= */
 
 import assert from "node:assert/strict";
@@ -35,7 +38,7 @@ assert.match(ui, /Version: 1\.1\.0/);
 assert.match(ui, /const BACKLOG_MODE = "operational-backlog"/);
 assert.match(ui, /const MAX_VISIBLE_EMAILS = 10/);
 assert.match(ui, /Read · Unprocessed/);
-assert.match(ui, /data-gcm-backlog/i);
+assert.match(ui, /article\.dataset\.gcmBacklog = "1"/);
 assert.match(ui, /Gmail read state is not treated as processed/);
 assert.match(ui, /Create Requested Work/);
 assert.match(ui, /Save as Monitoring/);
