@@ -1,14 +1,26 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: prospects.html
-   Version: 1.1.0
-   Status: Production Candidate
-   Change: Shared GCM OS application shell integration
-   Source: Production prospects.html
-   Shared Shell: shared/gcm-shell.js
-   Purpose: Preserve the existing prospect search, filter, sort,
-            workflow links, and current static prospect pipeline
-            while moving navigation ownership to the shared shell.
+   Version: 2.0.0
+   Status: Production Road-Test Candidate
+   Source: Production prospects.html 1.1.0 + Prospect CRM route 1.0.0
+   Sprint: Prospecting + CRM — Real D1 Pipeline
+   Purpose:
+   Replace the static sample prospect pipeline with the durable GCM CRM.
+   Radar remains pre-appointment intelligence. Formal Prospects are created
+   only when a real appointment is scheduled.
+
+   Change Notes — 2.0.0
+   - Removes all fake ABC Roofing / sample prospect records.
+   - Reads formal Prospects from D1 through prospect-crm list_prospects.
+   - Reads pre-appointment Radar records through prospect-crm list_radar.
+   - Adds durable "Add to Radar" and "Add Scheduled Prospect" workflows.
+   - Enforces the backend appointment boundary instead of manufacturing Prospects.
+   - Displays stage, primary contact, opportunity, value, Next Action, due state,
+     and unmanaged warnings from production CRM data.
+   - Opens a read-only CRM detail view backed by prospect-crm get_prospect.
+   - Preserves shared GCM OS shell and existing Client Pre-Research workflow.
+   - Does not alter Today, Client Health, Work, Gmail, Calendar, Media, or Proof.
    ========================================================= -->
 
 <!DOCTYPE html>
@@ -16,766 +28,321 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <title>Prospects | GCM OS</title>
-
+  <title>Prospects & CRM | GCM OS</title>
   <meta
     name="description"
-    content="Prospect Workspace for the Global Concepts Media Agency Operating System."
+    content="Durable prospecting radar and CRM pipeline for Global Concepts Media."
   />
 
   <style>
     :root {
-      --gcm-navy-950: #071426;
-      --gcm-navy-900: #0b1d33;
-      --gcm-navy-800: #112a47;
-      --gcm-blue-600: #1f68d8;
-      --gcm-blue-500: #347ce8;
-      --gcm-blue-100: #eaf2ff;
-      --gcm-gold-500: #d6a94a;
-      --gcm-gold-100: #fff7df;
-
-      --surface: #ffffff;
-      --surface-soft: #f5f7fb;
-      --surface-muted: #edf1f7;
-      --border: #dbe2ec;
-
-      --text: #132238;
-      --text-muted: #637083;
-      --text-soft: #8290a3;
-
-      --success: #1f7a4f;
-      --success-soft: #e9f7f0;
-      --warning: #9a6414;
-      --warning-soft: #fff4dd;
-      --critical: #b33a3a;
-      --critical-soft: #fff0f0;
-      --info: #245fae;
-      --info-soft: #edf5ff;
-
-      --shadow-sm: 0 8px 24px rgba(7, 20, 38, 0.07);
-      --shadow-md: 0 16px 42px rgba(7, 20, 38, 0.11);
-
-      --radius-sm: 10px;
-      --radius-md: 16px;
-      --radius-lg: 22px;
-
-      --content-width: 1480px;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    html {
-      scroll-behavior: smooth;
-    }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      background: var(--surface-soft);
-      color: var(--text);
-      font-family:
-        Inter,
-        ui-sans-serif,
-        system-ui,
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        sans-serif;
-      line-height: 1.5;
-    }
-
-    button,
-    input,
-    select,
-    textarea {
-      font: inherit;
-    }
-
-    a {
-      color: inherit;
-      text-decoration: none;
-    }
-
-    button,
-    a {
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    .skip-link {
-      position: absolute;
-      top: -48px;
-      left: 16px;
-      z-index: 1000;
-      padding: 10px 14px;
-      border-radius: 8px;
-      background: #ffffff;
-      color: var(--gcm-navy-950);
-      font-weight: 800;
-    }
-
-    .skip-link:focus {
-      top: 16px;
-    }
-
-    .app-shell {
-      min-height: 100vh;
-      display: grid;
-      grid-template-columns: 250px minmax(0, 1fr);
-    }
-
-    .sidebar {
-      position: sticky;
-      top: 0;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      padding: 24px 18px;
-      background:
-        radial-gradient(circle at top right, rgba(52, 124, 232, 0.19), transparent 34%),
-        linear-gradient(180deg, var(--gcm-navy-900), var(--gcm-navy-950));
-      color: #ffffff;
-      overflow-y: auto;
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 2px 8px 22px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-    }
-
-    .brand-mark {
-      width: 42px;
-      height: 42px;
-      display: grid;
-      place-items: center;
-      border: 1px solid rgba(255, 255, 255, 0.22);
-      border-radius: 13px;
-      background: rgba(255, 255, 255, 0.08);
-      color: var(--gcm-gold-500);
-      font-weight: 900;
-      letter-spacing: -0.04em;
-    }
-
-    .brand-copy strong,
-    .brand-copy span {
-      display: block;
-    }
-
-    .brand-copy strong {
-      font-size: 0.95rem;
-      letter-spacing: 0.01em;
-    }
-
-    .brand-copy span {
-      margin-top: 2px;
-      color: rgba(255, 255, 255, 0.58);
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-    }
-
-    .nav-label {
-      margin: 24px 10px 10px;
-      color: rgba(255, 255, 255, 0.42);
-      font-size: 0.68rem;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.14em;
-    }
-
-    .primary-nav {
-      display: grid;
-      gap: 6px;
-    }
-
-    .nav-link {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      min-height: 46px;
-      padding: 0 13px;
-      border-radius: 12px;
-      color: rgba(255, 255, 255, 0.72);
-      font-size: 0.92rem;
-      font-weight: 700;
-      transition:
-        background 160ms ease,
-        color 160ms ease,
-        transform 160ms ease;
-    }
-
-    .nav-link:hover,
-    .nav-link:focus-visible {
-      background: rgba(255, 255, 255, 0.08);
-      color: #ffffff;
-      transform: translateX(2px);
-      outline: none;
-    }
-
-    .nav-link[aria-current="page"] {
-      background: rgba(52, 124, 232, 0.2);
-      color: #ffffff;
-      box-shadow: inset 3px 0 0 var(--gcm-gold-500);
-    }
-
-    .nav-icon {
-      width: 22px;
-      text-align: center;
-      font-size: 1rem;
-    }
-
-    .sidebar-footer {
-      margin-top: auto;
-      padding: 18px 8px 2px;
-      border-top: 1px solid rgba(255, 255, 255, 0.12);
-    }
-
-    .sidebar-status {
-      display: flex;
-      align-items: center;
-      gap: 9px;
-      color: rgba(255, 255, 255, 0.67);
-      font-size: 0.78rem;
-    }
-
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #5fd397;
-      box-shadow: 0 0 0 4px rgba(95, 211, 151, 0.12);
-    }
-
-    .main {
-      min-width: 0;
-      padding: 28px 32px 48px;
-    }
-
-    .main-inner {
-      width: min(100%, var(--content-width));
-      margin: 0 auto;
-    }
-
-    .topbar {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 24px;
-      margin-bottom: 24px;
-    }
-
-    .eyebrow {
-      margin: 0 0 6px;
-      color: var(--gcm-blue-600);
-      font-size: 0.72rem;
-      font-weight: 900;
-      text-transform: uppercase;
-      letter-spacing: 0.14em;
-    }
-
-    .page-title {
-      margin: 0;
-      color: var(--gcm-navy-950);
-      font-size: clamp(2rem, 4vw, 3.15rem);
-      line-height: 1;
-      letter-spacing: -0.045em;
-    }
-
-    .page-subtitle {
-      margin: 10px 0 0;
-      color: var(--text-muted);
-      font-size: 1rem;
-    }
-
-    .topbar-actions {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-    }
-
-    .button {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      min-height: 42px;
-      padding: 0 16px;
-      border: 1px solid transparent;
-      border-radius: 11px;
-      cursor: pointer;
-      font-size: 0.86rem;
-      font-weight: 850;
-      transition:
-        transform 160ms ease,
-        box-shadow 160ms ease,
-        background 160ms ease,
-        border-color 160ms ease;
-    }
-
-    .button:hover {
-      transform: translateY(-1px);
-    }
-
-    .button:focus-visible {
-      outline: 3px solid rgba(52, 124, 232, 0.26);
-      outline-offset: 2px;
-    }
-
-    .button-primary {
-      background: var(--gcm-blue-600);
-      color: #ffffff;
-      box-shadow: 0 10px 24px rgba(31, 104, 216, 0.22);
-    }
-
-    .button-primary:hover {
-      background: #185fc8;
-    }
-
-    .button-secondary {
-      border-color: var(--border);
-      background: var(--surface);
-      color: var(--gcm-navy-900);
-    }
-
-    .button-secondary:hover {
-      border-color: #c3cfde;
-      box-shadow: var(--shadow-sm);
-    }
-
-    .summary-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 14px;
-      margin-bottom: 18px;
-    }
-
-    .summary-card {
-      min-height: 112px;
-      padding: 18px;
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      background: var(--surface);
-      box-shadow: var(--shadow-sm);
-    }
-
-    .summary-label {
-      margin: 0;
-      color: var(--text-muted);
-      font-size: 0.74rem;
-      font-weight: 850;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-
-    .summary-value {
-      margin: 8px 0 0;
-      color: var(--gcm-navy-950);
-      font-size: 2rem;
-      font-weight: 900;
-      line-height: 1;
-      letter-spacing: -0.04em;
-    }
-
-    .summary-note {
-      margin: 8px 0 0;
-      color: var(--text-soft);
-      font-size: 0.78rem;
-    }
-
-    .toolbar {
-      display: grid;
-      grid-template-columns: minmax(220px, 1fr) auto auto;
-      gap: 12px;
-      padding: 16px;
-      margin-bottom: 18px;
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      background: var(--surface);
-      box-shadow: var(--shadow-sm);
-    }
-
-    .field {
-      display: grid;
-      gap: 7px;
-    }
-
-    .field label {
-      color: var(--text-muted);
-      font-size: 0.72rem;
-      font-weight: 850;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-
-    .input,
-    .select {
-      width: 100%;
-      min-height: 43px;
-      border: 1px solid var(--border);
-      border-radius: 11px;
-      background: #ffffff;
-      color: var(--text);
-      padding: 0 13px;
-      outline: none;
-    }
-
-    .input:focus,
-    .select:focus {
-      border-color: var(--gcm-blue-500);
-      box-shadow: 0 0 0 3px rgba(52, 124, 232, 0.12);
-    }
-
-    .workspace-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.6fr);
-      gap: 18px;
-      align-items: start;
-    }
-
-    .panel {
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      background: var(--surface);
-      box-shadow: var(--shadow-sm);
-      overflow: hidden;
-    }
-
-    .panel-header {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 16px;
-      padding: 20px 22px 16px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .panel-title {
-      margin: 0;
-      color: var(--gcm-navy-950);
-      font-size: 1rem;
-      font-weight: 900;
-      letter-spacing: -0.015em;
-    }
-
-    .panel-description {
-      margin: 5px 0 0;
-      color: var(--text-muted);
-      font-size: 0.82rem;
-    }
-
-    .prospect-list {
-      display: grid;
-    }
-
-    .prospect-card {
-      display: grid;
-      grid-template-columns: minmax(0, 1.4fr) minmax(170px, 0.6fr) auto;
-      gap: 18px;
-      align-items: center;
-      padding: 20px 22px;
-      border-bottom: 1px solid var(--border);
-      transition: background 160ms ease;
-    }
-
-    .prospect-card:last-child {
-      border-bottom: 0;
-    }
-
-    .prospect-card:hover {
-      background: #fbfcfe;
-    }
-
-    .prospect-name {
-      margin: 0;
-      color: var(--gcm-navy-950);
-      font-size: 1.02rem;
-      font-weight: 900;
-    }
-
-    .prospect-url {
-      margin: 4px 0 0;
-      color: var(--text-soft);
-      font-size: 0.76rem;
-      word-break: break-word;
-    }
-
-    .prospect-insight {
-      margin: 10px 0 0;
-      color: var(--text-muted);
-      font-size: 0.82rem;
-    }
-
-    .prospect-tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 7px;
-      margin-top: 11px;
-    }
-
-    .tag,
-    .status-badge {
-      display: inline-flex;
-      align-items: center;
-      min-height: 27px;
-      padding: 0 9px;
-      border-radius: 999px;
-      font-size: 0.68rem;
-      font-weight: 900;
-      white-space: nowrap;
-    }
-
-    .tag {
-      border: 1px solid var(--border);
-      background: var(--surface-soft);
-      color: var(--text-muted);
-    }
-
-    .status-ready {
-      background: var(--success-soft);
-      color: var(--success);
-    }
-
-    .status-research {
-      background: var(--info-soft);
-      color: var(--info);
-    }
-
-    .status-discovery {
-      background: var(--warning-soft);
-      color: var(--warning);
-    }
-
-    .status-new {
-      background: var(--surface-muted);
-      color: var(--text-muted);
-    }
-
-    .score-block {
-      min-width: 150px;
-    }
-
-    .score-label {
-      margin: 0;
-      color: var(--text-soft);
-      font-size: 0.7rem;
-      font-weight: 850;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-
-    .score-row {
-      display: flex;
-      align-items: baseline;
-      gap: 7px;
-      margin-top: 3px;
-    }
-
-    .score-value {
-      color: var(--gcm-navy-950);
-      font-size: 1.55rem;
-      font-weight: 900;
-      letter-spacing: -0.04em;
-    }
-
-    .score-out-of {
-      color: var(--text-soft);
-      font-size: 0.74rem;
-      font-weight: 800;
-    }
-
-    .score-track {
-      height: 7px;
-      margin-top: 8px;
-      border-radius: 999px;
-      background: var(--surface-muted);
-      overflow: hidden;
-    }
-
-    .score-fill {
-      height: 100%;
-      border-radius: inherit;
-      background: linear-gradient(90deg, var(--gcm-blue-600), var(--gcm-gold-500));
-    }
-
-    .prospect-actions {
-      display: grid;
-      gap: 8px;
-      justify-items: stretch;
-      min-width: 148px;
-    }
-
-    .prospect-actions .button {
-      min-height: 38px;
-      padding: 0 12px;
-      font-size: 0.78rem;
-    }
-
-    .side-stack {
-      display: grid;
-      gap: 18px;
-    }
-
-    .priority-card {
-      padding: 22px;
-      background:
-        linear-gradient(135deg, rgba(31, 104, 216, 0.98), rgba(11, 29, 51, 0.99));
-      color: #ffffff;
-    }
-
-    .priority-card h2 {
-      margin: 0;
-      font-size: 1.35rem;
-      line-height: 1.1;
-      letter-spacing: -0.03em;
-    }
-
-    .priority-card p {
-      margin: 10px 0 0;
-      color: rgba(255, 255, 255, 0.72);
-      font-size: 0.86rem;
-    }
-
-    .priority-card .button {
-      margin-top: 18px;
-      width: 100%;
-      background: var(--gcm-gold-500);
-      color: var(--gcm-navy-950);
-      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
-    }
-
-    .stage-list {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-    }
-
-    .stage-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 15px 18px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .stage-item:last-child {
-      border-bottom: 0;
-    }
-
-    .stage-name {
-      color: var(--text);
-      font-size: 0.8rem;
-      font-weight: 850;
-    }
-
-    .stage-count {
-      display: grid;
-      place-items: center;
-      min-width: 30px;
-      height: 30px;
-      padding: 0 8px;
-      border-radius: 999px;
-      background: var(--surface-soft);
-      color: var(--gcm-navy-950);
-      font-size: 0.75rem;
-      font-weight: 900;
-    }
-
-    .empty-state {
-      padding: 40px 22px;
-      text-align: center;
-      color: var(--text-muted);
-    }
-
-    .mobile-menu-button {
-      display: none;
-    }
-
-    @media (max-width: 1180px) {
-      .summary-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-
-      .workspace-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    @media (max-width: 920px) {
-      .prospect-card {
-        grid-template-columns: 1fr;
-        align-items: start;
-      }
-
-      .prospect-actions {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        min-width: 0;
-      }
-    }
-
-    @media (max-width: 860px) {
-      .app-shell {
-        grid-template-columns: 1fr;
-      }
-
-      .sidebar {
-        position: fixed;
-        inset: 0 auto 0 0;
-        z-index: 100;
-        width: 250px;
-        transform: translateX(-100%);
-        transition: transform 180ms ease;
-      }
-
-      .sidebar.is-open {
-        transform: translateX(0);
-      }
-
-      .mobile-menu-button {
-        display: inline-flex;
-      }
-
-      .main {
-        padding: 20px;
-      }
-
-      .topbar {
-        align-items: center;
-      }
-    }
-
-    @media (max-width: 720px) {
-      .toolbar {
-        grid-template-columns: 1fr;
-      }
-
-      .topbar {
-        align-items: flex-start;
-        flex-direction: column;
-      }
-
-      .topbar-actions {
-        width: 100%;
-        justify-content: flex-start;
-      }
-    }
-
-    @media (max-width: 640px) {
-      .main {
-        padding: 16px;
-      }
-
-      .summary-grid,
-      .prospect-actions {
-        grid-template-columns: 1fr;
-      }
+      --gcm-navy-950:#071426;
+      --gcm-navy-900:#0b1d33;
+      --gcm-navy-800:#112a47;
+      --gcm-blue-600:#1f68d8;
+      --gcm-blue-500:#347ce8;
+      --gcm-blue-100:#eaf2ff;
+      --gcm-gold-500:#d6a94a;
+      --gcm-gold-100:#fff7df;
+      --surface:#ffffff;
+      --surface-soft:#f5f7fb;
+      --surface-muted:#edf1f7;
+      --border:#dbe2ec;
+      --text:#132238;
+      --text-muted:#637083;
+      --text-soft:#8290a3;
+      --success:#1f7a4f;
+      --success-soft:#e9f7f0;
+      --warning:#9a6414;
+      --warning-soft:#fff4dd;
+      --critical:#b33a3a;
+      --critical-soft:#fff0f0;
+      --info:#245fae;
+      --info-soft:#edf5ff;
+      --shadow-sm:0 8px 24px rgba(7,20,38,.07);
+      --shadow-md:0 16px 42px rgba(7,20,38,.11);
+      --radius-sm:10px;
+      --radius-md:16px;
+      --radius-lg:22px;
+      --content-width:1480px;
+    }
+
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      min-height:100vh;
+      background:var(--surface-soft);
+      color:var(--text);
+      font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      line-height:1.5
+    }
+    button,input,select,textarea{font:inherit}
+    button{cursor:pointer}
+    a{color:inherit;text-decoration:none}
+    [hidden]{display:none!important}
+
+    .skip-link{
+      position:absolute;top:-48px;left:16px;z-index:1000;
+      padding:10px 14px;border-radius:8px;background:#fff;
+      color:var(--gcm-navy-950);font-weight:800
+    }
+    .skip-link:focus{top:16px}
+
+    .app-shell{
+      min-height:100vh;
+      display:grid;
+      grid-template-columns:250px minmax(0,1fr)
+    }
+    .main{min-width:0;padding:28px 32px 48px}
+    .main-inner{width:min(100%,var(--content-width));margin:0 auto}
+
+    .topbar{
+      display:flex;align-items:flex-start;justify-content:space-between;
+      gap:24px;margin-bottom:22px
+    }
+    .eyebrow{
+      margin:0 0 6px;color:var(--gcm-blue-600);font-size:.72rem;
+      font-weight:900;text-transform:uppercase;letter-spacing:.14em
+    }
+    .page-title{
+      margin:0;color:var(--gcm-navy-950);font-size:clamp(2rem,4vw,3.15rem);
+      line-height:1;letter-spacing:-.045em
+    }
+    .page-subtitle{margin:10px 0 0;color:var(--text-muted);font-size:1rem;max-width:790px}
+    .topbar-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+
+    .button{
+      display:inline-flex;align-items:center;justify-content:center;gap:8px;
+      min-height:42px;padding:0 16px;border:1px solid transparent;
+      border-radius:11px;font-size:.84rem;font-weight:850;
+      transition:transform 160ms ease,box-shadow 160ms ease,background 160ms ease,border-color 160ms ease
+    }
+    .button:hover{transform:translateY(-1px)}
+    .button:focus-visible{outline:3px solid rgba(52,124,232,.26);outline-offset:2px}
+    .button-primary{background:var(--gcm-blue-600);color:#fff;box-shadow:0 10px 24px rgba(31,104,216,.22)}
+    .button-primary:hover{background:#185fc8}
+    .button-secondary{border-color:var(--border);background:var(--surface);color:var(--gcm-navy-900)}
+    .button-secondary:hover{border-color:#c3cfde;box-shadow:var(--shadow-sm)}
+    .button-gold{background:var(--gcm-gold-500);color:var(--gcm-navy-950)}
+    .button-small{min-height:36px;padding:0 12px;font-size:.76rem}
+    .button:disabled{opacity:.52;cursor:not-allowed;transform:none}
+
+    .system-banner{
+      display:flex;align-items:flex-start;justify-content:space-between;gap:18px;
+      margin-bottom:18px;padding:14px 16px;border:1px solid #cfe0fb;
+      border-radius:var(--radius-md);background:var(--info-soft);color:#173d72
+    }
+    .system-banner strong{display:block;font-size:.86rem}
+    .system-banner p{margin:3px 0 0;font-size:.78rem}
+    .system-state{white-space:nowrap;font-size:.73rem;font-weight:900}
+
+    .summary-grid{
+      display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:14px;margin-bottom:18px
+    }
+    .summary-card{
+      min-height:116px;padding:18px;border:1px solid var(--border);
+      border-radius:var(--radius-md);background:var(--surface);box-shadow:var(--shadow-sm)
+    }
+    .summary-label{
+      margin:0;color:var(--text-muted);font-size:.72rem;font-weight:850;
+      text-transform:uppercase;letter-spacing:.08em
+    }
+    .summary-value{
+      margin:8px 0 0;color:var(--gcm-navy-950);font-size:2rem;
+      font-weight:900;line-height:1;letter-spacing:-.04em
+    }
+    .summary-note{margin:8px 0 0;color:var(--text-soft);font-size:.76rem}
+
+    .toolbar{
+      display:grid;grid-template-columns:minmax(220px,1fr) minmax(170px,.35fr) auto;
+      gap:12px;padding:16px;margin-bottom:18px;border:1px solid var(--border);
+      border-radius:var(--radius-lg);background:var(--surface);box-shadow:var(--shadow-sm)
+    }
+    .field{display:grid;gap:7px}
+    .field label,.field-label{
+      color:var(--text-muted);font-size:.7rem;font-weight:850;
+      text-transform:uppercase;letter-spacing:.08em
+    }
+    .input,.select,.textarea{
+      width:100%;border:1px solid var(--border);border-radius:11px;
+      background:#fff;color:var(--text);outline:none
+    }
+    .input,.select{min-height:43px;padding:0 13px}
+    .textarea{min-height:96px;padding:11px 13px;resize:vertical}
+    .input:focus,.select:focus,.textarea:focus{
+      border-color:var(--gcm-blue-500);
+      box-shadow:0 0 0 3px rgba(52,124,232,.12)
+    }
+
+    .workspace-grid{
+      display:grid;grid-template-columns:minmax(0,1.45fr) minmax(330px,.55fr);
+      gap:18px;align-items:start
+    }
+    .panel{
+      border:1px solid var(--border);border-radius:var(--radius-lg);
+      background:var(--surface);box-shadow:var(--shadow-sm);overflow:hidden
+    }
+    .panel + .panel{margin-top:18px}
+    .panel-header{
+      display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
+      padding:20px 22px 16px;border-bottom:1px solid var(--border)
+    }
+    .panel-title{margin:0;color:var(--gcm-navy-950);font-size:1rem;font-weight:900;letter-spacing:-.015em}
+    .panel-description{margin:5px 0 0;color:var(--text-muted);font-size:.8rem}
+    .panel-count{
+      min-width:34px;height:30px;display:grid;place-items:center;padding:0 9px;
+      border-radius:999px;background:var(--surface-muted);color:var(--text-muted);
+      font-size:.72rem;font-weight:900
+    }
+
+    .pipeline-list{display:grid}
+    .prospect-card{
+      display:grid;grid-template-columns:minmax(0,1fr) minmax(235px,.55fr) auto;
+      gap:18px;align-items:center;padding:20px 22px;border-bottom:1px solid var(--border);
+      transition:background 160ms ease
+    }
+    .prospect-card:last-child{border-bottom:0}
+    .prospect-card:hover{background:#fbfcfe}
+    .prospect-name{margin:0;color:var(--gcm-navy-950);font-size:1.02rem;font-weight:900}
+    .prospect-meta{margin:4px 0 0;color:var(--text-soft);font-size:.74rem}
+    .prospect-insight{margin:9px 0 0;color:var(--text-muted);font-size:.8rem}
+    .tag-row{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+    .tag,.badge{
+      display:inline-flex;align-items:center;min-height:26px;padding:0 9px;
+      border-radius:999px;font-size:.67rem;font-weight:850
+    }
+    .tag{background:var(--surface-muted);color:var(--text-muted)}
+    .badge-blue{background:var(--gcm-blue-100);color:var(--info)}
+    .badge-green{background:var(--success-soft);color:var(--success)}
+    .badge-yellow{background:var(--warning-soft);color:var(--warning)}
+    .badge-red{background:var(--critical-soft);color:var(--critical)}
+    .badge-gray{background:var(--surface-muted);color:var(--text-muted)}
+
+    .next-action-block{min-width:0}
+    .next-label{
+      margin:0;color:var(--text-soft);font-size:.67rem;font-weight:850;
+      text-transform:uppercase;letter-spacing:.07em
+    }
+    .next-title{margin:5px 0 0;color:var(--gcm-navy-900);font-size:.8rem;font-weight:850}
+    .next-due{margin:5px 0 0;font-size:.72rem;font-weight:800}
+    .due-overdue{color:var(--critical)}
+    .due-today{color:var(--critical)}
+    .due-upcoming{color:var(--warning)}
+    .due-future{color:var(--success)}
+    .due-none{color:var(--critical)}
+    .card-actions{display:flex;justify-content:flex-end}
+
+    .empty-state{
+      padding:38px 22px;text-align:center;color:var(--text-muted)
+    }
+    .empty-state strong{display:block;color:var(--gcm-navy-900);font-size:.94rem}
+    .empty-state p{margin:7px auto 0;max-width:560px;font-size:.8rem}
+
+    .side-stack{display:grid;gap:18px}
+    .priority-card{
+      padding:22px;border-radius:var(--radius-lg);
+      background:linear-gradient(155deg,var(--gcm-navy-900),var(--gcm-navy-950));
+      color:#fff;box-shadow:var(--shadow-md)
+    }
+    .priority-card .eyebrow{color:#a8c9ff}
+    .priority-card h2{margin:3px 0 8px;font-size:1.22rem}
+    .priority-card p{margin:0;color:rgba(255,255,255,.72);font-size:.82rem}
+    .priority-card .button{margin-top:15px;background:#fff;color:var(--gcm-navy-950)}
+
+    .radar-list{display:grid}
+    .radar-item{padding:15px 18px;border-bottom:1px solid var(--border)}
+    .radar-item:last-child{border-bottom:0}
+    .radar-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+    .radar-name{margin:0;font-size:.86rem;font-weight:900;color:var(--gcm-navy-900)}
+    .radar-meta{margin:4px 0 0;color:var(--text-soft);font-size:.7rem}
+    .radar-source{margin:8px 0 0;color:var(--text-muted);font-size:.76rem}
+
+    .detail-shell{padding:0}
+    .detail-body{padding:20px 22px}
+    .detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .detail-item{
+      min-width:0;padding:13px;border:1px solid var(--border);
+      border-radius:12px;background:#fbfcfe
+    }
+    .detail-item span{
+      display:block;color:var(--text-soft);font-size:.66rem;font-weight:850;
+      text-transform:uppercase;letter-spacing:.07em
+    }
+    .detail-item strong{display:block;margin-top:5px;color:var(--gcm-navy-900);font-size:.79rem;word-break:break-word}
+    .timeline{display:grid;gap:10px;margin-top:18px}
+    .timeline-item{
+      padding:12px 14px;border-left:3px solid var(--gcm-blue-500);
+      border-radius:0 10px 10px 0;background:var(--surface-soft)
+    }
+    .timeline-item strong{display:block;font-size:.77rem;color:var(--gcm-navy-900)}
+    .timeline-item p{margin:4px 0 0;color:var(--text-muted);font-size:.73rem}
+    .timeline-item time{display:block;margin-top:5px;color:var(--text-soft);font-size:.66rem}
+
+    dialog{
+      width:min(760px,calc(100vw - 32px));max-height:calc(100vh - 40px);
+      padding:0;border:0;border-radius:20px;background:#fff;
+      box-shadow:0 28px 90px rgba(7,20,38,.28)
+    }
+    dialog::backdrop{background:rgba(7,20,38,.55);backdrop-filter:blur(3px)}
+    .modal-header{
+      display:flex;align-items:flex-start;justify-content:space-between;gap:18px;
+      padding:20px 22px 16px;border-bottom:1px solid var(--border)
+    }
+    .modal-title{margin:0;color:var(--gcm-navy-950);font-size:1.12rem;font-weight:900}
+    .modal-copy{margin:5px 0 0;color:var(--text-muted);font-size:.79rem}
+    .modal-close{
+      width:36px;height:36px;border:1px solid var(--border);border-radius:10px;
+      background:#fff;color:var(--text-muted);font-weight:900
+    }
+    .modal-body{padding:20px 22px;overflow:auto}
+    .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+    .form-grid .span-2{grid-column:1/-1}
+    .form-actions{
+      display:flex;justify-content:flex-end;gap:10px;margin-top:18px;
+      padding-top:16px;border-top:1px solid var(--border)
+    }
+    .form-note{
+      grid-column:1/-1;padding:11px 13px;border-radius:11px;
+      background:var(--gcm-gold-100);color:#654a0a;font-size:.76rem
+    }
+    .error-box{
+      margin-bottom:14px;padding:11px 13px;border:1px solid #f0c3c3;
+      border-radius:11px;background:var(--critical-soft);color:var(--critical);
+      font-size:.78rem;font-weight:700
+    }
+
+    .loading-skeleton{
+      margin:18px 22px;height:92px;border-radius:14px;
+      background:linear-gradient(90deg,#eef2f7 25%,#f8fafc 37%,#eef2f7 63%);
+      background-size:400% 100%;animation:pulse 1.4s ease infinite
+    }
+    @keyframes pulse{0%{background-position:100% 50%}100%{background-position:0 50%}}
+
+    @media(max-width:1180px){
+      .summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .workspace-grid{grid-template-columns:1fr}
+    }
+    @media(max-width:920px){
+      .prospect-card{grid-template-columns:1fr}
+      .card-actions{justify-content:flex-start}
+    }
+    @media(max-width:860px){
+      .app-shell{grid-template-columns:1fr}
+      .main{padding:20px}
+    }
+    @media(max-width:720px){
+      .topbar{flex-direction:column}
+      .topbar-actions{justify-content:flex-start}
+      .toolbar{grid-template-columns:1fr}
+      .form-grid,.detail-grid{grid-template-columns:1fr}
+      .form-grid .span-2{grid-column:auto}
+    }
+    @media(max-width:640px){
+      .main{padding:16px}
+      .summary-grid{grid-template-columns:1fr}
+      .system-banner{flex-direction:column}
     }
   </style>
 </head>
@@ -791,372 +358,160 @@
         <header class="topbar">
           <div>
             <p class="eyebrow">Acquire</p>
-            <h1 class="page-title">Prospects</h1>
+            <h1 class="page-title">Prospects & CRM</h1>
             <p class="page-subtitle">
-              Decide who to contact next, why the opportunity matters, and which workflow to launch.
+              Preserve how a business entered GCM's orbit, manage every real opportunity,
+              and make sure no active prospect sits without a dated next action.
             </p>
           </div>
 
           <div class="topbar-actions">
-            <a class="button button-secondary" href="today.html">
-              Back to Today
-            </a>
-
-            <a class="button button-primary" href="client-pre-research.html">
-              Research New Prospect
-            </a>
+            <a class="button button-secondary" href="client-pre-research.html">Research New Business</a>
+            <button class="button button-secondary" id="open-radar" type="button">Add to Radar</button>
+            <button class="button button-primary" id="open-prospect" type="button">Add Scheduled Prospect</button>
           </div>
         </header>
 
-        <section class="summary-grid" aria-label="Prospect summary">
+        <section class="system-banner" aria-live="polite">
+          <div>
+            <strong>CRM operating rule</strong>
+            <p>Radar holds pre-appointment intelligence. A formal Prospect exists only after a real appointment is scheduled.</p>
+          </div>
+          <span class="system-state" id="system-state">Connecting to D1…</span>
+        </section>
+
+        <section class="summary-grid" aria-label="CRM summary">
           <article class="summary-card">
-            <p class="summary-label">Total Prospects</p>
-            <p class="summary-value" id="total-count">5</p>
-            <p class="summary-note">Businesses currently in the acquisition pipeline.</p>
+            <p class="summary-label">Active Prospects</p>
+            <p class="summary-value" id="active-count">—</p>
+            <p class="summary-note">Formal opportunities currently being managed.</p>
           </article>
 
           <article class="summary-card">
-            <p class="summary-label">Ready to Contact</p>
-            <p class="summary-value" id="ready-count">2</p>
-            <p class="summary-note">Research complete with a clear outreach reason.</p>
+            <p class="summary-label">Due / Overdue</p>
+            <p class="summary-value" id="due-count">—</p>
+            <p class="summary-note">Prospect actions requiring attention now.</p>
           </article>
 
           <article class="summary-card">
-            <p class="summary-label">Research Needed</p>
-            <p class="summary-value" id="research-count">2</p>
-            <p class="summary-note">Businesses that need pre-research before outreach.</p>
+            <p class="summary-label">Unmanaged</p>
+            <p class="summary-value" id="unmanaged-count">—</p>
+            <p class="summary-note">Active relationship records missing a dated Next Action.</p>
           </article>
 
           <article class="summary-card">
-            <p class="summary-label">Discovery Stage</p>
-            <p class="summary-value" id="discovery-count">1</p>
-            <p class="summary-note">Prospects ready for the next consulting conversation.</p>
+            <p class="summary-label">Radar</p>
+            <p class="summary-value" id="radar-count">—</p>
+            <p class="summary-note">Businesses or verticals on GCM's radar before an appointment.</p>
           </article>
         </section>
 
         <section class="toolbar" aria-label="Prospect filters">
           <div class="field">
-            <label for="prospect-search">Search Prospects</label>
-            <input
-              class="input"
-              id="prospect-search"
-              type="search"
-              placeholder="Search by business, market, or opportunity"
-            />
+            <label for="prospect-search">Search CRM</label>
+            <input class="input" id="prospect-search" type="search" placeholder="Business, contact, market, opportunity, next action" />
           </div>
 
           <div class="field">
-            <label for="status-filter">Status</label>
-            <select class="select" id="status-filter">
-              <option value="all">All statuses</option>
-              <option value="ready">Ready to Contact</option>
-              <option value="research">Research Needed</option>
-              <option value="discovery">Discovery</option>
-              <option value="new">New</option>
+            <label for="stage-filter">Stage</label>
+            <select class="select" id="stage-filter">
+              <option value="all">All stages</option>
             </select>
           </div>
 
           <div class="field">
-            <label for="sort-filter">Sort</label>
-            <select class="select" id="sort-filter">
-              <option value="score-desc">Highest opportunity</option>
-              <option value="score-asc">Lowest opportunity</option>
-              <option value="name-asc">Business name</option>
-            </select>
+            <label>&nbsp;</label>
+            <button class="button button-secondary" id="refresh-crm" type="button">Refresh</button>
           </div>
         </section>
 
         <section class="workspace-grid">
-          <article class="panel">
-            <div class="panel-header">
-              <div>
-                <h2 class="panel-title">Prospect Pipeline</h2>
-                <p class="panel-description">
-                  Every prospect should have a clear status, opportunity, and next action.
+          <div>
+            <article class="panel">
+              <div class="panel-header">
+                <div>
+                  <h2 class="panel-title">Active CRM Pipeline</h2>
+                  <p class="panel-description">
+                    Production relationship records from D1. The next action is the operating priority.
+                  </p>
+                </div>
+                <span class="panel-count" id="pipeline-visible-count">0</span>
+              </div>
+
+              <div id="pipeline-loading">
+                <div class="loading-skeleton"></div>
+                <div class="loading-skeleton"></div>
+              </div>
+
+              <div class="pipeline-list" id="pipeline-list" hidden></div>
+
+              <div class="empty-state" id="pipeline-empty" hidden>
+                <strong>No formal CRM Prospects yet.</strong>
+                <p>
+                  A business belongs here only after a real appointment is scheduled.
+                  Use Radar before that point.
                 </p>
               </div>
-            </div>
+            </article>
 
-            <div class="prospect-list" id="prospect-list">
-              <article
-                class="prospect-card"
-                data-name="ABC Roofing"
-                data-status="ready"
-                data-score="94"
-                data-search="abc roofing melbourne roofing local visibility owner outreach"
-              >
+            <article class="panel detail-shell" id="detail-panel" hidden>
+              <div class="panel-header">
                 <div>
-                  <h3 class="prospect-name">ABC Roofing</h3>
-                  <p class="prospect-url">abcroofing.example</p>
-                  <p class="prospect-insight">
-                    Strong local demand, but the public presence does not clearly establish service-area authority or a compelling reason to choose the business.
-                  </p>
-
-                  <div class="prospect-tags">
-                    <span class="status-badge status-ready">Ready to Contact</span>
-                    <span class="tag">Roofing</span>
-                    <span class="tag">Local visibility</span>
-                  </div>
+                  <p class="eyebrow">CRM Record</p>
+                  <h2 class="panel-title" id="detail-title">Prospect</h2>
+                  <p class="panel-description" id="detail-subtitle"></p>
                 </div>
+                <button class="button button-secondary button-small" id="close-detail" type="button">Close</button>
+              </div>
+              <div class="detail-body" id="detail-body"></div>
+            </article>
+          </div>
 
-                <div class="score-block">
-                  <p class="score-label">Opportunity Score</p>
-                  <div class="score-row">
-                    <span class="score-value">94</span>
-                    <span class="score-out-of">/ 100</span>
-                  </div>
-                  <div class="score-track">
-                    <div class="score-fill" style="width: 94%;"></div>
-                  </div>
-                </div>
-
-                <div class="prospect-actions">
-                  <a class="button button-primary" href="prospect-workspace.html">
-                    Open Workspace
-                  </a>
-                  <a class="button button-secondary" href="business-snapshot.html">
-                    Run Snapshot
-                  </a>
-                </div>
-              </article>
-
-              <article
-                class="prospect-card"
-                data-name="Superior Plumbing"
-                data-status="research"
-                data-score="87"
-                data-search="superior plumbing cocoa plumbing website trust conversion"
-              >
-                <div>
-                  <h3 class="prospect-name">Superior Plumbing</h3>
-                  <p class="prospect-url">superiorplumbing.example</p>
-                  <p class="prospect-insight">
-                    The website appears credible, but there is not enough verified information yet to lead with a specific business opportunity.
-                  </p>
-
-                  <div class="prospect-tags">
-                    <span class="status-badge status-research">Research Needed</span>
-                    <span class="tag">Plumbing</span>
-                    <span class="tag">Trust and conversion</span>
-                  </div>
-                </div>
-
-                <div class="score-block">
-                  <p class="score-label">Opportunity Score</p>
-                  <div class="score-row">
-                    <span class="score-value">87</span>
-                    <span class="score-out-of">/ 100</span>
-                  </div>
-                  <div class="score-track">
-                    <div class="score-fill" style="width: 87%;"></div>
-                  </div>
-                </div>
-
-                <div class="prospect-actions">
-                  <a class="button button-primary" href="client-pre-research.html">
-                    Research
-                  </a>
-                  <a class="button button-secondary" href="business-snapshot.html">
-                    Snapshot
-                  </a>
-                </div>
-              </article>
-
-              <article
-                class="prospect-card"
-                data-name="Coastal HVAC"
-                data-status="discovery"
-                data-score="91"
-                data-search="coastal hvac brevard discovery growth review qualified"
-              >
-                <div>
-                  <h3 class="prospect-name">Coastal HVAC</h3>
-                  <p class="prospect-url">coastalhvac.example</p>
-                  <p class="prospect-insight">
-                    Research is complete and the largest visible opportunity is improving local proof around high-value installation services.
-                  </p>
-
-                  <div class="prospect-tags">
-                    <span class="status-badge status-discovery">Discovery Stage</span>
-                    <span class="tag">HVAC</span>
-                    <span class="tag">Local proof</span>
-                  </div>
-                </div>
-
-                <div class="score-block">
-                  <p class="score-label">Opportunity Score</p>
-                  <div class="score-row">
-                    <span class="score-value">91</span>
-                    <span class="score-out-of">/ 100</span>
-                  </div>
-                  <div class="score-track">
-                    <div class="score-fill" style="width: 91%;"></div>
-                  </div>
-                </div>
-
-                <div class="prospect-actions">
-                  <a class="button button-primary" href="growth-review-preview.html">
-                    Prepare Discovery
-                  </a>
-                  <a class="button button-secondary" href="client-pre-research.html">
-                    Review Research
-                  </a>
-                </div>
-              </article>
-
-              <article
-                class="prospect-card"
-                data-name="Elite Electric"
-                data-status="ready"
-                data-score="89"
-                data-search="elite electric palm bay electrician reviews service pages outreach"
-              >
-                <div>
-                  <h3 class="prospect-name">Elite Electric</h3>
-                  <p class="prospect-url">eliteelectric.example</p>
-                  <p class="prospect-insight">
-                    Good customer reviews are visible, but service-page clarity and conversion paths appear weaker than the business's reputation.
-                  </p>
-
-                  <div class="prospect-tags">
-                    <span class="status-badge status-ready">Ready to Contact</span>
-                    <span class="tag">Electrical</span>
-                    <span class="tag">Offer clarity</span>
-                  </div>
-                </div>
-
-                <div class="score-block">
-                  <p class="score-label">Opportunity Score</p>
-                  <div class="score-row">
-                    <span class="score-value">89</span>
-                    <span class="score-out-of">/ 100</span>
-                  </div>
-                  <div class="score-track">
-                    <div class="score-fill" style="width: 89%;"></div>
-                  </div>
-                </div>
-
-                <div class="prospect-actions">
-                  <a class="button button-primary" href="client-pre-research.html">
-                    Open Research
-                  </a>
-                  <a class="button button-secondary" href="business-snapshot.html">
-                    Run Snapshot
-                  </a>
-                </div>
-              </article>
-
-              <article
-                class="prospect-card"
-                data-name="Premier Landscaping"
-                data-status="research"
-                data-score="78"
-                data-search="premier landscaping rockledge landscaping website market research"
-              >
-                <div>
-                  <h3 class="prospect-name">Premier Landscaping</h3>
-                  <p class="prospect-url">premierlandscaping.example</p>
-                  <p class="prospect-insight">
-                    The business may be a strong local fit, but the market, owner information, and highest-value service opportunity still need verification.
-                  </p>
-
-                  <div class="prospect-tags">
-                    <span class="status-badge status-research">Research Needed</span>
-                    <span class="tag">Landscaping</span>
-                    <span class="tag">Needs verification</span>
-                  </div>
-                </div>
-
-                <div class="score-block">
-                  <p class="score-label">Opportunity Score</p>
-                  <div class="score-row">
-                    <span class="score-value">78</span>
-                    <span class="score-out-of">/ 100</span>
-                  </div>
-                  <div class="score-track">
-                    <div class="score-fill" style="width: 78%;"></div>
-                  </div>
-                </div>
-
-                <div class="prospect-actions">
-                  <a class="button button-primary" href="client-pre-research.html">
-                    Research
-                  </a>
-                  <a class="button button-secondary" href="business-snapshot.html">
-                    Snapshot
-                  </a>
-                </div>
-              </article>
-            </div>
-
-            <div class="empty-state" id="empty-state" hidden>
-              No prospects match the current search and status filter.
-            </div>
-          </article>
-
-          <aside class="side-stack" aria-label="Prospect priorities">
+          <aside class="side-stack" aria-label="Prospect operating support">
             <article class="priority-card">
-              <p class="eyebrow" style="color: #a8c9ff;">Highest-Priority Prospect</p>
-              <h2>ABC Roofing</h2>
-              <p>
-                Research is complete, the opportunity is specific, and the next action is a personalized first conversation.
-              </p>
-              <a class="button" href="prospect-workspace.html">
-                Open Workspace
-              </a>
+              <p class="eyebrow">Highest-Value Prospect Action</p>
+              <h2 id="priority-title">Loading CRM…</h2>
+              <p id="priority-copy">The CRM will surface the earliest due or unmanaged active relationship.</p>
+              <button class="button" id="priority-open" type="button" disabled>Open Record</button>
             </article>
 
             <article class="panel">
               <div class="panel-header">
                 <div>
-                  <h2 class="panel-title">Pipeline Stages</h2>
-                  <p class="panel-description">Where the current prospects are in the consulting lifecycle.</p>
+                  <h2 class="panel-title">Prospecting Radar</h2>
+                  <p class="panel-description">Durable lead intelligence before a scheduled appointment.</p>
                 </div>
+                <span class="panel-count" id="radar-side-count">0</span>
               </div>
 
-              <ul class="stage-list">
-                <li class="stage-item">
-                  <span class="stage-name">New</span>
-                  <span class="stage-count">0</span>
-                </li>
-                <li class="stage-item">
-                  <span class="stage-name">Research Needed</span>
-                  <span class="stage-count">2</span>
-                </li>
-                <li class="stage-item">
-                  <span class="stage-name">Ready to Contact</span>
-                  <span class="stage-count">2</span>
-                </li>
-                <li class="stage-item">
-                  <span class="stage-name">Discovery</span>
-                  <span class="stage-count">1</span>
-                </li>
-                <li class="stage-item">
-                  <span class="stage-name">Growth Review</span>
-                  <span class="stage-count">0</span>
-                </li>
-              </ul>
+              <div id="radar-loading">
+                <div class="loading-skeleton"></div>
+              </div>
+
+              <div class="radar-list" id="radar-list" hidden></div>
+
+              <div class="empty-state" id="radar-empty" hidden>
+                <strong>Radar is clear.</strong>
+                <p>Advertisements, referrals, business cards, vertical targets, and research leads can be preserved here.</p>
+              </div>
             </article>
 
             <article class="panel">
               <div class="panel-header">
                 <div>
-                  <h2 class="panel-title">Workspace Rule</h2>
-                  <p class="panel-description">Every prospect must answer three questions.</p>
+                  <h2 class="panel-title">Lifecycle</h2>
+                  <p class="panel-description">The durable relationship handoff built into GCM OS.</p>
                 </div>
               </div>
-
-              <ul class="stage-list">
-                <li class="stage-item">
-                  <span class="stage-name">Why this business?</span>
-                </li>
-                <li class="stage-item">
-                  <span class="stage-name">Why call now?</span>
-                </li>
-                <li class="stage-item">
-                  <span class="stage-name">What should I say?</span>
-                </li>
-              </ul>
+              <div class="detail-body">
+                <div class="timeline">
+                  <div class="timeline-item"><strong>Radar → Outreach</strong><p>Preserve why the business matters and every attempt to earn the appointment.</p></div>
+                  <div class="timeline-item"><strong>Appointment → Prospect</strong><p>Create the formal CRM relationship and prepare consultant-grade intelligence.</p></div>
+                  <div class="timeline-item"><strong>Discovery → Proposal</strong><p>Preserve objectives, scope, economics, proposal, and every meaningful contact.</p></div>
+                  <div class="timeline-item"><strong>Signed Scope → Payment Gate</strong><p>Agreement defines responsibility; work begins only after required initial payment.</p></div>
+                  <div class="timeline-item"><strong>Client Handoff</strong><p>Client conversion remains a separate verified handoff after the CRM arm passes road test.</p></div>
+                </div>
+              </div>
             </article>
           </aside>
         </section>
@@ -1164,78 +519,892 @@
     </main>
   </div>
 
+  <dialog id="radar-dialog">
+    <form id="radar-form" method="dialog">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title">Add to Prospecting Radar</h2>
+          <p class="modal-copy">Preserve lead intelligence without manufacturing a formal CRM Prospect.</p>
+        </div>
+        <button class="modal-close" type="button" data-close-dialog="radar-dialog" aria-label="Close">×</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="error-box" id="radar-error" hidden></div>
+        <div class="form-grid">
+          <div class="field">
+            <label for="radar-business">Business Name</label>
+            <input class="input" id="radar-business" name="businessName" />
+          </div>
+
+          <div class="field">
+            <label for="radar-website">Website</label>
+            <input class="input" id="radar-website" name="website" placeholder="https://example.com" />
+          </div>
+
+          <div class="field">
+            <label for="radar-vertical">Vertical / Industry</label>
+            <input class="input" id="radar-vertical" name="vertical" placeholder="Aviation, roofing, healthcare…" />
+          </div>
+
+          <div class="field">
+            <label for="radar-market">Market</label>
+            <input class="input" id="radar-market" name="market" placeholder="Melbourne, Florida" />
+          </div>
+
+          <div class="field">
+            <label for="radar-source">Source *</label>
+            <select class="select" id="radar-source" name="sourceType" required>
+              <option value="">Choose source</option>
+              <option value="advertisement">Advertisement</option>
+              <option value="business_card">Business Card</option>
+              <option value="referral">Referral / Relationship</option>
+              <option value="vertical">Target Vertical</option>
+              <option value="research">Research</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="radar-contact">Contact Name</label>
+            <input class="input" id="radar-contact" name="contactName" />
+          </div>
+
+          <div class="field span-2">
+            <label for="radar-source-description">Why is this on GCM's radar?</label>
+            <textarea class="textarea" id="radar-source-description" name="sourceDescription" placeholder="Visible ad, referral context, market opportunity, relationship, or reason to pursue."></textarea>
+          </div>
+
+          <div class="field span-2">
+            <label for="radar-notes">Notes</label>
+            <textarea class="textarea" id="radar-notes" name="notes"></textarea>
+          </div>
+
+          <div class="form-note">
+            This record stays in Radar. It does not become a formal CRM Prospect until a real appointment is scheduled.
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button class="button button-secondary" type="button" data-close-dialog="radar-dialog">Cancel</button>
+          <button class="button button-primary" id="save-radar" type="submit">Save Radar Record</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="prospect-dialog">
+    <form id="prospect-form" method="dialog">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title">Add Scheduled Prospect</h2>
+          <p class="modal-copy">Create the formal CRM relationship only because a real appointment exists.</p>
+        </div>
+        <button class="modal-close" type="button" data-close-dialog="prospect-dialog" aria-label="Close">×</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="error-box" id="prospect-error" hidden></div>
+
+        <div class="form-grid">
+          <div class="field">
+            <label for="prospect-business">Business Name *</label>
+            <input class="input" id="prospect-business" name="businessName" required />
+          </div>
+
+          <div class="field">
+            <label for="prospect-stage">Current Stage</label>
+            <select class="select" id="prospect-stage" name="stage">
+              <option value="appointment_scheduled">Appointment Scheduled</option>
+              <option value="discovery_completed">Discovery Completed</option>
+              <option value="qualified">Qualified Opportunity</option>
+              <option value="proposal_preparing">Proposal Preparing</option>
+              <option value="proposal_sent">Proposal Sent</option>
+              <option value="awaiting_decision">Awaiting Decision</option>
+              <option value="verbal_commitment">Verbal Commitment</option>
+              <option value="contract_pending">Contract Pending</option>
+              <option value="awaiting_signature">Awaiting Signature</option>
+              <option value="contracted">Contracted</option>
+              <option value="awaiting_initial_payment">Awaiting Initial Payment</option>
+              <option value="work_authorized">Work Authorized</option>
+              <option value="nurture">Nurture</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="prospect-date">Appointment Date *</label>
+            <input class="input" id="prospect-date" name="appointmentDate" type="date" required />
+          </div>
+
+          <div class="field">
+            <label for="prospect-time">Appointment Time *</label>
+            <input class="input" id="prospect-time" name="appointmentTime" type="time" required />
+          </div>
+
+          <div class="field">
+            <label for="prospect-website">Website</label>
+            <input class="input" id="prospect-website" name="website" placeholder="https://example.com" />
+          </div>
+
+          <div class="field">
+            <label for="prospect-industry">Industry</label>
+            <input class="input" id="prospect-industry" name="industry" />
+          </div>
+
+          <div class="field">
+            <label for="prospect-market">Market</label>
+            <input class="input" id="prospect-market" name="market" />
+          </div>
+
+          <div class="field">
+            <label for="prospect-source">Origin</label>
+            <input class="input" id="prospect-source" name="sourceType" placeholder="Referral, relationship, research…" />
+          </div>
+
+          <div class="field">
+            <label for="prospect-contact-name">Primary Contact</label>
+            <input class="input" id="prospect-contact-name" name="contactName" />
+          </div>
+
+          <div class="field">
+            <label for="prospect-contact-email">Contact Email</label>
+            <input class="input" id="prospect-contact-email" name="contactEmail" type="email" />
+          </div>
+
+          <div class="field">
+            <label for="prospect-last-contact-date">Last Meaningful Contact</label>
+            <input class="input" id="prospect-last-contact-date" name="lastContactDate" type="date" />
+          </div>
+
+          <div class="field">
+            <label for="prospect-last-contact-time">Contact Time</label>
+            <input class="input" id="prospect-last-contact-time" name="lastContactTime" type="time" />
+          </div>
+
+          <div class="field">
+            <label for="prospect-low">Opportunity Low ($)</label>
+            <input class="input" id="prospect-low" name="estimatedValueLow" type="number" min="0" step="0.01" />
+          </div>
+
+          <div class="field">
+            <label for="prospect-high">Opportunity High ($)</label>
+            <input class="input" id="prospect-high" name="estimatedValueHigh" type="number" min="0" step="0.01" />
+          </div>
+
+          <div class="field">
+            <label for="prospect-recurring">Recurring Value ($)</label>
+            <input class="input" id="prospect-recurring" name="recurringValue" type="number" min="0" step="0.01" />
+          </div>
+
+          <div class="field">
+            <label for="prospect-recurring-period">Recurring Period</label>
+            <select class="select" id="prospect-recurring-period" name="recurringPeriod">
+              <option value="">None / Unknown</option>
+              <option value="month">Monthly</option>
+              <option value="quarter">Quarterly</option>
+              <option value="year">Annual</option>
+            </select>
+          </div>
+
+          <div class="field span-2">
+            <label for="prospect-opportunity">Opportunity / Business Reason</label>
+            <textarea class="textarea" id="prospect-opportunity" name="opportunitySummary" placeholder="What business opportunity or problem did discovery reveal?"></textarea>
+          </div>
+
+          <div class="field span-2">
+            <label for="prospect-notes">Notes</label>
+            <textarea class="textarea" id="prospect-notes" name="notes"></textarea>
+          </div>
+
+          <div class="form-note">
+            For Proposal Sent / Awaiting Decision, enter the latest meaningful contact so GCM OS can calculate the 3-business-day follow-up automatically.
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button class="button button-secondary" type="button" data-close-dialog="prospect-dialog">Cancel</button>
+          <button class="button button-primary" id="save-prospect" type="submit">Create CRM Prospect</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
   <script src="shared/gcm-shell.js"></script>
 
   <script>
     (() => {
       "use strict";
 
-      const searchInput = document.getElementById("prospect-search");
-      const statusFilter = document.getElementById("status-filter");
-      const sortFilter = document.getElementById("sort-filter");
-      const prospectList = document.getElementById("prospect-list");
-      const emptyState = document.getElementById("empty-state");
+      const FILE_VERSION = "2.0.0";
+      const WORKER_ENDPOINT =
+        "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+      const CRM_ACTION = "prospect-crm";
 
-      function getCards() {
-        return [...prospectList.querySelectorAll(".prospect-card")];
+      const state = {
+        prospects: [],
+        radar: [],
+        selectedProspect: null
+      };
+
+      const els = {
+        systemState: document.getElementById("system-state"),
+        activeCount: document.getElementById("active-count"),
+        dueCount: document.getElementById("due-count"),
+        unmanagedCount: document.getElementById("unmanaged-count"),
+        radarCount: document.getElementById("radar-count"),
+        radarSideCount: document.getElementById("radar-side-count"),
+        pipelineVisibleCount: document.getElementById("pipeline-visible-count"),
+        search: document.getElementById("prospect-search"),
+        stage: document.getElementById("stage-filter"),
+        refresh: document.getElementById("refresh-crm"),
+        pipelineLoading: document.getElementById("pipeline-loading"),
+        pipelineList: document.getElementById("pipeline-list"),
+        pipelineEmpty: document.getElementById("pipeline-empty"),
+        radarLoading: document.getElementById("radar-loading"),
+        radarList: document.getElementById("radar-list"),
+        radarEmpty: document.getElementById("radar-empty"),
+        priorityTitle: document.getElementById("priority-title"),
+        priorityCopy: document.getElementById("priority-copy"),
+        priorityOpen: document.getElementById("priority-open"),
+        detailPanel: document.getElementById("detail-panel"),
+        detailTitle: document.getElementById("detail-title"),
+        detailSubtitle: document.getElementById("detail-subtitle"),
+        detailBody: document.getElementById("detail-body"),
+        closeDetail: document.getElementById("close-detail"),
+        radarDialog: document.getElementById("radar-dialog"),
+        prospectDialog: document.getElementById("prospect-dialog"),
+        radarForm: document.getElementById("radar-form"),
+        prospectForm: document.getElementById("prospect-form"),
+        radarError: document.getElementById("radar-error"),
+        prospectError: document.getElementById("prospect-error"),
+        saveRadar: document.getElementById("save-radar"),
+        saveProspect: document.getElementById("save-prospect")
+      };
+
+      function clean(value) {
+        return String(value ?? "").trim();
       }
 
-      function applyFiltersAndSort() {
-        const query = searchInput.value.trim().toLowerCase();
-        const status = statusFilter.value;
-        const sort = sortFilter.value;
-        const cards = getCards();
-
-        cards.sort((a, b) => {
-          if (sort === "name-asc") {
-            return a.dataset.name.localeCompare(b.dataset.name);
-          }
-
-          const scoreA = Number(a.dataset.score);
-          const scoreB = Number(b.dataset.score);
-
-          return sort === "score-asc"
-            ? scoreA - scoreB
-            : scoreB - scoreA;
-        });
-
-        cards.forEach((card) => prospectList.appendChild(card));
-
-        let visibleCount = 0;
-
-        cards.forEach((card) => {
-          const matchesSearch =
-            !query || card.dataset.search.includes(query);
-
-          const matchesStatus =
-            status === "all" || card.dataset.status === status;
-
-          const isVisible = matchesSearch && matchesStatus;
-
-          card.hidden = !isVisible;
-
-          if (isVisible) {
-            visibleCount += 1;
-          }
-        });
-
-        emptyState.hidden = visibleCount !== 0;
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
       }
 
-      searchInput.addEventListener("input", applyFiltersAndSort);
-      statusFilter.addEventListener("change", applyFiltersAndSort);
-      sortFilter.addEventListener("change", applyFiltersAndSort);
+      function stageLabel(value) {
+        const labels = {
+          appointment_scheduled: "Appointment Scheduled",
+          discovery_completed: "Discovery Completed",
+          qualified: "Qualified Opportunity",
+          proposal_preparing: "Proposal Preparing",
+          proposal_sent: "Proposal Sent",
+          awaiting_decision: "Awaiting Decision",
+          verbal_commitment: "Verbal Commitment",
+          contract_pending: "Contract Pending",
+          awaiting_signature: "Awaiting Signature",
+          contracted: "Contracted",
+          awaiting_initial_payment: "Awaiting Initial Payment",
+          work_authorized: "Work Authorized",
+          nurture: "Nurture",
+          lost: "Lost",
+          converted: "Converted"
+        };
+        return labels[value] || clean(value).replaceAll("_", " ") || "Unknown";
+      }
+
+      function statusBadgeClass(status) {
+        if (status === "converted") return "badge-green";
+        if (status === "lost") return "badge-gray";
+        if (status === "nurture") return "badge-yellow";
+        return "badge-blue";
+      }
+
+      function dueBadgeClass(dueState) {
+        if (dueState === "overdue" || dueState === "due_today") return "badge-red";
+        if (dueState === "upcoming") return "badge-green";
+        return "badge-gray";
+      }
+
+      function dueText(nextAction, unmanaged) {
+        if (unmanaged) return "No dated Next Action";
+        if (!nextAction?.dueDate) return "No due date";
+        const date = formatDate(nextAction.dueDate, false);
+        const labels = {
+          overdue: `Overdue · ${date}`,
+          due_today: `Due today · ${date}`,
+          upcoming: `Due ${date}`
+        };
+        return labels[nextAction.dueState] || `Due ${date}`;
+      }
+
+      function formatDate(value, includeTime = true) {
+        const text = clean(value);
+        if (!text) return "Unknown";
+        const normalized = text.length === 10 ? `${text}T12:00:00` : text;
+        const date = new Date(normalized);
+        if (Number.isNaN(date.getTime())) return text;
+        return new Intl.DateTimeFormat("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+          ...(includeTime ? { hour: "numeric", minute: "2-digit" } : {})
+        }).format(date);
+      }
+
+      function money(cents) {
+        const value = Number(cents);
+        if (!Number.isFinite(value)) return null;
+        return new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: "USD",
+          maximumFractionDigits: value % 100 === 0 ? 0 : 2
+        }).format(value / 100);
+      }
+
+      function valueSummary(prospect) {
+        const low = money(prospect?.estimatedValueLowCents);
+        const high = money(prospect?.estimatedValueHighCents);
+        const recurring = money(prospect?.recurringValueCents);
+        const period = prospect?.recurringPeriod ? `/${prospect.recurringPeriod}` : "";
+
+        const parts = [];
+        if (low && high && low !== high) parts.push(`${low}–${high}`);
+        else if (high || low) parts.push(high || low);
+        if (recurring) parts.push(`${recurring}${period}`);
+        return parts.join(" + ") || "Value not recorded";
+      }
+
+      function buildSearchText(prospect) {
+        return [
+          prospect.businessName,
+          prospect.website,
+          prospect.industry,
+          prospect.market,
+          prospect.sourceType,
+          prospect.opportunitySummary,
+          prospect.primaryContact?.name,
+          prospect.primaryContact?.email,
+          prospect.nextAction?.title,
+          stageLabel(prospect.stage)
+        ].filter(Boolean).join(" ").toLowerCase();
+      }
+
+      async function crm(operation, payload = {}) {
+        const response = await fetch(WORKER_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: CRM_ACTION,
+            operation,
+            ...payload
+          })
+        });
+
+        let data = null;
+        try {
+          data = await response.json();
+        } catch {
+          data = {};
+        }
+
+        if (!response.ok || data?.ok !== true) {
+          throw new Error(data?.error || `CRM request failed with HTTP ${response.status}.`);
+        }
+
+        return data;
+      }
+
+      async function loadCrm() {
+        els.systemState.textContent = "Connecting to D1…";
+        els.refresh.disabled = true;
+        els.pipelineLoading.hidden = false;
+        els.radarLoading.hidden = false;
+
+        try {
+          const [prospectPayload, radarPayload] = await Promise.all([
+            crm("list_prospects"),
+            crm("list_radar")
+          ]);
+
+          state.prospects = Array.isArray(prospectPayload.prospects)
+            ? prospectPayload.prospects
+            : [];
+          state.radar = Array.isArray(radarPayload.radar)
+            ? radarPayload.radar
+            : [];
+
+          populateStageFilter();
+          renderSummary(prospectPayload.counts || {});
+          renderPipeline();
+          renderRadar();
+          renderPriority();
+
+          els.systemState.textContent =
+            `D1 connected · CRM ${prospectPayload.prospectCrmVersion || "1.0.0"}`;
+        } catch (error) {
+          console.error(`Prospects ${FILE_VERSION}: CRM load failed`, error);
+          els.systemState.textContent = "CRM unavailable";
+          els.pipelineLoading.hidden = true;
+          els.radarLoading.hidden = true;
+          els.pipelineList.hidden = true;
+          els.radarList.hidden = true;
+          els.pipelineEmpty.hidden = false;
+          els.pipelineEmpty.innerHTML = `
+            <strong>CRM could not load from D1.</strong>
+            <p>${escapeHtml(error.message || "Unknown CRM error")}</p>
+          `;
+          els.radarEmpty.hidden = false;
+          els.radarEmpty.innerHTML = `
+            <strong>Radar could not load.</strong>
+            <p>Fix the CRM connection before adding or changing prospect records.</p>
+          `;
+        } finally {
+          els.refresh.disabled = false;
+        }
+      }
+
+      function renderSummary(counts) {
+        const due = Number(counts.overdue || 0) + Number(counts.dueToday || 0);
+        els.activeCount.textContent = Number(counts.active || 0);
+        els.dueCount.textContent = due;
+        els.unmanagedCount.textContent = Number(counts.unmanaged || 0);
+        els.radarCount.textContent = state.radar.length;
+        els.radarSideCount.textContent = state.radar.length;
+      }
+
+      function populateStageFilter() {
+        const existing = els.stage.value || "all";
+        const stages = [...new Set(state.prospects.map(p => p.stage).filter(Boolean))];
+
+        els.stage.innerHTML =
+          `<option value="all">All stages</option>` +
+          stages.map(stage =>
+            `<option value="${escapeHtml(stage)}">${escapeHtml(stageLabel(stage))}</option>`
+          ).join("");
+
+        els.stage.value = stages.includes(existing) ? existing : "all";
+      }
+
+      function renderPipeline() {
+        const query = clean(els.search.value).toLowerCase();
+        const stage = els.stage.value;
+
+        const visible = state.prospects.filter(prospect => {
+          const matchesSearch = !query || buildSearchText(prospect).includes(query);
+          const matchesStage = stage === "all" || prospect.stage === stage;
+          return matchesSearch && matchesStage;
+        });
+
+        els.pipelineLoading.hidden = true;
+        els.pipelineVisibleCount.textContent = visible.length;
+
+        if (!visible.length) {
+          els.pipelineList.hidden = true;
+          els.pipelineEmpty.hidden = false;
+
+          if (state.prospects.length && (query || stage !== "all")) {
+            els.pipelineEmpty.innerHTML = `
+              <strong>No CRM records match this filter.</strong>
+              <p>Clear the search or stage filter to see the full pipeline.</p>
+            `;
+          } else {
+            els.pipelineEmpty.innerHTML = `
+              <strong>No formal CRM Prospects yet.</strong>
+              <p>A business belongs here only after a real appointment is scheduled. Use Radar before that point.</p>
+            `;
+          }
+          return;
+        }
+
+        els.pipelineEmpty.hidden = true;
+        els.pipelineList.hidden = false;
+        els.pipelineList.innerHTML = visible.map(renderProspectCard).join("");
+
+        els.pipelineList.querySelectorAll("[data-open-prospect]").forEach(button => {
+          button.addEventListener("click", () => openProspect(Number(button.dataset.openProspect)));
+        });
+      }
+
+      function renderProspectCard(prospect) {
+        const unmanaged = prospect.isUnmanaged === true;
+        const due = prospect.nextAction?.dueState || "";
+        const badge = unmanaged ? "badge-red" : dueBadgeClass(due);
+        const nextTitle = unmanaged
+          ? "Active prospect has no dated Next Action"
+          : prospect.nextAction?.title || "No open Next Action";
+        const contact = prospect.primaryContact?.name || "Contact not recorded";
+        const market = prospect.market || prospect.industry || "Market not recorded";
+        const insight = prospect.opportunitySummary || "Opportunity summary has not been recorded yet.";
+
+        return `
+          <article class="prospect-card">
+            <div>
+              <h3 class="prospect-name">${escapeHtml(prospect.businessName)}</h3>
+              <p class="prospect-meta">${escapeHtml(contact)} · ${escapeHtml(market)}</p>
+              <p class="prospect-insight">${escapeHtml(insight)}</p>
+              <div class="tag-row">
+                <span class="badge ${statusBadgeClass(prospect.status)}">${escapeHtml(stageLabel(prospect.stage))}</span>
+                <span class="tag">${escapeHtml(valueSummary(prospect))}</span>
+                ${prospect.sourceType ? `<span class="tag">${escapeHtml(prospect.sourceType)}</span>` : ""}
+              </div>
+            </div>
+
+            <div class="next-action-block">
+              <p class="next-label">Highest-Value Next Action</p>
+              <p class="next-title">${escapeHtml(nextTitle)}</p>
+              <p class="next-due ${unmanaged ? "due-none" : due === "overdue" || due === "due_today" ? "due-overdue" : "due-future"}">
+                ${escapeHtml(dueText(prospect.nextAction, unmanaged))}
+              </p>
+              <div class="tag-row">
+                <span class="badge ${badge}">
+                  ${escapeHtml(unmanaged ? "Unmanaged" : prospect.managementState === "managed" ? "Managed" : "Closed")}
+                </span>
+              </div>
+            </div>
+
+            <div class="card-actions">
+              <button class="button button-secondary button-small" type="button" data-open-prospect="${prospect.id}">
+                Open Record
+              </button>
+            </div>
+          </article>
+        `;
+      }
+
+      function renderRadar() {
+        els.radarLoading.hidden = true;
+
+        if (!state.radar.length) {
+          els.radarList.hidden = true;
+          els.radarEmpty.hidden = false;
+          return;
+        }
+
+        els.radarEmpty.hidden = true;
+        els.radarList.hidden = false;
+        els.radarList.innerHTML = state.radar.slice(0, 12).map(record => `
+          <div class="radar-item">
+            <div class="radar-top">
+              <div>
+                <h3 class="radar-name">${escapeHtml(record.businessName || record.vertical || record.sourceDescription || "Radar Record")}</h3>
+                <p class="radar-meta">
+                  ${escapeHtml(record.market || record.vertical || "Market not recorded")}
+                  ${record.contactName ? ` · ${escapeHtml(record.contactName)}` : ""}
+                </p>
+              </div>
+              <span class="badge badge-gray">${escapeHtml(clean(record.status || "radar").replaceAll("_", " "))}</span>
+            </div>
+            <p class="radar-source">
+              <strong>${escapeHtml(record.sourceType || "Source")}</strong>
+              ${record.sourceDescription ? ` · ${escapeHtml(record.sourceDescription)}` : ""}
+            </p>
+          </div>
+        `).join("");
+      }
+
+      function sortPriorityCandidates() {
+        const candidates = state.prospects.filter(p =>
+          p.status === "active" || p.status === "nurture"
+        );
+
+        return candidates.sort((a, b) => {
+          if (a.isUnmanaged && !b.isUnmanaged) return -1;
+          if (!a.isUnmanaged && b.isUnmanaged) return 1;
+
+          const rank = { overdue: 0, due_today: 1, upcoming: 2 };
+          const aRank = rank[a.nextAction?.dueState] ?? 9;
+          const bRank = rank[b.nextAction?.dueState] ?? 9;
+          if (aRank !== bRank) return aRank - bRank;
+
+          const aDate = a.nextAction?.dueDate || "9999-12-31";
+          const bDate = b.nextAction?.dueDate || "9999-12-31";
+          return aDate.localeCompare(bDate);
+        });
+      }
+
+      function renderPriority() {
+        const prospect = sortPriorityCandidates()[0];
+
+        if (!prospect) {
+          els.priorityTitle.textContent = "No active prospect action";
+          els.priorityCopy.textContent =
+            "When an active CRM opportunity exists, its highest-value dated action will appear here.";
+          els.priorityOpen.disabled = true;
+          els.priorityOpen.removeAttribute("data-prospect-id");
+          return;
+        }
+
+        els.priorityTitle.textContent = prospect.businessName;
+        els.priorityCopy.textContent = prospect.isUnmanaged
+          ? "This active relationship has no dated Next Action. That is the first CRM problem to fix."
+          : `${prospect.nextAction?.title || "Review CRM record"} · ${dueText(prospect.nextAction, false)}`;
+
+        els.priorityOpen.disabled = false;
+        els.priorityOpen.dataset.prospectId = prospect.id;
+      }
+
+      async function openProspect(prospectId) {
+        if (!prospectId) return;
+        els.detailPanel.hidden = false;
+        els.detailTitle.textContent = "Loading record…";
+        els.detailSubtitle.textContent = "";
+        els.detailBody.innerHTML = `<div class="loading-skeleton"></div>`;
+        els.detailPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+
+        try {
+          const payload = await crm("get_prospect", { prospectId });
+          state.selectedProspect = payload.prospect || null;
+          renderDetail(state.selectedProspect);
+        } catch (error) {
+          els.detailTitle.textContent = "CRM record unavailable";
+          els.detailBody.innerHTML = `<div class="error-box">${escapeHtml(error.message)}</div>`;
+        }
+      }
+
+      function renderDetail(prospect) {
+        if (!prospect) return;
+
+        els.detailTitle.textContent = prospect.businessName;
+        els.detailSubtitle.textContent =
+          `${stageLabel(prospect.stage)} · ${prospect.primaryContact?.name || "Contact not recorded"}`;
+
+        const contacts = Array.isArray(prospect.contacts) ? prospect.contacts : [];
+        const activities = Array.isArray(prospect.activities) ? prospect.activities : [];
+        const proposals = Array.isArray(prospect.proposals) ? prospect.proposals : [];
+        const agreements = Array.isArray(prospect.agreements) ? prospect.agreements : [];
+        const intelligence = Array.isArray(prospect.intelligence) ? prospect.intelligence : [];
+
+        const latestProposal = proposals[0];
+        const latestAgreement = agreements[0];
+        const latestIntel = intelligence[0];
+
+        els.detailBody.innerHTML = `
+          <div class="detail-grid">
+            <div class="detail-item">
+              <span>Current Stage</span>
+              <strong>${escapeHtml(stageLabel(prospect.stage))}</strong>
+            </div>
+            <div class="detail-item">
+              <span>Appointment</span>
+              <strong>${escapeHtml(formatDate(prospect.appointmentAt))}</strong>
+            </div>
+            <div class="detail-item">
+              <span>Primary Contact</span>
+              <strong>${escapeHtml(contacts[0]?.name || prospect.primaryContact?.name || "Not recorded")}</strong>
+            </div>
+            <div class="detail-item">
+              <span>Contact Email</span>
+              <strong>${escapeHtml(contacts[0]?.email || prospect.primaryContact?.email || "Not recorded")}</strong>
+            </div>
+            <div class="detail-item">
+              <span>Opportunity Value</span>
+              <strong>${escapeHtml(valueSummary(prospect))}</strong>
+            </div>
+            <div class="detail-item">
+              <span>Last Meaningful Contact</span>
+              <strong>${escapeHtml(formatDate(prospect.lastMeaningfulContactAt))}</strong>
+            </div>
+            <div class="detail-item">
+              <span>Next Action</span>
+              <strong>${escapeHtml(prospect.nextAction?.title || (prospect.isUnmanaged ? "MISSING — active record is unmanaged" : "No open action"))}</strong>
+            </div>
+            <div class="detail-item">
+              <span>Due</span>
+              <strong>${escapeHtml(dueText(prospect.nextAction, prospect.isUnmanaged))}</strong>
+            </div>
+            <div class="detail-item">
+              <span>Latest Proposal</span>
+              <strong>${escapeHtml(latestProposal?.title || "No proposal recorded")}</strong>
+            </div>
+            <div class="detail-item">
+              <span>Agreement</span>
+              <strong>${escapeHtml(latestAgreement ? `${latestAgreement.status} · ${money(latestAgreement.contractValueCents) || ""}` : "No signed agreement")}</strong>
+            </div>
+            <div class="detail-item">
+              <span>Latest Intelligence</span>
+              <strong>${escapeHtml(latestIntel?.title || "No durable intelligence brief recorded")}</strong>
+            </div>
+            <div class="detail-item">
+              <span>Management State</span>
+              <strong>${escapeHtml(prospect.isUnmanaged ? "Unmanaged — action required" : prospect.managementState || "Unknown")}</strong>
+            </div>
+          </div>
+
+          <div class="timeline">
+            ${activities.length ? activities.slice(0, 8).map(activity => `
+              <div class="timeline-item">
+                <strong>${escapeHtml(activity.subject || clean(activity.activityType).replaceAll("_", " "))}</strong>
+                <p>${escapeHtml(activity.summary || "")}</p>
+                <time>${escapeHtml(formatDate(activity.occurredAt))}${activity.outcome ? ` · ${escapeHtml(activity.outcome.replaceAll("_", " "))}` : ""}</time>
+              </div>
+            `).join("") : `
+              <div class="timeline-item">
+                <strong>No relationship activity recorded yet.</strong>
+                <p>The Prospect record exists, but its communication and discovery history still needs to be connected.</p>
+              </div>
+            `}
+          </div>
+        `;
+      }
+
+      function openDialog(dialog, errorBox) {
+        if (errorBox) {
+          errorBox.hidden = true;
+          errorBox.textContent = "";
+        }
+        if (typeof dialog.showModal === "function") {
+          dialog.showModal();
+        } else {
+          dialog.setAttribute("open", "");
+        }
+      }
+
+      function closeDialog(dialog) {
+        if (typeof dialog.close === "function") dialog.close();
+        else dialog.removeAttribute("open");
+      }
+
+      function formObject(form) {
+        return Object.fromEntries(new FormData(form).entries());
+      }
+
+      function localDateTime(date, time) {
+        const d = clean(date);
+        const t = clean(time);
+        return d && t ? `${d}T${t}:00` : null;
+      }
+
+      async function saveRadar(event) {
+        event.preventDefault();
+        els.radarError.hidden = true;
+        els.saveRadar.disabled = true;
+
+        try {
+          const values = formObject(els.radarForm);
+          const payload = {
+            businessName: clean(values.businessName) || null,
+            website: clean(values.website) || null,
+            vertical: clean(values.vertical) || null,
+            market: clean(values.market) || null,
+            sourceType: clean(values.sourceType),
+            sourceDescription: clean(values.sourceDescription) || null,
+            contactName: clean(values.contactName) || null,
+            notes: clean(values.notes) || null
+          };
+
+          await crm("create_radar", payload);
+          closeDialog(els.radarDialog);
+          els.radarForm.reset();
+          await loadCrm();
+        } catch (error) {
+          els.radarError.textContent = error.message || "Radar record could not be saved.";
+          els.radarError.hidden = false;
+        } finally {
+          els.saveRadar.disabled = false;
+        }
+      }
+
+      async function saveProspect(event) {
+        event.preventDefault();
+        els.prospectError.hidden = true;
+        els.saveProspect.disabled = true;
+
+        try {
+          const values = formObject(els.prospectForm);
+          const appointmentAt = localDateTime(values.appointmentDate, values.appointmentTime);
+
+          if (!appointmentAt) {
+            throw new Error("A real appointment date and time are required before a formal CRM Prospect can be created.");
+          }
+
+          const lastMeaningfulContactAt =
+            clean(values.lastContactDate)
+              ? localDateTime(values.lastContactDate, clean(values.lastContactTime) || "12:00")
+              : null;
+
+          const contactName = clean(values.contactName);
+
+          const payload = {
+            businessName: clean(values.businessName),
+            stage: clean(values.stage) || "appointment_scheduled",
+            appointmentAt,
+            website: clean(values.website) || null,
+            industry: clean(values.industry) || null,
+            market: clean(values.market) || null,
+            sourceType: clean(values.sourceType) || null,
+            opportunitySummary: clean(values.opportunitySummary) || null,
+            lastMeaningfulContactAt,
+            estimatedValueLow: clean(values.estimatedValueLow) || null,
+            estimatedValueHigh: clean(values.estimatedValueHigh) || null,
+            recurringValue: clean(values.recurringValue) || null,
+            recurringPeriod: clean(values.recurringPeriod) || null,
+            notes: clean(values.notes) || null,
+            primaryContact: contactName ? {
+              name: contactName,
+              email: clean(values.contactEmail) || null,
+              role: "decision_maker"
+            } : null
+          };
+
+          const result = await crm("create_prospect", payload);
+          closeDialog(els.prospectDialog);
+          els.prospectForm.reset();
+          await loadCrm();
+
+          if (result?.prospect?.id) {
+            await openProspect(result.prospect.id);
+          }
+        } catch (error) {
+          els.prospectError.textContent = error.message || "CRM Prospect could not be created.";
+          els.prospectError.hidden = false;
+        } finally {
+          els.saveProspect.disabled = false;
+        }
+      }
+
+      document.getElementById("open-radar").addEventListener("click", () =>
+        openDialog(els.radarDialog, els.radarError)
+      );
+      document.getElementById("open-prospect").addEventListener("click", () =>
+        openDialog(els.prospectDialog, els.prospectError)
+      );
+
+      document.querySelectorAll("[data-close-dialog]").forEach(button => {
+        button.addEventListener("click", () => {
+          const dialog = document.getElementById(button.dataset.closeDialog);
+          if (dialog) closeDialog(dialog);
+        });
+      });
+
+      els.radarForm.addEventListener("submit", saveRadar);
+      els.prospectForm.addEventListener("submit", saveProspect);
+      els.search.addEventListener("input", renderPipeline);
+      els.stage.addEventListener("change", renderPipeline);
+      els.refresh.addEventListener("click", loadCrm);
+
+      els.priorityOpen.addEventListener("click", () => {
+        const id = Number(els.priorityOpen.dataset.prospectId);
+        if (id) openProspect(id);
+      });
+
+      els.closeDetail.addEventListener("click", () => {
+        els.detailPanel.hidden = true;
+        state.selectedProspect = null;
+      });
 
       if (!window.GCMOShell) {
-        console.error("Prospects 1.1.0: shared/gcm-shell.js did not load.");
+        console.error(`Prospects ${FILE_VERSION}: shared/gcm-shell.js did not load.`);
       } else {
         window.GCMOShell.mount({
           currentPage: "prospects",
-          statusText: "Prospect workspace operational · Prospects v1.1.0"
+          statusText: `CRM D1 pipeline · Prospects v${FILE_VERSION}`
         });
       }
 
-      applyFiltersAndSort();
+      loadCrm();
     })();
   </script>
 </body>
