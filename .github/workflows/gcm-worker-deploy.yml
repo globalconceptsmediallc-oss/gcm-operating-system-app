@@ -1,14 +1,15 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gcm-worker-deploy.yml
-# Version: 1.3.8
+# Version: 1.3.9
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Cloudflare Worker from main.
 # Change Notes:
-# - LOCK: require Worker 7.19.0 and the durable Prospect CRM route.
-# - Verify CRM D1 migration is live by reading list_prospects.
+# - LOCK: require Worker 7.19.0 and Prospect CRM 1.1.0.
+# - Verify CRM D1 migrations are live by reading list_prospects and service catalog.
 # - Verify the core business rule that a formal Prospect cannot be created
 #   without a real scheduled appointment.
+# - Verify service/startup route boundaries without creating test Prospect records.
 # - Preserve Gmail operator-decision routes, Calendar, Work due-date source,
 #   Operating Sessions, and auth boundaries.
 # =========================================================
@@ -132,6 +133,34 @@ jobs:
             throw new Error("Prospect CRM live read contract is invalid or D1 migration is unavailable.");
           }
 
+          const serviceCatalogResponse = await fetch(url, {
+            method:"POST",
+            headers:{ "Content-Type":"application/json" },
+            body:JSON.stringify({ action:"prospect-crm", operation:"list_service_catalog" })
+          });
+          if (!serviceCatalogResponse.ok) {
+            throw new Error(`Prospect CRM service catalog returned HTTP ${serviceCatalogResponse.status}`);
+          }
+          const serviceCatalog = await serviceCatalogResponse.json();
+          if (serviceCatalog?.prospectCrmVersion !== "1.1.0") {
+            throw new Error(`Expected Prospect CRM 1.1.0, received ${serviceCatalog?.prospectCrmVersion || "unknown"}`);
+          }
+          const requiredServices = ["website_rebuild", "seo_search_visibility", "analytics_measurement", "consulting_agency_of_record"];
+          for (const serviceKey of requiredServices) {
+            if (!serviceCatalog?.services?.some(service => service?.key === serviceKey)) {
+              throw new Error(`Prospect CRM service catalog is missing ${serviceKey}`);
+            }
+          }
+
+          const startupBoundaryResponse = await fetch(url, {
+            method:"POST",
+            headers:{ "Content-Type":"application/json" },
+            body:JSON.stringify({ action:"prospect-crm", operation:"get_startup_package" })
+          });
+          if (startupBoundaryResponse.status !== 400) {
+            throw new Error(`Startup package boundary expected HTTP 400 without prospectId, received ${startupBoundaryResponse.status}`);
+          }
+
           const appointmentBoundaryResponse = await fetch(url, {
             method:"POST",
             headers:{ "Content-Type":"application/json" },
@@ -210,5 +239,5 @@ jobs:
           if (protectedResponse.status !== 401) {
             throw new Error(`Expected authentication boundary HTTP 401, received ${protectedResponse.status}`);
           }
-          console.log("PASS live Worker 7.19.0, Prospect CRM, appointment boundary, Gmail decision routes, Calendar, Work due-date source, Operating Sessions, and authentication boundary");
+          console.log("PASS live Worker 7.19.0, Prospect CRM 1.1.0, service startup catalog, appointment boundary, Gmail decision routes, Calendar, Work due-date source, Operating Sessions, and authentication boundary");
           NODE
