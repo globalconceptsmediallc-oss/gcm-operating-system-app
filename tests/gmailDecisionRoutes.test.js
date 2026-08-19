@@ -1,11 +1,15 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/gmailDecisionRoutes.test.js
-   Version: 1.0.0
+   Version: 1.0.1
    Status: Production Regression Test
    Purpose: Verify Morning Command can distinguish delete, information,
             monitoring, direct requested work, and investigation paths without
             inventing Work from informational mail.
+   Change notes — 1.0.1:
+   - Stops pinning Gmail decision behavior to an unrelated shared-shell version.
+   - Requires the shell to load the decision asset with the version declared by
+     shared/today-gmail-decisions.js.
    ========================================================= */
 
 import assert from "node:assert/strict";
@@ -71,7 +75,12 @@ assert.match(todayDecisions, /Keep as Information/);
 assert.match(todayDecisions, /Save as Monitoring/);
 assert.match(todayDecisions, /Create Requested Work/);
 assert.match(todayDecisions, /Create Investigation/);
-assert.match(shell, /Version: 2\.0\.23/);
-assert.match(shell, /shared\/today-gmail-decisions\.js\?v=1\.0\.0/);
+
+const decisionVersion = todayDecisions.match(/const FILE_VERSION = "([^"]+)";/)?.[1];
+assert.ok(decisionVersion, "Today Gmail decision asset must declare FILE_VERSION");
+assert.match(
+  shell,
+  new RegExp(`shared/today-gmail-decisions\\.js\\?v=${decisionVersion.replaceAll(".", "\\.")}`)
+);
 
 console.log("PASS Gmail operator decision routes");
