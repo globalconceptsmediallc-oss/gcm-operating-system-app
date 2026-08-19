@@ -1,22 +1,22 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gcm-shell.js
-   Version: 2.0.22
+   Version: 2.0.23
    Status: Production Road-Test Candidate
    Purpose: Shared internal GCM OS application shell foundation.
-   Source: gcm-shell.js 2.0.21 production navigation
-   Sprint: Work — Durable Due Dates
+   Source: gcm-shell.js 2.0.22 production navigation
+   Sprint: Gmail — Operator Decision Routes
    Change:
-   - Preserves the durable red/yellow/green navigation urgency contract.
-   - Preserves Calendar D1 durability and refreshNavAttention.
-   - Loads the optional Work due-date enhancement only on work.html.
+   - Preserves durable red/yellow/green navigation urgency.
+   - Preserves Calendar durability and Work due-date enhancement.
+   - Loads unified Morning Command email decision controls on Today.
    - Preserves all existing Work Investigation and Media enhancements.
    ========================================================= */
 
 (() => {
   "use strict";
 
-  const SHELL_VERSION = "2.0.22";
+  const SHELL_VERSION = "2.0.23";
   const WORKER_ENDPOINT =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const MISSION_CONTROL_ACTION = "get-mission-control";
@@ -275,6 +275,13 @@
 
   function loadPageEnhancements() {
     const path = window.location.pathname;
+
+    if (/\/today\.html$/i.test(path)) {
+      appendScript(
+        "shared/today-gmail-decisions.js?v=1.0.0",
+        "data-gcm-today-gmail-decisions"
+      );
+    }
 
     if (/\/calendar\.html$/i.test(path)) {
       appendScript(

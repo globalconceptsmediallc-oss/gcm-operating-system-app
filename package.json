@@ -1,14 +1,15 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.3",
+  "version": "6.1.4",
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:work-due-date",
+    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:work-due-date && npm run test:gmail-decisions",
     "test:website-intelligence": "node tests/websiteIntelligence.test.js",
     "test:code-intelligence": "node tests/codeIntelligence.test.js",
     "test:operating-sessions": "node tests/operatingSessionTasks.test.js && node tests/osAuth.test.js && node tests/operatingSessionIntake.test.js",
     "test:calendar-durability": "node tests/calendarDurability.test.js",
-    "test:work-due-date": "node tests/workDueDate.test.js"
+    "test:work-due-date": "node tests/workDueDate.test.js",
+    "test:gmail-decisions": "node tests/gmailDecisionRoutes.test.js"
   }
 }

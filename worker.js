@@ -1,13 +1,21 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.17.0
+   Version: 7.18.0
    Status: OS 2.0 Production Road-Test Candidate
-   Source: Production worker.js 7.16.0
-   Sprint: Calendar — Durable Appointment Records
+   Source: Production worker.js 7.17.0
+   Sprint: Gmail — Operator Decision Routes
    Purpose: Preserve every verified production route while exposing the
-            durable Calendar appointment operations required by Calendar,
-            Mission Control, and shared navigation urgency.
+            durable Gmail decision paths required for Delete / Information /
+            Monitoring / Requested Work / Investigation processing.
+
+   Changes in 7.18.0:
+   - Adds read-only Gmail direct-Work candidate evaluation.
+   - Adds human-approved Gmail Communication + direct Work Item creation.
+   - Adds Delete — No Action Required, which moves Gmail to Trash with 0 OS writes.
+   - Adds Keep as Information, which creates one Communication and no Work/Investigation.
+   - Preserves Calendar, Historical Rehabilitation, Operating Sessions,
+     Mission Control, Media, Work, and all existing production behavior.
 
    Changes in 7.17.0:
    - Adds calendar-operations to the Worker action allowlist.
@@ -80,6 +88,14 @@ import {
 
 import { handleGmailGet, handleGmailAction } from "./routes/gmailIntegration.js";
 import {
+  handleGmailWorkRequests,
+  GMAIL_WORK_REQUEST_ACTIONS
+} from "./routes/gmailWorkRequests.js";
+import {
+  handleGmailDispositions,
+  GMAIL_DISPOSITION_ACTIONS
+} from "./routes/gmailDispositions.js";
+import {
   handleOperatingSessions,
   OPERATING_SESSION_ACTION_LIST
 } from "./routes/operatingSessions.js";
@@ -88,7 +104,7 @@ import {
   PREPARE_OPERATING_SESSION_ACTION
 } from "./routes/operatingSessionIntake.js";
 
-const WORKER_FILE_VERSION = "7.17.0";
+const WORKER_FILE_VERSION = "7.18.0";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
@@ -118,6 +134,8 @@ const SUPPORTED_ACTIONS = [
   ACTIONS.APPROVE_GMAIL_MONITORING,
   ACTIONS.APPROVE_GMAIL_INVESTIGATION,
   ACTIONS.CREATE_GMAIL_DRAFT,
+  ...GMAIL_WORK_REQUEST_ACTIONS,
+  ...GMAIL_DISPOSITION_ACTIONS,
   PREPARE_OPERATING_SESSION_ACTION,
   ...OPERATING_SESSION_ACTION_LIST
 ].filter(Boolean);
@@ -141,13 +159,15 @@ export default {
         version: VERSION,
         workerFileVersion: WORKER_FILE_VERSION,
         contractVersion: API_CONTRACT_VERSION,
-        sprint: "Calendar — Durable Appointment Records",
+        sprint: "Gmail — Operator Decision Routes",
         architecture:
-          "Modular production router with Agency Command, Calendar Operations, Historical Rehabilitation, Intelligence Backlog, Intelligence Refresh, Communication Intelligence, Activity Intelligence, Intelligence Processing, Prospect Intelligence, Communications analysis, Guided Investigation, and operational processing.",
+          "Modular production router with Agency Command, Calendar Operations, Gmail operator decisions, Historical Rehabilitation, Intelligence Backlog, Intelligence Refresh, Communication Intelligence, Activity Intelligence, Intelligence Processing, Prospect Intelligence, Communications analysis, Guided Investigation, and operational processing.",
         actions: SUPPORTED_ACTIONS,
         engines: [
           "agency-command",
           "calendar-operations",
+          "gmail-work-requests",
+          "gmail-dispositions",
           "historical-rehabilitation",
           "intelligence-backlog",
           "intelligence-refresh",
@@ -176,6 +196,8 @@ export default {
           routes: [
             "agency-command",
             "calendar-operations",
+            "gmail-work-requests",
+            "gmail-dispositions",
             "historical-rehabilitation",
             "intelligence-backlog",
             "intelligence-refresh",
@@ -235,6 +257,12 @@ export default {
       }
       if (OPERATING_SESSION_ACTION_LIST.includes(action)) {
         return await handleOperatingSessions(body, env, requestId, request);
+      }
+      if (GMAIL_WORK_REQUEST_ACTIONS.includes(action)) {
+        return await handleGmailWorkRequests(body, env, requestId);
+      }
+      if (GMAIL_DISPOSITION_ACTIONS.includes(action)) {
+        return await handleGmailDispositions(body, env, requestId);
       }
       switch (action) {
         case ACTIONS.GET_GMAIL_STATUS:
