@@ -1,11 +1,23 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/prospectCrm.js
-   Version: 1.0.0
+   Version: 1.1.0
    Status: Production Road-Test Candidate
    Purpose: Durable Prospecting Radar + CRM operations for GCM.
 
-   Change Notes:
+   Change Notes — 1.1.0:
+   - Adds a service catalog for proposed and contracted GCM services.
+   - Preserves proposed services without treating them as signed responsibility.
+   - Confirms contracted services only against a signed agreement.
+   - Builds one deduplicated startup package from the agreed services.
+   - Tracks startup requirements as Needed → Requested → Received → Verified.
+   - Separates client/mutual requirements from GCM internal startup requirements.
+   - Advances the highest-value Next Action from payment gate to startup collection
+     and then to begin contracted work when the package is verified.
+   - Preserves every verified CRM 1.0.0 Radar, appointment, follow-up, proposal,
+     agreement, payment, and management rule.
+
+   Change Notes — 1.0.0:
    - Adds a durable Radar record for pre-appointment prospecting intelligence.
    - Creates a formal CRM Prospect only when a real appointment is scheduled.
    - Preserves contacts, relationship activity, intelligence briefs, proposals,
@@ -26,7 +38,7 @@ import {
 } from "../shared/http.js";
 
 export const PROSPECT_CRM_ACTION = "prospect-crm";
-export const PROSPECT_CRM_VERSION = "1.0.0";
+export const PROSPECT_CRM_VERSION = "1.1.0";
 
 const ACTIVE_MANAGED_STATUSES = new Set(["active", "nurture"]);
 const ALLOWED_STATUSES = new Set([
@@ -52,6 +64,194 @@ const ALLOWED_STAGES = new Set([
   "lost",
   "converted"
 ]);
+
+const SERVICE_CATALOG = [
+  {
+    key: "website_rebuild",
+    name: "Website Design / Rebuild",
+    category: "Website",
+    description: "New website, redesign, migration, or major rebuild work.",
+    requirements: [
+      requirement("domain_dns_access", "Domain / DNS access", "Please provide access to the domain registrar and DNS currently controlling the website.", "Access", "client"),
+      requirement("hosting_access", "Current hosting access", "Please provide access to the current website hosting account or hosting provider.", "Access", "client"),
+      requirement("website_admin_access", "Website / CMS admin access", "Please provide administrator access to the current website or content management system.", "Access", "client"),
+      requirement("brand_assets", "Logo and brand assets", "Please send the current logo files, brand colors, fonts, and any brand standards you want preserved.", "Assets", "client"),
+      requirement("photo_video_assets", "Approved photo and video assets", "Please provide approved photos, video, and other visual assets that can be used on the website.", "Assets", "client"),
+      requirement("content_inventory", "Current content and must-keep material", "Please identify existing pages, copy, downloads, forms, or other content that must be preserved in the rebuild.", "Content", "mutual"),
+      requirement("priority_services", "Priority services / products", "Please confirm the services or products that should receive the strongest emphasis on the new site.", "Business", "client"),
+      requirement("service_areas", "Primary markets and service areas", "Please confirm the cities, counties, regions, or other geographic markets the website should support.", "Business", "client"),
+      requirement("form_destinations", "Lead and form destinations", "Please confirm where website calls, forms, quote requests, or other leads should be delivered.", "Operations", "client"),
+      requirement("project_staging_plan", "Project workspace and staging plan", "GCM establishes the project workspace, repository/staging plan, and deployment path.", "Internal", "gcm")
+    ]
+  },
+  {
+    key: "website_maintenance",
+    name: "Website Maintenance",
+    category: "Website",
+    description: "Ongoing website updates, maintenance, fixes, and improvement work.",
+    requirements: [
+      requirement("website_admin_access", "Website / CMS admin access", "Please provide administrator access to the website or content management system.", "Access", "client"),
+      requirement("hosting_access", "Current hosting access", "Please provide access to the current hosting account when hosting-level work may be required.", "Access", "client"),
+      requirement("domain_dns_access", "Domain / DNS access", "Please provide domain and DNS access when DNS, SSL, redirects, or deployment changes may be required.", "Access", "client"),
+      requirement("approval_contact", "Primary approval contact", "Please identify who can approve website changes and content decisions.", "Operations", "client"),
+      requirement("brand_assets", "Logo and brand assets", "Please provide current approved logos and brand standards for future updates.", "Assets", "client")
+    ]
+  },
+  {
+    key: "seo_search_visibility",
+    name: "SEO / Search Visibility",
+    category: "Search",
+    description: "Organic search visibility, technical SEO, content, and competitive search improvement.",
+    requirements: [
+      requirement("gsc_access", "Google Search Console access", "Please add GCM to the Google Search Console property for the website.", "Access", "client"),
+      requirement("ga4_access", "Google Analytics 4 access", "Please add GCM to the Google Analytics 4 property used by the website.", "Access", "client"),
+      requirement("website_admin_access", "Website / CMS admin access", "Please provide administrator access so approved SEO changes can be implemented.", "Access", "client"),
+      requirement("priority_services", "Priority services / products", "Please identify the services or products that matter most for revenue and growth.", "Business", "client"),
+      requirement("service_areas", "Primary markets and service areas", "Please confirm the geographic markets where organic visibility matters most.", "Business", "client"),
+      requirement("known_competitors", "Known competitors", "Please identify the competitors you most often encounter or want GCM to watch.", "Business", "client"),
+      requirement("existing_seo_reports", "Existing SEO reports / tools", "Please share any current SEO reports, tracking projects, or agency/vendor information that may contain useful history.", "Evidence", "client"),
+      requirement("search_baseline", "Initial search baseline", "GCM captures the starting search visibility, technical condition, and competitive baseline before material SEO changes.", "Internal", "gcm")
+    ]
+  },
+  {
+    key: "local_seo_gbp",
+    name: "Local SEO / Google Business Profile",
+    category: "Search",
+    description: "Local search visibility, Google Business Profile, listings, and geographic positioning.",
+    requirements: [
+      requirement("gbp_access", "Google Business Profile access", "Please add GCM as a manager to the applicable Google Business Profile location(s).", "Access", "client"),
+      requirement("business_nap", "Verified business name, address, and phone", "Please confirm the official business name, address, phone number, hours, and primary website used for local listings.", "Business", "client"),
+      requirement("service_areas", "Primary markets and service areas", "Please confirm the local markets and service areas that matter most.", "Business", "client"),
+      requirement("priority_services", "Priority services / products", "Please identify the local services or products that should receive priority.", "Business", "client"),
+      requirement("website_admin_access", "Website / CMS admin access", "Please provide administrator access when local landing-page or on-site changes are part of the work.", "Access", "client"),
+      requirement("local_baseline", "Local visibility baseline", "GCM records the starting Google Business Profile, listings, review, and local search condition.", "Internal", "gcm")
+    ]
+  },
+  {
+    key: "google_ads_paid_search",
+    name: "Google Ads / Paid Search",
+    category: "Advertising",
+    description: "Google Ads account management, paid search, landing pages, and conversion improvement.",
+    requirements: [
+      requirement("google_ads_access", "Google Ads access", "Please provide access to the Google Ads account or approve the GCM manager-account invitation.", "Access", "client"),
+      requirement("ga4_access", "Google Analytics 4 access", "Please add GCM to the GA4 property used for paid-search measurement.", "Access", "client"),
+      requirement("gtm_access", "Google Tag Manager access", "Please add GCM to Google Tag Manager if the site uses GTM for advertising or conversion tracking.", "Access", "client"),
+      requirement("website_admin_access", "Website / landing-page access", "Please provide access to the website or landing-page system when campaign pages or tracking changes are required.", "Access", "client"),
+      requirement("conversion_goals", "Lead and conversion definition", "Please confirm which calls, forms, purchases, appointments, or other actions count as valuable conversions.", "Business", "mutual"),
+      requirement("service_areas", "Campaign geography", "Please confirm the geographic areas that paid advertising should target or exclude.", "Business", "client"),
+      requirement("ad_budget", "Approved advertising budget", "Please confirm the monthly media budget available for Google Ads, separate from GCM fees.", "Finance", "client"),
+      requirement("paid_search_baseline", "Paid-search baseline", "GCM captures existing campaigns, goals, spend, performance, and tracking condition before making material changes.", "Internal", "gcm")
+    ]
+  },
+  {
+    key: "social_media",
+    name: "Social Media",
+    category: "Marketing",
+    description: "Organic social content, account management, publishing, and campaign support.",
+    requirements: [
+      requirement("social_account_access", "Social account access", "Please provide access to the social profiles and business-manager accounts included in the work.", "Access", "client"),
+      requirement("brand_assets", "Logo and brand assets", "Please send approved logo files, brand colors, fonts, and visual standards.", "Assets", "client"),
+      requirement("photo_video_assets", "Approved photo and video assets", "Please provide the current photo/video library and identify what GCM may publish.", "Assets", "client"),
+      requirement("approval_contact", "Primary approval contact", "Please identify who can approve social content and how quickly approvals can normally be returned.", "Operations", "client"),
+      requirement("social_goals", "Social priorities and audience", "Please confirm the audiences, offers, services, events, or business goals social media should support.", "Business", "mutual"),
+      requirement("social_content_plan", "Initial social content plan", "GCM establishes the first content themes, publishing cadence, and measurement approach.", "Internal", "gcm")
+    ]
+  },
+  {
+    key: "media_planning_buying",
+    name: "Media Planning / Buying",
+    category: "Advertising",
+    description: "Traditional/digital media evaluation, planning, buying, trafficking, and vendor coordination.",
+    requirements: [
+      requirement("current_media_schedule", "Current media schedules / contracts", "Please provide current media schedules, orders, contracts, invoices, or proposals that GCM should evaluate or manage.", "Evidence", "client"),
+      requirement("media_contacts", "Current media/vendor contacts", "Please provide the sales representatives, stations, publications, platforms, or vendors currently involved.", "Operations", "client"),
+      requirement("media_budget", "Approved media budget", "Please confirm the working media budget and any committed spend already in place.", "Finance", "client"),
+      requirement("target_markets", "Target markets and audience", "Please confirm the geographic markets and audiences the media plan should reach.", "Business", "client"),
+      requirement("approval_contact", "Primary approval contact", "Please identify who can approve schedules, creative, and material media changes.", "Operations", "client"),
+      requirement("historical_media_performance", "Historical media results", "Please share prior performance reports, lead information, call tracking, or other evidence that can improve planning.", "Evidence", "client"),
+      requirement("media_baseline", "Current media baseline", "GCM records the active schedule, commitments, deadlines, and available performance evidence before recommending changes.", "Internal", "gcm")
+    ]
+  },
+  {
+    key: "analytics_measurement",
+    name: "Analytics / GA4 / Measurement",
+    category: "Analytics",
+    description: "Analytics, tag management, measurement repair, conversion tracking, and reporting foundations.",
+    requirements: [
+      requirement("ga4_access", "Google Analytics 4 access", "Please add GCM to the Google Analytics 4 property used by the website.", "Access", "client"),
+      requirement("gtm_access", "Google Tag Manager access", "Please add GCM to Google Tag Manager if the site uses GTM.", "Access", "client"),
+      requirement("gsc_access", "Google Search Console access", "Please add GCM to Search Console when organic-search measurement is part of the analytics picture.", "Access", "client"),
+      requirement("website_admin_access", "Website / CMS admin access", "Please provide website access if tags, pixels, code, or ecommerce integrations need to be installed or repaired.", "Access", "client"),
+      requirement("conversion_goals", "Lead and conversion definition", "Please confirm which business actions should be measured as leads, sales, appointments, or other conversions.", "Business", "mutual"),
+      requirement("measurement_baseline", "Measurement baseline and live validation", "GCM documents the current measurement stack and verifies what is and is not collecting before changes are made.", "Internal", "gcm")
+    ]
+  },
+  {
+    key: "email_marketing",
+    name: "Email Marketing",
+    category: "Marketing",
+    description: "Email platform, campaigns, automations, lists, and reporting support.",
+    requirements: [
+      requirement("email_platform_access", "Email marketing platform access", "Please provide access to the email platform used for campaigns, automations, or customer lists.", "Access", "client"),
+      requirement("email_list_source", "Approved email list / audience source", "Please identify the approved customer/prospect lists and how consent or list ownership is maintained.", "Data", "client"),
+      requirement("brand_assets", "Logo and brand assets", "Please provide approved brand assets for email design.", "Assets", "client"),
+      requirement("approval_contact", "Primary approval contact", "Please identify who approves campaign copy, offers, and send timing.", "Operations", "client"),
+      requirement("email_goals", "Email business goals", "Please confirm the products, services, events, offers, or customer actions email should support.", "Business", "mutual"),
+      requirement("email_baseline", "Email program baseline", "GCM records current lists, automations, campaigns, deliverability signals, and available performance history.", "Internal", "gcm")
+    ]
+  },
+  {
+    key: "creative_graphic_design",
+    name: "Creative / Graphic Design",
+    category: "Creative",
+    description: "Brand, campaign, print, digital, and marketing creative production.",
+    requirements: [
+      requirement("brand_assets", "Logo and brand assets", "Please send the current logo files, brand colors, fonts, and existing brand standards.", "Assets", "client"),
+      requirement("brand_guidelines", "Brand guidelines / examples", "Please provide any formal brand guide plus examples of work you do or do not want GCM to follow.", "Assets", "client"),
+      requirement("creative_source_assets", "Source photos, copy, and production assets", "Please provide the approved photos, copy, product information, disclaimers, and other source material needed for the agreed creative.", "Assets", "client"),
+      requirement("approval_contact", "Primary approval contact", "Please identify who can approve creative and final production files.", "Operations", "client"),
+      requirement("creative_specs", "Deliverables and production specifications", "GCM confirms sizes, formats, placements, deadlines, and vendor specifications before production.", "Internal", "gcm")
+    ]
+  },
+  {
+    key: "video_radio_commercial_production",
+    name: "Video / Radio / Commercial Production",
+    category: "Creative",
+    description: "Script, audio, video, commercial production, traffic assets, and co-op support.",
+    requirements: [
+      requirement("brand_assets", "Logo and brand assets", "Please provide approved logos and brand assets needed for production.", "Assets", "client"),
+      requirement("production_direction", "Campaign topic and direction", "Please confirm the offer, topic, business objective, mandatory points, and intended audience for the production.", "Business", "mutual"),
+      requirement("existing_audio_video", "Existing audio/video assets", "Please provide any existing voice, music, video, photography, or prior commercial assets that may be reused or referenced.", "Assets", "client"),
+      requirement("approval_contact", "Primary approval contact", "Please identify who has final approval authority for scripts and produced spots.", "Operations", "client"),
+      requirement("coop_requirements", "Co-op / compliance requirements", "Please provide manufacturer, co-op, legal, disclaimer, ISCI, traffic, or other compliance requirements that apply.", "Compliance", "client"),
+      requirement("production_workflow", "Production and delivery workflow", "GCM establishes script approval, talent/recording, production, co-op, traffic, and final-proof checkpoints.", "Internal", "gcm")
+    ]
+  },
+  {
+    key: "consulting_agency_of_record",
+    name: "Consulting / Agency-of-Record",
+    category: "Consulting",
+    description: "Ongoing strategic marketing, growth, vendor, and agency operating support.",
+    requirements: [
+      requirement("business_goals", "Current business goals and priorities", "Please identify the most important business goals GCM should help improve over the next 90 days and year.", "Business", "mutual"),
+      requirement("decision_makers", "Decision makers and operating contacts", "Please identify the owners, managers, staff, or partners who make or influence marketing and operational decisions.", "Operations", "client"),
+      requirement("marketing_accounts_overview", "Current marketing accounts and vendors", "Please provide a list of current marketing platforms, agencies, vendors, media partners, and key account relationships GCM will need to understand.", "Operations", "client"),
+      requirement("known_competitors", "Known competitors", "Please identify the businesses you consider your most meaningful competitors.", "Business", "client"),
+      requirement("marketing_budget", "Current marketing investment", "Please provide the current or planned marketing/media budget ranges needed for practical recommendations.", "Finance", "client"),
+      requirement("reporting_expectations", "Reporting and communication expectations", "Please confirm the decision cadence, meetings, reporting expectations, and primary communication contacts.", "Operations", "mutual"),
+      requirement("agency_baseline", "Agency operating baseline", "GCM establishes the starting business, marketing, measurement, visibility, reputation, media, and competitive picture within the contracted responsibility.", "Internal", "gcm")
+    ]
+  },
+  {
+    key: "custom_other",
+    name: "Custom / Other",
+    category: "Other",
+    description: "A specifically defined service that does not fit the standard catalog.",
+    requirements: [
+      requirement("custom_scope_definition", "Custom scope startup requirements", "GCM and the client confirm the access, assets, information, approvals, and other inputs required by the custom signed scope.", "Scope", "mutual")
+    ]
+  }
+];
 
 export async function handleProspectCrm(body, env, requestId) {
   const db = getDatabase(env);
@@ -100,6 +300,16 @@ export async function handleProspectCrm(body, env, requestId) {
         return await recordAgreement(body, db, requestId);
       case "record_payment":
         return await recordPayment(body, db, requestId);
+      case "list_service_catalog":
+        return listServiceCatalog(requestId);
+      case "set_proposed_services":
+        return await setProposedServices(body, db, requestId);
+      case "confirm_contracted_services":
+        return await confirmContractedServices(body, db, requestId);
+      case "get_startup_package":
+        return await getStartupPackage(body, db, requestId);
+      case "update_startup_requirement":
+        return await updateStartupRequirement(body, db, requestId);
       default:
         return jsonResponse({
           ok: false,
@@ -147,7 +357,12 @@ function supportedOperations() {
     "set_next_action",
     "complete_next_action",
     "record_agreement",
-    "record_payment"
+    "record_payment",
+    "list_service_catalog",
+    "set_proposed_services",
+    "confirm_contracted_services",
+    "get_startup_package",
+    "update_startup_requirement"
   ];
 }
 
@@ -1474,12 +1689,28 @@ async function recordPayment(body, db, requestId) {
       WHERE id = ?
     `).bind(prospectId).run();
 
+    const startup = await readStartupState(db, prospectId, agreementId);
+    const packageReady = startup?.package?.readyToStart === true;
+    const hasPackage = Boolean(startup?.package);
+
     await replaceOpenNextAction(db, prospectId, {
-      actionType: "begin_onboarding",
-      title: "Begin service-specific onboarding",
+      actionType: packageReady
+        ? "begin_contracted_work"
+        : hasPackage
+          ? "collect_startup_requirements"
+          : "confirm_contracted_services",
+      title: packageReady
+        ? "Begin contracted work"
+        : hasPackage
+          ? "Collect and verify startup requirements"
+          : "Confirm contracted services and build startup package",
       dueDate: addBusinessDays(dateOnly(receivedAt), 1),
       priority: "High",
-      reason: "Signed scope exists and the required initial-payment gate has been cleared. Gather the access, assets, and kickoff requirements appropriate to the contracted service.",
+      reason: packageReady
+        ? "Signed scope, required initial payment, and startup requirements are verified. The agreed work is ready to begin."
+        : hasPackage
+          ? "The payment gate is cleared. Collect and verify the remaining startup requirements generated from the signed services."
+          : "The payment gate is cleared, but the signed services have not yet been confirmed into a startup package.",
       sourceType: "agreement",
       sourceReference: String(agreementId)
     });
@@ -1512,6 +1743,611 @@ async function recordPayment(body, db, requestId) {
   }, 201);
 }
 
+
+function listServiceCatalog(requestId) {
+  return jsonResponse({
+    ok: true,
+    requestId,
+    action: PROSPECT_CRM_ACTION,
+    operation: "list_service_catalog",
+    prospectCrmVersion: PROSPECT_CRM_VERSION,
+    services: serviceCatalogForResponse(),
+    writesPerformed: 0
+  });
+}
+
+async function setProposedServices(body, db, requestId) {
+  const prospectId = positiveInteger(body?.prospectId || body?.prospect_id);
+  if (!prospectId) {
+    return validationError(requestId, "set_proposed_services", "set_proposed_services requires a positive prospectId.");
+  }
+  if (!(await prospectExists(db, prospectId))) {
+    return validationError(requestId, "set_proposed_services", `CRM Prospect ${prospectId} was not found.`, 404);
+  }
+
+  const serviceKeys = normalizeServiceKeys(body?.serviceKeys || body?.service_keys || body?.services || []);
+  const validation = validateServiceKeys(serviceKeys);
+  if (!validation.valid) {
+    return validationError(requestId, "set_proposed_services", `Unsupported service key(s): ${validation.unknown.join(", ")}.`);
+  }
+
+  await db.prepare(`
+    UPDATE crm_prospect_services
+    SET status = 'not_selected',
+        updated_at = CURRENT_TIMESTAMP
+    WHERE prospect_id = ?
+      AND status = 'proposed'
+  `).bind(prospectId).run();
+
+  for (const serviceKey of serviceKeys) {
+    const service = serviceByKey(serviceKey);
+    await db.prepare(`
+      INSERT INTO crm_prospect_services (
+        prospect_id,
+        service_key,
+        service_name,
+        status,
+        scope_notes,
+        selected_at,
+        created_at,
+        updated_at
+      ) VALUES (?, ?, ?, 'proposed', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      ON CONFLICT(prospect_id, service_key) DO UPDATE SET
+        service_name = excluded.service_name,
+        status = CASE
+          WHEN crm_prospect_services.status = 'contracted' THEN 'contracted'
+          ELSE 'proposed'
+        END,
+        scope_notes = COALESCE(excluded.scope_notes, crm_prospect_services.scope_notes),
+        selected_at = COALESCE(crm_prospect_services.selected_at, CURRENT_TIMESTAMP),
+        updated_at = CURRENT_TIMESTAMP
+    `).bind(
+      prospectId,
+      service.key,
+      service.name,
+      nullableText(body?.scopeNotes?.[serviceKey] || body?.scope_notes?.[serviceKey])
+    ).run();
+  }
+
+  const serviceNames = serviceKeys.map(key => serviceByKey(key)?.name).filter(Boolean);
+  await insertActivity(db, prospectId, {
+    activityType: "services_proposed",
+    occurredAt: new Date().toISOString(),
+    direction: "internal",
+    subject: "Proposed services updated",
+    summary: serviceNames.length
+      ? `Proposed services: ${serviceNames.join(", ")}. These remain proposed until a signed agreement confirms scope.`
+      : "Proposed service selections were cleared. No service is treated as contracted responsibility.",
+    outcome: "proposal_scope_only",
+    meaningfulContact: false,
+    sourceType: "crm"
+  });
+
+  return jsonResponse({
+    ok: true,
+    requestId,
+    action: PROSPECT_CRM_ACTION,
+    operation: "set_proposed_services",
+    prospectCrmVersion: PROSPECT_CRM_VERSION,
+    serviceKeys,
+    startup: await readStartupState(db, prospectId),
+    prospect: await readProspectDetail(db, prospectId),
+    writesPerformed: 2 + serviceKeys.length
+  });
+}
+
+async function confirmContractedServices(body, db, requestId) {
+  const prospectId = positiveInteger(body?.prospectId || body?.prospect_id);
+  let agreementId = positiveInteger(body?.agreementId || body?.agreement_id);
+
+  if (!prospectId) {
+    return validationError(requestId, "confirm_contracted_services", "confirm_contracted_services requires a positive prospectId.");
+  }
+  if (!(await prospectExists(db, prospectId))) {
+    return validationError(requestId, "confirm_contracted_services", `CRM Prospect ${prospectId} was not found.`, 404);
+  }
+
+  const serviceKeys = normalizeServiceKeys(body?.serviceKeys || body?.service_keys || body?.services || []);
+  if (!serviceKeys.length) {
+    return validationError(requestId, "confirm_contracted_services", "At least one signed service must be selected before a startup package can be generated.");
+  }
+
+  const validation = validateServiceKeys(serviceKeys);
+  if (!validation.valid) {
+    return validationError(requestId, "confirm_contracted_services", `Unsupported service key(s): ${validation.unknown.join(", ")}.`);
+  }
+
+  if (!agreementId) {
+    const latestResult = await db.prepare(`
+      SELECT id
+      FROM crm_prospect_agreements
+      WHERE prospect_id = ?
+        AND LOWER(COALESCE(status, 'signed')) IN ('signed', 'work_authorized')
+      ORDER BY datetime(signed_at) DESC, id DESC
+      LIMIT 1
+    `).bind(prospectId).all();
+    agreementId = positiveInteger(rowsOf(latestResult)[0]?.id);
+  }
+
+  if (!agreementId) {
+    return validationError(
+      requestId,
+      "confirm_contracted_services",
+      "Contracted services require a signed agreement with defined scope. Record the agreement before confirming services."
+    );
+  }
+
+  const agreement = await readAgreementById(db, agreementId);
+  if (!agreement || agreement.prospectId !== prospectId) {
+    return validationError(requestId, "confirm_contracted_services", `Agreement ${agreementId} does not belong to CRM Prospect ${prospectId}.`, 404);
+  }
+
+  await db.prepare(`
+    UPDATE crm_prospect_services
+    SET status = 'not_contracted',
+        agreement_id = NULL,
+        contracted_at = NULL,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE prospect_id = ?
+      AND status IN ('proposed', 'contracted')
+  `).bind(prospectId).run();
+
+  for (const serviceKey of serviceKeys) {
+    const service = serviceByKey(serviceKey);
+    await db.prepare(`
+      INSERT INTO crm_prospect_services (
+        prospect_id,
+        agreement_id,
+        service_key,
+        service_name,
+        status,
+        scope_notes,
+        selected_at,
+        contracted_at,
+        created_at,
+        updated_at
+      ) VALUES (?, ?, ?, ?, 'contracted', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      ON CONFLICT(prospect_id, service_key) DO UPDATE SET
+        agreement_id = excluded.agreement_id,
+        service_name = excluded.service_name,
+        status = 'contracted',
+        scope_notes = COALESCE(excluded.scope_notes, crm_prospect_services.scope_notes),
+        selected_at = COALESCE(crm_prospect_services.selected_at, CURRENT_TIMESTAMP),
+        contracted_at = CURRENT_TIMESTAMP,
+        updated_at = CURRENT_TIMESTAMP
+    `).bind(
+      prospectId,
+      agreementId,
+      service.key,
+      service.name,
+      nullableText(body?.scopeNotes?.[serviceKey] || body?.scope_notes?.[serviceKey])
+    ).run();
+  }
+
+  await db.prepare(`
+    INSERT INTO crm_prospect_startup_packages (
+      prospect_id,
+      agreement_id,
+      status,
+      generated_at,
+      notes,
+      created_at,
+      updated_at
+    ) VALUES (?, ?, 'active', CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ON CONFLICT(prospect_id, agreement_id) DO UPDATE SET
+      status = CASE
+        WHEN crm_prospect_startup_packages.status = 'complete' THEN 'complete'
+        ELSE 'active'
+      END,
+      notes = COALESCE(excluded.notes, crm_prospect_startup_packages.notes),
+      updated_at = CURRENT_TIMESTAMP
+  `).bind(
+    prospectId,
+    agreementId,
+    nullableText(body?.packageNotes || body?.package_notes)
+  ).run();
+
+  const packageRow = await readStartupPackageRow(db, prospectId, agreementId);
+  const packageId = positiveInteger(packageRow?.id);
+  if (!packageId) {
+    throw new Error("Startup package could not be created for the signed agreement.");
+  }
+
+  const priorRequirementsResult = await db.prepare(`
+    SELECT requirement_key, status
+    FROM crm_prospect_startup_requirements
+    WHERE package_id = ?
+  `).bind(packageId).all();
+  const priorRequirementStatus = new Map(
+    rowsOf(priorRequirementsResult).map(row => [row.requirement_key, row.status])
+  );
+
+  await db.prepare(`
+    UPDATE crm_prospect_startup_requirements
+    SET status = 'not_required',
+        updated_at = CURRENT_TIMESTAMP
+    WHERE package_id = ?
+  `).bind(packageId).run();
+
+  const requirements = buildStartupRequirements(
+    serviceKeys,
+    Array.isArray(body?.customRequirements || body?.custom_requirements)
+      ? (body?.customRequirements || body?.custom_requirements)
+      : []
+  );
+
+  for (const item of requirements) {
+    const priorStatus = priorRequirementStatus.get(item.key);
+    const restoredStatus = ["requested", "received", "verified"].includes(priorStatus)
+      ? priorStatus
+      : "needed";
+
+    await db.prepare(`
+      INSERT INTO crm_prospect_startup_requirements (
+        package_id,
+        prospect_id,
+        agreement_id,
+        requirement_key,
+        title,
+        client_request,
+        category,
+        responsible_party,
+        status,
+        source_services_json,
+        created_at,
+        updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      ON CONFLICT(package_id, requirement_key) DO UPDATE SET
+        title = excluded.title,
+        client_request = excluded.client_request,
+        category = excluded.category,
+        responsible_party = excluded.responsible_party,
+        source_services_json = excluded.source_services_json,
+        status = excluded.status,
+        updated_at = CURRENT_TIMESTAMP
+    `).bind(
+      packageId,
+      prospectId,
+      agreementId,
+      item.key,
+      item.title,
+      item.clientRequest,
+      item.category,
+      item.responsibleParty,
+      restoredStatus,
+      JSON.stringify(item.sourceServices)
+    ).run();
+  }
+
+  await refreshStartupPackageStatus(db, packageId);
+
+  const serviceNames = serviceKeys.map(key => serviceByKey(key)?.name).filter(Boolean);
+  await insertActivity(db, prospectId, {
+    activityType: "contracted_services_confirmed",
+    occurredAt: new Date().toISOString(),
+    direction: "internal",
+    subject: "Signed services confirmed and startup package generated",
+    summary: `Contracted services confirmed from agreement ${agreementId}: ${serviceNames.join(", ")}. One deduplicated startup package was generated from the signed scope.`,
+    outcome: "startup_package_generated",
+    meaningfulContact: false,
+    sourceType: "agreement",
+    sourceReference: String(agreementId)
+  });
+
+  const startup = await readStartupState(db, prospectId, agreementId);
+  if (agreement.workAuthorizedAt) {
+    await setStartupNextAction(db, prospectId, agreementId, startup?.package, new Date().toISOString());
+  }
+
+  return jsonResponse({
+    ok: true,
+    requestId,
+    action: PROSPECT_CRM_ACTION,
+    operation: "confirm_contracted_services",
+    prospectCrmVersion: PROSPECT_CRM_VERSION,
+    agreementId,
+    contractedServiceKeys: serviceKeys,
+    startup: await readStartupState(db, prospectId, agreementId),
+    prospect: await readProspectDetail(db, prospectId),
+    writesPerformed: 5 + serviceKeys.length + requirements.length
+  }, 201);
+}
+
+async function getStartupPackage(body, db, requestId) {
+  const prospectId = positiveInteger(body?.prospectId || body?.prospect_id);
+  const agreementId = positiveInteger(body?.agreementId || body?.agreement_id);
+
+  if (!prospectId) {
+    return validationError(requestId, "get_startup_package", "get_startup_package requires a positive prospectId.");
+  }
+  if (!(await prospectExists(db, prospectId))) {
+    return validationError(requestId, "get_startup_package", `CRM Prospect ${prospectId} was not found.`, 404);
+  }
+
+  return jsonResponse({
+    ok: true,
+    requestId,
+    action: PROSPECT_CRM_ACTION,
+    operation: "get_startup_package",
+    prospectCrmVersion: PROSPECT_CRM_VERSION,
+    startup: await readStartupState(db, prospectId, agreementId),
+    writesPerformed: 0
+  });
+}
+
+async function updateStartupRequirement(body, db, requestId) {
+  const requirementId = positiveInteger(body?.requirementId || body?.requirement_id);
+  const status = normalizeKey(body?.status);
+  const allowed = new Set(["needed", "requested", "received", "verified", "not_required"]);
+
+  if (!requirementId || !allowed.has(status)) {
+    return validationError(
+      requestId,
+      "update_startup_requirement",
+      "update_startup_requirement requires a positive requirementId and status of needed, requested, received, verified, or not_required."
+    );
+  }
+
+  const result = await db.prepare(`
+    SELECT id, package_id, prospect_id, agreement_id
+    FROM crm_prospect_startup_requirements
+    WHERE id = ?
+    LIMIT 1
+  `).bind(requirementId).all();
+  const row = rowsOf(result)[0];
+  if (!row) {
+    return validationError(requestId, "update_startup_requirement", `Startup requirement ${requirementId} was not found.`, 404);
+  }
+
+  const now = normalizeDateTime(body?.occurredAt || body?.occurred_at || new Date().toISOString()) || new Date().toISOString();
+
+  await db.prepare(`
+    UPDATE crm_prospect_startup_requirements
+    SET status = ?,
+        requested_at = CASE WHEN ? = 'requested' THEN COALESCE(requested_at, ?) ELSE requested_at END,
+        received_at = CASE WHEN ? = 'received' THEN COALESCE(received_at, ?) ELSE received_at END,
+        verified_at = CASE WHEN ? = 'verified' THEN COALESCE(verified_at, ?) ELSE verified_at END,
+        notes = CASE WHEN ? IS NOT NULL THEN ? ELSE notes END,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `).bind(
+    status,
+    status,
+    now,
+    status,
+    now,
+    status,
+    now,
+    nullableText(body?.notes),
+    nullableText(body?.notes),
+    requirementId
+  ).run();
+
+  const packageId = positiveInteger(row.package_id);
+  const prospectId = positiveInteger(row.prospect_id);
+  const agreementId = positiveInteger(row.agreement_id);
+  await refreshStartupPackageStatus(db, packageId);
+
+  const agreement = agreementId ? await readAgreementById(db, agreementId) : null;
+  const startup = await readStartupState(db, prospectId, agreementId);
+  if (agreement?.workAuthorizedAt) {
+    await setStartupNextAction(db, prospectId, agreementId, startup?.package, now);
+  }
+
+  return jsonResponse({
+    ok: true,
+    requestId,
+    action: PROSPECT_CRM_ACTION,
+    operation: "update_startup_requirement",
+    prospectCrmVersion: PROSPECT_CRM_VERSION,
+    requirementId,
+    status,
+    startup: await readStartupState(db, prospectId, agreementId),
+    prospect: await readProspectDetail(db, prospectId),
+    writesPerformed: agreement?.workAuthorizedAt ? 4 : 2
+  });
+}
+
+async function readStartupState(db, prospectId, agreementId = null) {
+  const servicesResult = await db.prepare(`
+    SELECT *
+    FROM crm_prospect_services
+    WHERE prospect_id = ?
+      AND status IN ('proposed', 'contracted')
+    ORDER BY
+      CASE status WHEN 'contracted' THEN 0 WHEN 'proposed' THEN 1 ELSE 2 END,
+      service_name ASC,
+      id ASC
+  `).bind(prospectId).all();
+
+  const packageRow = agreementId
+    ? await readStartupPackageRow(db, prospectId, agreementId)
+    : await readLatestStartupPackageRow(db, prospectId);
+
+  if (!packageRow) {
+    return {
+      services: rowsOf(servicesResult).map(mapServiceSelectionRow),
+      package: null
+    };
+  }
+
+  const requirementsResult = await db.prepare(`
+    SELECT *
+    FROM crm_prospect_startup_requirements
+    WHERE package_id = ?
+    ORDER BY
+      CASE responsible_party WHEN 'client' THEN 0 WHEN 'mutual' THEN 1 ELSE 2 END,
+      category ASC,
+      title ASC,
+      id ASC
+  `).bind(packageRow.id).all();
+
+  const requirements = rowsOf(requirementsResult).map(mapStartupRequirementRow);
+  const active = requirements.filter(item => item.status !== "not_required");
+  const counts = active.reduce((acc, item) => {
+    acc.total += 1;
+    acc[item.status] = (acc[item.status] || 0) + 1;
+    if (["client", "mutual"].includes(item.responsibleParty) && item.status !== "verified") acc.clientOutstanding += 1;
+    if (item.responsibleParty === "gcm" && item.status !== "verified") acc.gcmOutstanding += 1;
+    return acc;
+  }, { total: 0, needed: 0, requested: 0, received: 0, verified: 0, clientOutstanding: 0, gcmOutstanding: 0 });
+
+  const readyToStart = counts.total > 0 && counts.verified === counts.total;
+  const clientRequestItems = active.filter(item => ["client", "mutual"].includes(item.responsibleParty));
+  const internalItems = active.filter(item => item.responsibleParty === "gcm");
+
+  return {
+    services: rowsOf(servicesResult).map(mapServiceSelectionRow),
+    package: {
+      ...mapStartupPackageRow(packageRow),
+      counts,
+      readyToStart,
+      requirements,
+      clientRequestItems,
+      internalItems
+    }
+  };
+}
+
+async function readStartupPackageRow(db, prospectId, agreementId) {
+  const result = await db.prepare(`
+    SELECT *
+    FROM crm_prospect_startup_packages
+    WHERE prospect_id = ?
+      AND agreement_id = ?
+    LIMIT 1
+  `).bind(prospectId, agreementId).all();
+  return rowsOf(result)[0] || null;
+}
+
+async function readLatestStartupPackageRow(db, prospectId) {
+  const result = await db.prepare(`
+    SELECT *
+    FROM crm_prospect_startup_packages
+    WHERE prospect_id = ?
+    ORDER BY datetime(generated_at) DESC, id DESC
+    LIMIT 1
+  `).bind(prospectId).all();
+  return rowsOf(result)[0] || null;
+}
+
+async function refreshStartupPackageStatus(db, packageId) {
+  const countsResult = await db.prepare(`
+    SELECT
+      SUM(CASE WHEN status != 'not_required' THEN 1 ELSE 0 END) AS total_active,
+      SUM(CASE WHEN status = 'verified' THEN 1 ELSE 0 END) AS verified_count
+    FROM crm_prospect_startup_requirements
+    WHERE package_id = ?
+  `).bind(packageId).all();
+  const counts = rowsOf(countsResult)[0] || {};
+  const total = Number(counts.total_active || 0);
+  const verified = Number(counts.verified_count || 0);
+  const ready = total > 0 && total === verified;
+
+  await db.prepare(`
+    UPDATE crm_prospect_startup_packages
+    SET status = CASE WHEN ? = 1 THEN 'ready' ELSE 'active' END,
+        completed_at = CASE WHEN ? = 1 THEN COALESCE(completed_at, CURRENT_TIMESTAMP) ELSE NULL END,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `).bind(ready ? 1 : 0, ready ? 1 : 0, packageId).run();
+}
+
+async function setStartupNextAction(db, prospectId, agreementId, startupPackage, atValue) {
+  const baseDate = dateOnly(atValue) || currentNewYorkDate();
+  const ready = startupPackage?.readyToStart === true;
+
+  await replaceOpenNextAction(db, prospectId, {
+    actionType: ready ? "begin_contracted_work" : "collect_startup_requirements",
+    title: ready ? "Begin contracted work" : "Collect and verify startup requirements",
+    dueDate: addBusinessDays(baseDate, 1),
+    priority: "High",
+    reason: ready
+      ? "Signed scope, required initial payment, and startup requirements are verified. The agreed work is ready to begin."
+      : "The payment gate is cleared. Complete the service-specific startup package before beginning the agreed work.",
+    sourceType: "agreement",
+    sourceReference: String(agreementId)
+  });
+}
+
+function normalizeServiceKeys(value) {
+  const list = Array.isArray(value) ? value : [value];
+  return [...new Set(list.map(item => {
+    if (item && typeof item === "object") return normalizeKey(item.key || item.serviceKey || item.service_key);
+    return normalizeKey(item);
+  }).filter(Boolean))];
+}
+
+function validateServiceKeys(serviceKeys) {
+  const known = new Set(SERVICE_CATALOG.map(service => service.key));
+  const unknown = serviceKeys.filter(key => !known.has(key));
+  return { valid: unknown.length === 0, unknown };
+}
+
+function serviceByKey(serviceKey) {
+  return SERVICE_CATALOG.find(service => service.key === serviceKey) || null;
+}
+
+function requirement(key, title, clientRequest, category, responsibleParty) {
+  return { key, title, clientRequest, category, responsibleParty };
+}
+
+export function serviceCatalogForResponse() {
+  return SERVICE_CATALOG.map(service => ({
+    key: service.key,
+    name: service.name,
+    category: service.category,
+    description: service.description
+  }));
+}
+
+export function buildStartupRequirements(serviceKeys, customRequirements = []) {
+  const keys = normalizeServiceKeys(serviceKeys);
+  const validation = validateServiceKeys(keys);
+  if (!validation.valid) return [];
+
+  const byRequirement = new Map();
+  for (const serviceKey of keys) {
+    const service = serviceByKey(serviceKey);
+    for (const item of service?.requirements || []) {
+      if (!byRequirement.has(item.key)) {
+        byRequirement.set(item.key, {
+          ...item,
+          sourceServices: [serviceKey]
+        });
+      } else {
+        const existing = byRequirement.get(item.key);
+        if (!existing.sourceServices.includes(serviceKey)) existing.sourceServices.push(serviceKey);
+      }
+    }
+  }
+
+  for (let index = 0; index < customRequirements.length; index += 1) {
+    const raw = customRequirements[index];
+    const title = cleanText(typeof raw === "string" ? raw : raw?.title || raw?.label);
+    if (!title) continue;
+    const key = normalizeKey(typeof raw === "object" ? raw?.key : "") || `custom_requirement_${index + 1}`;
+    const responsibleParty = normalizeKey(typeof raw === "object" ? raw?.responsibleParty || raw?.responsible_party : "mutual") || "mutual";
+    byRequirement.set(key, {
+      key,
+      title,
+      clientRequest: cleanText(typeof raw === "object" ? raw?.clientRequest || raw?.client_request : title) || title,
+      category: cleanText(typeof raw === "object" ? raw?.category : "Custom") || "Custom",
+      responsibleParty: ["client", "gcm", "mutual"].includes(responsibleParty) ? responsibleParty : "mutual",
+      sourceServices: ["custom_other"]
+    });
+  }
+
+  return [...byRequirement.values()].sort((a, b) => {
+    const partyRank = { client: 0, mutual: 1, gcm: 2 };
+    const partyDifference = (partyRank[a.responsibleParty] ?? 9) - (partyRank[b.responsibleParty] ?? 9);
+    if (partyDifference !== 0) return partyDifference;
+    const categoryDifference = a.category.localeCompare(b.category);
+    if (categoryDifference !== 0) return categoryDifference;
+    return a.title.localeCompare(b.title);
+  });
+}
+
 async function readProspectDetail(db, prospectId) {
   const prospect = await readProspectSummary(db, prospectId);
   if (!prospect) return null;
@@ -1526,6 +2362,8 @@ async function readProspectDetail(db, prospectId) {
     db.prepare(`SELECT * FROM crm_prospect_payments WHERE prospect_id = ? ORDER BY datetime(received_at) ASC, id ASC`).bind(prospectId).all()
   ]);
 
+  const startup = await readStartupState(db, prospectId);
+
   return {
     ...prospect,
     contacts: rowsOf(contactsResult).map(mapContactRow),
@@ -1534,7 +2372,9 @@ async function readProspectDetail(db, prospectId) {
     proposals: rowsOf(proposalsResult).map(mapProposalRow),
     nextActions: rowsOf(actionsResult).map(mapNextActionRow),
     agreements: rowsOf(agreementsResult).map(mapAgreementRow),
-    payments: rowsOf(paymentsResult).map(mapPaymentRow)
+    payments: rowsOf(paymentsResult).map(mapPaymentRow),
+    services: startup.services,
+    startupPackage: startup.package
   };
 }
 
@@ -2014,6 +2854,59 @@ function mapPaymentRow(row) {
     externalKey: row.external_key || null,
     notes: row.notes || null,
     createdAt: row.created_at || null
+  };
+}
+
+
+function mapServiceSelectionRow(row) {
+  return {
+    id: Number(row.id),
+    prospectId: Number(row.prospect_id),
+    agreementId: positiveInteger(row.agreement_id),
+    serviceKey: row.service_key,
+    serviceName: row.service_name,
+    status: row.status,
+    scopeNotes: row.scope_notes || null,
+    selectedAt: row.selected_at || null,
+    contractedAt: row.contracted_at || null,
+    createdAt: row.created_at || null,
+    updatedAt: row.updated_at || null
+  };
+}
+
+function mapStartupPackageRow(row) {
+  return {
+    id: Number(row.id),
+    prospectId: Number(row.prospect_id),
+    agreementId: Number(row.agreement_id),
+    status: row.status,
+    generatedAt: row.generated_at,
+    completedAt: row.completed_at || null,
+    notes: row.notes || null,
+    createdAt: row.created_at || null,
+    updatedAt: row.updated_at || null
+  };
+}
+
+function mapStartupRequirementRow(row) {
+  return {
+    id: Number(row.id),
+    packageId: Number(row.package_id),
+    prospectId: Number(row.prospect_id),
+    agreementId: Number(row.agreement_id),
+    requirementKey: row.requirement_key,
+    title: row.title,
+    clientRequest: row.client_request || null,
+    category: row.category || null,
+    responsibleParty: row.responsible_party || "client",
+    status: row.status || "needed",
+    sourceServices: parseJson(row.source_services_json) || [],
+    requestedAt: row.requested_at || null,
+    receivedAt: row.received_at || null,
+    verifiedAt: row.verified_at || null,
+    notes: row.notes || null,
+    createdAt: row.created_at || null,
+    updatedAt: row.updated_at || null
   };
 }
 
