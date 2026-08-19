@@ -1,23 +1,23 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gcm-shell.js
-   Version: 2.0.24
+   Version: 2.0.25
    Status: Production Road-Test Candidate
    Purpose: Shared internal GCM OS application shell foundation.
    Source: gcm-shell.js 2.0.23 production navigation
-   Sprint: Gmail — Durable Operational Intake Cache Lock
+   Sprint: Prospects — Combined Prospecting + CRM Navigation Lock
    Change:
+   - Points the shared Prospects navigation to the verified combined prospects.html workspace.
+   - Retires client-pre-research.html as the active Prospects nav destination.
    - Preserves durable red/yellow/green navigation urgency.
-   - Preserves Calendar durability and Work due-date enhancement.
-   - Loads Morning Command email decision controls v1.1.0 with a matching cache key.
-   - Prevents Today from silently reusing the pre-backlog v1.0.0 decision script.
-   - Preserves all existing Work Investigation and Media enhancements.
+   - Preserves Calendar durability, Work enhancements, Gmail decision controls,
+     and all existing Media page enhancements.
    ========================================================= */
 
 (() => {
   "use strict";
 
-  const SHELL_VERSION = "2.0.24";
+  const SHELL_VERSION = "2.0.25";
   const WORKER_ENDPOINT =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const MISSION_CONTROL_ACTION = "get-mission-control";
@@ -27,7 +27,7 @@
     clients: { label: "Clients", href: "clients.html", icon: "◫" },
     work: { label: "Work", href: "work.html", icon: "✓" },
     media: { label: "Media", href: "media.html", icon: "◉" },
-    prospects: { label: "Prospects", href: "client-pre-research.html", icon: "◎" },
+    prospects: { label: "Prospects", href: "prospects.html", icon: "◎" },
     calendar: { label: "Calendar", href: "calendar.html", icon: "▦" },
     finance: { label: "Billing", href: "finance.html", icon: "$" },
     proof: { label: "Proof", href: "proof.html", icon: "↗" }
