@@ -1,16 +1,20 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/config.js
-   Version: 7.9.0
-   Status: Production Candidate
-   Source: shared/config.js 7.7.9
-   Sprint: Media â€” Gmail Attached Draft Creation
-   Purpose: Preserve all existing production constants and add
-            the human-approved Gmail Communication + Investigation
-            action contract.
+   Version: 7.10.0
+   Status: Production Road-Test Candidate
+   Source: shared/config.js 7.9.0 production
+   Sprint: Prospecting + CRM — Durable Relationship Record
+   Purpose: Preserve all existing production constants and add the
+            durable Prospect CRM action contract.
+
+   Change Notes in 7.10.0:
+   - Adds PROSPECT_CRM: "prospect-crm".
+   - Preserves every existing Gmail, Client, Work, Media, Investigation,
+     Operating Session, and Calendar action unchanged.
    ========================================================= */
 
-export const VERSION = "7.9.0";
+export const VERSION = "7.10.0";
 export const API_CONTRACT_VERSION = "communications-operational-decision-v3";
 export const COMMUNICATION_ANALYSIS_ENGINE_VERSION = "3.4.1";
 
@@ -23,6 +27,7 @@ export const COMMUNICATION_REASONING_MODEL =
 export const ACTIONS = Object.freeze({
   ANALYZE_COMMUNICATION: "analyze-client-communication",
   ANALYZE_PROSPECT_INTELLIGENCE: "analyze-prospect-intelligence",
+  PROSPECT_CRM: "prospect-crm",
   GET_GMAIL_STATUS: "get-gmail-status",
   PREVIEW_GMAIL_INBOX: "preview-gmail-inbox",
   APPROVE_GMAIL_MONITORING: "approve-gmail-monitoring",
