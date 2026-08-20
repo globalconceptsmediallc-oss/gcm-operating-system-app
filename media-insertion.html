@@ -1,15 +1,22 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media-insertion.html
-   Version: 1.7.0
-   Status: Production Candidate — Gmail Attached Station Draft
+   Version: 1.7.1
+   Status: Production Candidate — Shared Shell Consolidation
    Source: Current GCM OS Media Operations architecture
-   Sprint: Media Traffic Package — Gmail Draft Integration
+   Shared Shell: shared/gcm-shell.js 2.0.28
+   Sprint: Navigation — Shared Shell Consolidation
    Purpose: Create or load the exact Media campaign selected from the dashboard,
             enforce market-specific GCM ISCI and production filenames, generate
             professional station traffic instructions, update the selected D1
             record, mark sent traffic as awaiting station confirmation, and return
             to the operator workspace.
+
+   Change:
+   - Replaces the legacy hard-coded sidebar with the authoritative shared shell.
+   - Preserves Media campaign creation/update, D1 routes, Gmail drafts, audio
+     attachment handling, record loading, and existing operator behavior.
+   - Keeps Media as the active canonical workspace for this specialized subpage.
 
    Pilot:
    - Client: Southeast Safes
@@ -42,17 +49,6 @@
       font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5}
     button,input,select,textarea{font:inherit}a{color:inherit;text-decoration:none}
     .shell{min-height:100vh;display:grid;grid-template-columns:250px minmax(0,1fr)}
-    .sidebar{position:sticky;top:0;height:100vh;padding:24px 18px;display:flex;flex-direction:column;
-      color:#fff;background:radial-gradient(circle at top right,rgba(52,124,232,.19),transparent 34%),
-      linear-gradient(180deg,var(--navy-900),var(--navy-950))}
-    .brand{display:flex;gap:12px;align-items:center;padding:2px 8px 22px;border-bottom:1px solid rgba(255,255,255,.12)}
-    .mark{width:42px;height:42px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.22);
-      border-radius:13px;background:rgba(255,255,255,.08);color:var(--gold);font-weight:900}
-    .brand strong,.brand span{display:block}.brand span{font-size:.72rem;color:rgba(255,255,255,.58);text-transform:uppercase;letter-spacing:.1em}
-    .nav-label{margin:24px 10px 10px;color:rgba(255,255,255,.42);font-size:.68rem;font-weight:900;text-transform:uppercase;letter-spacing:.14em}
-    nav{display:grid;gap:6px}.nav-link{min-height:46px;padding:0 13px;display:flex;align-items:center;gap:12px;border-radius:12px;color:rgba(255,255,255,.72);font-weight:750}
-    .nav-link:hover{background:rgba(255,255,255,.08);color:#fff}.nav-link.current{background:rgba(52,124,232,.2);color:#fff;box-shadow:inset 3px 0 0 var(--gold)}
-    .footer{margin-top:auto;padding:18px 8px 2px;border-top:1px solid rgba(255,255,255,.12);font-size:.78rem;color:rgba(255,255,255,.67)}
     main{min-width:0;padding:28px 32px 48px}.inner{max-width:1480px;margin:auto}
     .topbar{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:20px}
     .eyebrow{margin:0 0 6px;color:var(--blue-600);font-size:.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.14em}
@@ -76,32 +72,19 @@
     .timeline{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
     .milestone{padding:13px;border:1px solid var(--border);border-radius:11px;background:var(--soft)}
     .milestone span{display:block;color:var(--text-muted);font-size:.69rem;font-weight:900;text-transform:uppercase}.milestone strong{display:block;margin-top:5px;font-size:.87rem}
-    .actions{display:flex;gap:10px;flex-wrap:wrap}.button{min-height:43px;padding:0 15px;border-radius:10px;border:1px solid var(--border);font-weight:900;cursor:pointer}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.button{min-height:43px;padding:0 15px;border-radius:10px;border:1px solid var(--border);font-weight:900;cursor:pointer}
     .primary{background:var(--blue-600);border-color:var(--blue-600);color:#fff}.secondary{background:#fff;color:var(--blue-600);border-color:var(--blue-500)}
-    .button:disabled{opacity:.45;cursor:not-allowed}.status{margin-top:13px;padding:12px 14px;border-radius:10px;background:var(--muted);color:var(--text-muted);font-size:.8rem;font-weight:800}
+    .button:disabled{opacity:.45;cursor:not-allowed}.mobile-menu-button{display:none}.status{margin-top:13px;padding:12px 14px;border-radius:10px;background:var(--muted);color:var(--text-muted);font-size:.8rem;font-weight:800}
     .status.ok{background:var(--success-soft);color:var(--success)}.status.error{background:var(--critical-soft);color:var(--critical)}
     .draft{min-height:260px;font-family:inherit}.review{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-    @media(max-width:1000px){.shell{grid-template-columns:1fr}.sidebar{position:relative;height:auto}.summary,.grid,.timeline,.review{grid-template-columns:1fr 1fr}.span-2,.span-3{grid-column:1/-1}}
+    @media(max-width:1000px){.summary,.grid,.timeline,.review{grid-template-columns:1fr 1fr}.span-2,.span-3{grid-column:1/-1}}
+    @media(max-width:860px){.shell{grid-template-columns:1fr}.mobile-menu-button{display:inline-flex}}
     @media(max-width:680px){main{padding:20px 15px}.topbar{flex-direction:column}.summary,.grid,.timeline,.review,.asset-card{grid-template-columns:1fr}.span-2,.span-3{grid-column:auto}}
   </style>
 </head>
 <body>
 <div class="shell">
-  <aside class="sidebar">
-    <a class="brand" href="today.html"><span class="mark">G</span><span><strong>Global Concepts Media</strong><span>Agency Operating System</span></span></a>
-    <p class="nav-label">Workspace</p>
-    <nav>
-      <a class="nav-link" href="today.html">⌂ <span>Home</span></a>
-      <a class="nav-link" href="clients.html">◫ <span>Clients</span></a>
-      <a class="nav-link" href="communications.html">✉ <span>Communications</span></a>
-      <a class="nav-link" href="work.html">✓ <span>Work</span></a>
-      <a class="nav-link" href="proof.html">↗ <span>Proof</span></a>
-      <a class="nav-link" href="media.html">◉ <span>Media</span></a>
-      <a class="nav-link current" href="media-insertion.html">＋ <span>Media Insertion</span></a>
-      <a class="nav-link" href="prospects.html">◎ <span>Prospects</span></a>
-    </nav>
-    <div class="footer">Remote-control road test ready</div>
-  </aside>
+  <aside data-gcm-shell-sidebar aria-label="Primary navigation"></aside>
 
   <main>
     <div class="inner">
@@ -111,7 +94,10 @@
           <h1 id="pageTitle">Media Insertion</h1>
           <p class="subtitle" id="pageSubtitle">Create the campaign package that Media will operate, confirm, complete, and reuse.</p>
         </div>
-        <div class="version">Installed version 1.7.0</div>
+        <div class="actions">
+          <button class="button secondary mobile-menu-button" data-gcm-shell-menu-button type="button" aria-expanded="false">Menu</button>
+          <div class="version">Installed version 1.7.1</div>
+        </div>
       </header>
 
       <section class="summary">
@@ -217,8 +203,14 @@
   </main>
 </div>
 
+<script src="shared/gcm-shell.js?v=2.0.28"></script>
 <script>
 (() => {
+  window.GCMOShell?.mount({
+    currentPage:"media",
+    statusText:"Media Insertion · v1.7.1"
+  });
+
   const WORKER_ENDPOINT = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev";
   const $ = id => document.getElementById(id);
   const REPOSITORY_AUDIO_SOURCE = "SESL2601_Liberty_GunShow_30(1).mp3";
