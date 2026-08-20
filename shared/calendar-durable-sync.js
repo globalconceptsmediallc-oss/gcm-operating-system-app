@@ -1,10 +1,10 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/calendar-durable-sync.js
-   Version: 1.0.0
+   Version: 1.0.1
    Status: Production Road-Test Candidate
-   Source: calendar.html v1.1.0 browser Calendar state
-   Sprint: Calendar — Durable Appointment Records
+   Source: shared/calendar-durable-sync.js 1.0.0
+   Sprint: Calendar — Cross-Module Durable Render
    Purpose:
    Bridge the existing Calendar UI to the durable D1 calendar_appointments
    record system without changing the verified Calendar interface.
@@ -14,19 +14,29 @@
    - The first production run imports the actual browser Calendar snapshot.
    - Later local Calendar changes are synchronized to D1 automatically.
    - localStorage remains a UI working cache, not the durable source of truth.
-   - Successful sync refreshes shared-nav deadline urgency from Mission Control.
+   - Successful sync refreshes shared-nav deadline urgency.
+
+   Change Notes — 1.0.1
+   - Replaces the one-reload-per-browser-session guard with a
+     one-reload-per-durable-fingerprint guard.
+   - A newly created D1 appointment from Media or another OS module can now
+     update local Calendar state and trigger one safe visible re-render.
+   - Prevents reload loops by remembering the exact durable fingerprint that
+     caused the reload, not merely that a reload happened earlier in the session.
+   - Preserves all existing Calendar snapshot and nav-attention behavior.
    ========================================================= */
 
 (() => {
   "use strict";
 
-  const VERSION = "1.0.0";
+  const VERSION = "1.0.1";
   const WORKER_ENDPOINT =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const ACTION = "calendar-operations";
   const KEY = "gcm_calendar_v1_1";
   const PRIOR_KEY = "gcm_calendar_v1_0";
   const META_KEY = "gcm_calendar_d1_sync_v1";
+  const RELOAD_KEY = `gcm-calendar-durable-reload-${VERSION}`;
   const POLL_MS = 1000;
 
   let lastAppointmentFingerprint = "";
@@ -174,7 +184,10 @@
       ...state,
       appointments: mapped,
       nextAppointmentId:
-        mapped.reduce((max, item) => Math.max(max, Number(item.id) || 0), 0) + 1
+        mapped.reduce(
+          (max, item) => Math.max(max, Number(item.id) || 0),
+          0
+        ) + 1
     };
 
     writeJson(KEY, nextState);
@@ -189,6 +202,26 @@
     });
   }
 
+  function reloadForDurableFingerprint(durableAppointments) {
+    const durableFingerprint = fingerprint(durableAppointments);
+
+    try {
+      const lastReloadFingerprint =
+        sessionStorage.getItem(RELOAD_KEY) || "";
+
+      if (lastReloadFingerprint === durableFingerprint) {
+        return false;
+      }
+
+      sessionStorage.setItem(RELOAD_KEY, durableFingerprint);
+    } catch {
+      // If sessionStorage is unavailable, allow one direct reload attempt.
+    }
+
+    window.location.reload();
+    return true;
+  }
+
   async function syncSnapshot(appointments) {
     if (syncInFlight) {
       syncQueued = true;
@@ -198,20 +231,29 @@
     syncInFlight = true;
 
     try {
-      const payload = await calendarRequest("sync_snapshot", { appointments });
-      const durable = mapDurableAppointments(payload?.calendarAppointments);
+      const payload = await calendarRequest("sync_snapshot", {
+        appointments
+      });
+
+      const durable = mapDurableAppointments(
+        payload?.calendarAppointments
+      );
+
       lastAppointmentFingerprint = fingerprint(appointments);
       writeMeta(durable);
+
       setIntegrationState(
         "connected",
         "GCM OS Calendar connected · Google Calendar not connected"
       );
+
       await refreshNavAttention();
     } catch (error) {
       setIntegrationState(
         "error",
         "GCM OS Calendar sync unavailable"
       );
+
       console.error(
         `Calendar Durable Sync ${VERSION}: snapshot sync failed.`,
         error
@@ -221,6 +263,7 @@
 
       if (syncQueued) {
         syncQueued = false;
+
         const state = readLocalState();
         const current = normalizedLocalAppointments(state);
         const currentFingerprint = fingerprint(current);
@@ -236,7 +279,10 @@
     const state = readLocalState();
 
     if (!state) {
-      setIntegrationState("error", "GCM OS Calendar local state unavailable");
+      setIntegrationState(
+        "error",
+        "GCM OS Calendar local state unavailable"
+      );
       return;
     }
 
@@ -259,24 +305,26 @@
 
         writeMeta(durableAppointments);
         lastAppointmentFingerprint = fingerprint(durableAppointments);
+
         setIntegrationState(
           "connected",
           "GCM OS Calendar connected · Google Calendar not connected"
         );
+
         await refreshNavAttention();
 
         if (changedLocal) {
-          const reloadKey = `gcm-calendar-durable-reload-${VERSION}`;
-
-          if (!sessionStorage.getItem(reloadKey)) {
-            sessionStorage.setItem(reloadKey, "1");
-            window.location.reload();
+          if (reloadForDurableFingerprint(durableAppointments)) {
             return;
           }
         }
       }
     } catch (error) {
-      setIntegrationState("error", "GCM OS Calendar sync unavailable");
+      setIntegrationState(
+        "error",
+        "GCM OS Calendar sync unavailable"
+      );
+
       console.error(
         `Calendar Durable Sync ${VERSION}: initialization failed.`,
         error
@@ -287,17 +335,25 @@
       const currentState = readLocalState();
       if (!currentState) return;
 
-      const appointments = normalizedLocalAppointments(currentState);
-      const currentFingerprint = fingerprint(appointments);
+      const appointments =
+        normalizedLocalAppointments(currentState);
 
-      if (currentFingerprint !== lastAppointmentFingerprint) {
+      const currentFingerprint =
+        fingerprint(appointments);
+
+      if (
+        currentFingerprint !==
+        lastAppointmentFingerprint
+      ) {
         syncSnapshot(appointments);
       }
     }, POLL_MS);
   }
 
   window.addEventListener("beforeunload", () => {
-    if (intervalId) window.clearInterval(intervalId);
+    if (intervalId) {
+      window.clearInterval(intervalId);
+    }
   });
 
   initialize();
