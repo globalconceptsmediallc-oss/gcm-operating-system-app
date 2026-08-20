@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/calendarDurability.test.js
-   Version: 1.1.0
+   Version: 1.1.1
    Status: Production Test
    Source: tests/calendarDurability.test.js 1.0.0
    Sprint: Media → Calendar Natural Workflow
@@ -9,7 +9,7 @@
    Verify the durable Calendar contract plus the Media production-session
    connection that drives Calendar and Media urgency from one scheduled record.
 
-   Change Notes — 1.1.0
+   Change Notes — 1.1.1
    - Preserves Calendar normalization and migration regression coverage.
    - Verifies migration 0011 production-session structure.
    - Verifies Media workflow exposes save/complete production sessions.
@@ -226,7 +226,12 @@ function testMediaSessionRouteContract() {
 
   assert.match(
     mediaRoute,
-    /media_production_session:/
+    /MEDIA_SESSION_SOURCE\s*=\s*"media_production_session"/
+  );
+
+  assert.match(
+    mediaRoute,
+    /`\$\{MEDIA_SESSION_SOURCE\}:\$\{id\}`/
   );
 
   assert.match(
