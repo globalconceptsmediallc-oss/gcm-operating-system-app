@@ -1,24 +1,23 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gcm-shell.js
-   Version: 2.0.26
+   Version: 2.0.27
    Status: Production Road-Test Candidate
    Purpose: Shared internal GCM OS application shell foundation.
    Source: gcm-shell.js 2.0.23 production navigation
-   Sprint: Media → Calendar Natural Workflow
+   Sprint: Calendar — Cross-Module Durable Render
    Change:
+   - Loads Calendar Durable Sync v1.0.1 so every new D1 Calendar fingerprint
+     can trigger one safe visible Calendar re-render.
    - Preserves the verified combined Prospects destination and canonical shared nav.
-   - Loads Media Production Sessions v1.0.0 on media-production.html.
-   - Allows scheduled Media work to create durable Calendar commitments and
-     refresh the same Mission Control nav-attention contract.
-   - Preserves Calendar durability, Work enhancements, Gmail decision controls,
-     and all existing Media page enhancements.
+   - Preserves Media Production Sessions, Calendar urgency, Work enhancements,
+     Gmail decision controls, and all existing Media page enhancements.
    ========================================================= */
 
 (() => {
   "use strict";
 
-  const SHELL_VERSION = "2.0.26";
+  const SHELL_VERSION = "2.0.27";
   const WORKER_ENDPOINT =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const MISSION_CONTROL_ACTION = "get-mission-control";
@@ -287,7 +286,7 @@
 
     if (/\/calendar\.html$/i.test(path)) {
       appendScript(
-        "shared/calendar-durable-sync.js?v=1.0.0",
+        "shared/calendar-durable-sync.js?v=1.0.1",
         "data-gcm-calendar-durable-sync"
       );
     }
