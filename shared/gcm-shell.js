@@ -1,23 +1,23 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gcm-shell.js
-   Version: 2.0.27
+   Version: 2.0.28
    Status: Production Road-Test Candidate
    Purpose: Shared internal GCM OS application shell foundation.
    Source: gcm-shell.js 2.0.23 production navigation
-   Sprint: Calendar — Cross-Module Durable Render
+   Sprint: Navigation — Canonical Main Workspace
    Change:
-   - Loads Calendar Durable Sync v1.0.1 so every new D1 Calendar fingerprint
-     can trigger one safe visible Calendar re-render.
-   - Preserves the verified combined Prospects destination and canonical shared nav.
-   - Preserves Media Production Sessions, Calendar urgency, Work enhancements,
-     Gmail decision controls, and all existing Media page enhancements.
+   - Restores Communications as a main operating workspace after Clients.
+   - Locks canonical main-nav order: Today, Clients, Communications, Work,
+     Media, Prospects, Calendar, Billing, Proof.
+   - Preserves Calendar Durable Sync v1.0.1, Media Production Sessions,
+     deadline urgency, Work enhancements, and Gmail decision controls.
    ========================================================= */
 
 (() => {
   "use strict";
 
-  const SHELL_VERSION = "2.0.27";
+  const SHELL_VERSION = "2.0.28";
   const WORKER_ENDPOINT =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const MISSION_CONTROL_ACTION = "get-mission-control";
@@ -25,6 +25,7 @@
   const PAGE_MAP = {
     today: { label: "Today", href: "today.html", icon: "⌂" },
     clients: { label: "Clients", href: "clients.html", icon: "◫" },
+    communications: { label: "Communications", href: "communications.html", icon: "✉" },
     work: { label: "Work", href: "work.html", icon: "✓" },
     media: { label: "Media", href: "media.html", icon: "◉" },
     prospects: { label: "Prospects", href: "prospects.html", icon: "◎" },
