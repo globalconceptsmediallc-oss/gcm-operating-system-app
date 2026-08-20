@@ -1,7 +1,7 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gcm-worker-deploy.yml
-# Version: 1.4.1
+# Version: 1.4.2
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Cloudflare Worker from main.
 # Change Notes:
@@ -10,7 +10,7 @@
 # - Verify the core business rule that a formal Prospect cannot be created
 #   without a real scheduled appointment.
 # - Verify service/startup route boundaries without creating test Prospect records.
-# - Verify Media Production Sessions v1.1.0 and migration 0011 are live.
+# - Verify Media Production Sessions v1.1.1 and migration 0011 are live.
 # - Verify Mission Control recognizes media_production_sessions as a Media deadline source.
 # - Preserve Gmail operator-decision routes, Calendar, Work due-date source,
 #   Operating Sessions, and auth boundaries.
@@ -228,8 +228,8 @@ jobs:
             throw new Error(`Media creative workflow returned HTTP ${mediaWorkflowResponse.status}`);
           }
           const mediaWorkflow = await mediaWorkflowResponse.json();
-          if (mediaWorkflow?.mediaCreativeWorkflowVersion !== "1.1.0") {
-            throw new Error(`Expected Media Creative Workflow 1.1.0, received ${mediaWorkflow?.mediaCreativeWorkflowVersion || "unknown"}`);
+          if (mediaWorkflow?.mediaCreativeWorkflowVersion !== "1.1.1") {
+            throw new Error(`Expected Media Creative Workflow 1.1.1, received ${mediaWorkflow?.mediaCreativeWorkflowVersion || "unknown"}`);
           }
           if (!Array.isArray(mediaWorkflow?.creativeWorkflow?.productionSessions)) {
             throw new Error("Media production sessions are not live; migration 0011 may be unavailable.");
