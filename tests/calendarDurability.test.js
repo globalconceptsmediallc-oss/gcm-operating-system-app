@@ -1,15 +1,15 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/calendarDurability.test.js
-   Version: 1.1.2
+   Version: 1.1.3
    Status: Production Test
-   Source: tests/calendarDurability.test.js 1.0.0
-   Sprint: Media → Calendar Natural Workflow
+   Source: tests/calendarDurability.test.js 1.1.2
+   Sprint: Calendar — Cross-Module Durable Render
    Purpose:
    Verify the durable Calendar contract plus the Media production-session
    connection that drives Calendar and Media urgency from one scheduled record.
 
-   Change Notes — 1.1.2
+   Change Notes — 1.1.3
    - Preserves Calendar normalization and migration regression coverage.
    - Verifies migration 0011 production-session structure.
    - Verifies Media workflow exposes save/complete production sessions.
@@ -19,6 +19,8 @@
    - Locks the Media Creative Workflow runtime contract to v1.1.1.
    - Verifies Calendar UPSERT matches the existing partial UNIQUE source_key index.
    - Verifies retry recovery exists before inserting a new production session.
+   - Updates the Calendar bridge contract from v1.0.0 to v1.0.1.
+   - Verifies the durable-fingerprint reload protection used for cross-module appointments.
    ========================================================= */
 
 import assert from "node:assert/strict";
@@ -172,7 +174,7 @@ function testShellContract() {
 
   assert.match(
     shell,
-    /calendar-durable-sync\.js\?v=1\.0\.0/
+    /calendar-durable-sync\.js\?v=1\.0\.1/
   );
 
   assert.match(
@@ -187,12 +189,27 @@ function testShellContract() {
 
   assert.match(
     bridge,
+    /const VERSION = "1\.0\.1"/
+  );
+
+  assert.match(
+    bridge,
     /action:\s*ACTION/
   );
 
   assert.match(
     bridge,
     /sync_snapshot/
+  );
+
+  assert.match(
+    bridge,
+    /lastReloadFingerprint === durableFingerprint/
+  );
+
+  assert.match(
+    bridge,
+    /sessionStorage\.setItem\(RELOAD_KEY, durableFingerprint\)/
   );
 
   assert.match(
