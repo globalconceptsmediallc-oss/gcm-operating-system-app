@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/mediaCreativeWorkflow.js
-   Version: 1.1.0
+   Version: 1.1.1
    Status: Production Road-Test Candidate
    Source: Production routes/mediaCreativeWorkflow.js 1.0.0
    Sprint: Media → Calendar Natural Workflow
@@ -9,7 +9,7 @@
    Preserve the existing Media creative/traffic workflow and add durable
    production sessions that connect scheduled Media work to Calendar.
 
-   Change Notes — 1.1.0
+   Change Notes — 1.1.1
    - Preserves every existing creative, assignment, traffic-package, and
      station-confirmation operation.
    - Adds durable productionSessions and productionSessionCreatives to
@@ -21,6 +21,9 @@
      calendar_appointments record.
    - Completing a session completes its connected Calendar appointment.
    - Adds Media history entries to linked creatives.
+   - Fixes Calendar UPSERT matching for the existing partial UNIQUE source_key index.
+   - Makes new-session saves retry-safe by recovering the same open client/title/date
+     session after a partial failure instead of creating a duplicate.
    ========================================================= */
 
 import { VERSION, ACTIONS } from "../shared/config.js";
@@ -34,7 +37,7 @@ import {
   rowsOf
 } from "../shared/database.js";
 
-export const MEDIA_CREATIVE_WORKFLOW_VERSION = "1.1.0";
+export const MEDIA_CREATIVE_WORKFLOW_VERSION = "1.1.1";
 
 export const MEDIA_CREATIVE_OPERATIONS = Object.freeze([
   "get_creative_workflow",
@@ -1354,6 +1357,32 @@ async function saveProductionSession(body, db, requestId) {
 
   let id = sessionId;
   let created = false;
+  let recoveredExisting = false;
+
+  if (!id) {
+    const retryMatch = await db.prepare(`
+      SELECT id
+      FROM media_production_sessions
+      WHERE client_id = ?
+        AND LOWER(TRIM(COALESCE(session_type, 'recording'))) = LOWER(?)
+        AND LOWER(TRIM(title)) = LOWER(?)
+        AND scheduled_at = ?
+        AND LOWER(TRIM(COALESCE(status, 'scheduled')))
+          NOT IN ('completed', 'cancelled', 'canceled')
+      ORDER BY id DESC
+      LIMIT 1
+    `).bind(
+      clientId,
+      sessionType,
+      title,
+      scheduledAt
+    ).first();
+
+    if (retryMatch?.id) {
+      id = +retryMatch.id;
+      recoveredExisting = true;
+    }
+  }
 
   if (id) {
     const existing = await db.prepare(`
@@ -1501,6 +1530,7 @@ async function saveProductionSession(body, db, requestId) {
       NULL
     )
     ON CONFLICT(source_key)
+    WHERE source_key IS NOT NULL
     DO UPDATE SET
       client_id = excluded.client_id,
       title = excluded.title,
@@ -1573,7 +1603,8 @@ async function saveProductionSession(body, db, requestId) {
       creativeIds,
       scheduledAt,
       status,
-      created
+      created,
+      recoveredExisting
     },
     created ? 201 : 200
   );
@@ -1831,4 +1862,4 @@ function dateOnly(v) {
   return `${m[1]}-${m[2]}-${m[3]}`;
 }
 
-/* END OF FILE — routes/mediaCreativeWorkflow.js v1.1.0 */
+/* END OF FILE — routes/mediaCreativeWorkflow.js v1.1.1 */
