@@ -1,15 +1,17 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/clientWorkspace.js
-   Version: 7.3.0
+   Version: 7.3.1
    Status: Production Candidate
-   Source: Production routes/clientWorkspace.js 7.2.0
-   Sprint: Durable Investigation Monitoring State
+   Source: Production routes/clientWorkspace.js 7.3.0
+   Sprint: Client Health — Open Work Runtime Alignment
    Purpose: Preserve the complete live D1 client workspace and client tool
             router while separating actionable Investigations from durable
             monitoring / awaiting-external-validation history.
 
    Production changes:
+   - D1 Work status "open" now maps to Business Record status "Planned" so
+     active open Work Items remain visible in Current Work and Open Work counts.
    - Monitoring Investigations remain preserved in the full Investigation history.
    - Monitoring Investigations no longer drive account health, current priority,
      next action, Business Priorities, or active Investigation counts.
@@ -875,7 +877,7 @@ function normalizeStatus(value) {
 
 function workspaceStatus(value) {
   const statuses = {
-    open: "Not Started",
+    open: "Planned",
     planned: "Planned",
     in_progress: "In Progress",
     blocked: "Blocked",
