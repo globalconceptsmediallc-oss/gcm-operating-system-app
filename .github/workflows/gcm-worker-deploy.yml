@@ -1,7 +1,7 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gcm-worker-deploy.yml
-# Version: 1.4.0
+# Version: 1.4.1
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Cloudflare Worker from main.
 # Change Notes:
@@ -10,6 +10,8 @@
 # - Verify the core business rule that a formal Prospect cannot be created
 #   without a real scheduled appointment.
 # - Verify service/startup route boundaries without creating test Prospect records.
+# - Verify Media Production Sessions v1.1.0 and migration 0011 are live.
+# - Verify Mission Control recognizes media_production_sessions as a Media deadline source.
 # - Preserve Gmail operator-decision routes, Calendar, Work due-date source,
 #   Operating Sessions, and auth boundaries.
 # =========================================================
@@ -217,6 +219,38 @@ jobs:
             throw new Error("Calendar Operations live read contract is invalid.");
           }
 
+          const mediaWorkflowResponse = await fetch(url, {
+            method:"POST",
+            headers:{ "Content-Type":"application/json" },
+            body:JSON.stringify({ action:"get-media-operations", operation:"get_creative_workflow" })
+          });
+          if (!mediaWorkflowResponse.ok) {
+            throw new Error(`Media creative workflow returned HTTP ${mediaWorkflowResponse.status}`);
+          }
+          const mediaWorkflow = await mediaWorkflowResponse.json();
+          if (mediaWorkflow?.mediaCreativeWorkflowVersion !== "1.1.0") {
+            throw new Error(`Expected Media Creative Workflow 1.1.0, received ${mediaWorkflow?.mediaCreativeWorkflowVersion || "unknown"}`);
+          }
+          if (!Array.isArray(mediaWorkflow?.creativeWorkflow?.productionSessions)) {
+            throw new Error("Media production sessions are not live; migration 0011 may be unavailable.");
+          }
+          if (!Array.isArray(mediaWorkflow?.creativeWorkflow?.productionSessionCreatives)) {
+            throw new Error("Media production-session creative links are not live.");
+          }
+
+          const mediaSessionBoundaryResponse = await fetch(url, {
+            method:"POST",
+            headers:{ "Content-Type":"application/json" },
+            body:JSON.stringify({ action:"get-media-operations", operation:"save_production_session" })
+          });
+          if (mediaSessionBoundaryResponse.status !== 400) {
+            throw new Error(`Media production session boundary expected HTTP 400 without clientId, received ${mediaSessionBoundaryResponse.status}`);
+          }
+          const mediaSessionBoundary = await mediaSessionBoundaryResponse.json();
+          if (!String(mediaSessionBoundary?.error || "").toLowerCase().includes("clientid")) {
+            throw new Error("Media production session route did not return the expected clientId validation boundary.");
+          }
+
           const missionResponse = await fetch(url, {
             method:"POST",
             headers:{ "Content-Type":"application/json" },
@@ -236,6 +270,16 @@ jobs:
             );
           if (!dueDateSource) {
             throw new Error("Mission Control does not see work_items.due_date after migration.");
+          }
+
+          const mediaAttention = mission?.missionControl?.navAttention?.sections?.media;
+          const mediaSessionSource = Array.isArray(mediaAttention?.supportedSources)
+            && mediaAttention.supportedSources.some(source =>
+              source?.table === "media_production_sessions"
+              && source?.dateColumn === "scheduled_at"
+            );
+          if (!mediaSessionSource) {
+            throw new Error("Mission Control does not recognize media_production_sessions.scheduled_at as a Media deadline source.");
           }
 
           for (const action of [
