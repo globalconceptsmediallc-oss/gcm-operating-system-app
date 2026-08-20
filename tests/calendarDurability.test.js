@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/calendarDurability.test.js
-   Version: 1.1.1
+   Version: 1.1.2
    Status: Production Test
    Source: tests/calendarDurability.test.js 1.0.0
    Sprint: Media → Calendar Natural Workflow
@@ -9,13 +9,16 @@
    Verify the durable Calendar contract plus the Media production-session
    connection that drives Calendar and Media urgency from one scheduled record.
 
-   Change Notes — 1.1.1
+   Change Notes — 1.1.2
    - Preserves Calendar normalization and migration regression coverage.
    - Verifies migration 0011 production-session structure.
    - Verifies Media workflow exposes save/complete production sessions.
    - Verifies Media sessions write connected calendar_appointments.
    - Verifies navAttention reads media_production_sessions.
    - Verifies shared shell loads media-production-sessions.js v1.0.0.
+   - Locks the Media Creative Workflow runtime contract to v1.1.1.
+   - Verifies Calendar UPSERT matches the existing partial UNIQUE source_key index.
+   - Verifies retry recovery exists before inserting a new production session.
    ========================================================= */
 
 import assert from "node:assert/strict";
@@ -206,7 +209,7 @@ function testMediaSessionRouteContract() {
 
   assert.match(
     mediaRoute,
-    /MEDIA_CREATIVE_WORKFLOW_VERSION = "1\.1\.0"/
+    /MEDIA_CREATIVE_WORKFLOW_VERSION = "1\.1\.1"/
   );
 
   assert.match(
@@ -237,6 +240,21 @@ function testMediaSessionRouteContract() {
   assert.match(
     mediaRoute,
     /media_production_session_creatives/
+  );
+
+  assert.match(
+    mediaRoute,
+    /ON CONFLICT\(source_key\)[\s\S]*WHERE source_key IS NOT NULL[\s\S]*DO UPDATE SET/
+  );
+
+  assert.match(
+    mediaRoute,
+    /SELECT id[\s\S]*FROM media_production_sessions[\s\S]*scheduled_at = \?[\s\S]*NOT IN \('completed', 'cancelled', 'canceled'\)/
+  );
+
+  assert.match(
+    mediaRoute,
+    /recoveredExisting/
   );
 }
 
