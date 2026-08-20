@@ -1,13 +1,25 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailDispositions.js
-   Version: 1.0.0
+   Version: 1.1.0
    Status: Production Road-Test Candidate
-   Sprint: Gmail — Operator Decision Routes
+   Sprint: Gmail — Evidence Before Assumptions
    Purpose:
-   Give Morning Command explicit human dispositions for emails that require no
-   work while preserving the difference between disposable mail and durable
-   business information.
+   Give Morning Command explicit human dispositions while preventing Position
+   Tracking monitoring summaries from replacing the source evidence needed for
+   future comparison, verification, and consulting decisions.
+
+   Change notes — v1.1.0:
+   - Intercepts preview-gmail-inbox only to enrich Position Tracking cards with
+     exact keyword, current position, movement, trigger, domain, and report date.
+   - Intercepts approve-gmail-monitoring for Position Tracking and re-reads Gmail
+     at write time before any D1 mutation.
+   - Saves structured Position Tracking evidence plus the relevant Gmail source
+     text, message ID, thread ID, sender, and source date into activity_records.
+   - Marks Gmail read only after D1 confirms the evidence record.
+   - Delegates non-Position-Tracking preview/monitoring behavior to the verified
+     production Gmail integration unchanged.
+   - Preserves v1.0.0 Delete — No Action and Keep as Information behavior.
 
    Change notes — v1.0.0:
    - Delete — No Action Required moves the Gmail message to Trash and creates
@@ -23,24 +35,234 @@
 import { clean, safeErrorMessage, logWorkerError, jsonResponse } from "../shared/http.js";
 import { getDatabase } from "../shared/database.js";
 import { handleCommitOperationalDecision } from "./operationalDecision.js";
+import { handleGmailAction } from "./gmailIntegration.js";
 import { inferClientFromText } from "./gmailWorkRequestIntelligence.js";
+import {
+  extractPositionTrackingEvidence,
+  formatPositionTrackingEvidence,
+  buildPositionTrackingBusinessMeaning
+} from "../shared/gmailMonitoringEvidence.js";
 
+export const PREVIEW_GMAIL_INBOX_EVIDENCE_ACTION = "preview-gmail-inbox";
+export const APPROVE_GMAIL_MONITORING_EVIDENCE_ACTION = "approve-gmail-monitoring";
 export const DELETE_GMAIL_NO_ACTION_ACTION = "delete-gmail-no-action";
 export const SAVE_GMAIL_INFORMATION_ACTION = "save-gmail-information";
 export const GMAIL_DISPOSITION_ACTIONS = Object.freeze([
+  PREVIEW_GMAIL_INBOX_EVIDENCE_ACTION,
+  APPROVE_GMAIL_MONITORING_EVIDENCE_ACTION,
   DELETE_GMAIL_NO_ACTION_ACTION,
   SAVE_GMAIL_INFORMATION_ACTION
 ]);
-export const GMAIL_DISPOSITION_VERSION = "1.0.0";
+export const GMAIL_DISPOSITION_VERSION = "1.1.0";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GMAIL_API = "https://gmail.googleapis.com/gmail/v1";
 
 export async function handleGmailDispositions(body, env, requestId) {
   const action = clean(body?.action);
+  if (action === PREVIEW_GMAIL_INBOX_EVIDENCE_ACTION) return previewWithEvidence(body, env, requestId);
+  if (action === APPROVE_GMAIL_MONITORING_EVIDENCE_ACTION) return approveMonitoringWithEvidence(body, env, requestId);
   if (action === DELETE_GMAIL_NO_ACTION_ACTION) return deleteNoAction(body, env, requestId);
   if (action === SAVE_GMAIL_INFORMATION_ACTION) return saveInformation(body, env, requestId);
   return null;
+}
+
+async function previewWithEvidence(body, env, requestId) {
+  const legacyResponse = await handleGmailAction(body, env, requestId);
+  if (!legacyResponse || typeof legacyResponse.json !== "function") return legacyResponse;
+
+  let payload;
+  try {
+    payload = await legacyResponse.json();
+  } catch {
+    return legacyResponse;
+  }
+
+  if (!legacyResponse.ok || payload?.ok !== true || !Array.isArray(payload?.messages)) {
+    return jsonResponse(payload, legacyResponse.status || 500);
+  }
+
+  payload.messages = payload.messages.map(enrichPositionTrackingPreview);
+  payload.gmailDispositionVersion = GMAIL_DISPOSITION_VERSION;
+  payload.evidencePreservation = "Position Tracking exact-signal guard active";
+  return jsonResponse(payload, legacyResponse.status || 200);
+}
+
+function enrichPositionTrackingPreview(message) {
+  const evidence = extractPositionTrackingEvidence(
+    `${clean(message?.subject)}\n${clean(message?.bodyText)}`
+  );
+  if (!evidence) return message;
+
+  const inferred = inferClientFromText(
+    `${clean(message?.subject)}\n${clean(message?.bodyText)}`
+  );
+  const current = message?.intelligence || {};
+  const clientName = inferred?.name || current.client || "Unassigned — Human Review";
+  const evidenceSummary = formatPositionTrackingEvidence(evidence);
+  const businessMeaning = buildPositionTrackingBusinessMeaning(evidence, clientName);
+
+  return {
+    ...message,
+    snippet:evidenceSummary || message?.snippet,
+    intelligence:{
+      ...current,
+      notificationType:"position_tracking",
+      client:clientName,
+      businessMeaning:businessMeaning || current.businessMeaning,
+      monitoringMetrics:evidence,
+      evidenceSummary,
+      evidenceSufficiency:evidence.keywords?.length
+        ? "Exact keyword, current position, movement, trigger, domain, and report date extracted from the Gmail source"
+        : current.evidenceSufficiency,
+      evidenceComparedAgainst:"Current Gmail source preserved for future D1 trend comparison",
+      verificationRequired:"Human approval may save this exact Position Tracking signal as monitoring evidence. Escalate only when later comparison proves a meaningful adverse condition."
+    }
+  };
+}
+
+async function approveMonitoringWithEvidence(body, env, requestId) {
+  const gmailMessageId = clean(body?.gmailMessageId);
+  if (!gmailMessageId) {
+    return jsonResponse({
+      ok:false,
+      requestId,
+      action:APPROVE_GMAIL_MONITORING_EVIDENCE_ACTION,
+      error:"gmailMessageId is required."
+    }, 400);
+  }
+
+  try {
+    const db = requireDb(env);
+    const sourceReference = `gmail:${gmailMessageId}`;
+    const existing = await db.prepare(`
+      SELECT id, client_id, activity_date, activity, source_reference
+      FROM activity_records
+      WHERE source_reference = ? OR evidence_reference = ?
+      LIMIT 1
+    `).bind(sourceReference, sourceReference).first();
+
+    if (existing) {
+      const live = await loadLiveGmailMessage(gmailMessageId, env);
+      await markMessageRead(gmailMessageId, live.accessToken);
+      return jsonResponse({
+        ok:true,
+        requestId,
+        action:APPROVE_GMAIL_MONITORING_EVIDENCE_ACTION,
+        version:GMAIL_DISPOSITION_VERSION,
+        duplicate:true,
+        writesPerformed:0,
+        gmailMarkedRead:true,
+        evidencePreserved:true,
+        record:existing
+      });
+    }
+
+    const { message, accessToken } = await loadLiveGmailMessage(gmailMessageId, env);
+    const evidence = extractPositionTrackingEvidence(
+      `${clean(message.subject)}\n${clean(message.bodyText)}`
+    );
+
+    if (!evidence) {
+      return handleGmailAction(body, env, requestId);
+    }
+
+    const inferred = inferClientFromText(`${message.subject}\n${message.bodyText}`);
+    const client = await resolveClient(db, inferred, "");
+    if (!client?.client_code) {
+      return jsonResponse({
+        ok:false,
+        requestId,
+        action:APPROVE_GMAIL_MONITORING_EVIDENCE_ACTION,
+        error:"Position Tracking evidence was found, but the production client could not be verified. Gmail was left unchanged for manual review."
+      }, 409);
+    }
+
+    const activityDate = normalizeActivityDate(message.date);
+    const evidenceSummary = formatPositionTrackingEvidence(evidence);
+    const businessMeaning = buildPositionTrackingBusinessMeaning(evidence, client.name);
+    const sourceEvidence = positionTrackingSourceEvidence(message.bodyText);
+    const notes = [
+      `Business meaning: ${businessMeaning}`,
+      `Structured evidence: ${JSON.stringify(evidence)}`,
+      `Evidence summary: ${evidenceSummary}`,
+      `Source sender: ${clean(message.from)}`,
+      `Source date: ${clean(message.date)}`,
+      `Gmail message ID: ${gmailMessageId}`,
+      `Gmail thread ID: ${clean(message.threadId)}`,
+      sourceEvidence ? `Gmail source evidence:\n${sourceEvidence}` : ""
+    ].filter(Boolean).join("\n");
+
+    const result = await db.prepare(`INSERT INTO activity_records (
+      client_id,activity_date,category,activity,evidence_type,evidence_reference,
+      status,owner,time_minutes,expected_impact,actual_impact,notes,source_type,
+      source_reference,priority,win,created_at,updated_at
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`)
+      .bind(
+        client.id,
+        activityDate,
+        "SEO Ranking Alert",
+        clean(message.subject) || "Position Tracking update",
+        "Gmail — Position Tracking",
+        sourceReference,
+        "completed",
+        "Andy",
+        0,
+        "Monitoring / trend evidence",
+        businessMeaning,
+        notes,
+        "gmail_monitoring",
+        sourceReference,
+        "Low",
+        0
+      ).run();
+
+    const recordId = result?.meta?.last_row_id || null;
+    if (!recordId) {
+      return jsonResponse({
+        ok:false,
+        requestId,
+        action:APPROVE_GMAIL_MONITORING_EVIDENCE_ACTION,
+        error:"D1 did not confirm the Position Tracking monitoring record. Gmail was left unread."
+      }, 500);
+    }
+
+    await markMessageRead(gmailMessageId, accessToken);
+
+    return jsonResponse({
+      ok:true,
+      requestId,
+      action:APPROVE_GMAIL_MONITORING_EVIDENCE_ACTION,
+      version:GMAIL_DISPOSITION_VERSION,
+      duplicate:false,
+      writesPerformed:1,
+      gmailMarkedRead:true,
+      evidencePreserved:true,
+      monitoringMetrics:evidence,
+      evidenceSummary,
+      record:{
+        id:recordId,
+        client_id:client.id,
+        client:client.name,
+        activity_date:activityDate,
+        activity:clean(message.subject) || "Position Tracking update",
+        source_reference:sourceReference
+      }
+    });
+  } catch (error) {
+    logWorkerError({
+      requestId,
+      route:APPROVE_GMAIL_MONITORING_EVIDENCE_ACTION,
+      stage:"gmail_monitoring_evidence",
+      error
+    });
+    return jsonResponse({
+      ok:false,
+      requestId,
+      action:APPROVE_GMAIL_MONITORING_EVIDENCE_ACTION,
+      error:safeErrorMessage(error)
+    }, 500);
+  }
 }
 
 async function deleteNoAction(body, env, requestId) {
@@ -243,6 +465,20 @@ function buildInformationSummary(message) {
   return excerpt ? `${subject}. ${excerpt}` : `${subject}.`;
 }
 
+function positionTrackingSourceEvidence(value) {
+  const text = sanitizeEmailText(value);
+  if (!text) return "";
+  const relevant = text.split(/\bGo to Campaign\b/i)[0].trim();
+  return (relevant || text).slice(0, 8000);
+}
+
+function normalizeActivityDate(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? new Date().toISOString().slice(0, 10)
+    : date.toISOString().slice(0, 10);
+}
+
 async function loadLiveGmailMessage(gmailMessageId, env) {
   requireSecrets(env);
   const db = requireDb(env);
@@ -316,6 +552,8 @@ function htmlToText(value) {
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<br\s*\/?\s*>/gi, "\n")
     .replace(/<\/p>/gi, "\n")
+    .replace(/<\/tr>/gi, "\n")
+    .replace(/<\/t[dh]>/gi, " ")
     .replace(/<[^>]+>/g, " ")
     .replace(/&nbsp;/gi, " ")
     .replace(/&amp;/gi, "&")
