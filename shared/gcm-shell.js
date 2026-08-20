@@ -1,15 +1,16 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gcm-shell.js
-   Version: 2.0.25
+   Version: 2.0.26
    Status: Production Road-Test Candidate
    Purpose: Shared internal GCM OS application shell foundation.
    Source: gcm-shell.js 2.0.23 production navigation
-   Sprint: Prospects — Combined Prospecting + CRM Navigation Lock
+   Sprint: Media → Calendar Natural Workflow
    Change:
-   - Points the shared Prospects navigation to the verified combined prospects.html workspace.
-   - Retires client-pre-research.html as the active Prospects nav destination.
-   - Preserves durable red/yellow/green navigation urgency.
+   - Preserves the verified combined Prospects destination and canonical shared nav.
+   - Loads Media Production Sessions v1.0.0 on media-production.html.
+   - Allows scheduled Media work to create durable Calendar commitments and
+     refresh the same Mission Control nav-attention contract.
    - Preserves Calendar durability, Work enhancements, Gmail decision controls,
      and all existing Media page enhancements.
    ========================================================= */
@@ -17,7 +18,7 @@
 (() => {
   "use strict";
 
-  const SHELL_VERSION = "2.0.25";
+  const SHELL_VERSION = "2.0.26";
   const WORKER_ENDPOINT =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const MISSION_CONTROL_ACTION = "get-mission-control";
@@ -319,6 +320,11 @@
       appendScript(
         "shared/media-work-state.js?v=1.0.0",
         "data-gcm-media-work-state"
+      );
+
+      appendScript(
+        "shared/media-production-sessions.js?v=1.0.0",
+        "data-gcm-media-production-sessions"
       );
     }
 
