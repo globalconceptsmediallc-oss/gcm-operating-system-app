@@ -1,10 +1,19 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/gmailOperationalIntake.test.js
-   Version: 1.0.1
+   Version: 1.1.0
    Status: Production Regression Test
    Purpose: Verify Morning Command uses GCM OS disposition state rather than
-            Gmail read/unread state when surfacing operational email.
+            Gmail read/unread state and preserves exact Position Tracking
+            evidence before an approved monitoring email is cleared.
+
+   Change notes — 1.1.0:
+   - Locks Position Tracking monitoring to the Evidence Before Assumptions rule.
+   - Verifies keyword, position, movement, trigger, domain, and report date parsing.
+   - Verifies flattened Gmail HTML-to-text output is also parsed correctly.
+   - Requires the monitoring disposition route to store structured evidence and
+     the relevant Gmail source text before marking the message read.
+
    Change notes — 1.0.1:
    - Validates the JavaScript dataset contract that creates the rendered
      data-gcm-backlog attribute instead of requiring rendered HTML in source.
@@ -12,12 +21,18 @@
 
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import {
+  extractPositionTrackingEvidence,
+  formatPositionTrackingEvidence,
+  buildPositionTrackingBusinessMeaning
+} from "../shared/gmailMonitoringEvidence.js";
 
 function read(path) {
   return fs.readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
 const route = read("routes/gmailWorkRequests.js");
+const dispositions = read("routes/gmailDispositions.js");
 const ui = read("shared/today-gmail-decisions.js");
 
 assert.match(route, /Version: 1\.1\.0/);
@@ -34,6 +49,14 @@ assert.match(route, /writesPerformed:0/);
 assert.match(route, /excludeIds/);
 assert.match(route, /evaluateExplicitHumanWorkRequest/);
 
+assert.match(dispositions, /Version: 1\.1\.0/);
+assert.match(dispositions, /PREVIEW_GMAIL_INBOX_EVIDENCE_ACTION = "preview-gmail-inbox"/);
+assert.match(dispositions, /APPROVE_GMAIL_MONITORING_EVIDENCE_ACTION = "approve-gmail-monitoring"/);
+assert.match(dispositions, /Structured evidence:/);
+assert.match(dispositions, /Gmail source evidence:/);
+assert.match(dispositions, /await markMessageRead\(gmailMessageId, accessToken\)/);
+assert.match(dispositions, /if \(!recordId\)[\s\S]*Gmail was left unread/);
+
 assert.match(ui, /Version: 1\.1\.0/);
 assert.match(ui, /const BACKLOG_MODE = "operational-backlog"/);
 assert.match(ui, /const MAX_VISIBLE_EMAILS = 10/);
@@ -46,4 +69,54 @@ assert.match(ui, /Create Investigation/);
 assert.match(ui, /Delete — No Action/);
 assert.match(ui, /Keep as Information/);
 
-console.log("PASS Gmail operational intake uses OS disposition state, not unread state");
+const sample = `Position Tracking
+
+Project: A1 Action • a1actionsafeandlock.com
+
+Device & Location: Melbourne,Florida,United States (google) • English
+
+Date: August 21, 2026
+
+Alert triggered for 1 keywords
+
+Rule: Enters the top 10
+
+Domain: a1actionsafeandlock.com
+
+Keyword Pos. on Aug 21 Diff. Volume
+
+locksmith for business doors 9 4 0
+
+Go to Campaign`;
+
+const evidence = extractPositionTrackingEvidence(sample);
+assert.deepEqual(evidence, {
+  type:"position_tracking",
+  project:"A1 Action",
+  domain:"a1actionsafeandlock.com",
+  reportDate:"August 21, 2026",
+  rule:"Enters the top 10",
+  keywordCount:1,
+  keywords:[{
+    keyword:"locksmith for business doors",
+    position:9,
+    change:4,
+    volume:0
+  }]
+});
+assert.equal(
+  formatPositionTrackingEvidence(evidence),
+  "locksmith for business doors · #9 · ↑4 · Enters the top 10 · a1actionsafeandlock.com · August 21, 2026"
+);
+assert.match(
+  buildPositionTrackingBusinessMeaning(evidence, "A1 Action Safe & Lock"),
+  /“locksmith for business doors” is now position 9, up 4 positions, triggering “Enters the top 10”/
+);
+
+const flattened = sample.replace(/\n+/g, " ");
+const flattenedEvidence = extractPositionTrackingEvidence(flattened);
+assert.equal(flattenedEvidence?.keywords?.[0]?.keyword, "locksmith for business doors");
+assert.equal(flattenedEvidence?.keywords?.[0]?.position, 9);
+assert.equal(flattenedEvidence?.keywords?.[0]?.change, 4);
+
+console.log("PASS Gmail operational intake preserves OS disposition state and exact Position Tracking evidence");
