@@ -1,13 +1,23 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailDispositions.js
-   Version: 1.3.0
+   Version: 1.3.1
    Status: Production Road-Test Candidate
-   Sprint: Gmail — Universal Monitoring Evidence
+   Sprint: Gmail — Authoritative Monitoring Write
    Purpose:
    Give Morning Command explicit human dispositions while preserving exact
    source evidence before a Monitoring decision can clear Gmail, and preserve
    the lightweight Decision Hold / Work Lite workflow.
+
+   Change notes — v1.3.1:
+   - Makes the evidence-aware Monitoring approval path authoritative at write time.
+   - Re-reads the live Gmail message, independently verifies the production client,
+     extracts source-grounded Monitoring evidence, writes D1, then clears Gmail.
+   - Removes the obsolete second legacy/AI Monitoring decision that could disagree
+     with the verified preview client and reject an otherwise valid approval.
+   - Uses one source-grounded write path for Position Tracking and generic reports.
+   - Preserves the evidence vault, duplicate safety, Decision Hold, Information,
+     Delete — No Action, and Gmail-after-D1 mutation guarantees.
 
    Change notes — v1.3.0:
    - Applies Evidence Before Assumptions to every Gmail Monitoring approval.
@@ -18,12 +28,7 @@
    - Enriches Monitoring preview cards with compact evidence snapshots when the
      existing intelligence has no structured monitoring metrics.
    - Keeps Position Tracking's specialized keyword parser and exact-signal path.
-   - If authoritative Monitoring validation fails, no final Monitoring record is
-     invented; pending evidence is removed when no operational write occurred.
-   - If an operational write succeeds but Gmail clearing fails, the captured
-     source remains durable and linked to the activity record.
-   - Uses runtime schema guards for both Monitoring Evidence and Decision Hold
-     additive tables so application rollout cannot outrun D1 schema rollout.
+   - Uses runtime schema guards for both Monitoring Evidence and Decision Hold.
 
    Change notes — v1.2.0:
    - Adds Hold for Review / Work Lite as a durable, client-linked decision state.
@@ -31,10 +36,6 @@
    - Preserves the full source text, blocking question/follow-up, reason,
      priority, due date when present, Gmail message ID, and thread ID.
    - Marks Gmail read only after D1 confirms the Decision Hold.
-   - Lists open Decision Holds for Today and can release one back to Morning
-     Command without deleting its history.
-   - Resolves client identity from strongest message context first: subject,
-     body, snippet, thread context, recipients, then sender.
 
    Change notes — v1.1.0:
    - Adds exact Position Tracking keyword, position, movement, trigger, domain,
@@ -79,7 +80,7 @@ export const GMAIL_DISPOSITION_ACTIONS = Object.freeze([
   DELETE_GMAIL_NO_ACTION_ACTION,
   SAVE_GMAIL_INFORMATION_ACTION
 ]);
-export const GMAIL_DISPOSITION_VERSION = "1.3.0";
+export const GMAIL_DISPOSITION_VERSION = "1.3.1";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GMAIL_API = "https://gmail.googleapis.com/gmail/v1";
@@ -238,14 +239,14 @@ async function approveMonitoringWithEvidence(body, env, requestId) {
     const evidence = extractMonitoringEvidence(message);
     const evidenceSummary = formatMonitoringEvidence(evidence);
     const inferred = inferClientFromMessageContext(message, inferClientFromText);
-    const preClient = await resolveClient(db, inferred, clean(body?.clientName || body?.client));
+    const client = await resolveClient(db, inferred, clean(body?.clientName || body?.client));
 
     await captureMonitoringSourceEvidence(db, {
       sourceReference,
       message,
       evidence,
       evidenceSummary,
-      clientId:preClient?.id || null
+      clientId:client?.id || null
     });
 
     if (existing?.id) {
@@ -257,7 +258,7 @@ async function approveMonitoringWithEvidence(body, env, requestId) {
       await finalizeMonitoringSourceEvidence(db, {
         sourceReference,
         activityRecordId:existing.id,
-        clientId:existing.client_id || preClient?.id || null,
+        clientId:existing.client_id || client?.id || null,
         status:"monitoring_saved"
       });
       await markMessageRead(gmailMessageId, accessToken);
@@ -276,150 +277,74 @@ async function approveMonitoringWithEvidence(body, env, requestId) {
       });
     }
 
-    if (evidence?.type === "position_tracking") {
-      if (!preClient?.client_code) {
-        await deletePendingMonitoringEvidence(db, sourceReference);
-        return jsonResponse({
-          ok:false,
-          requestId,
-          action:APPROVE_GMAIL_MONITORING_EVIDENCE_ACTION,
-          error:"Position Tracking evidence was found, but the production client could not be verified. Gmail was left unchanged for manual review."
-        }, 409);
-      }
-
-      const activityDate = normalizeActivityDate(message.date);
-      const businessMeaning = buildPositionTrackingBusinessMeaning(evidence, preClient.name);
-      const notes = [
-        `Business meaning: ${businessMeaning}`,
-        `Evidence summary: ${evidenceSummary}`,
-        `Gmail message ID: ${gmailMessageId}`,
-        `Gmail thread ID: ${clean(message.threadId)}`
-      ].filter(Boolean).join("\n");
-
-      const result = await db.prepare(`INSERT INTO activity_records (
-        client_id,activity_date,category,activity,evidence_type,evidence_reference,
-        status,owner,time_minutes,expected_impact,actual_impact,notes,source_type,
-        source_reference,priority,win,created_at,updated_at
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`)
-        .bind(
-          preClient.id,
-          activityDate,
-          "SEO Ranking Alert",
-          clean(message.subject) || "Position Tracking update",
-          "Gmail — Position Tracking",
-          sourceReference,
-          "completed",
-          "Andy",
-          0,
-          "Monitoring / trend evidence",
-          businessMeaning,
-          notes,
-          "gmail_monitoring",
-          sourceReference,
-          "Low",
-          0
-        ).run();
-
-      const recordId = result?.meta?.last_row_id || null;
-      if (!recordId) {
-        await deletePendingMonitoringEvidence(db, sourceReference);
-        return jsonResponse({
-          ok:false,
-          requestId,
-          action:APPROVE_GMAIL_MONITORING_EVIDENCE_ACTION,
-          error:"D1 did not confirm the Position Tracking monitoring record. Gmail was left unread."
-        }, 500);
-      }
-
-      await patchMonitoringActivityEvidence(db, recordId, {
-        message,
-        evidence,
-        evidenceSummary
-      });
-      await finalizeMonitoringSourceEvidence(db, {
-        sourceReference,
-        activityRecordId:recordId,
-        clientId:preClient.id,
-        status:"monitoring_saved"
-      });
-      await markMessageRead(gmailMessageId, accessToken);
-
+    if (!client?.client_code) {
+      await deletePendingMonitoringEvidence(db, sourceReference);
       return jsonResponse({
-        ok:true,
+        ok:false,
         requestId,
         action:APPROVE_GMAIL_MONITORING_EVIDENCE_ACTION,
-        version:GMAIL_DISPOSITION_VERSION,
-        duplicate:false,
-        writesPerformed:1,
-        gmailMarkedRead:true,
-        evidencePreserved:true,
-        monitoringMetrics:evidence,
-        evidenceSummary,
-        record:{
-          id:recordId,
-          client_id:preClient.id,
-          client:preClient.name,
-          activity_date:activityDate,
-          activity:clean(message.subject) || "Position Tracking update",
-          source_reference:sourceReference
-        }
-      });
+        error:"Monitoring requires a verified production client. Gmail was left unchanged for manual review."
+      }, 409);
     }
 
-    const legacyResponse = await handleGmailAction(body, env, requestId);
-    if (!legacyResponse || typeof legacyResponse.json !== "function") {
+    if (!evidence || !["monitoring_evidence","position_tracking"].includes(evidence.type)) {
       await deletePendingMonitoringEvidence(db, sourceReference);
-      return legacyResponse;
-    }
-
-    let legacyPayload;
-    try {
-      legacyPayload = await legacyResponse.json();
-    } catch (error) {
-      await deletePendingMonitoringEvidence(db, sourceReference);
-      throw error;
-    }
-
-    if (!legacyResponse.ok || legacyPayload?.ok !== true) {
-      const writtenAfterFailure = await findMonitoringActivity(db, sourceReference);
-      if (writtenAfterFailure?.id) {
-        await patchMonitoringActivityEvidence(db, writtenAfterFailure.id, {
-          message,
-          evidence,
-          evidenceSummary
-        });
-        await finalizeMonitoringSourceEvidence(db, {
-          sourceReference,
-          activityRecordId:writtenAfterFailure.id,
-          clientId:writtenAfterFailure.client_id || preClient?.id || null,
-          status:"monitoring_saved_gmail_pending"
-        });
-      } else {
-        await deletePendingMonitoringEvidence(db, sourceReference);
-      }
-      return jsonResponse(legacyPayload, legacyResponse.status || 500);
-    }
-
-    let recordId = Number(legacyPayload?.record?.id || 0) || null;
-    let clientId = Number(legacyPayload?.record?.client_id || 0) || preClient?.id || null;
-    if (!recordId) {
-      const written = await findMonitoringActivity(db, sourceReference);
-      recordId = Number(written?.id || 0) || null;
-      clientId = Number(written?.client_id || 0) || clientId;
-    }
-
-    if (!recordId) {
-      await finalizeMonitoringSourceEvidence(db, {
-        sourceReference,
-        activityRecordId:null,
-        clientId,
-        status:"source_preserved_activity_unverified"
-      });
       return jsonResponse({
-        ...legacyPayload,
-        evidencePreserved:true,
-        evidenceWarning:"Gmail source evidence was preserved, but the Monitoring activity record ID could not be independently verified."
-      }, legacyResponse.status || 200);
+        ok:false,
+        requestId,
+        action:APPROVE_GMAIL_MONITORING_EVIDENCE_ACTION,
+        error:"The live Gmail source did not contain preservable Monitoring evidence. Gmail was left unchanged for review."
+      }, 409);
+    }
+
+    const activityDate = normalizeActivityDate(message.date);
+    const category = monitoringActivityCategory(evidence, message);
+    const businessMeaning = evidence.type === "position_tracking"
+      ? buildPositionTrackingBusinessMeaning(evidence, client.name)
+      : buildMonitoringBusinessMeaning(evidence, client.name);
+    const evidenceType = evidence.type === "position_tracking"
+      ? "Gmail — Position Tracking"
+      : "Gmail — Monitoring Evidence";
+    const notes = [
+      `Business meaning: ${businessMeaning}`,
+      `Evidence summary: ${evidenceSummary}`,
+      `Gmail message ID: ${gmailMessageId}`,
+      `Gmail thread ID: ${clean(message.threadId)}`
+    ].filter(Boolean).join("\n");
+
+    const result = await db.prepare(`INSERT INTO activity_records (
+      client_id,activity_date,category,activity,evidence_type,evidence_reference,
+      status,owner,time_minutes,expected_impact,actual_impact,notes,source_type,
+      source_reference,priority,win,created_at,updated_at
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`)
+      .bind(
+        client.id,
+        activityDate,
+        category,
+        clean(message.subject) || "Monitoring update",
+        evidenceType,
+        sourceReference,
+        "completed",
+        "Andy",
+        0,
+        "Monitoring / trend evidence",
+        businessMeaning,
+        notes,
+        "gmail_monitoring",
+        sourceReference,
+        "Low",
+        0
+      ).run();
+
+    const recordId = result?.meta?.last_row_id || null;
+    if (!recordId) {
+      await deletePendingMonitoringEvidence(db, sourceReference);
+      return jsonResponse({
+        ok:false,
+        requestId,
+        action:APPROVE_GMAIL_MONITORING_EVIDENCE_ACTION,
+        error:"D1 did not confirm the Monitoring record. Gmail was left unchanged."
+      }, 500);
     }
 
     await patchMonitoringActivityEvidence(db, recordId, {
@@ -430,16 +355,31 @@ async function approveMonitoringWithEvidence(body, env, requestId) {
     await finalizeMonitoringSourceEvidence(db, {
       sourceReference,
       activityRecordId:recordId,
-      clientId,
+      clientId:client.id,
       status:"monitoring_saved"
     });
+    await markMessageRead(gmailMessageId, accessToken);
 
     return jsonResponse({
-      ...legacyPayload,
+      ok:true,
+      requestId,
+      action:APPROVE_GMAIL_MONITORING_EVIDENCE_ACTION,
+      version:GMAIL_DISPOSITION_VERSION,
+      duplicate:false,
+      writesPerformed:1,
+      gmailMarkedRead:true,
       evidencePreserved:true,
-      monitoringMetrics:legacyPayload.monitoringMetrics || evidence || null,
-      evidenceSummary:evidenceSummary || null
-    }, legacyResponse.status || 200);
+      monitoringMetrics:evidence,
+      evidenceSummary,
+      record:{
+        id:recordId,
+        client_id:client.id,
+        client:client.name,
+        activity_date:activityDate,
+        activity:clean(message.subject) || "Monitoring update",
+        source_reference:sourceReference
+      }
+    });
   } catch (error) {
     logWorkerError({
       requestId,
@@ -454,6 +394,24 @@ async function approveMonitoringWithEvidence(body, env, requestId) {
       error:safeErrorMessage(error)
     }, 500);
   }
+}
+
+function monitoringActivityCategory(evidence, message) {
+  if (evidence?.type === "position_tracking") return "SEO Ranking Alert";
+  const text = `${clean(message?.subject)} ${clean(message?.bodyText)}`;
+  if (/site audit|health score|crawl|errors|warnings|notices/i.test(text)) {
+    return "Technical SEO Audit Alert";
+  }
+  if (/search console|search performance|clicks|impressions|ctr|position/i.test(text)) {
+    return "Search Performance Notification";
+  }
+  if (/analytics|ga4|users|sessions|conversions/i.test(text)) {
+    return "Analytics Notification";
+  }
+  if (/business profile|google review|local/i.test(text)) {
+    return "Local Presence Notification";
+  }
+  return "Monitoring Intelligence";
 }
 
 async function findMonitoringActivity(db, sourceReference) {
