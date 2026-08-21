@@ -1,41 +1,36 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/today-gmail-decisions.js
-   Version: 1.1.0
+   Version: 1.2.0
    Status: Production Road-Test Candidate
-   Source: shared/today-gmail-decisions.js 1.0.0 production
-   Sprint: Gmail — Durable Operational Intake
+   Source: shared/today-gmail-decisions.js 1.1.0 production
+   Sprint: Gmail — Decision Hold / Work Lite
    Purpose:
-   Give Morning Command one explicit disposition set while also surfacing
-   read-but-unprocessed operational Gmail that GCM OS has not yet preserved.
+   Give Morning Command one explicit disposition set, preserve the durable
+   operational backlog, and provide a lightweight client-linked holding state
+   when a decision-critical question or future follow-up remains unresolved.
+
+   Change notes — v1.2.0:
+   - Adds Hold for Review only when a verified client exists and no stronger
+     Monitoring, Investigation, or direct Work route has been proven.
+   - A successful hold creates 0 Work Items and 0 Investigations and removes the
+     email from active Morning Command processing.
+   - Adds Decision Holds · Work Lite below the Gmail queue with client, priority,
+     blocking question/follow-up, due date, source Gmail link, and next action.
+   - Return to Morning Command releases the hold without deleting its history.
+   - Preserves all v1.1.0 explicit disposition and operational-backlog behavior.
 
    Change notes — v1.1.0:
-   - Preserves all v1.0.0 Delete / Information / Monitoring / Work /
-     Investigation decisions.
-   - Merges read-but-unprocessed messages from Inbox, Kristy,
-     Frank & Adrianne Stuff, and REPORTS-SEO into the same Morning Command list.
+   - Preserves Delete / Information / Monitoring / Work / Investigation decisions.
+   - Merges read-but-unprocessed operational Gmail into Morning Command.
    - Treats GCM OS source history, not Gmail read state, as the processing test.
-   - Keeps the visible queue at 10 items and automatically pulls the next
-     unprocessed item after a disposition succeeds.
-   - De-duplicates backlog results against the normal unread-preview cards.
-   - Supplemental Monitoring/Investigation hints are only display hints;
-     existing approval routes re-read and re-validate the live email before D1.
-
-   Change notes — v1.0.0:
-   - Delete — No Action Required moves Gmail to Trash and creates 0 OS records.
-   - Keep as Information creates 1 durable Communication and 0 Investigation /
-     0 Work Item when a production client is verified.
-   - Save as Monitoring reuses the verified Gmail monitoring approval route.
-   - Create Requested Work appears only after the live Worker proves a known
-     human sender, verified client, and explicit concrete request.
-   - Create Investigation reuses the existing verified Investigation route.
-   - Gmail cards leave Morning Command only after the selected action succeeds.
+   - Keeps the visible queue at 10 items and pulls the next unprocessed item.
    ========================================================= */
 
 (() => {
   "use strict";
 
-  const FILE_VERSION = "1.1.0";
+  const FILE_VERSION = "1.2.0";
   const WORKER_URL =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const CARD_SELECTOR = ".gmail-message[data-gmail-id]";
@@ -47,6 +42,7 @@
   const KEEP_INFORMATION = "save-gmail-information";
   const APPROVE_MONITORING = "approve-gmail-monitoring";
   const APPROVE_INVESTIGATION = "approve-gmail-investigation";
+  const HOLD_DECISION = "hold-gmail-decision";
   const MAX_VISIBLE_EMAILS = 10;
 
   let lastBacklogFingerprint = null;
@@ -63,11 +59,29 @@
       .gcm-email-decision-buttons .button{min-height:36px;padding:0 12px;font-size:.74rem}
       .gcm-email-delete{border-color:#e5bcbc!important;background:#fff7f7!important;color:#9d3030!important}
       .gcm-email-information{border-color:#cbd6e4!important;background:#f8fafc!important;color:#34465d!important}
+      .gcm-email-hold{border-color:#d3c4ec!important;background:#faf7ff!important;color:#68479a!important}
       .gcm-email-monitor{border-color:#bcd8c8!important;background:#f3fbf6!important;color:#226342!important}
       .gcm-email-work{border-color:#a9c5f1!important;background:#edf5ff!important;color:#185fc8!important}
       .gcm-email-investigate{border-color:#e7c987!important;background:#fff8e8!important;color:#805615!important}
       .gcm-email-decision-status{display:block;margin-top:8px;color:var(--text-muted,#637083);font-size:.72rem;font-weight:800}
       .gcm-email-backlog-note{display:inline-flex;align-items:center;min-height:24px;margin-left:6px;padding:0 8px;border-radius:999px;background:#f1f4f8;color:#56677d;font-size:.62rem;font-weight:850}
+      .gcm-decision-holds{margin-top:18px;padding:16px;border:1px solid var(--border,#dbe2ec);border-radius:16px;background:rgba(255,255,255,.62)}
+      .gcm-decision-holds[hidden]{display:none!important}
+      .gcm-decision-holds-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+      .gcm-decision-holds-title{margin:0;color:var(--text,#14233a);font-size:.95rem;font-weight:900}
+      .gcm-decision-holds-copy{margin:4px 0 0;color:var(--text-muted,#637083);font-size:.76rem;line-height:1.45}
+      .gcm-decision-holds-count{display:inline-flex;min-width:28px;height:28px;align-items:center;justify-content:center;border-radius:999px;background:#f1ebfb;color:#68479a;font-size:.72rem;font-weight:900}
+      .gcm-decision-hold-list{display:grid;gap:10px}
+      .gcm-decision-hold-card{padding:13px 14px;border:1px solid #dfe5ee;border-radius:13px;background:#fff}
+      .gcm-decision-hold-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+      .gcm-decision-hold-card h4{margin:0;color:var(--text,#14233a);font-size:.82rem;font-weight:900}
+      .gcm-decision-hold-meta{margin-top:3px;color:var(--text-muted,#637083);font-size:.68rem;font-weight:750}
+      .gcm-decision-hold-priority{flex:0 0 auto;padding:4px 8px;border-radius:999px;background:#f5f1fb;color:#68479a;font-size:.62rem;font-weight:900;text-transform:uppercase;letter-spacing:.04em}
+      .gcm-decision-hold-question{margin:10px 0 0;color:var(--text,#14233a);font-size:.78rem;font-weight:850;line-height:1.45}
+      .gcm-decision-hold-why,.gcm-decision-hold-next{margin:6px 0 0;color:var(--text-muted,#637083);font-size:.72rem;line-height:1.45}
+      .gcm-decision-hold-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+      .gcm-decision-hold-actions .button{min-height:34px;padding:0 11px;font-size:.7rem}
+      .gcm-decision-hold-source{display:inline-flex;align-items:center;text-decoration:none}
     `;
     document.head.appendChild(style);
   }
@@ -190,6 +204,7 @@
       setGlobalStatus(message);
       await window.GCMOShell?.refreshNavAttention?.();
       removeCard(card);
+      if (action === HOLD_DECISION) await loadDecisionHolds();
     } catch (error) {
       clearBusy(panel, `Review required: ${error.message}`);
       setGlobalStatus(`Email decision failed: ${error.message}`);
@@ -275,6 +290,24 @@
         })
       );
       buttons.appendChild(infoButton);
+    }
+
+    if (hasVerifiedClient && !hadMonitor && !hadInvestigation && !workCandidate) {
+      const holdButton = actionButton(
+        "Hold for Review",
+        "gcm-email-hold",
+        () => runDecision({
+          card,
+          panel,
+          button:holdButton,
+          action:HOLD_DECISION,
+          payload:{ gmailMessageId, clientName },
+          pending:"Parking as Decision Hold · 0 Work · 0 Investigations…",
+          success:result =>
+            `Decision Hold #${result.hold?.id || "—"} saved for ${result.hold?.clientName || clientName} · 0 Work Items · 0 Investigations.`
+        })
+      );
+      buttons.appendChild(holdButton);
     }
 
     if (hadMonitor) {
@@ -470,6 +503,102 @@
     }
   }
 
+  function ensureDecisionHoldSection(preview) {
+    let section = document.getElementById("gcm-decision-holds");
+    if (section) return section;
+
+    section = document.createElement("section");
+    section.id = "gcm-decision-holds";
+    section.className = "gcm-decision-holds";
+    section.hidden = true;
+    section.innerHTML = `
+      <div class="gcm-decision-holds-header">
+        <div>
+          <h3 class="gcm-decision-holds-title">Decision Holds · Work Lite</h3>
+          <p class="gcm-decision-holds-copy">Important questions and follow-ups parked without creating committed Work or Investigations.</p>
+        </div>
+        <span class="gcm-decision-holds-count" data-gcm-hold-count>0</span>
+      </div>
+      <div class="gcm-decision-hold-list" data-gcm-hold-list></div>
+    `;
+    preview.insertAdjacentElement("afterend", section);
+    return section;
+  }
+
+  function formatHoldDate(value) {
+    const text = String(value || "").trim();
+    if (!text) return "";
+    const date = new Date(`${text}T12:00:00`);
+    if (Number.isNaN(date.getTime())) return text;
+    return date.toLocaleDateString(undefined, { month:"short", day:"numeric", year:"numeric" });
+  }
+
+  function renderDecisionHold(hold) {
+    const article = document.createElement("article");
+    article.className = "gcm-decision-hold-card";
+    article.dataset.holdId = String(hold?.id || "");
+    const due = formatHoldDate(hold?.dueDate);
+    const meta = [hold?.clientName || hold?.clientCode, hold?.holdType === "follow_up" ? "Follow-Up" : "Question", due ? `Due ${due}` : "No immediate deadline"].filter(Boolean).join(" · ");
+
+    article.innerHTML = `
+      <div class="gcm-decision-hold-top">
+        <div>
+          <h4>${escapeHtml(hold?.sourceSubject || hold?.title || "Decision Hold")}</h4>
+          <div class="gcm-decision-hold-meta">${escapeHtml(meta)}</div>
+        </div>
+        <span class="gcm-decision-hold-priority">${escapeHtml(hold?.priority || "Low")}</span>
+      </div>
+      <p class="gcm-decision-hold-question">${escapeHtml(hold?.question || "Decision question not recorded.")}</p>
+      ${hold?.whyItMatters ? `<p class="gcm-decision-hold-why"><strong>Why it matters:</strong> ${escapeHtml(hold.whyItMatters)}</p>` : ""}
+      ${hold?.suggestedNextAction ? `<p class="gcm-decision-hold-next"><strong>Come back to:</strong> ${escapeHtml(hold.suggestedNextAction)}</p>` : ""}
+      <div class="gcm-decision-hold-actions">
+        ${hold?.gmailUrl ? `<a class="button button-secondary gcm-decision-hold-source" href="${escapeHtml(hold.gmailUrl)}" target="_blank" rel="noopener">Open Source Email</a>` : ""}
+        <button type="button" class="button button-secondary" data-gcm-release-hold>Return to Morning Command</button>
+      </div>
+    `;
+
+    const release = article.querySelector("[data-gcm-release-hold]");
+    release?.addEventListener("click", async () => {
+      release.disabled = true;
+      release.textContent = "Returning…";
+      try {
+        await post(HOLD_DECISION, { mode:"release", holdId:hold.id });
+        lastBacklogFingerprint = null;
+        await loadDecisionHolds();
+        const preview = document.getElementById("gmail-preview");
+        queueBacklogLoad(preview);
+        setGlobalStatus("Decision Hold returned to Morning Command for final disposition.");
+      } catch (error) {
+        release.disabled = false;
+        release.textContent = "Return to Morning Command";
+        setGlobalStatus(`Decision Hold release failed: ${error.message}`);
+      }
+    });
+
+    return article;
+  }
+
+  async function loadDecisionHolds() {
+    const preview = document.getElementById("gmail-preview");
+    if (!preview) return;
+    const section = ensureDecisionHoldSection(preview);
+    const list = section.querySelector("[data-gcm-hold-list]");
+    const count = section.querySelector("[data-gcm-hold-count]");
+
+    try {
+      const result = await post(HOLD_DECISION, { mode:"list" });
+      const holds = Array.isArray(result?.holds) ? result.holds : [];
+      if (count) count.textContent = String(holds.length);
+      if (list) {
+        list.replaceChildren(...holds.map(renderDecisionHold));
+      }
+      section.hidden = holds.length === 0;
+    } catch (error) {
+      section.hidden = true;
+      console.warn(`GCM Gmail Decisions ${FILE_VERSION}: Decision Holds unavailable.`, error);
+    }
+  }
+
   function queueBacklogLoad(preview) {
     if (!preview || preview.hidden) return;
     if (backlogTimer) clearTimeout(backlogTimer);
@@ -495,6 +624,7 @@
     }
 
     scan(preview);
+    loadDecisionHolds();
 
     const observer = new MutationObserver(() => scan(preview));
     observer.observe(preview, {
