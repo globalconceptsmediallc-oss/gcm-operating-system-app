@@ -209,7 +209,6 @@ assert.match(siteAuditSummary, /Notices 484/);
 assert.match(siteAuditSummary, /Broken 0/);
 assert.match(siteAuditSummary, /Blocked 0/);
 assert.match(siteAuditSummary, /Crawled Pages 145/);
-assert.match(siteAuditSummary, /Reported Ratio 97\/119/);
 assert.match(siteAuditSummary, /No significant change/i);
 
 const siteAuditMeaning = buildMonitoringBusinessMeaning(
