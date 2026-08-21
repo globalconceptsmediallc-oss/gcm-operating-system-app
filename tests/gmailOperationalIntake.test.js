@@ -1,11 +1,16 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/gmailOperationalIntake.test.js
-   Version: 1.3.0
+   Version: 1.3.1
    Status: Production Regression Test
    Purpose: Verify Morning Command uses GCM OS disposition state rather than
             Gmail read/unread state and preserves exact source evidence before
             any approved Monitoring disposition clears Gmail.
+
+   Change notes — 1.3.1:
+   - Reproduces the live Semrush Site Audit failure where values are hyperlinks.
+   - Requires linked and flattened Gmail source shapes to retain the same metrics.
+   - Preserves every universal evidence, Position Tracking, and Decision Hold lock.
 
    Change notes — 1.3.0:
    - Locks the universal Monitoring source-evidence vault and runtime schema guard.
@@ -18,6 +23,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import {
+  GMAIL_MONITORING_EVIDENCE_VERSION,
   extractPositionTrackingEvidence,
   extractMonitoringEvidence,
   formatPositionTrackingEvidence,
@@ -36,12 +42,26 @@ function metricByLabel(evidence, label) {
   );
 }
 
+function assertSiteAuditMetrics(evidence) {
+  assert.equal(evidence?.type, "monitoring_evidence");
+  assert.equal(metricByLabel(evidence, "Site Health")?.displayValue, "89%");
+  assert.equal(metricByLabel(evidence, "Crawled Pages")?.value, 145);
+  assert.equal(metricByLabel(evidence, "Errors")?.value, 0);
+  assert.equal(metricByLabel(evidence, "Warnings")?.value, 687);
+  assert.equal(metricByLabel(evidence, "Notices")?.value, 484);
+  assert.equal(metricByLabel(evidence, "Broken")?.value, 0);
+  assert.equal(metricByLabel(evidence, "Blocked")?.value, 0);
+  assert.equal(metricByLabel(evidence, "Reported Ratio")?.displayValue, "97/119");
+  assert.match(evidence?.stableSignal || "", /No significant change/i);
+}
+
 const route = read("routes/gmailWorkRequests.js");
 const dispositions = read("routes/gmailDispositions.js");
 const ui = read("shared/today-gmail-decisions.js");
 const monitoringMigration = read("migrations/0014_gmail_monitoring_source_evidence.sql");
 const monitoringSchemaGuard = read("shared/gmailMonitoringEvidenceSchema.js");
 
+assert.equal(GMAIL_MONITORING_EVIDENCE_VERSION, "1.1.1");
 assert.match(route, /Version: 1\.1\.1/);
 assert.match(route, /mode\)\.toLowerCase\(\) === "operational-backlog"/);
 assert.match(route, /-in:spam -in:trash \{in:inbox label:Kristy label:\"Frank & Adrianne Stuff\" label:\"REPORTS-SEO\"\}/);
@@ -190,16 +210,7 @@ Top Issues
 };
 
 const siteAuditEvidence = extractMonitoringEvidence(siteAuditMessage);
-assert.equal(siteAuditEvidence?.type, "monitoring_evidence");
-assert.equal(metricByLabel(siteAuditEvidence, "Site Health")?.displayValue, "89%");
-assert.equal(metricByLabel(siteAuditEvidence, "Crawled Pages")?.value, 145);
-assert.equal(metricByLabel(siteAuditEvidence, "Errors")?.value, 0);
-assert.equal(metricByLabel(siteAuditEvidence, "Warnings")?.value, 687);
-assert.equal(metricByLabel(siteAuditEvidence, "Notices")?.value, 484);
-assert.equal(metricByLabel(siteAuditEvidence, "Broken")?.value, 0);
-assert.equal(metricByLabel(siteAuditEvidence, "Blocked")?.value, 0);
-assert.equal(metricByLabel(siteAuditEvidence, "Reported Ratio")?.displayValue, "97/119");
-assert.match(siteAuditEvidence?.stableSignal || "", /No significant change/i);
+assertSiteAuditMetrics(siteAuditEvidence);
 
 const siteAuditSummary = formatMonitoringEvidence(siteAuditEvidence);
 assert.match(siteAuditSummary, /Site Health 89%/);
@@ -209,6 +220,7 @@ assert.match(siteAuditSummary, /Notices 484/);
 assert.match(siteAuditSummary, /Broken 0/);
 assert.match(siteAuditSummary, /Blocked 0/);
 assert.match(siteAuditSummary, /Crawled Pages 145/);
+assert.match(siteAuditSummary, /Reported Ratio 97\/119/);
 assert.match(siteAuditSummary, /No significant change/i);
 
 const siteAuditMeaning = buildMonitoringBusinessMeaning(
@@ -221,4 +233,52 @@ assert.match(siteAuditMeaning, /Warnings 687/);
 assert.match(siteAuditMeaning, /source-grounded facts/i);
 assert.match(siteAuditMeaning, /does not create corrective work/i);
 
-console.log("PASS Gmail operational intake preserves universal monitoring evidence and Decision Hold state");
+const linkedSiteAuditMessage = {
+  subject:siteAuditMessage.subject,
+  date:siteAuditMessage.date,
+  bodyText:`Site Audit
+Project: [northfloridasafes.com](https://example.test/project)
+Website URL: northfloridasafes.com
+Date: Aug 21, 2026 (02:32:43)
+We haven't detected any significant changes in your site's health since the previous audit.
+We crawled only 97 out of 119 pages submitted in your sitemap.xml.
+Site Health
+[89%](https://example.test/health)
+The Site Health Score is based on the number of errors and warnings found on your site.
+Crawled Pages
+[145](https://example.test/crawled)
+[Healthy](https://example.test/healthy) 4
+[Broken](https://example.test/broken) 0
+[Have Issues](https://example.test/issues) 136
+[Redirects](https://example.test/redirects) 5
+[Blocked](https://example.test/blocked) 0
+Errors
+[0](https://example.test/errors) no change
+Warnings
+[687](https://example.test/warnings) no change
+Notices
+[484](https://example.test/notices) no change
+Top Issues
+[131 pages have a low text/HTML ratio](https://example.test/issue-1)
+[18 pages have no meta description tag](https://example.test/issue-2)
+[396 disallowed internal resources](https://example.test/issue-3)`
+};
+
+const linkedSiteAuditEvidence = extractMonitoringEvidence(linkedSiteAuditMessage);
+assertSiteAuditMetrics(linkedSiteAuditEvidence);
+assert.match(formatMonitoringEvidence(linkedSiteAuditEvidence), /Site Health 89%/);
+assert.match(formatMonitoringEvidence(linkedSiteAuditEvidence), /Warnings 687/);
+assert.match(formatMonitoringEvidence(linkedSiteAuditEvidence), /Reported Ratio 97\/119/);
+
+const flattenedLinkedSiteAuditEvidence = extractMonitoringEvidence({
+  ...linkedSiteAuditMessage,
+  bodyText:linkedSiteAuditMessage.bodyText.replace(/\n+/g, " ")
+});
+assertSiteAuditMetrics(flattenedLinkedSiteAuditEvidence);
+assert.match(formatMonitoringEvidence(flattenedLinkedSiteAuditEvidence), /Site Health 89%/);
+assert.match(formatMonitoringEvidence(flattenedLinkedSiteAuditEvidence), /Crawled Pages 145/);
+assert.match(formatMonitoringEvidence(flattenedLinkedSiteAuditEvidence), /Errors 0/);
+assert.match(formatMonitoringEvidence(flattenedLinkedSiteAuditEvidence), /Warnings 687/);
+assert.match(formatMonitoringEvidence(flattenedLinkedSiteAuditEvidence), /Notices 484/);
+
+console.log("PASS Gmail operational intake preserves linked, flattened, and universal monitoring evidence");
