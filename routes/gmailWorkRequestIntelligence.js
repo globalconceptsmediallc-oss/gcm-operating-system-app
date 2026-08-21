@@ -1,13 +1,26 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailWorkRequestIntelligence.js
-   Version: 1.0.3
+   Version: 1.1.0
    Status: Production Road-Test Candidate
-   Sprint: Gmail — Direct Requested Work
+   Sprint: Gmail — Direct Requested + Source-Proven Work
    Purpose:
-   Determine when a known operational human email contains a concrete client
-   request or explicit approval to proceed that is specific enough to become a
-   direct Work Item without an artificial Investigation.
+   Determine when Gmail contains concrete operational work that is specific
+   enough to become a direct Work Item without an artificial Investigation.
+
+   Change notes — v1.1.0:
+   - Preserves the existing known-human request / approval-to-proceed path.
+   - Adds a source-proven operational-work path for verified automated alerts.
+   - Automated alerts qualify only when the live source proves all of:
+       verified production client identity,
+       explicit action-required language,
+       a concrete affected-item count,
+       and a named corrective issue.
+   - Known external account IDs may act as durable client identity evidence.
+   - A source-proven corrective condition becomes Work, not Investigation,
+     when the source already tells GCM what is wrong and what must be corrected.
+   - Merchant Center ID 5325664516 is preserved as durable Southeast Safes
+     identity evidence because prior source history proves that ownership.
 
    Change notes — v1.0.3:
    - Makes compact client-name forms part of the canonical Gmail client resolver.
@@ -23,20 +36,6 @@
    - Keeps simple acknowledgements, FYI messages, and future follow-up language
      out of committed Work so Decision Hold / Information can handle them.
    - Gives explicit client approval-to-proceed High operational priority.
-
-   Change notes — v1.0.1:
-   - Exposes the same verified client-alias resolver for other Gmail disposition
-     paths so Information and Work do not invent competing client mappings.
-
-   Change notes — v1.0.0:
-   - Requires a known operational sender, a verified client, and an explicit
-     action request before declaring a Work candidate.
-   - Preserves the source email as the Communication evidence source.
-   - Does not convert FYI, completed work, monitoring, or vague discussion into
-     requested work.
-   - Recognizes analytics/tracking failures as high-priority measurement work.
-   - Produces a reviewed operational-decision payload for Communication + direct
-     Work Item creation with createInvestigation=false.
    ========================================================= */
 
 const KNOWN_HUMAN_ROLES = Object.freeze([
@@ -44,6 +43,15 @@ const KNOWN_HUMAN_ROLES = Object.freeze([
   { pattern: /\badrianne\b/i, role: "Adrianne — Client / Operations" },
   { pattern: /\bfrank\b/i, role: "Frank — Leadership / Client Operations" },
   { pattern: /\bted\b/i, role: "Ted — Liberty Regional Sales" }
+]);
+
+const CLIENT_IDENTITY_RULES = Object.freeze([
+  {
+    pattern: /\bmerchant\s+center\s+id\s*:\s*5325664516\b|\b5325664516\b/i,
+    name: "Southeast Safes",
+    code: "SES",
+    identity: "Merchant Center ID 5325664516"
+  }
 ]);
 
 const CLIENT_RULES = Object.freeze([
@@ -73,8 +81,13 @@ const APPROVAL_TO_PROCEED_PATTERNS = Object.freeze([
 ]);
 
 const ACTION_VERBS = /\b(check|verify|fix|repair|restore|test|review|audit|investigate|look into|look at|update|change|add|remove|build|create|publish|install|configure|correct|resolve|confirm|compare|research|proceed|launch|start|implement|execute|coordinate|plan|move forward|go ahead|go with)\b/i;
-const HIGH_IMPACT_SIGNAL = /\b(broken|not firing|stopped firing|drops? to zero|zero traffic|outage|down|failed|failure|missing data|not registering|urgent|critical)\b/i;
+const HIGH_IMPACT_SIGNAL = /\b(broken|not firing|stopped firing|drops? to zero|zero traffic|outage|down|failed|failure|missing data|not registering|urgent|critical|suspended|disapproved)\b/i;
 const ANALYTICS_SIGNAL = /\b(ga4|google analytics|gtm|google tag manager|tracking tag|analytics tag|realtime|measurement id|data layer)\b/i;
+
+const AUTOMATED_SOURCE_SIGNAL = /\b(no-?reply|notifications?|alerts?|merchant center|search console|semrush|ahrefs|site audit|automated)\b/i;
+const SOURCE_ACTION_SIGNAL = /\b(action required|action needed|fix(?:es)? to make now|needs attention|make these updates|must fix|requires action|fix your)\b/i;
+const SOURCE_ISSUE_PATTERN = /\b(\d+)\s+(products?|items?|pages?|urls?|records?|listings?)\s+(?:have|has)\s+(?:the\s+)?issue\s*:\s*([^\n\r]{3,180})/i;
+const SOURCE_IMPACT_PATTERN = /([+-]?\d+(?:\.\d+)?)\s+potential\s+clicks?\s+per\s+week/i;
 
 export function evaluateExplicitHumanWorkRequest(message = {}) {
   const sender = clean(message.from || message.from_);
@@ -83,7 +96,11 @@ export function evaluateExplicitHumanWorkRequest(message = {}) {
   const text = `${subject}\n${body}`;
 
   const role = knownHumanRole(sender);
-  if (!role) return notCandidate("Sender is not a known GCM operational human.");
+  if (!role) {
+    const sourceProven = evaluateSourceProvenOperationalWork(message);
+    if (sourceProven.candidate === true) return sourceProven;
+    return notCandidate(sourceProven.reason || "Sender is not a known GCM operational human.");
+  }
 
   const client = inferClientFromText(text);
   if (!client) return notCandidate("The email does not prove which production client owns the request.", { role });
@@ -126,35 +143,120 @@ export function evaluateExplicitHumanWorkRequest(message = {}) {
     ? `${role} explicitly approved GCM proceeding for ${client.name}. Source approval: ${explicitRequest}`
     : `${role} explicitly requested GCM work for ${client.name}. Source request: ${explicitRequest}`;
   const reasoning = approvalToProceed
-    ? `The sender is a known operational human, the client identity is explicit, and the current reply contains an approval-to-proceed directive. Committed Work is therefore appropriate; Decision Hold is only for unresolved decisions, not approved execution.`
-    : `The sender is a known operational human, the client identity is explicit, and the email contains a concrete action request. Requested work is therefore appropriate; an Investigation is not required merely to acknowledge and start the requested deliverable.`;
+    ? "The sender is a known operational human, the client identity is explicit, and the current reply contains an approval-to-proceed directive. Committed Work is therefore appropriate; Decision Hold is only for unresolved decisions, not approved execution."
+    : "The sender is a known operational human, the client identity is explicit, and the email contains a concrete action request. Requested work is therefore appropriate; an Investigation is not required merely to acknowledge and start the requested deliverable.";
 
   return {
-    candidate: true,
+    candidate:true,
     role,
     client,
     explicitRequest,
     approvalToProceed,
+    sourceProven:false,
     action,
     priority,
     businessImpact,
     expectedImpact,
     operationalSummary,
-    decision: {
-      source: "Gmail — Human Work Request",
-      communicationType: approvalToProceed ? "Client Approval / Direct Work" : "Direct Work Request",
-      title: subject || action,
+    decision:{
+      source:"Gmail — Human Work Request",
+      communicationType:approvalToProceed ? "Client Approval / Direct Work" : "Direct Work Request",
+      title:subject || action,
       operationalSummary,
-      businessImpact: expectedImpact,
-      importance: priority,
-      operationalPriority: priority,
-      recommendedAction: action,
+      businessImpact:expectedImpact,
+      importance:priority,
+      operationalPriority:priority,
+      recommendedAction:action,
       reasoning,
-      recommendedRoutes: {
-        saveCommunication: true,
-        createInvestigation: false,
-        createWorkItem: true,
-        replyRequired: false
+      recommendedRoutes:{
+        saveCommunication:true,
+        createInvestigation:false,
+        createWorkItem:true,
+        replyRequired:false
+      }
+    }
+  };
+}
+
+export function evaluateSourceProvenOperationalWork(message = {}) {
+  const sender = clean(message.from || message.from_);
+  const subject = clean(message.subject);
+  const body = clean(message.bodyText || message.body || message.snippet);
+  const text = `${subject}\n${body}`;
+
+  if (!AUTOMATED_SOURCE_SIGNAL.test(`${sender}\n${subject}`)) {
+    return notCandidate("The source is not a verified automated operational alert.");
+  }
+
+  const client = inferClientFromText(text);
+  if (!client) {
+    return notCandidate("The automated alert does not prove which production client owns the issue.");
+  }
+
+  if (!SOURCE_ACTION_SIGNAL.test(text)) {
+    return notCandidate("The automated source does not explicitly require corrective action.", { client });
+  }
+
+  const issueMatch = text.match(SOURCE_ISSUE_PATTERN);
+  if (!issueMatch) {
+    return notCandidate("The automated source does not identify a concrete affected-item count and corrective issue.", { client });
+  }
+
+  const count = Number(issueMatch[1]);
+  const itemType = normalizeItemType(issueMatch[2], count);
+  const issue = clean(issueMatch[3]).replace(/[.]+$/, "");
+  if (!Number.isFinite(count) || count <= 0 || !issue) {
+    return notCandidate("The automated source issue detail is incomplete.", { client });
+  }
+
+  const impactMatch = text.match(SOURCE_IMPACT_PATTERN);
+  const potentialClicks = impactMatch ? Number(impactMatch[1]) : null;
+  const highImpact = HIGH_IMPACT_SIGNAL.test(text);
+  const priority = highImpact ? "High" : "Medium";
+  const explicitRequest = `Correct ${count} ${itemType} with ${issue}`;
+  const action = `Correct ${client.code} ${issue} on ${count} ${itemType}`;
+  const impactSentence = Number.isFinite(potentialClicks)
+    ? `The source estimates about ${formatNumber(potentialClicks)} potential additional click${potentialClicks === 1 ? "" : "s"} per week if corrected.`
+    : "The source indicates the affected items are currently losing eligibility, visibility, or expected operational performance.";
+  const businessImpact = `${client.name}: a verified automated operational source reports ${count} ${itemType} affected by “${issue}”. ${impactSentence} The corrective condition is already explicit, so this belongs in direct Work rather than a vague Decision Hold or an Investigation created only to rediscover the stated problem.`;
+  const expectedImpact = `Correct the stated issue for the affected ${client.name} ${itemType}, verify the source/feed or live system reflects the fix, and confirm the alert clears or the affected items regain expected eligibility.`;
+  const operationalSummary = `Automated operational source created a concrete ${client.name} corrective obligation: ${count} ${itemType} have “${issue}”.`;
+  const reasoning = "The source is operational, the production client is independently identified, action is explicitly required, the affected scope is quantified, and the corrective condition is named. Diagnosis is not required merely to decide whether work exists; Work can be created directly and verified after correction.";
+
+  return {
+    candidate:true,
+    role:null,
+    client,
+    explicitRequest,
+    approvalToProceed:false,
+    sourceProven:true,
+    sourceKind:"automated_operational_alert",
+    action,
+    priority,
+    businessImpact,
+    expectedImpact,
+    operationalSummary,
+    evidence:{
+      affectedCount:count,
+      affectedItemType:itemType,
+      issue,
+      potentialClicksPerWeek:Number.isFinite(potentialClicks) ? potentialClicks : null
+    },
+    decision:{
+      source:"Gmail — Source-Proven Operational Work",
+      communicationType:"Automated Operational Alert / Direct Work",
+      title:subject || action,
+      operationalSummary,
+      businessImpact:expectedImpact,
+      importance:priority,
+      operationalPriority:priority,
+      recommendedAction:action,
+      reasoning,
+      recommendedRoutes:{
+        saveCommunication:true,
+        createInvestigation:false,
+        createWorkItem:true,
+        replyRequired:false
       }
     }
   };
@@ -188,8 +290,15 @@ export function extractApprovalToProceed(value) {
 
 export function inferClientFromText(text) {
   const value = clean(text);
+
+  for (const rule of CLIENT_IDENTITY_RULES) {
+    if (rule.pattern.test(value)) {
+      return { name:rule.name, code:rule.code, identity:rule.identity };
+    }
+  }
+
   for (const rule of CLIENT_RULES) {
-    if (rule.pattern.test(value)) return { name: rule.name, code: rule.code };
+    if (rule.pattern.test(value)) return { name:rule.name, code:rule.code };
   }
   return null;
 }
@@ -245,13 +354,23 @@ function buildActionTitle(subject, explicitRequest, approvalToProceed = false) {
   return request.length <= 110 ? request : `${request.slice(0, 107).trim()}...`;
 }
 
+function normalizeItemType(value, count) {
+  const raw = clean(value).toLowerCase();
+  if (count === 1) return raw.replace(/s$/, "");
+  return raw.endsWith("s") ? raw : `${raw}s`;
+}
+
+function formatNumber(value) {
+  return Number.isInteger(value) ? String(value) : String(value);
+}
+
 function notCandidate(reason, extra = {}) {
   return {
-    candidate: false,
+    candidate:false,
     reason,
-    role: extra.role || null,
-    client: extra.client || null,
-    explicitRequest: extra.explicitRequest || ""
+    role:extra.role || null,
+    client:extra.client || null,
+    explicitRequest:extra.explicitRequest || ""
   };
 }
 
