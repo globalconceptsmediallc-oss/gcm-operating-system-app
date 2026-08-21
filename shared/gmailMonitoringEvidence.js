@@ -1,12 +1,18 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gmailMonitoringEvidence.js
-   Version: 1.1.3
+   Version: 1.1.4
    Status: Production Road-Test Candidate
    Sprint: Gmail — Universal Monitoring Evidence
    Purpose:
    Extract exact, source-grounded monitoring facts from Gmail notifications so
    operator summaries never replace the evidence required for future comparison.
+
+   Change notes — v1.1.4:
+   - Preserves repeated flattened changed rows that use an explicit New marker.
+   - Prevents later changed metrics from disappearing after the first delta row
+     when Gmail collapses a multi-line report into one line.
+   - Keeps the rule source-neutral and preserves all v1.1.3 delta behavior.
 
    Change notes — v1.1.3:
    - Preserves measurable deltas such as +1 and −96 alongside current values.
@@ -45,7 +51,7 @@
    - Supports both line-oriented and flattened Gmail HTML-to-text layouts.
    ========================================================= */
 
-export const GMAIL_MONITORING_EVIDENCE_VERSION = "1.1.3";
+export const GMAIL_MONITORING_EVIDENCE_VERSION = "1.1.4";
 
 const METRIC_PRIORITY_TERMS = Object.freeze([
   "health score",
@@ -84,6 +90,11 @@ const PRIORITY_METRIC_PATTERN = new RegExp(
 
 const DELTA_METRIC_PATTERN = new RegExp(
   "(?:^|\\n|\\b(?:what['’]?s new|issues|view)\\s+)([A-Za-z][A-Za-z0-9 ./'&_-]{1,65}?)\\s+(?:New\\s+)?(\\d[\\d,.]*%?)\\s+([+−-]\\d[\\d,.]*)",
+  "ig"
+);
+
+const NEW_DELTA_METRIC_PATTERN = new RegExp(
+  "\\b([A-Za-z][A-Za-z0-9 ./'&_-]{1,65}?)\\s+New\\s+(\\d[\\d,.]*%?)\\s+([+−-]\\d[\\d,.]*)",
   "ig"
 );
 
@@ -256,6 +267,16 @@ export function extractMonitoringEvidence(messageOrText = {}) {
       deltaMatch[1],
       `${deltaMatch[2]} ${deltaMatch[3]}`,
       deltaMatch[0]
+    );
+  }
+
+  NEW_DELTA_METRIC_PATTERN.lastIndex = 0;
+  let newDeltaMatch;
+  while ((newDeltaMatch = NEW_DELTA_METRIC_PATTERN.exec(text)) !== null && metrics.length < 30) {
+    addMetric(
+      newDeltaMatch[1],
+      `${newDeltaMatch[2]} ${newDeltaMatch[3]}`,
+      newDeltaMatch[0]
     );
   }
 
