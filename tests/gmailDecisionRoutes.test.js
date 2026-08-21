@@ -1,12 +1,20 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/gmailDecisionRoutes.test.js
-   Version: 1.3.0
+   Version: 1.3.1
    Status: Production Regression Test
    Purpose: Verify Morning Command can distinguish delete, information,
             monitoring, Decision Hold / Work Lite, direct requested work,
             explicit approval-to-proceed work, source-proven automated work,
             and investigation paths without inventing committed Work.
+
+   Change notes — 1.3.1:
+   - Reproduces flattened Merchant Center issue text that includes impact copy,
+     Fix Issue text, and a raw transport URL on the same source line.
+   - Requires source-proven Work to preserve only the named corrective issue,
+     return clean operator-facing action/business meaning, and carry verified
+     automated-alert family/type + High confidence metadata.
+   - Locks Work intelligence v1.1.1 and Today decision-card cache parity.
 
    Change notes — 1.3.0:
    - Locks verified automated alerts into direct Work when the source itself
@@ -192,17 +200,25 @@ Action needed to show products
 Some of your products aren’t showing on Google
 Make these updates to get all of your products on Google.
 Fixes to make now
-4 products have the issue: Missing product price
-+2 potential clicks per week`
+4 products have the issue: Missing product price +2 potential clicks per week Fix issue <https://c.gle/ACT4xYxByUUWL8NDyWF41MeZDazRKfxTxy3gTMqApKiZ_jsR6MM5OUzrXuKxh_ADx1h5lR8ObBbvuVWn-vydUnW4DwfxavZweIT3s3A68CTxdW6_t-Hob7UEeE9K6W5oEuLLFfvQ0s_YPoQcXZxgAUS5AMTai-5UwTr7yXbQwUDPEf7-A5UbVYaUBphav6i8Sc2qpqyxqKAhgPJWl48Qx-THeIA3oLr2RrS0jnl82bsok1C6vE6Yd2SERlqCXSVGAvdJSCDDgGC-rYc6oUhHuuL2Uq_bSwP_Zjmc16FkxDDMIBA-LzbZdG_W7cLxE9J4ysO7Pxu-6589lOKlNLcswzzHi1csOvWiz5qy1MoAZR9B5kvAzcNQvp2EfniWPJ8BME17GxEhL3ZbTgLxQn38jV-M7XO4qqr--02MZYbapTSOHliwF1Uk_24i_z3oDhQ0ESJjnTAkL3Q2CaX40eCVyEYGGmgTcZMmYF_j2shAVR2smXEZS0DSvba-DiNKYGd9Tg>`
 };
 const merchantWork = evaluateSourceProvenOperationalWork(merchantActionRequired);
 assert.equal(merchantWork.candidate, true);
 assert.equal(merchantWork.sourceProven, true);
 assert.equal(merchantWork.client?.code, "SES");
 assert.equal(merchantWork.priority, "Medium");
-assert.match(merchantWork.action, /Correct SES Missing product price on 4 products/i);
+assert.equal(merchantWork.communicationFamily, "Automated Operational Alert");
+assert.equal(merchantWork.notificationType, "source_proven_work");
+assert.equal(merchantWork.confidence, "High");
+assert.equal(merchantWork.evidence?.issue, "Missing product price");
+assert.match(merchantWork.action, /Identify the 4 Southeast Safes products affected by “Missing product price”/i);
+assert.match(merchantWork.action, /verify the alert clears/i);
 assert.match(merchantWork.businessImpact, /4 products affected by “Missing product price”/i);
 assert.match(merchantWork.businessImpact, /2 potential additional clicks per week/i);
+assert.doesNotMatch(merchantWork.action, /https?:\/\//i);
+assert.doesNotMatch(merchantWork.action, /Fix issue/i);
+assert.doesNotMatch(merchantWork.businessImpact, /https?:\/\//i);
+assert.doesNotMatch(merchantWork.businessImpact, /Fix issue/i);
 assert.equal(merchantWork.decision?.recommendedRoutes?.saveCommunication, true);
 assert.equal(merchantWork.decision?.recommendedRoutes?.createWorkItem, true);
 assert.equal(merchantWork.decision?.recommendedRoutes?.createInvestigation, false);
@@ -211,6 +227,7 @@ const merchantUnifiedWork = evaluateExplicitHumanWorkRequest(merchantActionRequi
 assert.equal(merchantUnifiedWork.candidate, true);
 assert.equal(merchantUnifiedWork.sourceProven, true);
 assert.equal(merchantUnifiedWork.client?.code, "SES");
+assert.equal(merchantUnifiedWork.evidence?.issue, "Missing product price");
 
 const worker = read("worker.js");
 const workRoute = read("routes/gmailWorkRequests.js");
@@ -229,12 +246,13 @@ assert.match(workRoute, /investigationId:null/);
 assert.match(workRoute, /markMessageRead/);
 assert.match(workRoute, /FROM decision_holds/);
 assert.match(workRoute, /released/i);
-assert.match(workIntelligence, /Version: 1\.1\.0/);
+assert.match(workIntelligence, /Version: 1\.1\.1/);
 assert.match(workIntelligence, /APPROVAL_TO_PROCEED_PATTERNS/);
 assert.match(workIntelligence, /currentReplyText/);
 assert.match(workIntelligence, /approvalToProceed/);
 assert.match(workIntelligence, /northfloridasafes/);
 assert.match(workIntelligence, /evaluateSourceProvenOperationalWork/);
+assert.match(workIntelligence, /cleanSourceIssue/);
 assert.match(workIntelligence, /5325664516/);
 assert.match(workIntelligence, /Gmail — Source-Proven Operational Work/);
 
@@ -262,6 +280,8 @@ assert.match(todayDecisions, /Return to Morning Command/);
 assert.match(todayDecisions, /Save as Monitoring/);
 assert.match(todayDecisions, /Create Requested Work/);
 assert.match(todayDecisions, /Create Investigation/);
+assert.match(todayDecisions, /Automated Operational Alert/);
+assert.match(todayDecisions, /source_proven_work/);
 
 const decisionVersion = todayDecisions.match(/const FILE_VERSION = "([^"]+)";/)?.[1];
 assert.ok(decisionVersion, "Today Gmail decision asset must declare FILE_VERSION");
@@ -270,4 +290,4 @@ assert.match(
   new RegExp(`shared/today-gmail-decisions\\.js\\?v=${decisionVersion.replaceAll(".", "\\.")}`)
 );
 
-console.log("PASS Gmail operator decisions route human approvals and source-proven corrective alerts to Work before Decision Hold");
+console.log("PASS Gmail operator decisions route clean human approvals and source-proven corrective alerts to Work before Decision Hold");
