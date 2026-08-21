@@ -1,14 +1,23 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/today-gmail-decisions.js
-   Version: 1.2.0
+   Version: 1.2.1
    Status: Production Road-Test Candidate
-   Source: shared/today-gmail-decisions.js 1.1.0 production
+   Source: shared/today-gmail-decisions.js 1.2.0 production
    Sprint: Gmail — Decision Hold / Work Lite
    Purpose:
    Give Morning Command one explicit disposition set, preserve the durable
    operational backlog, and provide a lightweight client-linked holding state
    when a decision-critical question or future follow-up remains unresolved.
+
+   Change notes — v1.2.1:
+   - When the direct Work evaluator proves an automated operational obligation,
+     Morning Command now replaces stale preview metadata with the verified client,
+     Automated Operational Alert family, source_proven_work type, and High confidence.
+   - Keeps the source-proven Work action/business meaning from the authoritative
+     live-email evaluator instead of leaving Unknown/Low preview fields behind.
+   - Preserves all Decision Hold, Monitoring, Investigation, Information, Delete,
+     and human Requested Work behavior from v1.2.0.
 
    Change notes — v1.2.0:
    - Adds Hold for Review only when a verified client exists and no stronger
@@ -30,7 +39,7 @@
 (() => {
   "use strict";
 
-  const FILE_VERSION = "1.2.0";
+  const FILE_VERSION = "1.2.1";
   const WORKER_URL =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const CARD_SELECTOR = ".gmail-message[data-gmail-id]";
@@ -330,6 +339,16 @@
     }
 
     if (workCandidate) {
+      const sourceProvenWork = !workCandidate.role;
+      if (sourceProvenWork) {
+        setFieldValue(card, "Communication Family", "Automated Operational Alert");
+        setFieldValue(card, "Notification Type", "source_proven_work");
+        setFieldValue(card, "Confidence", "High");
+        if (workCandidate.client?.name) {
+          setFieldValue(card, "Client", workCandidate.client.name);
+        }
+      }
+
       setFieldValue(card, "Recommended Route", "Requested Work");
       setFieldValue(
         card,
