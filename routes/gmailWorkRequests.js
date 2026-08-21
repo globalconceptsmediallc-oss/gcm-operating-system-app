@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailWorkRequests.js
-   Version: 1.1.1
+   Version: 1.1.2
    Status: Production Road-Test Candidate
    Source: routes/gmailWorkRequests.js 1.0.0 production
    Sprint: Gmail — Durable Operational Intake
@@ -9,6 +9,12 @@
    Preserve the verified Gmail direct-Work approval path while adding a
    read-only backlog mode that finds operational email by GCM OS disposition
    state instead of Gmail read/unread state.
+
+   Change notes — v1.1.2:
+   - Routes operational backlog cards through evidence-aware backlog intelligence.
+   - Metric labels such as Errors and Issues no longer force Investigation when
+     the live client report instead provides measurable Monitoring evidence.
+   - Preserves the existing direct Work approval and durable backlog behavior.
 
    Change notes — v1.1.1:
    - Open Decision Hold / Work Lite records now count as a durable disposition
@@ -47,6 +53,7 @@ import {
   evaluateExplicitHumanWorkRequest,
   inferClientFromText
 } from "./gmailWorkRequestIntelligence.js";
+import { classifyOperationalBacklogMessage } from "./gmailBacklogIntelligence.js";
 
 export const EVALUATE_GMAIL_WORK_REQUEST_ACTION = "evaluate-gmail-work-request";
 export const APPROVE_GMAIL_WORK_REQUEST_ACTION = "approve-gmail-work-request";
@@ -55,7 +62,7 @@ export const GMAIL_WORK_REQUEST_ACTIONS = Object.freeze([
   APPROVE_GMAIL_WORK_REQUEST_ACTION
 ]);
 
-export const GMAIL_WORK_REQUEST_VERSION = "1.1.1";
+export const GMAIL_WORK_REQUEST_VERSION = "1.1.2";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GMAIL_API = "https://gmail.googleapis.com/gmail/v1";
@@ -144,7 +151,7 @@ async function evaluateOperationalBacklog(body, env, requestId) {
       processedFilteredCount:ids.filter(id => processed.has(id)).length,
       displayedExcludedCount:ids.filter(id => excluded.has(id)).length,
       remainingUnprocessedCount:eligibleIds.length,
-      messages:messages.map(mapOperationalBacklogMessage)
+      messages:messages.map(classifyOperationalBacklogMessage)
     });
   } catch (error) {
     logWorkerError({
