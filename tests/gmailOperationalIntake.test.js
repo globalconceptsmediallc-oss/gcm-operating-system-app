@@ -1,11 +1,18 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/gmailOperationalIntake.test.js
-   Version: 1.3.5
+   Version: 1.3.6
    Status: Production Regression Test
    Purpose: Verify Morning Command uses GCM OS disposition state rather than
             Gmail read/unread state and preserves exact source evidence before
             any approved Monitoring disposition clears Gmail.
+
+   Change notes — 1.3.6:
+   - Locks Gmail disposition route v1.3.1 as the authoritative Monitoring writer.
+   - Requires live-source evidence + verified production client before D1 write.
+   - Requires the evidence-aware route to insert Monitoring directly instead of
+     handing an approved report back to the obsolete legacy Gmail decision path.
+   - Preserves every prior universal, linked, Position Tracking, and Ahrefs lock.
 
    Change notes — 1.3.5:
    - Locks repeated flattened changed rows that use the explicit New marker.
@@ -114,7 +121,8 @@ assert.match(route, /writesPerformed:0/);
 assert.match(route, /excludeIds/);
 assert.match(route, /evaluateExplicitHumanWorkRequest/);
 
-assert.match(dispositions, /Version: 1\.3\.0/);
+assert.match(dispositions, /Version: 1\.3\.1/);
+assert.match(dispositions, /GMAIL_DISPOSITION_VERSION = "1\.3\.1"/);
 assert.match(dispositions, /PREVIEW_GMAIL_INBOX_EVIDENCE_ACTION = "preview-gmail-inbox"/);
 assert.match(dispositions, /APPROVE_GMAIL_MONITORING_EVIDENCE_ACTION = "approve-gmail-monitoring"/);
 assert.match(dispositions, /HOLD_GMAIL_DECISION_ACTION = "hold-gmail-decision"/);
@@ -124,11 +132,25 @@ assert.match(dispositions, /gmail_monitoring_evidence/);
 assert.match(dispositions, /Universal Gmail source evidence:/);
 assert.match(dispositions, /Structured source evidence:/);
 assert.match(dispositions, /deletePendingMonitoringEvidence/);
+assert.match(dispositions, /INSERT INTO activity_records/);
+assert.match(dispositions, /D1 did not confirm the Monitoring record/);
+assert.match(dispositions, /Monitoring requires a verified production client/);
+assert.match(dispositions, /monitoringActivityCategory/);
 assert.match(dispositions, /INSERT INTO decision_holds/);
 assert.match(dispositions, /source_content/);
 assert.match(dispositions, /workItemsCreated:0/);
 assert.match(dispositions, /investigationsCreated:0/);
 assert.match(dispositions, /ensureDecisionHoldSchema/);
+
+const approvalBlock = dispositions.match(
+  /async function approveMonitoringWithEvidence[\s\S]*?function monitoringActivityCategory/
+)?.[0] || "";
+assert.ok(approvalBlock, "Authoritative Monitoring approval block must exist");
+assert.doesNotMatch(
+  approvalBlock,
+  /handleGmailAction\(body, env, requestId\)/,
+  "Approved Monitoring must not be handed back to the legacy Gmail approval classifier"
+);
 
 assert.match(monitoringMigration, /CREATE TABLE IF NOT EXISTS gmail_monitoring_evidence/);
 assert.match(monitoringMigration, /source_content TEXT NOT NULL/);
@@ -356,4 +378,4 @@ assert.match(formatMonitoringEvidence(flattenedAhrefsEvidence), /Health Score 92
 assert.match(formatMonitoringEvidence(flattenedAhrefsEvidence), /Image file size too large 441 \(\+1\)/);
 assert.match(formatMonitoringEvidence(flattenedAhrefsEvidence), /Notices 64 \(−96\)/);
 
-console.log("PASS Gmail operational intake preserves linked, flattened, delta-aware, and universal monitoring evidence");
+console.log("PASS Gmail operational intake preserves evidence and uses the authoritative Monitoring write path");
