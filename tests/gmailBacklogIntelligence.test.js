@@ -1,12 +1,19 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/gmailBacklogIntelligence.test.js
-   Version: 1.0.0
+   Version: 1.1.0
    Status: Production Regression Test
    Sprint: Gmail — Evidence-Aware Operational Backlog
    Purpose:
    Lock the rule that measurable report labels do not become Investigations
-   unless the live source explicitly proves an operational failure.
+   unless the live source explicitly proves an operational failure, while
+   source-proven corrective obligations may become direct Work.
+
+   Change notes — 1.1.0:
+   - Reproduces the live Merchant Center missing-price alert.
+   - Requires Merchant Center ID 5325664516 to resolve to Southeast Safes.
+   - Requires a quantified, explicitly named corrective issue to route to Work,
+     not vague Decision Hold or Investigation Review.
    ========================================================= */
 
 import assert from "node:assert/strict";
@@ -79,5 +86,33 @@ assert.equal(provenFailure.intelligence.client, "HB Guns");
 assert.equal(provenFailure.intelligence.proposedRoute, "Investigation Review");
 assert.equal(provenFailure.intelligence.investigationCandidate, true);
 assert.equal(provenFailure.intelligence.monitoringOnly, false);
+
+const merchantCenterWork = classifyOperationalBacklogMessage({
+  gmailMessageId:"merchant-price-1",
+  threadId:"merchant-price-1",
+  from:"Google Merchant Center <googlebase-noreply@google.com>",
+  to:"GlobalConceptsMediaLLC@gmail.com",
+  subject:"Action required: Fix your product issues",
+  date:"Fri, 21 Aug 2026 12:15:21 -0700",
+  snippet:"Make these updates to get all of your products on Google.",
+  bodyText:`Merchant Center ID: 5325664516
+Action needed to show products
+Some of your products aren’t showing on Google
+Make these updates to get all of your products on Google.
+Fixes to make now
+4 products have the issue: Missing product price
++2 potential clicks per week`,
+  labels:["UNREAD","IMPORTANT","CATEGORY_UPDATES","INBOX"]
+});
+
+assert.equal(merchantCenterWork.intelligence.client, "Southeast Safes");
+assert.equal(merchantCenterWork.intelligence.proposedRoute, "Requested Work");
+assert.equal(merchantCenterWork.intelligence.shouldCreateWorkItem, true);
+assert.equal(merchantCenterWork.intelligence.investigationCandidate, false);
+assert.equal(merchantCenterWork.intelligence.monitoringOnly, false);
+assert.equal(merchantCenterWork.intelligence.operationalPriority, "Medium");
+assert.match(merchantCenterWork.intelligence.businessMeaning, /4 products affected by “Missing product price”/i);
+assert.match(merchantCenterWork.intelligence.businessMeaning, /2 potential additional clicks per week/i);
+assert.match(merchantCenterWork.intelligence.recommendedAction, /Correct SES Missing product price on 4 products/i);
 
 console.log("gmailBacklogIntelligence.test.js passed");
