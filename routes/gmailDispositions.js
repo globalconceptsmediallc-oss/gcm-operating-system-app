@@ -1,13 +1,28 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailDispositions.js
-   Version: 1.1.0
+   Version: 1.2.0
    Status: Production Road-Test Candidate
-   Sprint: Gmail — Evidence Before Assumptions
+   Sprint: Gmail — Decision Hold / Work Lite
    Purpose:
-   Give Morning Command explicit human dispositions while preventing Position
-   Tracking monitoring summaries from replacing the source evidence needed for
-   future comparison, verification, and consulting decisions.
+   Give Morning Command explicit human dispositions while preserving exact
+   monitoring evidence and adding a lightweight Decision Hold state for
+   communications that matter but are not ready for a final disposition.
+
+   Change notes — v1.2.0:
+   - Adds Hold for Review / Work Lite as a durable, client-linked decision state.
+   - A held Gmail source creates 0 Work Items and 0 Investigations.
+   - Preserves the full source text, blocking question/follow-up, reason,
+     priority, due date when present, Gmail message ID, and thread ID.
+   - Marks Gmail read only after D1 confirms the Decision Hold.
+   - Lists open Decision Holds for Today and can release one back to Morning
+     Command without deleting its history.
+   - Resolves client identity from strongest message context first: subject,
+     body, snippet, thread context, recipients, then sender. Sender domain no
+     longer overrides an explicit client named in the subject.
+   - Generic follow-up and future-requirement signals can recommend Decision
+     Hold without platform-specific communication rules.
+   - Preserves v1.1.0 Position Tracking exact-evidence protection.
 
    Change notes — v1.1.0:
    - Intercepts preview-gmail-inbox only to enrich Position Tracking cards with
@@ -19,17 +34,11 @@
    - Marks Gmail read only after D1 confirms the evidence record.
    - Delegates non-Position-Tracking preview/monitoring behavior to the verified
      production Gmail integration unchanged.
-   - Preserves v1.0.0 Delete — No Action and Keep as Information behavior.
 
    Change notes — v1.0.0:
-   - Delete — No Action Required moves the Gmail message to Trash and creates
-     zero GCM OS records.
+   - Delete — No Action Required moves Gmail to Trash and creates zero OS records.
    - Keep as Information creates one durable Communication with no Investigation
      and no Work Item, then marks Gmail read only after D1 confirms the record.
-   - Useful Information requires a verified production client; unassigned mail
-     cannot be silently stored under the wrong account.
-   - Reuses operationalDecision.js so Information remains part of the durable
-     Communication history rather than a parallel notes table.
    ========================================================= */
 
 import { clean, safeErrorMessage, logWorkerError, jsonResponse } from "../shared/http.js";
@@ -42,18 +51,25 @@ import {
   formatPositionTrackingEvidence,
   buildPositionTrackingBusinessMeaning
 } from "../shared/gmailMonitoringEvidence.js";
+import {
+  inferClientFromMessageContext,
+  evaluateDecisionHold,
+  buildDecisionHoldBusinessMeaning
+} from "../shared/gmailDecisionHold.js";
 
 export const PREVIEW_GMAIL_INBOX_EVIDENCE_ACTION = "preview-gmail-inbox";
 export const APPROVE_GMAIL_MONITORING_EVIDENCE_ACTION = "approve-gmail-monitoring";
+export const HOLD_GMAIL_DECISION_ACTION = "hold-gmail-decision";
 export const DELETE_GMAIL_NO_ACTION_ACTION = "delete-gmail-no-action";
 export const SAVE_GMAIL_INFORMATION_ACTION = "save-gmail-information";
 export const GMAIL_DISPOSITION_ACTIONS = Object.freeze([
   PREVIEW_GMAIL_INBOX_EVIDENCE_ACTION,
   APPROVE_GMAIL_MONITORING_EVIDENCE_ACTION,
+  HOLD_GMAIL_DECISION_ACTION,
   DELETE_GMAIL_NO_ACTION_ACTION,
   SAVE_GMAIL_INFORMATION_ACTION
 ]);
-export const GMAIL_DISPOSITION_VERSION = "1.1.0";
+export const GMAIL_DISPOSITION_VERSION = "1.2.0";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GMAIL_API = "https://gmail.googleapis.com/gmail/v1";
@@ -62,6 +78,7 @@ export async function handleGmailDispositions(body, env, requestId) {
   const action = clean(body?.action);
   if (action === PREVIEW_GMAIL_INBOX_EVIDENCE_ACTION) return previewWithEvidence(body, env, requestId);
   if (action === APPROVE_GMAIL_MONITORING_EVIDENCE_ACTION) return approveMonitoringWithEvidence(body, env, requestId);
+  if (action === HOLD_GMAIL_DECISION_ACTION) return handleDecisionHold(body, env, requestId);
   if (action === DELETE_GMAIL_NO_ACTION_ACTION) return deleteNoAction(body, env, requestId);
   if (action === SAVE_GMAIL_INFORMATION_ACTION) return saveInformation(body, env, requestId);
   return null;
@@ -82,10 +99,45 @@ async function previewWithEvidence(body, env, requestId) {
     return jsonResponse(payload, legacyResponse.status || 500);
   }
 
-  payload.messages = payload.messages.map(enrichPositionTrackingPreview);
+  payload.messages = payload.messages.map(enrichPreviewMessage);
   payload.gmailDispositionVersion = GMAIL_DISPOSITION_VERSION;
-  payload.evidencePreservation = "Position Tracking exact-signal guard active";
+  payload.evidencePreservation = "Exact monitoring evidence + Decision Hold guard active";
   return jsonResponse(payload, legacyResponse.status || 200);
+}
+
+function enrichPreviewMessage(message) {
+  const positionEnriched = enrichPositionTrackingPreview(message);
+  const current = positionEnriched?.intelligence || {};
+  const inferred = inferClientFromMessageContext(positionEnriched, inferClientFromText);
+  const clientName = inferred?.name || current.client || "Unassigned — Human Review";
+  const normalized = {
+    ...positionEnriched,
+    intelligence:{
+      ...current,
+      client:clientName
+    }
+  };
+
+  const hold = evaluateDecisionHold(normalized, normalized.intelligence, { clientName });
+  if (!hold.candidate) return normalized;
+
+  return {
+    ...normalized,
+    intelligence:{
+      ...normalized.intelligence,
+      client:clientName,
+      businessMeaning:buildDecisionHoldBusinessMeaning(hold, clientName),
+      operationalPriority:hold.priority || normalized.intelligence.operationalPriority || "Low",
+      recommendedAction:hold.suggestedNextAction,
+      proposedRoute:"Decision Hold",
+      decisionHoldCandidate:true,
+      decisionHold:hold,
+      evidenceSufficiency:"Source evidence is sufficient to preserve; one decision-critical question or future follow-up remains unresolved.",
+      evidenceComparedAgainst:"Current Gmail source and verified client identity; no final Work/Investigation disposition is assumed.",
+      verificationRequired:hold.question,
+      productionDecisionReady:false
+    }
+  };
 }
 
 function enrichPositionTrackingPreview(message) {
@@ -94,9 +146,7 @@ function enrichPositionTrackingPreview(message) {
   );
   if (!evidence) return message;
 
-  const inferred = inferClientFromText(
-    `${clean(message?.subject)}\n${clean(message?.bodyText)}`
-  );
+  const inferred = inferClientFromMessageContext(message, inferClientFromText);
   const current = message?.intelligence || {};
   const clientName = inferred?.name || current.client || "Unassigned — Human Review";
   const evidenceSummary = formatPositionTrackingEvidence(evidence);
@@ -167,7 +217,7 @@ async function approveMonitoringWithEvidence(body, env, requestId) {
       return handleGmailAction(body, env, requestId);
     }
 
-    const inferred = inferClientFromText(`${message.subject}\n${message.bodyText}`);
+    const inferred = inferClientFromMessageContext(message, inferClientFromText);
     const client = await resolveClient(db, inferred, "");
     if (!client?.client_code) {
       return jsonResponse({
@@ -265,6 +315,309 @@ async function approveMonitoringWithEvidence(body, env, requestId) {
   }
 }
 
+async function handleDecisionHold(body, env, requestId) {
+  const mode = clean(body?.mode || "create").toLowerCase();
+  if (mode === "list") return listDecisionHolds(env, requestId);
+  if (mode === "release") return releaseDecisionHold(body, env, requestId);
+  return createDecisionHold(body, env, requestId);
+}
+
+async function createDecisionHold(body, env, requestId) {
+  const gmailMessageId = clean(body?.gmailMessageId);
+  if (!gmailMessageId) {
+    return jsonResponse({
+      ok:false,
+      requestId,
+      action:HOLD_GMAIL_DECISION_ACTION,
+      error:"gmailMessageId is required."
+    }, 400);
+  }
+
+  try {
+    const db = requireDb(env);
+    const sourceReference = `gmail:${gmailMessageId}`;
+    const existing = await db.prepare(`
+      SELECT dh.*, c.client_code, c.name AS client_name
+      FROM decision_holds dh
+      LEFT JOIN clients c ON c.id = dh.client_id
+      WHERE dh.source_reference = ?
+        AND LOWER(COALESCE(dh.status, 'open')) IN ('open','held','waiting')
+      ORDER BY dh.id DESC
+      LIMIT 1
+    `).bind(sourceReference).first();
+
+    if (existing?.id) {
+      const live = await loadLiveGmailMessage(gmailMessageId, env);
+      await markMessageRead(gmailMessageId, live.accessToken);
+      return jsonResponse({
+        ok:true,
+        requestId,
+        action:HOLD_GMAIL_DECISION_ACTION,
+        version:GMAIL_DISPOSITION_VERSION,
+        duplicate:true,
+        writesPerformed:0,
+        gmailMarkedRead:true,
+        hold:mapDecisionHold(existing)
+      });
+    }
+
+    const { message, accessToken } = await loadLiveGmailMessage(gmailMessageId, env);
+    const inferred = inferClientFromMessageContext(message, inferClientFromText);
+    const client = await resolveClient(db, inferred, clean(body?.clientName || body?.client));
+
+    if (!client?.client_code) {
+      return jsonResponse({
+        ok:false,
+        requestId,
+        action:HOLD_GMAIL_DECISION_ACTION,
+        error:"Decision Hold requires a verified production client. Gmail was left unchanged for manual review."
+      }, 409);
+    }
+
+    const leadershipContext = /\b(frank|adrianne)\b/i.test(`${message.from} ${message.to}`)
+      ? "Human — Leadership / Client Operations"
+      : "Human Review";
+    const plan = evaluateDecisionHold(
+      message,
+      {
+        client:client.name,
+        proposedRoute:"Manual Review",
+        communicationFamily:leadershipContext,
+        archive:false,
+        monitoringOnly:false,
+        shouldCreateInvestigation:false,
+        shouldCreateWorkItem:false
+      },
+      { clientName:client.name }
+    );
+
+    const safePlan = plan.candidate ? plan : {
+      candidate:true,
+      holdType:"decision_question",
+      priority:"Low",
+      question:"What decision-critical fact is still missing before this communication can be given a final disposition?",
+      whyItMatters:"The source matters enough to preserve, but the operator intentionally deferred the final decision.",
+      suggestedNextAction:"Park this as Work Lite and return after higher-priority work is handled.",
+      dueDate:null,
+      reviewOn:null
+    };
+
+    const result = await db.prepare(`
+      INSERT INTO decision_holds (
+        client_id, source_type, source_reference, source_thread_reference,
+        source_subject, source_sender, source_date, source_content, title,
+        hold_type, question, why_it_matters, suggested_next_action, priority,
+        due_date, review_on, status, owner, created_at, updated_at
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+    `).bind(
+      client.id,
+      "gmail",
+      sourceReference,
+      message.threadId ? `gmail-thread:${message.threadId}` : null,
+      clean(message.subject),
+      clean(message.from),
+      clean(message.date),
+      clean(message.bodyText || message.snippet || message.subject).slice(0, 12000),
+      `Decision Hold — ${clean(message.subject) || "Gmail review"}`,
+      safePlan.holdType,
+      safePlan.question,
+      safePlan.whyItMatters,
+      safePlan.suggestedNextAction,
+      safePlan.priority || "Low",
+      safePlan.dueDate || null,
+      safePlan.reviewOn || null,
+      "Open",
+      "Andy"
+    ).run();
+
+    const holdId = result?.meta?.last_row_id || null;
+    if (!holdId) {
+      return jsonResponse({
+        ok:false,
+        requestId,
+        action:HOLD_GMAIL_DECISION_ACTION,
+        error:"D1 did not confirm the Decision Hold. Gmail was left unchanged."
+      }, 500);
+    }
+
+    await markMessageRead(gmailMessageId, accessToken);
+
+    return jsonResponse({
+      ok:true,
+      requestId,
+      action:HOLD_GMAIL_DECISION_ACTION,
+      version:GMAIL_DISPOSITION_VERSION,
+      duplicate:false,
+      writesPerformed:1,
+      workItemsCreated:0,
+      investigationsCreated:0,
+      gmailMarkedRead:true,
+      hold:{
+        id:holdId,
+        clientId:client.id,
+        clientCode:client.client_code,
+        clientName:client.name,
+        sourceReference,
+        sourceSubject:message.subject,
+        holdType:safePlan.holdType,
+        question:safePlan.question,
+        whyItMatters:safePlan.whyItMatters,
+        suggestedNextAction:safePlan.suggestedNextAction,
+        priority:safePlan.priority || "Low",
+        dueDate:safePlan.dueDate || null,
+        reviewOn:safePlan.reviewOn || null,
+        status:"Open"
+      }
+    });
+  } catch (error) {
+    logWorkerError({ requestId, route:HOLD_GMAIL_DECISION_ACTION, stage:"gmail_decision_hold", error });
+    return jsonResponse({ ok:false, requestId, action:HOLD_GMAIL_DECISION_ACTION, error:safeErrorMessage(error) }, 500);
+  }
+}
+
+async function listDecisionHolds(env, requestId) {
+  try {
+    const db = requireDb(env);
+    const result = await db.prepare(`
+      SELECT
+        dh.*,
+        c.client_code,
+        c.name AS client_name
+      FROM decision_holds dh
+      LEFT JOIN clients c ON c.id = dh.client_id
+      WHERE LOWER(COALESCE(dh.status, 'open')) IN ('open','held','waiting')
+      ORDER BY
+        CASE LOWER(COALESCE(dh.priority, 'low'))
+          WHEN 'urgent' THEN 0
+          WHEN 'critical' THEN 0
+          WHEN 'high' THEN 1
+          WHEN 'normal' THEN 2
+          WHEN 'medium' THEN 2
+          ELSE 3
+        END,
+        CASE WHEN dh.due_date IS NULL OR dh.due_date = '' THEN 1 ELSE 0 END,
+        date(dh.due_date) ASC,
+        datetime(dh.created_at) ASC,
+        dh.id ASC
+      LIMIT 50
+    `).all();
+
+    const holds = (result?.results || []).map(mapDecisionHold);
+    return jsonResponse({
+      ok:true,
+      requestId,
+      action:HOLD_GMAIL_DECISION_ACTION,
+      mode:"list",
+      version:GMAIL_DISPOSITION_VERSION,
+      writesPerformed:0,
+      count:holds.length,
+      holds
+    });
+  } catch (error) {
+    logWorkerError({ requestId, route:HOLD_GMAIL_DECISION_ACTION, stage:"list_decision_holds", error });
+    return jsonResponse({ ok:false, requestId, action:HOLD_GMAIL_DECISION_ACTION, error:safeErrorMessage(error) }, 500);
+  }
+}
+
+async function releaseDecisionHold(body, env, requestId) {
+  const holdId = Number(body?.holdId);
+  if (!Number.isInteger(holdId) || holdId <= 0) {
+    return jsonResponse({
+      ok:false,
+      requestId,
+      action:HOLD_GMAIL_DECISION_ACTION,
+      error:"holdId is required."
+    }, 400);
+  }
+
+  try {
+    const db = requireDb(env);
+    const hold = await db.prepare(`
+      SELECT *
+      FROM decision_holds
+      WHERE id = ?
+        AND LOWER(COALESCE(status, 'open')) IN ('open','held','waiting')
+      LIMIT 1
+    `).bind(holdId).first();
+
+    if (!hold?.id) {
+      return jsonResponse({
+        ok:false,
+        requestId,
+        action:HOLD_GMAIL_DECISION_ACTION,
+        error:"Open Decision Hold was not found."
+      }, 404);
+    }
+
+    await db.prepare(`
+      UPDATE decision_holds
+      SET status = 'Released',
+          released_at = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP,
+          resolution = 'Returned to Morning Command for final disposition'
+      WHERE id = ?
+    `).bind(holdId).run();
+
+    const gmailMessageId = clean(hold.source_reference).startsWith("gmail:")
+      ? clean(hold.source_reference).slice(6)
+      : "";
+    let gmailMarkedUnread = false;
+    if (gmailMessageId) {
+      try {
+        const live = await loadLiveGmailMessage(gmailMessageId, env);
+        await markMessageUnread(gmailMessageId, live.accessToken);
+        gmailMarkedUnread = true;
+      } catch (error) {
+        logWorkerError({ requestId, route:HOLD_GMAIL_DECISION_ACTION, stage:"release_decision_hold_gmail", error });
+      }
+    }
+
+    return jsonResponse({
+      ok:true,
+      requestId,
+      action:HOLD_GMAIL_DECISION_ACTION,
+      mode:"release",
+      version:GMAIL_DISPOSITION_VERSION,
+      writesPerformed:1,
+      holdId,
+      gmailMarkedUnread,
+      returnedToMorningCommand:true
+    });
+  } catch (error) {
+    logWorkerError({ requestId, route:HOLD_GMAIL_DECISION_ACTION, stage:"release_decision_hold", error });
+    return jsonResponse({ ok:false, requestId, action:HOLD_GMAIL_DECISION_ACTION, error:safeErrorMessage(error) }, 500);
+  }
+}
+
+function mapDecisionHold(row) {
+  const sourceReference = clean(row?.source_reference);
+  const gmailMessageId = sourceReference.startsWith("gmail:") ? sourceReference.slice(6) : null;
+  return {
+    id:Number(row?.id),
+    clientId:Number(row?.client_id) || null,
+    clientCode:clean(row?.client_code) || null,
+    clientName:clean(row?.client_name) || null,
+    title:clean(row?.title),
+    sourceType:clean(row?.source_type),
+    sourceReference,
+    sourceSubject:clean(row?.source_subject),
+    sourceSender:clean(row?.source_sender),
+    sourceDate:clean(row?.source_date),
+    holdType:clean(row?.hold_type),
+    question:clean(row?.question),
+    whyItMatters:clean(row?.why_it_matters),
+    suggestedNextAction:clean(row?.suggested_next_action),
+    priority:clean(row?.priority) || "Low",
+    dueDate:clean(row?.due_date) || null,
+    reviewOn:clean(row?.review_on) || null,
+    status:clean(row?.status) || "Open",
+    owner:clean(row?.owner) || "Andy",
+    createdAt:clean(row?.created_at) || null,
+    gmailMessageId,
+    gmailUrl:gmailMessageId ? `https://mail.google.com/mail/#all/${gmailMessageId}` : null
+  };
+}
+
 async function deleteNoAction(body, env, requestId) {
   const gmailMessageId = clean(body?.gmailMessageId);
   if (!gmailMessageId) {
@@ -348,8 +701,7 @@ async function saveInformation(body, env, requestId) {
     }
 
     const { message, accessToken } = await loadLiveGmailMessage(gmailMessageId, env);
-    const text = `${message.subject}\n${message.bodyText}`;
-    const inferred = inferClientFromText(text);
+    const inferred = inferClientFromMessageContext(message, inferClientFromText);
     const client = await resolveClient(db, inferred, clientNameHint);
 
     if (!client?.client_code) {
@@ -517,6 +869,17 @@ async function markMessageRead(gmailMessageId, accessToken) {
     method:"POST",
     headers:{ Authorization:`Bearer ${accessToken}`, "Content-Type":"application/json" },
     body:JSON.stringify({ removeLabelIds:["UNREAD"] })
+  });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload?.error?.message || `Gmail modify failed with HTTP ${response.status}.`);
+  return payload;
+}
+
+async function markMessageUnread(gmailMessageId, accessToken) {
+  const response = await fetch(`${GMAIL_API}/users/me/messages/${encodeURIComponent(gmailMessageId)}/modify`, {
+    method:"POST",
+    headers:{ Authorization:`Bearer ${accessToken}`, "Content-Type":"application/json" },
+    body:JSON.stringify({ addLabelIds:["UNREAD"] })
   });
   const payload = await response.json();
   if (!response.ok) throw new Error(payload?.error?.message || `Gmail modify failed with HTTP ${response.status}.`);
