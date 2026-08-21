@@ -1,12 +1,17 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/gmailDecisionRoutes.test.js
-   Version: 1.2.0
+   Version: 1.2.1
    Status: Production Regression Test
    Purpose: Verify Morning Command can distinguish delete, information,
             monitoring, Decision Hold / Work Lite, direct requested work,
             explicit approval-to-proceed work, and investigation paths without
             inventing committed Work.
+
+   Change notes — 1.2.1:
+   - Locks compact client-name forms into the canonical Gmail client resolver so
+     preview/backlog identity cannot disagree with write-time validation.
+   - Reproduces the live Northfloridasafes Ahrefs source identity as verified NFS.
 
    Change notes — 1.2.0:
    - Proves an explicit client approval to proceed becomes direct committed Work
@@ -37,6 +42,14 @@ import {
 function read(path) {
   return fs.readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
+
+const compactNorthFlorida = inferClientFromText(
+  "(Northfloridasafes) Image file size too large: 441 URLs\nNew crawl for Northfloridasafes"
+);
+assert.deepEqual(compactNorthFlorida, {
+  name:"North Florida Safes",
+  code:"NFS"
+});
 
 const kristyGa4 = evaluateExplicitHumanWorkRequest({
   from:"Kristy Schirmer <kkpayne1@gmail.com>",
@@ -187,10 +200,11 @@ assert.match(workRoute, /investigationId:null/);
 assert.match(workRoute, /markMessageRead/);
 assert.match(workRoute, /FROM decision_holds/);
 assert.match(workRoute, /released/i);
-assert.match(workIntelligence, /Version: 1\.0\.2/);
+assert.match(workIntelligence, /Version: 1\.0\.3/);
 assert.match(workIntelligence, /APPROVAL_TO_PROCEED_PATTERNS/);
 assert.match(workIntelligence, /currentReplyText/);
 assert.match(workIntelligence, /approvalToProceed/);
+assert.match(workIntelligence, /northfloridasafes/);
 
 assert.match(dispositions, /delete-gmail-no-action/);
 assert.match(dispositions, /\/trash`/);
