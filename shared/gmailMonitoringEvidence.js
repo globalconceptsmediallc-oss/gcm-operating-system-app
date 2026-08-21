@@ -1,12 +1,19 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gmailMonitoringEvidence.js
-   Version: 1.1.0
+   Version: 1.1.1
    Status: Production Road-Test Candidate
    Sprint: Gmail — Universal Monitoring Evidence
    Purpose:
    Extract exact, source-grounded monitoring facts from Gmail notifications so
    operator summaries never replace the evidence required for future comparison.
+
+   Change notes — v1.1.1:
+   - Normalizes Markdown-linked values and URL-heavy email text before extraction.
+   - Extracts priority dashboard metrics even when Gmail HTML flattens several
+     label/value pairs onto one line or adds explanatory copy after the value.
+   - Keeps the parser source-neutral: no client, project, or report-specific rule.
+   - Locks live Site Audit evidence shapes without weakening Position Tracking.
 
    Change notes — v1.1.0:
    - Adds a source-neutral monitoring evidence envelope for any monitoring email.
@@ -22,7 +29,7 @@
    - Supports both line-oriented and flattened Gmail HTML-to-text layouts.
    ========================================================= */
 
-export const GMAIL_MONITORING_EVIDENCE_VERSION = "1.1.0";
+export const GMAIL_MONITORING_EVIDENCE_VERSION = "1.1.1";
 
 const METRIC_PRIORITY_TERMS = Object.freeze([
   "site health",
@@ -46,6 +53,14 @@ const METRIC_PRIORITY_TERMS = Object.freeze([
   "views",
   "subscribers"
 ]);
+
+const PRIORITY_METRIC_PATTERN = new RegExp(
+  `\\b(${[...METRIC_PRIORITY_TERMS]
+    .sort((left, right) => right.length - left.length)
+    .map(escapeRegex)
+    .join("|")})\\b\\s*[:=-]?\\s*([-+]?\\d[\\d,.]*(?:\\.\\d+)?%?(?:\\s+(?:no change|unchanged|stable))?)`,
+  "ig"
+);
 
 export function extractPositionTrackingEvidence(value) {
   const text = sanitize(value);
@@ -177,6 +192,16 @@ export function extractMonitoringEvidence(messageOrText = {}) {
       sourceOrder:metrics.length
     });
   };
+
+  PRIORITY_METRIC_PATTERN.lastIndex = 0;
+  let priorityMatch;
+  while ((priorityMatch = PRIORITY_METRIC_PATTERN.exec(text)) !== null && metrics.length < 30) {
+    addMetric(
+      canonicalMetricLabel(priorityMatch[1]),
+      priorityMatch[2],
+      priorityMatch[0]
+    );
+  }
 
   for (let index = 0; index < lines.length && metrics.length < 30; index += 1) {
     const line = lines[index];
@@ -310,6 +335,12 @@ function metricPriority(label) {
   return index >= 0 ? index : METRIC_PRIORITY_TERMS.length + 1;
 }
 
+function canonicalMetricLabel(value) {
+  return clean(value)
+    .toLowerCase()
+    .replace(/\b\w/g, character => character.toUpperCase());
+}
+
 function isMetricLabel(value) {
   const label = clean(value);
   if (!label || label.length < 2 || label.length > 60) return false;
@@ -330,10 +361,22 @@ function formatMovement(value) {
 
 function sanitize(value) {
   return clean(String(value ?? "")
+    .replace(/\[([^\]]+)\]\((?:https?:\/\/|mailto:)[^)]+\)/gi, "$1")
+    .replace(/https?:\/\/\S+/gi, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
     .replace(/\r/g, "")
     .replace(/[ \t]+/g, " ")
     .replace(/\n[ \t]+/g, "\n")
     .replace(/\n{3,}/g, "\n\n"));
+}
+
+function escapeRegex(value) {
+  return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function clean(value) {
