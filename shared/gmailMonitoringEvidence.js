@@ -1,12 +1,19 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gmailMonitoringEvidence.js
-   Version: 1.1.1
+   Version: 1.1.2
    Status: Production Road-Test Candidate
    Sprint: Gmail — Universal Monitoring Evidence
    Purpose:
    Extract exact, source-grounded monitoring facts from Gmail notifications so
    operator summaries never replace the evidence required for future comparison.
+
+   Change notes — v1.1.2:
+   - Keeps compact monitoring summaries bounded while always surfacing ratio
+     evidence when the source provides one.
+   - Prevents a decision-critical ratio from being crowded out by lower-value
+     metrics when a report exposes more than ten measurable facts.
+   - Preserves all v1.1.1 linked/flattened parsing and Position Tracking behavior.
 
    Change notes — v1.1.1:
    - Normalizes Markdown-linked values and URL-heavy email text before extraction.
@@ -29,7 +36,7 @@
    - Supports both line-oriented and flattened Gmail HTML-to-text layouts.
    ========================================================= */
 
-export const GMAIL_MONITORING_EVIDENCE_VERSION = "1.1.1";
+export const GMAIL_MONITORING_EVIDENCE_VERSION = "1.1.2";
 
 const METRIC_PRIORITY_TERMS = Object.freeze([
   "site health",
@@ -284,8 +291,12 @@ export function formatMonitoringEvidence(evidence) {
     const b = metricPriority(right?.label);
     return a - b;
   });
-  const metricText = ordered
-    .slice(0, 10)
+  const selected = ordered.slice(0, 10);
+  for (const metric of ordered) {
+    if (metric?.unit !== "ratio" || selected.includes(metric)) continue;
+    selected.push(metric);
+  }
+  const metricText = selected
     .map(metric => `${clean(metric?.label)} ${clean(metric?.displayValue)}`)
     .filter(Boolean);
   const parts = [...metricText];
