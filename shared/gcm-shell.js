@@ -166,7 +166,7 @@
     try {
       const response = await fetch(WORKER_ENDPOINT, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type":"application/json" },
         body: JSON.stringify({ action: MISSION_CONTROL_ACTION })
       });
 
@@ -341,7 +341,7 @@
 
       appendScript(
         "shared/media-recovery-dashboard.js?v=1.0.0",
-        "data-gcm-media-recovery-dashboard-cleanup"
+        "data-gcm-media-recovery-dashboard"
       );
 
       appendScript(
