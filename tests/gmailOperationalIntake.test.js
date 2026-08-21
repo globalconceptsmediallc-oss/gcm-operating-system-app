@@ -1,11 +1,17 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/gmailOperationalIntake.test.js
-   Version: 1.3.3
+   Version: 1.3.4
    Status: Production Regression Test
    Purpose: Verify Morning Command uses GCM OS disposition state rather than
             Gmail read/unread state and preserves exact source evidence before
             any approved Monitoring disposition clears Gmail.
+
+   Change notes — 1.3.4:
+   - Locks measurable report deltas such as +1 and −96 into Monitoring evidence.
+   - Road-tests the live Ahrefs North Florida Safes alert in line-oriented and
+     flattened source shapes.
+   - Requires health context and changed metrics to survive compact formatting.
 
    Change notes — 1.3.3:
    - Updates the durable Gmail Work-request route version lock to 1.1.2.
@@ -66,13 +72,26 @@ function assertSiteAuditMetrics(evidence) {
   assert.match(evidence?.stableSignal || "", /No significant change/i);
 }
 
+function assertAhrefsMetrics(evidence) {
+  assert.equal(evidence?.type, "monitoring_evidence");
+  assert.equal(metricByLabel(evidence, "Health Score")?.displayValue, "92");
+  assert.equal(metricByLabel(evidence, "Errors")?.displayValue, "463 (+1)");
+  assert.equal(metricByLabel(evidence, "Errors")?.delta, 1);
+  assert.equal(metricByLabel(evidence, "Warnings")?.displayValue, "140");
+  assert.equal(metricByLabel(evidence, "Notices")?.displayValue, "64 (−96)");
+  assert.equal(metricByLabel(evidence, "Notices")?.delta, -96);
+  assert.equal(metricByLabel(evidence, "Image file size too large")?.displayValue, "441 (+1)");
+  assert.equal(metricByLabel(evidence, "Slow page")?.displayValue, "1 (+1)");
+  assert.equal(metricByLabel(evidence, "No. of referring domains dropped")?.displayValue, "1 (+1)");
+}
+
 const route = read("routes/gmailWorkRequests.js");
 const dispositions = read("routes/gmailDispositions.js");
 const ui = read("shared/today-gmail-decisions.js");
 const monitoringMigration = read("migrations/0014_gmail_monitoring_source_evidence.sql");
 const monitoringSchemaGuard = read("shared/gmailMonitoringEvidenceSchema.js");
 
-assert.equal(GMAIL_MONITORING_EVIDENCE_VERSION, "1.1.2");
+assert.equal(GMAIL_MONITORING_EVIDENCE_VERSION, "1.1.3");
 assert.match(route, /Version: 1\.1\.2/);
 assert.match(route, /classifyOperationalBacklogMessage/);
 assert.match(route, /mode\)\.toLowerCase\(\) === "operational-backlog"/);
@@ -293,4 +312,43 @@ assert.match(formatMonitoringEvidence(flattenedLinkedSiteAuditEvidence), /Errors
 assert.match(formatMonitoringEvidence(flattenedLinkedSiteAuditEvidence), /Warnings 687/);
 assert.match(formatMonitoringEvidence(flattenedLinkedSiteAuditEvidence), /Notices 484/);
 
-console.log("PASS Gmail operational intake preserves linked, flattened, and universal monitoring evidence");
+const ahrefsAuditMessage = {
+  subject:"(Northfloridasafes) Image file size too large: 441 URLs",
+  date:"Fri, 21 Aug 2026 02:20:13 +0000",
+  bodyText:`20 August
+New crawl for Northfloridasafes
+168 internal URLs were analyzed.
+Health Score
+92
+Health Score reflects the proportion of internal URLs on your site that don't have errors.
+Issues
+Errors 463 +1
+Warnings 140
+Notices 64 −96
+What's new
+Image file size too large 441 +1
+Slow page New 1 +1
+No. of referring domains dropped New 1 +1
+View all issues`
+};
+
+const ahrefsEvidence = extractMonitoringEvidence(ahrefsAuditMessage);
+assertAhrefsMetrics(ahrefsEvidence);
+const ahrefsSummary = formatMonitoringEvidence(ahrefsEvidence);
+assert.match(ahrefsSummary, /Health Score 92/);
+assert.match(ahrefsSummary, /Errors 463 \(\+1\)/);
+assert.match(ahrefsSummary, /Notices 64 \(−96\)/);
+assert.match(ahrefsSummary, /Image file size too large 441 \(\+1\)/);
+assert.match(ahrefsSummary, /Slow page 1 \(\+1\)/);
+assert.match(ahrefsSummary, /No\. of referring domains dropped 1 \(\+1\)/);
+
+const flattenedAhrefsEvidence = extractMonitoringEvidence({
+  ...ahrefsAuditMessage,
+  bodyText:ahrefsAuditMessage.bodyText.replace(/\n+/g, " ")
+});
+assertAhrefsMetrics(flattenedAhrefsEvidence);
+assert.match(formatMonitoringEvidence(flattenedAhrefsEvidence), /Health Score 92/);
+assert.match(formatMonitoringEvidence(flattenedAhrefsEvidence), /Image file size too large 441 \(\+1\)/);
+assert.match(formatMonitoringEvidence(flattenedAhrefsEvidence), /Notices 64 \(−96\)/);
+
+console.log("PASS Gmail operational intake preserves linked, flattened, delta-aware, and universal monitoring evidence");
