@@ -1,22 +1,51 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gmailMonitoringEvidence.js
-   Version: 1.0.0
+   Version: 1.1.0
    Status: Production Road-Test Candidate
-   Sprint: Gmail — Evidence Before Assumptions
+   Sprint: Gmail — Universal Monitoring Evidence
    Purpose:
    Extract exact, source-grounded monitoring facts from Gmail notifications so
    operator summaries never replace the evidence required for future comparison.
+
+   Change notes — v1.1.0:
+   - Adds a source-neutral monitoring evidence envelope for any monitoring email.
+   - Extracts compact numeric label/value facts without deciding what they mean.
+   - Preserves a stable/no-change source signal when explicitly stated.
+   - Produces a compact evidence summary and factual business-meaning sentence.
+   - Keeps the specialized Position Tracking table parser for keyword rows.
+   - Contains no D1 or Gmail mutation logic; this module remains pure/testable.
 
    Change notes — v1.0.0:
    - Extracts Position Tracking project/domain, report date, trigger rule,
      affected keyword rows, current position, movement, and search volume.
    - Supports both line-oriented and flattened Gmail HTML-to-text layouts.
-   - Produces a compact operator evidence summary and a business-meaning sentence.
-   - Contains no D1 or Gmail mutation logic; this module is pure/testable evidence parsing.
    ========================================================= */
 
-export const GMAIL_MONITORING_EVIDENCE_VERSION = "1.0.0";
+export const GMAIL_MONITORING_EVIDENCE_VERSION = "1.1.0";
+
+const METRIC_PRIORITY_TERMS = Object.freeze([
+  "site health",
+  "health",
+  "errors",
+  "warnings",
+  "notices",
+  "broken",
+  "blocked",
+  "crawled pages",
+  "crawled",
+  "have issues",
+  "issues",
+  "redirects",
+  "traffic",
+  "visibility",
+  "clicks",
+  "impressions",
+  "conversions",
+  "users",
+  "views",
+  "subscribers"
+]);
 
 export function extractPositionTrackingEvidence(value) {
   const text = sanitize(value);
@@ -107,6 +136,102 @@ export function extractPositionTrackingEvidence(value) {
   };
 }
 
+export function extractMonitoringEvidence(messageOrText = {}) {
+  const message = messageOrText && typeof messageOrText === "object"
+    ? messageOrText
+    : { bodyText:String(messageOrText || "") };
+  const subject = clean(message.subject);
+  const bodyText = clean(message.bodyText || message.body || message.snippet);
+  const text = sanitize(`${subject}\n${bodyText}`);
+  if (!text) return null;
+
+  const positionEvidence = extractPositionTrackingEvidence(text);
+  if (positionEvidence) return positionEvidence;
+
+  const lines = text
+    .split(/\n+/)
+    .map(line => clean(line).replace(/^[•·*-]\s*/, ""))
+    .filter(Boolean);
+  const metrics = [];
+  const seen = new Set();
+
+  const addMetric = (label, displayValue, scope = "") => {
+    const safeLabel = clean(label).replace(/[:=-]+$/, "").trim();
+    const safeValue = clean(displayValue);
+    if (!isMetricLabel(safeLabel) || !/^[-+]?\d[\d,.]*(?:\.\d+)?%?(?:\s+(?:no change|unchanged|stable))?$/i.test(safeValue)) {
+      return;
+    }
+    const numericText = safeValue.match(/^[-+]?\d[\d,.]*(?:\.\d+)?%?/)?.[0] || "";
+    const numericValue = Number(numericText.replace(/[,%]/g, ""));
+    if (!numericText || !Number.isFinite(numericValue)) return;
+    const key = safeLabel.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    metrics.push({
+      key,
+      label:safeLabel,
+      value:numericValue,
+      displayValue:numericText,
+      unit:numericText.includes("%") ? "percent" : "count",
+      scope:clean(scope),
+      sourceOrder:metrics.length
+    });
+  };
+
+  for (let index = 0; index < lines.length && metrics.length < 30; index += 1) {
+    const line = lines[index];
+    const inline = line.match(
+      /^([A-Za-z][A-Za-z0-9 /&_-]{1,55}?)\s*[:=-]?\s+([-+]?\d[\d,.]*(?:\.\d+)?%?(?:\s+(?:no change|unchanged|stable))?)$/i
+    );
+    if (inline) addMetric(inline[1], inline[2], line);
+
+    const next = lines[index + 1] || "";
+    if (
+      isMetricLabel(line) &&
+      /^[-+]?\d[\d,.]*(?:\.\d+)?%?(?:\s+(?:no change|unchanged|stable))?$/i.test(next)
+    ) {
+      addMetric(line, next, `${line} ${next}`);
+    }
+  }
+
+  const ratioMatch = subject.match(/\b(\d[\d,]*)\s+(?:out of|of)\s+(\d[\d,]*)\b/i);
+  if (ratioMatch) {
+    const numerator = Number(ratioMatch[1].replace(/,/g, ""));
+    const denominator = Number(ratioMatch[2].replace(/,/g, ""));
+    if (Number.isFinite(numerator) && Number.isFinite(denominator)) {
+      metrics.push({
+        key:"reported_ratio",
+        label:"Reported Ratio",
+        value:numerator,
+        displayValue:`${ratioMatch[1]}/${ratioMatch[2]}`,
+        unit:"ratio",
+        scope:subject,
+        denominator,
+        sourceOrder:metrics.length
+      });
+    }
+  }
+
+  const reportDate = clean(
+    text.match(/\bDate:\s*([A-Za-z]{3,9}\s+\d{1,2},\s+\d{4}(?:\s*\([^)]*\))?)/i)?.[1]
+  );
+  const stableSignal = /haven['’]?t detected any significant changes|no significant changes/i.test(text)
+    ? "No significant change since the previous comparison"
+    : /\b(?:no change|unchanged|stable)\b/i.test(text)
+      ? "Source reports stable or unchanged results"
+      : "";
+
+  if (!metrics.length && !stableSignal) return null;
+
+  return {
+    type:"monitoring_evidence",
+    subject:subject || null,
+    reportDate:reportDate || clean(message.date) || null,
+    stableSignal:stableSignal || null,
+    metrics:metrics.map(({ sourceOrder, ...metric }) => metric)
+  };
+}
+
 export function formatPositionTrackingEvidence(evidence) {
   if (!evidence || evidence.type !== "position_tracking") return "";
   const rows = Array.isArray(evidence.keywords) ? evidence.keywords : [];
@@ -119,6 +244,27 @@ export function formatPositionTrackingEvidence(evidence) {
   if (rowText.length) parts.push(rowText.join("; "));
   if (evidence.rule) parts.push(evidence.rule);
   if (evidence.domain) parts.push(evidence.domain);
+  if (evidence.reportDate) parts.push(evidence.reportDate);
+  return parts.join(" · ");
+}
+
+export function formatMonitoringEvidence(evidence) {
+  if (!evidence) return "";
+  if (evidence.type === "position_tracking") return formatPositionTrackingEvidence(evidence);
+  if (evidence.type !== "monitoring_evidence") return "";
+
+  const metrics = Array.isArray(evidence.metrics) ? evidence.metrics : [];
+  const ordered = [...metrics].sort((left, right) => {
+    const a = metricPriority(left?.label);
+    const b = metricPriority(right?.label);
+    return a - b;
+  });
+  const metricText = ordered
+    .slice(0, 10)
+    .map(metric => `${clean(metric?.label)} ${clean(metric?.displayValue)}`)
+    .filter(Boolean);
+  const parts = [...metricText];
+  if (evidence.stableSignal) parts.push(evidence.stableSignal);
   if (evidence.reportDate) parts.push(evidence.reportDate);
   return parts.join(" · ");
 }
@@ -145,6 +291,33 @@ export function buildPositionTrackingBusinessMeaning(evidence, clientName = "the
   }
 
   return `${clientName}: Position Tracking reported ${evidence.keywordCount || "a"} keyword signal${evidence.keywordCount === 1 ? "" : "s"}${evidence.rule ? ` under “${evidence.rule}”` : ""}. Preserve the source evidence for future comparison.`;
+}
+
+export function buildMonitoringBusinessMeaning(evidence, clientName = "the client") {
+  if (!evidence) return "";
+  if (evidence.type === "position_tracking") {
+    return buildPositionTrackingBusinessMeaning(evidence, clientName);
+  }
+  if (evidence.type !== "monitoring_evidence") return "";
+  const summary = formatMonitoringEvidence({ ...evidence, reportDate:null });
+  if (!summary) return "";
+  return `${clientName}: ${summary}. Preserve these exact source-grounded facts as monitoring evidence for future comparison; the evidence itself does not create corrective work.`;
+}
+
+function metricPriority(label) {
+  const value = clean(label).toLowerCase();
+  const index = METRIC_PRIORITY_TERMS.findIndex(term => value.includes(term));
+  return index >= 0 ? index : METRIC_PRIORITY_TERMS.length + 1;
+}
+
+function isMetricLabel(value) {
+  const label = clean(value);
+  if (!label || label.length < 2 || label.length > 60) return false;
+  if (!/[A-Za-z]/.test(label)) return false;
+  if (/^(date|time|copyright|project|website url|domain|merchant center id)$/i.test(label)) return false;
+  if (/[.!?]$/.test(label)) return false;
+  if (label.split(/\s+/).length > 8) return false;
+  return true;
 }
 
 function formatMovement(value) {
