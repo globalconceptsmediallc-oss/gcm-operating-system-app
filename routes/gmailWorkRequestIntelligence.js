@@ -1,12 +1,21 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailWorkRequestIntelligence.js
-   Version: 1.1.0
+   Version: 1.1.1
    Status: Production Road-Test Candidate
    Sprint: Gmail — Direct Requested + Source-Proven Work
    Purpose:
    Determine when Gmail contains concrete operational work that is specific
    enough to become a direct Work Item without an artificial Investigation.
+
+   Change notes — v1.1.1:
+   - Cleans flattened transport/link noise from automated source issue text before
+     Business Meaning, Recommended Action, or Work evidence is created.
+   - Stops issue extraction before impact copy, Fix Issue links, and raw URLs.
+   - Source-proven Work now returns explicit automated-alert family/type metadata
+     and High confidence when client identity + affected scope + issue are proven.
+   - Uses a concise operator action that identifies affected items, corrects the
+     underlying source data, and verifies the alert clears.
 
    Change notes — v1.1.0:
    - Preserves the existing known-human request / approval-to-proceed path.
@@ -204,7 +213,7 @@ export function evaluateSourceProvenOperationalWork(message = {}) {
 
   const count = Number(issueMatch[1]);
   const itemType = normalizeItemType(issueMatch[2], count);
-  const issue = clean(issueMatch[3]).replace(/[.]+$/, "");
+  const issue = cleanSourceIssue(issueMatch[3]);
   if (!Number.isFinite(count) || count <= 0 || !issue) {
     return notCandidate("The automated source issue detail is incomplete.", { client });
   }
@@ -214,7 +223,7 @@ export function evaluateSourceProvenOperationalWork(message = {}) {
   const highImpact = HIGH_IMPACT_SIGNAL.test(text);
   const priority = highImpact ? "High" : "Medium";
   const explicitRequest = `Correct ${count} ${itemType} with ${issue}`;
-  const action = `Correct ${client.code} ${issue} on ${count} ${itemType}`;
+  const action = `Identify the ${count} ${client.name} ${itemType} affected by “${issue}”, correct the underlying source data, and verify the alert clears.`;
   const impactSentence = Number.isFinite(potentialClicks)
     ? `The source estimates about ${formatNumber(potentialClicks)} potential additional click${potentialClicks === 1 ? "" : "s"} per week if corrected.`
     : "The source indicates the affected items are currently losing eligibility, visibility, or expected operational performance.";
@@ -231,6 +240,9 @@ export function evaluateSourceProvenOperationalWork(message = {}) {
     approvalToProceed:false,
     sourceProven:true,
     sourceKind:"automated_operational_alert",
+    communicationFamily:"Automated Operational Alert",
+    notificationType:"source_proven_work",
+    confidence:"High",
     action,
     priority,
     businessImpact,
@@ -358,6 +370,21 @@ function normalizeItemType(value, count) {
   const raw = clean(value).toLowerCase();
   if (count === 1) return raw.replace(/s$/, "");
   return raw.endsWith("s") ? raw : `${raw}s`;
+}
+
+function cleanSourceIssue(value) {
+  let text = clean(value)
+    .replace(/\[[^\]]+\]\(https?:\/\/[^)]+\)/gi, " ")
+    .replace(/<https?:\/\/[^>]+>/gi, " ")
+    .replace(/https?:\/\/\S+/gi, " ")
+    .replace(/\s+/g, " ");
+
+  const cut = text.search(
+    /\s+(?:[+-]?\d+(?:\.\d+)?\s+potential\s+clicks?\s+per\s+week|fix\s+issue|see\s+all\s+issues|need\s+help\??)\b/i
+  );
+  if (cut >= 0) text = text.slice(0, cut);
+
+  return clean(text).replace(/^[\s:–—-]+|[\s.:;|–—-]+$/g, "");
 }
 
 function formatNumber(value) {
