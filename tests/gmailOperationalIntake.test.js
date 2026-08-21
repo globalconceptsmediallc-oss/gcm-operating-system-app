@@ -1,11 +1,17 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/gmailOperationalIntake.test.js
-   Version: 1.3.1
+   Version: 1.3.2
    Status: Production Regression Test
    Purpose: Verify Morning Command uses GCM OS disposition state rather than
             Gmail read/unread state and preserves exact source evidence before
             any approved Monitoring disposition clears Gmail.
+
+   Change notes — 1.3.2:
+   - Locks ratio evidence into the compact monitoring summary even when more
+     than ten measurable facts are present.
+   - Preserves the live linked/flattened Site Audit regression and every prior
+     universal evidence, Position Tracking, and Decision Hold lock.
 
    Change notes — 1.3.1:
    - Reproduces the live Semrush Site Audit failure where values are hyperlinks.
@@ -61,7 +67,7 @@ const ui = read("shared/today-gmail-decisions.js");
 const monitoringMigration = read("migrations/0014_gmail_monitoring_source_evidence.sql");
 const monitoringSchemaGuard = read("shared/gmailMonitoringEvidenceSchema.js");
 
-assert.equal(GMAIL_MONITORING_EVIDENCE_VERSION, "1.1.1");
+assert.equal(GMAIL_MONITORING_EVIDENCE_VERSION, "1.1.2");
 assert.match(route, /Version: 1\.1\.1/);
 assert.match(route, /mode\)\.toLowerCase\(\) === "operational-backlog"/);
 assert.match(route, /-in:spam -in:trash \{in:inbox label:Kristy label:\"Frank & Adrianne Stuff\" label:\"REPORTS-SEO\"\}/);
