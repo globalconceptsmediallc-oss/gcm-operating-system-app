@@ -1,13 +1,19 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailWorkRequestIntelligence.js
-   Version: 1.0.2
+   Version: 1.0.3
    Status: Production Road-Test Candidate
    Sprint: Gmail — Direct Requested Work
    Purpose:
    Determine when a known operational human email contains a concrete client
    request or explicit approval to proceed that is specific enough to become a
    direct Work Item without an artificial Investigation.
+
+   Change notes — v1.0.3:
+   - Makes compact client-name forms part of the canonical Gmail client resolver.
+   - Ensures preview/backlog identity and write-time Monitoring/Information/Hold
+     validation use the same client evidence instead of competing alias layers.
+   - Specifically preserves source forms such as Northfloridasafes as verified NFS.
 
    Change notes — v1.0.2:
    - Treats explicit proceed / move-forward / go-with-this approval language as
@@ -41,15 +47,15 @@ const KNOWN_HUMAN_ROLES = Object.freeze([
 ]);
 
 const CLIENT_RULES = Object.freeze([
-  { pattern: /\bses\b|sesafes\.com|southeast safes/i, name: "Southeast Safes", code: "SES" },
-  { pattern: /a1actionsafeandlock\.com|a1 action safe(?: & lock)?|\ba1a?\b/i, name: "A1 Action Safe & Lock", code: "A1" },
-  { pattern: /hbguns\.com|harry beckwith guns(?: & range)?|\bhb guns\b|\bhbg\b/i, name: "HB Guns", code: "HBG" },
-  { pattern: /pickettweaponry\.com|pickett weaponry|\bpw\b/i, name: "Pickett Weaponry", code: "PW" },
-  { pattern: /northfloridasafes\.com|north florida safes|\bnfs\b/i, name: "North Florida Safes", code: "NFS" },
-  { pattern: /southfloridasafes\.com|south florida safes|\bsfs\b/i, name: "South Florida Safes", code: "SFS" },
-  { pattern: /moveasafe\.com|move a safe/i, name: "Move A Safe", code: "MAS" },
-  { pattern: /globalconceptsmedia\.com|global concepts media|\bgcm\b/i, name: "Global Concepts Media", code: "GCM" },
-  { pattern: /lumistudiohouse\.com|lumi & friends|lumi and friends|\blumi\b/i, name: "LUMI", code: "LUMI" }
+  { pattern: /southeastsafes(?:\.com)?|\bses\b|sesafes\.com|southeast safes/i, name: "Southeast Safes", code: "SES" },
+  { pattern: /a1actionsafeandlock(?:\.com)?|a1 action safe(?: & lock)?|\ba1a?\b/i, name: "A1 Action Safe & Lock", code: "A1" },
+  { pattern: /hbguns(?:\.com)?|harrybeckwithguns(?:range)?|harry beckwith guns(?: & range)?|\bhb guns\b|\bhbg\b/i, name: "HB Guns", code: "HBG" },
+  { pattern: /pickettweaponry(?:\.com)?|pickett weaponry|\bpw\b/i, name: "Pickett Weaponry", code: "PW" },
+  { pattern: /northfloridasafes(?:\.com)?|north florida safes|\bnfs\b/i, name: "North Florida Safes", code: "NFS" },
+  { pattern: /southfloridasafes(?:\.com)?|south florida safes|\bsfs\b/i, name: "South Florida Safes", code: "SFS" },
+  { pattern: /moveasafe(?:\.com)?|move a safe/i, name: "Move A Safe", code: "MAS" },
+  { pattern: /globalconceptsmedia(?:\.com)?|global concepts media|\bgcm\b/i, name: "Global Concepts Media", code: "GCM" },
+  { pattern: /lumistudiohouse(?:\.com)?|lumi & friends|lumi and friends|\blumi\b/i, name: "LUMI", code: "LUMI" }
 ]);
 
 const EXPLICIT_REQUEST_PATTERNS = Object.freeze([
