@@ -1,11 +1,20 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/gmailDecisionRoutes.test.js
-   Version: 1.1.0
+   Version: 1.2.0
    Status: Production Regression Test
    Purpose: Verify Morning Command can distinguish delete, information,
-            monitoring, Decision Hold / Work Lite, direct requested work, and
-            investigation paths without inventing committed Work.
+            monitoring, Decision Hold / Work Lite, direct requested work,
+            explicit approval-to-proceed work, and investigation paths without
+            inventing committed Work.
+
+   Change notes — 1.2.0:
+   - Proves an explicit client approval to proceed becomes direct committed Work
+     before the generic Decision Hold fallback is considered.
+   - Uses the live Q3/Q4 campaign reply pattern: approval + Orlando coordination
+     remains Work while "keep me posted" remains a Decision Hold follow-up.
+   - Keeps simple acknowledgement language out of committed Work.
+
    Change notes — 1.1.0:
    - Proves explicit subject/business context outranks sender domain for client identity.
    - Proves a leadership follow-up can become a high-priority Decision Hold.
@@ -57,12 +66,58 @@ const promotion = evaluateExplicitHumanWorkRequest({
 });
 assert.equal(promotion.candidate, false);
 
+const frankApprovedCampaign = evaluateExplicitHumanWorkRequest({
+  from:"frank@sesafes.com",
+  subject:"RE: Recommendation – 90-Day Q3/Q4 Growth Campaign",
+  bodyText:`Let go with this.
+
+However, I want to get Judi involved more with the advertising over in the Orlando area. This is mostly in order to give her some ownership in what goes on over there. I need Orlando to do better.
+
+I want to give her a reasonable budget and specific things to do with it.
+
+These need to be things she is capable of such as:
+FaceBook posts
+Videos
+Not sure what else – ideas?
+
+She will have a ‘budget’, but will have to work with you to ensure:
+That she gets what support is needed from you (radio ads, TV, etc.)
+Everything is coordinated.
+
+This budget will include the radio / TV advertising as well as anything else specifically targeted in the Orange and Seminole Counties.
+
+What do you need from me?
+
+From: Andy Belcher <globalconceptsmediallc@gmail.com>
+Sent: Friday, July 31, 2026 5:40 PM
+To: Frank Pickett <frank@sesafes.com>
+Subject: Recommendation – 90-Day Q3/Q4 Growth Campaign
+Southeast Safes should coordinate streaming TV, Orlando radio, Google Search, and Facebook & Instagram.`
+});
+assert.equal(frankApprovedCampaign.candidate, true);
+assert.equal(frankApprovedCampaign.client?.code, "SES");
+assert.equal(frankApprovedCampaign.approvalToProceed, true);
+assert.equal(frankApprovedCampaign.priority, "High");
+assert.match(frankApprovedCampaign.action, /Implement approved direction/i);
+assert.equal(frankApprovedCampaign.decision?.recommendedRoutes?.createWorkItem, true);
+assert.equal(frankApprovedCampaign.decision?.recommendedRoutes?.createInvestigation, false);
+
+const simpleAcknowledgement = evaluateExplicitHumanWorkRequest({
+  from:"frank@sesafes.com",
+  subject:"RE: Southeast Safes update",
+  bodyText:"Looks good. Thanks."
+});
+assert.equal(simpleAcknowledgement.candidate, false);
+
 const frankFollowUpMessage = {
   from:"frank@sesafes.com",
   to:"Andy Belcher <globalconceptsmediallc@gmail.com>; james@hbguns.com",
   subject:"RE: HB Guns TV Tracking Pixel",
   bodyText:"Great. Thanks. Keep me posted on how it is working . . ."
 };
+const frankWorkCheck = evaluateExplicitHumanWorkRequest(frankFollowUpMessage);
+assert.equal(frankWorkCheck.candidate, false);
+
 const frankClient = inferClientFromMessageContext(
   frankFollowUpMessage,
   inferClientFromText
@@ -117,6 +172,7 @@ assert.match(merchantHold.question, /already satisfy this requirement/i);
 
 const worker = read("worker.js");
 const workRoute = read("routes/gmailWorkRequests.js");
+const workIntelligence = read("routes/gmailWorkRequestIntelligence.js");
 const dispositions = read("routes/gmailDispositions.js");
 const todayDecisions = read("shared/today-gmail-decisions.js");
 const shell = read("shared/gcm-shell.js");
@@ -131,6 +187,10 @@ assert.match(workRoute, /investigationId:null/);
 assert.match(workRoute, /markMessageRead/);
 assert.match(workRoute, /FROM decision_holds/);
 assert.match(workRoute, /released/i);
+assert.match(workIntelligence, /Version: 1\.0\.2/);
+assert.match(workIntelligence, /APPROVAL_TO_PROCEED_PATTERNS/);
+assert.match(workIntelligence, /currentReplyText/);
+assert.match(workIntelligence, /approvalToProceed/);
 
 assert.match(dispositions, /delete-gmail-no-action/);
 assert.match(dispositions, /\/trash`/);
@@ -164,4 +224,4 @@ assert.match(
   new RegExp(`shared/today-gmail-decisions\\.js\\?v=${decisionVersion.replaceAll(".", "\\.")}`)
 );
 
-console.log("PASS Gmail operator decisions include generic Decision Hold / Work Lite");
+console.log("PASS Gmail operator decisions route explicit approval to Work before Decision Hold");
