@@ -1,23 +1,23 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gcm-shell.js
-   Version: 2.0.28
+   Version: 2.0.29
    Status: Production Road-Test Candidate
    Purpose: Shared internal GCM OS application shell foundation.
-   Source: gcm-shell.js 2.0.23 production navigation
-   Sprint: Navigation — Canonical Main Workspace
+   Source: gcm-shell.js 2.0.28 production navigation
+   Sprint: Gmail — Decision Hold / Work Lite
    Change:
-   - Restores Communications as a main operating workspace after Clients.
-   - Locks canonical main-nav order: Today, Clients, Communications, Work,
+   - Loads Today Gmail Decision controls v1.2.0 with durable Work Lite holds.
+   - Preserves canonical main-nav order: Today, Clients, Communications, Work,
      Media, Prospects, Calendar, Billing, Proof.
    - Preserves Calendar Durable Sync v1.0.1, Media Production Sessions,
-     deadline urgency, Work enhancements, and Gmail decision controls.
+     deadline urgency, Work enhancements, and existing shared navigation.
    ========================================================= */
 
 (() => {
   "use strict";
 
-  const SHELL_VERSION = "2.0.28";
+  const SHELL_VERSION = "2.0.29";
   const WORKER_ENDPOINT =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const MISSION_CONTROL_ACTION = "get-mission-control";
@@ -280,7 +280,7 @@
 
     if (/\/today\.html$/i.test(path)) {
       appendScript(
-        "shared/today-gmail-decisions.js?v=1.1.0",
+        "shared/today-gmail-decisions.js?v=1.2.0",
         "data-gcm-today-gmail-decisions"
       );
     }
@@ -341,7 +341,7 @@
 
       appendScript(
         "shared/media-recovery-dashboard.js?v=1.0.0",
-        "data-gcm-media-recovery-dashboard"
+        "data-gcm-media-recovery-dashboard-cleanup"
       );
 
       appendScript(
