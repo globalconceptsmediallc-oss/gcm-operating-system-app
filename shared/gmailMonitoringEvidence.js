@@ -1,12 +1,21 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gmailMonitoringEvidence.js
-   Version: 1.1.2
+   Version: 1.1.3
    Status: Production Road-Test Candidate
    Sprint: Gmail — Universal Monitoring Evidence
    Purpose:
    Extract exact, source-grounded monitoring facts from Gmail notifications so
    operator summaries never replace the evidence required for future comparison.
+
+   Change notes — v1.1.3:
+   - Preserves measurable deltas such as +1 and −96 alongside current values.
+   - Recognizes health-score metrics in flattened report layouts.
+   - Extracts changed metric rows from line-oriented and flattened source text.
+   - Prioritizes health context and changed metrics in compact summaries so the
+     operator can see what actually changed before choosing a disposition.
+   - Keeps the parser source-neutral and preserves all prior Monitoring and
+     Position Tracking evidence behavior.
 
    Change notes — v1.1.2:
    - Keeps compact monitoring summaries bounded while always surfacing ratio
@@ -36,9 +45,10 @@
    - Supports both line-oriented and flattened Gmail HTML-to-text layouts.
    ========================================================= */
 
-export const GMAIL_MONITORING_EVIDENCE_VERSION = "1.1.2";
+export const GMAIL_MONITORING_EVIDENCE_VERSION = "1.1.3";
 
 const METRIC_PRIORITY_TERMS = Object.freeze([
+  "health score",
   "site health",
   "health",
   "errors",
@@ -61,11 +71,19 @@ const METRIC_PRIORITY_TERMS = Object.freeze([
   "subscribers"
 ]);
 
+const METRIC_VALUE_SOURCE =
+  "[-+]?\\d[\\d,.]*(?:\\.\\d+)?%?(?:\\s*(?:\\(|\\[)?[+−-]\\d[\\d,.]*(?:\\)|\\])?)?(?:\\s+(?:no change|unchanged|stable))?";
+
 const PRIORITY_METRIC_PATTERN = new RegExp(
   `\\b(${[...METRIC_PRIORITY_TERMS]
     .sort((left, right) => right.length - left.length)
     .map(escapeRegex)
-    .join("|")})\\b\\s*[:=-]?\\s*([-+]?\\d[\\d,.]*(?:\\.\\d+)?%?(?:\\s+(?:no change|unchanged|stable))?)`,
+    .join("|")})\\b\\s*[:=-]?\\s*(${METRIC_VALUE_SOURCE})`,
+  "ig"
+);
+
+const DELTA_METRIC_PATTERN = new RegExp(
+  "(?:^|\\n|\\b(?:what['’]?s new|issues|view)\\s+)([A-Za-z][A-Za-z0-9 ./'&_-]{1,65}?)\\s+(?:New\\s+)?(\\d[\\d,.]*%?)\\s+([+−-]\\d[\\d,.]*)",
   "ig"
 );
 
@@ -175,26 +193,47 @@ export function extractMonitoringEvidence(messageOrText = {}) {
     .map(line => clean(line).replace(/^[•·*-]\s*/, ""))
     .filter(Boolean);
   const metrics = [];
-  const seen = new Set();
+  const seen = new Map();
 
   const addMetric = (label, displayValue, scope = "") => {
-    const safeLabel = clean(label).replace(/[:=-]+$/, "").trim();
+    const safeLabel = clean(label)
+      .replace(/^(?:what['’]?s new|issues|view)\s+/i, "")
+      .replace(/[:=-]+$/, "")
+      .trim();
     const safeValue = clean(displayValue);
-    if (!isMetricLabel(safeLabel) || !/^[-+]?\d[\d,.]*(?:\.\d+)?%?(?:\s+(?:no change|unchanged|stable))?$/i.test(safeValue)) {
+    const parsed = parseMetricValue(safeValue);
+    if (!isMetricLabel(safeLabel) || !parsed) return;
+
+    const key = safeLabel
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "");
+    if (!key) return;
+
+    const existingIndex = seen.get(key);
+    if (Number.isInteger(existingIndex)) {
+      const existing = metrics[existingIndex];
+      if (parsed.delta !== null && existing.delta === null) {
+        metrics[existingIndex] = {
+          ...existing,
+          displayValue:parsed.displayValue,
+          delta:parsed.delta,
+          deltaDisplay:parsed.deltaDisplay,
+          scope:clean(scope) || existing.scope
+        };
+      }
       return;
     }
-    const numericText = safeValue.match(/^[-+]?\d[\d,.]*(?:\.\d+)?%?/)?.[0] || "";
-    const numericValue = Number(numericText.replace(/[,%]/g, ""));
-    if (!numericText || !Number.isFinite(numericValue)) return;
-    const key = safeLabel.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
-    if (!key || seen.has(key)) return;
-    seen.add(key);
+
+    seen.set(key, metrics.length);
     metrics.push({
       key,
       label:safeLabel,
-      value:numericValue,
-      displayValue:numericText,
-      unit:numericText.includes("%") ? "percent" : "count",
+      value:parsed.value,
+      displayValue:parsed.displayValue,
+      unit:parsed.unit,
+      delta:parsed.delta,
+      deltaDisplay:parsed.deltaDisplay,
       scope:clean(scope),
       sourceOrder:metrics.length
     });
@@ -210,18 +249,25 @@ export function extractMonitoringEvidence(messageOrText = {}) {
     );
   }
 
+  DELTA_METRIC_PATTERN.lastIndex = 0;
+  let deltaMatch;
+  while ((deltaMatch = DELTA_METRIC_PATTERN.exec(text)) !== null && metrics.length < 30) {
+    addMetric(
+      deltaMatch[1],
+      `${deltaMatch[2]} ${deltaMatch[3]}`,
+      deltaMatch[0]
+    );
+  }
+
   for (let index = 0; index < lines.length && metrics.length < 30; index += 1) {
     const line = lines[index];
     const inline = line.match(
-      /^([A-Za-z][A-Za-z0-9 /&_-]{1,55}?)\s*[:=-]?\s+([-+]?\d[\d,.]*(?:\.\d+)?%?(?:\s+(?:no change|unchanged|stable))?)$/i
+      new RegExp(`^([A-Za-z][A-Za-z0-9 ./'&_-]{1,65}?)\\s*[:=-]?\\s+(${METRIC_VALUE_SOURCE})$`, "i")
     );
     if (inline) addMetric(inline[1], inline[2], line);
 
     const next = lines[index + 1] || "";
-    if (
-      isMetricLabel(line) &&
-      /^[-+]?\d[\d,.]*(?:\.\d+)?%?(?:\s+(?:no change|unchanged|stable))?$/i.test(next)
-    ) {
+    if (isMetricLabel(line) && new RegExp(`^${METRIC_VALUE_SOURCE}$`, "i").test(next)) {
       addMetric(line, next, `${line} ${next}`);
     }
   }
@@ -237,6 +283,8 @@ export function extractMonitoringEvidence(messageOrText = {}) {
         value:numerator,
         displayValue:`${ratioMatch[1]}/${ratioMatch[2]}`,
         unit:"ratio",
+        delta:null,
+        deltaDisplay:null,
         scope:subject,
         denominator,
         sourceOrder:metrics.length
@@ -286,11 +334,7 @@ export function formatMonitoringEvidence(evidence) {
   if (evidence.type !== "monitoring_evidence") return "";
 
   const metrics = Array.isArray(evidence.metrics) ? evidence.metrics : [];
-  const ordered = [...metrics].sort((left, right) => {
-    const a = metricPriority(left?.label);
-    const b = metricPriority(right?.label);
-    return a - b;
-  });
+  const ordered = [...metrics].sort(compareMetricPriority);
   const selected = ordered.slice(0, 10);
   for (const metric of ordered) {
     if (metric?.unit !== "ratio" || selected.includes(metric)) continue;
@@ -340,10 +384,66 @@ export function buildMonitoringBusinessMeaning(evidence, clientName = "the clien
   return `${clientName}: ${summary}. Preserve these exact source-grounded facts as monitoring evidence for future comparison; the evidence itself does not create corrective work.`;
 }
 
+function compareMetricPriority(left, right) {
+  const leftHealth = /\b(?:health score|site health|health)\b/i.test(clean(left?.label)) ? 0 : 1;
+  const rightHealth = /\b(?:health score|site health|health)\b/i.test(clean(right?.label)) ? 0 : 1;
+  if (leftHealth !== rightHealth) return leftHealth - rightHealth;
+
+  const leftChanged = Number.isFinite(Number(left?.delta)) && Number(left?.delta) !== 0 ? 0 : 1;
+  const rightChanged = Number.isFinite(Number(right?.delta)) && Number(right?.delta) !== 0 ? 0 : 1;
+  if (leftChanged !== rightChanged) return leftChanged - rightChanged;
+
+  const leftPriority = metricPriority(left?.label);
+  const rightPriority = metricPriority(right?.label);
+  if (leftPriority !== rightPriority) return leftPriority - rightPriority;
+
+  return 0;
+}
+
 function metricPriority(label) {
   const value = clean(label).toLowerCase();
   const index = METRIC_PRIORITY_TERMS.findIndex(term => value.includes(term));
   return index >= 0 ? index : METRIC_PRIORITY_TERMS.length + 1;
+}
+
+function parseMetricValue(value) {
+  const input = clean(value);
+  const match = input.match(
+    /^([-+]?\d[\d,.]*(?:\.\d+)?%?)(?:\s*(?:\(|\[)?([+−-]\d[\d,.]*)(?:\)|\])?)?(?:\s+(no change|unchanged|stable))?$/i
+  );
+  if (!match) return null;
+
+  const numericText = clean(match[1]);
+  const numericValue = Number(numericText.replace(/[,%]/g, ""));
+  if (!numericText || !Number.isFinite(numericValue)) return null;
+
+  const deltaToken = clean(match[2]);
+  const delta = deltaToken
+    ? Number(deltaToken.replace(/,/g, "").replace(/−/g, "-"))
+    : null;
+  const deltaValue = Number.isFinite(delta) ? delta : null;
+  const deltaDisplay = deltaValue === null
+    ? null
+    : deltaValue > 0
+      ? `+${deltaValue}`
+      : deltaValue < 0
+        ? `−${Math.abs(deltaValue)}`
+        : "0";
+
+  const status = clean(match[3]);
+  const displayValue = [
+    numericText,
+    deltaDisplay ? `(${deltaDisplay})` : "",
+    status
+  ].filter(Boolean).join(" ");
+
+  return {
+    value:numericValue,
+    displayValue,
+    unit:numericText.includes("%") ? "percent" : "count",
+    delta:deltaValue,
+    deltaDisplay
+  };
 }
 
 function canonicalMetricLabel(value) {
@@ -354,11 +454,11 @@ function canonicalMetricLabel(value) {
 
 function isMetricLabel(value) {
   const label = clean(value);
-  if (!label || label.length < 2 || label.length > 60) return false;
+  if (!label || label.length < 2 || label.length > 70) return false;
   if (!/[A-Za-z]/.test(label)) return false;
   if (/^(date|time|copyright|project|website url|domain|merchant center id)$/i.test(label)) return false;
-  if (/[.!?]$/.test(label)) return false;
-  if (label.split(/\s+/).length > 8) return false;
+  if (/[!?]$/.test(label)) return false;
+  if (label.split(/\s+/).length > 10) return false;
   return true;
 }
 
