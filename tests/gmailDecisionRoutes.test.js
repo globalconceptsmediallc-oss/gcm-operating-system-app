@@ -1,12 +1,19 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/gmailDecisionRoutes.test.js
-   Version: 1.2.1
+   Version: 1.3.0
    Status: Production Regression Test
    Purpose: Verify Morning Command can distinguish delete, information,
             monitoring, Decision Hold / Work Lite, direct requested work,
-            explicit approval-to-proceed work, and investigation paths without
-            inventing committed Work.
+            explicit approval-to-proceed work, source-proven automated work,
+            and investigation paths without inventing committed Work.
+
+   Change notes — 1.3.0:
+   - Locks verified automated alerts into direct Work when the source itself
+     proves client identity, action required, affected scope, and corrective issue.
+   - Reproduces the live Merchant Center ID 5325664516 missing-price alert.
+   - Preserves future Merchant Center requirements as Decision Hold when no
+     immediate affected-item corrective obligation is proven.
 
    Change notes — 1.2.1:
    - Locks compact client-name forms into the canonical Gmail client resolver so
@@ -19,19 +26,13 @@
    - Uses the live Q3/Q4 campaign reply pattern: approval + Orlando coordination
      remains Work while "keep me posted" remains a Decision Hold follow-up.
    - Keeps simple acknowledgement language out of committed Work.
-
-   Change notes — 1.1.0:
-   - Proves explicit subject/business context outranks sender domain for client identity.
-   - Proves a leadership follow-up can become a high-priority Decision Hold.
-   - Proves a future requirement can become a low-priority Decision Hold with
-     its real deadline rather than forcing immediate Work or Investigation.
-   - Locks Hold for Review to 0 Work Items and 0 Investigations.
    ========================================================= */
 
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import {
   evaluateExplicitHumanWorkRequest,
+  evaluateSourceProvenOperationalWork,
   inferClientFromText
 } from "../routes/gmailWorkRequestIntelligence.js";
 import {
@@ -183,6 +184,34 @@ assert.equal(merchantHold.priority, "Low");
 assert.equal(merchantHold.dueDate, "2027-01-31");
 assert.match(merchantHold.question, /already satisfy this requirement/i);
 
+const merchantActionRequired = {
+  from:"Google Merchant Center <googlebase-noreply@google.com>",
+  subject:"Action required: Fix your product issues",
+  bodyText:`Merchant Center ID: 5325664516
+Action needed to show products
+Some of your products aren’t showing on Google
+Make these updates to get all of your products on Google.
+Fixes to make now
+4 products have the issue: Missing product price
++2 potential clicks per week`
+};
+const merchantWork = evaluateSourceProvenOperationalWork(merchantActionRequired);
+assert.equal(merchantWork.candidate, true);
+assert.equal(merchantWork.sourceProven, true);
+assert.equal(merchantWork.client?.code, "SES");
+assert.equal(merchantWork.priority, "Medium");
+assert.match(merchantWork.action, /Correct SES Missing product price on 4 products/i);
+assert.match(merchantWork.businessImpact, /4 products affected by “Missing product price”/i);
+assert.match(merchantWork.businessImpact, /2 potential additional clicks per week/i);
+assert.equal(merchantWork.decision?.recommendedRoutes?.saveCommunication, true);
+assert.equal(merchantWork.decision?.recommendedRoutes?.createWorkItem, true);
+assert.equal(merchantWork.decision?.recommendedRoutes?.createInvestigation, false);
+
+const merchantUnifiedWork = evaluateExplicitHumanWorkRequest(merchantActionRequired);
+assert.equal(merchantUnifiedWork.candidate, true);
+assert.equal(merchantUnifiedWork.sourceProven, true);
+assert.equal(merchantUnifiedWork.client?.code, "SES");
+
 const worker = read("worker.js");
 const workRoute = read("routes/gmailWorkRequests.js");
 const workIntelligence = read("routes/gmailWorkRequestIntelligence.js");
@@ -200,11 +229,14 @@ assert.match(workRoute, /investigationId:null/);
 assert.match(workRoute, /markMessageRead/);
 assert.match(workRoute, /FROM decision_holds/);
 assert.match(workRoute, /released/i);
-assert.match(workIntelligence, /Version: 1\.0\.3/);
+assert.match(workIntelligence, /Version: 1\.1\.0/);
 assert.match(workIntelligence, /APPROVAL_TO_PROCEED_PATTERNS/);
 assert.match(workIntelligence, /currentReplyText/);
 assert.match(workIntelligence, /approvalToProceed/);
 assert.match(workIntelligence, /northfloridasafes/);
+assert.match(workIntelligence, /evaluateSourceProvenOperationalWork/);
+assert.match(workIntelligence, /5325664516/);
+assert.match(workIntelligence, /Gmail — Source-Proven Operational Work/);
 
 assert.match(dispositions, /delete-gmail-no-action/);
 assert.match(dispositions, /\/trash`/);
@@ -238,4 +270,4 @@ assert.match(
   new RegExp(`shared/today-gmail-decisions\\.js\\?v=${decisionVersion.replaceAll(".", "\\.")}`)
 );
 
-console.log("PASS Gmail operator decisions route explicit approval to Work before Decision Hold");
+console.log("PASS Gmail operator decisions route human approvals and source-proven corrective alerts to Work before Decision Hold");
