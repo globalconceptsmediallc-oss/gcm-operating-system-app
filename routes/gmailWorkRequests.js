@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailWorkRequests.js
-   Version: 1.1.0
+   Version: 1.1.1
    Status: Production Road-Test Candidate
    Source: routes/gmailWorkRequests.js 1.0.0 production
    Sprint: Gmail — Durable Operational Intake
@@ -9,6 +9,12 @@
    Preserve the verified Gmail direct-Work approval path while adding a
    read-only backlog mode that finds operational email by GCM OS disposition
    state instead of Gmail read/unread state.
+
+   Change notes — v1.1.1:
+   - Open Decision Hold / Work Lite records now count as a durable disposition
+     source, so parked Gmail does not immediately return to Morning Command.
+   - Released Decision Holds no longer suppress the source email.
+   - Preserves all v1.1.0 backlog and direct Work behavior.
 
    Change notes — v1.1.0:
    - Adds read-only operational-backlog mode to evaluate-gmail-work-request.
@@ -49,7 +55,7 @@ export const GMAIL_WORK_REQUEST_ACTIONS = Object.freeze([
   APPROVE_GMAIL_WORK_REQUEST_ACTION
 ]);
 
-export const GMAIL_WORK_REQUEST_VERSION = "1.1.0";
+export const GMAIL_WORK_REQUEST_VERSION = "1.1.1";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GMAIL_API = "https://gmail.googleapis.com/gmail/v1";
@@ -189,6 +195,18 @@ async function findProcessedGmailIds(db, gmailIds) {
       const ref = clean(row?.source_reference);
       if (ref.startsWith("gmail:")) found.add(ref.slice(6));
     }
+
+    const holdRows = await db.prepare(`
+      SELECT source_reference
+      FROM decision_holds
+      WHERE source_reference IN (${placeholders})
+        AND LOWER(COALESCE(status, 'open')) IN ('open','held','waiting')
+    `).bind(...chunk).all();
+
+    for (const row of holdRows?.results || []) {
+      const ref = clean(row?.source_reference);
+      if (ref.startsWith("gmail:")) found.add(ref.slice(6));
+    }
   }
 
   return found;
@@ -258,7 +276,7 @@ function mapOperationalBacklogMessage(message) {
       confidence:client ? "High" : "Medium",
       decisionReliability:"Backlog intake signal — authoritative approval re-validates the live email",
       evidenceSufficiency:"Sufficient to require operator disposition; write route is re-verified at approval time",
-      evidenceComparedAgainst:"Current Gmail message ID compared with production Communication and activity source references",
+      evidenceComparedAgainst:"Current Gmail message ID compared with production Communication, monitoring, and open Decision Hold source references",
       verificationRequired:"Choose one explicit disposition. Do not treat Gmail read state as proof that the email was processed.",
       humanReviewRequired:true,
       productionDecisionReady:false
