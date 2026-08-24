@@ -1,10 +1,11 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/gmailBacklinkAuditInvestigation.test.js
-   Version: 1.0.0
+   Version: 1.0.1
    Status: Regression Test
-   Purpose: Lock the source-proven Backlink Audit boundary so named toxic
-            domains create an Investigation candidate, not routine Monitoring.
+   Purpose: Lock the source-proven Backlink Audit boundary so named adverse
+            domains create an Investigation candidate even when the legacy
+            Gmail classifier labels the source Manual Review.
    ========================================================= */
 
 import fs from "node:fs";
@@ -13,8 +14,10 @@ import {
   extractBacklinkAuditEvidence,
   buildBacklinkAuditRecommendation
 } from "../routes/gmailBacklinkAuditIntelligence.js";
+import { isBacklinkAuditSource } from "../routes/gmailIntegration.js";
 
 const message = {
+  from:"Semrush Backlink Audit <backlink.audit@semrush.com>",
   subject:"Backlink Audit update of southfloridasafes.com. 2 New Toxic Domains; 3 New Trusted Domains",
   bodyText:[
     "Backlink Audit updates",
@@ -32,6 +35,12 @@ const message = {
   ].join("\n")
 };
 
+assert.equal(
+  isBacklinkAuditSource(message),
+  true,
+  "The live backlink.audit@semrush.com sender must be detected from source evidence before legacy classification."
+);
+
 const evidence = extractBacklinkAuditEvidence(message);
 assert.equal(evidence.toxicDomainCount, 2);
 assert.equal(evidence.trustedDomainCount, 3);
@@ -46,21 +55,14 @@ assert.deepEqual(evidence.toxicDomains, [
 const recommendation = buildBacklinkAuditRecommendation({
   message,
   analysis:{ client:{ name:"South Florida Safes" } },
-  decision:{
-    recommendedRoutes:{
-      saveCommunication:true,
-      createInvestigation:true,
-      createWorkItem:false,
-      replyRequired:false
-    }
-  },
+  decision:{},
   classification:{
-    notificationFamily:"SEMrush Backlink Audit",
-    notificationType:"backlink_audit"
+    notificationFamily:"Operational Email",
+    notificationType:"manual_review"
   }
 });
 
-assert.ok(recommendation);
+assert.ok(recommendation, "Specific source evidence must override a weaker legacy Manual Review classification.");
 assert.equal(recommendation.client, "South Florida Safes");
 assert.equal(recommendation.shouldCreateCommunication, true);
 assert.equal(recommendation.shouldCreateInvestigation, true);
@@ -80,6 +82,7 @@ assert.deepEqual(recommendation.sourceAnalysis.recommendedRoutes, {
 
 const routine = buildBacklinkAuditRecommendation({
   message:{
+    from:"Semrush Backlink Audit <backlink.audit@semrush.com>",
     subject:"Backlink Audit update of southfloridasafes.com",
     bodyText:"Project: southfloridasafes.com\nWe have found 3 new referring domains. You have lost 0 domains."
   },
@@ -87,15 +90,24 @@ const routine = buildBacklinkAuditRecommendation({
   decision:{},
   classification:{ notificationFamily:"SEMrush Backlink Audit", notificationType:"backlink_audit" }
 });
-assert.equal(routine, null, "A backlink update without named toxic-domain evidence must remain on the existing calibration path.");
+assert.equal(routine, null, "A backlink update without named adverse-domain evidence must remain on the existing calibration path.");
+
+const unrelated = {
+  from:"news@example.com",
+  subject:"Marketing newsletter",
+  bodyText:"We found new referring domains this month."
+};
+assert.equal(isBacklinkAuditSource(unrelated), false, "Unrelated mail must not enter the Backlink Audit override.");
 
 const wrapper = fs.readFileSync(new URL("../routes/gmailIntegration.js", import.meta.url), "utf8");
 const legacy = fs.readFileSync(new URL("../routes/gmailIntegrationLegacy.js", import.meta.url), "utf8");
-assert.match(wrapper, /Version: 1\.7\.1/);
+assert.match(wrapper, /Version: 1\.7\.2/);
+assert.match(wrapper, /isBacklinkAuditSource/);
+assert.match(wrapper, /backlink\.audit@semrush\.com/);
 assert.match(wrapper, /buildBacklinkAuditRecommendation/);
 assert.match(wrapper, /handleCommitOperationalDecision/);
 assert.match(wrapper, /workItemId:null/);
 assert.match(legacy, /Version: 1\.7\.0/);
 assert.match(legacy, /export const GMAIL_INTEGRATION_VERSION = "1\.7\.0"/);
 
-console.log("PASS Gmail Backlink Audit: named South Florida toxic domains -> Investigation, no Work");
+console.log("PASS Gmail Backlink Audit: source-detected South Florida adverse domains -> Investigation, no Work");
