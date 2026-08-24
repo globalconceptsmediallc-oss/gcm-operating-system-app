@@ -1,15 +1,15 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.14",
+  "version": "6.1.15",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.14",
+    "fileVersion": "6.1.15",
     "status": "Production Road-Test Candidate",
-    "purpose": "Preserve the full production test suite while locking the live HB Guns Semrush Site Audit malformed-MIME Monitoring regression.",
+    "purpose": "Preserve the HB Guns malformed-MIME Monitoring fix while synchronizing the authoritative operational-intake parser version lock.",
     "changeNotes": [
-      "Preserves the existing A1 Position Tracking Monitoring parity regression.",
-      "Adds the HB Guns Semrush Site Audit case where HTML markup is mislabeled as text/plain and must still yield exact monitoring metrics.",
-      "Normalizes malformed HTML evidence in the shared monitoring parser without changing Gmail decisions, D1 schemas, Work, Investigation, or client routing."
+      "Preserves the passing A1 Position Tracking and HB Guns malformed-HTML Monitoring parity regression.",
+      "Synchronizes gmailOperationalIntake.test.js with shared Gmail Monitoring evidence parser v1.1.5.",
+      "Changes no production Gmail decision, D1 schema, Work, Investigation, client, or Monitoring behavior and triggers a fresh full Worker gate."
     ]
   },
   "private": true,
