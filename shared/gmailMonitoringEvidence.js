@@ -1,12 +1,20 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gmailMonitoringEvidence.js
-   Version: 1.1.4
+   Version: 1.1.5
    Status: Production Road-Test Candidate
    Sprint: Gmail — Universal Monitoring Evidence
    Purpose:
    Extract exact, source-grounded monitoring facts from Gmail notifications so
    operator summaries never replace the evidence required for future comparison.
+
+   Change notes — v1.1.5:
+   - Normalizes HTML markup before monitoring extraction even when a sender
+     incorrectly labels HTML content as text/plain in Gmail MIME.
+   - Preserves table/paragraph boundaries so Site Audit labels and values remain
+     readable source evidence after malformed MIME normalization.
+   - Locks the live HB Guns Semrush Site Audit shape without changing Monitoring,
+     Work, Investigation, client, or D1 decision rules.
 
    Change notes — v1.1.4:
    - Preserves repeated flattened changed rows that use an explicit New marker.
@@ -51,7 +59,7 @@
    - Supports both line-oriented and flattened Gmail HTML-to-text layouts.
    ========================================================= */
 
-export const GMAIL_MONITORING_EVIDENCE_VERSION = "1.1.4";
+export const GMAIL_MONITORING_EVIDENCE_VERSION = "1.1.5";
 
 const METRIC_PRIORITY_TERMS = Object.freeze([
   "health score",
@@ -493,6 +501,13 @@ function formatMovement(value) {
 
 function sanitize(value) {
   return clean(String(value ?? "")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<br\s*\/?\s*>/gi, "\n")
+    .replace(/<\/p>/gi, "\n")
+    .replace(/<\/tr>/gi, "\n")
+    .replace(/<\/t[dh]>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
     .replace(/\[([^\]]+)\]\((?:https?:\/\/|mailto:)[^)]+\)/gi, "$1")
     .replace(/https?:\/\/\S+/gi, " ")
     .replace(/&nbsp;/gi, " ")

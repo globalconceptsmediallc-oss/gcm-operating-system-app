@@ -1,15 +1,15 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.13",
+  "version": "6.1.14",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.13",
+    "fileVersion": "6.1.14",
     "status": "Production Road-Test Candidate",
-    "purpose": "Preserve the full production test suite while synchronizing the stale Gmail backlog wording assertion so the approved Monitoring evidence-parity fix can pass the deployment gate.",
+    "purpose": "Preserve the full production test suite while locking the live HB Guns Semrush Site Audit malformed-MIME Monitoring regression.",
     "changeNotes": [
-      "Preserves test:gmail-monitoring-parity and every existing production test command.",
-      "Synchronizes the Merchant Center backlog regression with the existing source-proven Work v1.1.1 Recommended Action wording.",
-      "Changes no production Gmail decision, D1, Work, Investigation, or Monitoring logic and triggers a fresh gated Worker deployment."
+      "Preserves the existing A1 Position Tracking Monitoring parity regression.",
+      "Adds the HB Guns Semrush Site Audit case where HTML markup is mislabeled as text/plain and must still yield exact monitoring metrics.",
+      "Normalizes malformed HTML evidence in the shared monitoring parser without changing Gmail decisions, D1 schemas, Work, Investigation, or client routing."
     ]
   },
   "private": true,
