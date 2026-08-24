@@ -1,17 +1,24 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailIntegration.js
-   Version: 1.7.1
+   Version: 1.7.2
    Status: Production Road-Test Candidate
    Source: gmailIntegration.js 1.7.0 preserved as gmailIntegrationLegacy.js
-   Sprint: Gmail — Backlink Audit Investigation Boundary
+   Sprint: Gmail — Backlink Audit Source Detection
    Purpose:
    Preserve the complete production Gmail integration while overriding only
-   source-proven Backlink Audit cases that name specific toxic domains.
+   source-proven Backlink Audit cases that name specific adverse domains.
+
+   Change Notes — 1.7.2
+   - Detects Semrush Backlink Audit directly from the Gmail sender/subject/body
+     instead of requiring the legacy classifier to label it backlink_audit first.
+   - Covers the live backlink.audit@semrush.com sender variant that previously
+     fell through to Manual Review before the evidence rule could execute.
+   - Preserves the v1.7.1 Investigation boundary and all delegated Gmail behavior.
 
    Change Notes — 1.7.1
    - Delegates every existing Gmail behavior to the byte-preserved v1.7.0 module.
-   - Reclassifies Backlink Audit emails with named toxic domains + TS values from
+   - Reclassifies Backlink Audit emails with named adverse domains + TS values from
      routine Monitoring to Communication + Investigation.
    - Approval preserves the exact Gmail body in the operational decision and
      creates no Work Item until diagnosis proves corrective action.
@@ -25,11 +32,22 @@ import { handleCommitOperationalDecision } from "./operationalDecision.js";
 import * as legacy from "./gmailIntegrationLegacy.js";
 import { buildBacklinkAuditRecommendation } from "./gmailBacklinkAuditIntelligence.js";
 
-export const GMAIL_INTEGRATION_VERSION = "1.7.1";
+export const GMAIL_INTEGRATION_VERSION = "1.7.2";
 export const GMAIL_PATHS = legacy.GMAIL_PATHS;
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GMAIL_API = "https://gmail.googleapis.com/gmail/v1";
+
+export function isBacklinkAuditSource(message) {
+  const sender = clean(message?.from).toLowerCase();
+  const subject = clean(message?.subject);
+  const body = clean(message?.bodyText);
+  const text = `${subject}\n${body}`;
+
+  return /semrush\.com/i.test(sender) &&
+    /backlink[ ._-]*audit/i.test(`${sender}\n${text}`) &&
+    /(?:new toxic domains?|new trusted domains?|referring domains?|backlink audit updates)/i.test(text);
+}
 
 export async function handleGmailGet(request, env, requestId) {
   return legacy.handleGmailGet(request, env, requestId);
@@ -64,9 +82,9 @@ async function previewWithBacklinkAuditBoundary(body, env, requestId) {
   }
 
   payload.messages = payload.messages.map(message => {
-    const current = message?.intelligence || {};
-    if (clean(current.notificationType).toLowerCase() !== "backlink_audit") return message;
+    if (!isBacklinkAuditSource(message)) return message;
 
+    const current = message?.intelligence || {};
     const recommendation = buildBacklinkAuditRecommendation({
       message,
       analysis:{ client:{ name:current.client } },
@@ -99,11 +117,9 @@ async function approveSpecificBacklinkInvestigation(body, env, requestId) {
     if (!previewResponse?.ok) return null;
     const preview = await previewResponse.json();
     const message = (preview?.messages || []).find(item => clean(item?.gmailMessageId) === gmailMessageId);
-    if (!message) return null;
+    if (!message || !isBacklinkAuditSource(message)) return null;
 
     const current = message?.intelligence || {};
-    if (clean(current.notificationType).toLowerCase() !== "backlink_audit") return null;
-
     const recommendation = buildBacklinkAuditRecommendation({
       message,
       analysis:{ client:{ name:current.client } },
