@@ -1,13 +1,23 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailDispositions.js
-   Version: 1.3.1
+   Version: 1.3.2
    Status: Production Road-Test Candidate
-   Sprint: Gmail — Authoritative Monitoring Write
+   Sprint: Gmail — Monitoring Evidence Parity
    Purpose:
    Give Morning Command explicit human dispositions while preserving exact
    source evidence before a Monitoring decision can clear Gmail, and preserve
    the lightweight Decision Hold / Work Lite workflow.
+
+   Change notes — v1.3.2:
+   - Aligns authoritative Monitoring write-time Gmail source selection with the
+     evidence-richness behavior already used by Morning Command preview.
+   - When Gmail provides both text/plain and text/html, compares normalized source
+     richness and preserves the version containing stronger measurable/SEO evidence.
+   - Prevents Semrush Position Tracking tables from disappearing between preview
+     and Save as Monitoring when the plain-text MIME part is thin.
+   - Preserves all existing D1-before-Gmail mutation, client verification,
+     evidence-vault, duplicate, Decision Hold, Information, and delete safeguards.
 
    Change notes — v1.3.1:
    - Makes the evidence-aware Monitoring approval path authoritative at write time.
@@ -80,7 +90,7 @@ export const GMAIL_DISPOSITION_ACTIONS = Object.freeze([
   DELETE_GMAIL_NO_ACTION_ACTION,
   SAVE_GMAIL_INFORMATION_ACTION
 ]);
-export const GMAIL_DISPOSITION_VERSION = "1.3.1";
+export const GMAIL_DISPOSITION_VERSION = "1.3.2";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GMAIL_API = "https://gmail.googleapis.com/gmail/v1";
@@ -1117,7 +1127,25 @@ function extractMessageText(payload) {
     for (const child of Array.isArray(part.parts) ? part.parts : []) visit(child);
   };
   visit(payload);
-  return sanitizeEmailText(plain.length ? plain.join("\n\n") : html.join("\n\n"));
+  const plainText = sanitizeEmailText(plain.join("\n\n"));
+  const htmlText = sanitizeEmailText(html.join("\n\n"));
+  return selectEvidenceRichMessageText(plainText, htmlText);
+}
+
+export function selectEvidenceRichMessageText(plainText, htmlText) {
+  const plain = sanitizeEmailText(plainText);
+  const html = sanitizeEmailText(htmlText);
+  const plainScore = evidenceRichnessScore(plain);
+  const htmlScore = evidenceRichnessScore(html);
+  return htmlScore > plainScore ? html : plain;
+}
+
+function evidenceRichnessScore(value) {
+  const text = clean(value);
+  if (!text) return 0;
+  const numericTokens = (text.match(/(?:^|\s)[+-]?\d+(?:[.,]\d+)?%?(?=\s|$)/g) || []).length;
+  const seoTerms = (text.match(/\b(keyword|position|rank|ranking|change|traffic|clicks?|impressions?|errors?|warnings?|notices?|site health|canonical|redirect|url)\b/gi) || []).length;
+  return text.length + (numericTokens * 40) + (seoTerms * 25);
 }
 
 function decodeGmailText(value) {
