@@ -1,15 +1,15 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.18",
+  "version": "6.1.19",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.18",
+    "fileVersion": "6.1.19",
     "status": "Production Road-Test Candidate",
-    "purpose": "Route specific adverse Backlink Audit evidence to Investigation rather than routine Monitoring.",
+    "purpose": "Detect source-proven Backlink Audit evidence before legacy Gmail classification.",
     "changeNotes": [
-      "Preserves Gmail Integration 1.7.0 byte-for-byte behind a narrow 1.7.1 wrapper.",
-      "Routes named adverse backlink evidence to Communication + Investigation with no corrective Work.",
-      "Adds the exact South Florida Safes regression while leaving generic backlink updates on the existing calibration path."
+      "Updates Gmail Integration wrapper to 1.7.2.",
+      "Detects the live backlink.audit@semrush.com source directly from sender, subject, and body before applying the specific Investigation boundary.",
+      "Preserves the byte-for-byte 1.7.0 legacy module and all existing production routes."
     ]
   },
   "private": true,
