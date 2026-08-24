@@ -1,13 +1,19 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/gmailBacklogIntelligence.test.js
-   Version: 1.1.0
+   Version: 1.1.1
    Status: Production Regression Test
    Sprint: Gmail — Evidence-Aware Operational Backlog
    Purpose:
    Lock the rule that measurable report labels do not become Investigations
    unless the live source explicitly proves an operational failure, while
    source-proven corrective obligations may become direct Work.
+
+   Change notes — 1.1.1:
+   - Synchronizes the Merchant Center Recommended Action assertion with the
+     source-proven Work v1.1.1 operator wording already used in production.
+   - Preserves the same client, Work routing, business meaning, impact, and
+     no-Investigation requirements; this is a stale test-text correction only.
 
    Change notes — 1.1.0:
    - Reproduces the live Merchant Center missing-price alert.
@@ -113,6 +119,7 @@ assert.equal(merchantCenterWork.intelligence.monitoringOnly, false);
 assert.equal(merchantCenterWork.intelligence.operationalPriority, "Medium");
 assert.match(merchantCenterWork.intelligence.businessMeaning, /4 products affected by “Missing product price”/i);
 assert.match(merchantCenterWork.intelligence.businessMeaning, /2 potential additional clicks per week/i);
-assert.match(merchantCenterWork.intelligence.recommendedAction, /Correct SES Missing product price on 4 products/i);
+assert.match(merchantCenterWork.intelligence.recommendedAction, /Identify the 4 Southeast Safes products affected by “Missing product price”/i);
+assert.match(merchantCenterWork.intelligence.recommendedAction, /verify the alert clears/i);
 
 console.log("gmailBacklogIntelligence.test.js passed");
