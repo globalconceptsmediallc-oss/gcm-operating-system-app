@@ -1,15 +1,15 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.11",
+  "version": "6.1.12",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.11",
+    "fileVersion": "6.1.12",
     "status": "Production Road-Test Candidate",
-    "purpose": "Preserve the production test suite and lock Gmail Monitoring preview/write evidence parity.",
+    "purpose": "Preserve the production test suite, A1 Gmail Monitoring evidence parity, and the synchronized authoritative route version lock.",
     "changeNotes": [
-      "Adds test:gmail-monitoring-parity to npm test.",
-      "Reproduces the A1 Position Tracking case where the Gmail HTML part contains #9 / +2 evidence that a thin plain-text part does not preserve.",
-      "Preserves all existing production test commands."
+      "Preserves test:gmail-monitoring-parity in npm test.",
+      "Synchronizes the Gmail operational-intake regression with gmailDispositions.js v1.3.2.",
+      "Preserves all existing production test commands and triggers a fresh gated Worker deployment."
     ]
   },
   "private": true,
