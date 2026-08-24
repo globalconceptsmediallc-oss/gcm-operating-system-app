@@ -1,15 +1,15 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.16",
+  "version": "6.1.17",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.16",
+    "fileVersion": "6.1.17",
     "status": "Production Road-Test Candidate",
-    "purpose": "Align authoritative Gmail Monitoring Save-time normalization with Preview before the live source evidence cap.",
+    "purpose": "Expose the existing durable Prospect CRM Next Action operation from the relationship workspace.",
     "changeNotes": [
-      "Normalizes malformed text/plain HTML before evidence selection and truncation so large Semrush messages retain measurable Site Audit facts.",
-      "Locks an oversized HB Guns regression with useful metrics beyond the raw 12,000-character boundary.",
-      "Changes no D1 schema, client routing, Work, Investigation, or human disposition rules and triggers the full production Worker gate."
+      "Loads a Prospects-only Set Next Action enhancement through the established shared page-enhancement architecture.",
+      "Replaces only the current dated CRM Next Action without creating relationship activity, changing Prospect stage, or recording a proposal.",
+      "Adds a regression gate that locks the versioned loader and the set_next_action-only write boundary."
     ]
   },
   "private": true,
@@ -25,7 +25,7 @@
     "test:gmail-monitoring-parity": "node tests/gmailMonitoringEvidenceParity.test.js",
     "test:gmail-intake": "node tests/gmailOperationalIntake.test.js",
     "test:gmail-backlog": "node tests/gmailBacklogIntelligence.test.js",
-    "test:prospect-crm": "node tests/prospectCrm.test.js",
+    "test:prospect-crm": "node tests/prospectCrm.test.js && node tests/prospectNextActionUi.test.js",
     "test:asset-versions": "node tests/sharedAssetVersionLock.test.js"
   }
 }
