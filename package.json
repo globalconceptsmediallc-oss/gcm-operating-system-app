@@ -1,21 +1,21 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.17",
+  "version": "6.1.18",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.17",
+    "fileVersion": "6.1.18",
     "status": "Production Road-Test Candidate",
-    "purpose": "Expose the existing durable Prospect CRM Next Action operation from the relationship workspace.",
+    "purpose": "Route specific adverse Backlink Audit evidence to Investigation rather than routine Monitoring.",
     "changeNotes": [
-      "Loads a Prospects-only Set Next Action enhancement through the established shared page-enhancement architecture.",
-      "Replaces only the current dated CRM Next Action without creating relationship activity, changing Prospect stage, or recording a proposal.",
-      "Adds a regression gate that locks the versioned loader and the set_next_action-only write boundary."
+      "Preserves Gmail Integration 1.7.0 byte-for-byte behind a narrow 1.7.1 wrapper.",
+      "Routes named adverse backlink evidence to Communication + Investigation with no corrective Work.",
+      "Adds the exact South Florida Safes regression while leaving generic backlink updates on the existing calibration path."
     ]
   },
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:work-due-date && npm run test:gmail-decisions && npm run test:gmail-monitoring-parity && npm run test:gmail-intake && npm run test:gmail-backlog && npm run test:prospect-crm && npm run test:asset-versions",
+    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:work-due-date && npm run test:gmail-decisions && npm run test:gmail-monitoring-parity && npm run test:gmail-backlink-investigation && npm run test:gmail-intake && npm run test:gmail-backlog && npm run test:prospect-crm && npm run test:asset-versions",
     "test:website-intelligence": "node tests/websiteIntelligence.test.js",
     "test:code-intelligence": "node tests/codeIntelligence.test.js",
     "test:operating-sessions": "node tests/operatingSessionTasks.test.js && node tests/osAuth.test.js && node tests/operatingSessionIntake.test.js",
@@ -23,6 +23,7 @@
     "test:work-due-date": "node tests/workDueDate.test.js",
     "test:gmail-decisions": "node tests/gmailDecisionRoutes.test.js",
     "test:gmail-monitoring-parity": "node tests/gmailMonitoringEvidenceParity.test.js",
+    "test:gmail-backlink-investigation": "node tests/gmailBacklinkAuditInvestigation.test.js",
     "test:gmail-intake": "node tests/gmailOperationalIntake.test.js",
     "test:gmail-backlog": "node tests/gmailBacklogIntelligence.test.js",
     "test:prospect-crm": "node tests/prospectCrm.test.js && node tests/prospectNextActionUi.test.js",
