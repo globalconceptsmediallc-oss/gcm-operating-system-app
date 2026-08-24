@@ -1,13 +1,21 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailDispositions.js
-   Version: 1.3.2
+   Version: 1.3.3
    Status: Production Road-Test Candidate
    Sprint: Gmail — Monitoring Evidence Parity
    Purpose:
    Give Morning Command explicit human dispositions while preserving exact
    source evidence before a Monitoring decision can clear Gmail, and preserve
    the lightweight Decision Hold / Work Lite workflow.
+
+   Change notes — v1.3.3:
+   - Normalizes HTML markup mislabeled by Gmail senders as text/plain before
+     evidence-richness selection and before the 12,000-character live-source cap.
+   - Prevents large Semrush markup/tracking attributes from consuming the Save
+     evidence window before Site Audit metrics can be parsed.
+   - Aligns authoritative Save-time source normalization with the proven Preview
+     behavior without changing D1, client, Work, Investigation, or decision rules.
 
    Change notes — v1.3.2:
    - Aligns authoritative Monitoring write-time Gmail source selection with the
@@ -90,7 +98,7 @@ export const GMAIL_DISPOSITION_ACTIONS = Object.freeze([
   DELETE_GMAIL_NO_ACTION_ACTION,
   SAVE_GMAIL_INFORMATION_ACTION
 ]);
-export const GMAIL_DISPOSITION_VERSION = "1.3.2";
+export const GMAIL_DISPOSITION_VERSION = "1.3.3";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GMAIL_API = "https://gmail.googleapis.com/gmail/v1";
@@ -1121,8 +1129,8 @@ function extractMessageText(payload) {
     const data = part?.body?.data;
     if (data) {
       const decoded = decodeGmailText(data);
-      if (mime === "text/plain") plain.push(decoded);
-      else if (mime === "text/html") html.push(htmlToText(decoded));
+      if (mime === "text/plain") plain.push(normalizeDecodedGmailPart(mime, decoded));
+      else if (mime === "text/html") html.push(normalizeDecodedGmailPart(mime, decoded));
     }
     for (const child of Array.isArray(part.parts) ? part.parts : []) visit(child);
   };
@@ -1130,6 +1138,18 @@ function extractMessageText(payload) {
   const plainText = sanitizeEmailText(plain.join("\n\n"));
   const htmlText = sanitizeEmailText(html.join("\n\n"));
   return selectEvidenceRichMessageText(plainText, htmlText);
+}
+
+export function normalizeDecodedGmailPart(mimeType, value) {
+  const mime = clean(mimeType).toLowerCase();
+  const text = String(value || "");
+  if (mime === "text/html") return htmlToText(text);
+  if (mime === "text/plain" && looksLikeHtml(text)) return htmlToText(text);
+  return text;
+}
+
+function looksLikeHtml(value) {
+  return /<(?:!doctype|html|head|body|table|tbody|thead|tfoot|tr|td|th|div|p|h[1-6]|span|a|br)\b/i.test(String(value || ""));
 }
 
 export function selectEvidenceRichMessageText(plainText, htmlText) {
