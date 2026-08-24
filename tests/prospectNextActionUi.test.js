@@ -1,10 +1,14 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/prospectNextActionUi.test.js
-   Version: 1.0.0
+   Version: 1.0.1
    Status: Regression Test
    Purpose: Lock the Prospect relationship workspace to the existing durable
             set_next_action CRM operation without creating unrelated records.
+
+   Change Notes — 1.0.1
+   - Uses an exact source-string assertion for the Prospects-only loader scope.
+   - Preserves the v1.0.0 write-boundary and cache-version assertions.
 
    Change Notes — 1.0.0
    - Verifies the Prospects-only enhancement is cache-versioned by gcm-shell.js.
@@ -33,9 +37,8 @@ assert.match(
   `gcm-shell.js must request prospect-next-action.js with cache key v=${fileVersion}`
 );
 
-assert.match(
-  shell,
-  /if \(\/\\\/prospects\\\.html\$\/i\.test\(path\)\)/,
+assert.ok(
+  shell.includes('if (/\\/prospects\\.html$/i.test(path)) {'),
   "Prospect Next Action enhancement must load only on prospects.html"
 );
 
