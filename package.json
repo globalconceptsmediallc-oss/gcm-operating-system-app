@@ -1,26 +1,28 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.10",
+  "version": "6.1.11",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.10",
+    "fileVersion": "6.1.11",
     "status": "Production Road-Test Candidate",
-    "purpose": "Preserve the production test suite and add evidence-aware Gmail backlog routing coverage.",
+    "purpose": "Preserve the production test suite and lock Gmail Monitoring preview/write evidence parity.",
     "changeNotes": [
-      "Adds test:gmail-backlog to npm test.",
+      "Adds test:gmail-monitoring-parity to npm test.",
+      "Reproduces the A1 Position Tracking case where the Gmail HTML part contains #9 / +2 evidence that a thin plain-text part does not preserve.",
       "Preserves all existing production test commands."
     ]
   },
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:work-due-date && npm run test:gmail-decisions && npm run test:gmail-intake && npm run test:gmail-backlog && npm run test:prospect-crm && npm run test:asset-versions",
+    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:work-due-date && npm run test:gmail-decisions && npm run test:gmail-monitoring-parity && npm run test:gmail-intake && npm run test:gmail-backlog && npm run test:prospect-crm && npm run test:asset-versions",
     "test:website-intelligence": "node tests/websiteIntelligence.test.js",
     "test:code-intelligence": "node tests/codeIntelligence.test.js",
     "test:operating-sessions": "node tests/operatingSessionTasks.test.js && node tests/osAuth.test.js && node tests/operatingSessionIntake.test.js",
     "test:calendar-durability": "node tests/calendarDurability.test.js",
     "test:work-due-date": "node tests/workDueDate.test.js",
     "test:gmail-decisions": "node tests/gmailDecisionRoutes.test.js",
+    "test:gmail-monitoring-parity": "node tests/gmailMonitoringEvidenceParity.test.js",
     "test:gmail-intake": "node tests/gmailOperationalIntake.test.js",
     "test:gmail-backlog": "node tests/gmailBacklogIntelligence.test.js",
     "test:prospect-crm": "node tests/prospectCrm.test.js",
