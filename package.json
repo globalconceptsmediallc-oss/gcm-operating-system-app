@@ -1,15 +1,15 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.20",
+  "version": "6.1.21",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.20",
+    "fileVersion": "6.1.21",
     "status": "Production Road-Test Candidate",
-    "purpose": "Route source-proven Google Search Console achievement metrics to Monitoring in Morning Command.",
+    "purpose": "Route source-proven Google Search Console achievement metrics to Monitoring without corrupting adjacent report metrics.",
     "changeNotes": [
-      "Updates shared Gmail Monitoring evidence extraction to 1.1.6.",
-      "Recognizes value-before-label metrics such as 30 clicks without adding a client-specific rule.",
-      "Adds the live North Florida Safes Search Console achievement regression and preserves existing Work, Investigation, Monitoring, client, and D1 decision boundaries."
+      "Updates shared Gmail Monitoring evidence extraction to 1.1.7.",
+      "Preserves value-before-label evidence such as 30 clicks while preventing flattened Ahrefs deltas from being assigned to the following metric.",
+      "Keeps the live North Florida Safes Search Console achievement regression and all existing Work, Investigation, Monitoring, client, and D1 decision boundaries."
     ]
   },
   "private": true,

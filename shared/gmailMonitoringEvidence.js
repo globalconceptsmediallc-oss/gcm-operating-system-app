@@ -1,12 +1,19 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gmailMonitoringEvidence.js
-   Version: 1.1.6
+   Version: 1.1.7
    Status: Production Road-Test Candidate
    Sprint: Gmail — Universal Monitoring Evidence
    Purpose:
    Extract exact, source-grounded monitoring facts from Gmail notifications so
    operator summaries never replace the evidence required for future comparison.
+
+   Change notes — v1.1.7:
+   - Restricts value-before-label extraction to a simple unsigned metric value.
+   - Prevents a preceding metric delta such as “Errors 463 +1 Warnings 140” from
+     being misread as “Warnings 463 (+1)” in flattened Ahrefs report text.
+   - Preserves the Google Search Console “30 clicks” achievement fix while
+     restoring all existing Ahrefs metric values and deltas.
 
    Change notes — v1.1.6:
    - Extracts priority monitoring metrics when the source presents the numeric
@@ -67,7 +74,7 @@
    - Supports both line-oriented and flattened Gmail HTML-to-text layouts.
    ========================================================= */
 
-export const GMAIL_MONITORING_EVIDENCE_VERSION = "1.1.6";
+export const GMAIL_MONITORING_EVIDENCE_VERSION = "1.1.7";
 
 const METRIC_PRIORITY_TERMS = Object.freeze([
   "health score",
@@ -96,6 +103,8 @@ const METRIC_PRIORITY_TERMS = Object.freeze([
 const METRIC_VALUE_SOURCE =
   "[-+]?\\d[\\d,.]*(?:\\.\\d+)?%?(?:\\s*(?:\\(|\\[)?[+−-]\\d[\\d,.]*(?:\\)|\\])?)?(?:\\s+(?:no change|unchanged|stable))?";
 
+const REVERSED_METRIC_VALUE_SOURCE = "\\d[\\d,]*(?:\\.\\d+)?%?";
+
 const PRIORITY_METRIC_PATTERN = new RegExp(
   `\\b(${[...METRIC_PRIORITY_TERMS]
     .sort((left, right) => right.length - left.length)
@@ -105,7 +114,7 @@ const PRIORITY_METRIC_PATTERN = new RegExp(
 );
 
 const REVERSED_PRIORITY_METRIC_PATTERN = new RegExp(
-  `\\b(${METRIC_VALUE_SOURCE})\\s+(${[...METRIC_PRIORITY_TERMS]
+  `\\b(${REVERSED_METRIC_VALUE_SOURCE})\\s+(${[...METRIC_PRIORITY_TERMS]
     .sort((left, right) => right.length - left.length)
     .map(escapeRegex)
     .join("|")})\\b`,
