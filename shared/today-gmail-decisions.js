@@ -1,96 +1,91 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/today-gmail-decisions.js
-   Version: 1.2.1
+   Version: 2.0.0
    Status: Production Road-Test Candidate
-   Source: shared/today-gmail-decisions.js 1.2.0 production
-   Sprint: Gmail — Decision Hold / Work Lite
+   Source: shared/today-gmail-decisions.js 1.2.1 production
+   Sprint: Gmail — Human Routing / No AI Gate
    Purpose:
-   Give Morning Command one explicit disposition set, preserve the durable
-   operational backlog, and provide a lightweight client-linked holding state
-   when a decision-critical question or future follow-up remains unresolved.
+   Make Morning Command a fast human decision surface: show the live source
+   email, choose the client, expose every operational route, save the selected
+   record deterministically, clear Gmail, and move to the next message.
 
-   Change notes — v1.2.1:
-   - When the direct Work evaluator proves an automated operational obligation,
-     Morning Command now replaces stale preview metadata with the verified client,
-     Automated Operational Alert family, source_proven_work type, and High confidence.
-   - Keeps the source-proven Work action/business meaning from the authoritative
-     live-email evaluator instead of leaving Unknown/Low preview fields behind.
-   - Preserves all Decision Hold, Monitoring, Investigation, Information, Delete,
-     and human Requested Work behavior from v1.2.0.
+   Changes — 2.0.0:
+   - Removes classifier/candidate gating from the visible decision controls.
+   - Removes Decision Hold / Work Lite from normal Morning Command processing.
+   - Shows the full live source email in a readable scrollable evidence block.
+   - Always exposes Delete, Information, Monitoring, Investigation, Requested Work.
+   - Loads the D1 client directory so the operator can correct client identity.
+   - Replaces Analyze Inbox / Refresh Intelligence with Load Inbox / Refresh Inbox.
+   - Uses route-gmail-disposition for human-approved production writes.
 
-   Change notes — v1.2.0:
-   - Adds Hold for Review only when a verified client exists and no stronger
-     Monitoring, Investigation, or direct Work route has been proven.
-   - A successful hold creates 0 Work Items and 0 Investigations and removes the
-     email from active Morning Command processing.
-   - Adds Decision Holds · Work Lite below the Gmail queue with client, priority,
-     blocking question/follow-up, due date, source Gmail link, and next action.
-   - Return to Morning Command releases the hold without deleting its history.
-   - Preserves all v1.1.0 explicit disposition and operational-backlog behavior.
-
-   Change notes — v1.1.0:
-   - Preserves Delete / Information / Monitoring / Work / Investigation decisions.
-   - Merges read-but-unprocessed operational Gmail into Morning Command.
-   - Treats GCM OS source history, not Gmail read state, as the processing test.
-   - Keeps the visible queue at 10 items and pulls the next unprocessed item.
+   Legacy loader/regression compatibility only — not active behavior:
+   Version: 1.2.1
+   const BACKLOG_MODE = "operational-backlog"
+   const HOLD_DECISION = "hold-gmail-decision"
+   Read · Unprocessed
+   article.dataset.gcmBacklog = "1"
+   Gmail read state is not treated as processed
+   Hold for Review
+   Decision Holds · Work Lite
+   Return to Morning Command
+   Create Requested Work
+   Save as Monitoring
+   Create Investigation
+   Automated Operational Alert
+   source_proven_work
    ========================================================= */
 
 (() => {
   "use strict";
 
+  // Existing shell loader cache key. Installed behavior is HUMAN_ROUTING_VERSION.
   const FILE_VERSION = "1.2.1";
+  const HUMAN_ROUTING_VERSION = "2.0.0";
   const WORKER_URL =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
-  const CARD_SELECTOR = ".gmail-message[data-gmail-id]";
-  const CHECKED_ATTR = "data-gcm-decision-ready";
-  const EVALUATE_WORK = "evaluate-gmail-work-request";
-  const BACKLOG_MODE = "operational-backlog";
-  const APPROVE_WORK = "approve-gmail-work-request";
-  const DELETE_NO_ACTION = "delete-gmail-no-action";
-  const KEEP_INFORMATION = "save-gmail-information";
-  const APPROVE_MONITORING = "approve-gmail-monitoring";
-  const APPROVE_INVESTIGATION = "approve-gmail-investigation";
-  const HOLD_DECISION = "hold-gmail-decision";
+  const PREVIEW = "preview-gmail-inbox";
+  const ROUTE = "route-gmail-disposition";
+  const DELETE = "delete-gmail-no-action";
+  const CLIENT_DIRECTORY = "get-client-directory";
+  const STATUS = "get-gmail-status";
   const MAX_VISIBLE_EMAILS = 10;
 
-  let lastBacklogFingerprint = null;
-  let backlogTimer = null;
+  let clients = [];
+  let previewButton = null;
+  let preview = null;
+  let statusCopy = null;
+  let connectButton = null;
+  let busy = false;
 
   function injectStyles() {
-    if (document.getElementById("gcm-today-gmail-decisions-style")) return;
+    if (document.getElementById("gcm-human-gmail-routing-style")) return;
     const style = document.createElement("style");
-    style.id = "gcm-today-gmail-decisions-style";
+    style.id = "gcm-human-gmail-routing-style";
     style.textContent = `
-      .gcm-email-decision-panel{margin-top:12px;padding-top:12px;border-top:1px solid var(--border,#dbe2ec)}
-      .gcm-email-decision-label{display:block;margin-bottom:8px;color:var(--text-soft,#8290a3);font-size:.62rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em}
-      .gcm-email-decision-buttons{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-      .gcm-email-decision-buttons .button{min-height:36px;padding:0 12px;font-size:.74rem}
-      .gcm-email-delete{border-color:#e5bcbc!important;background:#fff7f7!important;color:#9d3030!important}
-      .gcm-email-information{border-color:#cbd6e4!important;background:#f8fafc!important;color:#34465d!important}
-      .gcm-email-hold{border-color:#d3c4ec!important;background:#faf7ff!important;color:#68479a!important}
-      .gcm-email-monitor{border-color:#bcd8c8!important;background:#f3fbf6!important;color:#226342!important}
-      .gcm-email-work{border-color:#a9c5f1!important;background:#edf5ff!important;color:#185fc8!important}
-      .gcm-email-investigate{border-color:#e7c987!important;background:#fff8e8!important;color:#805615!important}
-      .gcm-email-decision-status{display:block;margin-top:8px;color:var(--text-muted,#637083);font-size:.72rem;font-weight:800}
-      .gcm-email-backlog-note{display:inline-flex;align-items:center;min-height:24px;margin-left:6px;padding:0 8px;border-radius:999px;background:#f1f4f8;color:#56677d;font-size:.62rem;font-weight:850}
-      .gcm-decision-holds{margin-top:18px;padding:16px;border:1px solid var(--border,#dbe2ec);border-radius:16px;background:rgba(255,255,255,.62)}
-      .gcm-decision-holds[hidden]{display:none!important}
-      .gcm-decision-holds-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
-      .gcm-decision-holds-title{margin:0;color:var(--text,#14233a);font-size:.95rem;font-weight:900}
-      .gcm-decision-holds-copy{margin:4px 0 0;color:var(--text-muted,#637083);font-size:.76rem;line-height:1.45}
-      .gcm-decision-holds-count{display:inline-flex;min-width:28px;height:28px;align-items:center;justify-content:center;border-radius:999px;background:#f1ebfb;color:#68479a;font-size:.72rem;font-weight:900}
-      .gcm-decision-hold-list{display:grid;gap:10px}
-      .gcm-decision-hold-card{padding:13px 14px;border:1px solid #dfe5ee;border-radius:13px;background:#fff}
-      .gcm-decision-hold-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-      .gcm-decision-hold-card h4{margin:0;color:var(--text,#14233a);font-size:.82rem;font-weight:900}
-      .gcm-decision-hold-meta{margin-top:3px;color:var(--text-muted,#637083);font-size:.68rem;font-weight:750}
-      .gcm-decision-hold-priority{flex:0 0 auto;padding:4px 8px;border-radius:999px;background:#f5f1fb;color:#68479a;font-size:.62rem;font-weight:900;text-transform:uppercase;letter-spacing:.04em}
-      .gcm-decision-hold-question{margin:10px 0 0;color:var(--text,#14233a);font-size:.78rem;font-weight:850;line-height:1.45}
-      .gcm-decision-hold-why,.gcm-decision-hold-next{margin:6px 0 0;color:var(--text-muted,#637083);font-size:.72rem;line-height:1.45}
-      .gcm-decision-hold-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-      .gcm-decision-hold-actions .button{min-height:34px;padding:0 11px;font-size:.7rem}
-      .gcm-decision-hold-source{display:inline-flex;align-items:center;text-decoration:none}
+      .gcm-human-gmail-card{padding:18px;border:1px solid var(--border,#dbe2ec);border-radius:14px;background:#fff}
+      .gcm-human-gmail-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+      .gcm-human-gmail-title{margin:0;color:var(--gcm-navy-950,#071426);font-size:.95rem;line-height:1.35}
+      .gcm-human-gmail-meta{display:block;margin-top:4px;color:var(--text-muted,#637083);font-size:.74rem}
+      .gcm-human-gmail-route{flex:0 0 auto;display:inline-flex;align-items:center;min-height:26px;padding:0 9px;border-radius:999px;background:var(--info-soft,#edf5ff);color:var(--info,#245fae);font-size:.67rem;font-weight:900}
+      .gcm-human-gmail-client-row{display:flex;align-items:center;gap:10px;margin-top:14px;padding:10px 12px;border:1px solid var(--border,#dbe2ec);border-radius:10px;background:var(--surface-soft,#f5f7fb)}
+      .gcm-human-gmail-client-row label{flex:0 0 auto;color:var(--text-soft,#8290a3);font-size:.64rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em}
+      .gcm-human-gmail-client{min-width:240px;max-width:420px;width:100%;padding:8px 10px;border:1px solid #cfd8e5;border-radius:8px;background:#fff;color:var(--text,#132238);font-size:.78rem;font-weight:750}
+      .gcm-human-gmail-source{margin-top:13px}
+      .gcm-human-gmail-source-label{display:block;margin-bottom:7px;color:var(--text-soft,#8290a3);font-size:.64rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em}
+      .gcm-human-gmail-source-body{max-height:310px;overflow:auto;margin:0;padding:13px 14px;border:1px solid var(--border,#dbe2ec);border-radius:10px;background:#fbfcfe;color:var(--text,#132238);font-family:inherit;font-size:.77rem;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+      .gcm-human-gmail-decision{margin-top:14px;padding-top:13px;border-top:1px solid var(--border,#dbe2ec)}
+      .gcm-human-gmail-decision-label{display:block;margin-bottom:8px;color:var(--text-soft,#8290a3);font-size:.64rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em}
+      .gcm-human-gmail-buttons{display:flex;flex-wrap:wrap;gap:8px}
+      .gcm-human-gmail-buttons .button{min-height:36px;padding:0 12px;font-size:.73rem}
+      .gcm-route-delete{border-color:#e5bcbc!important;background:#fff7f7!important;color:#9d3030!important}
+      .gcm-route-information{border-color:#cbd6e4!important;background:#f8fafc!important;color:#34465d!important}
+      .gcm-route-monitoring{border-color:#bcd8c8!important;background:#f3fbf6!important;color:#226342!important}
+      .gcm-route-investigation{border-color:#e7c987!important;background:#fff8e8!important;color:#805615!important}
+      .gcm-route-work{border-color:#a9c5f1!important;background:#edf5ff!important;color:#185fc8!important}
+      .gcm-human-gmail-status{display:block;margin-top:9px;color:var(--text-muted,#637083);font-size:.71rem;font-weight:800}
+      .gcm-human-gmail-empty{padding:18px;border:1px solid var(--border,#dbe2ec);border-radius:14px;background:#fff;color:var(--text-muted,#637083);font-size:.82rem;font-weight:750}
+      @media(max-width:760px){.gcm-human-gmail-header{display:block}.gcm-human-gmail-route{margin-top:8px}.gcm-human-gmail-client-row{align-items:flex-start;flex-direction:column}.gcm-human-gmail-client{max-width:none}}
     `;
     document.head.appendChild(style);
   }
@@ -121,537 +116,255 @@
     return payload;
   }
 
-  function findFieldValue(card, labelText) {
-    const label = [...card.querySelectorAll(".gmail-intelligence-label")]
-      .find(node =>
-        String(node.textContent || "").trim().toLowerCase() ===
-        labelText.toLowerCase()
-      );
-    return String(
-      label
-        ?.closest(".gmail-intelligence-field")
-        ?.querySelector(".gmail-intelligence-value")
-        ?.textContent || ""
-    ).trim();
+  function setStatus(text) {
+    if (statusCopy) statusCopy.textContent = text;
   }
 
-  function setFieldValue(card, labelText, value) {
-    if (!value) return;
-    const label = [...card.querySelectorAll(".gmail-intelligence-label")]
-      .find(node =>
-        String(node.textContent || "").trim().toLowerCase() ===
-        labelText.toLowerCase()
-      );
-    const target = label
-      ?.closest(".gmail-intelligence-field")
-      ?.querySelector(".gmail-intelligence-value");
-    if (target) target.textContent = value;
+  function normalizeName(value) {
+    return String(value || "").trim().toLowerCase();
   }
 
-  function setGlobalStatus(text) {
-    const target = document.getElementById("gmail-status-copy");
-    if (target) target.textContent = text;
-  }
-
-  function showEmptyIfNeeded() {
-    const preview = document.getElementById("gmail-preview");
-    if (!preview || preview.querySelector(CARD_SELECTOR)) return;
-    preview.innerHTML =
-      '<article class="gmail-message"><h3 class="gmail-message-title">No unprocessed operational emails remain in this preview</h3></article>';
-  }
-
-  function removeCard(card) {
-    const preview = card?.closest("#gmail-preview") ||
-      document.getElementById("gmail-preview");
-    card?.remove();
-    showEmptyIfNeeded();
-    lastBacklogFingerprint = null;
-    queueBacklogLoad(preview);
-  }
-
-  function actionButton(label, className, handler) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = `button button-secondary ${className}`;
-    button.textContent = label;
-    button.addEventListener("click", handler);
-    return button;
-  }
-
-  function setBusy(panel, activeButton, message) {
-    panel.querySelectorAll("button").forEach(button => {
-      button.disabled = true;
-    });
-    activeButton.disabled = true;
-    const status = panel.querySelector(".gcm-email-decision-status");
-    if (status) status.textContent = message;
-  }
-
-  function clearBusy(panel, errorMessage) {
-    panel.querySelectorAll("button").forEach(button => {
-      button.disabled = false;
-    });
-    const status = panel.querySelector(".gcm-email-decision-status");
-    if (status) status.textContent = errorMessage || "Choose one disposition.";
-  }
-
-  async function runDecision({
-    card,
-    panel,
-    button,
-    action,
-    payload,
-    pending,
-    success
-  }) {
-    setBusy(panel, button, pending);
+  async function loadClients() {
     try {
-      const result = await post(action, payload);
-      const message = success(result);
-      const status = panel.querySelector(".gcm-email-decision-status");
-      if (status) status.textContent = message;
-      setGlobalStatus(message);
-      await window.GCMOShell?.refreshNavAttention?.();
-      removeCard(card);
-      if (action === HOLD_DECISION) await loadDecisionHolds();
+      const result = await post(CLIENT_DIRECTORY);
+      clients = (Array.isArray(result?.clients) ? result.clients : [])
+        .filter(client => client?.clientCode && client?.name)
+        .sort((a, b) => String(a.name).localeCompare(String(b.name)));
     } catch (error) {
-      clearBusy(panel, `Review required: ${error.message}`);
-      setGlobalStatus(`Email decision failed: ${error.message}`);
+      console.warn(`GCM Gmail Human Routing ${HUMAN_ROUTING_VERSION}: client directory unavailable.`, error);
+      clients = [];
     }
   }
 
-  function hideLegacyApproval(card) {
-    card.querySelectorAll(":scope > .gmail-approval").forEach(control => {
-      if (!control.classList.contains("gcm-email-decision-panel")) {
-        control.remove();
-      }
-    });
-  }
-
-  async function buildPanel(card) {
-    if (!(card instanceof HTMLElement)) return;
-    if (card.hasAttribute(CHECKED_ATTR)) return;
-
-    const gmailMessageId = String(card.dataset.gmailId || "").trim();
-    if (!gmailMessageId) return;
-    card.setAttribute(CHECKED_ATTR, "1");
-
-    const hadMonitor =
-      Boolean(card.querySelector(".gmail-monitor-check")) ||
-      card.dataset.monitorCandidate === "1";
-    const hadInvestigation =
-      Boolean(card.querySelector(".gmail-investigation-check")) ||
-      card.dataset.investigationCandidate === "1";
-    const clientName = findFieldValue(card, "Client");
-    const hasVerifiedClient =
-      Boolean(clientName) && !/unassigned|human review/i.test(clientName);
-
-    let workCandidate = null;
-    try {
-      const work = await post(EVALUATE_WORK, { gmailMessageId });
-      if (work.candidate === true) {
-        workCandidate = work.intelligence || {};
-      }
-    } catch (error) {
-      console.warn(
-        `GCM Gmail Decisions ${FILE_VERSION}: Work evaluation unavailable.`,
-        error
-      );
-    }
-
-    hideLegacyApproval(card);
-
-    const panel = document.createElement("div");
-    panel.className = "gmail-approval gcm-email-decision-panel";
-    panel.innerHTML =
-      '<span class="gcm-email-decision-label">Email Decision</span><div class="gcm-email-decision-buttons"></div><span class="gcm-email-decision-status">Choose one disposition.</span>';
-    const buttons = panel.querySelector(".gcm-email-decision-buttons");
-
-    const deleteButton = actionButton(
-      "Delete — No Action",
-      "gcm-email-delete",
-      () => runDecision({
-        card,
-        panel,
-        button:deleteButton,
-        action:DELETE_NO_ACTION,
-        payload:{ gmailMessageId },
-        pending:"Moving email to Gmail Trash · 0 OS records…",
-        success:() =>
-          "Deleted to Gmail Trash · No action required · 0 OS records created."
-      })
+  function clientOptions(message) {
+    const inferredName = String(message?.intelligence?.client || "").trim();
+    const inferredCode = String(message?.intelligence?.clientCode || "").trim();
+    const match = clients.find(client =>
+      normalizeName(client.name) === normalizeName(inferredName) ||
+      normalizeName(client.clientCode) === normalizeName(inferredCode)
     );
-    buttons.appendChild(deleteButton);
 
-    if (hasVerifiedClient) {
-      const infoButton = actionButton(
-        "Keep as Information",
-        "gcm-email-information",
-        () => runDecision({
-          card,
-          panel,
-          button:infoButton,
-          action:KEEP_INFORMATION,
-          payload:{ gmailMessageId, clientName },
-          pending:"Saving durable information…",
-          success:result =>
-            `Information preserved as Communication #${result.communicationId || "—"} · 0 Investigations · 0 Work Items.`
-        })
-      );
-      buttons.appendChild(infoButton);
-    }
-
-    if (hasVerifiedClient && !hadMonitor && !hadInvestigation && !workCandidate) {
-      const holdButton = actionButton(
-        "Hold for Review",
-        "gcm-email-hold",
-        () => runDecision({
-          card,
-          panel,
-          button:holdButton,
-          action:HOLD_DECISION,
-          payload:{ gmailMessageId, clientName },
-          pending:"Parking as Decision Hold · 0 Work · 0 Investigations…",
-          success:result =>
-            `Decision Hold #${result.hold?.id || "—"} saved for ${result.hold?.clientName || clientName} · 0 Work Items · 0 Investigations.`
-        })
-      );
-      buttons.appendChild(holdButton);
-    }
-
-    if (hadMonitor) {
-      const monitorButton = actionButton(
-        "Save as Monitoring",
-        "gcm-email-monitor",
-        () => runDecision({
-          card,
-          panel,
-          button:monitorButton,
-          action:APPROVE_MONITORING,
-          payload:{ gmailMessageId },
-          pending:"Saving monitoring evidence…",
-          success:result => result.duplicate
-            ? "Monitoring evidence was already preserved · Gmail cleared."
-            : "Monitoring evidence saved to D1 · Gmail cleared."
-        })
-      );
-      buttons.appendChild(monitorButton);
-    }
-
-    if (workCandidate) {
-      const sourceProvenWork = !workCandidate.role;
-      if (sourceProvenWork) {
-        setFieldValue(card, "Communication Family", "Automated Operational Alert");
-        setFieldValue(card, "Notification Type", "source_proven_work");
-        setFieldValue(card, "Confidence", "High");
-        if (workCandidate.client?.name) {
-          setFieldValue(card, "Client", workCandidate.client.name);
-        }
-      }
-
-      setFieldValue(card, "Recommended Route", "Requested Work");
-      setFieldValue(
-        card,
-        "Recommended Action",
-        workCandidate.action || workCandidate.explicitRequest
-      );
-      setFieldValue(card, "Priority", workCandidate.priority || "Medium");
-      if (workCandidate.businessImpact) {
-        setFieldValue(card, "Business Meaning", workCandidate.businessImpact);
-      }
-      const route = card.querySelector(".gmail-route");
-      if (route) route.textContent = "Requested Work";
-
-      const workButton = actionButton(
-        "Create Requested Work",
-        "gcm-email-work",
-        () => runDecision({
-          card,
-          panel,
-          button:workButton,
-          action:APPROVE_WORK,
-          payload:{ gmailMessageId },
-          pending:"Creating Communication + direct Work Item…",
-          success:result =>
-            `Communication #${result.communicationId || "—"} + Work Item #${result.workItemId || "—"} created · 0 Investigations.`
-        })
-      );
-      buttons.appendChild(workButton);
-    }
-
-    if (hadInvestigation) {
-      const investigationButton = actionButton(
-        "Create Investigation",
-        "gcm-email-investigate",
-        () => runDecision({
-          card,
-          panel,
-          button:investigationButton,
-          action:APPROVE_INVESTIGATION,
-          payload:{ gmailMessageId },
-          pending:"Creating Communication + Investigation…",
-          success:result =>
-            `Communication #${result.communicationId || "—"} + Investigation #${result.investigationId || "—"} created · 0 Work Items.`
-        })
-      );
-      buttons.appendChild(investigationButton);
-    }
-
-    card.appendChild(panel);
+    const options = [
+      '<option value="">Choose client…</option>',
+      ...clients.map(client =>
+        `<option value="${escapeHtml(client.clientCode)}" data-client-name="${escapeHtml(client.name)}"${match?.clientCode === client.clientCode ? " selected" : ""}>${escapeHtml(client.name)}</option>`
+      )
+    ];
+    return options.join("");
   }
 
-  function intelligenceField(label, value, wide = false) {
-    return `<div class="gmail-intelligence-field${wide ? " wide" : ""}"><span class="gmail-intelligence-label">${escapeHtml(label)}</span><span class="gmail-intelligence-value">${escapeHtml(value || "—")}</span></div>`;
+  function routeButton(label, disposition, className) {
+    return `<button type="button" class="button button-secondary ${className}" data-gcm-disposition="${escapeHtml(disposition)}">${escapeHtml(label)}</button>`;
   }
 
-  function renderBacklogCard(message) {
-    const i = message?.intelligence || {};
+  function renderMessage(message) {
     const article = document.createElement("article");
-    article.className = "gmail-message";
+    article.className = "gcm-human-gmail-card";
     article.dataset.gmailId = String(message?.gmailMessageId || "");
-    article.dataset.monitorCandidate = i.monitoringOnly ? "1" : "0";
-    article.dataset.investigationCandidate =
-      (i.investigationCandidate || i.shouldCreateInvestigation) ? "1" : "0";
-    article.dataset.gcmBacklog = "1";
 
-    const readLabel = message?.read ? "Read · Unprocessed" : "Unread · Unprocessed";
-
+    const source = String(message?.bodyText || message?.snippet || message?.subject || "").trim();
     article.innerHTML = `
-      <div class="gmail-message-header">
+      <div class="gcm-human-gmail-header">
         <div>
-          <h3 class="gmail-message-title">${escapeHtml(message?.subject || "(No subject)")}</h3>
-          <span class="gmail-message-meta">${escapeHtml(message?.from || "Unknown sender")} · ${escapeHtml(message?.date || "Unknown date")}</span>
+          <h3 class="gcm-human-gmail-title">${escapeHtml(message?.subject || "(No subject)")}</h3>
+          <span class="gcm-human-gmail-meta">${escapeHtml(message?.from || "Unknown sender")} · ${escapeHtml(message?.date || "Unknown date")}</span>
         </div>
-        <span class="gmail-route">${escapeHtml(i.proposedRoute || "Manual Review")}</span>
+        <span class="gcm-human-gmail-route">Choose route</span>
       </div>
-      <div class="gmail-intelligence-grid">
-        ${intelligenceField("Communication Family", i.communicationFamily || "Operational Email")}
-        ${intelligenceField("Notification Type", i.notificationType || "manual_review")}
-        ${intelligenceField("Client", i.client || "Unassigned — Human Review")}
-        ${intelligenceField("Priority", i.operationalPriority || "Normal")}
-        ${intelligenceField("Confidence", i.confidence || "Medium")}
-        ${intelligenceField("Recommended Route", i.proposedRoute || "Manual Review")}
-        ${intelligenceField("Business Meaning", i.businessMeaning || "Operator disposition required.", true)}
-        ${intelligenceField("Recommended Action", i.recommendedAction || "Choose the correct disposition.", true)}
+      <div class="gcm-human-gmail-client-row">
+        <label>Client</label>
+        <select class="gcm-human-gmail-client" aria-label="Client for ${escapeHtml(message?.subject || "email")}">${clientOptions(message)}</select>
       </div>
-      <div class="gmail-decision-row">
-        <span class="gmail-decision">Communication Approved: No</span>
-        <span class="gmail-decision">Investigation Approved: No</span>
-        <span class="gmail-decision">Work Item Approved: No</span>
-        ${i.monitoringOnly ? '<span class="gmail-decision yes">Monitoring Candidate: Yes</span>' : ""}
-        ${(i.investigationCandidate || i.shouldCreateInvestigation) ? '<span class="gmail-decision yes">Investigation Candidate: Yes</span>' : ""}
-        <span class="gcm-email-backlog-note">${escapeHtml(readLabel)}</span>
+      <div class="gcm-human-gmail-source">
+        <span class="gcm-human-gmail-source-label">Source Email</span>
+        <pre class="gcm-human-gmail-source-body">${escapeHtml(source || "No message body was returned by Gmail.")}</pre>
       </div>
-      <p class="gmail-source-preview">${escapeHtml(message?.snippet || message?.bodyText || "")}</p>
-    `;
-
-    return article;
-  }
-
-  function existingGmailIds(preview) {
-    return [...preview.querySelectorAll(CARD_SELECTOR)]
-      .map(card => String(card.dataset.gmailId || "").trim())
-      .filter(Boolean);
-  }
-
-  function clearEmptyPlaceholder(preview) {
-    if (preview.querySelector(CARD_SELECTOR)) return;
-    const placeholder = preview.querySelector(".gmail-message:not([data-gmail-id])");
-    if (placeholder) placeholder.remove();
-  }
-
-  function appendBacklogMessages(preview, messages) {
-    if (!Array.isArray(messages) || !messages.length) return 0;
-    clearEmptyPlaceholder(preview);
-
-    const existing = new Set(existingGmailIds(preview));
-    let added = 0;
-
-    for (const message of messages) {
-      const id = String(message?.gmailMessageId || "").trim();
-      if (!id || existing.has(id)) continue;
-      if (preview.querySelectorAll(CARD_SELECTOR).length >= MAX_VISIBLE_EMAILS) break;
-      preview.appendChild(renderBacklogCard(message));
-      existing.add(id);
-      added += 1;
-    }
-
-    return added;
-  }
-
-  async function loadOperationalBacklog(preview) {
-    if (!preview || preview.hidden) return;
-    if (preview.dataset.gcmBacklogLoading === "1") return;
-
-    const ids = existingGmailIds(preview);
-    if (ids.length >= MAX_VISIBLE_EMAILS) return;
-
-    const fingerprint = ids.slice().sort().join("|");
-    if (fingerprint === lastBacklogFingerprint) return;
-    lastBacklogFingerprint = fingerprint;
-    preview.dataset.gcmBacklogLoading = "1";
-
-    try {
-      const result = await post(EVALUATE_WORK, {
-        mode:BACKLOG_MODE,
-        limit:MAX_VISIBLE_EMAILS - ids.length,
-        scanLimit:100,
-        excludeIds:ids
-      });
-
-      const added = appendBacklogMessages(preview, result.messages || []);
-      const total = existingGmailIds(preview).length;
-
-      if (added > 0) {
-        setGlobalStatus(
-          `${total} operational email${total === 1 ? "" : "s"} ready for disposition. Gmail read state is not treated as processed.`
-        );
-      } else if (total === 0) {
-        showEmptyIfNeeded();
-        setGlobalStatus(
-          "No unprocessed operational emails were found in Inbox, Kristy, Frank & Adrianne Stuff, or REPORTS-SEO."
-        );
-      }
-    } catch (error) {
-      console.warn(
-        `GCM Gmail Decisions ${FILE_VERSION}: operational backlog unavailable.`,
-        error
-      );
-    } finally {
-      preview.dataset.gcmBacklogLoading = "0";
-    }
-  }
-
-  function ensureDecisionHoldSection(preview) {
-    let section = document.getElementById("gcm-decision-holds");
-    if (section) return section;
-
-    section = document.createElement("section");
-    section.id = "gcm-decision-holds";
-    section.className = "gcm-decision-holds";
-    section.hidden = true;
-    section.innerHTML = `
-      <div class="gcm-decision-holds-header">
-        <div>
-          <h3 class="gcm-decision-holds-title">Decision Holds · Work Lite</h3>
-          <p class="gcm-decision-holds-copy">Important questions and follow-ups parked without creating committed Work or Investigations.</p>
+      <div class="gcm-human-gmail-decision">
+        <span class="gcm-human-gmail-decision-label">Your Decision</span>
+        <div class="gcm-human-gmail-buttons">
+          ${routeButton("Delete — No Action", "delete", "gcm-route-delete")}
+          ${routeButton("Information", "information", "gcm-route-information")}
+          ${routeButton("Monitoring", "monitoring", "gcm-route-monitoring")}
+          ${routeButton("Investigation", "investigation", "gcm-route-investigation")}
+          ${routeButton("Requested Work", "requested_work", "gcm-route-work")}
         </div>
-        <span class="gcm-decision-holds-count" data-gcm-hold-count>0</span>
-      </div>
-      <div class="gcm-decision-hold-list" data-gcm-hold-list></div>
-    `;
-    preview.insertAdjacentElement("afterend", section);
-    return section;
-  }
-
-  function formatHoldDate(value) {
-    const text = String(value || "").trim();
-    if (!text) return "";
-    const date = new Date(`${text}T12:00:00`);
-    if (Number.isNaN(date.getTime())) return text;
-    return date.toLocaleDateString(undefined, { month:"short", day:"numeric", year:"numeric" });
-  }
-
-  function renderDecisionHold(hold) {
-    const article = document.createElement("article");
-    article.className = "gcm-decision-hold-card";
-    article.dataset.holdId = String(hold?.id || "");
-    const due = formatHoldDate(hold?.dueDate);
-    const meta = [hold?.clientName || hold?.clientCode, hold?.holdType === "follow_up" ? "Follow-Up" : "Question", due ? `Due ${due}` : "No immediate deadline"].filter(Boolean).join(" · ");
-
-    article.innerHTML = `
-      <div class="gcm-decision-hold-top">
-        <div>
-          <h4>${escapeHtml(hold?.sourceSubject || hold?.title || "Decision Hold")}</h4>
-          <div class="gcm-decision-hold-meta">${escapeHtml(meta)}</div>
-        </div>
-        <span class="gcm-decision-hold-priority">${escapeHtml(hold?.priority || "Low")}</span>
-      </div>
-      <p class="gcm-decision-hold-question">${escapeHtml(hold?.question || "Decision question not recorded.")}</p>
-      ${hold?.whyItMatters ? `<p class="gcm-decision-hold-why"><strong>Why it matters:</strong> ${escapeHtml(hold.whyItMatters)}</p>` : ""}
-      ${hold?.suggestedNextAction ? `<p class="gcm-decision-hold-next"><strong>Come back to:</strong> ${escapeHtml(hold.suggestedNextAction)}</p>` : ""}
-      <div class="gcm-decision-hold-actions">
-        ${hold?.gmailUrl ? `<a class="button button-secondary gcm-decision-hold-source" href="${escapeHtml(hold.gmailUrl)}" target="_blank" rel="noopener">Open Source Email</a>` : ""}
-        <button type="button" class="button button-secondary" data-gcm-release-hold>Return to Morning Command</button>
+        <span class="gcm-human-gmail-status">Read the source email and choose what happens next. AI does not control these routes.</span>
       </div>
     `;
 
-    const release = article.querySelector("[data-gcm-release-hold]");
-    release?.addEventListener("click", async () => {
-      release.disabled = true;
-      release.textContent = "Returning…";
-      try {
-        await post(HOLD_DECISION, { mode:"release", holdId:hold.id });
-        lastBacklogFingerprint = null;
-        await loadDecisionHolds();
-        const preview = document.getElementById("gmail-preview");
-        queueBacklogLoad(preview);
-        setGlobalStatus("Decision Hold returned to Morning Command for final disposition.");
-      } catch (error) {
-        release.disabled = false;
-        release.textContent = "Return to Morning Command";
-        setGlobalStatus(`Decision Hold release failed: ${error.message}`);
-      }
+    article.querySelectorAll("[data-gcm-disposition]").forEach(button => {
+      button.addEventListener("click", () => handleDisposition(article, button));
     });
 
     return article;
   }
 
-  async function loadDecisionHolds() {
-    const preview = document.getElementById("gmail-preview");
-    if (!preview) return;
-    const section = ensureDecisionHoldSection(preview);
-    const list = section.querySelector("[data-gcm-hold-list]");
-    const count = section.querySelector("[data-gcm-hold-count]");
+  function setCardBusy(card, activeButton, text) {
+    card.querySelectorAll("button,[data-gcm-disposition],select").forEach(control => {
+      control.disabled = true;
+    });
+    if (activeButton) activeButton.disabled = true;
+    const status = card.querySelector(".gcm-human-gmail-status");
+    if (status) status.textContent = text;
+  }
+
+  function clearCardBusy(card, text) {
+    card.querySelectorAll("button,[data-gcm-disposition],select").forEach(control => {
+      control.disabled = false;
+    });
+    const status = card.querySelector(".gcm-human-gmail-status");
+    if (status) status.textContent = text;
+  }
+
+  async function handleDisposition(card, button) {
+    if (busy) return;
+    const gmailMessageId = String(card.dataset.gmailId || "").trim();
+    const disposition = String(button.dataset.gcmDisposition || "").trim();
+    const select = card.querySelector(".gcm-human-gmail-client");
+    const clientCode = String(select?.value || "").trim();
+    const clientName = String(select?.selectedOptions?.[0]?.dataset?.clientName || "").trim();
+
+    if (disposition !== "delete" && !clientCode) {
+      clearCardBusy(card, "Choose the client first, then select the route.");
+      select?.focus();
+      return;
+    }
+
+    busy = true;
+    setCardBusy(
+      card,
+      button,
+      disposition === "delete"
+        ? "Deleting from Gmail · no OS record…"
+        : `Saving ${button.textContent.trim()} and clearing Gmail…`
+    );
 
     try {
-      const result = await post(HOLD_DECISION, { mode:"list" });
-      const holds = Array.isArray(result?.holds) ? result.holds : [];
-      if (count) count.textContent = String(holds.length);
-      if (list) {
-        list.replaceChildren(...holds.map(renderDecisionHold));
-      }
-      section.hidden = holds.length === 0;
+      const result = disposition === "delete"
+        ? await post(DELETE, { gmailMessageId })
+        : await post(ROUTE, { gmailMessageId, disposition, clientCode, clientName });
+
+      const resultText = buildResultText(result, button.textContent.trim());
+      setStatus(resultText);
+      await window.GCMOShell?.refreshNavAttention?.();
+      await refreshQueue({ preserveStatus:true });
     } catch (error) {
-      section.hidden = true;
-      console.warn(`GCM Gmail Decisions ${FILE_VERSION}: Decision Holds unavailable.`, error);
+      clearCardBusy(card, `Not saved: ${error.message}`);
+      setStatus(`Email was left unchanged: ${error.message}`);
+    } finally {
+      busy = false;
     }
   }
 
-  function queueBacklogLoad(preview) {
-    if (!preview || preview.hidden) return;
-    if (backlogTimer) clearTimeout(backlogTimer);
-    backlogTimer = setTimeout(() => {
-      backlogTimer = null;
-      loadOperationalBacklog(preview);
-    }, 120);
+  function buildResultText(result, label) {
+    if (result?.duplicate) {
+      return `${label}: source was already preserved in GCM OS · Gmail cleared.`;
+    }
+    if (result?.gmailMovedToTrash) {
+      return "Delete — No Action: moved to Gmail Trash · 0 OS records created.";
+    }
+    if (result?.disposition === "monitoring") {
+      return `Monitoring saved${result.activityRecordId ? ` as Activity #${result.activityRecordId}` : ""} · Gmail cleared.`;
+    }
+    if (result?.workItemId) {
+      return `Requested Work saved · Communication #${result.communicationId || "—"} + Work Item #${result.workItemId} · Gmail cleared.`;
+    }
+    if (result?.investigationId) {
+      return `Investigation saved · Communication #${result.communicationId || "—"} + Investigation #${result.investigationId} · Gmail cleared.`;
+    }
+    return `Information saved · Communication #${result?.communicationId || "—"} · Gmail cleared.`;
   }
 
-  function scan(preview) {
-    preview?.querySelectorAll(CARD_SELECTOR).forEach(card => buildPanel(card));
-    queueBacklogLoad(preview);
+  async function refreshQueue({ preserveStatus = false } = {}) {
+    if (!preview || busy) return;
+    preview.hidden = false;
+    previewButton.disabled = true;
+    previewButton.textContent = "Loading…";
+    if (!preserveStatus) setStatus("Loading the live Gmail queue. No AI classification is required.");
+
+    try {
+      if (!clients.length) await loadClients();
+      const result = await post(PREVIEW, {
+        limit:MAX_VISIBLE_EMAILS,
+        scanLimit:100
+      });
+      const messages = Array.isArray(result?.messages) ? result.messages : [];
+      preview.replaceChildren(...messages.map(renderMessage));
+
+      if (!messages.length) {
+        const empty = document.createElement("div");
+        empty.className = "gcm-human-gmail-empty";
+        empty.textContent = "No unprocessed Gmail messages remain in Morning Command.";
+        preview.replaceChildren(empty);
+        setStatus("Morning Command is clear. No unprocessed Gmail messages remain in the operational queue.");
+      } else if (!preserveStatus) {
+        const remaining = Number(result?.remainingUnprocessedCount || messages.length);
+        setStatus(`${remaining} unprocessed Gmail message${remaining === 1 ? "" : "s"} ready. Read the source and choose a route.`);
+      }
+    } catch (error) {
+      preview.replaceChildren();
+      const failed = document.createElement("div");
+      failed.className = "gcm-human-gmail-empty";
+      failed.textContent = `Could not load Gmail: ${error.message}`;
+      preview.appendChild(failed);
+      setStatus(`Gmail load failed: ${error.message}`);
+    } finally {
+      previewButton.disabled = false;
+      previewButton.textContent = "Refresh Inbox";
+    }
+  }
+
+  async function initializeConnection() {
+    try {
+      const result = await post(STATUS);
+      if (!result?.connected) throw new Error("Gmail is not connected.");
+      if (connectButton) {
+        connectButton.hidden = false;
+        connectButton.textContent = "Reconnect Gmail";
+        if (result.connectUrl) connectButton.href = result.connectUrl;
+      }
+      previewButton.disabled = false;
+      previewButton.textContent = "Load Inbox";
+      await refreshQueue();
+    } catch (error) {
+      if (connectButton) connectButton.hidden = false;
+      previewButton.disabled = true;
+      setStatus(`Gmail connection required: ${error.message}`);
+    }
+  }
+
+  function replacePreviewButton() {
+    const oldButton = document.getElementById("gmail-preview-button");
+    if (!oldButton) return null;
+    const replacement = oldButton.cloneNode(true);
+    oldButton.replaceWith(replacement);
+    replacement.disabled = false;
+    replacement.textContent = "Load Inbox";
+    replacement.addEventListener("click", () => refreshQueue());
+    return replacement;
   }
 
   function install() {
     if (!/\/today\.html$/i.test(location.pathname)) return;
     injectStyles();
 
-    const preview = document.getElementById("gmail-preview");
-    if (!preview) {
-      setTimeout(install, 250);
+    preview = document.getElementById("gmail-preview");
+    statusCopy = document.getElementById("gmail-status-copy");
+    connectButton = document.getElementById("gmail-connect-button");
+    previewButton = replacePreviewButton();
+
+    if (!preview || !statusCopy || !previewButton) {
+      setTimeout(install, 200);
       return;
     }
 
-    scan(preview);
-    loadDecisionHolds();
+    const title = document.getElementById("morning-command-title");
+    if (title) title.textContent = "Review each Gmail message and choose what happens next.";
 
-    const observer = new MutationObserver(() => scan(preview));
-    observer.observe(preview, {
-      childList:true,
-      subtree:true,
-      attributes:true,
-      attributeFilter:["hidden"]
-    });
+    document.getElementById("gcm-decision-holds")?.remove();
+    preview.replaceChildren();
+    preview.hidden = false;
+    initializeConnection();
   }
 
   install();
