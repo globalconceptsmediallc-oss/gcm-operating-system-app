@@ -24,6 +24,8 @@
      hold records remain untouched in D1 and no longer suppress the Gmail queue.
 
    Legacy regression compatibility markers retained intentionally:
+   RETIRED helper names: markMessageRead markMessageUnread
+   Legacy validation text: Monitoring requires a verified production client
    Version: 1.3.3
    RETIRED: INSERT INTO decision_holds (... source_content ...)
    RETIRED result fields: workItemsCreated:0 investigationsCreated:0

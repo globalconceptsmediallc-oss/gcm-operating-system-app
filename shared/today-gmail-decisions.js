@@ -20,6 +20,7 @@
    - Uses route-gmail-disposition for human-approved production writes.
 
    Legacy loader/regression compatibility only — not active behavior:
+   Keep as Information
    Version: 1.2.1
    const BACKLOG_MODE = "operational-backlog"
    const HOLD_DECISION = "hold-gmail-decision"
