@@ -1,12 +1,20 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gmailMonitoringEvidence.js
-   Version: 1.1.5
+   Version: 1.1.6
    Status: Production Road-Test Candidate
    Sprint: Gmail — Universal Monitoring Evidence
    Purpose:
    Extract exact, source-grounded monitoring facts from Gmail notifications so
    operator summaries never replace the evidence required for future comparison.
+
+   Change notes — v1.1.6:
+   - Extracts priority monitoring metrics when the source presents the numeric
+     value before the metric label, such as “30 clicks”.
+   - Fixes Google Search Console achievement emails that previously contained
+     measurable client evidence but surfaced as Manual Review in Morning Command.
+   - Keeps the rule source-neutral and preserves all existing Monitoring,
+     Investigation, Work, client, and D1 decision boundaries.
 
    Change notes — v1.1.5:
    - Normalizes HTML markup before monitoring extraction even when a sender
@@ -59,7 +67,7 @@
    - Supports both line-oriented and flattened Gmail HTML-to-text layouts.
    ========================================================= */
 
-export const GMAIL_MONITORING_EVIDENCE_VERSION = "1.1.5";
+export const GMAIL_MONITORING_EVIDENCE_VERSION = "1.1.6";
 
 const METRIC_PRIORITY_TERMS = Object.freeze([
   "health score",
@@ -93,6 +101,14 @@ const PRIORITY_METRIC_PATTERN = new RegExp(
     .sort((left, right) => right.length - left.length)
     .map(escapeRegex)
     .join("|")})\\b\\s*[:=-]?\\s*(${METRIC_VALUE_SOURCE})`,
+  "ig"
+);
+
+const REVERSED_PRIORITY_METRIC_PATTERN = new RegExp(
+  `\\b(${METRIC_VALUE_SOURCE})\\s+(${[...METRIC_PRIORITY_TERMS]
+    .sort((left, right) => right.length - left.length)
+    .map(escapeRegex)
+    .join("|")})\\b`,
   "ig"
 );
 
@@ -265,6 +281,16 @@ export function extractMonitoringEvidence(messageOrText = {}) {
       canonicalMetricLabel(priorityMatch[1]),
       priorityMatch[2],
       priorityMatch[0]
+    );
+  }
+
+  REVERSED_PRIORITY_METRIC_PATTERN.lastIndex = 0;
+  let reversedPriorityMatch;
+  while ((reversedPriorityMatch = REVERSED_PRIORITY_METRIC_PATTERN.exec(text)) !== null && metrics.length < 30) {
+    addMetric(
+      canonicalMetricLabel(reversedPriorityMatch[2]),
+      reversedPriorityMatch[1],
+      reversedPriorityMatch[0]
     );
   }
 

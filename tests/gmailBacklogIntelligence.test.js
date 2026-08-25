@@ -1,13 +1,20 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/gmailBacklogIntelligence.test.js
-   Version: 1.2.0
+   Version: 1.3.0
    Status: Production Regression Test
    Sprint: Gmail — Evidence-Aware Operational Backlog
    Purpose:
    Lock the rule that measurable report labels do not become Investigations
    unless the live source explicitly proves an operational failure, while
    source-proven corrective obligations may become direct Work.
+
+   Change notes — 1.3.0:
+   - Reproduces the live North Florida Safes Search Console achievement email.
+   - Requires “30 clicks” presented value-before-label to become source-grounded
+     Monitoring instead of Manual Review.
+   - Preserves the existing Backlink Audit, Site Audit/Ahrefs, Merchant Center,
+     and proven-failure decision boundaries.
 
    Change notes — 1.2.0:
    - Reproduces the live South Florida Safes Backlink Audit inside the actual
@@ -68,6 +75,42 @@ assert.equal(northFlorida.intelligence.investigationCandidate, false);
 assert.match(northFlorida.intelligence.businessMeaning, /Health Score 92/i);
 assert.match(northFlorida.intelligence.businessMeaning, /Errors 463/i);
 assert.match(northFlorida.intelligence.recommendedAction, /Save these exact source-grounded measurements as Monitoring/i);
+
+const northFloridaSearchAchievement = classifyOperationalBacklogMessage({
+  gmailMessageId:"1a0343f8dd5aa128",
+  threadId:"1a0343f8dd5aa128",
+  from:"Google Search Console Team <sc-noreply@google.com>",
+  to:"GlobalConceptsMediaLLC@gmail.com",
+  subject:"Congrats on reaching 30 clicks in 28 days!",
+  date:"Mon, 24 Aug 2026 07:49:35 -0700",
+  snippet:"Google Search Impact 30 northfloridasafes.com Congratulations! Your site reached 30 clicks from Google Search in the past 28 days Aug 19, 2026",
+  bodyText:`Google Search Impact
+
+30
+
+northfloridasafes.com
+
+Congratulations! Your site reached 30 clicks from Google Search in the past 28 days
+
+Aug 19, 2026
+
+Track your site's achievements
+
+You've received this transactional email because your site is listed in Google Search Console.`,
+  labels:["UNREAD","IMPORTANT","CATEGORY_SOCIAL","INBOX"]
+});
+
+assert.equal(northFloridaSearchAchievement.intelligence.client, "North Florida Safes");
+assert.equal(northFloridaSearchAchievement.intelligence.proposedRoute, "Monitoring Review");
+assert.equal(northFloridaSearchAchievement.intelligence.monitoringOnly, true);
+assert.equal(northFloridaSearchAchievement.intelligence.investigationCandidate, false);
+assert.equal(northFloridaSearchAchievement.intelligence.shouldCreateWorkItem, false);
+assert.match(northFloridaSearchAchievement.intelligence.businessMeaning, /Clicks 30/i);
+assert.match(northFloridaSearchAchievement.intelligence.recommendedAction, /Save these exact source-grounded measurements as Monitoring/i);
+assert.equal(
+  northFloridaSearchAchievement.intelligence.monitoringMetrics?.metrics?.find(item => item.key === "clicks")?.value,
+  30
+);
 
 assert.deepEqual(
   inferOperationalClient("Northfloridasafes new crawl"),
