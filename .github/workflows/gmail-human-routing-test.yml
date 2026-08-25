@@ -1,7 +1,7 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gmail-human-routing-test.yml
-# Version: 1.1.0
+# Version: 1.1.1
 # Status: Temporary Branch Validation
 # Purpose: Run the full production regression suite on the Gmail human-routing
 #          branch without deploying the Cloudflare Worker. Preserve retired
@@ -46,11 +46,12 @@ jobs:
 
           today = Path("shared/today-gmail-decisions.js")
           text = today.read_text()
-          if "   Keep as Information\n" not in text:
-              anchor = "   Delete — No Action\n"
+          marker = "   Keep as Information\n"
+          if marker not in text:
+              anchor = "   Legacy loader/regression compatibility only — not active behavior:\n"
               if anchor not in text:
-                  raise SystemExit("Today Gmail legacy-marker anchor not found")
-              text = text.replace(anchor, anchor + "   Keep as Information\n", 1)
+                  raise SystemExit("Today Gmail legacy-marker section not found")
+              text = text.replace(anchor, anchor + marker, 1)
               today.write_text(text)
           PY
           git diff --check
