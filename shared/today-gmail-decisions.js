@@ -1,14 +1,21 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/today-gmail-decisions.js
-   Version: 2.0.0
+   Version: 2.0.1
    Status: Production Road-Test Candidate
    Source: shared/today-gmail-decisions.js 1.2.1 production
-   Sprint: Gmail — Human Routing / No AI Gate
+   Sprint: Gmail — Human Routing / Source Email Cleanup
    Purpose:
    Make Morning Command a fast human decision surface: show the live source
    email, choose the client, expose every operational route, save the selected
    record deterministically, clear Gmail, and move to the next message.
+
+   Changes — 2.0.1:
+   - Decodes HTML character references before Source Email display.
+   - Handles named, decimal, hexadecimal, and double-encoded entities without
+     sender-specific rules.
+   - Converts non-breaking spaces to normal spaces and normalizes presentation
+     whitespace so Gmail template markup does not leak into the decision card.
 
    Changes — 2.0.0:
    - Removes classifier/candidate gating from the visible decision controls.
@@ -42,7 +49,7 @@
 
   // Existing shell loader cache key. Installed behavior is HUMAN_ROUTING_VERSION.
   const FILE_VERSION = "1.2.1";
-  const HUMAN_ROUTING_VERSION = "2.0.0";
+  const HUMAN_ROUTING_VERSION = "2.0.1";
   const WORKER_URL =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const PREVIEW = "preview-gmail-inbox";
@@ -98,6 +105,27 @@
       .replaceAll(">", "&gt;")
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#039;");
+  }
+
+  function cleanSourceEmail(value) {
+    let text = String(value ?? "");
+    const decoder = document.createElement("textarea");
+
+    // Two passes intentionally handle nested encoding such as &amp;#160;.
+    for (let pass = 0; pass < 2; pass += 1) {
+      decoder.innerHTML = text;
+      const decoded = decoder.value;
+      if (decoded === text) break;
+      text = decoded;
+    }
+
+    return text
+      .replace(/\u00a0/g, " ")
+      .replace(/\r/g, "")
+      .replace(/[\t ]+\n/g, "\n")
+      .replace(/[\t ]{2,}/g, " ")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
   }
 
   async function post(action, extra = {}) {
@@ -163,7 +191,9 @@
     article.className = "gcm-human-gmail-card";
     article.dataset.gmailId = String(message?.gmailMessageId || "");
 
-    const source = String(message?.bodyText || message?.snippet || message?.subject || "").trim();
+    const source = cleanSourceEmail(
+      message?.bodyText || message?.snippet || message?.subject || ""
+    );
     article.innerHTML = `
       <div class="gcm-human-gmail-header">
         <div>
