@@ -1,7 +1,7 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gmail-human-routing-test.yml
-# Version: 1.1.1
+# Version: 1.1.2
 # Status: Temporary Branch Validation
 # Purpose: Run the full production regression suite on the Gmail human-routing
 #          branch without deploying the Cloudflare Worker. Preserve retired
