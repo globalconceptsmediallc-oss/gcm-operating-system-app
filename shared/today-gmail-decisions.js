@@ -247,6 +247,7 @@
       const resultText = buildResultText(result, button.textContent.trim());
       setStatus(resultText);
       await window.GCMOShell?.refreshNavAttention?.();
+      busy = false;
       await refreshQueue({ preserveStatus:true });
     } catch (error) {
       clearCardBusy(card, `Not saved: ${error.message}`);
