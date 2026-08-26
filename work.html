@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.16
+   Version: 1.9.17
    Status: FBDT Production Candidate
    Source: Production work.html 1.9.13
    Sprint: Durable Investigation Progress
@@ -69,6 +69,9 @@
      and Review Issues without falsely completing Analyze Evidence.
    - Preserves existing Investigation progress, evidence history, and checklist state.
    - v1.9.16 makes Safari new-tab evidence clicks deterministic.
+   - v1.9.17 keeps Open Work Items as the authoritative open-work queue even when an Investigation is selected.
+   - v1.9.17 uses the client filter for queue scope and only prioritizes, rather than filters to, the selected Investigation linked Work Item.
+   - v1.9.17 keeps direct Requested Work visible beside Investigation-created work.
    - Validates the saved per-client SEMrush Issues URL during the capture phase
      and saves Open Evidence Source plus Review Issues atomically before navigation.
    ========================================================= -->
@@ -166,7 +169,7 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Use Investigation when the correct action is unknown. Use Create Requested Work when the client need and deliverable are already clear.</p></div>
-        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.16</span>
+        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.17</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -250,7 +253,7 @@
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.16"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.17"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),target:byId("target-banner"),requestedForm:byId("requested-work-form"),requestedClient:byId("requested-client"),requestedMessage:byId("requested-work-message"),createRequested:byId("create-requested-work")};
   let activeClients=[],directoryClients=[],investigations=[],workItems=[],selectedKey="",processing=false,processingWorkItem=false,processingRequestedWork=false;
 
@@ -2217,36 +2220,28 @@
   }
 
   function renderWorkItems(selectedInvestigation){
-    const linkedWorkItems=selectedInvestigation
-      ? workItems.filter(item=>
-          Number(item.investigation_id ?? item.investigationId)===Number(selectedInvestigation.id) &&
-          normalizedClientCode(item.clientCode)===normalizedClientCode(selectedInvestigation.clientCode)
-        )
-      : (()=> {
-          const exactTarget=requestedWorkItemId
-            ? workItems.find(item=>
-                Number(item.id)===Number(requestedWorkItemId) &&
-                directWorkInvestigationId(item)===null
-              )
-            : null;
+    const selectedClient=normalizedClientCode(el.filter.value);
+    const selectedInvestigationId=positiveInt(selectedInvestigation?.id);
+    const selectedInvestigationClient=normalizedClientCode(selectedInvestigation?.clientCode);
+    const linkedToSelectedInvestigation=item=>
+      Boolean(selectedInvestigationId) &&
+      directWorkInvestigationId(item)===selectedInvestigationId &&
+      normalizedClientCode(item.clientCode)===selectedInvestigationClient;
 
-          if(exactTarget)return [exactTarget];
+    const visibleWorkItems=workItems.filter(item=>
+      !selectedClient||normalizedClientCode(item.clientCode)===selectedClient
+    ).sort((a,b)=>{
+      const selectedDelta=Number(linkedToSelectedInvestigation(b))-Number(linkedToSelectedInvestigation(a));
+      if(selectedDelta)return selectedDelta;
+      return Number(b.id)-Number(a.id);
+    });
 
-          const selectedClient=normalizedClientCode(el.filter.value);
-          return workItems.filter(item=>
-            directWorkInvestigationId(item)===null &&
-            (!selectedClient||normalizedClientCode(item.clientCode)===selectedClient)
-          );
-        })();
-
-    if(!linkedWorkItems.length){
-      el.openWork.innerHTML=selectedInvestigation
-        ? `<div class="empty"><strong>No Work Item has been created for Investigation #${esc(selectedInvestigation.id)}.</strong><br />Continue the Investigation until the evidence proves specific work is required.</div>`
-        : '<div class="empty">No direct requested Work Items match this view. Select an Investigation to view its linked work.</div>';
+    if(!visibleWorkItems.length){
+      el.openWork.innerHTML='<div class="empty">No open Work Items match this view.</div>';
       return;
     }
 
-    el.openWork.innerHTML=linkedWorkItems.map(i=>`
+    el.openWork.innerHTML=visibleWorkItems.map(i=>`
       <article class="work-card" data-work-id="${esc(i.id)}">
         <h3>Work Item #${esc(i.id)} · ${esc(i.title||"Work Item")}</h3>
         ${i.investigation_id?"":'<span class="direct-work-label">Direct Requested Work</span>'}
@@ -2278,7 +2273,7 @@
     el.openWork.querySelectorAll("[data-complete-work]").forEach(button=>{
       button.addEventListener("click",()=>{
         const id=Number(button.dataset.completeWork);
-        const item=linkedWorkItems.find(entry=>Number(entry.id)===id);
+        const item=visibleWorkItems.find(entry=>Number(entry.id)===id);
         if(item)completeWorkItem(item);
       });
     });

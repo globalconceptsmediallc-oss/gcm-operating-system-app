@@ -1,16 +1,18 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/workDueDate.test.js
-   Version: 1.0.2
+   Version: 1.1.0
    Status: Production Regression Test
-   Source: tests/workDueDate.test.js 1.0.1
-   Purpose: Verify the durable Work due-date contract stays wired from
-            migration through route, UI enhancement, and nav urgency.
-   Change notes — 1.0.2:
-   - Replaces a formatting-sensitive navAttention assertion with a semantic
-     Work source-definition check that allows multiline formatting.
+   Source: tests/workDueDate.test.js 1.0.2
+   Purpose: Verify the durable Work due-date contract and the Work Queue
+            visibility contract stay wired in production.
+   Change notes — 1.1.0:
    - Preserves every existing Work due-date contract assertion.
-   - Does not change production Work or navAttention behavior.
+   - Requires the main Open Work Items panel to show all open work for the
+     current client filter instead of hiding unrelated work when an
+     Investigation is selected.
+   - Requires a selected Investigation to prioritize its linked Work Item
+     without filtering direct requested work or other open Work Items away.
    ========================================================= */
 
 import assert from "node:assert/strict";
@@ -37,6 +39,9 @@ const shell =
 
 const navAttention =
   read("routes/navAttention.js");
+
+const workPage =
+  read("work.html");
 
 assert.match(
   migration,
@@ -98,6 +103,31 @@ assert.match(
   /source\(\s*"work_items",\s*\[\s*"due_at",\s*"due_date",\s*"deadline",\s*"scheduled_for",\s*"review_due_at"\s*\]/
 );
 
+assert.match(
+  workPage,
+  /Version: 1\.9\.17/
+);
+
+assert.match(
+  workPage,
+  /const visibleWorkItems=workItems\.filter\(item=>/
+);
+
+assert.match(
+  workPage,
+  /const linkedToSelectedInvestigation=item=>/
+);
+
+assert.doesNotMatch(
+  workPage,
+  /const linkedWorkItems=selectedInvestigation\s*\?/
+);
+
+assert.match(
+  workPage,
+  /No open Work Items match this view\./
+);
+
 console.log(
-  "PASS Work durable due-date contract"
+  "PASS Work durable due-date and queue visibility contracts"
 );
