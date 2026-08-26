@@ -1,0 +1,779 @@
+name: Gmail Thread Routing Test
+
+on:
+  push:
+    branches:
+      - gmail-thread-routing-20260826
+
+permissions:
+  contents: write
+
+jobs:
+  patch-test-commit:
+    if: ${{ !contains(github.event.head_commit.message, '[thread-routing-ci]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Apply thread-aware Gmail routing patch
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+
+          def replace_between(text, start_marker, end_marker, replacement):
+              start = text.find(start_marker)
+              if start < 0:
+                  raise SystemExit(f"Missing start marker: {start_marker}")
+              end = text.find(end_marker, start)
+              if end < 0:
+                  raise SystemExit(f"Missing end marker: {end_marker}")
+              return text[:start] + replacement.rstrip() + "\n\n" + text[end:]
+
+          # ---------------- Backend ----------------
+          path = Path('routes/gmailDispositions.js')
+          text = path.read_text()
+          text = text.replace('Version: 2.0.0', 'Version: 2.1.0', 1)
+          text = text.replace(
+              '   Human-routing changes — 2.0.0:',
+              '''   Thread-routing changes — 2.1.0:
+   - Morning Command now groups Gmail results by thread instead of individual message.
+   - Preview loads the complete Gmail conversation in chronological order.
+   - One human route creates at most one Communication plus its selected operational record for the whole thread.
+   - New records use canonical gmail-thread:<threadId> source references.
+   - Legacy gmail:<messageId> records suppress the entire thread so previously handled replies cannot create duplicates.
+   - Successful routes archive the entire Gmail thread; Delete and Handle Now completion move the entire thread to Trash.
+   - Preview remains read-only and performs zero Gmail or D1 writes.
+
+   Human-routing changes — 2.0.0:''',
+              1
+          )
+          text = text.replace(
+              'export const GMAIL_HUMAN_ROUTING_VERSION = "2.0.0";',
+              'export const GMAIL_HUMAN_ROUTING_VERSION = "2.1.0";',
+              1
+          )
+
+          preview = r'''async function previewHumanRoutingQueue(body, env, requestId) {
+  const limit = Math.min(Math.max(Number(body?.limit) || 10, 1), 20);
+  const scanLimit = Math.min(Math.max(Number(body?.scanLimit) || 100, limit), 100);
+  const excluded = new Set(
+    (Array.isArray(body?.excludeIds) ? body.excludeIds : [])
+      .map(value => clean(value))
+      .filter(Boolean)
+      .slice(0, 100)
+  );
+
+  try {
+    const db = requireDb(env);
+    const accessToken = await liveGmailAccessToken(env);
+    const listUrl = new URL(`${GMAIL_API}/users/me/messages`);
+    listUrl.searchParams.set("q", OPERATIONAL_GMAIL_QUERY);
+    listUrl.searchParams.set("maxResults", String(scanLimit));
+
+    const list = await gmailFetch(listUrl.toString(), accessToken);
+    const listedMessages = (Array.isArray(list?.messages) ? list.messages : [])
+      .map(item => ({
+        gmailMessageId:clean(item?.id),
+        threadId:clean(item?.threadId || item?.id)
+      }))
+      .filter(item => item.gmailMessageId && item.threadId);
+
+    const threadGroups = groupListedMessagesByThread(listedMessages);
+    const processedThreads = await findProcessedGmailThreads(db, threadGroups);
+    const eligibleThreads = threadGroups.filter(group =>
+      !processedThreads.has(group.threadId) &&
+      !excluded.has(group.threadId) &&
+      !group.messageIds.some(id => excluded.has(id))
+    );
+    const selectedThreads = eligibleThreads.slice(0, limit);
+    const conversations = await mapWithConcurrency(
+      selectedThreads,
+      3,
+      group => loadLiveGmailThreadWithAccessToken(group.threadId, accessToken)
+    );
+
+    return jsonResponse({
+      ok:true,
+      requestId,
+      action:PREVIEW_GMAIL_INBOX_EVIDENCE_ACTION,
+      version:GMAIL_HUMAN_ROUTING_VERSION,
+      gmailDispositionVersion:GMAIL_DISPOSITION_VERSION,
+      mode:"human-thread-routing-preview",
+      aiUsed:false,
+      writesPerformed:0,
+      scannedCount:listedMessages.length,
+      scannedThreadCount:threadGroups.length,
+      processedFilteredCount:threadGroups.filter(group => processedThreads.has(group.threadId)).length,
+      remainingUnprocessedCount:eligibleThreads.length,
+      remainingUnprocessedMessageCount:eligibleThreads.reduce((total, group) => total + group.messageIds.length, 0),
+      messages:conversations.map(buildHumanPreviewMessage)
+    });
+  } catch (error) {
+    logWorkerError({
+      requestId,
+      route:PREVIEW_GMAIL_INBOX_EVIDENCE_ACTION,
+      stage:"gmail_human_thread_routing_preview",
+      error
+    });
+    return jsonResponse({
+      ok:false,
+      requestId,
+      action:PREVIEW_GMAIL_INBOX_EVIDENCE_ACTION,
+      error:safeErrorMessage(error)
+    }, 500);
+  }
+}
+
+function groupListedMessagesByThread(items) {
+  const groups = new Map();
+  for (const item of items) {
+    const threadId = clean(item?.threadId || item?.gmailMessageId);
+    const messageId = clean(item?.gmailMessageId);
+    if (!threadId || !messageId) continue;
+    if (!groups.has(threadId)) groups.set(threadId, { threadId, messageIds:[] });
+    const group = groups.get(threadId);
+    if (!group.messageIds.includes(messageId)) group.messageIds.push(messageId);
+  }
+  return [...groups.values()];
+}'''
+          text = replace_between(text, 'async function previewHumanRoutingQueue', 'function buildHumanPreviewMessage', preview)
+
+          build_preview = r'''function buildHumanPreviewMessage(message) {
+  const text = [
+    message.from,
+    message.to,
+    message.subject,
+    message.bodyText
+  ].filter(Boolean).join("\n");
+  const inferred = inferClientFromText(text);
+  const clientName = inferred?.name || "Unassigned — Choose Client";
+
+  return {
+    ...message,
+    conversation:true,
+    threadMessageCount:Array.isArray(message?.threadMessages) ? message.threadMessages.length : 1,
+    read:!message.labels.includes("UNREAD"),
+    intelligence:{
+      communicationFamily:"Source Conversation",
+      notificationType:"human_thread_routing",
+      client:clientName,
+      clientCode:inferred?.code || null,
+      operationalPriority:"Operator decides",
+      confidence:"Not used",
+      proposedRoute:"Choose Route",
+      businessMeaning:message.bodyText || message.snippet || message.subject,
+      recommendedAction:"Read the complete source conversation and choose one operational route for the thread.",
+      monitoringOnly:false,
+      investigationCandidate:false,
+      shouldCreateInvestigation:false,
+      shouldCreateWorkItem:false,
+      archive:false,
+      productionDecisionReady:true
+    }
+  };
+}'''
+          text = replace_between(text, 'function buildHumanPreviewMessage', 'async function routeHumanDisposition', build_preview)
+
+          route = r'''async function routeHumanDisposition(body, env, requestId) {
+  const gmailMessageId = clean(body?.gmailMessageId);
+  const requestedThreadId = clean(body?.gmailThreadId || body?.threadId);
+  const disposition = normalizeDisposition(body?.disposition);
+
+  if (!gmailMessageId && !requestedThreadId) {
+    return jsonResponse({
+      ok:false,
+      requestId,
+      action:ROUTE_GMAIL_DISPOSITION_ACTION,
+      error:"gmailThreadId or gmailMessageId is required."
+    }, 400);
+  }
+
+  if (!HUMAN_DISPOSITIONS.has(disposition)) {
+    return jsonResponse({
+      ok:false,
+      requestId,
+      action:ROUTE_GMAIL_DISPOSITION_ACTION,
+      error:"Choose Information, Monitoring, Investigation, or Requested Work."
+    }, 400);
+  }
+
+  try {
+    const db = requireDb(env);
+    const accessToken = await liveGmailAccessToken(env);
+    let threadId = requestedThreadId;
+    let seedMessage = null;
+
+    if (!threadId && gmailMessageId) {
+      seedMessage = await loadLiveGmailMessageWithAccessToken(gmailMessageId, accessToken);
+      threadId = clean(seedMessage?.threadId);
+    }
+
+    const message = threadId
+      ? await loadLiveGmailThreadWithAccessToken(threadId, accessToken)
+      : seedMessage;
+    if (!message) throw new Error("Gmail source conversation could not be loaded.");
+
+    const sourceReference = threadId
+      ? `gmail-thread:${threadId}`
+      : `gmail:${gmailMessageId}`;
+    const memberReferences = (Array.isArray(message.threadMessages) ? message.threadMessages : [message])
+      .map(item => clean(item?.gmailMessageId))
+      .filter(Boolean)
+      .map(id => `gmail:${id}`);
+    const client = await resolveClient(
+      db,
+      clean(body?.clientCode),
+      clean(body?.clientName || body?.client),
+      message
+    );
+
+    if (!client?.client_code) {
+      return jsonResponse({
+        ok:false,
+        requestId,
+        action:ROUTE_GMAIL_DISPOSITION_ACTION,
+        error:"Choose a production client before routing this Gmail conversation. Gmail was left unchanged."
+      }, 409);
+    }
+
+    const existing = await findExistingThreadDisposition(db, sourceReference, memberReferences);
+    if (existing) {
+      await archiveConversation(message, accessToken);
+      return jsonResponse({
+        ok:true,
+        requestId,
+        action:ROUTE_GMAIL_DISPOSITION_ACTION,
+        version:GMAIL_HUMAN_ROUTING_VERSION,
+        duplicate:true,
+        disposition,
+        writesPerformed:0,
+        gmailArchived:true,
+        gmailThreadArchived:Boolean(message.threadId),
+        threadMessageCount:Array.isArray(message.threadMessages) ? message.threadMessages.length : 1,
+        existing
+      });
+    }
+
+    if (disposition === "monitoring") {
+      return saveHumanMonitoring({
+        db,
+        message,
+        accessToken,
+        sourceReference,
+        client,
+        requestId
+      });
+    }
+
+    const decision = buildHumanOperationalDecision(message, disposition);
+    const commitResponse = await handleCommitOperationalDecision({
+      action:"commit-operational-decision",
+      clientCode:client.client_code,
+      externalId:sourceReference,
+      occurredAt:message.date,
+      direction:"incoming",
+      owner:"Andrew",
+      rawContent:message.bodyText || message.snippet || message.subject,
+      decision
+    }, env, `${requestId}-human-thread-route`);
+
+    const commit = await commitResponse.json();
+    if (!commitResponse.ok || commit?.ok !== true) {
+      return jsonResponse({
+        ok:false,
+        requestId,
+        action:ROUTE_GMAIL_DISPOSITION_ACTION,
+        error:typeof commit?.error === "string"
+          ? commit.error
+          : commit?.error?.message || "The human thread disposition could not be saved.",
+        commit
+      }, commitResponse.status || 500);
+    }
+
+    validateHumanCommit(commit, disposition);
+    await archiveConversation(message, accessToken);
+
+    return jsonResponse({
+      ok:true,
+      requestId,
+      action:ROUTE_GMAIL_DISPOSITION_ACTION,
+      version:GMAIL_HUMAN_ROUTING_VERSION,
+      duplicate:Boolean(commit.duplicate),
+      disposition,
+      writesPerformed:commit.duplicate
+        ? 0
+        : disposition === "information" ? 1 : 2,
+      gmailArchived:true,
+      gmailThreadArchived:Boolean(message.threadId),
+      threadMessageCount:Array.isArray(message.threadMessages) ? message.threadMessages.length : 1,
+      communicationId:commit.communicationId || null,
+      investigationId:commit.investigationId || null,
+      workItemId:commit.workItemId || null,
+      client:{ id:client.id, clientCode:client.client_code, name:client.name }
+    });
+  } catch (error) {
+    logWorkerError({
+      requestId,
+      route:ROUTE_GMAIL_DISPOSITION_ACTION,
+      stage:"gmail_human_thread_disposition",
+      error
+    });
+    return jsonResponse({
+      ok:false,
+      requestId,
+      action:ROUTE_GMAIL_DISPOSITION_ACTION,
+      error:safeErrorMessage(error)
+    }, 500);
+  }
+}'''
+          text = replace_between(text, 'async function routeHumanDisposition', 'async function approveMonitoringWithEvidence', route)
+
+          text = text.replace('  await archiveMessage(message.gmailMessageId, accessToken);\n\n  return jsonResponse({\n    ok:true,\n    requestId,\n    action:ROUTE_GMAIL_DISPOSITION_ACTION,\n    version:GMAIL_HUMAN_ROUTING_VERSION,\n    disposition:"monitoring",', '  await archiveConversation(message, accessToken);\n\n  return jsonResponse({\n    ok:true,\n    requestId,\n    action:ROUTE_GMAIL_DISPOSITION_ACTION,\n    version:GMAIL_HUMAN_ROUTING_VERSION,\n    disposition:"monitoring",', 1)
+          text = text.replace('    gmailArchived:true,\n    evidencePreserved:true,', '    gmailArchived:true,\n    gmailThreadArchived:Boolean(message.threadId),\n    threadMessageCount:Array.isArray(message.threadMessages) ? message.threadMessages.length : 1,\n    evidencePreserved:true,', 1)
+
+          processed = r'''async function findExistingThreadDisposition(db, sourceReference, memberReferences = []) {
+  const references = [...new Set([sourceReference, ...memberReferences].map(clean).filter(Boolean))];
+  for (const reference of references) {
+    const existing = await findExistingDisposition(db, reference);
+    if (existing) return { ...existing, matchedSourceReference:reference };
+  }
+  return null;
+}
+
+async function findProcessedGmailThreads(db, threadGroups) {
+  const processed = new Set();
+  const referenceToThread = new Map();
+
+  for (const group of threadGroups) {
+    const threadId = clean(group?.threadId);
+    if (!threadId) continue;
+    referenceToThread.set(`gmail-thread:${threadId}`, threadId);
+    for (const messageId of Array.isArray(group?.messageIds) ? group.messageIds : []) {
+      const id = clean(messageId);
+      if (id) referenceToThread.set(`gmail:${id}`, threadId);
+    }
+  }
+
+  const references = [...referenceToThread.keys()];
+  const chunkSize = 35;
+  const mark = reference => {
+    const threadId = referenceToThread.get(clean(reference));
+    if (threadId) processed.add(threadId);
+  };
+
+  for (let start = 0; start < references.length; start += chunkSize) {
+    const chunk = references.slice(start, start + chunkSize);
+    if (!chunk.length) continue;
+    const placeholders = chunk.map(() => "?").join(",");
+
+    const communicationRows = await db.prepare(`
+      SELECT external_id AS source_reference
+      FROM communications
+      WHERE external_id IN (${placeholders})
+    `).bind(...chunk).all();
+    for (const row of communicationRows?.results || []) mark(row?.source_reference);
+
+    const activityRows = await db.prepare(`
+      SELECT source_reference,evidence_reference
+      FROM activity_records
+      WHERE source_reference IN (${placeholders}) OR evidence_reference IN (${placeholders})
+    `).bind(...chunk, ...chunk).all();
+    for (const row of activityRows?.results || []) {
+      mark(row?.source_reference);
+      mark(row?.evidence_reference);
+    }
+  }
+
+  return processed;
+}'''
+          text = replace_between(text, 'async function findProcessedGmailIds', 'async function resolveClient', processed)
+
+          delete = r'''async function deleteNoAction(body, env, requestId) {
+  const gmailMessageId = clean(body?.gmailMessageId);
+  let gmailThreadId = clean(body?.gmailThreadId || body?.threadId);
+  if (!gmailMessageId && !gmailThreadId) {
+    return jsonResponse({ ok:false, requestId, action:DELETE_GMAIL_NO_ACTION_ACTION, error:"gmailThreadId or gmailMessageId is required." }, 400);
+  }
+
+  try {
+    const accessToken = await liveGmailAccessToken(env);
+    if (!gmailThreadId && gmailMessageId) {
+      const message = await loadLiveGmailMessageWithAccessToken(gmailMessageId, accessToken);
+      gmailThreadId = clean(message?.threadId);
+    }
+
+    const endpoint = gmailThreadId
+      ? `${GMAIL_API}/users/me/threads/${encodeURIComponent(gmailThreadId)}/trash`
+      : `${GMAIL_API}/users/me/messages/${encodeURIComponent(gmailMessageId)}/trash`;
+    const response = await fetch(endpoint, {
+      method:"POST",
+      headers:{ Authorization:`Bearer ${accessToken}`, "Content-Type":"application/json" },
+      body:"{}"
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload?.error?.message || `Gmail Trash returned HTTP ${response.status}.`);
+
+    return jsonResponse({
+      ok:true,
+      requestId,
+      action:DELETE_GMAIL_NO_ACTION_ACTION,
+      version:GMAIL_HUMAN_ROUTING_VERSION,
+      gmailMovedToTrash:true,
+      gmailThreadMovedToTrash:Boolean(gmailThreadId),
+      writesPerformed:0,
+      osRecordsCreated:0
+    });
+  } catch (error) {
+    logWorkerError({ requestId, route:DELETE_GMAIL_NO_ACTION_ACTION, stage:"gmail_delete_no_action", error });
+    return jsonResponse({ ok:false, requestId, action:DELETE_GMAIL_NO_ACTION_ACTION, error:safeErrorMessage(error) }, 500);
+  }
+}'''
+          text = replace_between(text, 'async function deleteNoAction', 'async function captureMonitoringSourceEvidence', delete)
+
+          loaders = r'''async function loadLiveGmailMessage(gmailMessageId, env) {
+  const accessToken = await liveGmailAccessToken(env);
+  const message = await loadLiveGmailMessageWithAccessToken(gmailMessageId, accessToken);
+  return { accessToken, message };
+}
+
+async function loadLiveGmailMessageWithAccessToken(gmailMessageId, accessToken) {
+  const data = await gmailFetch(
+    `${GMAIL_API}/users/me/messages/${encodeURIComponent(gmailMessageId)}?format=full`,
+    accessToken
+  );
+  return gmailMessageFromData(data);
+}
+
+async function loadLiveGmailThreadWithAccessToken(gmailThreadId, accessToken) {
+  const data = await gmailFetch(
+    `${GMAIL_API}/users/me/threads/${encodeURIComponent(gmailThreadId)}?format=full`,
+    accessToken
+  );
+  const messages = (Array.isArray(data?.messages) ? data.messages : [])
+    .map(gmailMessageFromData)
+    .filter(message => message.gmailMessageId)
+    .sort((a, b) => {
+      const internal = Number(a.internalDate || 0) - Number(b.internalDate || 0);
+      if (internal) return internal;
+      return new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime();
+    });
+  if (!messages.length) throw new Error("Gmail thread contained no readable messages.");
+  return buildThreadAggregate(clean(data?.id || gmailThreadId), messages);
+}
+
+function gmailMessageFromData(data) {
+  const headers = data?.payload?.headers || [];
+  const header = name => clean(
+    headers.find(item => clean(item.name).toLowerCase() === name.toLowerCase())?.value
+  );
+  const bodyText = extractMessageText(data?.payload).slice(0, 12000);
+
+  return {
+    gmailMessageId:clean(data?.id),
+    threadId:clean(data?.threadId),
+    internalDate:Number(data?.internalDate || 0),
+    from:header("From"),
+    to:header("To"),
+    subject:header("Subject") || "(No subject)",
+    date:header("Date"),
+    snippet:clean(data?.snippet),
+    bodyText:bodyText || clean(data?.snippet),
+    labels:Array.isArray(data?.labelIds) ? data.labelIds : []
+  };
+}
+
+function buildThreadAggregate(threadId, messages) {
+  const latest = messages[messages.length - 1] || messages[0];
+  const labels = [...new Set(messages.flatMap(message => Array.isArray(message.labels) ? message.labels : []))];
+  const bodyText = formatThreadSource(messages).slice(0, 30000);
+  return {
+    gmailMessageId:clean(latest?.gmailMessageId),
+    threadId:clean(threadId || latest?.threadId),
+    from:clean(latest?.from),
+    to:clean(latest?.to),
+    subject:clean(latest?.subject) || clean(messages[0]?.subject) || "(No subject)",
+    date:clean(latest?.date),
+    snippet:clean(latest?.snippet),
+    bodyText,
+    labels,
+    threadMessageCount:messages.length,
+    threadMessages:messages
+  };
+}
+
+function formatThreadSource(messages) {
+  const total = messages.length;
+  return messages.map((message, index) => [
+    `Message ${index + 1} of ${total}`,
+    `From: ${clean(message.from) || "Unknown sender"}`,
+    clean(message.to) ? `To: ${clean(message.to)}` : "",
+    `Date: ${clean(message.date) || "Unknown date"}`,
+    `Subject: ${clean(message.subject) || "(No subject)"}`,
+    "",
+    sanitizeEmailText(message.bodyText || message.snippet || message.subject)
+  ].filter((value, itemIndex) => value || itemIndex === 5).join("\n"))
+    .join("\n\n------------------------------\n\n");
+}'''
+          text = replace_between(text, 'async function loadLiveGmailMessage', 'async function liveGmailAccessToken', loaders)
+
+          archive_insert = r'''async function archiveConversation(message, accessToken) {
+  const threadId = clean(message?.threadId);
+  if (threadId) return archiveThread(threadId, accessToken);
+  return archiveMessage(clean(message?.gmailMessageId), accessToken);
+}
+
+async function archiveThread(gmailThreadId, accessToken) {
+  const response = await fetch(`${GMAIL_API}/users/me/threads/${encodeURIComponent(gmailThreadId)}/modify`, {
+    method:"POST",
+    headers:{ Authorization:`Bearer ${accessToken}`, "Content-Type":"application/json" },
+    body:JSON.stringify({ removeLabelIds:["UNREAD","INBOX"] })
+  });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload?.error?.message || `Gmail thread archive failed with HTTP ${response.status}.`);
+  return payload;
+}
+
+'''
+          marker = 'function extractMessageText(payload) {'
+          idx = text.find(marker)
+          if idx < 0:
+              raise SystemExit('Missing extractMessageText marker')
+          text = text[:idx] + archive_insert + text[idx:]
+          path.write_text(text)
+
+          # ---------------- Frontend ----------------
+          path = Path('shared/today-gmail-decisions.js')
+          text = path.read_text()
+          text = text.replace('Version: 2.2.0', 'Version: 2.3.0', 1)
+          text = text.replace(
+              '   Changes — 2.2.0:',
+              '''   Changes — 2.3.0:
+   - Treats one Gmail thread as one Morning Command decision card.
+   - Shows every message in the conversation chronologically inside Source Conversation.
+   - Sends gmailThreadId with every route so one decision applies to the whole thread.
+   - Counts unprocessed Gmail conversations rather than individual replies.
+   - Preserves Handle Now home-base behavior and opens the whole Gmail thread as fallback.
+
+   Changes — 2.2.0:''',
+              1
+          )
+          text = text.replace('const HUMAN_ROUTING_VERSION = "2.2.0";', 'const HUMAN_ROUTING_VERSION = "2.3.0";', 1)
+          text = text.replace('const MAX_VISIBLE_EMAILS = 10;', 'const MAX_VISIBLE_EMAILS = 10;', 1)
+          text = text.replace('      .gcm-human-gmail-source-body{max-height:310px;', '      .gcm-human-gmail-source-body{max-height:390px;', 1)
+
+          insertion_marker = '  function routeButton(label, disposition, className) {'
+          helper = r'''  function threadMessages(message) {
+    const messages = Array.isArray(message?.threadMessages) ? message.threadMessages : [];
+    return messages.length ? messages : [message];
+  }
+
+  function rawConversationSource(message) {
+    return threadMessages(message)
+      .map(item => item?.bodyText || item?.snippet || item?.subject || "")
+      .filter(Boolean)
+      .join("\n\n");
+  }
+
+  function formatConversationSource(message) {
+    const messages = threadMessages(message);
+    if (messages.length <= 1) {
+      return cleanSourceEmail(message?.bodyText || message?.snippet || message?.subject || "");
+    }
+
+    return messages.map((item, index) => {
+      const header = [
+        `MESSAGE ${index + 1} OF ${messages.length}`,
+        `From: ${item?.from || "Unknown sender"}`,
+        item?.to ? `To: ${item.to}` : "",
+        `Date: ${item?.date || "Unknown date"}`
+      ].filter(Boolean).join("\n");
+      const body = cleanSourceEmail(item?.bodyText || item?.snippet || item?.subject || "");
+      return `${header}\n\n${body}`.trim();
+    }).join("\n\n────────────────────────────────────────\n\n");
+  }
+
+'''
+          idx = text.find(insertion_marker)
+          if idx < 0:
+              raise SystemExit('Missing routeButton marker')
+          text = text[:idx] + helper + text[idx:]
+
+          text = text.replace(
+              '    const rawSource = message?.bodyText || message?.snippet || message?.subject || "";\n    const source = cleanSourceEmail(rawSource);\n    const taskLinks = actionLinkButtons(rawSource);',
+              '    const rawSource = rawConversationSource(message);\n    const source = formatConversationSource(message);\n    const taskLinks = actionLinkButtons(rawSource);\n    const count = Number(message?.threadMessageCount || threadMessages(message).length || 1);\n    const meta = count > 1\n      ? `${count} messages · Latest: ${message?.from || "Unknown sender"} · ${message?.date || "Unknown date"}`\n      : `${message?.from || "Unknown sender"} · ${message?.date || "Unknown date"}`;'
+          )
+          text = text.replace(
+              '<span class="gcm-human-gmail-meta">${escapeHtml(message?.from || "Unknown sender")} · ${escapeHtml(message?.date || "Unknown date")}</span>',
+              '<span class="gcm-human-gmail-meta">${escapeHtml(meta)}</span>',
+              1
+          )
+          text = text.replace(
+              '<span class="gcm-human-gmail-source-label">Source Email</span>',
+              '<span class="gcm-human-gmail-source-label">${count > 1 ? "Source Conversation" : "Source Email"}</span>',
+              1
+          )
+          text = text.replace(
+              'Read the source email and choose what happens next. Handle Now keeps GCM OS as home base until you confirm completion. AI does not control these routes.',
+              'Read the source conversation and choose what happens next. One route applies to the whole Gmail thread. Handle Now keeps GCM OS as home base until you confirm completion. AI does not control these routes.'
+          )
+
+          text = text.replace(
+              '    const gmailMessageId = String(card.dataset.gmailId || "").trim();\n    if (!gmailMessageId) {',
+              '    const gmailMessageId = String(card.dataset.gmailId || "").trim();\n    const gmailThreadId = String(card.dataset.gmailThreadId || "").trim();\n    if (!gmailMessageId && !gmailThreadId) {',
+              1
+          )
+          text = text.replace(
+              'if (status) status.textContent = "Could not clear Gmail because the message ID is missing.";',
+              'if (status) status.textContent = "Could not clear Gmail because the conversation ID is missing.";',
+              1
+          )
+          text = text.replace(
+              'const result = await post(DELETE, { gmailMessageId });',
+              'const result = await post(DELETE, { gmailMessageId, gmailThreadId });',
+              1
+          )
+          text = text.replace(
+              'throw new Error("Gmail did not confirm that the completed message moved to Trash.");',
+              'throw new Error("Gmail did not confirm that the completed conversation moved to Trash.");',
+              1
+          )
+          text = text.replace(
+              'setStatus("Handle Now complete: action confirmed · moved to Gmail Trash · 0 OS records created.");',
+              'setStatus("Handle Now complete: action confirmed · Gmail conversation moved to Trash · 0 OS records created.");',
+              1
+          )
+
+          old = '    const gmailMessageId = String(card.dataset.gmailId || "").trim();\n    const disposition = String(button.dataset.gcmDisposition || "").trim();'
+          new = '    const gmailMessageId = String(card.dataset.gmailId || "").trim();\n    const gmailThreadId = String(card.dataset.gmailThreadId || "").trim();\n    const disposition = String(button.dataset.gcmDisposition || "").trim();'
+          text = text.replace(old, new, 1)
+          text = text.replace(
+              '? await post(DELETE, { gmailMessageId })\n        : await post(ROUTE, { gmailMessageId, disposition, clientCode, clientName });',
+              '? await post(DELETE, { gmailMessageId, gmailThreadId })\n        : await post(ROUTE, { gmailMessageId, gmailThreadId, disposition, clientCode, clientName });',
+              1
+          )
+          text = text.replace('Deleting from Gmail · no OS record…', 'Deleting Gmail conversation · no OS record…', 1)
+          text = text.replace('and clearing Gmail…', 'and clearing Gmail conversation…', 1)
+          text = text.replace('source was already preserved in GCM OS · Gmail cleared.', 'conversation was already preserved in GCM OS · Gmail thread cleared.', 1)
+          text = text.replace('Delete — No Action: moved to Gmail Trash · 0 OS records created.', 'Delete — No Action: Gmail conversation moved to Trash · 0 OS records created.', 1)
+          text = text.replace(' · Gmail cleared.`;', ' · Gmail thread cleared.`;')
+          text = text.replace('No unprocessed Gmail messages remain in Morning Command.', 'No unprocessed Gmail conversations remain in Morning Command.')
+          text = text.replace('Morning Command is clear. No unprocessed Gmail messages remain in the operational queue.', 'Morning Command is clear. No unprocessed Gmail conversations remain in the operational queue.')
+          text = text.replace(
+              'setStatus(`${remaining} unprocessed Gmail message${remaining === 1 ? "" : "s"} ready. Read the source and choose a route.`);',
+              'setStatus(`${remaining} unprocessed Gmail conversation${remaining === 1 ? "" : "s"} ready. Read the full thread and choose one route.`);',
+              1
+          )
+          text = text.replace(
+              'if (title) title.textContent = "Review each Gmail message and choose what happens next.";',
+              'if (title) title.textContent = "Review each Gmail conversation and choose what happens next.";',
+              1
+          )
+          path.write_text(text)
+
+          # ---------------- Existing tests ----------------
+          path = Path('tests/gmailHandleNow.test.js')
+          text = path.read_text()
+          text = text.replace('Version: 1.1.0', 'Version: 1.2.0', 1)
+          text = text.replace('/Version: 2\\.2\\.0/', '/Version: 2\\.3\\.0/')
+          text = text.replace('/const HUMAN_ROUTING_VERSION = "2\\.2\\.0"/', '/const HUMAN_ROUTING_VERSION = "2\\.3\\.0"/')
+          text = text.replace('/post\\(DELETE, \\{ gmailMessageId \\}\\)/', '/post\\(DELETE, \\{ gmailMessageId, gmailThreadId \\}\\)/')
+          path.write_text(text)
+
+          path = Path('tests/gmailSourceEmailDisplay.test.js')
+          text = path.read_text()
+          text = text.replace('Version: 1.1.2', 'Version: 1.2.0', 1)
+          text = text.replace('Version: 2.2.0', 'Version: 2.3.0')
+          text = text.replace('version 2.2.0', 'version 2.3.0')
+          text = text.replace('assert(source.includes("const source = cleanSourceEmail(rawSource)"), "Morning Command must render the cleaned Source Email text.");', 'assert(source.includes("const source = formatConversationSource(message)"), "Morning Command must render the cleaned Source Conversation text.");')
+          path.write_text(text)
+
+          # ---------------- New regression ----------------
+          Path('tests/gmailThreadRouting.test.js').write_text(r'''/* =========================================================
+   Global Concepts Media Operating System
+   File: tests/gmailThreadRouting.test.js
+   Version: 1.0.0
+   Status: Production Regression Test
+   Purpose: Lock Morning Command to one human decision per Gmail conversation.
+   ========================================================= */
+
+import assert from "node:assert/strict";
+import fs from "node:fs";
+
+const backend = fs.readFileSync(new URL("../routes/gmailDispositions.js", import.meta.url), "utf8");
+const frontend = fs.readFileSync(new URL("../shared/today-gmail-decisions.js", import.meta.url), "utf8");
+
+assert.doesNotThrow(() => new Function(frontend));
+assert.match(backend, /Version: 2\.1\.0/);
+assert.match(backend, /GMAIL_HUMAN_ROUTING_VERSION = "2\.1\.0"/);
+assert.match(frontend, /Version: 2\.3\.0/);
+assert.match(frontend, /HUMAN_ROUTING_VERSION = "2\.3\.0"/);
+
+assert.match(backend, /function groupListedMessagesByThread\(items\)/);
+assert.match(backend, /findProcessedGmailThreads\(db, threadGroups\)/);
+assert.match(backend, /gmail-thread:\$\{threadId\}/);
+assert.match(backend, /memberReferences/);
+assert.match(backend, /findExistingThreadDisposition/);
+assert.match(backend, /loadLiveGmailThreadWithAccessToken/);
+assert.match(backend, /users\/me\/threads\/\$\{encodeURIComponent\(gmailThreadId\)\}\?format=full/);
+assert.match(backend, /async function archiveThread/);
+assert.match(backend, /users\/me\/threads\/\$\{encodeURIComponent\(gmailThreadId\)\}\/modify/);
+assert.match(backend, /users\/me\/threads\/\$\{encodeURIComponent\(gmailThreadId\)\}\/trash/);
+assert.match(backend, /threadMessages:messages/);
+assert.match(backend, /writesPerformed:0/);
+
+assert.match(frontend, /function formatConversationSource\(message\)/);
+assert.match(frontend, /Source Conversation/);
+assert.match(frontend, /MESSAGE \$\{index \+ 1\} OF \$\{messages\.length\}/);
+assert.match(frontend, /article\.dataset\.gmailThreadId/);
+assert.match(frontend, /post\(ROUTE, \{ gmailMessageId, gmailThreadId, disposition, clientCode, clientName \}\)/);
+assert.match(frontend, /post\(DELETE, \{ gmailMessageId, gmailThreadId \}\)/);
+assert.match(frontend, /unprocessed Gmail conversation/);
+assert.match(frontend, /One route applies to the whole Gmail thread/);
+
+console.log("PASS Gmail Morning Command groups replies into one chronological conversation and applies one route to the whole thread");
+''')
+
+          # Add the new regression to npm test.
+          path = Path('package.json')
+          text = path.read_text()
+          text = text.replace(
+              'npm run test:gmail-source-display && npm run test:gmail-handle-now && npm run test:prospect-crm',
+              'npm run test:gmail-source-display && npm run test:gmail-handle-now && npm run test:gmail-thread-routing && npm run test:prospect-crm',
+              1
+          )
+          text = text.replace(
+              '"test:gmail-handle-now": "node tests/gmailHandleNow.test.js",',
+              '"test:gmail-handle-now": "node tests/gmailHandleNow.test.js",\n    "test:gmail-thread-routing": "node tests/gmailThreadRouting.test.js",',
+              1
+          )
+          path.write_text(text)
+          PY
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run full production tests
+        run: npm test
+
+      - name: Commit tested production files
+        shell: bash
+        run: |
+          git config user.name "globalconceptsmediallc-oss"
+          git config user.email "globalconceptsmediallc@gmail.com"
+          git add routes/gmailDispositions.js shared/today-gmail-decisions.js tests/gmailHandleNow.test.js tests/gmailSourceEmailDisplay.test.js tests/gmailThreadRouting.test.js package.json
+          if git diff --cached --quiet; then
+            echo "No production changes to commit."
+            exit 0
+          fi
+          git commit -m "Make Morning Command Gmail thread-aware [thread-routing-ci]"
+          git push origin HEAD:gmail-thread-routing-20260826
