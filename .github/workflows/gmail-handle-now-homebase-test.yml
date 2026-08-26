@@ -1,0 +1,23 @@
+name: Gmail Handle Now Home Base Test
+
+on:
+  push:
+    branches:
+      - gmail-handle-now-homebase-20260826
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run full production regression suite
+        run: npm test
