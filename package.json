@@ -16,7 +16,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:work-due-date && npm run test:gmail-decisions && npm run test:gmail-monitoring-parity && npm run test:gmail-backlink-investigation && npm run test:gmail-intake && npm run test:gmail-backlog && npm run test:gmail-source-display && npm run test:gmail-handle-now && npm run test:prospect-crm && npm run test:asset-versions",
+    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:work-due-date && npm run test:gmail-decisions && npm run test:gmail-monitoring-parity && npm run test:gmail-backlink-investigation && npm run test:gmail-intake && npm run test:gmail-backlog && npm run test:gmail-source-display && npm run test:gmail-handle-now && npm run test:gmail-thread-routing && npm run test:prospect-crm && npm run test:asset-versions",
     "test:website-intelligence": "node tests/websiteIntelligence.test.js",
     "test:code-intelligence": "node tests/codeIntelligence.test.js",
     "test:operating-sessions": "node tests/operatingSessionTasks.test.js && node tests/osAuth.test.js && node tests/operatingSessionIntake.test.js",
@@ -29,6 +29,7 @@
     "test:gmail-backlog": "node tests/gmailBacklogIntelligence.test.js",
     "test:gmail-source-display": "node tests/gmailSourceEmailDisplay.test.js",
     "test:gmail-handle-now": "node tests/gmailHandleNow.test.js",
+    "test:gmail-thread-routing": "node tests/gmailThreadRouting.test.js",
     "test:prospect-crm": "node tests/prospectCrm.test.js && node tests/prospectNextActionUi.test.js",
     "test:asset-versions": "node tests/sharedAssetVersionLock.test.js"
   }
