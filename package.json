@@ -1,16 +1,16 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.24",
+  "version": "6.1.25",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.24",
+    "fileVersion": "6.1.25",
     "status": "Production Road-Test Candidate",
-    "purpose": "Add a lightweight Handle Now path so small immediate Gmail actions can be completed without inventing Work or AI routing rules.",
+    "purpose": "Keep GCM OS as the Handle Now home base while immediate external tasks open beside Morning Command.",
     "changeNotes": [
-      "Updates the Morning Command Gmail decision surface to 2.1.0.",
-      "Adds Handle Now, which leaves Gmail and GCM OS unchanged while the operator completes the action.",
-      "Adds explicit completion that clears Gmail with zero OS records, while preserving all existing human routing boundaries.",
-      "Adds permanent regression coverage for the immediate-action boundary."
+      "Updates the Morning Command Gmail decision surface to 2.2.0.",
+      "Extracts usable task links generically from the live Gmail source before presentation cleanup and opens them in a separate browser context.",
+      "Keeps Open Email in Gmail as a fallback while preserving the current Morning Command card and explicit completion boundary.",
+      "Extends permanent Handle Now and Source Email regression coverage without adding sender-specific, client-specific, or AI routing rules."
     ]
   },
   "private": true,

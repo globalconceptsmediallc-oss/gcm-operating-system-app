@@ -1,15 +1,25 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/today-gmail-decisions.js
-   Version: 2.1.0
+   Version: 2.2.0
    Status: Production Road-Test Candidate
-   Source: shared/today-gmail-decisions.js 2.0.2 production
-   Sprint: Gmail — Human Routing / Immediate Action
+   Source: shared/today-gmail-decisions.js 2.1.0 production
+   Sprint: Gmail — Human Routing / Home Base Action Tabs
    Purpose:
    Make Morning Command a fast human decision surface: show the live source
    email, choose the client, expose every operational route, support immediate
-   human action without creating artificial Work, and clear Gmail only after
-   the operator confirms the selected outcome.
+   human action without creating artificial Work, and keep GCM OS as the home
+   base until the operator confirms the selected outcome.
+
+   Changes — 2.2.0:
+   - Keeps GCM OS open while Handle Now tasks are completed in a separate tab.
+   - Extracts usable http/https task links generically from the live Gmail source
+     before presentation cleanup and exposes them as optional action buttons.
+   - Keeps Open Email in Gmail as the fallback when the source task link is not
+     useful or the operator needs the original Gmail context.
+   - All Handle Now external links use a new browsing context with noopener and
+     noreferrer so navigating the task cannot replace the Morning Command tab.
+   - Adds no sender-specific, client-specific, or AI classification rules.
 
    Changes — 2.1.0:
    - Adds Handle Now for small real actions that should be completed immediately.
@@ -64,7 +74,7 @@
 
   // Existing shell loader cache key. Installed behavior is HUMAN_ROUTING_VERSION.
   const FILE_VERSION = "1.2.1";
-  const HUMAN_ROUTING_VERSION = "2.1.0";
+  const HUMAN_ROUTING_VERSION = "2.2.0";
   const WORKER_URL =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const PREVIEW = "preview-gmail-inbox";
@@ -73,6 +83,7 @@
   const CLIENT_DIRECTORY = "get-client-directory";
   const STATUS = "get-gmail-status";
   const MAX_VISIBLE_EMAILS = 10;
+  const MAX_ACTION_LINKS = 3;
 
   let clients = [];
   let previewButton = null;
@@ -112,6 +123,7 @@
       .gcm-human-gmail-now-panel p{margin:5px 0 10px;color:var(--text-muted,#637083);font-size:.73rem;line-height:1.45}
       .gcm-human-gmail-now-actions{display:flex;flex-wrap:wrap;gap:8px}
       .gcm-human-gmail-now-actions .button{min-height:34px;padding:0 11px;font-size:.72rem;text-decoration:none}
+      .gcm-human-gmail-now-action{border-color:#98b8e8!important;background:#fff!important;color:#165fbd!important}
       .gcm-human-gmail-status{display:block;margin-top:9px;color:var(--text-muted,#637083);font-size:.71rem;font-weight:800}
       .gcm-human-gmail-empty{padding:18px;border:1px solid var(--border,#dbe2ec);border-radius:14px;background:#fff;color:var(--text-muted,#637083);font-size:.82rem;font-weight:750}
       @media(max-width:760px){.gcm-human-gmail-header{display:block}.gcm-human-gmail-route{margin-top:8px}.gcm-human-gmail-client-row{align-items:flex-start;flex-direction:column}.gcm-human-gmail-client{max-width:none}}
@@ -128,7 +140,7 @@
       .replaceAll("'", "&#039;");
   }
 
-  function cleanSourceEmail(value) {
+  function decodeEmailText(value) {
     let text = String(value ?? "");
     const decoder = document.createElement("textarea");
 
@@ -139,6 +151,12 @@
       if (decoded === text) break;
       text = decoded;
     }
+
+    return text;
+  }
+
+  function cleanSourceEmail(value) {
+    let text = decodeEmailText(value);
 
     // Gmail/plain-text conversions can leave URL wrappers and href attributes
     // behind after markup is flattened. Remove only those presentation artifacts;
@@ -154,6 +172,59 @@
       .replace(/[\t ]{2,}/g, " ")
       .replace(/\n{3,}/g, "\n\n")
       .trim();
+  }
+
+  function cleanActionLabel(value, fallback) {
+    const label = String(value || "")
+      .replace(/https?:\/\/\S+/gi, " ")
+      .replace(/[<>"']/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .split(/(?:[.!?]\s+|\||•|›|»)/)
+      .pop()
+      .trim();
+
+    if (!label || label.length < 2 || label.length > 52) return fallback;
+    return label;
+  }
+
+  function extractActionLinks(value) {
+    const text = decodeEmailText(value);
+    const links = [];
+    const seen = new Set();
+
+    function addLink(url, label = "") {
+      let href = String(url || "").trim();
+      href = href.replace(/[),.;\]]+$/g, "");
+      if (!/^https?:\/\//i.test(href) || seen.has(href)) return;
+
+      seen.add(href);
+      const fallback = links.length
+        ? `Open Task Link ${links.length + 1}`
+        : "Open Task Link";
+      links.push({ href, label:cleanActionLabel(label, fallback) });
+    }
+
+    const hrefPattern = /(?:([^<\n]{2,80}?)\s+)?href\s*=\s*(?:"(https?:\/\/[^"\n]+)"|'(https?:\/\/[^'\n]+)'|<(https?:\/\/[^>\n]+)>|(https?:\/\/[^\s>\n]+))/gi;
+    let match;
+    while ((match = hrefPattern.exec(text)) && links.length < MAX_ACTION_LINKS) {
+      addLink(match[2] || match[3] || match[4] || match[5], match[1] || "");
+    }
+
+    const wrappedPattern = /<(https?:\/\/[^>\n]+)>/gi;
+    while ((match = wrappedPattern.exec(text)) && links.length < MAX_ACTION_LINKS) {
+      addLink(match[1]);
+    }
+
+    return links.slice(0, MAX_ACTION_LINKS);
+  }
+
+  function actionLinkButtons(rawSource) {
+    return extractActionLinks(rawSource)
+      .map(link =>
+        `<a class="button button-secondary gcm-human-gmail-now-action" data-gcm-open-action href="${escapeHtml(link.href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link.label)} ↗</a>`
+      )
+      .join("");
   }
 
   function gmailThreadUrl(message) {
@@ -227,9 +298,10 @@
     article.dataset.gmailId = String(message?.gmailMessageId || "");
     article.dataset.gmailThreadId = String(message?.threadId || "");
 
-    const source = cleanSourceEmail(
-      message?.bodyText || message?.snippet || message?.subject || ""
-    );
+    const rawSource = message?.bodyText || message?.snippet || message?.subject || "";
+    const source = cleanSourceEmail(rawSource);
+    const taskLinks = actionLinkButtons(rawSource);
+
     article.innerHTML = `
       <div class="gcm-human-gmail-header">
         <div>
@@ -257,15 +329,16 @@
           ${routeButton("Requested Work", "requested_work", "gcm-route-work")}
         </div>
         <div class="gcm-human-gmail-now-panel" data-gcm-handle-now-panel hidden>
-          <strong>Handle Now — finish the action before clearing Gmail.</strong>
-          <p>Gmail and GCM OS are unchanged. Open the source email, complete the small action, then confirm completion here.</p>
+          <strong>Handle Now — GCM OS stays open while you complete the action.</strong>
+          <p>Open the task beside Morning Command, finish it, then return here and confirm completion. Gmail and GCM OS remain unchanged until you do.</p>
           <div class="gcm-human-gmail-now-actions">
-            <a class="button button-secondary" data-gcm-open-gmail href="${escapeHtml(gmailThreadUrl(message))}" target="_blank" rel="noopener">Open Email in Gmail</a>
+            ${taskLinks}
+            <a class="button button-secondary" data-gcm-open-gmail href="${escapeHtml(gmailThreadUrl(message))}" target="_blank" rel="noopener noreferrer">Open Email in Gmail ↗</a>
             <button type="button" class="button button-primary" data-gcm-complete-now>Completed — Clear Gmail</button>
             <button type="button" class="button button-secondary" data-gcm-cancel-now>Back</button>
           </div>
         </div>
-        <span class="gcm-human-gmail-status">Read the source email and choose what happens next. Handle Now leaves Gmail untouched until you confirm completion. AI does not control these routes.</span>
+        <span class="gcm-human-gmail-status">Read the source email and choose what happens next. Handle Now keeps GCM OS as home base until you confirm completion. AI does not control these routes.</span>
       </div>
     `;
 
@@ -293,9 +366,9 @@
     if (panel) panel.hidden = false;
     if (route) route.textContent = "Handle now";
     if (status) {
-      status.textContent = "Handle Now selected. Gmail and GCM OS are unchanged until you confirm completion.";
+      status.textContent = "Handle Now selected. GCM OS stays open; Gmail and GCM OS are unchanged until you confirm completion.";
     }
-    setStatus("Handle Now: complete the action first. Gmail and GCM OS are unchanged until completion is confirmed.");
+    setStatus("Handle Now: open the task beside GCM OS, complete it, then return here to confirm. Nothing is cleared yet.");
   }
 
   function cancelHandleNow(card) {
@@ -306,7 +379,7 @@
     if (panel) panel.hidden = true;
     if (route) route.textContent = "Choose route";
     if (status) {
-      status.textContent = "Read the source email and choose what happens next. Handle Now leaves Gmail untouched until you confirm completion. AI does not control these routes.";
+      status.textContent = "Read the source email and choose what happens next. Handle Now keeps GCM OS as home base until you confirm completion. AI does not control these routes.";
     }
   }
 
