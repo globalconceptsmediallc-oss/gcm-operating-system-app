@@ -10,7 +10,6 @@ permissions:
 
 jobs:
   patch-test-commit:
-    if: ${{ contains(github.event.head_commit.message, '[work-queue-ci]') == false }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -34,22 +33,23 @@ jobs:
           path = Path('work.html')
           text = path.read_text()
 
-          text = text.replace('Version: 1.9.16', 'Version: 1.9.17', 1)
-          text = text.replace(
-              '   - v1.9.16 makes Safari new-tab evidence clicks deterministic.\n',
-              '   - v1.9.16 makes Safari new-tab evidence clicks deterministic.\n'
-              '   - v1.9.17 keeps Open Work Items as the authoritative open-work queue even when an Investigation is selected.\n'
-              '   - v1.9.17 uses the client filter for queue scope and only prioritizes, rather than filters to, the selected Investigation\'s linked Work Item.\n'
-              '   - v1.9.17 keeps direct Requested Work visible beside Investigation-created work.\n',
-              1
-          )
-          text = text.replace('Requested Work + WWPOWD Investigation · v1.9.16', 'Requested Work + WWPOWD Investigation · v1.9.17')
-          text = text.replace('Requested work + WWPOWD investigation · Work v1.9.16', 'Requested work + WWPOWD investigation · Work v1.9.17')
+          if 'Version: 1.9.17' not in text:
+              text = text.replace('Version: 1.9.16', 'Version: 1.9.17', 1)
+              text = text.replace(
+                  '   - v1.9.16 makes Safari new-tab evidence clicks deterministic.\n',
+                  '   - v1.9.16 makes Safari new-tab evidence clicks deterministic.\n'
+                  '   - v1.9.17 keeps Open Work Items as the authoritative open-work queue even when an Investigation is selected.\n'
+                  '   - v1.9.17 uses the client filter for queue scope and only prioritizes, rather than filters to, the selected Investigation linked Work Item.\n'
+                  '   - v1.9.17 keeps direct Requested Work visible beside Investigation-created work.\n',
+                  1
+              )
+              text = text.replace('Requested Work + WWPOWD Investigation · v1.9.16', 'Requested Work + WWPOWD Investigation · v1.9.17')
+              text = text.replace('Requested work + WWPOWD investigation · Work v1.9.16', 'Requested work + WWPOWD investigation · Work v1.9.17')
 
-          start = text.index('  function renderWorkItems(selectedInvestigation){')
-          end = text.index('  async function completeWorkItem(item){', start)
+              start = text.index('  function renderWorkItems(selectedInvestigation){')
+              end = text.index('  async function completeWorkItem(item){', start)
 
-          replacement = '''  function renderWorkItems(selectedInvestigation){
+              replacement = '''  function renderWorkItems(selectedInvestigation){
     const selectedClient=normalizedClientCode(el.filter.value);
     const selectedInvestigationId=positiveInt(selectedInvestigation?.id);
     const selectedInvestigationClient=normalizedClientCode(selectedInvestigation?.clientCode);
@@ -111,8 +111,8 @@ jobs:
 
 '''
 
-          text = text[:start] + replacement + text[end:]
-          path.write_text(text)
+              text = text[:start] + replacement + text[end:]
+              path.write_text(text)
           PY
 
       - name: Install dependencies
@@ -131,5 +131,5 @@ jobs:
             echo "No Work page changes to commit."
             exit 0
           fi
-          git commit -m "Keep all open Work Items visible [work-queue-ci]"
+          git commit -m "Keep all open Work Items visible"
           git push origin HEAD:fix/work-queue-visibility-20260826
