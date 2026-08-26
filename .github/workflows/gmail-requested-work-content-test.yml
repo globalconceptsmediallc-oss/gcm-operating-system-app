@@ -1,0 +1,48 @@
+name: Gmail Requested Work Content Test
+
+on:
+  push:
+    branches:
+      - fix/gmail-requested-work-content-20260826
+
+permissions:
+  contents: write
+
+jobs:
+  patch-test-commit:
+    if: ${{ contains(github.event.head_commit.message, '[requested-work-content-ci]') == false }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Apply Requested Work content fix
+        run: python .github/scripts/patch-gmail-requested-work-content.py
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run full production tests
+        run: npm test
+
+      - name: Commit tested production files
+        shell: bash
+        run: |
+          git config user.name "globalconceptsmediallc-oss"
+          git config user.email "globalconceptsmediallc@gmail.com"
+          git add routes/gmailDispositions.js routes/operationalDecision.js migrations/0015_gmail_requested_work_content_repair.sql tests/gmailRequestedWorkContent.test.js package.json
+          if git diff --cached --quiet; then
+            echo "No production changes to commit."
+            exit 0
+          fi
+          git commit -m "Preserve Gmail Requested Work source content [requested-work-content-ci]"
+          git push origin HEAD:fix/gmail-requested-work-content-20260826
