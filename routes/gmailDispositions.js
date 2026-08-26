@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailDispositions.js
-   Version: 2.0.0
+   Version: 2.1.0
    Status: Production Road-Test Candidate
    Source: routes/gmailDispositions.js 1.3.3 production
    Sprint: Gmail — Human Routing / No AI Gate
@@ -10,6 +10,15 @@
    Show the live Gmail source, accept an explicit human disposition, preserve the
    source in D1 when appropriate, then clear the real Gmail Inbox only after the
    requested OS write is confirmed.
+
+   Thread-routing changes — 2.1.0:
+   - Morning Command now groups Gmail results by thread instead of individual message.
+   - Preview loads the complete Gmail conversation in chronological order.
+   - One human route creates at most one Communication plus its selected operational record for the whole thread.
+   - New records use canonical gmail-thread:<threadId> source references.
+   - Legacy gmail:<messageId> records suppress the entire thread so previously handled replies cannot create duplicates.
+   - Successful routes archive the entire Gmail thread; Delete and Handle Now completion move the entire thread to Trash.
+   - Preview remains read-only and performs zero Gmail or D1 writes.
 
    Human-routing changes — 2.0.0:
    - preview-gmail-inbox is now a deterministic Gmail + D1 queue read; no AI call.
@@ -61,7 +70,7 @@ export const GMAIL_DISPOSITION_ACTIONS = Object.freeze([
 // Keep the existing public contract string for regression compatibility while
 // exposing the installed human-routing version separately.
 export const GMAIL_DISPOSITION_VERSION = "1.3.3";
-export const GMAIL_HUMAN_ROUTING_VERSION = "2.0.0";
+export const GMAIL_HUMAN_ROUTING_VERSION = "2.1.0";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GMAIL_API = "https://gmail.googleapis.com/gmail/v1";
@@ -123,17 +132,25 @@ async function previewHumanRoutingQueue(body, env, requestId) {
     listUrl.searchParams.set("maxResults", String(scanLimit));
 
     const list = await gmailFetch(listUrl.toString(), accessToken);
-    const ids = (Array.isArray(list?.messages) ? list.messages : [])
-      .map(item => clean(item?.id))
-      .filter(Boolean);
+    const listedMessages = (Array.isArray(list?.messages) ? list.messages : [])
+      .map(item => ({
+        gmailMessageId:clean(item?.id),
+        threadId:clean(item?.threadId || item?.id)
+      }))
+      .filter(item => item.gmailMessageId && item.threadId);
 
-    const processed = await findProcessedGmailIds(db, ids);
-    const eligibleIds = ids.filter(id => !processed.has(id) && !excluded.has(id));
-    const selectedIds = eligibleIds.slice(0, limit);
-    const messages = await mapWithConcurrency(
-      selectedIds,
-      4,
-      id => loadLiveGmailMessageWithAccessToken(id, accessToken)
+    const threadGroups = groupListedMessagesByThread(listedMessages);
+    const processedThreads = await findProcessedGmailThreads(db, threadGroups);
+    const eligibleThreads = threadGroups.filter(group =>
+      !processedThreads.has(group.threadId) &&
+      !excluded.has(group.threadId) &&
+      !group.messageIds.some(id => excluded.has(id))
+    );
+    const selectedThreads = eligibleThreads.slice(0, limit);
+    const conversations = await mapWithConcurrency(
+      selectedThreads,
+      3,
+      group => loadLiveGmailThreadWithAccessToken(group.threadId, accessToken)
     );
 
     return jsonResponse({
@@ -142,19 +159,21 @@ async function previewHumanRoutingQueue(body, env, requestId) {
       action:PREVIEW_GMAIL_INBOX_EVIDENCE_ACTION,
       version:GMAIL_HUMAN_ROUTING_VERSION,
       gmailDispositionVersion:GMAIL_DISPOSITION_VERSION,
-      mode:"human-routing-preview",
+      mode:"human-thread-routing-preview",
       aiUsed:false,
       writesPerformed:0,
-      scannedCount:ids.length,
-      processedFilteredCount:ids.filter(id => processed.has(id)).length,
-      remainingUnprocessedCount:eligibleIds.length,
-      messages:messages.map(buildHumanPreviewMessage)
+      scannedCount:listedMessages.length,
+      scannedThreadCount:threadGroups.length,
+      processedFilteredCount:threadGroups.filter(group => processedThreads.has(group.threadId)).length,
+      remainingUnprocessedCount:eligibleThreads.length,
+      remainingUnprocessedMessageCount:eligibleThreads.reduce((total, group) => total + group.messageIds.length, 0),
+      messages:conversations.map(buildHumanPreviewMessage)
     });
   } catch (error) {
     logWorkerError({
       requestId,
       route:PREVIEW_GMAIL_INBOX_EVIDENCE_ACTION,
-      stage:"gmail_human_routing_preview",
+      stage:"gmail_human_thread_routing_preview",
       error
     });
     return jsonResponse({
@@ -164,6 +183,19 @@ async function previewHumanRoutingQueue(body, env, requestId) {
       error:safeErrorMessage(error)
     }, 500);
   }
+}
+
+function groupListedMessagesByThread(items) {
+  const groups = new Map();
+  for (const item of items) {
+    const threadId = clean(item?.threadId || item?.gmailMessageId);
+    const messageId = clean(item?.gmailMessageId);
+    if (!threadId || !messageId) continue;
+    if (!groups.has(threadId)) groups.set(threadId, { threadId, messageIds:[] });
+    const group = groups.get(threadId);
+    if (!group.messageIds.includes(messageId)) group.messageIds.push(messageId);
+  }
+  return [...groups.values()];
 }
 
 function buildHumanPreviewMessage(message) {
@@ -178,17 +210,19 @@ function buildHumanPreviewMessage(message) {
 
   return {
     ...message,
+    conversation:true,
+    threadMessageCount:Array.isArray(message?.threadMessages) ? message.threadMessages.length : 1,
     read:!message.labels.includes("UNREAD"),
     intelligence:{
-      communicationFamily:"Source Email",
-      notificationType:"human_routing",
+      communicationFamily:"Source Conversation",
+      notificationType:"human_thread_routing",
       client:clientName,
       clientCode:inferred?.code || null,
       operationalPriority:"Operator decides",
       confidence:"Not used",
       proposedRoute:"Choose Route",
       businessMeaning:message.bodyText || message.snippet || message.subject,
-      recommendedAction:"Read the source email and choose the correct operational route.",
+      recommendedAction:"Read the complete source conversation and choose one operational route for the thread.",
       monitoringOnly:false,
       investigationCandidate:false,
       shouldCreateInvestigation:false,
@@ -201,14 +235,15 @@ function buildHumanPreviewMessage(message) {
 
 async function routeHumanDisposition(body, env, requestId) {
   const gmailMessageId = clean(body?.gmailMessageId);
+  const requestedThreadId = clean(body?.gmailThreadId || body?.threadId);
   const disposition = normalizeDisposition(body?.disposition);
 
-  if (!gmailMessageId) {
+  if (!gmailMessageId && !requestedThreadId) {
     return jsonResponse({
       ok:false,
       requestId,
       action:ROUTE_GMAIL_DISPOSITION_ACTION,
-      error:"gmailMessageId is required."
+      error:"gmailThreadId or gmailMessageId is required."
     }, 400);
   }
 
@@ -223,9 +258,27 @@ async function routeHumanDisposition(body, env, requestId) {
 
   try {
     const db = requireDb(env);
-    const live = await loadLiveGmailMessage(gmailMessageId, env);
-    const message = live.message;
-    const sourceReference = `gmail:${gmailMessageId}`;
+    const accessToken = await liveGmailAccessToken(env);
+    let threadId = requestedThreadId;
+    let seedMessage = null;
+
+    if (!threadId && gmailMessageId) {
+      seedMessage = await loadLiveGmailMessageWithAccessToken(gmailMessageId, accessToken);
+      threadId = clean(seedMessage?.threadId);
+    }
+
+    const message = threadId
+      ? await loadLiveGmailThreadWithAccessToken(threadId, accessToken)
+      : seedMessage;
+    if (!message) throw new Error("Gmail source conversation could not be loaded.");
+
+    const sourceReference = threadId
+      ? `gmail-thread:${threadId}`
+      : `gmail:${gmailMessageId}`;
+    const memberReferences = (Array.isArray(message.threadMessages) ? message.threadMessages : [message])
+      .map(item => clean(item?.gmailMessageId))
+      .filter(Boolean)
+      .map(id => `gmail:${id}`);
     const client = await resolveClient(
       db,
       clean(body?.clientCode),
@@ -238,13 +291,13 @@ async function routeHumanDisposition(body, env, requestId) {
         ok:false,
         requestId,
         action:ROUTE_GMAIL_DISPOSITION_ACTION,
-        error:"Choose a production client before routing this email. Gmail was left unchanged."
+        error:"Choose a production client before routing this Gmail conversation. Gmail was left unchanged."
       }, 409);
     }
 
-    const existing = await findExistingDisposition(db, sourceReference);
+    const existing = await findExistingThreadDisposition(db, sourceReference, memberReferences);
     if (existing) {
-      await archiveMessage(gmailMessageId, live.accessToken);
+      await archiveConversation(message, accessToken);
       return jsonResponse({
         ok:true,
         requestId,
@@ -254,6 +307,8 @@ async function routeHumanDisposition(body, env, requestId) {
         disposition,
         writesPerformed:0,
         gmailArchived:true,
+        gmailThreadArchived:Boolean(message.threadId),
+        threadMessageCount:Array.isArray(message.threadMessages) ? message.threadMessages.length : 1,
         existing
       });
     }
@@ -262,7 +317,7 @@ async function routeHumanDisposition(body, env, requestId) {
       return saveHumanMonitoring({
         db,
         message,
-        accessToken:live.accessToken,
+        accessToken,
         sourceReference,
         client,
         requestId
@@ -279,7 +334,7 @@ async function routeHumanDisposition(body, env, requestId) {
       owner:"Andrew",
       rawContent:message.bodyText || message.snippet || message.subject,
       decision
-    }, env, `${requestId}-human-route`);
+    }, env, `${requestId}-human-thread-route`);
 
     const commit = await commitResponse.json();
     if (!commitResponse.ok || commit?.ok !== true) {
@@ -288,14 +343,14 @@ async function routeHumanDisposition(body, env, requestId) {
         requestId,
         action:ROUTE_GMAIL_DISPOSITION_ACTION,
         error:typeof commit?.error === "string"
-          ? commit.error
-          : commit?.error?.message || "The human disposition could not be saved.",
+? commit.error
+: commit?.error?.message || "The human thread disposition could not be saved.",
         commit
       }, commitResponse.status || 500);
     }
 
     validateHumanCommit(commit, disposition);
-    await archiveMessage(gmailMessageId, live.accessToken);
+    await archiveConversation(message, accessToken);
 
     return jsonResponse({
       ok:true,
@@ -308,6 +363,8 @@ async function routeHumanDisposition(body, env, requestId) {
         ? 0
         : disposition === "information" ? 1 : 2,
       gmailArchived:true,
+      gmailThreadArchived:Boolean(message.threadId),
+      threadMessageCount:Array.isArray(message.threadMessages) ? message.threadMessages.length : 1,
       communicationId:commit.communicationId || null,
       investigationId:commit.investigationId || null,
       workItemId:commit.workItemId || null,
@@ -317,7 +374,7 @@ async function routeHumanDisposition(body, env, requestId) {
     logWorkerError({
       requestId,
       route:ROUTE_GMAIL_DISPOSITION_ACTION,
-      stage:"gmail_human_disposition",
+      stage:"gmail_human_thread_disposition",
       error
     });
     return jsonResponse({
@@ -404,7 +461,7 @@ async function saveHumanMonitoring({
     activityRecordId:recordId,
     clientId:client.id
   });
-  await archiveMessage(message.gmailMessageId, accessToken);
+  await archiveConversation(message, accessToken);
 
   return jsonResponse({
     ok:true,
@@ -415,6 +472,8 @@ async function saveHumanMonitoring({
     duplicate:false,
     writesPerformed:1,
     gmailArchived:true,
+    gmailThreadArchived:Boolean(message.threadId),
+    threadMessageCount:Array.isArray(message.threadMessages) ? message.threadMessages.length : 1,
     evidencePreserved:true,
     monitoringMetrics:evidence || null,
     evidenceSummary:evidenceSummary || null,
@@ -510,13 +569,38 @@ async function findExistingDisposition(db, sourceReference) {
   return null;
 }
 
-async function findProcessedGmailIds(db, gmailIds) {
-  const found = new Set();
-  const refs = gmailIds.map(id => `gmail:${id}`);
-  const chunkSize = 40;
+async function findExistingThreadDisposition(db, sourceReference, memberReferences = []) {
+  const references = [...new Set([sourceReference, ...memberReferences].map(clean).filter(Boolean))];
+  for (const reference of references) {
+    const existing = await findExistingDisposition(db, reference);
+    if (existing) return { ...existing, matchedSourceReference:reference };
+  }
+  return null;
+}
 
-  for (let start = 0; start < refs.length; start += chunkSize) {
-    const chunk = refs.slice(start, start + chunkSize);
+async function findProcessedGmailThreads(db, threadGroups) {
+  const processed = new Set();
+  const referenceToThread = new Map();
+
+  for (const group of threadGroups) {
+    const threadId = clean(group?.threadId);
+    if (!threadId) continue;
+    referenceToThread.set(`gmail-thread:${threadId}`, threadId);
+    for (const messageId of Array.isArray(group?.messageIds) ? group.messageIds : []) {
+      const id = clean(messageId);
+      if (id) referenceToThread.set(`gmail:${id}`, threadId);
+    }
+  }
+
+  const references = [...referenceToThread.keys()];
+  const chunkSize = 35;
+  const mark = reference => {
+    const threadId = referenceToThread.get(clean(reference));
+    if (threadId) processed.add(threadId);
+  };
+
+  for (let start = 0; start < references.length; start += chunkSize) {
+    const chunk = references.slice(start, start + chunkSize);
     if (!chunk.length) continue;
     const placeholders = chunk.map(() => "?").join(",");
 
@@ -525,23 +609,20 @@ async function findProcessedGmailIds(db, gmailIds) {
       FROM communications
       WHERE external_id IN (${placeholders})
     `).bind(...chunk).all();
-    for (const row of communicationRows?.results || []) {
-      const ref = clean(row?.source_reference);
-      if (ref.startsWith("gmail:")) found.add(ref.slice(6));
-    }
+    for (const row of communicationRows?.results || []) mark(row?.source_reference);
 
     const activityRows = await db.prepare(`
-      SELECT COALESCE(source_reference,evidence_reference) AS source_reference
+      SELECT source_reference,evidence_reference
       FROM activity_records
       WHERE source_reference IN (${placeholders}) OR evidence_reference IN (${placeholders})
     `).bind(...chunk, ...chunk).all();
     for (const row of activityRows?.results || []) {
-      const ref = clean(row?.source_reference);
-      if (ref.startsWith("gmail:")) found.add(ref.slice(6));
+      mark(row?.source_reference);
+      mark(row?.evidence_reference);
     }
   }
 
-  return found;
+  return processed;
 }
 
 async function resolveClient(db, clientCodeHint, clientNameHint, message) {
@@ -600,13 +681,22 @@ async function retiredDecisionHold(body, env, requestId) {
 
 async function deleteNoAction(body, env, requestId) {
   const gmailMessageId = clean(body?.gmailMessageId);
-  if (!gmailMessageId) {
-    return jsonResponse({ ok:false, requestId, action:DELETE_GMAIL_NO_ACTION_ACTION, error:"gmailMessageId is required." }, 400);
+  let gmailThreadId = clean(body?.gmailThreadId || body?.threadId);
+  if (!gmailMessageId && !gmailThreadId) {
+    return jsonResponse({ ok:false, requestId, action:DELETE_GMAIL_NO_ACTION_ACTION, error:"gmailThreadId or gmailMessageId is required." }, 400);
   }
 
   try {
-    const { accessToken } = await loadLiveGmailMessage(gmailMessageId, env);
-    const response = await fetch(`${GMAIL_API}/users/me/messages/${encodeURIComponent(gmailMessageId)}/trash`, {
+    const accessToken = await liveGmailAccessToken(env);
+    if (!gmailThreadId && gmailMessageId) {
+      const message = await loadLiveGmailMessageWithAccessToken(gmailMessageId, accessToken);
+      gmailThreadId = clean(message?.threadId);
+    }
+
+    const endpoint = gmailThreadId
+      ? `${GMAIL_API}/users/me/threads/${encodeURIComponent(gmailThreadId)}/trash`
+      : `${GMAIL_API}/users/me/messages/${encodeURIComponent(gmailMessageId)}/trash`;
+    const response = await fetch(endpoint, {
       method:"POST",
       headers:{ Authorization:`Bearer ${accessToken}`, "Content-Type":"application/json" },
       body:"{}"
@@ -620,6 +710,7 @@ async function deleteNoAction(body, env, requestId) {
       action:DELETE_GMAIL_NO_ACTION_ACTION,
       version:GMAIL_HUMAN_ROUTING_VERSION,
       gmailMovedToTrash:true,
+      gmailThreadMovedToTrash:Boolean(gmailThreadId),
       writesPerformed:0,
       osRecordsCreated:0
     });
@@ -705,6 +796,27 @@ async function loadLiveGmailMessageWithAccessToken(gmailMessageId, accessToken) 
     `${GMAIL_API}/users/me/messages/${encodeURIComponent(gmailMessageId)}?format=full`,
     accessToken
   );
+  return gmailMessageFromData(data);
+}
+
+async function loadLiveGmailThreadWithAccessToken(gmailThreadId, accessToken) {
+  const data = await gmailFetch(
+    `${GMAIL_API}/users/me/threads/${encodeURIComponent(gmailThreadId)}?format=full`,
+    accessToken
+  );
+  const messages = (Array.isArray(data?.messages) ? data.messages : [])
+    .map(gmailMessageFromData)
+    .filter(message => message.gmailMessageId)
+    .sort((a, b) => {
+      const internal = Number(a.internalDate || 0) - Number(b.internalDate || 0);
+      if (internal) return internal;
+      return new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime();
+    });
+  if (!messages.length) throw new Error("Gmail thread contained no readable messages.");
+  return buildThreadAggregate(clean(data?.id || gmailThreadId), messages);
+}
+
+function gmailMessageFromData(data) {
   const headers = data?.payload?.headers || [];
   const header = name => clean(
     headers.find(item => clean(item.name).toLowerCase() === name.toLowerCase())?.value
@@ -712,16 +824,50 @@ async function loadLiveGmailMessageWithAccessToken(gmailMessageId, accessToken) 
   const bodyText = extractMessageText(data?.payload).slice(0, 12000);
 
   return {
-    gmailMessageId:data.id,
-    threadId:data.threadId,
+    gmailMessageId:clean(data?.id),
+    threadId:clean(data?.threadId),
+    internalDate:Number(data?.internalDate || 0),
     from:header("From"),
     to:header("To"),
     subject:header("Subject") || "(No subject)",
     date:header("Date"),
-    snippet:clean(data.snippet),
-    bodyText:bodyText || clean(data.snippet),
-    labels:Array.isArray(data.labelIds) ? data.labelIds : []
+    snippet:clean(data?.snippet),
+    bodyText:bodyText || clean(data?.snippet),
+    labels:Array.isArray(data?.labelIds) ? data.labelIds : []
   };
+}
+
+function buildThreadAggregate(threadId, messages) {
+  const latest = messages[messages.length - 1] || messages[0];
+  const labels = [...new Set(messages.flatMap(message => Array.isArray(message.labels) ? message.labels : []))];
+  const bodyText = formatThreadSource(messages).slice(0, 30000);
+  return {
+    gmailMessageId:clean(latest?.gmailMessageId),
+    threadId:clean(threadId || latest?.threadId),
+    from:clean(latest?.from),
+    to:clean(latest?.to),
+    subject:clean(latest?.subject) || clean(messages[0]?.subject) || "(No subject)",
+    date:clean(latest?.date),
+    snippet:clean(latest?.snippet),
+    bodyText,
+    labels,
+    threadMessageCount:messages.length,
+    threadMessages:messages
+  };
+}
+
+function formatThreadSource(messages) {
+  const total = messages.length;
+  return messages.map((message, index) => [
+    `Message ${index + 1} of ${total}`,
+    `From: ${clean(message.from) || "Unknown sender"}`,
+    clean(message.to) ? `To: ${clean(message.to)}` : "",
+    `Date: ${clean(message.date) || "Unknown date"}`,
+    `Subject: ${clean(message.subject) || "(No subject)"}`,
+    "",
+    sanitizeEmailText(message.bodyText || message.snippet || message.subject)
+  ].filter((value, itemIndex) => value || itemIndex === 5).join("\n"))
+    .join("\n\n------------------------------\n\n");
 }
 
 async function liveGmailAccessToken(env) {
@@ -764,6 +910,23 @@ async function archiveMessage(gmailMessageId, accessToken) {
   });
   const payload = await response.json();
   if (!response.ok) throw new Error(payload?.error?.message || `Gmail archive failed with HTTP ${response.status}.`);
+  return payload;
+}
+
+async function archiveConversation(message, accessToken) {
+  const threadId = clean(message?.threadId);
+  if (threadId) return archiveThread(threadId, accessToken);
+  return archiveMessage(clean(message?.gmailMessageId), accessToken);
+}
+
+async function archiveThread(gmailThreadId, accessToken) {
+  const response = await fetch(`${GMAIL_API}/users/me/threads/${encodeURIComponent(gmailThreadId)}/modify`, {
+    method:"POST",
+    headers:{ Authorization:`Bearer ${accessToken}`, "Content-Type":"application/json" },
+    body:JSON.stringify({ removeLabelIds:["UNREAD","INBOX"] })
+  });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload?.error?.message || `Gmail thread archive failed with HTTP ${response.status}.`);
   return payload;
 }
 

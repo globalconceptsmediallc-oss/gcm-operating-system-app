@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/today-gmail-decisions.js
-   Version: 2.2.0
+   Version: 2.3.0
    Status: Production Road-Test Candidate
    Source: shared/today-gmail-decisions.js 2.1.0 production
    Sprint: Gmail — Human Routing / Home Base Action Tabs
@@ -10,6 +10,13 @@
    email, choose the client, expose every operational route, support immediate
    human action without creating artificial Work, and keep GCM OS as the home
    base until the operator confirms the selected outcome.
+
+   Changes — 2.3.0:
+   - Treats one Gmail thread as one Morning Command decision card.
+   - Shows every message in the conversation chronologically inside Source Conversation.
+   - Sends gmailThreadId with every route so one decision applies to the whole thread.
+   - Counts unprocessed Gmail conversations rather than individual replies.
+   - Preserves Handle Now home-base behavior and opens the whole Gmail thread as fallback.
 
    Changes — 2.2.0:
    - Keeps GCM OS open while Handle Now tasks are completed in a separate tab.
@@ -74,7 +81,7 @@
 
   // Existing shell loader cache key. Installed behavior is HUMAN_ROUTING_VERSION.
   const FILE_VERSION = "1.2.1";
-  const HUMAN_ROUTING_VERSION = "2.2.0";
+  const HUMAN_ROUTING_VERSION = "2.3.0";
   const WORKER_URL =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const PREVIEW = "preview-gmail-inbox";
@@ -107,7 +114,7 @@
       .gcm-human-gmail-client{min-width:240px;max-width:420px;width:100%;padding:8px 10px;border:1px solid #cfd8e5;border-radius:8px;background:#fff;color:var(--text,#132238);font-size:.78rem;font-weight:750}
       .gcm-human-gmail-source{margin-top:13px}
       .gcm-human-gmail-source-label{display:block;margin-bottom:7px;color:var(--text-soft,#8290a3);font-size:.64rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em}
-      .gcm-human-gmail-source-body{max-height:310px;overflow:auto;margin:0;padding:13px 14px;border:1px solid var(--border,#dbe2ec);border-radius:10px;background:#fbfcfe;color:var(--text,#132238);font-family:inherit;font-size:.77rem;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+      .gcm-human-gmail-source-body{max-height:390px;overflow:auto;margin:0;padding:13px 14px;border:1px solid var(--border,#dbe2ec);border-radius:10px;background:#fbfcfe;color:var(--text,#132238);font-family:inherit;font-size:.77rem;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
       .gcm-human-gmail-decision{margin-top:14px;padding-top:13px;border-top:1px solid var(--border,#dbe2ec)}
       .gcm-human-gmail-decision-label{display:block;margin-bottom:8px;color:var(--text-soft,#8290a3);font-size:.64rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em}
       .gcm-human-gmail-buttons{display:flex;flex-wrap:wrap;gap:8px}
@@ -288,6 +295,36 @@
     return options.join("");
   }
 
+  function threadMessages(message) {
+    const messages = Array.isArray(message?.threadMessages) ? message.threadMessages : [];
+    return messages.length ? messages : [message];
+  }
+
+  function rawConversationSource(message) {
+    return threadMessages(message)
+      .map(item => item?.bodyText || item?.snippet || item?.subject || "")
+      .filter(Boolean)
+      .join("\n\n");
+  }
+
+  function formatConversationSource(message) {
+    const messages = threadMessages(message);
+    if (messages.length <= 1) {
+      return cleanSourceEmail(message?.bodyText || message?.snippet || message?.subject || "");
+    }
+
+    return messages.map((item, index) => {
+      const header = [
+        `MESSAGE ${index + 1} OF ${messages.length}`,
+        `From: ${item?.from || "Unknown sender"}`,
+        item?.to ? `To: ${item.to}` : "",
+        `Date: ${item?.date || "Unknown date"}`
+      ].filter(Boolean).join("\n");
+      const body = cleanSourceEmail(item?.bodyText || item?.snippet || item?.subject || "");
+      return `${header}\n\n${body}`.trim();
+    }).join("\n\n────────────────────────────────────────\n\n");
+  }
+
   function routeButton(label, disposition, className) {
     return `<button type="button" class="button button-secondary ${className}" data-gcm-disposition="${escapeHtml(disposition)}">${escapeHtml(label)}</button>`;
   }
@@ -298,15 +335,19 @@
     article.dataset.gmailId = String(message?.gmailMessageId || "");
     article.dataset.gmailThreadId = String(message?.threadId || "");
 
-    const rawSource = message?.bodyText || message?.snippet || message?.subject || "";
-    const source = cleanSourceEmail(rawSource);
+    const rawSource = rawConversationSource(message);
+    const source = formatConversationSource(message);
     const taskLinks = actionLinkButtons(rawSource);
+    const count = Number(message?.threadMessageCount || threadMessages(message).length || 1);
+    const meta = count > 1
+      ? `${count} messages · Latest: ${message?.from || "Unknown sender"} · ${message?.date || "Unknown date"}`
+      : `${message?.from || "Unknown sender"} · ${message?.date || "Unknown date"}`;
 
     article.innerHTML = `
       <div class="gcm-human-gmail-header">
         <div>
           <h3 class="gcm-human-gmail-title">${escapeHtml(message?.subject || "(No subject)")}</h3>
-          <span class="gcm-human-gmail-meta">${escapeHtml(message?.from || "Unknown sender")} · ${escapeHtml(message?.date || "Unknown date")}</span>
+          <span class="gcm-human-gmail-meta">${escapeHtml(meta)}</span>
         </div>
         <span class="gcm-human-gmail-route">Choose route</span>
       </div>
@@ -315,7 +356,7 @@
         <select class="gcm-human-gmail-client" aria-label="Client for ${escapeHtml(message?.subject || "email")}">${clientOptions(message)}</select>
       </div>
       <div class="gcm-human-gmail-source">
-        <span class="gcm-human-gmail-source-label">Source Email</span>
+        <span class="gcm-human-gmail-source-label">${count > 1 ? "Source Conversation" : "Source Email"}</span>
         <pre class="gcm-human-gmail-source-body">${escapeHtml(source || "No message body was returned by Gmail.")}</pre>
       </div>
       <div class="gcm-human-gmail-decision">
@@ -338,7 +379,7 @@
             <button type="button" class="button button-secondary" data-gcm-cancel-now>Back</button>
           </div>
         </div>
-        <span class="gcm-human-gmail-status">Read the source email and choose what happens next. Handle Now keeps GCM OS as home base until you confirm completion. AI does not control these routes.</span>
+        <span class="gcm-human-gmail-status">Read the source conversation and choose what happens next. One route applies to the whole Gmail thread. Handle Now keeps GCM OS as home base until you confirm completion. AI does not control these routes.</span>
       </div>
     `;
 
@@ -379,28 +420,29 @@
     if (panel) panel.hidden = true;
     if (route) route.textContent = "Choose route";
     if (status) {
-      status.textContent = "Read the source email and choose what happens next. Handle Now keeps GCM OS as home base until you confirm completion. AI does not control these routes.";
+      status.textContent = "Read the source conversation and choose what happens next. One route applies to the whole Gmail thread. Handle Now keeps GCM OS as home base until you confirm completion. AI does not control these routes.";
     }
   }
 
   async function completeHandleNow(card, button) {
     if (busy) return;
     const gmailMessageId = String(card.dataset.gmailId || "").trim();
-    if (!gmailMessageId) {
+    const gmailThreadId = String(card.dataset.gmailThreadId || "").trim();
+    if (!gmailMessageId && !gmailThreadId) {
       const status = card.querySelector(".gcm-human-gmail-status");
-      if (status) status.textContent = "Could not clear Gmail because the message ID is missing.";
+      if (status) status.textContent = "Could not clear Gmail because the conversation ID is missing.";
       return;
     }
 
     busy = true;
-    setCardBusy(card, button, "Confirming Handle Now completion and clearing Gmail…");
+    setCardBusy(card, button, "Confirming Handle Now completion and clearing Gmail conversation…");
 
     try {
-      const result = await post(DELETE, { gmailMessageId });
+      const result = await post(DELETE, { gmailMessageId, gmailThreadId });
       if (!result?.gmailMovedToTrash) {
-        throw new Error("Gmail did not confirm that the completed message moved to Trash.");
+        throw new Error("Gmail did not confirm that the completed conversation moved to Trash.");
       }
-      setStatus("Handle Now complete: action confirmed · moved to Gmail Trash · 0 OS records created.");
+      setStatus("Handle Now complete: action confirmed · Gmail conversation moved to Trash · 0 OS records created.");
       await window.GCMOShell?.refreshNavAttention?.();
       busy = false;
       await refreshQueue({ preserveStatus:true });
@@ -432,6 +474,7 @@
   async function handleDisposition(card, button) {
     if (busy) return;
     const gmailMessageId = String(card.dataset.gmailId || "").trim();
+    const gmailThreadId = String(card.dataset.gmailThreadId || "").trim();
     const disposition = String(button.dataset.gcmDisposition || "").trim();
     const select = card.querySelector(".gcm-human-gmail-client");
     const clientCode = String(select?.value || "").trim();
@@ -448,14 +491,14 @@
       card,
       button,
       disposition === "delete"
-        ? "Deleting from Gmail · no OS record…"
+        ? "Deleting Gmail conversation · no OS record…"
         : `Saving ${button.textContent.trim()} and clearing Gmail…`
     );
 
     try {
       const result = disposition === "delete"
-        ? await post(DELETE, { gmailMessageId })
-        : await post(ROUTE, { gmailMessageId, disposition, clientCode, clientName });
+        ? await post(DELETE, { gmailMessageId, gmailThreadId })
+        : await post(ROUTE, { gmailMessageId, gmailThreadId, disposition, clientCode, clientName });
 
       const resultText = buildResultText(result, button.textContent.trim());
       setStatus(resultText);
@@ -472,21 +515,21 @@
 
   function buildResultText(result, label) {
     if (result?.duplicate) {
-      return `${label}: source was already preserved in GCM OS · Gmail cleared.`;
+      return `${label}: conversation was already preserved in GCM OS · Gmail thread cleared.`;
     }
     if (result?.gmailMovedToTrash) {
-      return "Delete — No Action: moved to Gmail Trash · 0 OS records created.";
+      return "Delete — No Action: Gmail conversation moved to Trash · 0 OS records created.";
     }
     if (result?.disposition === "monitoring") {
-      return `Monitoring saved${result.activityRecordId ? ` as Activity #${result.activityRecordId}` : ""} · Gmail cleared.`;
+      return `Monitoring saved${result.activityRecordId ? ` as Activity #${result.activityRecordId}` : ""} · Gmail thread cleared.`;
     }
     if (result?.workItemId) {
-      return `Requested Work saved · Communication #${result.communicationId || "—"} + Work Item #${result.workItemId} · Gmail cleared.`;
+      return `Requested Work saved · Communication #${result.communicationId || "—"} + Work Item #${result.workItemId} · Gmail thread cleared.`;
     }
     if (result?.investigationId) {
-      return `Investigation saved · Communication #${result.communicationId || "—"} + Investigation #${result.investigationId} · Gmail cleared.`;
+      return `Investigation saved · Communication #${result.communicationId || "—"} + Investigation #${result.investigationId} · Gmail thread cleared.`;
     }
-    return `Information saved · Communication #${result?.communicationId || "—"} · Gmail cleared.`;
+    return `Information saved · Communication #${result?.communicationId || "—"} · Gmail thread cleared.`;
   }
 
   async function refreshQueue({ preserveStatus = false } = {}) {
@@ -508,12 +551,12 @@
       if (!messages.length) {
         const empty = document.createElement("div");
         empty.className = "gcm-human-gmail-empty";
-        empty.textContent = "No unprocessed Gmail messages remain in Morning Command.";
+        empty.textContent = "No unprocessed Gmail conversations remain in Morning Command.";
         preview.replaceChildren(empty);
-        setStatus("Morning Command is clear. No unprocessed Gmail messages remain in the operational queue.");
+        setStatus("Morning Command is clear. No unprocessed Gmail conversations remain in the operational queue.");
       } else if (!preserveStatus) {
         const remaining = Number(result?.remainingUnprocessedCount || messages.length);
-        setStatus(`${remaining} unprocessed Gmail message${remaining === 1 ? "" : "s"} ready. Read the source and choose a route.`);
+        setStatus(`${remaining} unprocessed Gmail conversation${remaining === 1 ? "" : "s"} ready. Read the full thread and choose one route.`);
       }
     } catch (error) {
       preview.replaceChildren();
@@ -573,7 +616,7 @@
     }
 
     const title = document.getElementById("morning-command-title");
-    if (title) title.textContent = "Review each Gmail message and choose what happens next.";
+    if (title) title.textContent = "Review each Gmail conversation and choose what happens next.";
 
     document.getElementById("gcm-decision-holds")?.remove();
     preview.replaceChildren();
