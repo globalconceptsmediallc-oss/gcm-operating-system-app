@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailDispositions.js
-   Version: 2.1.0
+   Version: 2.2.0
    Status: Production Road-Test Candidate
    Source: routes/gmailDispositions.js 1.3.3 production
    Sprint: Gmail — Human Routing / No AI Gate
@@ -10,6 +10,11 @@
    Show the live Gmail source, accept an explicit human disposition, preserve the
    source in D1 when appropriate, then clear the real Gmail Inbox only after the
    requested OS write is confirmed.
+
+   Requested Work content changes — 2.2.0:
+   - Human-routed Requested Work now carries an explicit workTitle from the Gmail subject.
+   - Human-routed Requested Work now carries workDescription from the cleaned preserved source conversation.
+   - AI/classifier eligibility remains outside the critical path; source evidence defines the task.
 
    Thread-routing changes — 2.1.0:
    - Morning Command now groups Gmail results by thread instead of individual message.
@@ -70,7 +75,7 @@ export const GMAIL_DISPOSITION_ACTIONS = Object.freeze([
 // Keep the existing public contract string for regression compatibility while
 // exposing the installed human-routing version separately.
 export const GMAIL_DISPOSITION_VERSION = "1.3.3";
-export const GMAIL_HUMAN_ROUTING_VERSION = "2.1.0";
+export const GMAIL_HUMAN_ROUTING_VERSION = "2.2.0";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GMAIL_API = "https://gmail.googleapis.com/gmail/v1";
@@ -503,11 +508,18 @@ function buildHumanOperationalDecision(message, disposition) {
     investigation:"Review the preserved source evidence, determine the actual condition, and establish the correct next action before creating corrective work.",
     requested_work:"Execute the requested work from the preserved source email and record the result as Proof of Work."
   };
+  const requestedWorkSource = disposition === "requested_work"
+    ? sanitizeEmailText(message.bodyText || message.snippet || message.subject).slice(0, 12000)
+    : "";
 
   return {
     source:"Gmail — Human Routing",
     communicationType:labels[disposition] || "Gmail Communication",
     title:clean(message.subject) || "Gmail communication",
+    workTitle:disposition === "requested_work"
+      ? clean(message.subject) || "Requested Work"
+      : "",
+    workDescription:requestedWorkSource,
     operationalSummary:buildSourceSummary(message, summaries[disposition]),
     businessImpact:summaries[disposition],
     importance:disposition === "information" ? "Informational" : "Medium",
