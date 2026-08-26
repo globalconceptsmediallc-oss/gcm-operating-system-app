@@ -1,22 +1,22 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.25",
+  "version": "6.1.26",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.25",
+    "fileVersion": "6.1.26",
     "status": "Production Road-Test Candidate",
-    "purpose": "Keep GCM OS as the Handle Now home base while immediate external tasks open beside Morning Command.",
+    "purpose": "Preserve human-routed Gmail Requested Work as executable source-based work rather than generic routing metadata.",
     "changeNotes": [
-      "Updates the Morning Command Gmail decision surface to 2.2.0.",
-      "Extracts usable task links generically from the live Gmail source before presentation cleanup and opens them in a separate browser context.",
-      "Keeps Open Email in Gmail as a fallback while preserving the current Morning Command card and explicit completion boundary.",
-      "Extends permanent Handle Now and Source Email regression coverage without adding sender-specific, client-specific, or AI routing rules."
+      "Updates Gmail Human Routing to 2.2.0 and Operational Decision commit to 7.1.0.",
+      "Adds explicit workTitle/workDescription fields while preserving legacy fallbacks for existing callers.",
+      "Adds migration 0015 to repair existing Gmail Human Routing Requested Work placeholders from linked Communication source evidence.",
+      "Adds permanent Requested Work content regression coverage."
     ]
   },
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:work-due-date && npm run test:gmail-decisions && npm run test:gmail-monitoring-parity && npm run test:gmail-backlink-investigation && npm run test:gmail-intake && npm run test:gmail-backlog && npm run test:gmail-source-display && npm run test:gmail-handle-now && npm run test:gmail-thread-routing && npm run test:prospect-crm && npm run test:asset-versions",
+    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:work-due-date && npm run test:gmail-decisions && npm run test:gmail-monitoring-parity && npm run test:gmail-backlink-investigation && npm run test:gmail-intake && npm run test:gmail-backlog && npm run test:gmail-source-display && npm run test:gmail-handle-now && npm run test:gmail-thread-routing && npm run test:gmail-requested-work-content && npm run test:prospect-crm && npm run test:asset-versions",
     "test:website-intelligence": "node tests/websiteIntelligence.test.js",
     "test:code-intelligence": "node tests/codeIntelligence.test.js",
     "test:operating-sessions": "node tests/operatingSessionTasks.test.js && node tests/osAuth.test.js && node tests/operatingSessionIntake.test.js",
@@ -31,6 +31,7 @@
     "test:gmail-handle-now": "node tests/gmailHandleNow.test.js",
     "test:gmail-thread-routing": "node tests/gmailThreadRouting.test.js",
     "test:prospect-crm": "node tests/prospectCrm.test.js && node tests/prospectNextActionUi.test.js",
-    "test:asset-versions": "node tests/sharedAssetVersionLock.test.js"
+    "test:asset-versions": "node tests/sharedAssetVersionLock.test.js",
+    "test:gmail-requested-work-content": "node tests/gmailRequestedWorkContent.test.js"
   }
 }

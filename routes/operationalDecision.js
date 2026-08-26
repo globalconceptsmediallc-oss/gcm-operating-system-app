@@ -1,11 +1,15 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/operationalDecision.js
-   Version: 7.0.0
+   Version: 7.1.0
    Source: Production Worker 6.3.7
    Purpose: Commit one reviewed operational decision to D1
             as a Communication and, when selected, an
             Investigation or Work Item.
+   Changes — 7.1.0:
+   - Adds optional workTitle/workDescription fields for human-reviewed Work Items.
+   - Uses those explicit fields before legacy recommendedAction/reasoning fallbacks.
+   - Preserves backward compatibility for every existing caller that omits them.
    ========================================================= */
 
 import {
@@ -223,8 +227,8 @@ export async function handleCommitOperationalDecision(body, env, requestId) {
         FROM communications c
         WHERE c.source = ? AND c.external_id = ?
       `).bind(
-        decision.recommendedAction || decision.title,
-        decision.reasoning || decision.operationalSummary,
+        decision.workTitle || decision.recommendedAction || decision.title,
+        decision.workDescription || decision.reasoning || decision.operationalSummary,
         decision.communicationType,
         priority,
         owner,
@@ -300,6 +304,8 @@ function normalizeOperationalDecisionPayload(value) {
     source: clean(decision.source) || "Unknown",
     communicationType: clean(decision.communicationType || decision.category) || "General Communication",
     title: clean(decision.title || decision.subject),
+    workTitle: clean(decision.workTitle || decision.work_title),
+    workDescription: clean(decision.workDescription || decision.work_description),
     operationalSummary: clean(decision.operationalSummary || decision.summary),
     businessImpact: clean(decision.businessImpact),
     importance: normalizeCommunicationImportance(decision.importance || decision.operationalPriority),
