@@ -1,15 +1,15 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.22",
+  "version": "6.1.23",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.22",
+    "fileVersion": "6.1.23",
     "status": "Production Road-Test Candidate",
-    "purpose": "Keep Morning Command Source Email readable by decoding Gmail HTML character references without sender-specific rules.",
+    "purpose": "Keep Morning Command Source Email readable by removing flattened Gmail link-formatting debris without sender-specific rules.",
     "changeNotes": [
-      "Updates the Morning Command Gmail decision surface to 2.0.1.",
-      "Decodes named, decimal, hexadecimal, and nested HTML entities before Source Email display and normalizes non-breaking-space presentation noise.",
-      "Adds a permanent Gmail Source Email display regression test while preserving the human-routing, Monitoring, Investigation, Requested Work, Information, and Delete boundaries."
+      "Updates the Morning Command Gmail decision surface to 2.0.2.",
+      "Removes angle-bracket URL wrappers and flattened href attributes while preserving ordinary evidence URLs and visible message text.",
+      "Extends the permanent Gmail Source Email display regression while preserving the human-routing, Monitoring, Investigation, Requested Work, Information, and Delete boundaries."
     ]
   },
   "private": true,

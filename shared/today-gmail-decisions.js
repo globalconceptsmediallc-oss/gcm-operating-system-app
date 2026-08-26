@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/today-gmail-decisions.js
-   Version: 2.0.1
+   Version: 2.0.2
    Status: Production Road-Test Candidate
    Source: shared/today-gmail-decisions.js 1.2.1 production
    Sprint: Gmail — Human Routing / Source Email Cleanup
@@ -9,6 +9,12 @@
    Make Morning Command a fast human decision surface: show the live source
    email, choose the client, expose every operational route, save the selected
    record deterministically, clear Gmail, and move to the next message.
+
+   Changes — 2.0.2:
+   - Removes flattened link-wrapper debris such as <https://...> and href=...
+     from Source Email presentation while preserving visible human-readable text.
+   - Keeps ordinary URLs that are part of the actual message evidence.
+   - Applies no sender-specific, client-specific, or business-classification rules.
 
    Changes — 2.0.1:
    - Decodes HTML character references before Source Email display.
@@ -49,7 +55,7 @@
 
   // Existing shell loader cache key. Installed behavior is HUMAN_ROUTING_VERSION.
   const FILE_VERSION = "1.2.1";
-  const HUMAN_ROUTING_VERSION = "2.0.1";
+  const HUMAN_ROUTING_VERSION = "2.0.2";
   const WORKER_URL =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const PREVIEW = "preview-gmail-inbox";
@@ -118,6 +124,13 @@
       if (decoded === text) break;
       text = decoded;
     }
+
+    // Gmail/plain-text conversions can leave URL wrappers and href attributes
+    // behind after markup is flattened. Remove only those presentation artifacts;
+    // ordinary URLs in the actual message remain visible as evidence.
+    text = text
+      .replace(/\bhref\s*=\s*(?:"[^"]*"|'[^']*'|<[^>\n]+>|[^\s>]+)/gi, " ")
+      .replace(/<https?:\/\/[^>\n]+>/gi, " ");
 
     return text
       .replace(/\u00a0/g, " ")
