@@ -1,14 +1,23 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/today-gmail-decisions.js
-   Version: 2.0.2
+   Version: 2.1.0
    Status: Production Road-Test Candidate
-   Source: shared/today-gmail-decisions.js 1.2.1 production
-   Sprint: Gmail — Human Routing / Source Email Cleanup
+   Source: shared/today-gmail-decisions.js 2.0.2 production
+   Sprint: Gmail — Human Routing / Immediate Action
    Purpose:
    Make Morning Command a fast human decision surface: show the live source
-   email, choose the client, expose every operational route, save the selected
-   record deterministically, clear Gmail, and move to the next message.
+   email, choose the client, expose every operational route, support immediate
+   human action without creating artificial Work, and clear Gmail only after
+   the operator confirms the selected outcome.
+
+   Changes — 2.1.0:
+   - Adds Handle Now for small real actions that should be completed immediately.
+   - Handle Now performs zero OS writes and leaves Gmail unchanged when selected.
+   - Provides Open Email in Gmail using the Gmail thread ID returned by preview.
+   - Provides Completed — Clear Gmail only after the operator confirms the action.
+   - Completion moves the message to Gmail Trash with zero OS records created.
+   - Adds no sender-specific, client-specific, or AI classification rules.
 
    Changes — 2.0.2:
    - Removes flattened link-wrapper debris such as <https://...> and href=...
@@ -55,7 +64,7 @@
 
   // Existing shell loader cache key. Installed behavior is HUMAN_ROUTING_VERSION.
   const FILE_VERSION = "1.2.1";
-  const HUMAN_ROUTING_VERSION = "2.0.2";
+  const HUMAN_ROUTING_VERSION = "2.1.0";
   const WORKER_URL =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const PREVIEW = "preview-gmail-inbox";
@@ -92,11 +101,17 @@
       .gcm-human-gmail-decision-label{display:block;margin-bottom:8px;color:var(--text-soft,#8290a3);font-size:.64rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em}
       .gcm-human-gmail-buttons{display:flex;flex-wrap:wrap;gap:8px}
       .gcm-human-gmail-buttons .button{min-height:36px;padding:0 12px;font-size:.73rem}
+      .gcm-route-now{border-color:#9dbcf0!important;background:#eef5ff!important;color:#165fbd!important}
       .gcm-route-delete{border-color:#e5bcbc!important;background:#fff7f7!important;color:#9d3030!important}
       .gcm-route-information{border-color:#cbd6e4!important;background:#f8fafc!important;color:#34465d!important}
       .gcm-route-monitoring{border-color:#bcd8c8!important;background:#f3fbf6!important;color:#226342!important}
       .gcm-route-investigation{border-color:#e7c987!important;background:#fff8e8!important;color:#805615!important}
       .gcm-route-work{border-color:#a9c5f1!important;background:#edf5ff!important;color:#185fc8!important}
+      .gcm-human-gmail-now-panel{margin-top:12px;padding:13px 14px;border:1px solid #b9cdf0;border-radius:10px;background:#f5f9ff}
+      .gcm-human-gmail-now-panel strong{display:block;color:#173f72;font-size:.78rem}
+      .gcm-human-gmail-now-panel p{margin:5px 0 10px;color:var(--text-muted,#637083);font-size:.73rem;line-height:1.45}
+      .gcm-human-gmail-now-actions{display:flex;flex-wrap:wrap;gap:8px}
+      .gcm-human-gmail-now-actions .button{min-height:34px;padding:0 11px;font-size:.72rem;text-decoration:none}
       .gcm-human-gmail-status{display:block;margin-top:9px;color:var(--text-muted,#637083);font-size:.71rem;font-weight:800}
       .gcm-human-gmail-empty{padding:18px;border:1px solid var(--border,#dbe2ec);border-radius:14px;background:#fff;color:var(--text-muted,#637083);font-size:.82rem;font-weight:750}
       @media(max-width:760px){.gcm-human-gmail-header{display:block}.gcm-human-gmail-route{margin-top:8px}.gcm-human-gmail-client-row{align-items:flex-start;flex-direction:column}.gcm-human-gmail-client{max-width:none}}
@@ -139,6 +154,13 @@
       .replace(/[\t ]{2,}/g, " ")
       .replace(/\n{3,}/g, "\n\n")
       .trim();
+  }
+
+  function gmailThreadUrl(message) {
+    const target = String(message?.threadId || message?.gmailMessageId || "").trim();
+    return target
+      ? `https://mail.google.com/mail/u/0/#all/${encodeURIComponent(target)}`
+      : "https://mail.google.com/mail/u/0/#inbox";
   }
 
   async function post(action, extra = {}) {
@@ -203,6 +225,7 @@
     const article = document.createElement("article");
     article.className = "gcm-human-gmail-card";
     article.dataset.gmailId = String(message?.gmailMessageId || "");
+    article.dataset.gmailThreadId = String(message?.threadId || "");
 
     const source = cleanSourceEmail(
       message?.bodyText || message?.snippet || message?.subject || ""
@@ -226,21 +249,94 @@
       <div class="gcm-human-gmail-decision">
         <span class="gcm-human-gmail-decision-label">Your Decision</span>
         <div class="gcm-human-gmail-buttons">
+          <button type="button" class="button button-secondary gcm-route-now" data-gcm-handle-now>Handle Now</button>
           ${routeButton("Delete — No Action", "delete", "gcm-route-delete")}
           ${routeButton("Information", "information", "gcm-route-information")}
           ${routeButton("Monitoring", "monitoring", "gcm-route-monitoring")}
           ${routeButton("Investigation", "investigation", "gcm-route-investigation")}
           ${routeButton("Requested Work", "requested_work", "gcm-route-work")}
         </div>
-        <span class="gcm-human-gmail-status">Read the source email and choose what happens next. AI does not control these routes.</span>
+        <div class="gcm-human-gmail-now-panel" data-gcm-handle-now-panel hidden>
+          <strong>Handle Now — finish the action before clearing Gmail.</strong>
+          <p>Gmail and GCM OS are unchanged. Open the source email, complete the small action, then confirm completion here.</p>
+          <div class="gcm-human-gmail-now-actions">
+            <a class="button button-secondary" data-gcm-open-gmail href="${escapeHtml(gmailThreadUrl(message))}" target="_blank" rel="noopener">Open Email in Gmail</a>
+            <button type="button" class="button button-primary" data-gcm-complete-now>Completed — Clear Gmail</button>
+            <button type="button" class="button button-secondary" data-gcm-cancel-now>Back</button>
+          </div>
+        </div>
+        <span class="gcm-human-gmail-status">Read the source email and choose what happens next. Handle Now leaves Gmail untouched until you confirm completion. AI does not control these routes.</span>
       </div>
     `;
 
+    article.querySelector("[data-gcm-handle-now]")?.addEventListener("click", () => {
+      handleNow(article);
+    });
+    article.querySelector("[data-gcm-complete-now]")?.addEventListener("click", event => {
+      completeHandleNow(article, event.currentTarget);
+    });
+    article.querySelector("[data-gcm-cancel-now]")?.addEventListener("click", () => {
+      cancelHandleNow(article);
+    });
     article.querySelectorAll("[data-gcm-disposition]").forEach(button => {
       button.addEventListener("click", () => handleDisposition(article, button));
     });
 
     return article;
+  }
+
+  function handleNow(card) {
+    if (busy) return;
+    const panel = card.querySelector("[data-gcm-handle-now-panel]");
+    const route = card.querySelector(".gcm-human-gmail-route");
+    const status = card.querySelector(".gcm-human-gmail-status");
+    if (panel) panel.hidden = false;
+    if (route) route.textContent = "Handle now";
+    if (status) {
+      status.textContent = "Handle Now selected. Gmail and GCM OS are unchanged until you confirm completion.";
+    }
+    setStatus("Handle Now: complete the action first. Gmail and GCM OS are unchanged until completion is confirmed.");
+  }
+
+  function cancelHandleNow(card) {
+    if (busy) return;
+    const panel = card.querySelector("[data-gcm-handle-now-panel]");
+    const route = card.querySelector(".gcm-human-gmail-route");
+    const status = card.querySelector(".gcm-human-gmail-status");
+    if (panel) panel.hidden = true;
+    if (route) route.textContent = "Choose route";
+    if (status) {
+      status.textContent = "Read the source email and choose what happens next. Handle Now leaves Gmail untouched until you confirm completion. AI does not control these routes.";
+    }
+  }
+
+  async function completeHandleNow(card, button) {
+    if (busy) return;
+    const gmailMessageId = String(card.dataset.gmailId || "").trim();
+    if (!gmailMessageId) {
+      const status = card.querySelector(".gcm-human-gmail-status");
+      if (status) status.textContent = "Could not clear Gmail because the message ID is missing.";
+      return;
+    }
+
+    busy = true;
+    setCardBusy(card, button, "Confirming Handle Now completion and clearing Gmail…");
+
+    try {
+      const result = await post(DELETE, { gmailMessageId });
+      if (!result?.gmailMovedToTrash) {
+        throw new Error("Gmail did not confirm that the completed message moved to Trash.");
+      }
+      setStatus("Handle Now complete: action confirmed · moved to Gmail Trash · 0 OS records created.");
+      await window.GCMOShell?.refreshNavAttention?.();
+      busy = false;
+      await refreshQueue({ preserveStatus:true });
+    } catch (error) {
+      clearCardBusy(card, `Completion was not cleared: ${error.message}`);
+      setStatus(`Handle Now left Gmail unchanged: ${error.message}`);
+    } finally {
+      busy = false;
+    }
   }
 
   function setCardBusy(card, activeButton, text) {
