@@ -1,0 +1,86 @@
+# =========================================================
+# MediaForge
+# File: .github/workflows/mediaforge-deploy.yml
+# Version: 1.0.0
+# Status: Production Deployment
+# Purpose: Test and deploy the source-controlled MediaForge Pages app.
+# =========================================================
+
+name: MediaForge Deploy
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "mediaforge/**"
+      - "tests/mediaforgeNamingRecipe.test.js"
+      - "package.json"
+      - ".github/workflows/mediaforge-deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mediaforge-production
+  cancel-in-progress: false
+
+jobs:
+  test-deploy-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Production Tests
+        run: npm test
+
+      - name: Deploy MediaForge Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          cd mediaforge
+          npx --yes wrangler@4.122.0 pages deploy . \
+            --project-name=mediaforge-36x \
+            --branch=main \
+            --commit-hash="${GITHUB_SHA}" \
+            --commit-message="MediaForge flexible naming recipes"
+
+      - name: Verify Live MediaForge
+        env:
+          MEDIAFORGE_URL: https://mediaforge-36x.pages.dev
+        run: |
+          node <<'NODE'
+          const base = process.env.MEDIAFORGE_URL;
+          const pageResponse = await fetch(`${base}/?verify=${Date.now()}`, { cache:"no-store" });
+          if (!pageResponse.ok) throw new Error(`MediaForge page returned HTTP ${pageResponse.status}`);
+          const html = await pageResponse.text();
+          for (const marker of ["Version 2.2.0", "Flexible Naming Recipes", 'id="namingPreset"']) {
+            if (!html.includes(marker)) throw new Error(`Live MediaForge is missing ${marker}`);
+          }
+
+          const catalogResponse = await fetch(`${base}/api/catalog`, { cache:"no-store" });
+          if (!catalogResponse.ok) throw new Error(`MediaForge catalog returned HTTP ${catalogResponse.status}`);
+          const catalog = await catalogResponse.json();
+          if (catalog?.ok !== true || catalog?.version !== "1.8.0") {
+            throw new Error(`Expected catalog 1.8.0, received ${catalog?.version || "unknown"}`);
+          }
+
+          const proxyBoundary = await fetch(`${base}/api/reference-image`, { cache:"no-store" });
+          if (proxyBoundary.status !== 400) {
+            throw new Error(`Reference-image boundary expected HTTP 400, received ${proxyBoundary.status}`);
+          }
+
+          console.log("PASS live MediaForge 2.2.0 flexible naming UI + catalog 1.8.0 + reference-image function boundary");
+          NODE
