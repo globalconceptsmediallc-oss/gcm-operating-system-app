@@ -1,0 +1,23 @@
+name: MediaForge Flexible Naming Branch Test
+
+on:
+  push:
+    branches:
+      - feature/mediaforge-flexible-naming-20260827
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm test
+      - run: node --check mediaforge/naming.js
+      - run: node --check mediaforge/naming-ui.js
