@@ -1,21 +1,59 @@
 # =========================================================
-# GCM OS — Completed Gmail History Recovery
-# Status: RETIRED / NO PRODUCTION ACTIONS
-# August history recovery and related one-time production reconciliation
-# were completed and verified on 2026-08-28.
-# This file performs no D1, Gmail, or Worker writes.
+# GCM OS — Advance A1 Investigation #41 after manual evidence review
+# Authorized operational continuation: 2026-08-28
+# Uses production process-investigation route. No Work Item created.
 # =========================================================
-name: Retired Gmail History Recovery
+name: Advance A1 Canonical Investigation 41
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/gmail-history-backfill.yml"
 
 permissions:
   contents: read
 
 jobs:
-  retired:
+  advance:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - name: Recovery complete
-        run: echo "Gmail history recovery is complete. No production action is performed."
+      - name: Save verified Investigation progress
+        env:
+          WORKER_URL: https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/
+        run: |
+          node <<'NODE'
+          async function post(body){
+            const response=await fetch(process.env.WORKER_URL,{
+              method:"POST",
+              headers:{"Content-Type":"application/json"},
+              body:JSON.stringify(body)
+            });
+            const payload=await response.json().catch(()=>({}));
+            if(!response.ok||payload?.ok!==true){
+              throw new Error(`${body.action} failed HTTP ${response.status}: ${payload?.error||"unknown"}`);
+            }
+            return payload;
+          }
+
+          const result=await post({
+            action:"process-investigation",
+            clientCode:"A1",
+            investigationId:41,
+            outcome:"continue_investigation",
+            findingSummary:"Google Search Console confirms /marine-locksmith-services is crawlable and indexing is allowed. The page declares itself canonical, but Google selected https://www.a1actionsafeandlock.com/ as canonical. Live review showed the extensionless Marine Locksmith URL serving homepage-like A1 content, which explains Google's duplicate classification. The current A1 production repository contains no dedicated marine-locksmith-services.html page. The evidence therefore supports a content/URL-intent problem rather than a canonical-tag or crawl-blocking defect.",
+            nextQuestion:"Should Marine Locksmith remain a real standalone A1 service/SEO page, or should the legacy /marine-locksmith-services and /marine-locksmith-services.html URLs permanently redirect to the most relevant current A1 service page?",
+            nextEvidence:"Confirm the intended business use of Marine Locksmith. If it remains an offered/targeted service, verify the desired unique page topic and destination URL. If it is not a current standalone service target, identify the correct existing service page for a 301 redirect and then verify both legacy Marine URLs resolve directly to that destination."
+          });
+
+          console.log("INV41_ADVANCE="+JSON.stringify(result));
+
+          const workspace=await post({action:"get-client-workspace",clientCode:"A1"});
+          const inv=(workspace.operational?.investigationHistory||[]).find(i=>Number(i.id)===41)||null;
+          console.log("INV41_VERIFY="+JSON.stringify({inv,counts:workspace.counts||null}));
+          if(!inv || String(inv.status||"").toLowerCase()!=="open"){
+            throw new Error("Investigation #41 did not verify as open after progress save.");
+          }
+          NODE
