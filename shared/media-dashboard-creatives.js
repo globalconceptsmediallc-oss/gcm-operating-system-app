@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/media-dashboard-creatives.js
-   Version: 1.1.0
+   Version: 1.1.1
    Status: Production Candidate
    Sprint: Media Work State / Waiting + Scheduled
    Purpose: Add media_creatives to the Media dashboard while separating
@@ -13,13 +13,14 @@
    - Waiting / Scheduled Creatives stay visible in the queue but do not count
      as Needs Action until an optional resume date arrives.
    - Station Confirmation is treated as waiting on an external response.
+   - Creative-level cards show authoritative run dates from their linked market assignments.
    - No D1 writes occur from this dashboard layer.
    ========================================================= */
 
 (() => {
   "use strict";
 
-  const VERSION = "1.1.0";
+  const VERSION = "1.1.1";
   const ENDPOINT = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const $ = id => document.getElementById(id);
   const lower = value => String(value || "").trim().toLowerCase();
@@ -118,6 +119,32 @@
     return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   }
 
+  function assignmentRunRange(item) {
+    const start = item.placementStartDate || item.rotationStartDate || "";
+    const end = item.placementEndDate || item.rotationEndDate || "";
+    if (!start && !end) return "";
+    if (start && end) return `${formatDate(start)} – ${formatDate(end)}`;
+    return start ? `Starts ${formatDate(start)}` : `Ends ${formatDate(end)}`;
+  }
+
+  function creativeRunDateText(assignments) {
+    const dated = assignments
+      .map(item => ({
+        item,
+        range: assignmentRunRange(item)
+      }))
+      .filter(entry => entry.range);
+
+    if (!dated.length) return "Run dates: Not set";
+
+    const uniqueRanges = [...new Set(dated.map(entry => entry.range))];
+    if (uniqueRanges.length === 1) return `Run dates: ${uniqueRanges[0]}`;
+
+    return dated
+      .map(({ item, range }) => `${item.market || "Market"} / ${item.outletName || "Outlet"}: ${range}`)
+      .join("; ");
+  }
+
   function nextAction(creative) {
     const stage = lower(creative.currentStage);
     const voice = String(creative.voiceTalent || "").trim();
@@ -170,6 +197,7 @@
   function creativeCard(creative, lane) {
     const assignments = assignmentsFor(creative.id);
     const assignmentText = assignments.length ? assignments.map(item => `${item.market || "Market"} / ${item.outletName || "Outlet"}`).join("; ") : "No market assignment yet";
+    const runDateText = creativeRunDateText(assignments);
     const stage = creative.currentStage || "Idea / Direction";
     const work = workStateFor(creative);
     const badge = work.state === "waiting" ? ["b-info", "Waiting / Scheduled"]
@@ -193,6 +221,7 @@
         <strong>${esc(creative.clientName || creative.clientCode || "Client")} · ${esc(creative.creativeName || "Creative")}</strong>
         <div class="meta"><strong>Creative #${esc(creative.id)}</strong> · ${esc(stage)} · ${esc(length)}${esc(voice)}</div>
         <div class="meta">${esc(assignmentText)}</div>
+        <div class="meta"><strong>${esc(runDateText)}</strong></div>
         <div class="action">${esc(action)}</div>
         <a class="open-record" data-open-creative="${esc(creative.id)}" href="${creativeUrl(creative.id)}">Open production record →</a>
       </article>`;
