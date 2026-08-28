@@ -1,112 +1,20 @@
 # =========================================================
-# GCM OS — Activate SES Work Item #11 for prelaunch build
-# Authorized operational action: 2026-08-28
+# GCM OS — Completed One-Time Reconciliation
+# Status: RETIRED / NO PRODUCTION ACTIONS
+# SES Work Item #11 was activated for prelaunch on 2026-08-28.
+# This file performs no D1, Gmail, or Worker writes.
 # =========================================================
-name: Activate SES Work 11 Prelaunch
+name: Retired One-Time Reconciliation
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/gmail-history-backfill.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  update:
+  retired:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Install Wrangler
-        run: npm install wrangler@4.122.0
-
-      - name: Build D1 update
-        run: |
-          cat > /tmp/activate-work-11.sql <<'SQL'
-          UPDATE work_items
-          SET
-            title = 'Prepare approved 90-Day Orlando Growth Campaign for launch',
-            status = 'in_progress',
-            started_at = COALESCE(started_at, '2026-08-28 11:15:00'),
-            description = 'Approved direction: Frank approved the original 90-day Southeast Safes growth campaign on August 20, 2026. The controlling campaign plan is the original proposal: focus on the Lake Nona / Narcoossee corridor and surrounding growth areas; $1,000/month Connected TV, $600/month Google Search, and $400/month Facebook/Instagram for 90 days. Frank also wants Judi to have real ownership of Orlando execution. Judi''s working role is local content and execution: Facebook/Instagram posts, short showroom videos, inventory/product highlights, promotions, local events, customer-focused content, and ideas from the Orlando market. GCM retains campaign strategy, paid media, radio/TV coordination, Google, targeting, tracking, and measurement.\n\nThe August 24 follow-up asking Frank for a new total Orange/Seminole budget ceiling is not a blocker to prelaunch preparation. The original approved proposal remains the build baseline. Any future reply from Frank should be treated as an allocation adjustment or added operating instruction, not as permission required to begin setup.\n\nPRELAUNCH BUILD NOW:\n1. Build the launch matrix around the approved 90-day baseline: CTV $1,000; Google Search $600; Facebook/Instagram $400.\n2. Primary geographic focus: Lake Nona / Narcoossee corridor and surrounding growth areas, coordinated with the existing Orlando media footprint.\n3. Prepare Google Search structure for Liberty Safes, gun safes, home safes, vault doors, and high-intent local buyers.\n4. Prepare Meta paid/retargeting structure plus Judi''s local organic content responsibilities.\n5. Prepare CTV audience/geo brief using the approved Liberty creative direction.\n6. Keep Orlando radio coordinated with the campaign; existing WFLA activity does not delay digital/CTV setup.\n7. Prepare tracking/measurement for qualified leads, showroom traffic, safe sales, channel attribution, and 90-day ROI review.\n8. Complete all non-client-dependent setup so final launch can occur immediately after any remaining account/vendor access or allocation instruction is received.',
-            expected_impact = 'Have the approved Orlando campaign structurally ready to launch without losing additional time. Frank''s next reply, if any, should only require allocation or operating adjustments rather than restarting campaign planning.',
-            updated_at = '2026-08-28 11:15:00'
-          WHERE id = 11
-            AND client_id = (SELECT id FROM clients WHERE client_code = 'SES' LIMIT 1)
-            AND status NOT IN ('completed','closed','cancelled','canceled');
-
-          UPDATE communications
-          SET
-            operational_decision = 'work_progress',
-            status = 'processed',
-            notes = 'Historical follow-up preserved. Operator review on August 28, 2026 determined this email should not gate Work Item #11 because Frank had already approved the original campaign. The original proposal remains the campaign baseline; future reply may adjust allocation but prelaunch preparation proceeds now.',
-            updated_at = '2026-08-28 11:15:00'
-          WHERE external_id = 'gmail:1a035c17b2cc8ec9';
-
-          INSERT INTO evidence (
-            client_id,
-            investigation_id,
-            work_item_id,
-            communication_id,
-            evidence_type,
-            source,
-            description,
-            url,
-            captured_at
-          )
-          SELECT
-            wi.client_id,
-            wi.investigation_id,
-            wi.id,
-            wi.communication_id,
-            'operator_decision',
-            'GCM Campaign Direction Review',
-            'August 28, 2026 operator review: Frank''s August 20 approval of the original 90-day campaign is sufficient authority to proceed with prelaunch setup. The approved baseline remains Lake Nona/Narcoossee focus with $1,000 CTV, $600 Google Search, and $400 Facebook/Instagram monthly for 90 days. Judi is to own local content/execution while GCM coordinates paid media, radio/TV, Google, targeting, tracking, and measurement. The August 24 request for a new total budget ceiling should not block preparation. Work Item #11 returned to active prelaunch status.',
-            NULL,
-            '2026-08-28 11:15:00'
-          FROM work_items wi
-          WHERE wi.id = 11
-            AND NOT EXISTS (
-              SELECT 1 FROM evidence e
-              WHERE e.work_item_id = 11
-                AND e.evidence_type = 'operator_decision'
-                AND e.source = 'GCM Campaign Direction Review'
-            );
-          SQL
-
-      - name: Apply update to production D1
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npx wrangler d1 execute DB --remote --file=/tmp/activate-work-11.sql
-
-      - name: Verify through production Worker
-        env:
-          WORKER_URL: https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/
-        run: |
-          node <<'NODE'
-          const r=await fetch(process.env.WORKER_URL,{
-            method:"POST",
-            headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({action:"get-client-workspace",clientCode:"SES"})
-          });
-          const p=await r.json();
-          if(!r.ok||p?.ok!==true) throw new Error(p?.error||String(r.status));
-          const work=(p.operational?.workItems||[]).find(w=>Number(w.id)===11)||null;
-          const comm=(p.operational?.communications||[]).find(c=>String(c.external_id||"")==="gmail:1a035c17b2cc8ec9")||null;
-          const evidence=(p.operational?.evidence||[]).filter(e=>Number(e.work_item_id)===11);
-          console.log("SES_WORK11_ACTIVE="+JSON.stringify({work,comm,evidence,counts:p.counts||null}));
-          if(!work || String(work.status||"").toLowerCase()!=="in_progress"){
-            throw new Error("Work Item #11 did not verify in_progress.");
-          }
-          NODE
+      - name: Complete
+        run: echo "One-time reconciliation is complete. No production action is performed."
