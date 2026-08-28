@@ -1,21 +1,47 @@
 # =========================================================
-# GCM OS — Completed One-Time Reconciliation
-# Status: RETIRED / NO PRODUCTION ACTIONS
-# August Gmail history recovery and A1 Investigation #41 progress save
-# were completed and verified on 2026-08-28.
-# This file performs no D1, Gmail, or Worker writes.
+# GCM OS — Create A1 Marine Locksmith Work from Investigation #41
+# Authorized production action: 2026-08-28
 # =========================================================
-name: Retired One-Time Reconciliation
+name: Create A1 Marine Locksmith Work
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/gmail-history-backfill.yml"
 
 permissions:
   contents: read
 
 jobs:
-  retired:
+  create:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - name: Complete
-        run: echo "One-time reconciliation is complete. No production action is performed."
+      - name: Create linked Work Item
+        env:
+          WORKER_URL: https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/
+        run: |
+          node <<'NODE'
+          const response=await fetch(process.env.WORKER_URL,{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({
+              action:"process-investigation",
+              clientCode:"A1",
+              investigationId:41,
+              outcome:"specific_work_required",
+              findingSummary:"Google Search Console shows /marine-locksmith-services is crawlable and self-canonical, but Google selects the homepage because the current legacy URL serves homepage-like duplicate content. The current A1 repository has no dedicated Marine Locksmith Services page. A real standalone Marine Locksmith page is required.",
+              workTitle:"Create unique Marine Locksmith Services page and correct legacy Marine URL handling",
+              workDescription:"Create a dedicated A1 Marine Locksmith Services page at /marine-locksmith-services with unique service content, self-canonical metadata, schema, internal links, and sitemap inclusion. Ensure the legacy /marine-locksmith-services.html URL resolves consistently to the new page rather than homepage-like content. After deployment, run Google Search Console live inspection and verify Google can crawl the unique page before requesting validation.",
+              workCategory:"SEO / Site Architecture",
+              expectedImpact:"Replace the current homepage-duplicate condition with a real indexable Marine Locksmith Services page and give Google consistent canonical and internal-link signals for the intended URL."
+            })
+          });
+          const payload=await response.json().catch(()=>({}));
+          if(!response.ok||payload?.ok!==true){
+            throw new Error(payload?.error||`HTTP ${response.status}`);
+          }
+          console.log("A1_MARINE_WORK="+JSON.stringify(payload));
+          NODE
