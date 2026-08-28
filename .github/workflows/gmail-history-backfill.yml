@@ -1,21 +1,38 @@
 # =========================================================
-# GCM OS — Completed One-Time Reconciliation
-# Status: RETIRED / NO PRODUCTION ACTIONS
-# A1 Marine Locksmith Work Item #15 was moved to external
-# validation and verified on 2026-08-28.
-# This file performs no D1, Gmail, or Worker writes.
+# GCM OS — Lookup SES Investigation #40
+# Read-only production verification: 2026-08-28
 # =========================================================
-name: Retired One-Time Reconciliation
+name: Lookup SES Investigation 40
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/gmail-history-backfill.yml"
 
 permissions:
   contents: read
 
 jobs:
-  retired:
+  lookup:
     runs-on: ubuntu-latest
     steps:
-      - name: Complete
-        run: echo "One-time reconciliation is complete. No production action is performed."
+      - name: Read SES workspace
+        env:
+          WORKER_URL: https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/
+        run: |
+          node <<'NODE'
+          const r=await fetch(process.env.WORKER_URL,{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({action:"get-client-workspace",clientCode:"SES"})
+          });
+          const p=await r.json();
+          if(!r.ok||p?.ok!==true) throw new Error(p?.error||String(r.status));
+          const inv=(p.operational?.investigationHistory||p.operational?.investigations||[]).find(i=>Number(i.id)===40)||null;
+          const work=(p.operational?.workItems||[]).filter(w=>Number(w.investigation_id??w.investigationId)===40);
+          const evidence=(p.operational?.evidence||[]).filter(e=>Number(e.investigation_id??e.investigationId)===40);
+          const comms=(p.operational?.communications||[]).filter(c=>Number(c.id)===Number(inv?.communication_id??inv?.communicationId));
+          console.log("SES_INV40="+JSON.stringify({inv,work,evidence,comms,counts:p.counts||null}));
+          NODE
