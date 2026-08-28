@@ -30,945 +30,945 @@ jobs:
           node <<'NODE'
           const workerUrl = process.env.WORKER_URL;
           const items = [
-  {
-    "id": "19fbaaebe752f0fd",
-    "threadId": "19fbaaebe752f0fd",
-    "clientCode": "GCM",
-    "disposition": "monitoring",
-    "subject": "globalconceptsmedia.com: 44% of your pages have no markups"
-  },
-  {
-    "id": "19fbab1524dfb242",
-    "threadId": "19fbab1524dfb242",
-    "clientCode": "MAS",
-    "disposition": "monitoring",
-    "subject": "moveasafe.com: Your Audit Report Is Ready"
-  },
-  {
-    "id": "19fbed09c38c9877",
-    "threadId": "19fbed09a46d04e7",
-    "clientCode": "SES",
-    "disposition": "monitoring",
-    "subject": "Notification of rank change. Project: sesafes.com"
-  },
-  {
-    "id": "19fbf446c9df2ace",
-    "threadId": "19fbf446c9df2ace",
-    "clientCode": "A1",
-    "disposition": "monitoring",
-    "subject": "Notification of rank change. Project: A1 Action"
-  },
-  {
-    "id": "19fc04e11eb6de96",
-    "threadId": "19fc04e11eb6de96",
-    "clientCode": "HBG",
-    "disposition": "monitoring",
-    "subject": "hbguns.com: Your Audit Report Is Ready"
-  },
-  {
-    "id": "19fc05bfa91aef15",
-    "threadId": "19fc05bfa91aef15",
-    "clientCode": "SFS",
-    "disposition": "monitoring",
-    "subject": "southfloridasafes.com: New Type of Issues Detected"
-  },
-  {
-    "id": "19fc3fb8f347da5a",
-    "threadId": "19fc3fb8f347da5a",
-    "clientCode": "SES",
-    "disposition": "monitoring",
-    "subject": "Notification of rank change. Project: sesafes.com"
-  },
-  {
-    "id": "19fc46f10807571c",
-    "threadId": "19fc46f10807571c",
-    "clientCode": "A1",
-    "disposition": "monitoring",
-    "subject": "Notification of rank change. Project: A1 Action"
-  },
-  {
-    "id": "19fc7ba03fc5b9f5",
-    "threadId": "19fc7ba03fc5b9f5",
-    "clientCode": "HBG",
-    "disposition": "monitoring",
-    "subject": "(Hbguns) Site Audit crawl failed"
-  },
-  {
-    "id": "19fc7cda0f7faf27",
-    "threadId": "19fc7cda0f7faf27",
-    "clientCode": "PW",
-    "disposition": "monitoring",
-    "subject": "(Pickettweaponry) No. of referring domains dropped [New]: 1 URL"
-  },
-  {
-    "id": "19fc7d17fc04f730",
-    "threadId": "19fc7d17fc04f730",
-    "clientCode": "A1",
-    "disposition": "monitoring",
-    "subject": "(A1actionsafeandlock) Orphan page (has no incoming internal links): 2 URLs"
-  },
-  {
-    "id": "19fc986d1c9ebe15",
-    "threadId": "19fc986d1c9ebe15",
-    "clientCode": "SES",
-    "disposition": "monitoring",
-    "subject": "Notification of rank change. Project: sesafes.com"
-  },
-  {
-    "id": "19fc9b7c031fe03b",
-    "threadId": "19fc9b7c031fe03b",
-    "clientCode": "A1",
-    "disposition": "monitoring",
-    "subject": "Notification of rank change. Project: A1 Action"
-  },
-  {
-    "id": "19fcce61a1a914af",
-    "threadId": "19fcce61a1a914af",
-    "clientCode": "A1",
-    "disposition": "monitoring",
-    "subject": "Your July Search performance for https://www.a1actionsafeandlock.com/"
-  },
-  {
-    "id": "19fcceabc83b3047",
-    "threadId": "19fcceabc83b3047",
-    "clientCode": "HBG",
-    "disposition": "monitoring",
-    "subject": "Your July Search performance for hbguns.com"
-  },
-  {
-    "id": "19fccec04b513fb2",
-    "threadId": "19fccec04b513fb2",
-    "clientCode": "SFS",
-    "disposition": "monitoring",
-    "subject": "Your July Search performance for https://www.southfloridasafes.com/"
-  },
-  {
-    "id": "19fccef809ec2279",
-    "threadId": "19fccef809ec2279",
-    "clientCode": "SES",
-    "disposition": "monitoring",
-    "subject": "Your July Search performance for https://sesafes.com/"
-  },
-  {
-    "id": "19fcd0f33bd87542",
-    "threadId": "19fcd0f33bd87542",
-    "clientCode": "PW",
-    "disposition": "monitoring",
-    "subject": "Your July Search performance for pickettweaponry.com"
-  },
-  {
-    "id": "19fceae5c19259cc",
-    "threadId": "19fceae5c19259cc",
-    "clientCode": "SES",
-    "disposition": "monitoring",
-    "subject": "Notification of rank change. Project: sesafes.com"
-  },
-  {
-    "id": "19fcefd836b5d2b9",
-    "threadId": "19fcefd836b5d2b9",
-    "clientCode": "A1",
-    "disposition": "monitoring",
-    "subject": "Notification of rank change. Project: A1 Action"
-  },
-  {
-    "id": "19fd31e7539e6f78",
-    "threadId": "19fd31e7539e6f78",
-    "clientCode": "GCM",
-    "disposition": "monitoring",
-    "subject": "Position Tracking Update (globalconceptsmedia.com)"
-  },
-  {
-    "id": "19fd31e7688ca31f",
-    "threadId": "19fd31e7688ca31f",
-    "clientCode": "SFS",
-    "disposition": "monitoring",
-    "subject": "Position Tracking Update - Your rankings declined (southfloridasafes.com)"
-  },
-  {
-    "id": "19fd31e77c636ef1",
-    "threadId": "19fd31e77c636ef1",
-    "clientCode": "HBG",
-    "disposition": "monitoring",
-    "subject": "Position Tracking Update (hbguns.com)"
-  },
-  {
-    "id": "19fd31e77daf7590",
-    "threadId": "19fd31e77daf7590",
-    "clientCode": "NFS",
-    "disposition": "monitoring",
-    "subject": "Position Tracking Update (northfloridasafes.com)"
-  },
-  {
-    "id": "19fd31e795572a7f",
-    "threadId": "19fd31e795572a7f",
-    "clientCode": "SES",
-    "disposition": "monitoring",
-    "subject": "Position Tracking Update - Your rankings increased (sesafes.com)"
-  },
-  {
-    "id": "19fd31e7a675d001",
-    "threadId": "19fd31e7a675d001",
-    "clientCode": "PW",
-    "disposition": "monitoring",
-    "subject": "Position Tracking Update - Your rankings declined (pickettweaponry.com)"
-  },
-  {
-    "id": "19fd31e833282580",
-    "threadId": "19fd31e833282580",
-    "clientCode": "A1",
-    "disposition": "monitoring",
-    "subject": "Position Tracking Update (a1actionsafeandlock.com)"
-  },
-  {
-    "id": "19fd3c5e1ea62064",
-    "threadId": "19fd3c5e1ea62064",
-    "clientCode": "GCM",
-    "disposition": "monitoring",
-    "subject": "Your Google Analytics performance report is in for July 9th - August 5th"
-  },
-  {
-    "id": "19fd406175160355",
-    "threadId": "19fd406175160355",
-    "clientCode": "A1",
-    "disposition": "monitoring",
-    "subject": "Notification of rank change. Project: A1 Action"
-  },
-  {
-    "id": "19fd8ab05f8cbae0",
-    "threadId": "19fd683bcb0bb1cd",
-    "clientCode": "SES",
-    "disposition": "monitoring",
-    "subject": "Notification of rank change. Project: sesafes.com"
-  },
-  {
-    "id": "19fd91942c99171b",
-    "threadId": "19fd91942c99171b",
-    "clientCode": "A1",
-    "disposition": "monitoring",
-    "subject": "Notification of rank change. Project: A1 Action"
-  },
-  {
-    "id": "19fd958a12458081",
-    "threadId": "19fd958a12458081",
-    "clientCode": "SFS",
-    "disposition": "monitoring",
-    "subject": "(Southfloridasafes) Organic traffic dropped [New]: 2 URLs"
-  },
-  {
-    "id": "19fd9700b9cf15ef",
-    "threadId": "19fd9700b9cf15ef",
-    "clientCode": "SES",
-    "disposition": "monitoring",
-    "subject": "Backlink Audit update of sesafes.com. 3 New Toxic Domains; 3 New Trusted Domains"
-  },
-  {
-    "id": "19fd9fd90aa214bd",
-    "threadId": "19fd9fd90aa214bd",
-    "clientCode": "PW",
-    "disposition": "monitoring",
-    "subject": "pickettweaponry.com: Your Audit Report Is Ready"
-  },
-  {
-    "id": "19fda0c9d9e214e2",
-    "threadId": "19fda0c9d9e214e2",
-    "clientCode": "NFS",
-    "disposition": "monitoring",
-    "subject": "northfloridasafes.com: Your Audit Report Is Ready"
-  },
-  {
-    "id": "19fddc5a4e4a2a83",
-    "threadId": "19fddc5a4e4a2a83",
-    "clientCode": "SES",
-    "disposition": "monitoring",
-    "subject": "Notification of rank change. Project: sesafes.com"
-  },
-  {
-    "id": "19fde729ab9cc368",
-    "threadId": "19fde729ab9cc368",
-    "clientCode": "A1",
-    "disposition": "monitoring",
-    "subject": "Notification of rank change. Project: A1 Action"
-  },
-  {
-    "id": "19fdeb86ac41febd",
-    "threadId": "19fdeb86ac41febd",
-    "clientCode": "GCM",
-    "disposition": "monitoring",
-    "subject": "globalconceptsmedia.com: 71% of your pages have no canonical links"
-  },
-  {
-    "id": "19fdebaa2167ef24",
-    "threadId": "19fdebaa2167ef24",
-    "clientCode": "MAS",
-    "disposition": "monitoring",
-    "subject": "moveasafe.com: 100% of your pages have no canonical links"
-  },
-  {
-    "id": "19fdec8a5c6c3d2c",
-    "threadId": "19fdec8a5c6c3d2c",
-    "clientCode": "SES",
-    "disposition": "monitoring",
-    "subject": "New reasons prevent pages from being indexed on site https://www.sesafes.com/"
-  },
-  {
-    "id": "19fe368704efa4a7",
-    "threadId": "19fe368704efa4a7",
-    "clientCode": "A1",
-    "disposition": "monitoring",
-    "subject": "Notification of rank change. Project: A1 Action"
-  },
-  {
-    "id": "19fe448dff979a17",
-    "threadId": "19fe448dff979a17",
-    "clientCode": "HBG",
-    "disposition": "monitoring",
-    "subject": "hbguns.com: 4% of your pages have no canonical links"
-  },
-  {
-    "id": "19febd26162c8462",
-    "threadId": "19febd26162c8462",
-    "clientCode": "A1",
-    "disposition": "monitoring",
-    "subject": "(A1actionsafeandlock) Organic traffic dropped [New]: 2 URLs"
-  },
-  {
-    "id": "19febd9d4271c3a4",
-    "threadId": "19febd9d4271c3a4",
-    "clientCode": "PW",
-    "disposition": "monitoring",
-    "subject": "(Pickettweaponry) Non-canonical page in sitemap: 61 URLs"
-  },
-  {
-    "id": "19fec37a3415084b",
-    "threadId": "19fec37a3415084b",
-    "clientCode": "SFS",
-    "disposition": "monitoring",
-    "subject": "Backlink Audit update of southfloridasafes.com. 1 New Toxic Domain; 2 New Trusted Domains"
-  },
-  {
-    "id": "19ff11f920109472",
-    "threadId": "19ff11f920109472",
-    "clientCode": "GCM",
-    "disposition": "monitoring",
-    "subject": "Position Tracking Update (globalconceptsmedia.com)"
-  },
-  {
-    "id": "19ff11f9324737b7",
-    "threadId": "19ff11f9324737b7",
-    "clientCode": "PW",
-    "disposition": "monitoring",
-    "subject": "Position Tracking Update - Your rankings declined (pickettweaponry.com)"
-  },
-  {
-    "id": "19ff11f938c33d3b",
-    "threadId": "19ff11f938c33d3b",
-    "clientCode": "HBG",
-    "disposition": "monitoring",
-    "subject": "Position Tracking Update - Your rankings declined (hbguns.com)"
-  },
-  {
-    "id": "19ff11f9423d584c",
-    "threadId": "19ff11f92fd9ed66",
-    "clientCode": "A1",
-    "disposition": "monitoring",
-    "subject": "Position Tracking Update (a1actionsafeandlock.com)"
-  },
-  {
-    "id": "19ff11f94603691e",
-    "threadId": "19ff11f94603691e",
-    "clientCode": "NFS",
-    "disposition": "monitoring",
-    "subject": "Position Tracking Update (northfloridasafes.com)"
-  },
-  {
-    "id": "19ff11f966f437b6",
-    "threadId": "19ff11f966f437b6",
-    "clientCode": "SES",
-    "disposition": "monitoring",
-    "subject": "Position Tracking Update - Your rankings declined (sesafes.com)"
-  },
-  {
-    "id": "19ff26dbe7ae1270",
-    "threadId": "19ff26dba540fddf",
-    "clientCode": "SES",
-    "disposition": "monitoring",
-    "subject": "Notification of rank change. Project: sesafes.com"
-  },
-  {
-    "id": "19ff59022d0cb894",
-    "threadId": "19ff557fda143418",
-    "clientCode": "HBG",
-    "disposition": "monitoring",
-    "subject": "hbguns.com: 4% of your pages have no canonical links"
-  },
-  {
-    "id": "19ff59022d0cb894",
-    "threadId": "19ff59022d0cb894",
-    "clientCode": "HBG",
-    "disposition": "monitoring",
-    "subject": "hbguns.com: 4% of your pages have no canonical links"
-  },
-  {
-    "id": "19ff63145db8feb1",
-    "threadId": "19ff63145db8feb1",
-    "clientCode": "HBG",
-    "disposition": "monitoring",
-    "subject": "hbguns.com: New Type of Issues Detected"
-  },
-  {
-    "id": "19ff7888aa8b3156",
-    "threadId": "19ff7888aa8b3156",
-    "clientCode": "SES",
-    "disposition": "monitoring",
-    "subject": "Notification of rank change. Project: sesafes.com"
-  },
-  {
-    "id": "19ff90de50e59c47",
-    "threadId": "19ff90de50e59c47",
-    "clientCode": "HBG",
-    "disposition": "monitoring",
-    "subject": "hbguns.com: Your Audit Report Is Ready"
-  },
-  {
-    "id": "19ffba3fc8beeec2",
-    "threadId": "19ffba3fc8beeec2",
-    "clientCode": "A1",
-    "disposition": "monitoring",
-    "subject": "Backlink Audit update of A1 Action. 18 New Toxic Domains; 4 New Trusted Domains"
-  },
-  {
-    "id": "19ffcbaaf7bfb0a3",
-    "threadId": "19ffcbaae61c7140",
-    "clientCode": "SES",
-    "disposition": "monitoring",
-    "subject": "Notification of rank change. Project: sesafes.com"
-  },
-  {
-    "id": "19ffd679d4150497",
-    "threadId": "19ffd679d4150497",
-    "clientCode": "SFS",
-    "disposition": "monitoring",
-    "subject": "(Southfloridasafes) Non-canonical page in sitemap: 52 URLs"
-  },
-  {
-    "id": "19ffe0643737809b",
-    "threadId": "19ffe0643737809b",
-    "clientCode": "PW",
-    "disposition": "monitoring",
-    "subject": "pickettweaponry.com: Your Audit Report Is Ready"
-  },
-  {
-    "id": "19ffe162b7bdd6a2",
-    "threadId": "19ffe162b7bdd6a2",
-    "clientCode": "NFS",
-    "disposition": "monitoring",
-    "subject": "northfloridasafes.com: Great Job! You’ve Got Better Results"
-  },
-  {
-    "id": "19ffe18a5754dd9f",
-    "threadId": "19ffe18a5754dd9f",
-    "clientCode": "NFS",
-    "disposition": "monitoring",
-    "subject": "(Northfloridasafes) Image file size too large: 440 URLs"
-  },
-  {
-    "id": "1a00224176b1bcc0",
-    "threadId": "1a00224176b1bcc0",
-    "clientCode": "SES",
-    "disposition": "monitoring",
-    "subject": "Notification of rank change. Project: sesafes.com"
-  },
-  {
-    "id": "1a002f13c497b2b7",
-    "threadId": "1a002f13c497b2b7",
-    "clientCode": "4A",
-    "disposition": "monitoring",
-    "subject": "More than 17 of your products aren’t on Google"
-  },
-  {
-    "id": "1a0030437e68f358",
-    "threadId": "1a0030437e68f358",
-    "clientCode": "MAS",
-    "disposition": "monitoring",
-    "subject": "moveasafe.com: Your Audit Report Is Ready"
-  },
-  {
-    "id": "1a0086b6d20b3b20",
-    "threadId": "1a0086b6d20b3b20",
-    "clientCode": "HBG",
-    "disposition": "monitoring",
-    "subject": "hbguns.com: Your Audit Report Is Ready"
-  },
-  {
-    "id": "1a00871a372e8df4",
-    "threadId": "1a00871a372e8df4",
-    "clientCode": "SFS",
-    "disposition": "monitoring",
-    "subject": "southfloridasafes.com: Your Audit Report Is Ready"
-  },
-  {
-    "id": "1a00c0cabd8ce9b5",
-    "threadId": "1a00c0cabd8ce9b5",
-    "clientCode": "SFS",
-    "disposition": "monitoring",
-    "subject": "New reasons prevent pages from being indexed on site https://www.southfloridasafes.com/"
-  },
-  {
-    "id": "1a00c0ccb922f0b8",
-    "threadId": "1a00c0ccb922f0b8",
-    "clientCode": "SFS",
-    "disposition": "monitoring",
-    "subject": "New reasons prevent pages in a sitemap from being indexed on site https://www.southfloridasafes.com/"
-  },
-  {
-    "id": "1a00c0df5c0b28d2",
-    "threadId": "1a00c0df5c0b28d2",
-    "clientCode": "NFS",
-    "disposition": "monitoring",
-    "subject": "New reasons prevent pages in a sitemap from being indexed on site northfloridasafes.com"
-  },
-  {
-    "id": "1a00c0e008f88fe3",
-    "threadId": "1a00c0e008f88fe3",
-    "clientCode": "NFS",
-    "disposition": "monitoring",
-    "subject": "Page indexing issues successfully fixed for site northfloridasafes.com"
-  },
-  {
-    "id": "1a00c9df14d9776b",
-    "threadId": "1a00c9df14d9776b",
-    "clientCode": "A1",
-    "disposition": "monitoring",
-    "subject": "Notification of rank change. Project: A1 Action"
-  },
-  {
-    "id": "1a00f2a7bb7b42e6",
-    "threadId": "1a00f2a7bb7b42e6",
-    "clientCode": "HBG",
-    "disposition": "monitoring",
-    "subject": "New reasons prevent pages in a sitemap from being indexed on site hbguns.com"
-  },
-  {
-    "id": "1a00fcbe2f39abee",
-    "threadId": "1a00fcbe2f39abee",
-    "clientCode": "HBG",
-    "disposition": "monitoring",
-    "subject": "We're validating your Page indexing issue fixes for site hbguns.com"
-  },
-  {
-    "id": "1a00fd531998b350",
-    "threadId": "1a00fd531998b350",
-    "clientCode": "A1",
-    "disposition": "monitoring",
-    "subject": "(A1actionsafeandlock) 3XX redirect: 10 URLs"
-  },
-  {
-    "id": "1a00ff155b5c68c5",
-    "threadId": "1a00ff155b5c68c5",
-    "clientCode": "PW",
-    "disposition": "monitoring",
-    "subject": "(Pickettweaponry) Non-canonical page in sitemap: 61 URLs"
-  },
-  {
-    "id": "1a010473945addcb",
-    "threadId": "1a010473945addcb",
-    "clientCode": "PW",
-    "disposition": "monitoring",
-    "subject": "pickettweaponry.com: Great Job! You’ve Got Better Results"
-  },
-  {
-    "id": "1a0109d7bed5ab48",
-    "threadId": "1a0109d7bed5ab48",
-    "clientCode": "PW",
-    "disposition": "monitoring",
-    "subject": "We're validating your Page indexing issue fixes for site pickettweaponry.com"
-  },
-  {
-    "id": "1a0115d4d58a20c0",
-    "threadId": "1a0115d4d58a20c0",
-    "clientCode": "HBG",
-    "disposition": "monitoring",
-    "subject": "hbguns.com: Your Audit Report Is Ready"
-  },
-  {
-    "id": "1a0116a19937f7ad",
-    "threadId": "1a0116a19937f7ad",
-    "clientCode": "SES",
-    "disposition": "monitoring",
-    "subject": "Notification of rank change. Project: sesafes.com"
-  },
-  {
-    "id": "1a0118b91b641f92",
-    "threadId": "1a0118b91b641f92",
-    "clientCode": "HBG",
-    "disposition": "monitoring",
-    "subject": "hbguns.com: robots.txt updated. Review changes"
-  },
-  {
-    "id": "1a01191bb2b1fa40",
-    "threadId": "1a01191bb2b1fa40",
-    "clientCode": "HBG",
-    "disposition": "monitoring",
-    "subject": "(Hbguns) Site Audit crawl error"
-  },
-  {
-    "id": "1a011d3b18a52ee8",
-    "threadId": "1a011d3b18a52ee8",
-    "clientCode": "A1",
-    "disposition": "monitoring",
-    "subject": "Notification of rank change. Project: A1 Action"
-  },
-  {
-    "id": "1a012602efe98487",
-    "threadId": "1a012602efe98487",
-    "clientCode": "HBG",
-    "disposition": "monitoring",
-    "subject": "hbguns.com: Great Job! You’ve Got Better Results"
-  },
-  {
-    "id": "1a012a6540ae852d",
-    "threadId": "1a012a6540ae852d",
-    "clientCode": "GCM",
-    "disposition": "monitoring",
-    "subject": "globalconceptsmedia.com: 1/7 page had its Core Web Vitals declined"
-  },
-  {
-    "id": "1a013dac52bf42d9",
-    "threadId": "1a013d78b376ed4b",
-    "clientCode": "SES",
-    "disposition": "monitoring",
-    "subject": "Disavow File Updated for https://sesafes.com/"
-  },
-  {
-    "id": "1a0141c409f81347",
-    "threadId": "1a0141af4172a234",
-    "clientCode": "A1",
-    "disposition": "monitoring",
-    "subject": "Disavow File Updated for https://www.a1actionsafeandlock.com/"
-  },
-  {
-    "id": "1a01441c34bdaad6",
-    "threadId": "1a01441c34bdaad6",
-    "clientCode": "PW",
-    "disposition": "monitoring",
-    "subject": "(Pickettweaponry) Orphan page (has no incoming internal links) [New]: 18 URLs"
-  },
-  {
-    "id": "1a01500e4c3f3058",
-    "threadId": "1a01500e4c3f3058",
-    "clientCode": "PW",
-    "disposition": "monitoring",
-    "subject": "pickettweaponry.com: Your Audit Report Is Ready"
-  },
-  {
-    "id": "1a01577b72a8e3f5",
-    "threadId": "1a01577b72a8e3f5",
-    "clientCode": "4A",
-    "disposition": "information",
-    "subject": "Your Google Merchant Center account has been closed (18004agunsafe - Account ID: 5825072258)"
-  },
-  {
-    "id": "1a01aad19d802b47",
-    "threadId": "1a01aad19d802b47",
-    "clientCode": "PW",
-    "disposition": "monitoring",
-    "subject": "pickettweaponry.com: Great Job! You’ve Got Better Results"
-  },
-  {
-    "id": "1a01b0eae2a34d4d",
-    "threadId": "1a01b0eae2a34d4d",
-    "clientCode": "A1",
-    "disposition": "monitoring",
-    "subject": "Page indexing issues successfully fixed for site https://www.a1actionsafeandlock.com/"
-  },
-  {
-    "id": "1a01b18a37f8b486",
-    "threadId": "1a01b18a37f8b486",
-    "clientCode": "PW",
-    "disposition": "monitoring",
-    "subject": "pickettweaponry.com: Your Site’s Health Is at Risk. Act Now"
-  },
-  {
-    "id": "1a01b370630e3929",
-    "threadId": "1a01b370630e3929",
-    "clientCode": "PW",
-    "disposition": "monitoring",
-    "subject": "pickettweaponry.com: Your Audit Report Is Ready"
-  },
-  {
-    "id": "1a01b9dc80af2239",
-    "threadId": "1a01b9dc80af2239",
-    "clientCode": "NFS",
-    "disposition": "monitoring",
-    "subject": "Position Tracking Update (northfloridasafes.com)"
-  },
-  {
-    "id": "1a01b9dc9805ce2f",
-    "threadId": "1a01b9dc9805ce2f",
-    "clientCode": "GCM",
-    "disposition": "monitoring",
-    "subject": "Position Tracking Update - Your rankings declined (globalconceptsmedia.com)"
-  },
-  {
-    "id": "1a01b9dca202bb82",
-    "threadId": "1a01b9dca202bb82",
-    "clientCode": "SFS",
-    "disposition": "monitoring",
-    "subject": "Position Tracking Update - Your rankings declined (southfloridasafes.com)"
-  },
-  {
-    "id": "1a01b9dcbb22d07c",
-    "threadId": "1a01b9dc8c5798a0",
-    "clientCode": "A1",
-    "disposition": "monitoring",
-    "subject": "Position Tracking Update (a1actionsafeandlock.com)"
-  },
-  {
-    "id": "1a020cb232abc20b",
-    "threadId": "1a020cb232abc20b",
-    "clientCode": "SES",
-    "disposition": "monitoring",
-    "subject": "Notification of rank change. Project: sesafes.com"
-  },
-  {
-    "id": "1a022136f58c5d92",
-    "threadId": "1a022136f58c5d92",
-    "clientCode": "PW",
-    "disposition": "monitoring",
-    "subject": "pickettweaponry.com: We crawled only 46 out of 63 pages submitted in your sitemap.xml"
-  },
-  {
-    "id": "1a0221e6ef811644",
-    "threadId": "1a0221e6ef811644",
-    "clientCode": "NFS",
-    "disposition": "monitoring",
-    "subject": "(Northfloridasafes) Image file size too large: 441 URLs"
-  },
-  {
-    "id": "1a024d619b6d721d",
-    "threadId": "1a024d619b6d721d",
-    "clientCode": "SES",
-    "disposition": "monitoring",
-    "subject": "Backlink Audit update of sesafes.com. 3 High Quality Domains Broken; 2 New Trusted Domains"
-  },
-  {
-    "id": "1a025bfcd8bf599b",
-    "threadId": "1a025bfcd8bf599b",
-    "clientCode": "SES",
-    "disposition": "investigation",
-    "subject": "Action required: Fix your product issues"
-  },
-  {
-    "id": "1a025e20f790be55",
-    "threadId": "1a025e20f790be55",
-    "clientCode": "SES",
-    "disposition": "monitoring",
-    "subject": "Notification of rank change. Project: sesafes.com"
-  },
-  {
-    "id": "1a02662d80204837",
-    "threadId": "1a02662d80204837",
-    "clientCode": "A1",
-    "disposition": "monitoring",
-    "subject": "Notification of rank change. Project: A1 Action"
-  },
-  {
-    "id": "1a026d6d696f980b",
-    "threadId": "1a026d6d696f980b",
-    "clientCode": "GCM",
-    "disposition": "monitoring",
-    "subject": "globalconceptsmedia.com: We crawled only 6 out of 8 pages submitted in your sitemap.xml"
-  },
-  {
-    "id": "1a027051ebad9b60",
-    "threadId": "1a027051ebad9b60",
-    "clientCode": "MAS",
-    "disposition": "monitoring",
-    "subject": "moveasafe.com: We crawled only 11 out of 13 pages submitted in your sitemap.xml"
-  },
-  {
-    "id": "1a02b72aada147d6",
-    "threadId": "1a02b72a9333dfed",
-    "clientCode": "SES",
-    "disposition": "monitoring",
-    "subject": "Notification of rank change. Project: sesafes.com"
-  },
-  {
-    "id": "1a02c5d7388c2b8c",
-    "threadId": "1a02c5d7388c2b8c",
-    "clientCode": "HBG",
-    "disposition": "monitoring",
-    "subject": "hbguns.com: Great Job! You’ve Got Better Results"
-  },
-  {
-    "id": "1a02c687bddb1a69",
-    "threadId": "1a02c687bddb1a69",
-    "clientCode": "SFS",
-    "disposition": "monitoring",
-    "subject": "southfloridasafes.com: We crawled only 50 out of 52 pages submitted in your sitemap.xml"
-  },
-  {
-    "id": "1a02fa95e8e50a28",
-    "threadId": "1a02fa95e8e50a28",
-    "clientCode": "A1",
-    "disposition": "investigation",
-    "subject": "New reasons prevent pages from being indexed on site https://www.a1actionsafeandlock.com/"
-  },
-  {
-    "id": "1a02fdd999f64f90",
-    "threadId": "1a02fdd999f64f90",
-    "clientCode": "HBG",
-    "disposition": "monitoring",
-    "subject": "New reasons prevent pages from being indexed on site hbguns.com"
-  },
-  {
-    "id": "1a030ad7203e29c8",
-    "threadId": "1a030ad7203e29c8",
-    "clientCode": "SES",
-    "disposition": "monitoring",
-    "subject": "Notification of rank change. Project: sesafes.com"
-  },
-  {
-    "id": "1a0319dae3c77a5e",
-    "threadId": "1a0319dae3c77a5e",
-    "clientCode": "A1",
-    "disposition": "monitoring",
-    "subject": "Notification of rank change. Project: A1 Action"
-  },
-  {
-    "id": "1a033f681d8439f1",
-    "threadId": "1a033f681d8439f1",
-    "clientCode": "A1",
-    "disposition": "monitoring",
-    "subject": "(A1actionsafeandlock) Slow page [New]: 5 URLs"
-  },
-  {
-    "id": "1a033ff705c0714f",
-    "threadId": "1a033ff705c0714f",
-    "clientCode": "PW",
-    "disposition": "monitoring",
-    "subject": "(Pickettweaponry) SERP title changed [New]: 1 URL"
-  },
-  {
-    "id": "1a0344d80dfc3634",
-    "threadId": "1a0344d80dfc3634",
-    "clientCode": "SFS",
-    "disposition": "monitoring",
-    "subject": "Backlink Audit update of southfloridasafes.com. 2 New Toxic Domains; 3 New Trusted Domains"
-  },
-  {
-    "id": "1a03a8d0fc1d5687",
-    "threadId": "1a03a8d0fc1d5687",
-    "clientCode": "SES",
-    "disposition": "monitoring",
-    "subject": "Notification of rank change. Project: sesafes.com"
-  },
-  {
-    "id": "1a03fcc431434fb1",
-    "threadId": "1a03fcc431434fb1",
-    "clientCode": "SES",
-    "disposition": "monitoring",
-    "subject": "Position Tracking Update - Your rankings increased (sesafes.com)"
-  },
-  {
-    "id": "1a03fcc44506dd11",
-    "threadId": "1a03fcc44506dd11",
-    "clientCode": "HBG",
-    "disposition": "monitoring",
-    "subject": "Position Tracking Update (hbguns.com)"
-  },
-  {
-    "id": "1a03fcc446a4558d",
-    "threadId": "1a03fcc446a4558d",
-    "clientCode": "GCM",
-    "disposition": "monitoring",
-    "subject": "Position Tracking Update (globalconceptsmedia.com)"
-  },
-  {
-    "id": "1a03fcc44e4fa154",
-    "threadId": "1a03fcc44e4fa154",
-    "clientCode": "PW",
-    "disposition": "monitoring",
-    "subject": "Position Tracking Update (pickettweaponry.com)"
-  },
-  {
-    "id": "1a03fcc44e5d4a93",
-    "threadId": "1a03fcc44e5d4a93",
-    "clientCode": "SFS",
-    "disposition": "monitoring",
-    "subject": "Position Tracking Update (southfloridasafes.com)"
-  },
-  {
-    "id": "1a03fcc46efe408d",
-    "threadId": "1a03fcc46efe408d",
-    "clientCode": "A1",
-    "disposition": "monitoring",
-    "subject": "Position Tracking Update (a1actionsafeandlock.com)"
-  },
-  {
-    "id": "1a040235a46bd1d3",
-    "threadId": "1a040235a46bd1d3",
-    "clientCode": "A1",
-    "disposition": "monitoring",
-    "subject": "Notification of rank change. Project: A1 Action"
-  },
-  {
-    "id": "1a043bfa4f044d65",
-    "threadId": "1a043bfa4f044d65",
-    "clientCode": "A1",
-    "disposition": "monitoring",
-    "subject": "Backlink Audit update of A1 Action. 9 New Toxic Domains; 8 New Trusted Domains"
-  },
-  {
-    "id": "1a04470a7c8391dc",
-    "threadId": "1a04470a7c8391dc",
-    "clientCode": "SES",
-    "disposition": "monitoring",
-    "subject": "Your Google Analytics performance report is in for July 31st - August 27th"
-  },
-  {
-    "id": "1a044c9219cc3b25",
-    "threadId": "1a044c9207369bd5",
-    "clientCode": "SES",
-    "disposition": "monitoring",
-    "subject": "Notification of rank change. Project: sesafes.com"
-  },
-  {
-    "id": "1a04552017520791",
-    "threadId": "1a04552017520791",
-    "clientCode": "A1",
-    "disposition": "monitoring",
-    "subject": "Notification of rank change. Project: A1 Action"
-  },
-  {
-    "id": "1a04584554788e2c",
-    "threadId": "1a04584554788e2c",
-    "clientCode": "SFS",
-    "disposition": "monitoring",
-    "subject": "(Southfloridasafes) Pages dropped from Top 10 [New]: 1 URL"
-  },
-  {
-    "id": "1a0461957ac88d04",
-    "threadId": "1a0461957ac88d04",
-    "clientCode": "PW",
-    "disposition": "monitoring",
-    "subject": "pickettweaponry.com: 25% of your pages have redirects (3xx)"
-  },
-  {
-    "id": "1a0463a1b448f7ef",
-    "threadId": "1a0463a1b448f7ef",
-    "clientCode": "NFS",
-    "disposition": "monitoring",
-    "subject": "(Northfloridasafes) Image file size too large: 442 URLs"
-  },
-  {
-    "id": "1a047da4a7a57de2",
-    "threadId": "1a047da4a7a57de2",
-    "clientCode": "SES",
-    "disposition": "information",
-    "subject": "Your Google Merchant Center account has been closed (Southeast Safes - Account ID: 5817421868)"
-  }
-];
+            {
+              "id": "19fbaaebe752f0fd",
+              "threadId": "19fbaaebe752f0fd",
+              "clientCode": "GCM",
+              "disposition": "monitoring",
+              "subject": "globalconceptsmedia.com: 44% of your pages have no markups"
+            },
+            {
+              "id": "19fbab1524dfb242",
+              "threadId": "19fbab1524dfb242",
+              "clientCode": "MAS",
+              "disposition": "monitoring",
+              "subject": "moveasafe.com: Your Audit Report Is Ready"
+            },
+            {
+              "id": "19fbed09c38c9877",
+              "threadId": "19fbed09a46d04e7",
+              "clientCode": "SES",
+              "disposition": "monitoring",
+              "subject": "Notification of rank change. Project: sesafes.com"
+            },
+            {
+              "id": "19fbf446c9df2ace",
+              "threadId": "19fbf446c9df2ace",
+              "clientCode": "A1",
+              "disposition": "monitoring",
+              "subject": "Notification of rank change. Project: A1 Action"
+            },
+            {
+              "id": "19fc04e11eb6de96",
+              "threadId": "19fc04e11eb6de96",
+              "clientCode": "HBG",
+              "disposition": "monitoring",
+              "subject": "hbguns.com: Your Audit Report Is Ready"
+            },
+            {
+              "id": "19fc05bfa91aef15",
+              "threadId": "19fc05bfa91aef15",
+              "clientCode": "SFS",
+              "disposition": "monitoring",
+              "subject": "southfloridasafes.com: New Type of Issues Detected"
+            },
+            {
+              "id": "19fc3fb8f347da5a",
+              "threadId": "19fc3fb8f347da5a",
+              "clientCode": "SES",
+              "disposition": "monitoring",
+              "subject": "Notification of rank change. Project: sesafes.com"
+            },
+            {
+              "id": "19fc46f10807571c",
+              "threadId": "19fc46f10807571c",
+              "clientCode": "A1",
+              "disposition": "monitoring",
+              "subject": "Notification of rank change. Project: A1 Action"
+            },
+            {
+              "id": "19fc7ba03fc5b9f5",
+              "threadId": "19fc7ba03fc5b9f5",
+              "clientCode": "HBG",
+              "disposition": "monitoring",
+              "subject": "(Hbguns) Site Audit crawl failed"
+            },
+            {
+              "id": "19fc7cda0f7faf27",
+              "threadId": "19fc7cda0f7faf27",
+              "clientCode": "PW",
+              "disposition": "monitoring",
+              "subject": "(Pickettweaponry) No. of referring domains dropped [New]: 1 URL"
+            },
+            {
+              "id": "19fc7d17fc04f730",
+              "threadId": "19fc7d17fc04f730",
+              "clientCode": "A1",
+              "disposition": "monitoring",
+              "subject": "(A1actionsafeandlock) Orphan page (has no incoming internal links): 2 URLs"
+            },
+            {
+              "id": "19fc986d1c9ebe15",
+              "threadId": "19fc986d1c9ebe15",
+              "clientCode": "SES",
+              "disposition": "monitoring",
+              "subject": "Notification of rank change. Project: sesafes.com"
+            },
+            {
+              "id": "19fc9b7c031fe03b",
+              "threadId": "19fc9b7c031fe03b",
+              "clientCode": "A1",
+              "disposition": "monitoring",
+              "subject": "Notification of rank change. Project: A1 Action"
+            },
+            {
+              "id": "19fcce61a1a914af",
+              "threadId": "19fcce61a1a914af",
+              "clientCode": "A1",
+              "disposition": "monitoring",
+              "subject": "Your July Search performance for https://www.a1actionsafeandlock.com/"
+            },
+            {
+              "id": "19fcceabc83b3047",
+              "threadId": "19fcceabc83b3047",
+              "clientCode": "HBG",
+              "disposition": "monitoring",
+              "subject": "Your July Search performance for hbguns.com"
+            },
+            {
+              "id": "19fccec04b513fb2",
+              "threadId": "19fccec04b513fb2",
+              "clientCode": "SFS",
+              "disposition": "monitoring",
+              "subject": "Your July Search performance for https://www.southfloridasafes.com/"
+            },
+            {
+              "id": "19fccef809ec2279",
+              "threadId": "19fccef809ec2279",
+              "clientCode": "SES",
+              "disposition": "monitoring",
+              "subject": "Your July Search performance for https://sesafes.com/"
+            },
+            {
+              "id": "19fcd0f33bd87542",
+              "threadId": "19fcd0f33bd87542",
+              "clientCode": "PW",
+              "disposition": "monitoring",
+              "subject": "Your July Search performance for pickettweaponry.com"
+            },
+            {
+              "id": "19fceae5c19259cc",
+              "threadId": "19fceae5c19259cc",
+              "clientCode": "SES",
+              "disposition": "monitoring",
+              "subject": "Notification of rank change. Project: sesafes.com"
+            },
+            {
+              "id": "19fcefd836b5d2b9",
+              "threadId": "19fcefd836b5d2b9",
+              "clientCode": "A1",
+              "disposition": "monitoring",
+              "subject": "Notification of rank change. Project: A1 Action"
+            },
+            {
+              "id": "19fd31e7539e6f78",
+              "threadId": "19fd31e7539e6f78",
+              "clientCode": "GCM",
+              "disposition": "monitoring",
+              "subject": "Position Tracking Update (globalconceptsmedia.com)"
+            },
+            {
+              "id": "19fd31e7688ca31f",
+              "threadId": "19fd31e7688ca31f",
+              "clientCode": "SFS",
+              "disposition": "monitoring",
+              "subject": "Position Tracking Update - Your rankings declined (southfloridasafes.com)"
+            },
+            {
+              "id": "19fd31e77c636ef1",
+              "threadId": "19fd31e77c636ef1",
+              "clientCode": "HBG",
+              "disposition": "monitoring",
+              "subject": "Position Tracking Update (hbguns.com)"
+            },
+            {
+              "id": "19fd31e77daf7590",
+              "threadId": "19fd31e77daf7590",
+              "clientCode": "NFS",
+              "disposition": "monitoring",
+              "subject": "Position Tracking Update (northfloridasafes.com)"
+            },
+            {
+              "id": "19fd31e795572a7f",
+              "threadId": "19fd31e795572a7f",
+              "clientCode": "SES",
+              "disposition": "monitoring",
+              "subject": "Position Tracking Update - Your rankings increased (sesafes.com)"
+            },
+            {
+              "id": "19fd31e7a675d001",
+              "threadId": "19fd31e7a675d001",
+              "clientCode": "PW",
+              "disposition": "monitoring",
+              "subject": "Position Tracking Update - Your rankings declined (pickettweaponry.com)"
+            },
+            {
+              "id": "19fd31e833282580",
+              "threadId": "19fd31e833282580",
+              "clientCode": "A1",
+              "disposition": "monitoring",
+              "subject": "Position Tracking Update (a1actionsafeandlock.com)"
+            },
+            {
+              "id": "19fd3c5e1ea62064",
+              "threadId": "19fd3c5e1ea62064",
+              "clientCode": "GCM",
+              "disposition": "monitoring",
+              "subject": "Your Google Analytics performance report is in for July 9th - August 5th"
+            },
+            {
+              "id": "19fd406175160355",
+              "threadId": "19fd406175160355",
+              "clientCode": "A1",
+              "disposition": "monitoring",
+              "subject": "Notification of rank change. Project: A1 Action"
+            },
+            {
+              "id": "19fd8ab05f8cbae0",
+              "threadId": "19fd683bcb0bb1cd",
+              "clientCode": "SES",
+              "disposition": "monitoring",
+              "subject": "Notification of rank change. Project: sesafes.com"
+            },
+            {
+              "id": "19fd91942c99171b",
+              "threadId": "19fd91942c99171b",
+              "clientCode": "A1",
+              "disposition": "monitoring",
+              "subject": "Notification of rank change. Project: A1 Action"
+            },
+            {
+              "id": "19fd958a12458081",
+              "threadId": "19fd958a12458081",
+              "clientCode": "SFS",
+              "disposition": "monitoring",
+              "subject": "(Southfloridasafes) Organic traffic dropped [New]: 2 URLs"
+            },
+            {
+              "id": "19fd9700b9cf15ef",
+              "threadId": "19fd9700b9cf15ef",
+              "clientCode": "SES",
+              "disposition": "monitoring",
+              "subject": "Backlink Audit update of sesafes.com. 3 New Toxic Domains; 3 New Trusted Domains"
+            },
+            {
+              "id": "19fd9fd90aa214bd",
+              "threadId": "19fd9fd90aa214bd",
+              "clientCode": "PW",
+              "disposition": "monitoring",
+              "subject": "pickettweaponry.com: Your Audit Report Is Ready"
+            },
+            {
+              "id": "19fda0c9d9e214e2",
+              "threadId": "19fda0c9d9e214e2",
+              "clientCode": "NFS",
+              "disposition": "monitoring",
+              "subject": "northfloridasafes.com: Your Audit Report Is Ready"
+            },
+            {
+              "id": "19fddc5a4e4a2a83",
+              "threadId": "19fddc5a4e4a2a83",
+              "clientCode": "SES",
+              "disposition": "monitoring",
+              "subject": "Notification of rank change. Project: sesafes.com"
+            },
+            {
+              "id": "19fde729ab9cc368",
+              "threadId": "19fde729ab9cc368",
+              "clientCode": "A1",
+              "disposition": "monitoring",
+              "subject": "Notification of rank change. Project: A1 Action"
+            },
+            {
+              "id": "19fdeb86ac41febd",
+              "threadId": "19fdeb86ac41febd",
+              "clientCode": "GCM",
+              "disposition": "monitoring",
+              "subject": "globalconceptsmedia.com: 71% of your pages have no canonical links"
+            },
+            {
+              "id": "19fdebaa2167ef24",
+              "threadId": "19fdebaa2167ef24",
+              "clientCode": "MAS",
+              "disposition": "monitoring",
+              "subject": "moveasafe.com: 100% of your pages have no canonical links"
+            },
+            {
+              "id": "19fdec8a5c6c3d2c",
+              "threadId": "19fdec8a5c6c3d2c",
+              "clientCode": "SES",
+              "disposition": "monitoring",
+              "subject": "New reasons prevent pages from being indexed on site https://www.sesafes.com/"
+            },
+            {
+              "id": "19fe368704efa4a7",
+              "threadId": "19fe368704efa4a7",
+              "clientCode": "A1",
+              "disposition": "monitoring",
+              "subject": "Notification of rank change. Project: A1 Action"
+            },
+            {
+              "id": "19fe448dff979a17",
+              "threadId": "19fe448dff979a17",
+              "clientCode": "HBG",
+              "disposition": "monitoring",
+              "subject": "hbguns.com: 4% of your pages have no canonical links"
+            },
+            {
+              "id": "19febd26162c8462",
+              "threadId": "19febd26162c8462",
+              "clientCode": "A1",
+              "disposition": "monitoring",
+              "subject": "(A1actionsafeandlock) Organic traffic dropped [New]: 2 URLs"
+            },
+            {
+              "id": "19febd9d4271c3a4",
+              "threadId": "19febd9d4271c3a4",
+              "clientCode": "PW",
+              "disposition": "monitoring",
+              "subject": "(Pickettweaponry) Non-canonical page in sitemap: 61 URLs"
+            },
+            {
+              "id": "19fec37a3415084b",
+              "threadId": "19fec37a3415084b",
+              "clientCode": "SFS",
+              "disposition": "monitoring",
+              "subject": "Backlink Audit update of southfloridasafes.com. 1 New Toxic Domain; 2 New Trusted Domains"
+            },
+            {
+              "id": "19ff11f920109472",
+              "threadId": "19ff11f920109472",
+              "clientCode": "GCM",
+              "disposition": "monitoring",
+              "subject": "Position Tracking Update (globalconceptsmedia.com)"
+            },
+            {
+              "id": "19ff11f9324737b7",
+              "threadId": "19ff11f9324737b7",
+              "clientCode": "PW",
+              "disposition": "monitoring",
+              "subject": "Position Tracking Update - Your rankings declined (pickettweaponry.com)"
+            },
+            {
+              "id": "19ff11f938c33d3b",
+              "threadId": "19ff11f938c33d3b",
+              "clientCode": "HBG",
+              "disposition": "monitoring",
+              "subject": "Position Tracking Update - Your rankings declined (hbguns.com)"
+            },
+            {
+              "id": "19ff11f9423d584c",
+              "threadId": "19ff11f92fd9ed66",
+              "clientCode": "A1",
+              "disposition": "monitoring",
+              "subject": "Position Tracking Update (a1actionsafeandlock.com)"
+            },
+            {
+              "id": "19ff11f94603691e",
+              "threadId": "19ff11f94603691e",
+              "clientCode": "NFS",
+              "disposition": "monitoring",
+              "subject": "Position Tracking Update (northfloridasafes.com)"
+            },
+            {
+              "id": "19ff11f966f437b6",
+              "threadId": "19ff11f966f437b6",
+              "clientCode": "SES",
+              "disposition": "monitoring",
+              "subject": "Position Tracking Update - Your rankings declined (sesafes.com)"
+            },
+            {
+              "id": "19ff26dbe7ae1270",
+              "threadId": "19ff26dba540fddf",
+              "clientCode": "SES",
+              "disposition": "monitoring",
+              "subject": "Notification of rank change. Project: sesafes.com"
+            },
+            {
+              "id": "19ff59022d0cb894",
+              "threadId": "19ff557fda143418",
+              "clientCode": "HBG",
+              "disposition": "monitoring",
+              "subject": "hbguns.com: 4% of your pages have no canonical links"
+            },
+            {
+              "id": "19ff59022d0cb894",
+              "threadId": "19ff59022d0cb894",
+              "clientCode": "HBG",
+              "disposition": "monitoring",
+              "subject": "hbguns.com: 4% of your pages have no canonical links"
+            },
+            {
+              "id": "19ff63145db8feb1",
+              "threadId": "19ff63145db8feb1",
+              "clientCode": "HBG",
+              "disposition": "monitoring",
+              "subject": "hbguns.com: New Type of Issues Detected"
+            },
+            {
+              "id": "19ff7888aa8b3156",
+              "threadId": "19ff7888aa8b3156",
+              "clientCode": "SES",
+              "disposition": "monitoring",
+              "subject": "Notification of rank change. Project: sesafes.com"
+            },
+            {
+              "id": "19ff90de50e59c47",
+              "threadId": "19ff90de50e59c47",
+              "clientCode": "HBG",
+              "disposition": "monitoring",
+              "subject": "hbguns.com: Your Audit Report Is Ready"
+            },
+            {
+              "id": "19ffba3fc8beeec2",
+              "threadId": "19ffba3fc8beeec2",
+              "clientCode": "A1",
+              "disposition": "monitoring",
+              "subject": "Backlink Audit update of A1 Action. 18 New Toxic Domains; 4 New Trusted Domains"
+            },
+            {
+              "id": "19ffcbaaf7bfb0a3",
+              "threadId": "19ffcbaae61c7140",
+              "clientCode": "SES",
+              "disposition": "monitoring",
+              "subject": "Notification of rank change. Project: sesafes.com"
+            },
+            {
+              "id": "19ffd679d4150497",
+              "threadId": "19ffd679d4150497",
+              "clientCode": "SFS",
+              "disposition": "monitoring",
+              "subject": "(Southfloridasafes) Non-canonical page in sitemap: 52 URLs"
+            },
+            {
+              "id": "19ffe0643737809b",
+              "threadId": "19ffe0643737809b",
+              "clientCode": "PW",
+              "disposition": "monitoring",
+              "subject": "pickettweaponry.com: Your Audit Report Is Ready"
+            },
+            {
+              "id": "19ffe162b7bdd6a2",
+              "threadId": "19ffe162b7bdd6a2",
+              "clientCode": "NFS",
+              "disposition": "monitoring",
+              "subject": "northfloridasafes.com: Great Job! You’ve Got Better Results"
+            },
+            {
+              "id": "19ffe18a5754dd9f",
+              "threadId": "19ffe18a5754dd9f",
+              "clientCode": "NFS",
+              "disposition": "monitoring",
+              "subject": "(Northfloridasafes) Image file size too large: 440 URLs"
+            },
+            {
+              "id": "1a00224176b1bcc0",
+              "threadId": "1a00224176b1bcc0",
+              "clientCode": "SES",
+              "disposition": "monitoring",
+              "subject": "Notification of rank change. Project: sesafes.com"
+            },
+            {
+              "id": "1a002f13c497b2b7",
+              "threadId": "1a002f13c497b2b7",
+              "clientCode": "4A",
+              "disposition": "monitoring",
+              "subject": "More than 17 of your products aren’t on Google"
+            },
+            {
+              "id": "1a0030437e68f358",
+              "threadId": "1a0030437e68f358",
+              "clientCode": "MAS",
+              "disposition": "monitoring",
+              "subject": "moveasafe.com: Your Audit Report Is Ready"
+            },
+            {
+              "id": "1a0086b6d20b3b20",
+              "threadId": "1a0086b6d20b3b20",
+              "clientCode": "HBG",
+              "disposition": "monitoring",
+              "subject": "hbguns.com: Your Audit Report Is Ready"
+            },
+            {
+              "id": "1a00871a372e8df4",
+              "threadId": "1a00871a372e8df4",
+              "clientCode": "SFS",
+              "disposition": "monitoring",
+              "subject": "southfloridasafes.com: Your Audit Report Is Ready"
+            },
+            {
+              "id": "1a00c0cabd8ce9b5",
+              "threadId": "1a00c0cabd8ce9b5",
+              "clientCode": "SFS",
+              "disposition": "monitoring",
+              "subject": "New reasons prevent pages from being indexed on site https://www.southfloridasafes.com/"
+            },
+            {
+              "id": "1a00c0ccb922f0b8",
+              "threadId": "1a00c0ccb922f0b8",
+              "clientCode": "SFS",
+              "disposition": "monitoring",
+              "subject": "New reasons prevent pages in a sitemap from being indexed on site https://www.southfloridasafes.com/"
+            },
+            {
+              "id": "1a00c0df5c0b28d2",
+              "threadId": "1a00c0df5c0b28d2",
+              "clientCode": "NFS",
+              "disposition": "monitoring",
+              "subject": "New reasons prevent pages in a sitemap from being indexed on site northfloridasafes.com"
+            },
+            {
+              "id": "1a00c0e008f88fe3",
+              "threadId": "1a00c0e008f88fe3",
+              "clientCode": "NFS",
+              "disposition": "monitoring",
+              "subject": "Page indexing issues successfully fixed for site northfloridasafes.com"
+            },
+            {
+              "id": "1a00c9df14d9776b",
+              "threadId": "1a00c9df14d9776b",
+              "clientCode": "A1",
+              "disposition": "monitoring",
+              "subject": "Notification of rank change. Project: A1 Action"
+            },
+            {
+              "id": "1a00f2a7bb7b42e6",
+              "threadId": "1a00f2a7bb7b42e6",
+              "clientCode": "HBG",
+              "disposition": "monitoring",
+              "subject": "New reasons prevent pages in a sitemap from being indexed on site hbguns.com"
+            },
+            {
+              "id": "1a00fcbe2f39abee",
+              "threadId": "1a00fcbe2f39abee",
+              "clientCode": "HBG",
+              "disposition": "monitoring",
+              "subject": "We're validating your Page indexing issue fixes for site hbguns.com"
+            },
+            {
+              "id": "1a00fd531998b350",
+              "threadId": "1a00fd531998b350",
+              "clientCode": "A1",
+              "disposition": "monitoring",
+              "subject": "(A1actionsafeandlock) 3XX redirect: 10 URLs"
+            },
+            {
+              "id": "1a00ff155b5c68c5",
+              "threadId": "1a00ff155b5c68c5",
+              "clientCode": "PW",
+              "disposition": "monitoring",
+              "subject": "(Pickettweaponry) Non-canonical page in sitemap: 61 URLs"
+            },
+            {
+              "id": "1a010473945addcb",
+              "threadId": "1a010473945addcb",
+              "clientCode": "PW",
+              "disposition": "monitoring",
+              "subject": "pickettweaponry.com: Great Job! You’ve Got Better Results"
+            },
+            {
+              "id": "1a0109d7bed5ab48",
+              "threadId": "1a0109d7bed5ab48",
+              "clientCode": "PW",
+              "disposition": "monitoring",
+              "subject": "We're validating your Page indexing issue fixes for site pickettweaponry.com"
+            },
+            {
+              "id": "1a0115d4d58a20c0",
+              "threadId": "1a0115d4d58a20c0",
+              "clientCode": "HBG",
+              "disposition": "monitoring",
+              "subject": "hbguns.com: Your Audit Report Is Ready"
+            },
+            {
+              "id": "1a0116a19937f7ad",
+              "threadId": "1a0116a19937f7ad",
+              "clientCode": "SES",
+              "disposition": "monitoring",
+              "subject": "Notification of rank change. Project: sesafes.com"
+            },
+            {
+              "id": "1a0118b91b641f92",
+              "threadId": "1a0118b91b641f92",
+              "clientCode": "HBG",
+              "disposition": "monitoring",
+              "subject": "hbguns.com: robots.txt updated. Review changes"
+            },
+            {
+              "id": "1a01191bb2b1fa40",
+              "threadId": "1a01191bb2b1fa40",
+              "clientCode": "HBG",
+              "disposition": "monitoring",
+              "subject": "(Hbguns) Site Audit crawl error"
+            },
+            {
+              "id": "1a011d3b18a52ee8",
+              "threadId": "1a011d3b18a52ee8",
+              "clientCode": "A1",
+              "disposition": "monitoring",
+              "subject": "Notification of rank change. Project: A1 Action"
+            },
+            {
+              "id": "1a012602efe98487",
+              "threadId": "1a012602efe98487",
+              "clientCode": "HBG",
+              "disposition": "monitoring",
+              "subject": "hbguns.com: Great Job! You’ve Got Better Results"
+            },
+            {
+              "id": "1a012a6540ae852d",
+              "threadId": "1a012a6540ae852d",
+              "clientCode": "GCM",
+              "disposition": "monitoring",
+              "subject": "globalconceptsmedia.com: 1/7 page had its Core Web Vitals declined"
+            },
+            {
+              "id": "1a013dac52bf42d9",
+              "threadId": "1a013d78b376ed4b",
+              "clientCode": "SES",
+              "disposition": "monitoring",
+              "subject": "Disavow File Updated for https://sesafes.com/"
+            },
+            {
+              "id": "1a0141c409f81347",
+              "threadId": "1a0141af4172a234",
+              "clientCode": "A1",
+              "disposition": "monitoring",
+              "subject": "Disavow File Updated for https://www.a1actionsafeandlock.com/"
+            },
+            {
+              "id": "1a01441c34bdaad6",
+              "threadId": "1a01441c34bdaad6",
+              "clientCode": "PW",
+              "disposition": "monitoring",
+              "subject": "(Pickettweaponry) Orphan page (has no incoming internal links) [New]: 18 URLs"
+            },
+            {
+              "id": "1a01500e4c3f3058",
+              "threadId": "1a01500e4c3f3058",
+              "clientCode": "PW",
+              "disposition": "monitoring",
+              "subject": "pickettweaponry.com: Your Audit Report Is Ready"
+            },
+            {
+              "id": "1a01577b72a8e3f5",
+              "threadId": "1a01577b72a8e3f5",
+              "clientCode": "4A",
+              "disposition": "information",
+              "subject": "Your Google Merchant Center account has been closed (18004agunsafe - Account ID: 5825072258)"
+            },
+            {
+              "id": "1a01aad19d802b47",
+              "threadId": "1a01aad19d802b47",
+              "clientCode": "PW",
+              "disposition": "monitoring",
+              "subject": "pickettweaponry.com: Great Job! You’ve Got Better Results"
+            },
+            {
+              "id": "1a01b0eae2a34d4d",
+              "threadId": "1a01b0eae2a34d4d",
+              "clientCode": "A1",
+              "disposition": "monitoring",
+              "subject": "Page indexing issues successfully fixed for site https://www.a1actionsafeandlock.com/"
+            },
+            {
+              "id": "1a01b18a37f8b486",
+              "threadId": "1a01b18a37f8b486",
+              "clientCode": "PW",
+              "disposition": "monitoring",
+              "subject": "pickettweaponry.com: Your Site’s Health Is at Risk. Act Now"
+            },
+            {
+              "id": "1a01b370630e3929",
+              "threadId": "1a01b370630e3929",
+              "clientCode": "PW",
+              "disposition": "monitoring",
+              "subject": "pickettweaponry.com: Your Audit Report Is Ready"
+            },
+            {
+              "id": "1a01b9dc80af2239",
+              "threadId": "1a01b9dc80af2239",
+              "clientCode": "NFS",
+              "disposition": "monitoring",
+              "subject": "Position Tracking Update (northfloridasafes.com)"
+            },
+            {
+              "id": "1a01b9dc9805ce2f",
+              "threadId": "1a01b9dc9805ce2f",
+              "clientCode": "GCM",
+              "disposition": "monitoring",
+              "subject": "Position Tracking Update - Your rankings declined (globalconceptsmedia.com)"
+            },
+            {
+              "id": "1a01b9dca202bb82",
+              "threadId": "1a01b9dca202bb82",
+              "clientCode": "SFS",
+              "disposition": "monitoring",
+              "subject": "Position Tracking Update - Your rankings declined (southfloridasafes.com)"
+            },
+            {
+              "id": "1a01b9dcbb22d07c",
+              "threadId": "1a01b9dc8c5798a0",
+              "clientCode": "A1",
+              "disposition": "monitoring",
+              "subject": "Position Tracking Update (a1actionsafeandlock.com)"
+            },
+            {
+              "id": "1a020cb232abc20b",
+              "threadId": "1a020cb232abc20b",
+              "clientCode": "SES",
+              "disposition": "monitoring",
+              "subject": "Notification of rank change. Project: sesafes.com"
+            },
+            {
+              "id": "1a022136f58c5d92",
+              "threadId": "1a022136f58c5d92",
+              "clientCode": "PW",
+              "disposition": "monitoring",
+              "subject": "pickettweaponry.com: We crawled only 46 out of 63 pages submitted in your sitemap.xml"
+            },
+            {
+              "id": "1a0221e6ef811644",
+              "threadId": "1a0221e6ef811644",
+              "clientCode": "NFS",
+              "disposition": "monitoring",
+              "subject": "(Northfloridasafes) Image file size too large: 441 URLs"
+            },
+            {
+              "id": "1a024d619b6d721d",
+              "threadId": "1a024d619b6d721d",
+              "clientCode": "SES",
+              "disposition": "monitoring",
+              "subject": "Backlink Audit update of sesafes.com. 3 High Quality Domains Broken; 2 New Trusted Domains"
+            },
+            {
+              "id": "1a025bfcd8bf599b",
+              "threadId": "1a025bfcd8bf599b",
+              "clientCode": "SES",
+              "disposition": "investigation",
+              "subject": "Action required: Fix your product issues"
+            },
+            {
+              "id": "1a025e20f790be55",
+              "threadId": "1a025e20f790be55",
+              "clientCode": "SES",
+              "disposition": "monitoring",
+              "subject": "Notification of rank change. Project: sesafes.com"
+            },
+            {
+              "id": "1a02662d80204837",
+              "threadId": "1a02662d80204837",
+              "clientCode": "A1",
+              "disposition": "monitoring",
+              "subject": "Notification of rank change. Project: A1 Action"
+            },
+            {
+              "id": "1a026d6d696f980b",
+              "threadId": "1a026d6d696f980b",
+              "clientCode": "GCM",
+              "disposition": "monitoring",
+              "subject": "globalconceptsmedia.com: We crawled only 6 out of 8 pages submitted in your sitemap.xml"
+            },
+            {
+              "id": "1a027051ebad9b60",
+              "threadId": "1a027051ebad9b60",
+              "clientCode": "MAS",
+              "disposition": "monitoring",
+              "subject": "moveasafe.com: We crawled only 11 out of 13 pages submitted in your sitemap.xml"
+            },
+            {
+              "id": "1a02b72aada147d6",
+              "threadId": "1a02b72a9333dfed",
+              "clientCode": "SES",
+              "disposition": "monitoring",
+              "subject": "Notification of rank change. Project: sesafes.com"
+            },
+            {
+              "id": "1a02c5d7388c2b8c",
+              "threadId": "1a02c5d7388c2b8c",
+              "clientCode": "HBG",
+              "disposition": "monitoring",
+              "subject": "hbguns.com: Great Job! You’ve Got Better Results"
+            },
+            {
+              "id": "1a02c687bddb1a69",
+              "threadId": "1a02c687bddb1a69",
+              "clientCode": "SFS",
+              "disposition": "monitoring",
+              "subject": "southfloridasafes.com: We crawled only 50 out of 52 pages submitted in your sitemap.xml"
+            },
+            {
+              "id": "1a02fa95e8e50a28",
+              "threadId": "1a02fa95e8e50a28",
+              "clientCode": "A1",
+              "disposition": "investigation",
+              "subject": "New reasons prevent pages from being indexed on site https://www.a1actionsafeandlock.com/"
+            },
+            {
+              "id": "1a02fdd999f64f90",
+              "threadId": "1a02fdd999f64f90",
+              "clientCode": "HBG",
+              "disposition": "monitoring",
+              "subject": "New reasons prevent pages from being indexed on site hbguns.com"
+            },
+            {
+              "id": "1a030ad7203e29c8",
+              "threadId": "1a030ad7203e29c8",
+              "clientCode": "SES",
+              "disposition": "monitoring",
+              "subject": "Notification of rank change. Project: sesafes.com"
+            },
+            {
+              "id": "1a0319dae3c77a5e",
+              "threadId": "1a0319dae3c77a5e",
+              "clientCode": "A1",
+              "disposition": "monitoring",
+              "subject": "Notification of rank change. Project: A1 Action"
+            },
+            {
+              "id": "1a033f681d8439f1",
+              "threadId": "1a033f681d8439f1",
+              "clientCode": "A1",
+              "disposition": "monitoring",
+              "subject": "(A1actionsafeandlock) Slow page [New]: 5 URLs"
+            },
+            {
+              "id": "1a033ff705c0714f",
+              "threadId": "1a033ff705c0714f",
+              "clientCode": "PW",
+              "disposition": "monitoring",
+              "subject": "(Pickettweaponry) SERP title changed [New]: 1 URL"
+            },
+            {
+              "id": "1a0344d80dfc3634",
+              "threadId": "1a0344d80dfc3634",
+              "clientCode": "SFS",
+              "disposition": "monitoring",
+              "subject": "Backlink Audit update of southfloridasafes.com. 2 New Toxic Domains; 3 New Trusted Domains"
+            },
+            {
+              "id": "1a03a8d0fc1d5687",
+              "threadId": "1a03a8d0fc1d5687",
+              "clientCode": "SES",
+              "disposition": "monitoring",
+              "subject": "Notification of rank change. Project: sesafes.com"
+            },
+            {
+              "id": "1a03fcc431434fb1",
+              "threadId": "1a03fcc431434fb1",
+              "clientCode": "SES",
+              "disposition": "monitoring",
+              "subject": "Position Tracking Update - Your rankings increased (sesafes.com)"
+            },
+            {
+              "id": "1a03fcc44506dd11",
+              "threadId": "1a03fcc44506dd11",
+              "clientCode": "HBG",
+              "disposition": "monitoring",
+              "subject": "Position Tracking Update (hbguns.com)"
+            },
+            {
+              "id": "1a03fcc446a4558d",
+              "threadId": "1a03fcc446a4558d",
+              "clientCode": "GCM",
+              "disposition": "monitoring",
+              "subject": "Position Tracking Update (globalconceptsmedia.com)"
+            },
+            {
+              "id": "1a03fcc44e4fa154",
+              "threadId": "1a03fcc44e4fa154",
+              "clientCode": "PW",
+              "disposition": "monitoring",
+              "subject": "Position Tracking Update (pickettweaponry.com)"
+            },
+            {
+              "id": "1a03fcc44e5d4a93",
+              "threadId": "1a03fcc44e5d4a93",
+              "clientCode": "SFS",
+              "disposition": "monitoring",
+              "subject": "Position Tracking Update (southfloridasafes.com)"
+            },
+            {
+              "id": "1a03fcc46efe408d",
+              "threadId": "1a03fcc46efe408d",
+              "clientCode": "A1",
+              "disposition": "monitoring",
+              "subject": "Position Tracking Update (a1actionsafeandlock.com)"
+            },
+            {
+              "id": "1a040235a46bd1d3",
+              "threadId": "1a040235a46bd1d3",
+              "clientCode": "A1",
+              "disposition": "monitoring",
+              "subject": "Notification of rank change. Project: A1 Action"
+            },
+            {
+              "id": "1a043bfa4f044d65",
+              "threadId": "1a043bfa4f044d65",
+              "clientCode": "A1",
+              "disposition": "monitoring",
+              "subject": "Backlink Audit update of A1 Action. 9 New Toxic Domains; 8 New Trusted Domains"
+            },
+            {
+              "id": "1a04470a7c8391dc",
+              "threadId": "1a04470a7c8391dc",
+              "clientCode": "SES",
+              "disposition": "monitoring",
+              "subject": "Your Google Analytics performance report is in for July 31st - August 27th"
+            },
+            {
+              "id": "1a044c9219cc3b25",
+              "threadId": "1a044c9207369bd5",
+              "clientCode": "SES",
+              "disposition": "monitoring",
+              "subject": "Notification of rank change. Project: sesafes.com"
+            },
+            {
+              "id": "1a04552017520791",
+              "threadId": "1a04552017520791",
+              "clientCode": "A1",
+              "disposition": "monitoring",
+              "subject": "Notification of rank change. Project: A1 Action"
+            },
+            {
+              "id": "1a04584554788e2c",
+              "threadId": "1a04584554788e2c",
+              "clientCode": "SFS",
+              "disposition": "monitoring",
+              "subject": "(Southfloridasafes) Pages dropped from Top 10 [New]: 1 URL"
+            },
+            {
+              "id": "1a0461957ac88d04",
+              "threadId": "1a0461957ac88d04",
+              "clientCode": "PW",
+              "disposition": "monitoring",
+              "subject": "pickettweaponry.com: 25% of your pages have redirects (3xx)"
+            },
+            {
+              "id": "1a0463a1b448f7ef",
+              "threadId": "1a0463a1b448f7ef",
+              "clientCode": "NFS",
+              "disposition": "monitoring",
+              "subject": "(Northfloridasafes) Image file size too large: 442 URLs"
+            },
+            {
+              "id": "1a047da4a7a57de2",
+              "threadId": "1a047da4a7a57de2",
+              "clientCode": "SES",
+              "disposition": "information",
+              "subject": "Your Google Merchant Center account has been closed (Southeast Safes - Account ID: 5817421868)"
+            }
+          ];
 
           const healthResponse = await fetch(workerUrl);
           if (!healthResponse.ok) throw new Error(`Worker health returned HTTP ${healthResponse.status}`);
