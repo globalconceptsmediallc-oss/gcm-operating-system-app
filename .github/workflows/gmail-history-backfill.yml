@@ -1,8 +1,8 @@
 # =========================================================
-# GCM OS — Lookup record #11
+# GCM OS — Read SES Communication #93
 # Read-only production verification: 2026-08-28
 # =========================================================
-name: Lookup GCM OS Record 11
+name: Read SES Communication 93
 
 on:
   push:
@@ -18,32 +18,19 @@ jobs:
   lookup:
     runs-on: ubuntu-latest
     steps:
-      - name: Read production workspaces
+      - name: Read SES communication
         env:
           WORKER_URL: https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/
         run: |
           node <<'NODE'
-          async function post(body){
-            const r=await fetch(process.env.WORKER_URL,{
-              method:"POST",
-              headers:{"Content-Type":"application/json"},
-              body:JSON.stringify(body)
-            });
-            const p=await r.json();
-            if(!r.ok||p?.ok!==true) throw new Error(p?.error||String(r.status));
-            return p;
-          }
-          const dir=await post({action:"get-client-directory"});
-          const clients=Array.isArray(dir.clients)?dir.clients:[];
-          const matches=[];
-          for(const c of clients){
-            const code=String(c.client_code||c.clientCode||c.code||"").trim();
-            if(!code) continue;
-            const w=await post({action:"get-client-workspace",clientCode:code});
-            const op=w.operational||{};
-            const inv=(op.investigationHistory||op.investigations||[]).find(i=>Number(i.id)===11)||null;
-            const work=(op.workItems||[]).find(i=>Number(i.id)===11)||null;
-            if(inv||work) matches.push({clientCode:code,clientName:op.client?.name||c.name||code,inv,work});
-          }
-          console.log("RECORD11="+JSON.stringify(matches));
+          const r=await fetch(process.env.WORKER_URL,{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({action:"get-client-workspace",clientCode:"SES"})
+          });
+          const p=await r.json();
+          if(!r.ok||p?.ok!==true) throw new Error(p?.error||String(r.status));
+          const comm=(p.operational?.communications||[]).find(c=>Number(c.id)===93)||null;
+          const work=(p.operational?.workItems||[]).find(w=>Number(w.id)===11)||null;
+          console.log("SES93="+JSON.stringify({comm,work}));
           NODE
