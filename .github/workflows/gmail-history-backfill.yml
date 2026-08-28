@@ -1,58 +1,21 @@
 # =========================================================
-# GCM OS — Update SES Investigation #40
-# Authorized operational action: 2026-08-28
+# GCM OS — Completed One-Time Reconciliation
+# Status: RETIRED / NO PRODUCTION ACTIONS
+# SES Investigation #40 was moved to monitoring after the
+# August 25 Store Pickup email chain was reviewed.
+# This file performs no D1, Gmail, or Worker writes.
 # =========================================================
-name: Update SES Investigation 40
+name: Retired One-Time Reconciliation
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/gmail-history-backfill.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  update:
+  retired:
     runs-on: ubuntu-latest
     steps:
-      - name: Save Investigation finding
-        env:
-          WORKER_URL: https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/
-        run: |
-          node <<'NODE'
-          const body={
-            action:"process-investigation",
-            clientCode:"SES",
-            investigationId:40,
-            outcome:"monitoring_external_validation",
-            findingSummary:"Kristy completed the technical and operational analysis in the August 25 Shopify Store Pickup email chain. Shopify native pickup can support multiple locations, but one shared multi-location pickup flow should not be enabled under current operations because Shopify depends on accurate location-level inventory and SES does not maintain those quantities reliably enough for pickup promises. A sale also remains financially owned by the selling storefront even if another location supplies the safe, creating reimbursement/accounting work. The safe operating choices are to retain the existing Zapiet pickup method with clearer customer wording, or use storefront-aligned pickup only: SES to Melbourne, NFS to HB/Pickett, and SoFlo to Ft. Lauderdale. No further technical investigation is required until management chooses the operating model.",
-            nextQuestion:"Which operating model does management want: keep Zapiet with clearer pickup wording, or use storefront-aligned native Shopify pickup?",
-            nextEvidence:"A direct decision from Frank, Adrianne, or Monica selecting the pickup model. Only after that decision should implementation work be created."
-          };
-          const r=await fetch(process.env.WORKER_URL,{
-            method:"POST",
-            headers:{"Content-Type":"application/json"},
-            body:JSON.stringify(body)
-          });
-          const p=await r.json();
-          if(!r.ok||p?.ok!==true) throw new Error(p?.error||String(r.status));
-          console.log("SES_INV40_UPDATE="+JSON.stringify(p));
-
-          const verify=await fetch(process.env.WORKER_URL,{
-            method:"POST",
-            headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({action:"get-client-workspace",clientCode:"SES"})
-          });
-          const v=await verify.json();
-          if(!verify.ok||v?.ok!==true) throw new Error(v?.error||String(verify.status));
-          const inv=(v.operational?.investigationHistory||v.operational?.investigations||[]).find(i=>Number(i.id)===40)||null;
-          const work=(v.operational?.workItems||[]).filter(w=>Number(w.investigation_id??w.investigationId)===40);
-          console.log("SES_INV40_VERIFY="+JSON.stringify({inv,work,counts:v.counts||null}));
-          if(!inv || String(inv.status||"").toLowerCase()!=="monitoring"){
-            throw new Error("Investigation #40 did not verify in monitoring.");
-          }
-          if(work.length!==0) throw new Error("Investigation #40 unexpectedly has a Work Item.");
-          NODE
+      - name: Complete
+        run: echo "One-time reconciliation is complete. No production action is performed."
