@@ -1,49 +1,20 @@
 # =========================================================
-# GCM OS — Lookup record #9
-# Read-only production verification: 2026-08-28
+# GCM OS — Completed One-Time Reconciliation
+# Status: RETIRED / NO PRODUCTION ACTIONS
+# Read-only lookup of record #9 completed on 2026-08-28.
+# This file performs no D1, Gmail, or Worker writes.
 # =========================================================
-name: Lookup GCM OS Record 9
+name: Retired One-Time Reconciliation
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/gmail-history-backfill.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  lookup:
+  retired:
     runs-on: ubuntu-latest
     steps:
-      - name: Read production workspaces
-        env:
-          WORKER_URL: https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/
-        run: |
-          node <<'NODE'
-          async function post(body){
-            const r=await fetch(process.env.WORKER_URL,{
-              method:"POST",
-              headers:{"Content-Type":"application/json"},
-              body:JSON.stringify(body)
-            });
-            const p=await r.json();
-            if(!r.ok||p?.ok!==true) throw new Error(p?.error||String(r.status));
-            return p;
-          }
-          const dir=await post({action:"get-client-directory"});
-          const clients=Array.isArray(dir.clients)?dir.clients:[];
-          const matches=[];
-          for(const c of clients){
-            const code=String(c.client_code||c.clientCode||c.code||"").trim();
-            if(!code) continue;
-            const w=await post({action:"get-client-workspace",clientCode:code});
-            const op=w.operational||{};
-            const inv=(op.investigationHistory||op.investigations||[]).find(i=>Number(i.id)===9)||null;
-            const work=(op.workItems||[]).find(i=>Number(i.id)===9)||null;
-            if(inv||work) matches.push({clientCode:code,clientName:op.client?.name||c.name||code,inv,work});
-          }
-          console.log("RECORD9="+JSON.stringify(matches));
-          NODE
+      - name: Complete
+        run: echo "One-time reconciliation is complete. No production action is performed."
