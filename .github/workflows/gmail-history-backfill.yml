@@ -1,21 +1,49 @@
 # =========================================================
-# GCM OS — Completed One-Time Reconciliation
-# Status: RETIRED / NO PRODUCTION ACTIONS
-# SES Investigation #40 was moved to monitoring after the
-# August 25 Store Pickup email chain was reviewed.
-# This file performs no D1, Gmail, or Worker writes.
+# GCM OS — Lookup record #9
+# Read-only production verification: 2026-08-28
 # =========================================================
-name: Retired One-Time Reconciliation
+name: Lookup GCM OS Record 9
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/gmail-history-backfill.yml"
 
 permissions:
   contents: read
 
 jobs:
-  retired:
+  lookup:
     runs-on: ubuntu-latest
     steps:
-      - name: Complete
-        run: echo "One-time reconciliation is complete. No production action is performed."
+      - name: Read production workspaces
+        env:
+          WORKER_URL: https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/
+        run: |
+          node <<'NODE'
+          async function post(body){
+            const r=await fetch(process.env.WORKER_URL,{
+              method:"POST",
+              headers:{"Content-Type":"application/json"},
+              body:JSON.stringify(body)
+            });
+            const p=await r.json();
+            if(!r.ok||p?.ok!==true) throw new Error(p?.error||String(r.status));
+            return p;
+          }
+          const dir=await post({action:"get-client-directory"});
+          const clients=Array.isArray(dir.clients)?dir.clients:[];
+          const matches=[];
+          for(const c of clients){
+            const code=String(c.client_code||c.clientCode||c.code||"").trim();
+            if(!code) continue;
+            const w=await post({action:"get-client-workspace",clientCode:code});
+            const op=w.operational||{};
+            const inv=(op.investigationHistory||op.investigations||[]).find(i=>Number(i.id)===9)||null;
+            const work=(op.workItems||[]).find(i=>Number(i.id)===9)||null;
+            if(inv||work) matches.push({clientCode:code,clientName:op.client?.name||c.name||code,inv,work});
+          }
+          console.log("RECORD9="+JSON.stringify(matches));
+          NODE
