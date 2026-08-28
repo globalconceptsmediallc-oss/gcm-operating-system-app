@@ -1,20 +1,35 @@
 # =========================================================
-# GCM OS — Completed Gmail History Recovery
-# Status: RETIRED / NO PRODUCTION ACTIONS
-# August history recovery and TV pixel Proof repair were completed and
-# verified on 2026-08-28. This file performs no D1, Gmail, or Worker writes.
+# GCM OS — Read-only Lincoln 25 Work lookup
 # =========================================================
-name: Retired Gmail History Recovery
+name: Lookup Lincoln 25 Work
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/gmail-history-backfill.yml"
 
 permissions:
   contents: read
 
 jobs:
-  retired:
+  lookup:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - name: Recovery complete
-        run: echo "Gmail history recovery is complete. No production action is performed."
+      - name: Read SES work item
+        env:
+          WORKER_URL: https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/
+        run: |
+          node <<'NODE'
+          const response=await fetch(process.env.WORKER_URL,{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({action:"get-client-workspace",clientCode:"SES"})
+          });
+          const payload=await response.json();
+          if(!response.ok||payload?.ok!==true) throw new Error(payload?.error||String(response.status));
+          const items=(payload.operational?.workItems||[]).filter(w=>/Lincoln 25 Signature Renames/i.test(w.title||""));
+          console.log("LINCOLN25="+JSON.stringify(items));
+          NODE
