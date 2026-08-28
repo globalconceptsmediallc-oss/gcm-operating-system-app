@@ -1,72 +1,21 @@
 # =========================================================
-# GCM OS — Complete SES Work Item #14
-# Authorized by user 2026-08-28.
-# Uses production process-work-item route and verifies result.
+# GCM OS — Completed Gmail History Recovery
+# Status: RETIRED / NO PRODUCTION ACTIONS
+# August history recovery, TV pixel Proof repair, and SES Lincoln 25
+# completion were completed and verified on 2026-08-28.
+# This file performs no D1, Gmail, or Worker writes.
 # =========================================================
-name: Complete Lincoln 25 Work Item
+name: Retired Gmail History Recovery
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/gmail-history-backfill.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  complete:
+  retired:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
-      - name: Complete and verify Work Item 14
-        env:
-          WORKER_URL: https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/
-        run: |
-          node <<'NODE'
-          const url=process.env.WORKER_URL;
-
-          async function post(body){
-            const response=await fetch(url,{
-              method:"POST",
-              headers:{"Content-Type":"application/json"},
-              body:JSON.stringify(body)
-            });
-            const payload=await response.json().catch(()=>({}));
-            if(!response.ok||payload?.ok!==true){
-              throw new Error(`${body.action} failed HTTP ${response.status}: ${payload?.error||"unknown"}`);
-            }
-            return payload;
-          }
-
-          const completed=await post({
-            action:"process-work-item",
-            clientCode:"SES",
-            workItemId:14,
-            workPerformed:"Corrected the Lincoln 25 Signature filename convention by removing the extra 'interior' segment from the naming pattern and provided the corrected naming output needed for Kristy's current Lincoln 25 batch.",
-            actualImpact:"Kristy received the corrected Lincoln 25 naming convention needed for the current batch. The immediate requested renaming work is complete. A separate future MediaForge usability/rebuild improvement remains outside this completed Work Item.",
-            evidenceDescription:"Andy confirmed on August 28, 2026 that Kristy got what she needed after the extra 'interior' was removed from the naming convention and that the Lincoln 25 item is done for now and can be cleared.",
-            evidenceSource:"Operator Completion Confirmation",
-            evidenceType:"completion"
-          });
-          console.log("COMPLETE_RESULT="+JSON.stringify({
-            updated:completed.updated,
-            alreadyCompleted:completed.alreadyCompleted||false,
-            workItem:completed.workItem,
-            proofOfWorkEligible:completed.proofOfWorkEligible
-          }));
-
-          const workspace=await post({
-            action:"get-client-workspace",
-            clientCode:"SES"
-          });
-          const item=(workspace.operational?.workItems||[]).find(w=>Number(w.id)===14)||null;
-          console.log("VERIFY_WORK14="+JSON.stringify({
-            item,
-            counts:workspace.counts||null
-          }));
-          if(!item || String(item.status||"").toLowerCase()!=="completed" || !item.completed_at){
-            throw new Error("Work Item #14 is not verified as completed in production D1.");
-          }
-          NODE
+      - name: Recovery complete
+        run: echo "Gmail history recovery is complete. No production action is performed."
