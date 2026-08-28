@@ -1,11 +1,7 @@
 # =========================================================
 # GCM OS one-time August Gmail history recovery verification
 # Authorized production reconciliation: 2026-08-28
-# Purpose:
-# - Preserve the one missed LUMI monitoring event.
-# - Identify the authoritative existing SES Merchant Center source record.
-# - Verify post-backfill client workspace counts and Mission Control attention.
-# Existing D1 duplicate protection remains authoritative.
+# Read-only verification after completed backfill.
 # =========================================================
 name: Verify August Gmail History Backfill
 
@@ -38,71 +34,88 @@ jobs:
               body:JSON.stringify(body)
             });
             const payload = await response.json().catch(() => ({}));
-            if (!response.ok || payload?.ok !== true) {
-              throw new Error(`${body.action} failed HTTP ${response.status}: ${payload?.error || "unknown error"}`);
-            }
-            return payload;
+            return { response, payload };
           }
 
-          // One operational August item omitted by the first batch.
-          const lumi = await post({
-            action:"route-gmail-disposition",
-            gmailMessageId:"1a0092c798cc34ac",
-            clientCode:"LUMI",
-            disposition:"monitoring"
-          });
-          console.log("LUMI_RECOVERY=" + JSON.stringify({
-            duplicate:Boolean(lumi.duplicate),
-            activityRecordId:lumi.activityRecordId || lumi.existing?.activityRecordId || null,
-            existing:lumi.existing || null
-          }));
-
-          // Duplicate-safe probe: reveals exactly what D1 already has for the SES source.
-          const sesMerchant = await post({
-            action:"route-gmail-disposition",
-            gmailMessageId:"1a025bfcd8bf599b",
-            clientCode:"SES",
-            disposition:"investigation"
-          });
-          console.log("SES_MERCHANT_EXISTING=" + JSON.stringify({
-            duplicate:Boolean(sesMerchant.duplicate),
-            existing:sesMerchant.existing || null,
-            communicationId:sesMerchant.communicationId || null,
-            investigationId:sesMerchant.investigationId || null,
-            activityRecordId:sesMerchant.activityRecordId || null
-          }));
-
-          const clients = ["SES","A1","HBG","NFS","SFS","PW","MAS","GCM","4A","LUMI"];
+          const clients = ["SES","A1","HBG","NFS","SFS","PW","MAS","GCM","LUMI"];
           for (const clientCode of clients) {
-            const workspace = await post({
+            const { response, payload } = await post({
               action:"get-client-workspace",
               clientCode
             });
-            const counts = workspace?.workspace?.metadata?.operationalCounts
-              || workspace?.clientWorkspace?.metadata?.operationalCounts
-              || workspace?.metadata?.operationalCounts
-              || null;
-            const operational =
-              workspace?.workspace?.operational
-              || workspace?.clientWorkspace?.operational
-              || workspace?.operational
-              || null;
+            if (!response.ok || payload?.ok !== true) {
+              console.log("CLIENT_VERIFY_ERROR=" + JSON.stringify({
+                clientCode,
+                status:response.status,
+                error:payload?.error || "unknown"
+              }));
+              continue;
+            }
+
+            const op = payload.operational || {};
+            const work13 = clientCode === "SES"
+              ? (op.workItems || []).find(item => Number(item?.id) === 13) || null
+              : null;
+            const comm95 = clientCode === "SES"
+              ? (op.communications || []).find(item => Number(item?.id) === 95) || null
+              : null;
+            const inv41 = clientCode === "A1"
+              ? (op.investigationHistory || []).find(item => Number(item?.id) === 41) || null
+              : null;
+
             console.log("CLIENT_VERIFY=" + JSON.stringify({
               clientCode,
-              counts,
-              monitoringInvestigationCount:
-                operational?.monitoringInvestigations?.length ?? null,
-              activeInvestigationCount:
-                operational?.investigations?.length ?? null,
-              investigationHistoryCount:
-                operational?.investigationHistory?.length ?? null
+              counts:payload.counts || null,
+              work13:work13 ? {
+                id:work13.id,
+                communicationId:work13.communication_id,
+                status:work13.status,
+                title:work13.title,
+                description:work13.description,
+                actualImpact:work13.actual_impact,
+                createdAt:work13.created_at,
+                updatedAt:work13.updated_at
+              } : null,
+              communication95:comm95 ? {
+                id:comm95.id,
+                externalId:comm95.external_id,
+                status:comm95.status,
+                subject:comm95.subject,
+                occurredAt:comm95.occurred_at
+              } : null,
+              investigation41:inv41 ? {
+                id:inv41.id,
+                communicationId:inv41.communication_id,
+                status:inv41.status,
+                title:inv41.title,
+                description:inv41.description,
+                findingSummary:inv41.finding_summary,
+                recommendation:inv41.recommendation
+              } : null
             }));
           }
 
+          const directory = await post({ action:"get-client-directory" });
+          console.log("CLIENT_DIRECTORY=" + JSON.stringify({
+            status:directory.response.status,
+            clients:
+              directory.payload?.clients
+              || directory.payload?.directory?.clients
+              || directory.payload?.clientDirectory?.clients
+              || []
+          }));
+
           const mission = await post({ action:"get-mission-control" });
-          const mc = mission?.missionControl || mission;
           console.log("MISSION_ATTENTION=" + JSON.stringify({
-            clientsRequiringAttention:mc?.clientsRequiringAttention || [],
-            navAttention:mc?.navAttention || null
+            status:mission.response.status,
+            ok:mission.payload?.ok === true,
+            clientsRequiringAttention:
+              mission.payload?.missionControl?.clientsRequiringAttention
+              || mission.payload?.clientsRequiringAttention
+              || [],
+            highestPriorityDecision:
+              mission.payload?.missionControl?.highestPriorityDecision
+              || mission.payload?.highestPriorityDecision
+              || null
           }));
           NODE
