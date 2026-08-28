@@ -1,20 +1,59 @@
 # =========================================================
-# GCM OS — Completed One-Time Reconciliation
-# Status: RETIRED / NO PRODUCTION ACTIONS
-# Read-only lookup of record #9 completed on 2026-08-28.
-# This file performs no D1, Gmail, or Worker writes.
+# GCM OS — Complete Pickett Work Item #9
+# Authorized operational action: 2026-08-28
+# Purpose: record verified no-defect result from current SEMrush crawl.
 # =========================================================
-name: Retired One-Time Reconciliation
+name: Complete Pickett Work 9
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/gmail-history-backfill.yml"
 
 permissions:
   contents: read
 
 jobs:
-  retired:
+  complete:
     runs-on: ubuntu-latest
     steps:
-      - name: Complete
-        run: echo "One-time reconciliation is complete. No production action is performed."
+      - name: Complete Work Item through production Worker
+        env:
+          WORKER_URL: https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/
+        run: |
+          node <<'NODE'
+          const body={
+            action:"process-work-item",
+            clientCode:"PW",
+            workItemId:9,
+            workPerformed:"Reviewed the current Pickett Weaponry SEMrush Site Audit dated August 27, 2026 and drilled into the remaining 4XX error. The only failing URL is https://pickettweaponry.com/cdn-cgi/l/email-protection, a Cloudflare email-protection path. Opened SEMrush View broken links for that URL and confirmed 0 internal links are broken / Failed 0 / Successful 665. Also reviewed the current Errors list and confirmed the prior canonical-target error is no longer present.",
+            actualImpact:"No actionable Pickett website defect remains for this Work Item. The remaining 4XX is a Cloudflare email-protection crawler artifact with no internal broken-link source in the current crawl, and the prior canonical-target error is not present in the current SEMrush Errors list. No production site change is supported by the evidence.",
+            evidenceDescription:"SEMrush Site Audit updated Aug 27, 2026: Errors list showed one page returned a 4XX; detail identified https://pickettweaponry.com/cdn-cgi/l/email-protection with HTTP 404. View broken links then showed 0 internal links are broken, Failed 0, Successful 665, and no source rows. Current Errors list also showed no canonical-target error.",
+            evidenceSource:"SEMrush Site Audit — Pickett Weaponry",
+            evidenceType:"verification"
+          };
+          const r=await fetch(process.env.WORKER_URL,{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify(body)
+          });
+          const p=await r.json();
+          if(!r.ok||p?.ok!==true) throw new Error(p?.error||String(r.status));
+          console.log("PW_WORK9_COMPLETE="+JSON.stringify(p));
+
+          const verify=await fetch(process.env.WORKER_URL,{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({action:"get-client-workspace",clientCode:"PW"})
+          });
+          const v=await verify.json();
+          if(!verify.ok||v?.ok!==true) throw new Error(v?.error||String(verify.status));
+          const item=(v.operational?.workItems||[]).find(w=>Number(w.id)===9)||null;
+          const evidence=(v.operational?.evidence||[]).filter(e=>Number(e.work_item_id??e.workItemId)===9);
+          console.log("PW_WORK9_VERIFY="+JSON.stringify({item,evidence,counts:v.counts||null}));
+          if(!item || String(item.status||"").toLowerCase()!=="completed"){
+            throw new Error("Work Item #9 did not verify completed.");
+          }
+          NODE
