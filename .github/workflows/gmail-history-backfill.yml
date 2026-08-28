@@ -1,121 +1,21 @@
 # =========================================================
-# GCM OS one-time August Gmail history recovery verification
-# Authorized production reconciliation: 2026-08-28
-# Read-only verification after completed backfill.
+# GCM OS — Completed August Gmail History Recovery
+# Status: RETIRED / NO PRODUCTION ACTIONS
+# Recovery completed and verified on 2026-08-28.
+# This file intentionally contains no D1, Gmail, or Worker calls.
+# It is retained only because automated deletion is unavailable here.
 # =========================================================
-name: Verify August Gmail History Backfill
+name: Retired August Gmail History Recovery
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/gmail-history-backfill.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  verify:
+  retired:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
-      - name: Verify August D1 recovery
-        env:
-          WORKER_URL: https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/
-        run: |
-          node <<'NODE'
-          const url = process.env.WORKER_URL;
-
-          async function post(body) {
-            const response = await fetch(url, {
-              method:"POST",
-              headers:{ "Content-Type":"application/json" },
-              body:JSON.stringify(body)
-            });
-            const payload = await response.json().catch(() => ({}));
-            return { response, payload };
-          }
-
-          const clients = ["SES","A1","HBG","NFS","SFS","PW","MAS","GCM","LUMI"];
-          for (const clientCode of clients) {
-            const { response, payload } = await post({
-              action:"get-client-workspace",
-              clientCode
-            });
-            if (!response.ok || payload?.ok !== true) {
-              console.log("CLIENT_VERIFY_ERROR=" + JSON.stringify({
-                clientCode,
-                status:response.status,
-                error:payload?.error || "unknown"
-              }));
-              continue;
-            }
-
-            const op = payload.operational || {};
-            const work13 = clientCode === "SES"
-              ? (op.workItems || []).find(item => Number(item?.id) === 13) || null
-              : null;
-            const comm95 = clientCode === "SES"
-              ? (op.communications || []).find(item => Number(item?.id) === 95) || null
-              : null;
-            const inv41 = clientCode === "A1"
-              ? (op.investigationHistory || []).find(item => Number(item?.id) === 41) || null
-              : null;
-
-            console.log("CLIENT_VERIFY=" + JSON.stringify({
-              clientCode,
-              counts:payload.counts || null,
-              work13:work13 ? {
-                id:work13.id,
-                communicationId:work13.communication_id,
-                status:work13.status,
-                title:work13.title,
-                description:work13.description,
-                actualImpact:work13.actual_impact,
-                createdAt:work13.created_at,
-                updatedAt:work13.updated_at
-              } : null,
-              communication95:comm95 ? {
-                id:comm95.id,
-                externalId:comm95.external_id,
-                status:comm95.status,
-                subject:comm95.subject,
-                occurredAt:comm95.occurred_at
-              } : null,
-              investigation41:inv41 ? {
-                id:inv41.id,
-                communicationId:inv41.communication_id,
-                status:inv41.status,
-                title:inv41.title,
-                description:inv41.description,
-                findingSummary:inv41.finding_summary,
-                recommendation:inv41.recommendation
-              } : null
-            }));
-          }
-
-          const directory = await post({ action:"get-client-directory" });
-          console.log("CLIENT_DIRECTORY=" + JSON.stringify({
-            status:directory.response.status,
-            clients:
-              directory.payload?.clients
-              || directory.payload?.directory?.clients
-              || directory.payload?.clientDirectory?.clients
-              || []
-          }));
-
-          const mission = await post({ action:"get-mission-control" });
-          console.log("MISSION_ATTENTION=" + JSON.stringify({
-            status:mission.response.status,
-            ok:mission.payload?.ok === true,
-            clientsRequiringAttention:
-              mission.payload?.missionControl?.clientsRequiringAttention
-              || mission.payload?.clientsRequiringAttention
-              || [],
-            highestPriorityDecision:
-              mission.payload?.missionControl?.highestPriorityDecision
-              || mission.payload?.highestPriorityDecision
-              || null
-          }));
-          NODE
+      - name: Recovery complete
+        run: echo "August Gmail history recovery is complete. No production action is performed."
