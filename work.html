@@ -1,9 +1,9 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.17
+   Version: 1.9.18
    Status: FBDT Production Candidate
-   Source: Production work.html 1.9.13
+   Source: Production work.html 1.9.17
    Sprint: Durable Investigation Progress
    Purpose: Preserve the complete audited SEMrush evidence and guided
             Investigation workflow while adding a direct D1 entrance for
@@ -72,6 +72,12 @@
    - v1.9.17 keeps Open Work Items as the authoritative open-work queue even when an Investigation is selected.
    - v1.9.17 uses the client filter for queue scope and only prioritizes, rather than filters to, the selected Investigation linked Work Item.
    - v1.9.17 keeps direct Requested Work visible beside Investigation-created work.
+   - v1.9.18 separates active work from external-validation monitoring.
+   - Investigations with monitoring/external-wait states no longer appear in the active Investigation Queue.
+   - Work Items awaiting external validation render in a dedicated read-only panel with no completion controls.
+   - Deep links to monitoring Investigations or external-validation Work Items resolve to the monitoring panel instead of reopening the guided evidence workflow.
+   - Active-work and active-Investigation summary counts no longer include monitoring/external-validation records.
+   - No D1 schema, Worker route, completion rule, or Proof rule changed.
    - Validates the saved per-client SEMrush Issues URL during the capture phase
      and saves Open Evidence Source plus Review Issues atomically before navigation.
    ========================================================= -->
@@ -169,12 +175,12 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Use Investigation when the correct action is unknown. Use Create Requested Work when the client need and deliverable are already clear.</p></div>
-        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.17</span>
+        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.18</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
         <article class="summary-card"><span class="summary-label">Clients With Open Work</span><strong id="clients-with-investigations" class="summary-value">—</strong></article>
-        <article class="summary-card"><span class="summary-label">Existing Work Items</span><strong id="work-items" class="summary-value">—</strong></article>
+        <article class="summary-card"><span class="summary-label">Active Work Items</span><strong id="work-items" class="summary-value">—</strong></article>
       </section>
       <div id="target-banner" class="target-banner" hidden></div>
       <section id="requested-work-panel" class="panel">
@@ -236,6 +242,7 @@
         </div>
       </section>
       <section id="open-work-panel" class="panel"><div class="panel-header"><h2>Open Work Items</h2><p>Specific work created from proven Investigation findings or known client requests.</p></div><div id="open-work-list" class="panel-body"></div></section>
+      <section id="external-validation-panel" class="panel"><div class="panel-header"><h2>Awaiting External Validation</h2><p>Work already performed and verified internally that is waiting on Google, a platform, a vendor, or another external result. These records remain visible but cannot be completed until final proof returns.</p></div><div id="external-validation-list" class="panel-body"></div></section>
       <section class="workspace-grid">
         <article class="panel"><div class="panel-header"><h2>Investigation Queue</h2><p>Select an unresolved Investigation.</p></div><div class="panel-body"><div class="toolbar"><select id="client-filter"><option value="">All clients</option></select><button id="refresh-button" class="button">Refresh</button></div><div id="runtime-status" class="status loading">Loading production D1…</div><div id="investigation-list" class="investigation-list"></div></div></article>
         <article id="guided-investigation-panel" class="panel"><div class="panel-header"><h2>Guided Investigation</h2><p>Evidence first. Final resolution remains secondary until the current step is complete.</p></div><div id="detail-panel" class="panel-body"><div class="detail-empty">Select an open Investigation.</div></div></article>
@@ -253,11 +260,11 @@
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.17"});}
-  const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),target:byId("target-banner"),requestedForm:byId("requested-work-form"),requestedClient:byId("requested-client"),requestedMessage:byId("requested-work-message"),createRequested:byId("create-requested-work")};
-  let activeClients=[],directoryClients=[],investigations=[],workItems=[],selectedKey="",processing=false,processingWorkItem=false,processingRequestedWork=false;
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.18"});}
+  const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),externalValidation:byId("external-validation-list"),target:byId("target-banner"),requestedForm:byId("requested-work-form"),requestedClient:byId("requested-client"),requestedMessage:byId("requested-work-message"),createRequested:byId("create-requested-work")};
+  let activeClients=[],directoryClients=[],investigations=[],monitoringInvestigations=[],workItems=[],validationWorkItems=[],selectedKey="",processing=false,processingWorkItem=false,processingRequestedWork=false;
 
-  el.filter.addEventListener("change",()=>selectVisibleDefault());
+  el.filter.addEventListener("change",()=>{renderExternalValidationItems();selectVisibleDefault();});
   el.refresh.addEventListener("click",load);
   el.requestedForm.addEventListener("submit",createRequestedWork);
   load();
@@ -271,7 +278,7 @@
       renderFilter(activeClients);
       renderRequestedClientOptions(directoryClients);
       const results=await Promise.allSettled(activeClients.map(loadWorkspace));
-      investigations=[];workItems=[];
+      investigations=[];monitoringInvestigations=[];workItems=[];validationWorkItems=[];
       results.forEach((result,index)=>{
         if(result.status!=="fulfilled")return;
         const client=activeClients[index],op=result.value.operational||{};
@@ -293,12 +300,21 @@
           op.client?.primary_domain ||
           client.website
         );
-        (Array.isArray(op.investigations)?op.investigations:[]).filter(i=>!closed(i)).forEach(i=>investigations.push({...i,clientCode:op.client?.client_code||client.code,clientName:op.client?.name||client.name,clientWebsite,communication:communicationById.get(Number(i.communication_id))||null,progressUpdates:progressByInvestigation.get(Number(i.id))||[]}));
-        (Array.isArray(op.workItems)?op.workItems:[]).filter(i=>!completed(i)).forEach(i=>workItems.push({...i,clientCode:op.client?.client_code||client.code,clientName:op.client?.name||client.name,clientWebsite}));
+        const sourceInvestigations=Array.isArray(op.investigations)?op.investigations:[];
+        const enrichInvestigation=i=>({...i,clientCode:op.client?.client_code||client.code,clientName:op.client?.name||client.name,clientWebsite,communication:communicationById.get(Number(i.communication_id))||null,progressUpdates:progressByInvestigation.get(Number(i.id))||[]});
+        sourceInvestigations.filter(i=>activeInvestigation(i)).forEach(i=>investigations.push(enrichInvestigation(i)));
+        sourceInvestigations.filter(i=>monitoringInvestigation(i)).forEach(i=>monitoringInvestigations.push(enrichInvestigation(i)));
+
+        (Array.isArray(op.workItems)?op.workItems:[]).filter(i=>!completed(i)).forEach(i=>{
+          const mapped={...i,clientCode:op.client?.client_code||client.code,clientName:op.client?.name||client.name,clientWebsite};
+          if(externalValidation(i))validationWorkItems.push(mapped);
+          else workItems.push(mapped);
+        });
       });
       investigations.sort(sortInvestigations);
-      renderSummary();applyRequestedTarget();
-      setStatus("ready",`Loaded ${investigations.length} open Investigations and ${workItems.length} open Work Items.`);
+      monitoringInvestigations.sort(sortInvestigations);
+      renderSummary();renderExternalValidationItems();applyRequestedTarget();
+      setStatus("ready",`Loaded ${investigations.length} active Investigation${investigations.length===1?"":"s"}, ${workItems.length} active Work Item${workItems.length===1?"":"s"}, and ${validationWorkItems.length} awaiting external validation.`);
     }catch(error){
       console.error(error);setStatus("error",error.message||"Work could not load.");el.list.innerHTML='<div class="empty">Work data unavailable.</div>';
     }finally{el.refresh.disabled=false;}
@@ -420,6 +436,18 @@
   function applyRequestedTarget(){
     renderList();
     if(requestedWorkItemId){
+      const validationItem=validationWorkItems.find(i=>Number(i.id)===requestedWorkItemId);
+      if(validationItem){
+        el.filter.value=validationItem.clientCode;
+        showTarget(`Work Item #${validationItem.id} is awaiting external validation for ${validationItem.clientName}. No completion action is available until final external proof returns.`);
+        renderList();
+        renderWorkItems(null);
+        renderExternalValidationItems();
+        el.detail.innerHTML='<div class="detail-empty">This Work Item is in external validation. The implementation is already recorded; wait for the external result before reopening Investigation work or completing Proof.</div>';
+        document.querySelector(`[data-validation-work-id="${validationItem.id}"]`)?.scrollIntoView({behavior:"smooth",block:"center"});
+        return;
+      }
+
       const item=workItems.find(i=>Number(i.id)===requestedWorkItemId);
       if(item){
         const linkedInvestigation=investigations.find(
@@ -455,6 +483,17 @@
       }
     }
     if(requestedInvestigationId){
+      const monitoringItem=monitoringInvestigations.find(i=>Number(i.id)===requestedInvestigationId&&(!requestedClientCode||String(i.clientCode).toUpperCase()===requestedClientCode));
+      if(monitoringItem){
+        el.filter.value=monitoringItem.clientCode;
+        showTarget(`Investigation #${monitoringItem.id} is monitoring an external result and is not active Investigation work.`);
+        renderList();
+        renderWorkItems(null);
+        renderExternalValidationItems();
+        el.detail.innerHTML='<div class="detail-empty">This Investigation is in monitoring. Its guided evidence workflow is intentionally paused until the external result changes the operational decision.</div>';
+        return;
+      }
+
       const item=investigations.find(i=>Number(i.id)===requestedInvestigationId&&(!requestedClientCode||String(i.clientCode).toUpperCase()===requestedClientCode));
       if(item){
         el.filter.value=item.clientCode;
@@ -2279,6 +2318,44 @@
     });
   }
 
+  function renderExternalValidationItems(){
+    if(!el.externalValidation)return;
+
+    const selectedClient=normalizedClientCode(el.filter.value);
+    const visibleValidation=validationWorkItems
+      .filter(item=>!selectedClient||normalizedClientCode(item.clientCode)===selectedClient)
+      .sort((a,b)=>Number(b.id)-Number(a.id));
+
+    if(!visibleValidation.length){
+      el.externalValidation.innerHTML='<div class="empty">No Work Items are awaiting external validation in this view.</div>';
+      return;
+    }
+
+    el.externalValidation.innerHTML=visibleValidation.map(i=>{
+      const actualImpact=i.actual_impact||i.actualImpact||"Implementation is complete and internal verification is preserved.";
+      const expectedImpact=i.expected_impact||i.expectedImpact||"Wait for the external system to return final proof.";
+      const statusLabel=String(i.status||"awaiting_external_validation").replaceAll("_"," ");
+      return `
+        <article class="work-card" data-validation-work-id="${esc(i.id)}">
+          <span class="direct-work-label">Awaiting External Validation</span>
+          <h3>Work Item #${esc(i.id)} · ${esc(i.title||"Work Item")}</h3>
+          <p class="detail-subtitle">
+            ${esc(i.clientName)} · ${i.investigation_id?`Investigation #${esc(i.investigation_id)}`:"No Investigation required"} · ${esc(statusLabel)}
+          </p>
+          <section class="detail-section">
+            <h3>Verified So Far</h3>
+            <p>${esc(actualImpact)}</p>
+          </section>
+          <section class="detail-section">
+            <h3>Final Proof Required</h3>
+            <p>${esc(expectedImpact)}</p>
+          </section>
+          <div class="status ready">No completion action is available while this item is awaiting external validation.</div>
+        </article>
+      `;
+    }).join("");
+  }
+
   async function completeWorkItem(item){
     if(processingWorkItem)return;
 
@@ -2325,7 +2402,10 @@
 
   function sortInvestigations(a,b){const p={urgent:0,high:1,normal:2,medium:2,low:3};return (p[norm(a.priority)]??4)-(p[norm(b.priority)]??4)||((Date.parse(b.opened_at||b.created_at||"")||0)-(Date.parse(a.opened_at||a.created_at||"")||0));}
   function closed(i){return ["complete","completed","closed","resolved","cancelled","canceled","archived","ignored","no_action"].includes(norm(i.status));}
+  function monitoringInvestigation(i){return ["monitoring","awaiting_external_validation","waiting_external","waiting_on_external"].includes(norm(i.status));}
+  function activeInvestigation(i){return !closed(i)&&!monitoringInvestigation(i);}
   function completed(i){return ["complete","completed","closed","resolved","cancelled","canceled"].includes(norm(i.status));}
+  function externalValidation(i){return ["awaiting_external_validation","monitoring","waiting_external","waiting_on_external"].includes(norm(i.status));}
   function key(i){return `${i.clientCode}:${i.id}`;}
   function norm(v){return String(v||"").trim().toLowerCase().replace(/\s+/g,"_");}
   function normalizeWebsite(value){
