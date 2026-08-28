@@ -1,8 +1,10 @@
 # =========================================================
-# GCM OS — Create A1 Marine Locksmith Work from Investigation #41
-# Authorized production action: 2026-08-28
+# GCM OS — Move A1 Marine Work Item #15 to external validation
+# Authorized operational action: 2026-08-28
+# Purpose: preserve live Google verification after deployment and keep
+# Work Item #15 open until Google recrawls/indexes the new Marine page.
 # =========================================================
-name: Create A1 Marine Locksmith Work
+name: Update A1 Marine Work 15
 
 on:
   push:
@@ -15,11 +17,82 @@ permissions:
   contents: read
 
 jobs:
-  create:
+  update:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Create linked Work Item
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Wrangler
+        run: npm install wrangler@4.122.0
+
+      - name: Build D1 update
+        run: |
+          cat > /tmp/update-work-15.sql <<'SQL'
+          UPDATE work_items
+          SET
+            description = 'Create a dedicated A1 Marine Locksmith Services page at /marine-locksmith-services with unique service content, self-canonical metadata, schema, internal links, and sitemap inclusion. Ensure the legacy /marine-locksmith-services.html URL resolves consistently to the new page rather than homepage-like content. After deployment, run Google Search Console live inspection and verify Google can crawl the unique page before requesting validation.\n\nWork Performed: Created and deployed marine-locksmith-services.html v1.0.0 with unique Marine Locksmith content and self-canonical metadata. Updated shared header, footer, and CTA partials to add Marine Locksmith navigation. Updated services.html to include Marine Locksmith as a core service and updated sitemap.xml to include /marine-locksmith-services. Verified the live page renders correctly. Google Search Console Live Test on August 28, 2026 confirmed crawl allowed = Yes, page fetch = Successful, indexing allowed = Yes, and user-declared canonical = https://www.a1actionsafeandlock.com/marine-locksmith-services. The updated sitemap was resubmitted to Google and Request Indexing was accepted into Google''s priority crawl queue.',
+            status = 'awaiting_external_validation',
+            actual_impact = 'The former homepage-like duplicate at /marine-locksmith-services has been replaced by a unique production Marine Locksmith Services page. Google live testing now sees a crawlable, indexable page with the intended self-canonical. Google accepted an indexing request and the updated sitemap was resubmitted. Final Google-selected canonical/indexed status is still pending recrawl.',
+            expected_impact = 'Final proof is Google Search Console showing /marine-locksmith-services indexed with Google selecting the Marine URL as canonical, or otherwise no longer classifying it as Duplicate, Google chose different canonical than user.',
+            updated_at = '2026-08-28 10:30:26'
+          WHERE id = 15
+            AND client_id = (SELECT id FROM clients WHERE client_code = 'A1' LIMIT 1);
+
+          UPDATE investigations
+          SET
+            status = 'monitoring',
+            finding_summary = 'A unique Marine Locksmith Services page is now deployed at /marine-locksmith-services. Google Search Console Live Test confirms the page is crawlable, fetch succeeds, indexing is allowed, and the user-declared canonical is the Marine URL. The updated sitemap was resubmitted and Google accepted a Request Indexing submission. The remaining dependency is Google recrawl/index processing and final canonical selection.',
+            recommendation = 'Wait for Google to recrawl and index the new Marine page, then recheck URL Inspection. Close Investigation #41 and Work Item #15 only after Google no longer treats the Marine URL as a homepage duplicate and final canonical/index status is verified.',
+            updated_at = '2026-08-28 10:30:26'
+          WHERE id = 41
+            AND client_id = (SELECT id FROM clients WHERE client_code = 'A1' LIMIT 1);
+
+          INSERT INTO evidence (
+            client_id,
+            investigation_id,
+            work_item_id,
+            communication_id,
+            evidence_type,
+            source,
+            description,
+            url,
+            captured_at
+          )
+          SELECT
+            wi.client_id,
+            wi.investigation_id,
+            wi.id,
+            wi.communication_id,
+            'verification',
+            'Google Search Console Live Test / Sitemap Submission',
+            'August 28, 2026 verification: live URL test for https://www.a1actionsafeandlock.com/marine-locksmith-services returned URL is available to Google; crawl allowed Yes; page fetch Successful; indexing allowed Yes; user-declared canonical https://www.a1actionsafeandlock.com/marine-locksmith-services; Google-selected canonical only determined after indexing. The updated A1 sitemap containing the Marine URL was resubmitted to Google. Request Indexing was accepted and Google confirmed the URL was added to a priority crawl queue.',
+            'https://www.a1actionsafeandlock.com/marine-locksmith-services',
+            '2026-08-28 10:30:26'
+          FROM work_items wi
+          WHERE wi.id = 15
+            AND NOT EXISTS (
+              SELECT 1
+              FROM evidence e
+              WHERE e.work_item_id = 15
+                AND e.evidence_type = 'verification'
+                AND e.source = 'Google Search Console Live Test / Sitemap Submission'
+            );
+          SQL
+
+      - name: Apply update to production D1
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler d1 execute DB --remote --file=/tmp/update-work-15.sql
+
+      - name: Verify through production Worker
         env:
           WORKER_URL: https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/
         run: |
@@ -27,21 +100,18 @@ jobs:
           const response=await fetch(process.env.WORKER_URL,{
             method:"POST",
             headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({
-              action:"process-investigation",
-              clientCode:"A1",
-              investigationId:41,
-              outcome:"specific_work_required",
-              findingSummary:"Google Search Console shows /marine-locksmith-services is crawlable and self-canonical, but Google selects the homepage because the current legacy URL serves homepage-like duplicate content. The current A1 repository has no dedicated Marine Locksmith Services page. A real standalone Marine Locksmith page is required.",
-              workTitle:"Create unique Marine Locksmith Services page and correct legacy Marine URL handling",
-              workDescription:"Create a dedicated A1 Marine Locksmith Services page at /marine-locksmith-services with unique service content, self-canonical metadata, schema, internal links, and sitemap inclusion. Ensure the legacy /marine-locksmith-services.html URL resolves consistently to the new page rather than homepage-like content. After deployment, run Google Search Console live inspection and verify Google can crawl the unique page before requesting validation.",
-              workCategory:"SEO / Site Architecture",
-              expectedImpact:"Replace the current homepage-duplicate condition with a real indexable Marine Locksmith Services page and give Google consistent canonical and internal-link signals for the intended URL."
-            })
+            body:JSON.stringify({action:"get-client-workspace",clientCode:"A1"})
           });
-          const payload=await response.json().catch(()=>({}));
-          if(!response.ok||payload?.ok!==true){
-            throw new Error(payload?.error||`HTTP ${response.status}`);
+          const payload=await response.json();
+          if(!response.ok||payload?.ok!==true) throw new Error(payload?.error||String(response.status));
+          const item=(payload.operational?.workItems||[]).find(w=>Number(w.id)===15)||null;
+          const inv=(payload.operational?.investigationHistory||[]).find(i=>Number(i.id)===41)||null;
+          const evidence=(payload.operational?.evidence||[]).filter(e=>Number(e.work_item_id)===15);
+          console.log("A1_WORK15_VERIFY="+JSON.stringify({item,inv,evidence,counts:payload.counts||null}));
+          if(!item || item.status!=="awaiting_external_validation"){
+            throw new Error("Work Item #15 did not verify in awaiting_external_validation.");
           }
-          console.log("A1_MARINE_WORK="+JSON.stringify(payload));
+          if(!inv || String(inv.status||"").toLowerCase()!=="monitoring"){
+            throw new Error("Investigation #41 did not verify in monitoring.");
+          }
           NODE
