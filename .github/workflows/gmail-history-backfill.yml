@@ -1,60 +1,20 @@
 # =========================================================
-# GCM OS — Verify TV Pixel Proof Repair
-# Read-only verification. No D1 writes.
+# GCM OS — Completed Gmail History Recovery
+# Status: RETIRED / NO PRODUCTION ACTIONS
+# August history recovery and TV pixel Proof repair were completed and
+# verified on 2026-08-28. This file performs no D1, Gmail, or Worker writes.
 # =========================================================
-name: Verify TV Pixel Proof Repair
+name: Retired Gmail History Recovery
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/gmail-history-backfill.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  verify:
+  retired:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
-      - name: Verify HBG and Pickett Proof records
-        env:
-          WORKER_URL: https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/
-        run: |
-          node <<'NODE'
-          const url=process.env.WORKER_URL;
-          for(const clientCode of ["HBG","PW"]){
-            const response=await fetch(url,{
-              method:"POST",
-              headers:{"Content-Type":"application/json"},
-              body:JSON.stringify({action:"get-client-workspace",clientCode})
-            });
-            const payload=await response.json();
-            if(!response.ok||payload?.ok!==true){
-              throw new Error(`${clientCode} workspace failed: ${payload?.error||response.status}`);
-            }
-            const records=(payload.operational?.proofOfWork||[]).filter(r =>
-              r?.source_reference===`gmail-thread:1a00cfb1fd1a602a#${clientCode}`
-            );
-            console.log("PIXEL_PROOF_VERIFY="+JSON.stringify({
-              clientCode,
-              proofCount:payload.counts?.proofOfWork ?? null,
-              matches:records.map(r=>({
-                id:r.id,
-                activityDate:r.activity_date,
-                activity:r.activity,
-                status:r.status,
-                sourceType:r.source_type,
-                sourceReference:r.source_reference,
-                evidenceReference:r.evidence_reference,
-                timeMinutes:r.time_minutes,
-                actualImpact:r.actual_impact
-              }))
-            }));
-            if(records.length!==1){
-              throw new Error(`Expected exactly one repaired ${clientCode} Proof record, found ${records.length}`);
-            }
-          }
-          NODE
+      - name: Recovery complete
+        run: echo "Gmail history recovery is complete. No production action is performed."
