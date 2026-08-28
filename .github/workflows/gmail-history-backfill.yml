@@ -1,148 +1,20 @@
 # =========================================================
-# GCM OS — Preserve SES Work #11 follow-up and wait state
-# Authorized operational reconciliation: 2026-08-28
+# GCM OS — Completed One-Time Reconciliation
+# Status: RETIRED / NO PRODUCTION ACTIONS
+# SES Work Item #11 follow-up state reconciled on 2026-08-28.
+# This file performs no D1, Gmail, or Worker writes.
 # =========================================================
-name: Reconcile SES Work 11 Waiting State
+name: Retired One-Time Reconciliation
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/gmail-history-backfill.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  reconcile:
+  retired:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Install Wrangler
-        run: npm install wrangler@4.122.0
-
-      - name: Build D1 reconciliation
-        run: |
-          cat > /tmp/reconcile-work-11.sql <<'SQL'
-          INSERT INTO communications (
-            client_id,
-            occurred_at,
-            direction,
-            source,
-            category,
-            subject,
-            raw_content,
-            ai_summary,
-            operational_decision,
-            status,
-            requires_investigation,
-            owner,
-            minutes_spent,
-            notes,
-            created_at,
-            updated_at,
-            external_id
-          )
-          SELECT
-            (SELECT id FROM clients WHERE client_code = 'SES' LIMIT 1),
-            '2026-08-24T21:51:06.000Z',
-            'outgoing',
-            'Gmail — Human Follow-Up',
-            'Work Coordination / Waiting on Client Input',
-            'RE: Recommendation – 90-Day Q3/Q4 Growth Campaign',
-            'Frank, Yes. I can structure this so Judi has real ownership of the Orlando effort without breaking the campaign into separate pieces. My recommendation is that Judi own the local execution and content side — Facebook/Instagram posts, short videos from the showroom, new inventory or product highlights, promotions, local events, customer-focused content, and ideas from what she is seeing in the Orlando market. I would continue to coordinate the overall campaign strategy, paid media, radio/TV, Google, targeting, tracking, and measurement so everything stays consistent and we can tell what is actually producing results. The one thing I need from you before I put the working plan together is the total monthly budget you want allocated specifically to Orange and Seminole Counties. The $2,000/month 90-day plan I originally recommended was $1,000 Connected TV, $600 Google Search, and $400 Facebook/Instagram, and it did not include the existing Orlando radio spend. Since you want Judi''s budget to include radio/TV and anything else specifically targeted there, I need the total monthly ceiling you want us working within. Once I have that number, I can break it into a simple budget and responsibility plan for Judi so she knows what she owns, what I handle, and how everything works together. If you want, include Judi on the next reply and I can take it from there. Andy',
-            'GCM replied to Frank confirming the campaign can be structured around Judi ownership of local Orlando content/execution. The remaining required client input is the total monthly Orange/Seminole budget ceiling, including radio/TV and other targeted spending. No implementation plan can be finalized until Frank supplies that amount.',
-            'waiting_on_client_input',
-            'waiting_on_external',
-            0,
-            'Andrew',
-            0,
-            'Linked operational follow-up for Work Item #11. Waiting for Frank to provide the monthly budget ceiling and optionally include Judi on the reply.',
-            '2026-08-24 17:51:06',
-            '2026-08-24 17:51:06',
-            'gmail:1a035c17b2cc8ec9'
-          WHERE NOT EXISTS (
-            SELECT 1 FROM communications WHERE external_id = 'gmail:1a035c17b2cc8ec9'
-          );
-
-          UPDATE work_items
-          SET
-            status = 'waiting_on_external',
-            description = CASE
-              WHEN description LIKE '%Current Dependency:%' THEN description
-              ELSE description || char(10) || char(10) ||
-                'Current Dependency: GCM replied to Frank on August 24, 2026 with the recommended Judi role split and asked for the total monthly Orange/Seminole budget ceiling, including radio/TV and all other Orlando-targeted spending. Frank has not yet replied. Implementation is waiting on that budget decision.'
-            END,
-            updated_at = '2026-08-28 11:05:00'
-          WHERE id = 11
-            AND client_id = (SELECT id FROM clients WHERE client_code = 'SES' LIMIT 1)
-            AND status NOT IN ('completed','closed','cancelled','canceled');
-
-          INSERT INTO evidence (
-            client_id,
-            investigation_id,
-            work_item_id,
-            communication_id,
-            evidence_type,
-            source,
-            description,
-            url,
-            captured_at
-          )
-          SELECT
-            wi.client_id,
-            wi.investigation_id,
-            wi.id,
-            c.id,
-            'work_progress',
-            'Gmail Follow-Up — 90-Day Q3/Q4 Growth Campaign',
-            'August 24, 2026: GCM replied to Frank with a proposed Judi ownership model for Orlando local content and execution while GCM retains coordination of paid media, radio/TV, Google, targeting, tracking, and measurement. GCM requested the total monthly Orange/Seminole budget ceiling before building the working budget/responsibility plan. No later reply from Frank appears in the Gmail thread as of August 28, 2026.',
-            'https://mail.google.com/mail/#all/1a035c17b2cc8ec9',
-            '2026-08-28 11:05:00'
-          FROM work_items wi
-          JOIN communications c ON c.external_id = 'gmail:1a035c17b2cc8ec9'
-          WHERE wi.id = 11
-            AND NOT EXISTS (
-              SELECT 1 FROM evidence e
-              WHERE e.work_item_id = 11
-                AND e.evidence_type = 'work_progress'
-                AND e.source = 'Gmail Follow-Up — 90-Day Q3/Q4 Growth Campaign'
-            );
-          SQL
-
-      - name: Apply reconciliation to production D1
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npx wrangler d1 execute DB --remote --file=/tmp/reconcile-work-11.sql
-
-      - name: Verify through production Worker
-        env:
-          WORKER_URL: https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/
-        run: |
-          node <<'NODE'
-          const r=await fetch(process.env.WORKER_URL,{
-            method:"POST",
-            headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({action:"get-client-workspace",clientCode:"SES"})
-          });
-          const p=await r.json();
-          if(!r.ok||p?.ok!==true) throw new Error(p?.error||String(r.status));
-          const work=(p.operational?.workItems||[]).find(w=>Number(w.id)===11)||null;
-          const comm=(p.operational?.communications||[]).find(c=>String(c.external_id||"")==="gmail:1a035c17b2cc8ec9")||null;
-          const evidence=(p.operational?.evidence||[]).filter(e=>Number(e.work_item_id)===11);
-          console.log("SES_WORK11_RECONCILED="+JSON.stringify({work,comm,evidence,counts:p.counts||null}));
-          if(!work || String(work.status||"").toLowerCase()!=="waiting_on_external"){
-            throw new Error("Work Item #11 did not verify in waiting_on_external.");
-          }
-          if(!comm) throw new Error("August 24 follow-up communication was not preserved.");
-          NODE
+      - name: Complete
+        run: echo "One-time reconciliation is complete. No production action is performed."
