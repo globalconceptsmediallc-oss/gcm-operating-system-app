@@ -1,9 +1,10 @@
 # =========================================================
-# GCM OS — Morning Human-Thread Audit
-# Read-only verification of human/client conversations handled in the
-# 2026-08-28 Inbox recovery. No D1 writes.
+# GCM OS — One-time TV Pixel Proof Repair
+# Authorized production repair: 2026-08-28
+# Purpose: restore two completed client Proof/Activity records supported
+# by Gmail thread 1a00cfb1fd1a602a. Duplicate-safe. No Work/Investigation writes.
 # =========================================================
-name: Audit Morning Human Threads
+name: Repair TV Pixel Proof History
 
 on:
   push:
@@ -16,63 +17,98 @@ permissions:
   contents: read
 
 jobs:
-  audit:
+  repair:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Inspect human-thread D1 history
-        env:
-          WORKER_URL: https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/
-        run: |
-          node <<'NODE'
-          const url = process.env.WORKER_URL;
-          async function post(body){
-            const response=await fetch(url,{
-              method:"POST",
-              headers:{"Content-Type":"application/json"},
-              body:JSON.stringify(body)
-            });
-            const payload=await response.json().catch(()=>({}));
-            if(!response.ok||payload?.ok!==true){
-              throw new Error(`${body.action} failed HTTP ${response.status}: ${payload?.error||"unknown"}`);
-            }
-            return payload;
-          }
+      - name: Insert and verify two missing Proof records
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: "4.122.0"
+          command: |
+            d1 execute DB --remote --command "
+            INSERT INTO activity_records (
+              client_id, activity_date, category, activity, evidence_type,
+              evidence_reference, status, owner, time_minutes, expected_impact,
+              actual_impact, notes, source_type, source_reference, priority, win,
+              created_at, updated_at
+            )
+            SELECT
+              c.id,
+              '2026-08-17',
+              'Advertising Measurement',
+              'Installed and verified HB Guns TV campaign tracking pixel',
+              'Gmail — Completed Work Evidence',
+              'gmail-thread:1a00cfb1fd1a602a',
+              'completed',
+              'Andy',
+              0,
+              'Enable campaign attribution for HB Guns TV advertising.',
+              'Simpli.fi tracking pixel installed and verified on hbguns.com; vendor-side receipt confirmation was requested.',
+              'Source Gmail thread: HB Guns TV Tracking Pixel. Jesse answered the Simpli.fi tracking questions; configuration was for campaign attribution rather than general site retargeting; HB retains ownership of first-party customer data; data generally retained up to 180 days; pixel installed and verified; vendor confirmation requested; recommendation was to remove the pixel after the campaign and attribution window.',
+              'gmail_completed_work',
+              'gmail-thread:1a00cfb1fd1a602a#HBG',
+              'Normal',
+              0,
+              CURRENT_TIMESTAMP,
+              CURRENT_TIMESTAMP
+            FROM clients c
+            WHERE c.client_code='HBG'
+              AND NOT EXISTS (
+                SELECT 1 FROM activity_records
+                WHERE source_reference='gmail-thread:1a00cfb1fd1a602a#HBG'
+              );
 
-          for(const clientCode of ["SES","HBG"]){
-            const payload=await post({action:"get-client-workspace",clientCode});
-            const op=payload.operational||{};
-            const communications=(op.communications||[]).map(c=>({
-              id:c.id,
-              externalId:c.external_id,
-              subject:c.subject,
-              status:c.status,
-              occurredAt:c.occurred_at
-            }));
-            const workItems=(op.workItems||[]).map(w=>({
-              id:w.id,
-              communicationId:w.communication_id,
-              title:w.title,
-              status:w.status
-            }));
-            const proof=(op.proofOfWork||[]).map(p=>({
-              id:p.id,
-              activity:p.activity,
-              sourceType:p.source_type,
-              sourceReference:p.source_reference,
-              activityDate:p.activity_date
-            }));
-            console.log("HUMAN_AUDIT="+JSON.stringify({
-              clientCode,
-              communications:communications.filter(x=>
-                /90-Day Q3\/Q4 Growth Campaign|HB Guns TV Tracking Pixel|TV Campaign Tracking Pixel|Pixel Placement/i.test(x.subject||"")
-              ),
-              workItems:workItems.filter(x=>
-                /90-Day Q3\/Q4 Growth Campaign|HB Guns TV Tracking Pixel|TV Campaign Tracking Pixel|Pixel Placement/i.test(x.title||"")
-              ),
-              proof:proof.filter(x=>
-                /90-Day Q3\/Q4 Growth Campaign|HB Guns TV Tracking Pixel|TV Campaign Tracking Pixel|Pixel Placement/i.test(x.activity||"")
-              )
-            }));
-          }
-          NODE
+            INSERT INTO activity_records (
+              client_id, activity_date, category, activity, evidence_type,
+              evidence_reference, status, owner, time_minutes, expected_impact,
+              actual_impact, notes, source_type, source_reference, priority, win,
+              created_at, updated_at
+            )
+            SELECT
+              c.id,
+              '2026-08-17',
+              'Advertising Measurement',
+              'Installed and verified Pickett Weaponry TV campaign tracking pixel',
+              'Gmail — Completed Work Evidence',
+              'gmail-thread:1a00cfb1fd1a602a',
+              'completed',
+              'Andy',
+              0,
+              'Enable campaign attribution for Pickett Weaponry TV advertising.',
+              'Simpli.fi tracking pixel installed and verified on pickettweaponry.com; vendor-side receipt confirmation was requested.',
+              'Source Gmail thread: HB Guns TV Tracking Pixel. The same completion email states the separate Pickett pixel was installed and verified on pickettweaponry.com; vendor confirmation was requested; recommendation was to remove the pixel after the campaign and attribution window.',
+              'gmail_completed_work',
+              'gmail-thread:1a00cfb1fd1a602a#PW',
+              'Normal',
+              0,
+              CURRENT_TIMESTAMP,
+              CURRENT_TIMESTAMP
+            FROM clients c
+            WHERE c.client_code='PW'
+              AND NOT EXISTS (
+                SELECT 1 FROM activity_records
+                WHERE source_reference='gmail-thread:1a00cfb1fd1a602a#PW'
+              );
+
+            SELECT
+              ar.id,
+              c.client_code,
+              ar.activity_date,
+              ar.activity,
+              ar.status,
+              ar.source_type,
+              ar.source_reference,
+              ar.evidence_reference,
+              ar.time_minutes,
+              ar.actual_impact
+            FROM activity_records ar
+            JOIN clients c ON c.id=ar.client_id
+            WHERE ar.source_reference IN (
+              'gmail-thread:1a00cfb1fd1a602a#HBG',
+              'gmail-thread:1a00cfb1fd1a602a#PW'
+            )
+            ORDER BY c.client_code;
+            "
