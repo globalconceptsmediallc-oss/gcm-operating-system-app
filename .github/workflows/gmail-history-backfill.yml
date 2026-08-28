@@ -1,21 +1,78 @@
 # =========================================================
-# GCM OS — Completed August Gmail History Recovery
-# Status: RETIRED / NO PRODUCTION ACTIONS
-# Recovery completed and verified on 2026-08-28.
-# This file intentionally contains no D1, Gmail, or Worker calls.
-# It is retained only because automated deletion is unavailable here.
+# GCM OS — Morning Human-Thread Audit
+# Read-only verification of human/client conversations handled in the
+# 2026-08-28 Inbox recovery. No D1 writes.
 # =========================================================
-name: Retired August Gmail History Recovery
+name: Audit Morning Human Threads
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/gmail-history-backfill.yml"
 
 permissions:
   contents: read
 
 jobs:
-  retired:
+  audit:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - name: Recovery complete
-        run: echo "August Gmail history recovery is complete. No production action is performed."
+      - name: Inspect human-thread D1 history
+        env:
+          WORKER_URL: https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/
+        run: |
+          node <<'NODE'
+          const url = process.env.WORKER_URL;
+          async function post(body){
+            const response=await fetch(url,{
+              method:"POST",
+              headers:{"Content-Type":"application/json"},
+              body:JSON.stringify(body)
+            });
+            const payload=await response.json().catch(()=>({}));
+            if(!response.ok||payload?.ok!==true){
+              throw new Error(`${body.action} failed HTTP ${response.status}: ${payload?.error||"unknown"}`);
+            }
+            return payload;
+          }
+
+          for(const clientCode of ["SES","HBG"]){
+            const payload=await post({action:"get-client-workspace",clientCode});
+            const op=payload.operational||{};
+            const communications=(op.communications||[]).map(c=>({
+              id:c.id,
+              externalId:c.external_id,
+              subject:c.subject,
+              status:c.status,
+              occurredAt:c.occurred_at
+            }));
+            const workItems=(op.workItems||[]).map(w=>({
+              id:w.id,
+              communicationId:w.communication_id,
+              title:w.title,
+              status:w.status
+            }));
+            const proof=(op.proofOfWork||[]).map(p=>({
+              id:p.id,
+              activity:p.activity,
+              sourceType:p.source_type,
+              sourceReference:p.source_reference,
+              activityDate:p.activity_date
+            }));
+            console.log("HUMAN_AUDIT="+JSON.stringify({
+              clientCode,
+              communications:communications.filter(x=>
+                /90-Day Q3\/Q4 Growth Campaign|HB Guns TV Tracking Pixel|TV Campaign Tracking Pixel|Pixel Placement/i.test(x.subject||"")
+              ),
+              workItems:workItems.filter(x=>
+                /90-Day Q3\/Q4 Growth Campaign|HB Guns TV Tracking Pixel|TV Campaign Tracking Pixel|Pixel Placement/i.test(x.title||"")
+              ),
+              proof:proof.filter(x=>
+                /90-Day Q3\/Q4 Growth Campaign|HB Guns TV Tracking Pixel|TV Campaign Tracking Pixel|Pixel Placement/i.test(x.activity||"")
+              )
+            }));
+          }
+          NODE
