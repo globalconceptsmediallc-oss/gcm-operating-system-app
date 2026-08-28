@@ -1,8 +1,8 @@
 # =========================================================
-# GCM OS — Read SES Communication #93
+# GCM OS — Verify SES Work Item #11 follow-up state
 # Read-only production verification: 2026-08-28
 # =========================================================
-name: Read SES Communication 93
+name: Verify SES Work 11 Follow-up
 
 on:
   push:
@@ -15,10 +15,10 @@ permissions:
   contents: read
 
 jobs:
-  lookup:
+  verify:
     runs-on: ubuntu-latest
     steps:
-      - name: Read SES communication
+      - name: Read SES communication history
         env:
           WORKER_URL: https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/
         run: |
@@ -30,7 +30,10 @@ jobs:
           });
           const p=await r.json();
           if(!r.ok||p?.ok!==true) throw new Error(p?.error||String(r.status));
-          const comm=(p.operational?.communications||[]).find(c=>Number(c.id)===93)||null;
+          const comms=(p.operational?.communications||[]).filter(c=>
+            String(c.external_id||"").includes("1a035c17b2cc8ec9") ||
+            /90-Day Q3\/Q4 Growth Campaign/i.test(String(c.subject||""))
+          );
           const work=(p.operational?.workItems||[]).find(w=>Number(w.id)===11)||null;
-          console.log("SES93="+JSON.stringify({comm,work}));
+          console.log("SES_WORK11_STATE="+JSON.stringify({comms,work,counts:p.counts||null}));
           NODE
