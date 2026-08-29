@@ -1,20 +1,30 @@
 # =========================================================
-# GCM OS — Completed Read-Only Test
-# Status: RETIRED / NO PRODUCTION ACTIONS
-# Media native commercial queue de-duplication verified on 2026-08-29.
-# This file performs no D1, Gmail, or Worker writes.
+# GCM OS — Test Media shell cache-bust
+# No production writes
 # =========================================================
-name: Retired One-Time Reconciliation
+name: Test Media Shell Cache Bust
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/gmail-history-backfill.yml"
 
 permissions:
   contents: read
 
 jobs:
-  retired:
+  test:
     runs-on: ubuntu-latest
     steps:
-      - name: Complete
-        run: echo "Read-only verification is complete. No production action is performed."
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Verify cache-bust references
+        run: |
+          grep -q 'media.html · v2.4.5' media.html
+          grep -q 'shared/gcm-shell.js?v=2.0.34' media.html
+          grep -q 'media-dashboard-creatives.js?v=1.1.2' shared/gcm-shell.js
+          grep -q 'data-gcm-native-creative-queue' shared/media-dashboard-creatives.js
+          node --check shared/gcm-shell.js
+          node --check shared/media-dashboard-creatives.js
