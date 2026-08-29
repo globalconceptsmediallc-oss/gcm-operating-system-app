@@ -5,7 +5,7 @@
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Cloudflare Worker from main.
 # Change Notes:
-# - LOCK: require Worker 7.19.0 and Prospect CRM 1.2.0 with durable Radar continuity.
+# - LOCK: require Worker 7.19.1 and Prospect CRM 1.2.0 with durable Radar continuity.
 # - Verify CRM D1 migrations are live by reading list_prospects and service catalog.
 # - Verify the core business rule that a formal Prospect cannot be created
 #   without a real scheduled appointment.
@@ -100,8 +100,8 @@ jobs:
           const healthResponse = await fetch(url);
           if (!healthResponse.ok) throw new Error(`Worker health returned HTTP ${healthResponse.status}`);
           const health = await healthResponse.json();
-          if (health.workerFileVersion !== "7.19.0") {
-            throw new Error(`Expected Worker 7.19.0, received ${health.workerFileVersion || "unknown"}`);
+          if (health.workerFileVersion !== "7.19.1") {
+            throw new Error(`Expected Worker 7.19.1, received ${health.workerFileVersion || "unknown"}`);
           }
           const requiredActions = [
             "prospect-crm",
@@ -309,5 +309,5 @@ jobs:
           if (protectedResponse.status !== 401) {
             throw new Error(`Expected authentication boundary HTTP 401, received ${protectedResponse.status}`);
           }
-          console.log("PASS live Worker 7.19.0, Prospect CRM 1.2.0, durable Radar intelligence/outreach continuity, service startup catalog, appointment boundary, Gmail decision routes, Calendar, Work due-date source, Operating Sessions, and authentication boundary");
+          console.log("PASS live Worker 7.19.1, Prospect CRM 1.2.0, durable Radar intelligence/outreach continuity, service startup catalog, appointment boundary, Gmail decision routes, Calendar, Work due-date source, Operating Sessions, and authentication boundary");
           NODE
