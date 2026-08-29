@@ -1,15 +1,22 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/today-gmail-decisions.js
-   Version: 2.3.0
+   Version: 2.3.1
    Status: Production Road-Test Candidate
    Source: shared/today-gmail-decisions.js 2.1.0 production
-   Sprint: Gmail — Human Routing / Home Base Action Tabs
+   Sprint: Gmail — Processed Thread Re-entry Guard
    Purpose:
    Make Morning Command a fast human decision surface: show the live source
    email, choose the client, expose every operational route, support immediate
    human action without creating artificial Work, and keep GCM OS as the home
    base until the operator confirms the selected outcome.
+
+   Changes — 2.3.1:
+   - Adds a browser-side processed-thread safety ledger after a successful human route.
+   - Suppresses an already-routed conversation if the Worker preview returns the same latest Gmail message again.
+   - Automatically allows a thread back into Morning Command when Gmail supplies a newer latest-message ID.
+   - Prevents stale Worker preview results from causing duplicate Monitoring, Information, Investigation, or Requested Work writes.
+   - Keeps the Worker/D1 record authoritative; this is a duplicate-write safety guard, not a replacement for Worker processed-state repair.
 
    Changes — 2.3.0:
    - Treats one Gmail thread as one Morning Command decision card.
@@ -80,8 +87,8 @@
   "use strict";
 
   // Existing shell loader cache key. Installed behavior is HUMAN_ROUTING_VERSION.
-  const FILE_VERSION = "1.2.1";
-  const HUMAN_ROUTING_VERSION = "2.3.0";
+  const FILE_VERSION = "2.3.1";
+  const HUMAN_ROUTING_VERSION = "2.3.1";
   const WORKER_URL =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const PREVIEW = "preview-gmail-inbox";
@@ -91,6 +98,8 @@
   const STATUS = "get-gmail-status";
   const MAX_VISIBLE_EMAILS = 10;
   const MAX_ACTION_LINKS = 3;
+  const PROCESSED_LEDGER_KEY = "gcm_morning_command_processed_threads_v1";
+  const PROCESSED_LEDGER_TTL_MS = 1000 * 60 * 60 * 24 * 90;
 
   let clients = [];
   let previewButton = null;
@@ -264,6 +273,70 @@
 
   function normalizeName(value) {
     return String(value || "").trim().toLowerCase();
+  }
+
+  function loadProcessedLedger() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(PROCESSED_LEDGER_KEY) || "{}");
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+
+      const now = Date.now();
+      let changed = false;
+      Object.keys(parsed).forEach(key => {
+        const processedAt = Number(parsed[key]?.processedAt || 0);
+        if (!processedAt || now - processedAt > PROCESSED_LEDGER_TTL_MS) {
+          delete parsed[key];
+          changed = true;
+        }
+      });
+
+      if (changed) localStorage.setItem(PROCESSED_LEDGER_KEY, JSON.stringify(parsed));
+      return parsed;
+    } catch {
+      return {};
+    }
+  }
+
+  function saveProcessedLedger(ledger) {
+    try {
+      localStorage.setItem(PROCESSED_LEDGER_KEY, JSON.stringify(ledger || {}));
+    } catch {}
+  }
+
+  function markThreadLocallyProcessed(gmailThreadId, gmailMessageId) {
+    const threadId = String(gmailThreadId || "").trim();
+    const messageId = String(gmailMessageId || "").trim();
+    const key = threadId || messageId;
+    if (!key) return;
+
+    const ledger = loadProcessedLedger();
+    ledger[key] = {
+      gmailThreadId:threadId,
+      gmailMessageId:messageId,
+      processedAt:Date.now()
+    };
+    saveProcessedLedger(ledger);
+  }
+
+  function isLocallyProcessed(message) {
+    const threadId = String(message?.threadId || "").trim();
+    const messageId = String(message?.gmailMessageId || "").trim();
+    const key = threadId || messageId;
+    if (!key) return false;
+
+    const entry = loadProcessedLedger()[key];
+    if (!entry) return false;
+
+    const recordedMessageId = String(entry.gmailMessageId || "").trim();
+
+    // A new reply in the same Gmail thread must return to Morning Command.
+    if (messageId && recordedMessageId) {
+      return messageId === recordedMessageId;
+    }
+
+    // Fallback only when one side lacks a Gmail message ID. Keep this short so
+    // an id-less thread cannot be hidden indefinitely.
+    return Date.now() - Number(entry.processedAt || 0) < 5 * 60 * 1000;
   }
 
   async function loadClients() {
@@ -442,6 +515,7 @@
       if (!result?.gmailMovedToTrash) {
         throw new Error("Gmail did not confirm that the completed conversation moved to Trash.");
       }
+      markThreadLocallyProcessed(gmailThreadId, gmailMessageId);
       setStatus("Handle Now complete: action confirmed · Gmail conversation moved to Trash · 0 OS records created.");
       await window.GCMOShell?.refreshNavAttention?.();
       busy = false;
@@ -500,6 +574,7 @@
         ? await post(DELETE, { gmailMessageId, gmailThreadId })
         : await post(ROUTE, { gmailMessageId, gmailThreadId, disposition, clientCode, clientName });
 
+      markThreadLocallyProcessed(gmailThreadId, gmailMessageId);
       const resultText = buildResultText(result, button.textContent.trim());
       setStatus(resultText);
       await window.GCMOShell?.refreshNavAttention?.();
@@ -542,10 +617,13 @@
     try {
       if (!clients.length) await loadClients();
       const result = await post(PREVIEW, {
-        limit:MAX_VISIBLE_EMAILS,
+        limit:MAX_VISIBLE_EMAILS + 20,
         scanLimit:100
       });
-      const messages = Array.isArray(result?.messages) ? result.messages : [];
+      const returnedMessages = Array.isArray(result?.messages) ? result.messages : [];
+      const messages = returnedMessages
+        .filter(message => !isLocallyProcessed(message))
+        .slice(0, MAX_VISIBLE_EMAILS);
       preview.replaceChildren(...messages.map(renderMessage));
 
       if (!messages.length) {
@@ -555,8 +633,9 @@
         preview.replaceChildren(empty);
         setStatus("Morning Command is clear. No unprocessed Gmail conversations remain in the operational queue.");
       } else if (!preserveStatus) {
-        const remaining = Number(result?.remainingUnprocessedCount || messages.length);
-        setStatus(`${remaining} unprocessed Gmail conversation${remaining === 1 ? "" : "s"} ready. Read the full thread and choose one route.`);
+        const remaining = messages.length;
+        const suppressed = Math.max(0, returnedMessages.length - messages.length);
+        setStatus(`${remaining} unprocessed Gmail conversation${remaining === 1 ? "" : "s"} ready. Read the full thread and choose one route.${suppressed ? ` ${suppressed} already-routed stale preview ${suppressed === 1 ? "conversation was" : "conversations were"} suppressed.` : ""}`);
       }
     } catch (error) {
       preview.replaceChildren();
