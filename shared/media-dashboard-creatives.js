@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/media-dashboard-creatives.js
-   Version: 1.1.1
+   Version: 1.1.2
    Status: Production Candidate
    Sprint: Media Work State / Waiting + Scheduled
    Purpose: Add media_creatives to the Media dashboard while separating
@@ -20,7 +20,7 @@
 (() => {
   "use strict";
 
-  const VERSION = "1.1.1";
+  const VERSION = "1.1.2";
   const ENDPOINT = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const $ = id => document.getElementById(id);
   const lower = value => String(value || "").trim().toLowerCase();
@@ -272,6 +272,10 @@
 
   function reconcile() {
     if (!workflow || !$("lane-preparing")) return;
+    if (document.querySelector('[data-gcm-native-creative-queue="1"]')) {
+      document.querySelectorAll(".gcm-creative-card").forEach(node => node.remove());
+      return;
+    }
     document.querySelectorAll(".gcm-creative-card").forEach(node => node.remove());
     const creatives = visibleCreatives();
     const lanes = {
