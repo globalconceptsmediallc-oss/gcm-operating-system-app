@@ -1,20 +1,136 @@
 # =========================================================
-# GCM OS — Completed One-Time Reconciliation
-# Status: RETIRED / NO PRODUCTION ACTIONS
-# SES Work Item #11 was activated for prelaunch on 2026-08-28.
-# This file performs no D1, Gmail, or Worker writes.
+# GCM OS — Record SES Work Item #11 Google Ads prelaunch milestone
+# Authorized operational action: 2026-08-29
 # =========================================================
-name: Retired One-Time Reconciliation
+name: Record SES Work 11 Google Ads Milestone
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/gmail-history-backfill.yml"
 
 permissions:
   contents: read
 
 jobs:
-  retired:
+  update:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - name: Complete
-        run: echo "One-time reconciliation is complete. No production action is performed."
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Wrangler
+        run: npm install wrangler@4.122.0
+
+      - name: Build D1 progress update
+        run: |
+          cat > /tmp/record-ses-google-ads.sql <<'SQL'
+          UPDATE work_items
+          SET
+            description = description ||
+              '\n\nGOOGLE ADS PRELAUNCH MILESTONE — 2026-08-29: SES Google Ads foundation and first Lake Nona/Narcoossee Search campaign were rebuilt from a clean baseline. Account foundation verified: correct Southeast Safes Ads account, Eastern Time, auto-tagging enabled, call reporting on, auto-apply off, and account security reviewed. Shopify Google & YouTube was connected to the SES Google Ads account and the correct Southeast Safes GA4 property (310297761 / G-5Y0986V3WY). Google tag GT-55N7NPTG reached Excellent / sending data. Shopify-created ecommerce actions were established; Purchase remains Primary but inactive/unverified until a real purchase is observed, while Add to Cart, Begin Checkout, Add Payment Info, Page View, View Item, Search, YouTube subscriptions, and YouTube follow-on views are Secondary/reporting-only. GA4 realtime testing confirmed view_item, add_to_cart, begin_checkout and normal site events.\n\nCampaign build reached Google Ads Review and is ready to publish but was not yet published at this checkpoint. Campaign: SES | Search | Lake Nona-Narcoossee | 90-Day. Dates: September 1-November 30, 2026. Campaign total budget: $1,800 ($600/month planned). Bidding: Maximize Clicks with no CPC cap while conversion history is established. Network: Google Search only; Search Partners and Display disabled. Geography: Lake Nona Region plus ZIP 32832, using Presence-only targeting. English only. AI Max, text customization, and Final URL expansion are off. First ad group uses 8 Phrase/Exact high-intent gun-safe keywords, a large-safe collection landing page, 10 controlled headlines, 4 descriptions, 4 sitelinks (Current Safe Deals, Special Offers, Delivery & Installation, Shop Liberty Safes), and 4 callouts (Local Safe Showroom, Safe Delivery Available, Professional Installation, Liberty & Browning Safes). Google Ads review reports the campaign ready to publish. The account also shows a $500 promotional credit after $500 spend by October 27, 2026; final credit eligibility remains subject to Google terms.',
+            updated_at = '2026-08-29 08:28:00'
+          WHERE id = 11
+            AND client_id = (SELECT id FROM clients WHERE client_code = 'SES' LIMIT 1)
+            AND status = 'in_progress'
+            AND instr(COALESCE(description,''), 'GOOGLE ADS PRELAUNCH MILESTONE — 2026-08-29') = 0;
+
+          INSERT INTO evidence (
+            client_id,
+            investigation_id,
+            work_item_id,
+            communication_id,
+            evidence_type,
+            source,
+            description,
+            url,
+            captured_at
+          )
+          SELECT
+            wi.client_id,
+            wi.investigation_id,
+            wi.id,
+            wi.communication_id,
+            'measurement_validation',
+            'Google Ads + Shopify + GA4',
+            'Measurement foundation verified during SES Work Item #11 prelaunch: Shopify Google & YouTube connected to the correct SES Google Ads account and GA4 property 310297761 (G-5Y0986V3WY); Google tag GT-55N7NPTG reached Excellent / sending data. Shopify ecommerce actions were created. Purchase is Primary but inactive/unverified pending a real purchase. Add to Cart, Begin Checkout, Add Payment Info, Page View, View Item, Search, YouTube subscriptions, and YouTube follow-on views are Secondary/reporting-only. GA4 realtime testing confirmed view_item, add_to_cart, begin_checkout and normal site activity.',
+            NULL,
+            '2026-08-29 08:28:00'
+          FROM work_items wi
+          WHERE wi.id = 11
+            AND NOT EXISTS (
+              SELECT 1 FROM evidence e
+              WHERE e.work_item_id = 11
+                AND e.evidence_type = 'measurement_validation'
+                AND e.source = 'Google Ads + Shopify + GA4'
+            );
+
+          INSERT INTO evidence (
+            client_id,
+            investigation_id,
+            work_item_id,
+            communication_id,
+            evidence_type,
+            source,
+            description,
+            url,
+            captured_at
+          )
+          SELECT
+            wi.client_id,
+            wi.investigation_id,
+            wi.id,
+            wi.communication_id,
+            'work_progress',
+            'Google Ads Campaign Review',
+            'SES Search campaign prelaunch build reached Review and Google Ads reports it ready to publish. Campaign name: SES | Search | Lake Nona-Narcoossee | 90-Day. Start 2026-09-01; end 2026-11-30; campaign total budget $1,800. Maximize Clicks with no CPC cap. Google Search only; Search Partners and Display off. Target locations: Lake Nona Region and ZIP 32832 with Presence-only targeting. English. AI Max / text customization / Final URL expansion off. First ad group: 8 Phrase/Exact high-intent gun-safe keywords, large-safe collection landing page, 10 headlines, 4 descriptions, 4 sitelinks, and 4 callouts. Campaign was ready to publish but not yet published when this evidence was captured.',
+            NULL,
+            '2026-08-29 08:28:00'
+          FROM work_items wi
+          WHERE wi.id = 11
+            AND NOT EXISTS (
+              SELECT 1 FROM evidence e
+              WHERE e.work_item_id = 11
+                AND e.evidence_type = 'work_progress'
+                AND e.source = 'Google Ads Campaign Review'
+            );
+          SQL
+
+      - name: Apply update to production D1
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler d1 execute DB --remote --file=/tmp/record-ses-google-ads.sql
+
+      - name: Verify through production Worker
+        env:
+          WORKER_URL: https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/
+        run: |
+          node <<'NODE'
+          const r=await fetch(process.env.WORKER_URL,{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({action:"get-client-workspace",clientCode:"SES"})
+          });
+          const p=await r.json();
+          if(!r.ok||p?.ok!==true) throw new Error(p?.error||String(r.status));
+          const work=(p.operational?.workItems||[]).find(w=>Number(w.id)===11)||null;
+          const evidence=(p.operational?.evidence||[]).filter(e=>Number(e.work_item_id)===11);
+          const measurement=evidence.find(e=>e.source==="Google Ads + Shopify + GA4")||null;
+          const campaign=evidence.find(e=>e.source==="Google Ads Campaign Review")||null;
+          console.log("SES_WORK11_GOOGLE_ADS_MILESTONE="+JSON.stringify({work,measurement,campaign,counts:p.counts||null}));
+          if(!work || String(work.status||"").toLowerCase()!=="in_progress"){
+            throw new Error("Work Item #11 is not in_progress.");
+          }
+          if(!measurement || !campaign){
+            throw new Error("Google Ads milestone evidence did not verify.");
+          }
+          NODE
