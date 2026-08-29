@@ -1,8 +1,9 @@
 # =========================================================
-# GCM OS — Read-only verification of SES radio traffic records
-# No production writes
+# GCM OS — Process SES iHeart station confirmations
+# Authorized operational action: 2026-08-29
+# Uses production Media workflow endpoints so confirmation logic stays canonical.
 # =========================================================
-name: Verify SES Radio Traffic Records
+name: Process SES Radio Confirmations
 
 on:
   push:
@@ -15,32 +16,125 @@ permissions:
   contents: read
 
 jobs:
-  verify:
+  process:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - name: Install Wrangler
-        run: npm install wrangler@4.122.0
-      - name: Query production D1 read only
+      - name: Process confirmations through production Worker
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WORKER_URL: https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/
         run: |
-          echo "=== MEDIA SCHEMA ==="
-          npx wrangler d1 execute DB --remote --command="SELECT name, sql FROM sqlite_master WHERE type='table' AND name IN ('media_records','media_creatives','media_creative_assignments','media_traffic_packages','media_traffic_package_assignments','media_confirmation_evidence','media_confirmation_links');"
-          echo "=== CREATIVES ==="
-          npx wrangler d1 execute DB --remote --command="SELECT * FROM media_creatives WHERE creative_name LIKE '%Safe Moving Services 2%' OR creative_name LIKE '%Safe Repair Services 2%';"
-          echo "=== ASSIGNMENTS ==="
-          npx wrangler d1 execute DB --remote --command="SELECT a.* FROM media_creative_assignments a JOIN media_creatives c ON c.id=a.creative_id WHERE c.creative_name LIKE '%Safe Moving Services 2%' OR c.creative_name LIKE '%Safe Repair Services 2%' ORDER BY c.id,a.id;"
-          echo "=== PACKAGES ==="
-          npx wrangler d1 execute DB --remote --command="SELECT p.* FROM media_traffic_packages p JOIN media_creatives c ON c.id=p.creative_id WHERE c.creative_name LIKE '%Safe Moving Services 2%' OR c.creative_name LIKE '%Safe Repair Services 2%' ORDER BY c.id,p.id;"
-          echo "=== CONFIRMATIONS ==="
-          npx wrangler d1 execute DB --remote --command="SELECT * FROM media_confirmation_evidence WHERE gmail_thread_id IN ('1a044a593149b942','1a044921f5bde047') OR gmail_message_id IN ('1a04a45bab9d1341','1a04a460ea554d75');"
-          echo "=== MEDIA RECORDS ==="
-          npx wrangler d1 execute DB --remote --command="SELECT * FROM media_records WHERE campaign_name LIKE '%Safe Moving Services 2%' OR campaign_name LIKE '%Safe Repair Services 2%' OR creative_version LIKE '%SESLM2602%' OR creative_version LIKE '%SESLO2602%' ORDER BY id;" || true
+          node <<'NODE'
+          const endpoint=process.env.WORKER_URL;
+
+          async function api(operation, extra={}) {
+            const r=await fetch(endpoint,{
+              method:"POST",
+              headers:{"Content-Type":"application/json"},
+              body:JSON.stringify({action:"get-media-operations",operation,...extra})
+            });
+            const j=await r.json().catch(()=>({}));
+            if(!r.ok || j?.ok!==true) throw new Error(operation+": "+(j?.error||j?.details||r.status));
+            return j;
+          }
+
+          const items=[
+            {
+              creativeName:"Safe Moving Services 2",
+              packageId:4,
+              gmailMessageId:"1a04a45bab9d1341",
+              gmailThreadId:"1a044a593149b942",
+              receivedAt:"2026-08-28T21:27:56.000Z",
+              subject:"Traffic Instructions — Southeast Safes — Safe Moving Services 2",
+              bodyText:"Confirmed! 😊",
+              history:"Station confirmation completed for Safe Moving Services 2; iHeartMedia confirmed receipt and trafficking for Melbourne / WMMB and Orlando / WFLA. Creative marked Running / Rotation."
+            },
+            {
+              creativeName:"Safe Repair Services 2",
+              packageId:3,
+              gmailMessageId:"1a04a460ea554d75",
+              gmailThreadId:"1a044921f5bde047",
+              receivedAt:"2026-08-28T21:28:18.000Z",
+              subject:"Traffic Instructions — Southeast Safes — Safe Repair Services 2",
+              bodyText:"Confirmed! 😊",
+              history:"Station confirmation completed for Safe Repair Services 2; iHeartMedia confirmed receipt and trafficking for Melbourne / WMMB and Orlando / WFLA. Creative marked Running / Rotation."
+            }
+          ];
+
+          let state=(await api("get_creative_workflow")).creativeWorkflow;
+
+          for (const item of items) {
+            const creative=state.creatives.find(c=>c.creativeName===item.creativeName);
+            if(!creative) throw new Error("Creative not found: "+item.creativeName);
+
+            const pkg=state.trafficPackages.find(p=>Number(p.id)===item.packageId);
+            if(!pkg || Number(pkg.creativeId)!==Number(creative.id)) {
+              throw new Error("Traffic package mismatch for "+item.creativeName);
+            }
+
+            await api("record_station_confirmation",{
+              trafficPackageId:item.packageId,
+              confirmation:{
+                gmailMessageId:item.gmailMessageId,
+                gmailThreadId:item.gmailThreadId,
+                fromEmail:"StephanieStein@iheartmedia.com",
+                toEmail:"globalconceptsmediallc@gmail.com",
+                subject:item.subject,
+                receivedAt:item.receivedAt,
+                bodyText:item.bodyText,
+                stationReceivedConfirmed:true,
+                stationTraffickedConfirmed:true,
+                approvedBy:"Andy"
+              }
+            });
+
+            await api("save_creative",{
+              creativeId:creative.id,
+              creative:{
+                clientId:creative.clientId,
+                creativeName:creative.creativeName,
+                mediaType:creative.mediaType || "Radio",
+                lengthSeconds:creative.lengthSeconds || 30,
+                isci:creative.isci || "",
+                currentStage:"Running / Rotation",
+                status:"running",
+                ideaDirection:creative.ideaDirection || "",
+                workingScript:creative.workingScript || "",
+                approvedScript:creative.approvedScript || "",
+                finalScript:creative.finalScript || "",
+                voiceTalent:creative.voiceTalent || "",
+                recordingStatus:creative.recordingStatus || "",
+                recordingReceivedDate:creative.recordingReceivedDate || "",
+                recordingReviewNotes:creative.recordingReviewNotes || "",
+                productionStatus:creative.productionStatus || "",
+                finalAudioFileName:creative.finalAudioFileName || "",
+                coopScript:creative.coopScript || "",
+                owner:creative.owner || "Andy"
+              }
+            });
+
+            const already=(state.history||[]).some(h=>Number(h.creativeId)===Number(creative.id) && h.content===item.history);
+            if(!already){
+              await api("append_creative_history",{
+                creativeId:creative.id,
+                entryType:"decision",
+                stage:"Station Confirmation",
+                author:"Andy",
+                content:item.history
+              });
+            }
+
+            state=(await api("get_creative_workflow")).creativeWorkflow;
+          }
+
+          const verify=(await api("get_creative_workflow")).creativeWorkflow;
+          for(const item of items){
+            const creative=verify.creatives.find(c=>c.creativeName===item.creativeName);
+            const pkg=verify.trafficPackages.find(p=>Number(p.id)===item.packageId);
+            const confirmation=verify.confirmations.find(c=>c.gmailMessageId===item.gmailMessageId && Number(c.trafficPackageId)===item.packageId);
+            console.log(JSON.stringify({creativeName:item.creativeName,creative,pkg,confirmation}));
+            if(!creative || creative.status!=="running" || creative.currentStage!=="Running / Rotation") throw new Error("Creative not running: "+item.creativeName);
+            if(!pkg || pkg.packageStatus!=="confirmed" || !pkg.confirmedAt) throw new Error("Package not confirmed: "+item.creativeName);
+            if(!confirmation || !confirmation.stationReceivedConfirmed || !confirmation.stationTraffickedConfirmed) throw new Error("Confirmation not verified: "+item.creativeName);
+          }
+          NODE
