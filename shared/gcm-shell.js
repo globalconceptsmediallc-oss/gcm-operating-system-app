@@ -1,21 +1,22 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gcm-shell.js
-   Version: 2.0.34
+   Version: 2.0.35
    Status: Production Road-Test Candidate
    Purpose: Shared internal GCM OS application shell foundation.
-   Source: gcm-shell.js 2.0.33 production navigation
-   Sprint: Media Dashboard — Creative Run Dates
+   Source: gcm-shell.js 2.0.34 production navigation
+   Sprint: Gmail Morning Command — Processed Thread Re-entry Guard
    Change:
-   - Loads Media Dashboard Creative Queue v1.1.2 and defers to the native commercial-grouped Media queue to prevent duplicate Creative cards.
-   - Preserves MediaForge navigation, Gmail Decision controls, Calendar Durable Sync,
-     Media Production Sessions, Prospect Next Action, and existing Work enhancements.
+   - Loads Gmail Human Routing v2.3.1 with a processed-thread re-entry guard so stale Worker preview results cannot recreate routed decision cards.
+   - Preserves Media Dashboard Creative Queue v1.1.2 and the native commercial-grouped Media queue.
+   - Preserves MediaForge navigation, Calendar Durable Sync, Media Production Sessions,
+     Prospect Next Action, and existing Work enhancements.
    ========================================================= */
 
 (() => {
   "use strict";
 
-  const SHELL_VERSION = "2.0.34";
+  const SHELL_VERSION = "2.0.35";
   const WORKER_ENDPOINT =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const MISSION_CONTROL_ACTION = "get-mission-control";
@@ -279,7 +280,7 @@
 
     if (/\/today\.html$/i.test(path)) {
       appendScript(
-        "shared/today-gmail-decisions.js?v=1.2.1",
+        "shared/today-gmail-decisions.js?v=2.3.1",
         "data-gcm-today-gmail-decisions"
       );
     }
