@@ -1,13 +1,13 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gcm-shell.js
-   Version: 2.0.33
+   Version: 2.0.34
    Status: Production Road-Test Candidate
    Purpose: Shared internal GCM OS application shell foundation.
-   Source: gcm-shell.js 2.0.32 production navigation
+   Source: gcm-shell.js 2.0.33 production navigation
    Sprint: Media Dashboard — Creative Run Dates
    Change:
-   - Loads Media Dashboard Creative Queue v1.1.1 so creative-level cards show linked run dates.
+   - Loads Media Dashboard Creative Queue v1.1.2 and defers to the native commercial-grouped Media queue to prevent duplicate Creative cards.
    - Preserves MediaForge navigation, Gmail Decision controls, Calendar Durable Sync,
      Media Production Sessions, Prospect Next Action, and existing Work enhancements.
    ========================================================= */
@@ -15,7 +15,7 @@
 (() => {
   "use strict";
 
-  const SHELL_VERSION = "2.0.33";
+  const SHELL_VERSION = "2.0.34";
   const WORKER_ENDPOINT =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const MISSION_CONTROL_ACTION = "get-mission-control";
@@ -336,7 +336,7 @@
 
     if (/\/media\.html$/i.test(path)) {
       appendScript(
-        "shared/media-dashboard-creatives.js?v=1.1.1",
+        "shared/media-dashboard-creatives.js?v=1.1.2",
         "data-gcm-media-dashboard-creatives"
       );
 
