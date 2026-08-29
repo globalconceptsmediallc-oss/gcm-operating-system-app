@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/gmailSourceEmailDisplay.test.js
-   Version: 1.2.0
+   Version: 1.2.1
    Status: Production Regression Test
    Purpose: Prevent raw Gmail HTML character references and flattened link
             presentation debris from leaking into Morning Command Source Email.
@@ -19,7 +19,7 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
-assert(source.includes("Version: 2.3.0"), "Today Gmail source display must identify version 2.3.0.");
+assert(source.includes("Version: 2.3.1"), "Today Gmail source display must identify version 2.3.1.");
 assert(source.includes("function cleanSourceEmail(value)"), "Universal Source Email cleanup function is missing.");
 assert(source.includes("function decodeEmailText(value)"), "Shared Gmail entity decoding function is missing.");
 assert(source.includes("for (let pass = 0; pass < 2; pass += 1)"), "Nested/double-encoded HTML entities must receive a second decode pass.");
