@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/gmailThreadRouting.test.js
-   Version: 1.0.0
+   Version: 1.0.1
    Status: Production Regression Test
    Purpose: Lock Morning Command to one human decision per Gmail conversation.
    ========================================================= */
@@ -13,13 +13,15 @@ const backend = fs.readFileSync(new URL("../routes/gmailDispositions.js", import
 const frontend = fs.readFileSync(new URL("../shared/today-gmail-decisions.js", import.meta.url), "utf8");
 
 assert.doesNotThrow(() => new Function(frontend));
-assert.match(backend, /Version: 2\.2\.0/);
-assert.match(backend, /GMAIL_HUMAN_ROUTING_VERSION = "2\.2\.0"/);
-assert.match(frontend, /Version: 2\.3\.0/);
-assert.match(frontend, /HUMAN_ROUTING_VERSION = "2\.3\.0"/);
+assert.match(backend, /Version: 2\.2\.1/);
+assert.match(backend, /GMAIL_HUMAN_ROUTING_VERSION = "2\.2\.1"/);
+assert.match(frontend, /Version: 2\.3\.1/);
+assert.match(frontend, /HUMAN_ROUTING_VERSION = "2\.3\.1"/);
 
 assert.match(backend, /function groupListedMessagesByThread\(items\)/);
 assert.match(backend, /findProcessedGmailThreads\(db, threadGroups\)/);
+assert.match(backend, /gmail_monitoring_evidence/);
+assert.match(backend, /monitoring_saved/);
 assert.match(backend, /gmail-thread:\$\{threadId\}/);
 assert.match(backend, /memberReferences/);
 assert.match(backend, /findExistingThreadDisposition/);
