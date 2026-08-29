@@ -1,8 +1,8 @@
 # =========================================================
-# GCM OS — Read-only check of MoveASafe current work
+# GCM OS — Read-only MoveASafe investigation history check
 # No production writes
 # =========================================================
-name: Verify MoveASafe Current Work
+name: Verify MoveASafe Investigation History
 
 on:
   push:
@@ -18,21 +18,19 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - name: Query production Worker
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Wrangler
+        run: npm install wrangler@4.122.0
+      - name: Query production D1 read only
         env:
-          WORKER_URL: https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          node <<'NODE'
-          const r=await fetch(process.env.WORKER_URL,{
-            method:"POST",
-            headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({action:"get-client-workspace",clientCode:"MAS"})
-          });
-          const p=await r.json();
-          if(!r.ok||p?.ok!==true) throw new Error(p?.error||String(r.status));
-          console.log("MAS_WORKSPACE="+JSON.stringify({
-            investigations:p.operational?.investigations||[],
-            workItems:p.operational?.workItems||[],
-            counts:p.counts||null
-          }));
-          NODE
+          npx wrangler d1 execute DB --remote --command="SELECT i.* FROM investigations i JOIN clients c ON c.id=i.client_id WHERE c.client_code='MAS' ORDER BY i.id;"
+          npx wrangler d1 execute DB --remote --command="SELECT e.* FROM evidence e JOIN clients c ON c.id=e.client_id WHERE c.client_code='MAS' ORDER BY e.id;"
+          npx wrangler d1 execute DB --remote --command="SELECT ar.* FROM activity_records ar JOIN clients c ON c.id=ar.client_id WHERE c.client_code='MAS' ORDER BY ar.id DESC LIMIT 25;"
