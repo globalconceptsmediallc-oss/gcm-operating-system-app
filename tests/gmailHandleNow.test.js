@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/gmailHandleNow.test.js
-   Version: 1.2.0
+   Version: 1.2.1
    Status: Production Regression Test
    Purpose: Lock the Morning Command Handle Now boundary so immediate human
             actions keep GCM OS as the home base, open external tasks beside it,
@@ -18,8 +18,8 @@ const source = fs.readFileSync(
 );
 
 assert.doesNotThrow(() => new Function(source));
-assert.match(source, /Version: 2\.3\.0/);
-assert.match(source, /const HUMAN_ROUTING_VERSION = "2\.3\.0"/);
+assert.match(source, /Version: 2\.3\.1/);
+assert.match(source, /const HUMAN_ROUTING_VERSION = "2\.3\.1"/);
 
 assert.match(source, />Handle Now<\/button>/);
 assert.match(source, /Open Email in Gmail ↗/);
