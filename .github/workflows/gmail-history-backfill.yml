@@ -51,7 +51,7 @@ jobs:
             NULL,
             'reputation_response',
             'Google Business Profile Review Response',
-            'August 29, 2026: Response posted to Kyle Sexton\'s 5-star Google Business Profile rating for Harry Beckwith Guns & Range. Reply: "Thank you, Kyle, for the 5-star rating. We appreciate your support and look forward to serving you again." Reputation-management action completed; no further work required.',
+            'August 29, 2026: Response posted to Kyle Sexton''s 5-star Google Business Profile rating for Harry Beckwith Guns & Range. Reply: "Thank you, Kyle, for the 5-star rating. We appreciate your support and look forward to serving you again." Reputation-management action completed; no further work required.',
             NULL,
             '2026-08-29 09:55:00'
           FROM clients c
