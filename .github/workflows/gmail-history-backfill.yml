@@ -1,20 +1,38 @@
 # =========================================================
-# GCM OS — Completed One-Time Reconciliation
-# Status: RETIRED / NO PRODUCTION ACTIONS
-# GCM Semrush Site Audit monitoring recorded on 2026-08-29.
-# This file performs no D1, Gmail, or Worker writes.
+# GCM OS — Read-only check of MoveASafe current work
+# No production writes
 # =========================================================
-name: Retired One-Time Reconciliation
+name: Verify MoveASafe Current Work
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/gmail-history-backfill.yml"
 
 permissions:
   contents: read
 
 jobs:
-  retired:
+  verify:
     runs-on: ubuntu-latest
     steps:
-      - name: Complete
-        run: echo "One-time reconciliation is complete. No production action is performed."
+      - name: Query production Worker
+        env:
+          WORKER_URL: https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/
+        run: |
+          node <<'NODE'
+          const r=await fetch(process.env.WORKER_URL,{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({action:"get-client-workspace",clientCode:"MAS"})
+          });
+          const p=await r.json();
+          if(!r.ok||p?.ok!==true) throw new Error(p?.error||String(r.status));
+          console.log("MAS_WORKSPACE="+JSON.stringify({
+            investigations:p.operational?.investigations||[],
+            workItems:p.operational?.workItems||[],
+            counts:p.counts||null
+          }));
+          NODE
