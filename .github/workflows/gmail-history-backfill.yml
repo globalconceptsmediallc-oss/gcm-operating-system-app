@@ -1,20 +1,61 @@
 # =========================================================
-# GCM OS — Completed One-Time Reconciliation
-# Status: RETIRED / NO PRODUCTION ACTIONS
-# SES iHeart station confirmations processed on 2026-08-29.
-# This file performs no D1, Gmail, or Worker writes.
+# GCM OS — Read-only test of Media commercial grouping
+# No production writes
 # =========================================================
-name: Retired One-Time Reconciliation
+name: Test Media Commercial Grouping
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/gmail-history-backfill.yml"
 
 permissions:
   contents: read
 
 jobs:
-  retired:
+  test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - name: Complete
-        run: echo "One-time reconciliation is complete. No production action is performed."
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Check media.html inline JavaScript syntax
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const html=fs.readFileSync("media.html","utf8");
+          const scripts=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)]
+            .map(m=>m[1])
+            .filter(s=>s.trim());
+          if(!scripts.length) throw new Error("No inline script found.");
+          fs.writeFileSync("/tmp/media-inline.js",scripts.join("\n"));
+          NODE
+          node --check /tmp/media-inline.js
+
+      - name: Verify creative-centric grouping against production Worker
+        env:
+          WORKER_URL: https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/
+        run: |
+          node <<'NODE'
+          const r=await fetch(process.env.WORKER_URL,{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({action:"get-media-operations",operation:"get_creative_workflow"})
+          });
+          const p=await r.json();
+          if(!r.ok||p?.ok!==true) throw new Error(p?.error||String(r.status));
+          const w=p.creativeWorkflow||{};
+          for(const name of ["Safe Moving Services 2","Safe Repair Services 2"]){
+            const c=(w.creatives||[]).find(x=>x.creativeName===name);
+            if(!c) throw new Error("Missing creative: "+name);
+            const a=(w.assignments||[]).filter(x=>Number(x.creativeId)===Number(c.id));
+            const markets=a.map(x=>({market:x.market,outlet:x.outletName,end:x.rotationEndDate}));
+            console.log(name,markets);
+            if(a.length!==2) throw new Error(name+" should have 2 market assignments.");
+            if(!a.some(x=>x.market==="Melbourne"&&x.outletName==="WMMB"&&x.rotationEndDate==="2026-09-30")) throw new Error(name+" missing Melbourne Sep 30 end date.");
+            if(!a.some(x=>x.market==="Orlando"&&x.outletName==="WFLA"&&x.rotationEndDate==="2026-09-30")) throw new Error(name+" missing Orlando Sep 30 end date.");
+          }
+          NODE
