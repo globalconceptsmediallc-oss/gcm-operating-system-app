@@ -1,89 +1,20 @@
 # =========================================================
-# GCM OS — Record HBG Google review response
-# Authorized operational action: 2026-08-29
+# GCM OS — Completed One-Time Reconciliation
+# Status: RETIRED / NO PRODUCTION ACTIONS
+# HBG Google Business Profile review response recorded on 2026-08-29.
+# This file performs no D1, Gmail, or Worker writes.
 # =========================================================
-name: Record HBG Review Response
+name: Retired One-Time Reconciliation
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/gmail-history-backfill.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  update:
+  retired:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Install Wrangler
-        run: npm install wrangler@4.122.0
-
-      - name: Build D1 update
-        run: |
-          cat > /tmp/record-hbg-review-response.sql <<'SQL'
-          INSERT INTO evidence (
-            client_id,
-            investigation_id,
-            work_item_id,
-            communication_id,
-            evidence_type,
-            source,
-            description,
-            url,
-            captured_at
-          )
-          SELECT
-            c.id,
-            NULL,
-            NULL,
-            NULL,
-            'reputation_response',
-            'Google Business Profile Review Response',
-            'August 29, 2026: Response posted to Kyle Sexton''s 5-star Google Business Profile rating for Harry Beckwith Guns & Range. Reply: "Thank you, Kyle, for the 5-star rating. We appreciate your support and look forward to serving you again." Reputation-management action completed; no further work required.',
-            NULL,
-            '2026-08-29 09:55:00'
-          FROM clients c
-          WHERE c.client_code = 'HBG'
-            AND NOT EXISTS (
-              SELECT 1 FROM evidence e
-              WHERE e.client_id = c.id
-                AND e.evidence_type = 'reputation_response'
-                AND e.source = 'Google Business Profile Review Response'
-                AND instr(COALESCE(e.description,''), 'Kyle Sexton') > 0
-            );
-          SQL
-
-      - name: Apply update to production D1
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npx wrangler d1 execute DB --remote --file=/tmp/record-hbg-review-response.sql
-
-      - name: Verify through production Worker
-        env:
-          WORKER_URL: https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/
-        run: |
-          node <<'NODE'
-          const r=await fetch(process.env.WORKER_URL,{
-            method:"POST",
-            headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({action:"get-client-workspace",clientCode:"HBG"})
-          });
-          const p=await r.json();
-          if(!r.ok||p?.ok!==true) throw new Error(p?.error||String(r.status));
-          const hit=(p.operational?.evidence||[]).find(e=>e.evidence_type==="reputation_response" && e.source==="Google Business Profile Review Response" && String(e.description||"").includes("Kyle Sexton"))||null;
-          console.log("HBG_REVIEW_RESPONSE="+JSON.stringify({hit,counts:p.counts||null}));
-          if(!hit) throw new Error("HBG review response evidence did not verify.");
-          NODE
+      - name: Complete
+        run: echo "One-time reconciliation is complete. No production action is performed."
