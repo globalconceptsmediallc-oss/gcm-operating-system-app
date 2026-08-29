@@ -1,20 +1,121 @@
 # =========================================================
-# GCM OS — Completed One-Time Reconciliation
-# Status: RETIRED / NO PRODUCTION ACTIONS
-# Agnor audit intelligence and follow-up communication recorded on 2026-08-29.
-# This file performs no D1, Gmail, or Worker writes.
+# GCM OS — Record GCM Semrush Site Audit monitoring
+# Authorized operational action: 2026-08-29
 # =========================================================
-name: Retired One-Time Reconciliation
+name: Record GCM Site Audit Monitoring
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/gmail-history-backfill.yml"
 
 permissions:
   contents: read
 
 jobs:
-  retired:
+  update:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - name: Complete
-        run: echo "One-time reconciliation is complete. No production action is performed."
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Wrangler
+        run: npm install wrangler@4.122.0
+      - name: Build D1 update
+        run: |
+          cat > /tmp/record-gcm-site-audit.sql <<'SQL'
+          INSERT INTO activity_records (
+            client_id,
+            activity_date,
+            category,
+            activity,
+            evidence_type,
+            evidence_reference,
+            status,
+            owner,
+            expected_impact,
+            actual_impact,
+            notes,
+            source_type,
+            source_reference
+          )
+          SELECT
+            c.id,
+            '2026-08-29',
+            'SEO Monitoring',
+            'SEMrush Site Audit — globalconceptsmedia.com stable at 98% Site Health',
+            'SEMrush Site Audit',
+            'gmail-thread:1a04ae44f5a3eca3',
+            'completed',
+            'GCM',
+            'Preserve technical SEO state and only escalate material regressions.',
+            'SEMrush reported no significant change. Site Health 98%, 16 crawled pages, 0 errors, 13 warnings, 19 notices, 6 redirect pages (38%), 1 blocked page, and 1 page categorized as broken.',
+            'Monitoring only. No new work item created from a stable 98% audit. Top warning remains 12 unminified JavaScript/CSS issues; one low-content page and one crawl-blocked page also remain.',
+            'gmail_monitoring',
+            'gmail-thread:1a04ae44f5a3eca3'
+          FROM clients c
+          WHERE c.client_code = 'GCM'
+            AND NOT EXISTS (
+              SELECT 1 FROM activity_records ar
+              WHERE ar.source_reference = 'gmail-thread:1a04ae44f5a3eca3'
+            );
+
+          INSERT INTO gmail_monitoring_evidence (
+            client_id,
+            activity_record_id,
+            source_type,
+            source_reference,
+            gmail_message_id,
+            gmail_thread_id,
+            source_subject,
+            source_sender,
+            source_date,
+            source_content,
+            structured_evidence_json,
+            evidence_summary,
+            status,
+            created_at,
+            updated_at
+          )
+          SELECT
+            c.id,
+            ar.id,
+            'gmail',
+            'gmail-thread:1a04ae44f5a3eca3',
+            '1a04ae44f5a3eca3',
+            '1a04ae44f5a3eca3',
+            'globalconceptsmedia.com: 38% of your pages have redirects (3xx)',
+            'Semrush Site Audit <site-audit@semrush.com>',
+            'August 29, 2026',
+            'SEMrush Site Audit for globalconceptsmedia.com on Aug 29, 2026. No significant changes detected. Site Health 98%. Crawled Pages 16. Healthy 1. Broken 1. Have Issues 7. Redirects 6. Blocked 1. Errors 0. Warnings 13. Notices 19. Top issues: 12 unminified JavaScript/CSS issues, 1 page with small amount of content, 1 page blocked from crawling.',
+            '{"type":"monitoring_evidence","project":"globalconceptsmedia.com","date":"2026-08-29","site_health":98,"crawled_pages":16,"healthy_pages":1,"broken_pages":1,"pages_with_issues":7,"redirect_pages":6,"redirect_percent":38,"blocked_pages":1,"errors":0,"warnings":13,"notices":19,"significant_change":false,"disposition":"monitoring_only"}',
+            'Stable GCM Site Audit: 98% Site Health, no significant change, 0 errors. Preserve 38% redirects and remaining warnings/notices as monitoring; no new work item justified.',
+            'monitoring_saved',
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP
+          FROM clients c
+          JOIN activity_records ar
+            ON ar.client_id = c.id
+           AND ar.source_reference = 'gmail-thread:1a04ae44f5a3eca3'
+          WHERE c.client_code = 'GCM'
+            AND NOT EXISTS (
+              SELECT 1 FROM gmail_monitoring_evidence g
+              WHERE g.source_reference = 'gmail-thread:1a04ae44f5a3eca3'
+            );
+          SQL
+      - name: Apply update to production D1
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler d1 execute DB --remote --file=/tmp/record-gcm-site-audit.sql
+      - name: Verify production D1
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler d1 execute DB --remote --command="SELECT id, client_id, activity_record_id, source_subject, evidence_summary, status FROM gmail_monitoring_evidence WHERE source_reference='gmail-thread:1a04ae44f5a3eca3';"
