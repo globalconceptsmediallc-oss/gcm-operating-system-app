@@ -1,11 +1,15 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/workDueDate.test.js
-   Version: 1.1.0
+   Version: 1.1.1
    Status: Production Regression Test
    Source: tests/workDueDate.test.js 1.0.2
    Purpose: Verify the durable Work due-date contract and the Work Queue
             visibility contract stay wired in production.
+   Change notes — 1.1.1:
+   - Updates the Work page production version lock from 1.9.17 to 1.9.18 after the external-validation monitoring UI release.
+   - Preserves the complete durable due-date and queue visibility contract.
+
    Change notes — 1.1.0:
    - Preserves every existing Work due-date contract assertion.
    - Requires the main Open Work Items panel to show all open work for the
@@ -105,7 +109,7 @@ assert.match(
 
 assert.match(
   workPage,
-  /Version: 1\.9\.17/
+  /Version: 1\.9\.18/
 );
 
 assert.match(
