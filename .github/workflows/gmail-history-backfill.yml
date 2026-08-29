@@ -1,8 +1,8 @@
 # =========================================================
-# GCM OS — Read-only MoveASafe investigation history check
-# No production writes
+# GCM OS — Record MoveASafe continued Site Audit monitoring
+# Authorized operational action: 2026-08-29
 # =========================================================
-name: Verify MoveASafe Investigation History
+name: Record MoveASafe Site Audit Monitoring
 
 on:
   push:
@@ -15,8 +15,9 @@ permissions:
   contents: read
 
 jobs:
-  verify:
+  update:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -26,11 +27,95 @@ jobs:
           node-version: 22
       - name: Install Wrangler
         run: npm install wrangler@4.122.0
-      - name: Query production D1 read only
+      - name: Build D1 update
+        run: |
+          cat > /tmp/record-mas-site-audit.sql <<'SQL'
+          INSERT INTO activity_records (
+            client_id,
+            activity_date,
+            category,
+            activity,
+            evidence_type,
+            evidence_reference,
+            status,
+            owner,
+            expected_impact,
+            actual_impact,
+            notes,
+            source_type,
+            source_reference
+          )
+          SELECT
+            c.id,
+            '2026-08-29',
+            'SEO Monitoring',
+            'SEMrush Site Audit — Move A Safe unchanged at 87% Site Health',
+            'SEMrush Site Audit',
+            'gmail-thread:1a04b1aac03b1cdf',
+            'completed',
+            'GCM',
+            'Preserve current technical SEO state without reopening closed work unless ownership/access responsibility changes.',
+            'Aug 29 audit is materially unchanged from historical Investigation #29: Site Health 87%, 19 crawled pages, 7 errors, 106 warnings, 8 notices, 3 redirects, 2 broken pages, including 1 page returning 4XX and 6 broken internal links.',
+            'Monitoring only. Investigation #29 previously established that these technical issues should not create new work until Move A Safe website/domain ownership, access, and responsibility are resolved.',
+            'gmail_monitoring',
+            'gmail-thread:1a04b1aac03b1cdf'
+          FROM clients c
+          WHERE c.client_code = 'MAS'
+            AND NOT EXISTS (
+              SELECT 1 FROM activity_records ar
+              WHERE ar.source_reference = 'gmail-thread:1a04b1aac03b1cdf'
+            );
+
+          INSERT INTO gmail_monitoring_evidence (
+            client_id,
+            activity_record_id,
+            source_type,
+            source_reference,
+            gmail_message_id,
+            gmail_thread_id,
+            source_subject,
+            source_sender,
+            source_date,
+            source_content,
+            structured_evidence_json,
+            evidence_summary,
+            status,
+            created_at,
+            updated_at
+          )
+          SELECT
+            c.id,
+            ar.id,
+            'gmail',
+            'gmail-thread:1a04b1aac03b1cdf',
+            '1a04b1aac03b1cdf',
+            '1a04b1aac03b1cdf',
+            'moveasafe.com: 16% of your pages have redirects (3xx)',
+            'Semrush Site Audit <site-audit@semrush.com>',
+            'August 29, 2026',
+            'SEMrush Site Audit for moveasafe.com on Aug 29, 2026. No significant changes detected. Site Health 87%. Crawled Pages 19. Healthy 1. Broken 2. Have Issues 13. Redirects 3. Blocked 0. Errors 7. Warnings 106. Notices 8. Top issues: 1 page returned 4XX, 6 internal links are broken, 5 pages have low word count.',
+            '{"type":"monitoring_evidence","project":"moveasafe.com","date":"2026-08-29","site_health":87,"crawled_pages":19,"healthy_pages":1,"broken_pages":2,"pages_with_issues":13,"redirect_pages":3,"redirect_percent":16,"blocked_pages":0,"errors":7,"warnings":106,"notices":8,"four_xx_pages":1,"broken_internal_links":6,"low_content_pages":5,"significant_change":false,"related_investigation_id":29,"disposition":"monitoring_only_until_ownership_access_resolved"}',
+            'Move A Safe Site Audit remains unchanged from historical Investigation #29. Preserve as monitoring; do not reopen technical work until website/domain ownership, access, and responsibility are resolved.',
+            'monitoring_saved',
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP
+          FROM clients c
+          JOIN activity_records ar
+            ON ar.client_id = c.id
+           AND ar.source_reference = 'gmail-thread:1a04b1aac03b1cdf'
+          WHERE c.client_code = 'MAS'
+            AND NOT EXISTS (
+              SELECT 1 FROM gmail_monitoring_evidence g
+              WHERE g.source_reference = 'gmail-thread:1a04b1aac03b1cdf'
+            );
+          SQL
+      - name: Apply update to production D1
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          npx wrangler d1 execute DB --remote --command="SELECT i.* FROM investigations i JOIN clients c ON c.id=i.client_id WHERE c.client_code='MAS' ORDER BY i.id;"
-          npx wrangler d1 execute DB --remote --command="SELECT e.* FROM evidence e JOIN clients c ON c.id=e.client_id WHERE c.client_code='MAS' ORDER BY e.id;"
-          npx wrangler d1 execute DB --remote --command="SELECT ar.* FROM activity_records ar JOIN clients c ON c.id=ar.client_id WHERE c.client_code='MAS' ORDER BY ar.id DESC LIMIT 25;"
+        run: npx wrangler d1 execute DB --remote --file=/tmp/record-mas-site-audit.sql
+      - name: Verify production D1
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler d1 execute DB --remote --command="SELECT id, client_id, activity_record_id, source_subject, evidence_summary, status FROM gmail_monitoring_evidence WHERE source_reference='gmail-thread:1a04b1aac03b1cdf';"
