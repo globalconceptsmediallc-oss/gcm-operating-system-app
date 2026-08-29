@@ -1,11 +1,11 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gcm-worker-deploy.yml
-# Version: 1.4.3
+# Version: 1.4.4
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Cloudflare Worker from main.
 # Change Notes:
-# - Deploy Worker 7.19.1 with Gmail Monitoring processed-state repair and current regression locks.
+# - Deploy Worker 7.19.1 with Gmail Monitoring processed-state repair and all updated Gmail/Work regression locks.
 # - LOCK: require Worker 7.19.1 and Prospect CRM 1.2.0 with durable Radar continuity.
 # - Verify CRM D1 migrations are live by reading list_prospects and service catalog.
 # - Verify the core business rule that a formal Prospect cannot be created
