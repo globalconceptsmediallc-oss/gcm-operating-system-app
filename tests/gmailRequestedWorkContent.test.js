@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/gmailRequestedWorkContent.test.js
-   Version: 1.0.0
+   Version: 1.0.1
    Status: Production Regression Test
    Purpose: Lock human-routed Gmail Requested Work to executable source
             content instead of generic routing metadata.
@@ -18,8 +18,8 @@ const dispositions = read("routes/gmailDispositions.js");
 const operationalDecision = read("routes/operationalDecision.js");
 const migration = read("migrations/0015_gmail_requested_work_content_repair.sql");
 
-assert.match(dispositions, /Version: 2\.2\.0/);
-assert.match(dispositions, /GMAIL_HUMAN_ROUTING_VERSION = "2\.2\.0"/);
+assert.match(dispositions, /Version: 2\.2\.1/);
+assert.match(dispositions, /GMAIL_HUMAN_ROUTING_VERSION = "2\.2\.1"/);
 assert.match(dispositions, /workTitle:disposition === "requested_work"/);
 assert.match(dispositions, /workDescription:requestedWorkSource/);
 assert.match(dispositions, /sanitizeEmailText\(message\.bodyText \|\| message\.snippet \|\| message\.subject\)/);
