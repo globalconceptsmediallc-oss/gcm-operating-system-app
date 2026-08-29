@@ -1,97 +1,20 @@
 # =========================================================
-# GCM OS — Record Agnor audit intelligence + follow-up communication
-# Authorized operational action: 2026-08-29
+# GCM OS — Completed One-Time Reconciliation
+# Status: RETIRED / NO PRODUCTION ACTIONS
+# Agnor audit intelligence and follow-up communication recorded on 2026-08-29.
+# This file performs no D1, Gmail, or Worker writes.
 # =========================================================
-name: Record Agnor Audit Follow-Up
+name: Retired One-Time Reconciliation
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/gmail-history-backfill.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  update:
+  retired:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
-      - name: Record through production Prospect CRM
-        env:
-          WORKER_URL: https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/
-        run: |
-          node <<'NODE'
-          const endpoint=process.env.WORKER_URL;
-
-          async function api(operation,payload={}) {
-            const r=await fetch(endpoint,{
-              method:"POST",
-              headers:{"Content-Type":"application/json"},
-              body:JSON.stringify({action:"prospect-crm",operation,...payload})
-            });
-            const j=await r.json().catch(()=>({}));
-            if(!r.ok||j?.ok!==true) throw new Error(operation+": "+(j?.error||j?.details||r.status));
-            return j;
-          }
-
-          const list=await api("list_prospects");
-          const prospect=(list.prospects||[]).find(p =>
-            String(p.businessName||"").toLowerCase().includes("agnor aviation") ||
-            String(p.website||"").toLowerCase().includes("agnoraviation.com")
-          );
-          if(!prospect) throw new Error("Agnor Aviation prospect was not found in production CRM.");
-
-          const intelligence=await api("add_intelligence",{
-            prospectId:prospect.id,
-            intelligenceType:"site_audit",
-            title:"Aug 29 Semrush Site Audit — Agnor Aviation",
-            summary:"Semrush Site Audit on Aug 29, 2026 reported Site Health 87% (-2), 17 crawled pages, 1 broken/uncrawlable page, 4 pages missing meta descriptions, 5 pages with titles that are too short, and a Core Web Vitals decline on /fleet-managment. Findings support the website rebuild case and should be corrected as part of the technical/search foundation rather than treated as isolated patch work.",
-            intelligence:{
-              siteHealth:87,
-              siteHealthChange:-2,
-              crawledPages:17,
-              brokenPages:1,
-              missingMetaDescriptions:4,
-              shortTitles:5,
-              coreWebVitalsDeclinedPages:1,
-              affectedUrl:"https://agnoraviation.com/fleet-managment",
-              sourceEmailId:"1a04ae122d12fbad"
-            },
-            sourceType:"gmail_semrush",
-            sourceReference:"gmail:1a04ae122d12fbad",
-            externalKey:"semrush:agnoraviation.com:2026-08-29:site-audit",
-            capturedAt:"2026-08-29T00:17:43"
-          });
-
-          const activityType=["proposal_sent","awaiting_decision"].includes(String(prospect.stage||"").toLowerCase())
-            ? "proposal_follow_up_email"
-            : "follow_up_email";
-
-          const activity=await api("add_activity",{
-            prospectId:prospect.id,
-            activityType,
-            occurredAt:"2026-08-29T14:29:44",
-            direction:"outbound",
-            subject:"Agnor Aviation — Website Audit Follow-Up",
-            summary:"Follow-up email sent to Asa using the Aug 29 Semrush audit as value-added evidence. Email explained the 87% site health score, one uncrawlable page, missing meta descriptions, short page titles, and the Core Web Vitals decline, and positioned the findings as part of a stronger technical/search rebuild rather than a visual-only redesign.",
-            outcome:"sent",
-            meaningfulContact:true,
-            sourceType:"gmail",
-            sourceReference:"gmail:1a04ded2d2d2224d",
-            externalKey:"gmail:1a04ded2d2d2224d:prospect-follow-up",
-            notes:"Recipient: asa@agnortac.com. Source audit email: gmail:1a04ae122d12fbad."
-          });
-
-          const verify=await api("get_prospect",{prospectId:prospect.id});
-          console.log("AGNOR_AUDIT_FOLLOWUP="+JSON.stringify({
-            prospectId:prospect.id,
-            businessName:verify.prospect?.businessName,
-            stage:verify.prospect?.stage,
-            nextAction:verify.prospect?.nextAction,
-            intelligenceId:intelligence.intelligenceId,
-            activityId:activity.activityId
-          }));
-          NODE
+      - name: Complete
+        run: echo "One-time reconciliation is complete. No production action is performed."
