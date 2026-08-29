@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailDispositions.js
-   Version: 2.2.0
+   Version: 2.2.1
    Status: Production Road-Test Candidate
    Source: routes/gmailDispositions.js 1.3.3 production
    Sprint: Gmail — Human Routing / No AI Gate
@@ -10,6 +10,12 @@
    Show the live Gmail source, accept an explicit human disposition, preserve the
    source in D1 when appropriate, then clear the real Gmail Inbox only after the
    requested OS write is confirmed.
+
+   Processed-state repair — 2.2.1:
+   - Treats the dedicated gmail_monitoring_evidence table as an authoritative processed-state source.
+   - Preview now suppresses routed Monitoring threads even when Gmail custom operational labels keep archived mail inside the operational query.
+   - Duplicate protection also checks gmail_monitoring_evidence before allowing another Monitoring write.
+   - Preserves custom Gmail labels, full source evidence, and all existing Information / Investigation / Requested Work behavior.
 
    Requested Work content changes — 2.2.0:
    - Human-routed Requested Work now carries an explicit workTitle from the Gmail subject.
@@ -75,7 +81,7 @@ export const GMAIL_DISPOSITION_ACTIONS = Object.freeze([
 // Keep the existing public contract string for regression compatibility while
 // exposing the installed human-routing version separately.
 export const GMAIL_DISPOSITION_VERSION = "1.3.3";
-export const GMAIL_HUMAN_ROUTING_VERSION = "2.2.0";
+export const GMAIL_HUMAN_ROUTING_VERSION = "2.2.1";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GMAIL_API = "https://gmail.googleapis.com/gmail/v1";
@@ -131,6 +137,7 @@ async function previewHumanRoutingQueue(body, env, requestId) {
 
   try {
     const db = requireDb(env);
+    await ensureGmailMonitoringEvidenceSchema(db);
     const accessToken = await liveGmailAccessToken(env);
     const listUrl = new URL(`${GMAIL_API}/users/me/messages`);
     listUrl.searchParams.set("q", OPERATIONAL_GMAIL_QUERY);
@@ -263,6 +270,7 @@ async function routeHumanDisposition(body, env, requestId) {
 
   try {
     const db = requireDb(env);
+    await ensureGmailMonitoringEvidenceSchema(db);
     const accessToken = await liveGmailAccessToken(env);
     let threadId = requestedThreadId;
     let seedMessage = null;
@@ -578,6 +586,26 @@ async function findExistingDisposition(db, sourceReference) {
     LIMIT 1
   `).bind(sourceReference, sourceReference).first();
   if (monitoring?.id) return { type:"monitoring", activityRecordId:monitoring.id };
+
+  const monitoringEvidence = await db.prepare(`
+    SELECT activity_record_id,source_reference,gmail_thread_id,gmail_message_id
+    FROM gmail_monitoring_evidence
+    WHERE status='monitoring_saved'
+      AND (
+        source_reference=?
+        OR ('gmail-thread:' || COALESCE(gmail_thread_id,''))=?
+        OR ('gmail:' || COALESCE(gmail_message_id,''))=?
+      )
+    ORDER BY id DESC
+    LIMIT 1
+  `).bind(sourceReference, sourceReference, sourceReference).first();
+  if (monitoringEvidence?.activity_record_id) {
+    return {
+      type:"monitoring",
+      activityRecordId:monitoringEvidence.activity_record_id,
+      sourceReference:monitoringEvidence.source_reference || sourceReference
+    };
+  }
   return null;
 }
 
@@ -631,6 +659,22 @@ async function findProcessedGmailThreads(db, threadGroups) {
     for (const row of activityRows?.results || []) {
       mark(row?.source_reference);
       mark(row?.evidence_reference);
+    }
+
+    const monitoringEvidenceRows = await db.prepare(`
+      SELECT source_reference,gmail_thread_id,gmail_message_id
+      FROM gmail_monitoring_evidence
+      WHERE status='monitoring_saved'
+        AND (
+          source_reference IN (${placeholders})
+          OR ('gmail-thread:' || COALESCE(gmail_thread_id,'')) IN (${placeholders})
+          OR ('gmail:' || COALESCE(gmail_message_id,'')) IN (${placeholders})
+        )
+    `).bind(...chunk, ...chunk, ...chunk).all();
+    for (const row of monitoringEvidenceRows?.results || []) {
+      mark(row?.source_reference);
+      if (row?.gmail_thread_id) mark(`gmail-thread:${clean(row.gmail_thread_id)}`);
+      if (row?.gmail_message_id) mark(`gmail:${clean(row.gmail_message_id)}`);
     }
   }
 
