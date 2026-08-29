@@ -1,13 +1,18 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.5.2
+   Version: 3.5.3
    Status: Production Candidate
-   Source: Production today.html 3.5.1
-   Sprint: Today / Agency Command Center — Authoritative Attention Queue
+   Source: Production today.html 3.5.2
+   Sprint: Today / Morning Command — Gmail Routing Cache Safety
    Purpose: Preserve the locked Today layout, Gmail approvals, Mission Control,
             Media logic, and operating workflow while keeping Mission Control's
             durable D1 ranking authoritative across both decision and queue views.
+
+   Production changes in 3.5.3:
+   - Cache-busts the shared shell loader so Morning Command receives Gmail Human Routing v2.3.1 immediately.
+   - Activates the processed-thread re-entry guard after successful Gmail routing.
+   - Preserves all Today v3.5.2 Mission Control and Agency Command behavior unchanged.
 
    Production changes in 3.5.2:
    - Keeps Mission Control's clientsRequiringAttention ordering authoritative.
@@ -1832,7 +1837,7 @@
 <div aria-hidden="true" hidden="" id="mission-control-state-values"><span id="prospect-count">0</span><span id="attention-count">0</span><span id="open-task-count">0</span><span id="proof-count">0</span><span id="media-pulse-count">0</span></div></div>
 </main>
 </div>
-<script src="shared/gcm-shell.js?v=1.0.1"></script>
+<script src="shared/gcm-shell.js?v=2.0.35"></script>
 <script>
     (() => {
       "use strict";
@@ -2956,11 +2961,11 @@
       });
 
       if (!window.GCMOShell) {
-        console.error("Today 3.5.2: shared/gcm-shell.js did not load.");
+        console.error("Today 3.5.3: shared/gcm-shell.js did not load.");
       } else {
         window.GCMOShell.mount({
           currentPage: "today",
-          statusText: "Agency Command Center operational · Today v3.5.2"
+          statusText: "Agency Command Center operational · Today v3.5.3"
         });
       }
 
