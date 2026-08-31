@@ -1,22 +1,21 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.27",
+  "version": "6.1.28",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.27",
+    "fileVersion": "6.1.28",
     "status": "Production Road-Test Candidate",
-    "purpose": "Source-control and deploy MediaForge flexible naming recipes for request-specific batch naming jobs.",
+    "purpose": "Build and regression-test the Client Health v2 evidence-based scoring contract.",
     "changeNotes": [
-      "Adds MediaForge 2.2.0 flexible Naming Recipes with saved presets, per-job overrides, custom field order, case, separator, aliases, and sequence maps.",
-      "Adds batch preview with unresolved mapping warnings, manual filename overrides, CSV manifest export, and rename-only ZIP export that preserves image bytes.",
-      "Adds the Liberty Lincoln 25 Signature Interiors starter preset without silently guessing unresolved mappings.",
-      "Adds permanent MediaForge naming regression coverage and a dedicated Cloudflare Pages production deployment workflow."
+      "Adds deterministic Client Health v2 scoring with confidence, trend, ten health dimensions, and a client-safe summary layer.",
+      "Unknown dimensions reduce confidence instead of reducing the health score.",
+      "Wires Client Health v2 into the existing D1 client workspace without replacing the current v1 UI field yet."
     ]
   },
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:work-due-date && npm run test:gmail-decisions && npm run test:gmail-monitoring-parity && npm run test:gmail-backlink-investigation && npm run test:gmail-intake && npm run test:gmail-backlog && npm run test:gmail-source-display && npm run test:gmail-handle-now && npm run test:gmail-thread-routing && npm run test:gmail-requested-work-content && npm run test:prospect-crm && npm run test:mediaforge-naming && npm run test:asset-versions",
+    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:work-due-date && npm run test:gmail-decisions && npm run test:gmail-monitoring-parity && npm run test:gmail-backlink-investigation && npm run test:gmail-intake && npm run test:gmail-backlog && npm run test:gmail-source-display && npm run test:gmail-handle-now && npm run test:gmail-thread-routing && npm run test:gmail-requested-work-content && npm run test:prospect-crm && npm run test:mediaforge-naming && npm run test:client-health-v2 && npm run test:asset-versions",
     "test:website-intelligence": "node tests/websiteIntelligence.test.js",
     "test:code-intelligence": "node tests/codeIntelligence.test.js",
     "test:operating-sessions": "node tests/operatingSessionTasks.test.js && node tests/osAuth.test.js && node tests/operatingSessionIntake.test.js",
@@ -33,6 +32,7 @@
     "test:prospect-crm": "node tests/prospectCrm.test.js && node tests/prospectNextActionUi.test.js",
     "test:asset-versions": "node tests/sharedAssetVersionLock.test.js",
     "test:gmail-requested-work-content": "node tests/gmailRequestedWorkContent.test.js",
-    "test:mediaforge-naming": "node tests/mediaforgeNamingRecipe.test.js"
+    "test:mediaforge-naming": "node tests/mediaforgeNamingRecipe.test.js",
+    "test:client-health-v2": "node tests/clientHealthV2.test.js"
   }
 }
