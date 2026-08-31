@@ -1,16 +1,16 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.32",
+  "version": "6.1.33",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.32",
+    "fileVersion": "6.1.33",
     "status": "Production Road-Test Candidate",
-    "purpose": "Redesign MediaForge around simple task-first workflows while preserving advanced tools.",
+    "purpose": "Road-test MediaForge 3.0.1 with reliable Lincoln batch detection and simpler rename workflow.",
     "changeNotes": [
-      "Adds a What do you want to do today? home with Rename, Website Preparation, Unknown Image Identification, Analyze My Files, and Catalog & Settings.",
-      "Adds direct ZIP/image intake for the simple Rename and Website Preparation workflows.",
-      "Moves naming recipe controls behind Advanced settings while preserving existing presets and preview/export behavior.",
-      "Routes MediaForge navigation into the GCM OS GitHub Pages subdirectory instead of the retired standalone Cloudflare Pages project."
+      "Recognizes both Kristy's raw LX-Sig files and already-renamed Lincoln 25/40/50 Signature Interior batches.",
+      "Defaults naming to the reusable Lincoln 25/40/50 recipe instead of the old Lincoln 25-only recipe.",
+      "Moves the recipe selector inside Advanced settings so normal rename jobs stay simple.",
+      "Keeps correctly named files unchanged while verifying the batch before ZIP export."
     ]
   },
   "private": true,
