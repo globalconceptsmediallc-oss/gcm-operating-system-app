@@ -1,15 +1,16 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.29",
+  "version": "6.1.30",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.29",
+    "fileVersion": "6.1.30",
     "status": "Production Road-Test Candidate",
-    "purpose": "Lock Client Health v2 into the live Business Workspace without schema-version runtime failures.",
+    "purpose": "Tighten Client Health v2.1 into an explainable, recency-aware client score.",
     "changeNotes": [
-      "Business Workspace runtime accepts both legacy Business Record 1.1.0 and Client Health v2 Business Record 1.2.0.",
-      "Business Workspace displays the Client Health score, status, trend, and confidence.",
-      "Adds regression coverage for schema 1.2.0 compatibility and the client-facing health display."
+      "Business Performance now requires actual outcome evidence instead of plans, expected impact, or priority labels.",
+      "Stale evidence has less score influence and lowers confidence.",
+      "Each source record may affect at most two health dimensions to prevent cross-category inflation.",
+      "Each dimension now includes a plain-English score reason and primary supporting evidence."
     ]
   },
   "private": true,
