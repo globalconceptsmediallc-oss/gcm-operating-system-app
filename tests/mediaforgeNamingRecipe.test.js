@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/mediaforgeNamingRecipe.test.js
-   Version: 1.1.0
+   Version: 1.1.1
    Status: Production Regression Test
    Purpose: Lock MediaForge flexible naming recipes, aliases,
             sequence maps, job overrides, unresolved-map blocking,
@@ -53,7 +53,7 @@ const proposal = buildProposedName(preset, bronze);
 assert.equal(proposal.ready, true);
 assert.equal(
   proposal.filename,
-  "liberty-lincoln-25-9-bronze-gloss-signature-interior-loaded-interior.webp"
+  "liberty-lincoln-25-9-bronze-gloss-signature-interior-loaded.webp"
 );
 
 const reusable = structuredClone(
@@ -67,7 +67,7 @@ const lx40White = buildProposedName(
 assert.equal(lx40White.ready, true);
 assert.equal(
   lx40White.filename,
-  "liberty-lincoln-40-6-white-gloss-signature-interior-loaded-interior.webp"
+  "liberty-lincoln-40-6-white-gloss-signature-interior-loaded.webp"
 );
 
 const lx40Black = buildProposedName(
@@ -77,17 +77,24 @@ const lx40Black = buildProposedName(
 assert.equal(lx40Black.ready, true);
 assert.equal(
   lx40Black.filename,
-  "liberty-lincoln-40-14-black-gloss-signature-interior-empty-interior.webp"
+  "liberty-lincoln-40-14-black-gloss-signature-interior-empty.webp"
 );
 
 const lx50Textured = buildProposedName(
   reusable,
   inferFileRecord("LX-Sig-50-Textured Bronze-Open-Full No Guns-ProFlex-interior.webp")
 );
-assert.equal(lx50Textured.ready, true);
+assert.equal(lx50Textured.ready, false);
+assert.ok(lx50Textured.missing.includes("Color Order"));
+
+const lx50DoubleHyphen = buildProposedName(
+  reusable,
+  inferFileRecord("LX-Sig-50-Champagne Marble--Open-Empty-ProFlex-interior.webp")
+);
+assert.equal(lx50DoubleHyphen.ready, true);
 assert.equal(
-  lx50Textured.filename,
-  "liberty-lincoln-50-23-textured-bronze-signature-interior-full-no-guns-interior.webp"
+  lx50DoubleHyphen.filename,
+  "liberty-lincoln-50-2-champagne-marble-signature-interior-empty.webp"
 );
 
 const lx50Burgundy = buildProposedName(
@@ -97,7 +104,7 @@ const lx50Burgundy = buildProposedName(
 assert.equal(lx50Burgundy.ready, true);
 assert.equal(
   lx50Burgundy.filename,
-  "liberty-lincoln-50-12-burgundy-gloss-signature-interior-loaded-interior.webp"
+  "liberty-lincoln-50-12-burgundy-gloss-signature-interior-loaded.webp"
 );
 
 const flexible = structuredClone(preset);
@@ -112,7 +119,7 @@ const flexibleProposal = buildProposedName(
 assert.equal(flexibleProposal.ready, true);
 assert.equal(
   flexibleProposal.filename,
-  "LIBERTY_LINCOLN_25_9_BRONZE_GLOSS_BC_SIGNATURE_INTERIOR_LOADED_INTERIOR.webp"
+  "LIBERTY_LINCOLN_25_9_BRONZE_GLOSS_BC_SIGNATURE_INTERIOR_LOADED.webp"
 );
 
 const unresolved = structuredClone(preset);
@@ -137,12 +144,12 @@ assert.ok(zipText.includes("second.webp"));
 
 const html = fs.readFileSync(new URL("../mediaforge/index.html", import.meta.url), "utf8");
 for (const marker of [
-  "Version 2.2.0",
+  "Version 2.2.2",
   'id="namingPreset"',
   'id="namingAliases"',
   'id="namingSequence"',
   'id="namingZip"',
-  'src="./naming-ui.js"'
+  'src="./naming-ui.js?v=1.0.2"'
 ]) {
   assert.ok(html.includes(marker), `Missing MediaForge UI contract: ${marker}`);
 }

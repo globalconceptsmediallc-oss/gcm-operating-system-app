@@ -1,14 +1,14 @@
 /* =========================================================
 MediaForge
 File: naming.js
-Version: 1.1.0
+Version: 1.1.1
 Status: Production Candidate
 Purpose: Generic, human-controlled batch naming engine for MediaForge.
          Recipes define included fields, field order, fixed/parsed/sequence
          values, aliases, case, separator, and extension policy.
 ========================================================= */
 
-export const NAMING_ENGINE_VERSION = "1.1.0";
+export const NAMING_ENGINE_VERSION = "1.1.1";
 
 export const BUILTIN_PRESETS = [
   {
@@ -50,7 +50,7 @@ export const BUILTIN_PRESETS = [
       { key: "hardware", label: "Hardware", enabled: false, source: "parsed", value: "" },
       { key: "interiorFamily", label: "Interior Family", enabled: true, source: "fixed", value: "Signature Interior" },
       { key: "interiorState", label: "Interior State", enabled: true, source: "parsed", value: "" },
-      { key: "suffix", label: "Suffix", enabled: true, source: "fixed", value: "Interior" }
+      { key: "suffix", label: "Suffix", enabled: false, source: "fixed", value: "Interior" }
     ]
   },
   {
@@ -58,7 +58,7 @@ export const BUILTIN_PRESETS = [
     name: "Liberty — Lincoln 25/40/50 — Signature Interiors",
     builtIn: true,
     jobName: "Lincoln Signature Interiors",
-    instructions: "Reusable Lincoln Signature Interior recipe. Size is parsed from the source filename. White Ivory Gloss and Black Gloss source variants are normalized to the established Lincoln naming convention. Textured Bronze is the next unique Lincoln exterior sequence after the established 22-position variant list.",
+    instructions: "Reusable Lincoln Signature Interior recipe using the accepted Lincoln 25 v2 convention. Size is parsed from the source filename. White Ivory Gloss and Black Gloss source variants are normalized. Textured Bronze is intentionally unresolved because the accepted Lincoln 25 job identified it as a Liberty source naming mistake.",
     caseMode: "lower",
     separator: "-",
     extensionMode: "preserve",
@@ -86,7 +86,6 @@ export const BUILTIN_PRESETS = [
       "Black Cherry Gloss = 13",
       "Black Gloss = 14",
       "Blue Gloss = 22",
-      "Textured Bronze = 23"
     ].join("\n"),
     fields: [
       { key: "manufacturer", label: "Manufacturer", enabled: true, source: "fixed", value: "Liberty" },
@@ -97,7 +96,7 @@ export const BUILTIN_PRESETS = [
       { key: "hardware", label: "Hardware", enabled: false, source: "parsed", value: "" },
       { key: "interiorFamily", label: "Interior Family", enabled: true, source: "fixed", value: "Signature Interior" },
       { key: "interiorState", label: "Interior State", enabled: true, source: "parsed", value: "" },
-      { key: "suffix", label: "Suffix", enabled: true, source: "fixed", value: "Interior" }
+      { key: "suffix", label: "Suffix", enabled: false, source: "fixed", value: "Interior" }
     ]
   }
 ];
@@ -187,7 +186,7 @@ export function inferFileRecord(fileName) {
     const m = source.match(/^LX-Sig-([^\-]+)-(.+?)-Open-(.+?)(?:-interior)?$/i);
     if (m) {
       record.size = cleanText(m[1]);
-      record.exteriorColor = cleanText(m[2]);
+      record.exteriorColor = cleanText(m[2]).replace(/[-\s]+$/g, "");
       const tail = cleanText(m[3]);
       if (/full\s*no\s*guns/i.test(tail)) record.interiorState = "Full No Guns";
       else if (/loaded/i.test(tail)) record.interiorState = "Loaded";
@@ -208,7 +207,7 @@ export function inferFileRecord(fileName) {
   }
 
   if (!record.size) {
-    const size = source.match(/(?:^|[-_ ])(08|12|17|25)(?:[-_ ]|$)/i);
+    const size = source.match(/(?:^|[-_ ])(08|12|17|25|40|50)(?:[-_ ]|$)/i);
     if (size) record.size = size[1];
   }
 
