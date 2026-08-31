@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/clientHealthV2.test.js
-   Version: 1.2.1
+   Version: 1.2.2
    Status: Production Regression Test
    Purpose: Lock Client Health v2 to evidence-based scoring where unknown
             dimensions reduce confidence rather than health.
@@ -13,7 +13,7 @@ import {
   buildClientHealthV2
 } from "../shared/clientHealthV2.js";
 
-assert.equal(CLIENT_HEALTH_V2_VERSION, "2.2.1");
+assert.equal(CLIENT_HEALTH_V2_VERSION, "2.2.2");
 
 const health = buildClientHealthV2({
   now:"2026-08-31T12:00:00Z",
@@ -67,7 +67,7 @@ const health = buildClientHealthV2({
   alerts:[]
 });
 
-assert.equal(health.version, "2.2.1");
+assert.equal(health.version, "2.2.2");
 assert.equal(health.client.clientCode, "SES");
 assert.ok(Number.isInteger(health.score));
 assert.ok(health.score >= 60);
@@ -221,6 +221,41 @@ assert.ok(
   freshCompetitive.dimensions.find(item => item.key === "competitive_position").confidenceScore >
     staleCompetitive.dimensions.find(item => item.key === "competitive_position").confidenceScore,
   "Fresh evidence must carry more confidence than stale evidence."
+);
+
+
+const uncertainMonitoring = buildClientHealthV2({
+  now:"2026-08-31T12:00:00Z",
+  client:{ id:9, client_code:"MON", name:"Monitoring Client" },
+  intelligence:[
+    {
+      id:1,
+      subject:"Position Tracking Update",
+      business_meaning:"A tracked keyword changed position. This is monitoring evidence until the actual movement proves a meaningful gain or loss.",
+      trend:"improving",
+      importance:"normal",
+      handling_state:"monitoring",
+      last_observed_at:"2026-08-30T12:00:00Z"
+    },
+    {
+      id:2,
+      subject:"Keyword entered Top 10",
+      business_meaning:"Keyword reached position 7 and entered the top 10.",
+      trend:"improving",
+      importance:"normal",
+      handling_state:"monitoring",
+      last_observed_at:"2026-08-30T12:00:00Z"
+    }
+  ]
+});
+
+assert.ok(
+  uncertainMonitoring.whatIsWorking.some(item => /position 7|top 10/i.test(item)),
+  "Explicit positive monitoring evidence may appear in What Is Working."
+);
+assert.ok(
+  uncertainMonitoring.whatIsWorking.every(item => !/until the actual movement proves/i.test(item)),
+  "Unproven monitoring direction must not be presented as client-safe success."
 );
 
 const empty = buildClientHealthV2({
