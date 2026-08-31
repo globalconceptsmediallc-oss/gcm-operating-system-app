@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.5.3
+   Version: 3.5.4
    Status: Production Candidate
    Source: Production today.html 3.5.2
    Sprint: Today / Morning Command — Gmail Routing Cache Safety
@@ -12,7 +12,7 @@
    Production changes in 3.5.3:
    - Cache-busts the shared shell loader so Morning Command receives Gmail Human Routing v2.3.1 immediately.
    - Activates the processed-thread re-entry guard after successful Gmail routing.
-   - Preserves all Today v3.5.2 Mission Control and Agency Command behavior unchanged.
+   - Preserves all Today v3.5.3 Mission Control and Agency Command behavior while loading GCM Shell 2.0.36 for the integrated MediaForge route.
 
    Production changes in 3.5.2:
    - Keeps Mission Control's clientsRequiringAttention ordering authoritative.
@@ -1837,7 +1837,7 @@
 <div aria-hidden="true" hidden="" id="mission-control-state-values"><span id="prospect-count">0</span><span id="attention-count">0</span><span id="open-task-count">0</span><span id="proof-count">0</span><span id="media-pulse-count">0</span></div></div>
 </main>
 </div>
-<script src="shared/gcm-shell.js?v=2.0.35"></script>
+<script src="shared/gcm-shell.js?v=2.0.36"></script>
 <script>
     (() => {
       "use strict";
@@ -2961,11 +2961,11 @@
       });
 
       if (!window.GCMOShell) {
-        console.error("Today 3.5.3: shared/gcm-shell.js did not load.");
+        console.error("Today 3.5.4: shared/gcm-shell.js did not load.");
       } else {
         window.GCMOShell.mount({
           currentPage: "today",
-          statusText: "Agency Command Center operational · Today v3.5.3"
+          statusText: "Agency Command Center operational · Today v3.5.4"
         });
       }
 
