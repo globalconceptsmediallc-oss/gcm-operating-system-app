@@ -345,15 +345,19 @@ function buildDimension(definition, matches) {
     ? weightedDirection / totalStrength
     : 0;
 
+  const recencyStrength = matches.length
+    ? matches.reduce((sum, item) => sum + item.recencyWeight, 0) / matches.length
+    : 0;
+
   let score;
 
   if (definition.key === "risk_attention") {
     score = 85 +
-      (Math.min(0, averageDirection) * 20) -
+      (Math.min(0, averageDirection) * 20 * recencyStrength) -
       Math.min(30, activeRiskPenalty);
   } else {
     score = 70 +
-      (averageDirection * 20) -
+      (averageDirection * 20 * recencyStrength) -
       Math.min(12, activeRiskPenalty);
   }
 
@@ -361,9 +365,6 @@ function buildDimension(definition, matches) {
 
   const recent = matches.filter(item => item.ageDays <= 45);
   const recentRatio = matches.length ? recent.length / matches.length : 0;
-  const recencyStrength = matches.length
-    ? matches.reduce((sum, item) => sum + item.recencyWeight, 0) / matches.length
-    : 0;
 
   const dimensionConfidenceScore = Math.round(
     Math.min(
