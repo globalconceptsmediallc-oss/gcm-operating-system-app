@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/clientHealthV2.js
-   Version: 2.0.0
+   Version: 2.0.1
    Status: Production Candidate
    Sprint: Client Health v2 — Evidence-Based Client-Safe Health
    Purpose:
@@ -18,7 +18,7 @@
      source-grounded titles / summaries already stored in the OS.
    ========================================================= */
 
-export const CLIENT_HEALTH_V2_VERSION = "2.0.0";
+export const CLIENT_HEALTH_V2_VERSION = "2.0.1";
 
 const DIMENSIONS = Object.freeze([
   {
@@ -199,7 +199,10 @@ export function buildClientHealthV2(input = {}) {
 
   const watching = uniqueEvidence(
     evidence
-      .filter(item => item.kind === "monitoring" || item.direction === 0)
+      .filter(item =>
+        item.kind === "monitoring" ||
+        (item.direction === 0 && item.kind === "intelligence")
+      )
       .sort(compareEvidence)
   ).slice(0, 3);
 
@@ -594,13 +597,52 @@ function uniqueEvidence(items) {
 }
 
 function clientSafeEvidenceText(item) {
-  return text(item.summary || item.title);
+  const title = cleanClientTitle(item?.title);
+  let value = text(item?.summary || title);
+
+  const looksLikeRawSource =
+    /\bMessage\s+\d+\s+of\s+\d+\b|\bFrom:\s|\bTo:\s|\bSubject:\s/i.test(value);
+
+  const looksGeneric =
+    /^The saved .+ evidence contains measurable client information/i.test(value) ||
+    /^Human operator routed/i.test(value);
+
+  if (looksLikeRawSource || looksGeneric || value.length > 260) {
+    value = title || value;
+  }
+
+  return clipClientText(value, 190);
+}
+
+function cleanClientTitle(value) {
+  return text(value)
+    .replace(/^\s*(?:re|fw|fwd):\s*/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function clipClientText(value, limit) {
+  const compact = text(value).replace(/\s+/g, " ");
+  if (compact.length <= limit) return compact;
+
+  const sentence = compact.slice(0, limit + 1);
+  const lastStop = Math.max(
+    sentence.lastIndexOf(". "),
+    sentence.lastIndexOf("; "),
+    sentence.lastIndexOf(" — ")
+  );
+
+  const clipped = lastStop >= 70
+    ? sentence.slice(0, lastStop + 1)
+    : compact.slice(0, limit).replace(/[\s,;:.-]+$/g, "");
+
+  return `${clipped}…`;
 }
 
 function dimensionSummary(matches, trend) {
   const top = uniqueEvidence(matches.slice().sort(compareEvidence))[0];
   if (!top) return "Evidence is available.";
-  const core = text(top.summary || top.title);
+  const core = clientSafeEvidenceText(top);
   return core ? `${trend}: ${core}` : trend;
 }
 
