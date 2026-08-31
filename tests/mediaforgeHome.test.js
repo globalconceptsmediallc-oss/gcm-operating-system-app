@@ -1,7 +1,7 @@
 /* =========================================================
 MediaForge
 File: tests/mediaforgeHome.test.js
-Version: 1.0.1
+Version: 1.1.0
 Status: Production Regression Test
 Purpose: Lock the task-first MediaForge home, simple workflow routing,
          hidden advanced controls, and production website-image defaults.
@@ -14,7 +14,7 @@ const html = fs.readFileSync(new URL("../mediaforge/index.html", import.meta.url
 const home = fs.readFileSync(new URL("../mediaforge/home.js", import.meta.url), "utf8");
 const namingUi = fs.readFileSync(new URL("../mediaforge/naming-ui.js", import.meta.url), "utf8");
 
-assert.match(html, /Version: 3\.0\.1/);
+assert.match(html, /Version: 3\.1\.0/);
 assert.match(html, /What do you want to do today\?/);
 assert.match(html, /Rename Product Images/);
 assert.match(html, /Prepare Images for the Website/);
@@ -39,10 +39,15 @@ assert.match(html, /id="prepareMaxKb"[^>]+value="250"/);
 assert.match(html, /Process &amp; Build ZIP/);
 assert.match(html, /Load Reference Catalog/);
 assert.match(html, /Use Recommended Workflow/);
-assert.match(html, /src="\.\/naming-ui\.js\?v=1\.1\.1"/);
-assert.match(html, /src="\.\/home\.js\?v=1\.0\.1"/);
+assert.match(html, /Images found/);
+assert.match(html, /Need review/);
+assert.match(html, /Filenames will change/);
+assert.match(html, /See All Filenames/);
+assert.match(html, /Download Audit Manifest/);
+assert.match(html, /src="\.\/naming-ui\.js\?v=1\.2\.0"/);
+assert.match(html, /src="\.\/home\.js\?v=1\.0\.2"/);
 
-assert.match(home, /Version: 1\.0\.1/);
+assert.match(home, /Version: 1\.0\.2/);
 assert.match(home, /function classifyJob/);
 assert.match(home, /alreadyRenamed/);
 assert.match(home, /liberty-lincoln-\(25\|40\|50\)/);
@@ -53,9 +58,14 @@ assert.match(home, /mediaforge:naming-files/);
 assert.match(home, /1200/);
 assert.match(home, /250/);
 
-assert.match(namingUi, /Version: 1\.1\.1/);
+assert.match(namingUi, /Version: 1\.2\.0/);
 assert.match(namingUi, /structuredClone\(BUILTIN_PRESETS\[2\]\)/);
 assert.match(namingUi, /mediaforge:naming-files/);
+assert.match(namingUi, /Download Verified ZIP/);
+assert.match(namingUi, /need review —/i);
+assert.match(namingUi, /Image contents will not be changed/i);
+assert.match(namingUi, /knownRenameException/);
+assert.match(namingUi, /rows\.filter\(row => row\.ready\)/);
 
 assert.doesNotMatch(
   html,
@@ -63,4 +73,4 @@ assert.doesNotMatch(
   "The catalog must no longer be the MediaForge opening experience."
 );
 
-console.log("PASS MediaForge 3.0.1 task-first home, already-renamed detection, reusable Lincoln default, ZIP routing, and hidden advanced settings");
+console.log("PASS MediaForge 3.1.0 task-first road test, plain-English outcome, known exceptions, collapsed filenames, and safe ZIP rules");
