@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/mediaforgeNamingRecipe.test.js
-   Version: 1.2.0
+   Version: 1.2.1
    Status: Production Regression Test
    Purpose: Lock MediaForge flexible naming recipes, aliases,
             sequence maps, job overrides, unresolved-map blocking,
@@ -144,12 +144,12 @@ assert.ok(zipText.includes("second.webp"));
 
 const html = fs.readFileSync(new URL("../mediaforge/index.html", import.meta.url), "utf8");
 for (const marker of [
-  "Version 3.0.0",
+  "Version 3.0.1",
   'id="namingPreset"',
   'id="namingAliases"',
   'id="namingSequence"',
   'id="namingZip"',
-  'src="./naming-ui.js?v=1.1.0"'
+  'src="./naming-ui.js?v=1.1.1"'
 ]) {
   assert.ok(html.includes(marker), `Missing MediaForge UI contract: ${marker}`);
 }
