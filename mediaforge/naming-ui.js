@@ -1,7 +1,7 @@
 /* =========================================================
 MediaForge
 File: naming-ui.js
-Version: 1.0.2
+Version: 1.1.0
 Status: Production Candidate
 Purpose: Human-controlled Naming Recipe UI, preset persistence,
          batch preview, manifest export, and rename-only ZIP export.
@@ -276,6 +276,15 @@ els.fileInput.onchange = event => {
   overrides = new Map();
   renderPreview();
 };
+
+window.addEventListener("mediaforge:naming-files", event => {
+  const incoming = Array.isArray(event.detail?.files)
+    ? event.detail.files
+    : [];
+  files = incoming.filter(file => /\.(jpe?g|png|webp)$/i.test(file.name));
+  overrides = new Map();
+  renderPreview();
+});
 
 els.manifest.onclick = () => {
   const rows = previewRows();
