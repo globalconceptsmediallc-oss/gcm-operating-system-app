@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/mediaforgeNamingRecipe.test.js
-   Version: 1.0.0
+   Version: 1.1.0
    Status: Production Regression Test
    Purpose: Lock MediaForge flexible naming recipes, aliases,
             sequence maps, job overrides, unresolved-map blocking,
@@ -54,6 +54,50 @@ assert.equal(proposal.ready, true);
 assert.equal(
   proposal.filename,
   "liberty-lincoln-25-9-bronze-gloss-signature-interior-loaded-interior.webp"
+);
+
+const reusable = structuredClone(
+  BUILTIN_PRESETS.find(item => item.id === "liberty-lincoln-signature-interiors")
+);
+
+const lx40White = buildProposedName(
+  reusable,
+  inferFileRecord("LX-Sig-40-White Ivory Gloss-Open-Loaded-ProFlex-interior.webp")
+);
+assert.equal(lx40White.ready, true);
+assert.equal(
+  lx40White.filename,
+  "liberty-lincoln-40-6-white-gloss-signature-interior-loaded-interior.webp"
+);
+
+const lx40Black = buildProposedName(
+  reusable,
+  inferFileRecord("LX-Sig-40-Black Gloss(SV and BV)-Open-Empty-ProFlex-interior.webp")
+);
+assert.equal(lx40Black.ready, true);
+assert.equal(
+  lx40Black.filename,
+  "liberty-lincoln-40-14-black-gloss-signature-interior-empty-interior.webp"
+);
+
+const lx50Textured = buildProposedName(
+  reusable,
+  inferFileRecord("LX-Sig-50-Textured Bronze-Open-Full No Guns-ProFlex-interior.webp")
+);
+assert.equal(lx50Textured.ready, true);
+assert.equal(
+  lx50Textured.filename,
+  "liberty-lincoln-50-23-textured-bronze-signature-interior-full-no-guns-interior.webp"
+);
+
+const lx50Burgundy = buildProposedName(
+  reusable,
+  inferFileRecord("LX-Sig-50-Burgundy Gloss-Open-Loaded-ProFlex-interior.webp")
+);
+assert.equal(lx50Burgundy.ready, true);
+assert.equal(
+  lx50Burgundy.filename,
+  "liberty-lincoln-50-12-burgundy-gloss-signature-interior-loaded-interior.webp"
 );
 
 const flexible = structuredClone(preset);
