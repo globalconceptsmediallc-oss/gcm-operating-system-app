@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/clientHealthV2.js
-   Version: 2.2.0
+   Version: 2.2.1
    Status: Production Candidate
    Sprint: Client Health v2 — Explainable Scoring Refinement
    Purpose:
@@ -19,7 +19,7 @@
    - Client-safe output never exposes raw email/thread text.
    ========================================================= */
 
-export const CLIENT_HEALTH_V2_VERSION = "2.2.0";
+export const CLIENT_HEALTH_V2_VERSION = "2.2.1";
 
 const DIMENSIONS = Object.freeze([
   {
@@ -209,27 +209,33 @@ export function buildClientHealthV2(input = {}) {
 
   const positives = uniqueEvidence(
     classifiedEvidence
-      .filter(item => item.direction > 0 && item.recencyWeight >= 0.5)
+      .filter(item =>
+        item.dimensionKeys.length > 0 &&
+        item.direction > 0 &&
+        item.recencyWeight >= 0.5
+      )
       .sort(compareEvidence)
-  ).slice(0, 3);
+  ).slice(0, 6);
 
   const negatives = uniqueEvidence(
     classifiedEvidence
       .filter(item =>
+        item.dimensionKeys.length > 0 &&
         (item.direction < 0 || item.kind === "active_risk") &&
         item.recencyWeight >= 0.25
       )
       .sort(compareEvidence)
-  ).slice(0, 3);
+  ).slice(0, 6);
 
   const watching = uniqueEvidence(
     classifiedEvidence
       .filter(item =>
+        item.dimensionKeys.length > 0 &&
         item.kind === "monitoring" &&
         item.recencyWeight >= 0.25
       )
       .sort(compareEvidence)
-  ).slice(0, 3);
+  ).slice(0, 6);
 
   const highestValueMove = chooseHighestValueMove({
     workItems,
@@ -237,9 +243,15 @@ export function buildClientHealthV2(input = {}) {
     negatives
   });
 
-  const whatIsWorking = positives.map(clientSafeEvidenceText).filter(Boolean);
-  const needsAttention = negatives.map(clientSafeEvidenceText).filter(Boolean);
-  const whatWeAreWatching = watching.map(clientSafeEvidenceText).filter(Boolean);
+  const whatIsWorking = uniqueStrings(
+    positives.map(clientSafeEvidenceText).filter(Boolean)
+  ).slice(0, 3);
+  const needsAttention = uniqueStrings(
+    negatives.map(clientSafeEvidenceText).filter(Boolean)
+  ).slice(0, 3);
+  const whatWeAreWatching = uniqueStrings(
+    watching.map(clientSafeEvidenceText).filter(Boolean)
+  ).slice(0, 3);
 
   return {
     version:CLIENT_HEALTH_V2_VERSION,
@@ -456,17 +468,11 @@ function dimensionMatchScore(definition, item) {
 
     if (!metricMatches) return 0;
 
-    if (
-      BUSINESS_HYPOTHETICAL_RE.test(item.outcomeText) &&
-      !/\b\d+(?:\.\d+)?%?\b/.test(item.outcomeText)
-    ) {
+    if (BUSINESS_HYPOTHETICAL_RE.test(item.outcomeText)) {
       return 0;
     }
 
-    if (
-      !BUSINESS_OUTCOME_ASSERTION_RE.test(item.outcomeText) &&
-      !/\b\d+(?:\.\d+)?%?\b/.test(item.outcomeText)
-    ) {
+    if (!BUSINESS_OUTCOME_ASSERTION_RE.test(item.outcomeText)) {
       return 0;
     }
 
@@ -866,6 +872,21 @@ function uniqueEvidence(items) {
     if (!key || seen.has(key)) continue;
     seen.add(key);
     output.push(item);
+  }
+
+  return output;
+}
+
+function uniqueStrings(items) {
+  const seen = new Set();
+  const output = [];
+
+  for (const item of items) {
+    const value = text(item);
+    const key = normalize(value);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    output.push(value);
   }
 
   return output;
