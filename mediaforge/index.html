@@ -7,7 +7,7 @@
 <!-- =========================================================
 MediaForge
 File: index.html
-Version: 3.0.1
+Version: 3.1.0
 Status: Production Road-Test Candidate
 Source: Production Development
 Purpose: Put the real MediaForge jobs first: rename product images,
@@ -118,11 +118,28 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;padding:20px 12px 28
 .mf-workflow-intro{margin-bottom:14px;padding:14px;border:1px solid #cbd9ff;border-radius:12px;background:linear-gradient(135deg,#f8faff,#eef3ff)}
 .mf-workflow-intro strong{display:block;margin-bottom:4px}.mf-workflow-intro p{margin:0;color:var(--muted);font-size:.84rem;line-height:1.5}
 @media(max-width:760px){.mf-task-grid{grid-template-columns:1fr}.mf-simple-grid{grid-template-columns:1fr}.mf-task-bar{top:58px}}
+.mf-outcome{margin-top:16px;border:1px solid #bfd0ff;border-radius:16px;background:#fff;overflow:hidden}
+.mf-outcome-head{padding:18px 18px 14px;background:linear-gradient(135deg,#f8faff,#eef3ff);border-bottom:1px solid var(--line)}
+.mf-outcome-head h3{margin:0;font-size:1.16rem}.mf-outcome-head p{margin:6px 0 0;color:var(--muted);font-size:.86rem;line-height:1.5}
+.mf-outcome-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:14px 18px}
+.mf-outcome-stat{border:1px solid var(--line);border-radius:11px;padding:12px;background:#fbfcff}
+.mf-outcome-stat strong{display:block;font-size:1.28rem;color:var(--blue-dark)}
+.mf-outcome-stat span{display:block;margin-top:3px;color:var(--muted);font-size:.73rem}
+.mf-outcome-copy{padding:0 18px 16px;display:grid;gap:8px}
+.mf-outcome-copy p{margin:0;font-size:.86rem;line-height:1.55}
+.mf-outcome-copy .promise{padding:11px 12px;border-radius:10px;background:var(--success-bg);color:var(--success);font-weight:760}
+.mf-outcome-copy .warning-copy{padding:11px 12px;border-radius:10px;background:var(--warning-bg);color:var(--warning);font-weight:760}
+.mf-outcome-actions{display:flex;gap:8px;flex-wrap:wrap;padding:0 18px 18px}
+.mf-file-details{margin-top:14px;border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden}
+.mf-file-details summary{cursor:pointer;padding:12px 14px;font-weight:800;color:var(--blue-dark);background:#f8faff}
+.mf-file-details-body{padding:0 12px 12px}
+.mf-exception-row{background:#fffaf0}
+@media(max-width:760px){.mf-outcome-grid{grid-template-columns:1fr 1fr}}
 
 </style>
 </head>
 <body>
-<header class="topbar"><div class="topbar-inner"><div class="brand"><span class="mark">▣</span><span>MediaForge</span></div><div class="version">Version 3.0.1 · Task-First Workflow</div></div></header>
+<header class="topbar"><div class="topbar-inner"><div class="brand"><span class="mark">▣</span><span>MediaForge</span></div><div class="version">Version 3.1.0 · Plain-English Road Test</div></div></header>
 <main class="shell">
 <section id="mfHome" class="mf-home">
   <div class="mf-home-copy">
@@ -206,9 +223,37 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;padding:20px 12px 28
     </div>
   </details>
 
-  <div id="namingStatus" class="status">No batch loaded. MediaForge will show the proposed names here.</div>
-  <div class="preview-wrap"><table class="rename-table"><thead><tr><th>Original filename</th><th>Parsed color</th><th>Parsed state</th><th>Proposed / manual override</th><th>Status</th></tr></thead><tbody id="namingPreviewBody"><tr><td colspan="5" class="empty-cell">Drop a ZIP or choose files to preview the rename job.</td></tr></tbody></table></div>
-  <div class="naming-actions"><button id="namingManifest" class="btn secondary" type="button" disabled>Download Rename Manifest</button><button id="namingZip" class="btn primary" type="button" disabled>Build Renamed ZIP</button></div>
+  <div id="namingStatus" class="status" hidden>No batch loaded.</div>
+
+  <section id="namingOutcome" class="mf-outcome" hidden aria-live="polite">
+    <div class="mf-outcome-head">
+      <h3 id="namingOutcomeTitle">Batch recognized</h3>
+      <p id="namingOutcomeSubtitle"></p>
+    </div>
+    <div class="mf-outcome-grid">
+      <div class="mf-outcome-stat"><strong id="namingFoundCount">0</strong><span>Images found</span></div>
+      <div class="mf-outcome-stat"><strong id="namingReadyCount">0</strong><span id="namingReadyLabel">Ready</span></div>
+      <div class="mf-outcome-stat"><strong id="namingReviewCount">0</strong><span>Need review</span></div>
+      <div class="mf-outcome-stat"><strong id="namingChangeCount">0</strong><span>Filenames will change</span></div>
+    </div>
+    <div class="mf-outcome-copy">
+      <p id="namingOutcomeExplanation"></p>
+      <p id="namingOutcomePromise" class="promise"></p>
+    </div>
+    <div class="mf-outcome-actions">
+      <button id="namingReviewExceptions" class="btn secondary" type="button" hidden>Review Exceptions</button>
+      <button id="namingShowAll" class="btn secondary" type="button">See All Filenames</button>
+      <button id="namingZip" class="btn primary" type="button" disabled>Build Renamed ZIP</button>
+    </div>
+  </section>
+
+  <details id="namingFileDetails" class="mf-file-details" hidden>
+    <summary id="namingFileDetailsSummary">See all filenames</summary>
+    <div class="mf-file-details-body">
+      <div class="preview-wrap"><table class="rename-table"><thead><tr><th>Original filename</th><th>Parsed color</th><th>Parsed state</th><th>Proposed / manual override</th><th>Status</th></tr></thead><tbody id="namingPreviewBody"><tr><td colspan="5" class="empty-cell">Drop a ZIP or choose files to preview the rename job.</td></tr></tbody></table></div>
+      <div class="naming-actions"><button id="namingManifest" class="btn secondary" type="button" disabled>Download Audit Manifest</button></div>
+    </div>
+  </details>
 </div></section>
 
 <section id="prepareImagesLab" class="card" data-mf-task-section="prepare" hidden>
@@ -640,7 +685,7 @@ els.clearReplacementBtn.onclick=()=>clearReplacement(true);
 
 try{const saved=localStorage.getItem("mediaforge-liberty-premium-catalog");if(saved){state.payload=JSON.parse(saved);state.saved=true;setStatus("Saved Liberty Premium catalog loaded from MediaForge.","success")}}catch(e){console.warn("Saved catalog could not be loaded",e)}renderAll();
 </script>
-<script type="module" src="./naming-ui.js?v=1.1.1"></script>
-<script type="module" src="./home.js?v=1.0.1"></script>
+<script type="module" src="./naming-ui.js?v=1.2.0"></script>
+<script type="module" src="./home.js?v=1.0.2"></script>
 </body>
 </html>
