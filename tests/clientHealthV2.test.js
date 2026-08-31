@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/clientHealthV2.test.js
-   Version: 1.2.0
+   Version: 1.2.1
    Status: Production Regression Test
    Purpose: Lock Client Health v2 to evidence-based scoring where unknown
             dimensions reduce confidence rather than health.
@@ -13,7 +13,7 @@ import {
   buildClientHealthV2
 } from "../shared/clientHealthV2.js";
 
-assert.equal(CLIENT_HEALTH_V2_VERSION, "2.2.0");
+assert.equal(CLIENT_HEALTH_V2_VERSION, "2.2.1");
 
 const health = buildClientHealthV2({
   now:"2026-08-31T12:00:00Z",
@@ -67,7 +67,7 @@ const health = buildClientHealthV2({
   alerts:[]
 });
 
-assert.equal(health.version, "2.2.0");
+assert.equal(health.version, "2.2.1");
 assert.equal(health.client.clientCode, "SES");
 assert.ok(Number.isInteger(health.score));
 assert.ok(health.score >= 60);
@@ -158,6 +158,27 @@ assert.ok(
     measuredBusiness.dimensions.find(item => item.key === "business_performance")?.score
   ),
   "Actual business outcome evidence should create a Business Performance score."
+);
+
+const hypotheticalBusiness = buildClientHealthV2({
+  now:"2026-08-31T12:00:00Z",
+  client:{ id:8, client_code:"HYPOTHETICAL", name:"Hypothetical Business" },
+  intelligence:[
+    {
+      id:1,
+      subject:"Google Search Console — Page Indexing Issue — Review Required",
+      business_meaning:"5 indexing issues could reduce sales and revenue if unresolved.",
+      trend:"declining",
+      importance:"high",
+      last_observed_at:"2026-08-30T12:00:00Z"
+    }
+  ]
+});
+
+assert.equal(
+  hypotheticalBusiness.dimensions.find(item => item.key === "business_performance")?.score ?? null,
+  null,
+  "Hypothetical business impact must not become measured Business Performance just because a page count is present."
 );
 
 const freshCompetitive = buildClientHealthV2({
