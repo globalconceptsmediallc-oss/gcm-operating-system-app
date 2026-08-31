@@ -1,7 +1,7 @@
 /* =========================================================
 MediaForge
 File: naming-ui.js
-Version: 1.1.0
+Version: 1.1.1
 Status: Production Candidate
 Purpose: Human-controlled Naming Recipe UI, preset persistence,
          batch preview, manifest export, and rename-only ZIP export.
@@ -41,7 +41,7 @@ const els = {
 
 if (!els.preset) throw new Error("MediaForge naming UI markup is missing.");
 
-let recipe = structuredClone(BUILTIN_PRESETS[1]);
+let recipe = structuredClone(BUILTIN_PRESETS[2]);
 let files = [];
 let overrides = new Map();
 let savedPresets = loadSavedPresets();
