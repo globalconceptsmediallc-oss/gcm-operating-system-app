@@ -1,7 +1,7 @@
 # =========================================================
 # MediaForge
 # File: .github/workflows/mediaforge-deploy.yml
-# Version: 1.1.0
+# Version: 1.1.1
 # Status: Production Validation
 # Purpose: Test the source-controlled MediaForge app that is served from
 #          the GCM OS GitHub Pages deployment.
@@ -59,14 +59,14 @@ jobs:
           const shell = fs.readFileSync("shared/gcm-shell.js", "utf8");
 
           for (const marker of [
-            "Version 3.0.0 · Task-First Workflow",
+            "Version 3.0.1 · Task-First Workflow",
             "What do you want to do today?",
             "Rename Product Images",
             "Prepare Images for the Website",
             "Identify Unknown Images",
             "I'm Not Sure — Analyze My Files",
             "Catalog &amp; Settings",
-            'src="./home.js?v=1.0.0"'
+            'src="./home.js?v=1.0.1"'
           ]) {
             if (!html.includes(marker)) {
               throw new Error(`MediaForge source missing: ${marker}`);
@@ -81,5 +81,5 @@ jobs:
             throw new Error("GCM shell is not pointing at the integrated MediaForge path.");
           }
 
-          console.log("PASS MediaForge 3.0 task-first source contract and integrated GCM OS navigation");
+          console.log("PASS MediaForge 3.0.1 task-first source contract and integrated GCM OS navigation");
           NODE
