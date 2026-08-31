@@ -1,0 +1,31 @@
+name: One-Time Client Health v2 Check
+
+on:
+  push:
+    paths:
+      - ".github/workflows/one-time-client-health-v2-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Read live SES Client Health v2
+        shell: bash
+        run: |
+          node <<'NODE'
+          const url = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+          const response = await fetch(url, {
+            method:"POST",
+            headers:{ "Content-Type":"application/json" },
+            body:JSON.stringify({ action:"get-client-workspace", clientCode:"SES" })
+          });
+          const data = await response.json();
+          if (!response.ok || data?.ok !== true) {
+            throw new Error(data?.error || `HTTP ${response.status}`);
+          }
+          console.log("CLIENT_HEALTH_V2", JSON.stringify(data?.record?.clientHealthV2 || null));
+          NODE
