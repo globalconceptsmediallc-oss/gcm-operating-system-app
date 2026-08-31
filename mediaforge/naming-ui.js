@@ -1,7 +1,7 @@
 /* =========================================================
 MediaForge
 File: naming-ui.js
-Version: 1.0.0
+Version: 1.0.1
 Status: Production Candidate
 Purpose: Human-controlled Naming Recipe UI, preset persistence,
          batch preview, manifest export, and rename-only ZIP export.
@@ -13,7 +13,7 @@ import {
   buildProposedName,
   csvEscape,
   createStoredZip
-} from "./naming.js";
+} from "./naming.js?v=1.1.0";
 
 const STORAGE_KEY = "mediaforge-naming-presets-v1";
 const $ = id => document.getElementById(id);
