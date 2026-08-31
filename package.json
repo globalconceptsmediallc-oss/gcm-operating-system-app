@@ -1,16 +1,17 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.30",
+  "version": "6.1.31",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.30",
+    "fileVersion": "6.1.31",
     "status": "Production Road-Test Candidate",
-    "purpose": "Tighten Client Health v2.1 into an explainable, recency-aware client score.",
+    "purpose": "Release Client Health v2.2 with deduplicated, recency-weighted, explainable evidence scoring.",
     "changeNotes": [
-      "Business Performance now requires actual outcome evidence instead of plans, expected impact, or priority labels.",
-      "Stale evidence has less score influence and lowers confidence.",
-      "Each source record may affect at most two health dimensions to prevent cross-category inflation.",
-      "Each dimension now includes a plain-English score reason and primary supporting evidence."
+      "Deduplicates durable evidence by source reference before scoring.",
+      "Business Performance requires measured or asserted actual outcomes and rejects hypothetical/expected impact.",
+      "Generic website mentions no longer inflate Website / Conversion.",
+      "Risk scoring uses active-risk and negative evidence instead of generic priority labels.",
+      "Client-safe summaries remove generic monitoring placeholders and weak priority-only text."
     ]
   },
   "private": true,
