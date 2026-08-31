@@ -7,7 +7,7 @@
 <!-- =========================================================
 MediaForge
 File: index.html
-Version: 3.0.0
+Version: 3.0.1
 Status: Production Road-Test Candidate
 Source: Production Development
 Purpose: Put the real MediaForge jobs first: rename product images,
@@ -122,7 +122,7 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;padding:20px 12px 28
 </style>
 </head>
 <body>
-<header class="topbar"><div class="topbar-inner"><div class="brand"><span class="mark">▣</span><span>MediaForge</span></div><div class="version">Version 3.0.0 · Task-First Workflow</div></div></header>
+<header class="topbar"><div class="topbar-inner"><div class="brand"><span class="mark">▣</span><span>MediaForge</span></div><div class="version">Version 3.0.1 · Task-First Workflow</div></div></header>
 <main class="shell">
 <section id="mfHome" class="mf-home">
   <div class="mf-home-copy">
@@ -181,11 +181,10 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;padding:20px 12px 28
   </div>
   <div id="renameQuickStatus" class="status">No batch loaded yet.</div>
 
-  <div style="margin-top:16px" class="field"><label>Detected / selected naming recipe</label><select id="namingPreset"></select></div>
-
   <details class="mf-advanced">
     <summary>Advanced recipe settings</summary>
     <div class="mf-advanced-body">
+      <div class="field" style="margin-bottom:12px"><label>Change naming recipe</label><select id="namingPreset"></select></div>
       <div class="naming-toolbar">
         <button id="namingNewJob" class="btn secondary" type="button">New Custom Job</button>
         <button id="namingSavePreset" class="btn secondary" type="button">Save Recipe as Preset</button>
@@ -641,7 +640,7 @@ els.clearReplacementBtn.onclick=()=>clearReplacement(true);
 
 try{const saved=localStorage.getItem("mediaforge-liberty-premium-catalog");if(saved){state.payload=JSON.parse(saved);state.saved=true;setStatus("Saved Liberty Premium catalog loaded from MediaForge.","success")}}catch(e){console.warn("Saved catalog could not be loaded",e)}renderAll();
 </script>
-<script type="module" src="./naming-ui.js?v=1.1.0"></script>
-<script type="module" src="./home.js?v=1.0.0"></script>
+<script type="module" src="./naming-ui.js?v=1.1.1"></script>
+<script type="module" src="./home.js?v=1.0.1"></script>
 </body>
 </html>
