@@ -1,22 +1,22 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gcm-shell.js
-   Version: 2.0.35
+   Version: 2.0.36
    Status: Production Road-Test Candidate
    Purpose: Shared internal GCM OS application shell foundation.
-   Source: gcm-shell.js 2.0.34 production navigation
-   Sprint: Gmail Morning Command — Processed Thread Re-entry Guard
+   Source: gcm-shell.js 2.0.35 production navigation
+   Sprint: MediaForge — Task-First Production Home
    Change:
-   - Loads Gmail Human Routing v2.3.1 with a processed-thread re-entry guard so stale Worker preview results cannot recreate routed decision cards.
-   - Preserves Media Dashboard Creative Queue v1.1.2 and the native commercial-grouped Media queue.
-   - Preserves MediaForge navigation, Calendar Durable Sync, Media Production Sessions,
-     Prospect Next Action, and existing Work enhancements.
+   - Routes MediaForge navigation into the GCM OS GitHub Pages deployment instead of the retired standalone Cloudflare Pages project.
+   - Preserves Gmail Human Routing v2.3.1, Media Dashboard Creative Queue v1.1.2,
+     Calendar Durable Sync, Media Production Sessions, Prospect Next Action,
+     and existing Work enhancements.
    ========================================================= */
 
 (() => {
   "use strict";
 
-  const SHELL_VERSION = "2.0.35";
+  const SHELL_VERSION = "2.0.36";
   const WORKER_ENDPOINT =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const MISSION_CONTROL_ACTION = "get-mission-control";
@@ -27,7 +27,7 @@
     communications: { label: "Communications", href: "communications.html", icon: "✉" },
     work: { label: "Work", href: "work.html", icon: "✓" },
     media: { label: "Media", href: "media.html", icon: "◉" },
-    mediaforge: { label: "MediaForge", href: "https://mediaforge-36x.pages.dev/", icon: "◆" },
+    mediaforge: { label: "MediaForge", href: "mediaforge/", icon: "◆" },
     prospects: { label: "Prospects", href: "prospects.html", icon: "◎" },
     calendar: { label: "Calendar", href: "calendar.html", icon: "▦" },
     finance: { label: "Billing", href: "finance.html", icon: "$" },
