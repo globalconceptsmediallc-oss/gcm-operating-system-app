@@ -1,0 +1,131 @@
+name: One-Time Semrush Inbox Route 2026-08-31
+
+on:
+  push:
+    paths:
+      - ".github/workflows/one-time-semrush-route-20260831.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  route:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Route five Semrush conversations and inspect SES Work
+        shell: bash
+        run: |
+          node <<'NODE'
+          const WORKER_URL = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+
+          async function call(payload) {
+            const response = await fetch(WORKER_URL, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload)
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || data?.ok !== true) {
+              throw new Error(`${payload.action} failed: ${data?.error?.message || data?.error || `HTTP ${response.status}`}`);
+            }
+            return data;
+          }
+
+          const healthResponse = await fetch(WORKER_URL);
+          const health = await healthResponse.json();
+          if (!healthResponse.ok || health?.ok !== true) {
+            throw new Error("Worker health check failed.");
+          }
+          console.log("WORKER_HEALTH", JSON.stringify({
+            workerFileVersion: health.workerFileVersion,
+            version: health.version
+          }));
+
+          const routes = [
+            {
+              label: "SES Position Tracking Aug 30",
+              gmailMessageId: "1a04f12f07ddc656",
+              gmailThreadId: "1a04f12eeab6e26a",
+              clientCode: "SES",
+              clientName: "Southeast Safes"
+            },
+            {
+              label: "A1 Position Tracking Aug 30",
+              gmailMessageId: "1a04f8390067a041",
+              gmailThreadId: "1a04f8390067a041",
+              clientCode: "A1",
+              clientName: "A1 Action Safe & Lock"
+            },
+            {
+              label: "HB Guns Site Audit Aug 30",
+              gmailMessageId: "1a0506700e6821ff",
+              gmailThreadId: "1a0506700e6821ff",
+              clientCode: "HBG",
+              clientName: "HB Guns"
+            },
+            {
+              label: "South Florida Safes Site Audit Aug 30",
+              gmailMessageId: "1a0506e0e7054552",
+              gmailThreadId: "1a0506e0e7054552",
+              clientCode: "SFS",
+              clientName: "South Florida Safes"
+            },
+            {
+              label: "SES Position Tracking Aug 31",
+              gmailMessageId: "1a05439d96498027",
+              gmailThreadId: "1a05439d96498027",
+              clientCode: "SES",
+              clientName: "Southeast Safes"
+            }
+          ];
+
+          for (const item of routes) {
+            const result = await call({
+              action: "route-gmail-disposition",
+              gmailMessageId: item.gmailMessageId,
+              gmailThreadId: item.gmailThreadId,
+              disposition: "monitoring",
+              clientCode: item.clientCode,
+              clientName: item.clientName
+            });
+            console.log("ROUTE_RESULT", JSON.stringify({
+              label: item.label,
+              duplicate: Boolean(result.duplicate),
+              disposition: result.disposition,
+              activityRecordId: result.activityRecordId || result?.existing?.activityRecordId || null,
+              gmailArchived: Boolean(result.gmailArchived),
+              gmailThreadArchived: Boolean(result.gmailThreadArchived)
+            }));
+          }
+
+          const ses = await call({
+            action: "get-client-workspace",
+            clientCode: "SES"
+          });
+
+          const workItems = Array.isArray(ses?.operational?.workItems)
+            ? ses.operational.workItems
+            : [];
+          const matches = workItems.filter(item => {
+            const text = [
+              item?.title,
+              item?.description,
+              item?.category,
+              item?.expected_impact,
+              item?.actual_impact,
+              item?.notes
+            ].filter(Boolean).join(" ");
+            return /(q3|q4|campaign|frank|radio|iheart|media schedule)/i.test(text);
+          });
+
+          console.log("SES_WORK_MATCHES", JSON.stringify(matches.map(item => ({
+            id: item.id,
+            title: item.title,
+            status: item.status,
+            category: item.category,
+            description: item.description,
+            created_at: item.created_at,
+            completed_at: item.completed_at
+          }))));
+          NODE
