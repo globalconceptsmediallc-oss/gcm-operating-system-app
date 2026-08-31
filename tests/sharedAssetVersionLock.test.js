@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/sharedAssetVersionLock.test.js
-   Version: 1.1.0
+   Version: 1.1.1
    Status: Regression Test
    Purpose: Prevent shared shell enhancement loaders from silently requesting
             an older cached asset than the version declared by that asset and
@@ -10,7 +10,7 @@
    - Locks Today Gmail decision loader to the decision file's declared version.
    - Locks shared shell's visible version header to SHELL_VERSION.
    - Locks MediaForge into the canonical Workspace navigation between Media and Prospects.
-   - Locks the MediaForge navigation destination to the existing production Pages application.
+   - Locks the MediaForge navigation destination to the GCM OS GitHub Pages subdirectory.
    ========================================================= */
 
 import fs from "node:fs";
@@ -33,8 +33,8 @@ assert.equal(shellHeaderVersion, shellRuntimeVersion, "gcm-shell.js header and S
 
 assert.match(
   shell,
-  /mediaforge:\s*\{\s*label:\s*"MediaForge",\s*href:\s*"https:\/\/mediaforge-36x\.pages\.dev\/"/,
-  "gcm-shell.js must expose the existing production MediaForge application"
+  /mediaforge:\s*\{\s*label:\s*"MediaForge",\s*href:\s*"mediaforge\/"/,
+  "gcm-shell.js must route MediaForge into the GCM OS GitHub Pages application"
 );
 
 const mediaIndex = shell.indexOf('media: { label: "Media"');
