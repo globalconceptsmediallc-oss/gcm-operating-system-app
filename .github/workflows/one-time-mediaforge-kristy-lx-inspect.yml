@@ -24,12 +24,11 @@ jobs:
           unzip -t /tmp/mediaforge/lx40.zip
           unzip -t /tmp/mediaforge/lx50.zip
 
-      - name: Inspect filenames and image metadata
+      - name: Inspect filenames
         shell: bash
         run: |
           python <<'PY'
-          import json, zipfile, io
-          from PIL import Image
+          import json, zipfile
 
           for label in ("lx40","lx50"):
               path=f"/tmp/mediaforge/{label}.zip"
@@ -39,19 +38,6 @@ jobs:
                       if name.endswith("/"):
                           continue
                       info=z.getinfo(name)
-                      width=height=None
-                      try:
-                          with z.open(name) as f:
-                              data=f.read()
-                          with Image.open(io.BytesIO(data)) as im:
-                              width,height=im.size
-                      except Exception:
-                          pass
-                      rows.append({
-                          "name":name,
-                          "size":info.file_size,
-                          "width":width,
-                          "height":height
-                      })
+                      rows.append({"name":name,"size":info.file_size})
               print(f"{label.upper()}_FILES "+json.dumps(rows))
           PY
