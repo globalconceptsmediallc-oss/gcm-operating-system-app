@@ -1,9 +1,9 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/clientHealthV2.js
-   Version: 2.0.1
+   Version: 2.1.0
    Status: Production Candidate
-   Sprint: Client Health v2 — Evidence-Based Client-Safe Health
+   Sprint: Client Health v2 — Explainable Scoring Refinement
    Purpose:
    Convert durable client operating history into one explainable health score
    with confidence, trend, category detail, and a client-safe summary layer.
@@ -11,14 +11,15 @@
    Production rules:
    - Unknown evidence does NOT reduce health; it reduces confidence.
    - No AI is required. Every score is deterministic and auditable.
-   - Open Work is not automatically "bad"; active risk / failed conditions are.
-   - Monitoring evidence may influence trend only when the source explicitly
-     describes improvement or deterioration.
-   - Client-safe output never exposes internal reasoning text beyond durable,
-     source-grounded titles / summaries already stored in the OS.
+   - Open Work is not automatically positive or negative.
+   - Priority labels never count as performance evidence.
+   - Stale evidence has less scoring influence and less confidence.
+   - One source record may affect at most two health dimensions.
+   - Business Performance requires actual outcome evidence, not plans or goals.
+   - Client-safe output never exposes raw email/thread text.
    ========================================================= */
 
-export const CLIENT_HEALTH_V2_VERSION = "2.0.1";
+export const CLIENT_HEALTH_V2_VERSION = "2.1.0";
 
 const DIMENSIONS = Object.freeze([
   {
@@ -27,8 +28,9 @@ const DIMENSIONS = Object.freeze([
     weight:1.25,
     patterns:[
       /\brevenue\b/i, /\bsales?\b/i, /\bleads?\b/i, /\broi\b/i,
-      /\bconversion(?:s| rate)?\b/i, /\bqualified (?:lead|traffic)/i,
-      /\bshowroom traffic\b/i
+      /\broas\b/i, /\bcpa\b/i, /\bcost per (?:lead|acquisition)\b/i,
+      /\bconversion rate\b/i, /\bqualified leads?\b/i,
+      /\bshowroom traffic\b/i, /\bpurchases?\b/i, /\borders?\b/i
     ]
   },
   {
@@ -36,10 +38,10 @@ const DIMENSIONS = Object.freeze([
     label:"Search Visibility",
     weight:1.15,
     patterns:[
-      /\bseo\b/i, /\bsemrush\b/i, /\bposition tracking\b/i,
-      /\bkeyword/i, /\brank(?:ing|ings)?\b/i, /\bsearch visibility\b/i,
-      /\bsearch console\b/i, /\borganic\b/i, /\bclicks?\b/i,
-      /\bimpressions?\b/i
+      /\bsemrush\b/i, /\bposition tracking\b/i, /\bkeyword/i,
+      /\brank(?:ing|ings)?\b/i, /\bsearch visibility\b/i,
+      /\borganic (?:traffic|visibility|clicks|impressions)\b/i,
+      /\bsearch console\b/i, /\btop 10\b/i, /\btop 3\b/i
     ]
   },
   {
@@ -47,11 +49,11 @@ const DIMENSIONS = Object.freeze([
     label:"Website / Conversion",
     weight:1.05,
     patterns:[
-      /\bwebsite\b/i, /\bsite health\b/i, /\bcore web vitals?\b/i,
-      /\bcrawl/i, /\bredirect/i, /\b4xx\b/i, /\b404\b/i,
-      /\bduplicate content\b/i, /\bmeta description\b/i,
-      /\bcheckout\b/i, /\badd to cart\b/i, /\bview item\b/i,
-      /\bshopify\b/i
+      /\bsite health\b/i, /\bcore web vitals?\b/i, /\bcrawl/i,
+      /\bredirect/i, /\b4xx\b/i, /\b404\b/i, /\bduplicate content\b/i,
+      /\bmeta description\b/i, /\bcanonical\b/i, /\bsitemap\b/i,
+      /\bpage speed\b/i, /\bcheckout\b/i, /\badd to cart\b/i,
+      /\bview item\b/i, /\bshopify\b/i, /\bwebsite\b/i
     ]
   },
   {
@@ -60,8 +62,8 @@ const DIMENSIONS = Object.freeze([
     weight:1.0,
     patterns:[
       /\bga4\b/i, /\bgoogle analytics\b/i, /\bgtm\b/i,
-      /\bgoogle tag\b/i, /\btracking\b/i, /\battribution\b/i,
-      /\bmeasurement\b/i, /\bconversion action/i, /\brealtime\b/i
+      /\bgoogle tag\b/i, /\battribution\b/i, /\bmeasurement\b/i,
+      /\bconversion action/i, /\brealtime\b/i, /\bdata collection\b/i
     ]
   },
   {
@@ -79,10 +81,10 @@ const DIMENSIONS = Object.freeze([
     label:"Marketing Activity",
     weight:1.0,
     patterns:[
-      /\bcampaign\b/i, /\bgoogle ads\b/i, /\bmeta\b/i,
-      /\bfacebook\b/i, /\binstagram\b/i, /\bconnected tv\b/i,
-      /\bctv\b/i, /\bradio\b/i, /\bmedia\b/i, /\bpromotion\b/i,
-      /\bsale\b/i, /\bgoogle business profile\b/i, /\bgoogle profile\b/i
+      /\bgoogle ads\b/i, /\bfacebook\b/i, /\binstagram\b/i,
+      /\bconnected tv\b/i, /\bctv\b/i, /\bradio\b/i,
+      /\bmedia buy\b/i, /\bpaid media\b/i, /\bpromotion\b/i,
+      /\bcampaign\b/i, /\blabor day sale\b/i
     ]
   },
   {
@@ -90,8 +92,9 @@ const DIMENSIONS = Object.freeze([
     label:"Competitive Position",
     weight:0.75,
     patterns:[
-      /\bcompetitor/i, /\bcompetitive\b/i, /\bmarket share\b/i,
-      /\bshare of voice\b/i, /\bvisibility vs\b/i, /\bversus competitor/i
+      /\bcompetitor/i, /\bcompetitive benchmark\b/i,
+      /\bmarket share\b/i, /\bshare of voice\b/i,
+      /\bvisibility (?:vs|versus|among)\b/i, /\btracked competitors\b/i
     ]
   },
   {
@@ -99,10 +102,10 @@ const DIMENSIONS = Object.freeze([
     label:"Advantage Coverage",
     weight:0.75,
     patterns:[
-      /\bservice area\b/i, /\bmarket coverage\b/i, /\bgeographic/i,
-      /\bgeo(?:graphy)?\b/i, /\blake nona\b/i, /\bnarcoossee\b/i,
-      /\borlando\b/i, /\bmelbourne\b/i, /\blocal coverage\b/i,
-      /\bproduct coverage\b/i, /\bcategory coverage\b/i
+      /\bservice area\b/i, /\bmarket coverage\b/i,
+      /\bgeographic (?:coverage|targeting)\b/i, /\bgeo targeting\b/i,
+      /\blake nona\b/i, /\bnarcoossee\b/i, /\borlando\b/i,
+      /\bmelbourne\b/i, /\bproduct coverage\b/i, /\bcategory coverage\b/i
     ]
   },
   {
@@ -111,8 +114,9 @@ const DIMENSIONS = Object.freeze([
     weight:1.2,
     patterns:[
       /\brisk\b/i, /\bneeds attention\b/i, /\bhold\b/i,
-      /\bblocked\b/i, /\bbroken\b/i, /\berrors?\b/i, /\bfailed\b/i,
-      /\bdeclin/i, /\bproblem\b/i, /\bissue\b/i, /\bwarning/i
+      /\bblocked\b/i, /\bbroken\b/i, /\berrors?\b/i,
+      /\bfailed\b/i, /\bdeclin/i, /\bwarning/i, /\b4xx\b/i,
+      /\b404\b/i, /\bunverified\b/i
     ]
   },
   {
@@ -120,12 +124,14 @@ const DIMENSIONS = Object.freeze([
     label:"Opportunity",
     weight:0.8,
     patterns:[
-      /\bopportunit/i, /\bgrowth\b/i, /\bexpansion\b/i,
-      /\btop 10\b/i, /\bnew market\b/i, /\bnew keyword\b/i,
-      /\bimprov/i, /\blaunch\b/i
+      /\bopportunit/i, /\bgrowth opportunity\b/i,
+      /\bexpansion opportunity\b/i, /\bnew market\b/i,
+      /\bnew keyword\b/i, /\blaunch opportunity\b/i
     ]
   }
 ]);
+
+const DIMENSION_BY_KEY = new Map(DIMENSIONS.map(item => [item.key, item]));
 
 const CLOSED_STATUSES = new Set([
   "complete","completed","closed","resolved","cancelled","canceled",
@@ -137,9 +143,9 @@ const MONITORING_STATUSES = new Set([
   "waiting_on_external","historical"
 ]);
 
-const NEGATIVE_RE = /\b(?:declin(?:e|ed|ing)|drop(?:ped|ping)?|down|failed|failure|broken|blocked|error|critical|risk|hold|warning|needs attention|4xx|404|duplicate content|not working|inactive|unverified|missing)\b/i;
-const POSITIVE_RE = /\b(?:improv(?:e|ed|ing|ement)|increas(?:e|ed|ing)|up|gain(?:ed|ing)?|passed|healthy|excellent|success|successful|completed|published|launched|ready|verified|top 10|win|winning)\b/i;
-const STABLE_RE = /\b(?:stable|no significant change|no change|monitoring|watching|unchanged)\b/i;
+const NEGATIVE_RE = /\b(?:declin(?:e|ed|ing)|drop(?:ped|ping)?|down|failed|failure|broken|blocked|error|risk|hold|warning|needs attention|4xx|404|duplicate content|not working|inactive|unverified|missing)\b/i;
+const POSITIVE_RE = /\b(?:improv(?:e|ed|ing|ement)|increas(?:e|ed|ing)|gain(?:ed|ing)?|passed|healthy|excellent|success|successful|restored|verified|reached position|entered the top|in the top 10|win|winning)\b/i;
+const STABLE_RE = /\b(?:stable|no significant change|no change|monitoring|watching|unchanged|flat)\b/i;
 
 export function buildClientHealthV2(input = {}) {
   const now = validDate(input.now) || new Date();
@@ -158,8 +164,18 @@ export function buildClientHealthV2(input = {}) {
     ...alerts.map(item => evidenceFromAlert(item, now))
   ].filter(Boolean);
 
+  const classifiedEvidence = evidence.map(item => ({
+    ...item,
+    dimensionKeys:classifyEvidenceDimensions(item)
+  }));
+
   const dimensions = DIMENSIONS.map(definition =>
-    buildDimension(definition, evidence, now)
+    buildDimension(
+      definition,
+      classifiedEvidence.filter(item =>
+        item.dimensionKeys.includes(definition.key)
+      )
+    )
   );
 
   const known = dimensions.filter(item => Number.isFinite(item.score));
@@ -172,36 +188,40 @@ export function buildClientHealthV2(input = {}) {
     ? Math.round(weightedTotal / weightTotal)
     : null;
 
-  const recentEvidence = evidence.filter(item => item.ageDays <= 45);
+  const recentEvidence = classifiedEvidence.filter(item => item.ageDays <= 45);
   const coverageRatio = known.length / DIMENSIONS.length;
-  const recencyRatio = evidence.length
-    ? recentEvidence.length / evidence.length
+  const averageDimensionConfidence = known.length
+    ? known.reduce((sum, item) => sum + item.confidenceScore, 0) / known.length
     : 0;
+
   const confidenceScore = Math.round(
-    Math.min(100, (coverageRatio * 70) + (recencyRatio * 30))
+    Math.min(100, (coverageRatio * 45) + (averageDimensionConfidence * 0.55))
   );
   const confidence = confidenceLabel(confidenceScore);
 
-  const trend = overallTrend(evidence);
+  const trend = overallTrend(classifiedEvidence);
   const status = healthStatus(score, confidenceScore);
 
   const positives = uniqueEvidence(
-    evidence
-      .filter(item => item.direction > 0)
+    classifiedEvidence
+      .filter(item => item.direction > 0 && item.recencyWeight >= 0.5)
       .sort(compareEvidence)
   ).slice(0, 3);
 
   const negatives = uniqueEvidence(
-    evidence
-      .filter(item => item.direction < 0 || item.kind === "active_risk")
+    classifiedEvidence
+      .filter(item =>
+        (item.direction < 0 || item.kind === "active_risk") &&
+        item.recencyWeight >= 0.25
+      )
       .sort(compareEvidence)
   ).slice(0, 3);
 
   const watching = uniqueEvidence(
-    evidence
+    classifiedEvidence
       .filter(item =>
-        item.kind === "monitoring" ||
-        (item.direction === 0 && item.kind === "intelligence")
+        item.kind === "monitoring" &&
+        item.recencyWeight >= 0.25
       )
       .sort(compareEvidence)
   ).slice(0, 3);
@@ -233,7 +253,7 @@ export function buildClientHealthV2(input = {}) {
       totalDimensions:DIMENSIONS.length,
       ratio:Number(coverageRatio.toFixed(2)),
       recentEvidenceCount:recentEvidence.length,
-      totalEvidenceCount:evidence.length
+      totalEvidenceCount:classifiedEvidence.length
     },
     generatedAt:now.toISOString(),
     lastStrategicReview:null,
@@ -256,18 +276,18 @@ export function buildClientHealthV2(input = {}) {
       whatWeAreWatching
     },
     internal:{
-      scoringRule:"Weighted average of known dimensions only; unknown dimensions reduce confidence, not health.",
+      scoringRule:"Weighted average of known dimensions only. Evidence is assigned to at most two dimensions. Stale evidence is recency-discounted. Unknown dimensions reduce confidence, not health.",
       unknownDimensions:dimensions.filter(item => item.score === null).map(item => item.key),
-      evidenceCount:evidence.length
+      evidenceCount:classifiedEvidence.length,
+      evidenceAssignments:classifiedEvidence.map(item => ({
+        id:item.id,
+        dimensions:item.dimensionKeys
+      }))
     }
   };
 }
 
-function buildDimension(definition, evidence, now) {
-  const matches = evidence.filter(item =>
-    definition.patterns.some(pattern => pattern.test(item.searchText))
-  );
-
+function buildDimension(definition, matches) {
   if (!matches.length) {
     return {
       key:definition.key,
@@ -277,39 +297,87 @@ function buildDimension(definition, evidence, now) {
       status:"Unknown",
       trend:"Unknown",
       confidence:"Low",
+      confidenceScore:0,
       evidenceCount:0,
       recentEvidenceCount:0,
-      summary:"Not enough durable evidence is available yet."
+      reason:"Not enough durable evidence is available yet.",
+      summary:"Not enough durable evidence is available yet.",
+      primaryEvidence:[]
     };
   }
 
-  let score = 70;
-  let directionTotal = 0;
-  let riskPenalty = 0;
   let positiveLift = 0;
+  let negativePenalty = 0;
+  let trendSignal = 0;
+  let evidenceStrength = 0;
 
   for (const item of matches) {
-    directionTotal += item.direction;
-    if (item.direction > 0) positiveLift += Math.min(8, 4 + item.importance);
-    if (item.direction < 0) riskPenalty += Math.min(12, 6 + item.importance);
-    if (item.kind === "active_risk") riskPenalty += 8;
-    if (item.kind === "completed_proof" && item.direction >= 0) positiveLift += 4;
+    const reliability = evidenceReliability(item);
+    const strength =
+      Math.max(1, item.importance) *
+      item.recencyWeight *
+      reliability;
+
+    evidenceStrength += strength;
+    trendSignal += item.direction * strength;
+
+    if (item.direction > 0) {
+      positiveLift += (2.25 + (item.importance * 1.15)) *
+        item.recencyWeight *
+        reliability;
+    }
+
+    if (item.direction < 0) {
+      negativePenalty += (3.5 + (item.importance * 1.65)) *
+        item.recencyWeight *
+        reliability;
+    }
+
+    if (item.kind === "active_risk") {
+      negativePenalty += 5.5 * item.recencyWeight;
+    }
   }
 
+  let score = 70;
   score += Math.min(20, positiveLift);
-  score -= Math.min(40, riskPenalty);
-  score = clamp(Math.round(score), 20, 96);
+  score -= Math.min(38, negativePenalty);
+  score = clamp(Math.round(score), 25, 95);
 
   const recent = matches.filter(item => item.ageDays <= 45);
+  const recentRatio = matches.length ? recent.length / matches.length : 0;
+  const recencyStrength = matches.length
+    ? matches.reduce((sum, item) => sum + item.recencyWeight, 0) / matches.length
+    : 0;
+
   const dimensionConfidenceScore = Math.round(
-    Math.min(100, 35 + Math.min(matches.length, 5) * 9 + (recent.length ? 20 : 0))
+    Math.min(
+      100,
+      20 +
+      (Math.min(matches.length, 5) * 8) +
+      (recentRatio * 25) +
+      (recencyStrength * 15)
+    )
   );
 
-  const trend = directionTotal >= 2
+  const trend = trendSignal >= 2.5
     ? "Improving"
-    : directionTotal <= -2
+    : trendSignal <= -2.5
       ? "Declining"
       : "Stable";
+
+  const primaryEvidence = uniqueEvidence(
+    matches.slice().sort(compareEvidence)
+  ).slice(0, 3).map(clientSafeEvidenceText);
+
+  const reason = buildDimensionReason({
+    definition,
+    score,
+    trend,
+    matches,
+    recent,
+    primaryEvidence,
+    evidenceStrength
+  });
 
   return {
     key:definition.key,
@@ -319,71 +387,142 @@ function buildDimension(definition, evidence, now) {
     status:dimensionStatus(score),
     trend,
     confidence:confidenceLabel(dimensionConfidenceScore),
+    confidenceScore:dimensionConfidenceScore,
     evidenceCount:matches.length,
     recentEvidenceCount:recent.length,
-    summary:dimensionSummary(matches, trend)
+    reason,
+    summary:reason,
+    primaryEvidence
   };
 }
 
+function classifyEvidenceDimensions(item) {
+  const candidates = [];
+
+  for (const definition of DIMENSIONS) {
+    const matchScore = dimensionMatchScore(definition, item);
+    if (matchScore > 0) {
+      candidates.push({ key:definition.key, matchScore });
+    }
+  }
+
+  candidates.sort((a, b) =>
+    b.matchScore - a.matchScore ||
+    DIMENSION_BY_KEY.get(b.key).weight - DIMENSION_BY_KEY.get(a.key).weight
+  );
+
+  const selected = [];
+
+  for (const candidate of candidates) {
+    if (selected.length >= 2) break;
+
+    if (
+      candidate.key === "risk_attention" ||
+      !selected.length ||
+      candidate.matchScore >= Math.max(2, candidates[0].matchScore - 1)
+    ) {
+      selected.push(candidate.key);
+    }
+  }
+
+  return selected;
+}
+
+function dimensionMatchScore(definition, item) {
+  if (definition.key === "business_performance") {
+    if (!item.outcomeText) return 0;
+    return countPatternMatches(definition.patterns, item.outcomeText);
+  }
+
+  if (definition.key === "risk_attention" && item.kind === "active_risk") {
+    return 5 + countPatternMatches(definition.patterns, item.searchText);
+  }
+
+  const score = countPatternMatches(definition.patterns, item.searchText);
+
+  if (definition.key === "opportunity") {
+    return score > 0 && /\b(?:opportunit|growth opportunity|expansion opportunity|new market|new keyword|launch opportunity)/i.test(item.searchText)
+      ? score
+      : 0;
+  }
+
+  return score;
+}
+
+function countPatternMatches(patterns, value) {
+  return patterns.reduce(
+    (count, pattern) => count + (pattern.test(value) ? 1 : 0),
+    0
+  );
+}
+
 function evidenceFromIntelligence(item, now) {
+  const subject = text(item.subject || item.what_happened || item.whatHappened || "Client intelligence");
+  const whatHappened = text(item.what_happened || item.whatHappened);
+  const businessMeaning = text(item.business_meaning || item.businessMeaning);
+  const recommendedAction = text(item.recommended_action || item.recommendedAction);
+
   const body = joinText(
-    item.subject,
-    item.what_happened,
-    item.whatHappened,
-    item.business_meaning,
-    item.businessMeaning,
-    item.recommended_action,
-    item.recommendedAction,
-    item.trend,
-    item.importance,
-    item.handling_state,
-    item.handlingState
+    subject,
+    whatHappened,
+    businessMeaning,
+    recommendedAction
   );
   if (!body) return null;
 
-  const direction = directionFromText(body, item.trend);
+  const direction = directionFromText(
+    joinText(whatHappened, businessMeaning),
+    item.trend
+  );
   const status = normalize(item.status);
   const handling = normalize(item.handling_state || item.handlingState);
 
   return makeEvidence({
     id:`intelligence:${item.id || "unknown"}`,
-    title:text(item.subject || item.what_happened || item.whatHappened || "Client intelligence"),
-    summary:text(item.business_meaning || item.businessMeaning || item.what_happened || item.whatHappened),
+    title:subject,
+    summary:businessMeaning || whatHappened || subject,
     searchText:body,
+    outcomeText:joinText(whatHappened, businessMeaning),
     direction,
     importance:importanceValue(item.importance),
-    kind:handling === "monitoring" || MONITORING_STATUSES.has(status) ? "monitoring" : "intelligence",
+    kind:handling === "monitoring" || MONITORING_STATUSES.has(status)
+      ? "monitoring"
+      : "intelligence",
     observedAt:item.last_observed_at || item.lastObservedAt || item.first_observed_at || item.created_at,
     now
   });
 }
 
 function evidenceFromActivity(item, now) {
+  const actualImpact = text(item.actual_impact);
   const body = joinText(
     item.category,
     item.activity,
+    actualImpact,
     item.expected_impact,
-    item.actual_impact,
     item.notes,
     item.source_type,
-    item.evidence_type,
-    item.priority,
-    item.status
+    item.evidence_type
   );
   if (!body) return null;
 
-  const direction = directionFromText(body);
+  const direction = directionFromText(actualImpact || item.notes);
   const category = normalize(item.category);
   const sourceType = normalize(item.source_type);
 
   return makeEvidence({
     id:`activity:${item.id || "unknown"}`,
     title:text(item.activity || item.category || "Activity"),
-    summary:text(item.actual_impact || item.expected_impact || item.activity),
+    summary:actualImpact || text(item.activity || item.category),
     searchText:body,
+    outcomeText:actualImpact,
     direction,
     importance:importanceValue(item.priority),
-    kind:category.includes("monitor") || sourceType.includes("monitor") ? "monitoring" : item.win ? "completed_proof" : "activity",
+    kind:category.includes("monitor") || sourceType.includes("monitor")
+      ? "monitoring"
+      : item.win
+        ? "completed_proof"
+        : "activity",
     observedAt:item.activity_date || item.created_at,
     now
   });
@@ -397,9 +536,7 @@ function evidenceFromInvestigation(item, now) {
     item.title,
     item.description,
     item.finding_summary,
-    item.recommendation,
-    item.priority,
-    item.status
+    item.recommendation
   );
   if (!body) return null;
 
@@ -408,6 +545,7 @@ function evidenceFromInvestigation(item, now) {
     title:text(item.title || "Open investigation"),
     summary:text(item.finding_summary || item.description || item.recommendation || item.title),
     searchText:body,
+    outcomeText:text(item.finding_summary),
     direction:-1,
     importance:importanceValue(item.priority) + 1,
     kind:"active_risk",
@@ -418,14 +556,13 @@ function evidenceFromInvestigation(item, now) {
 
 function evidenceFromWork(item, now) {
   const status = normalize(item.status);
+  const actualImpact = text(item.actual_impact);
   const body = joinText(
     item.title,
     item.description,
     item.expected_impact,
-    item.actual_impact,
-    item.category,
-    item.priority,
-    item.status
+    actualImpact,
+    item.category
   );
   if (!body) return null;
 
@@ -433,9 +570,10 @@ function evidenceFromWork(item, now) {
     return makeEvidence({
       id:`work:${item.id || "unknown"}`,
       title:text(item.title || "Completed work"),
-      summary:text(item.actual_impact || item.expected_impact || item.description || item.title),
+      summary:actualImpact || text(item.title || item.description),
       searchText:body,
-      direction:directionFromText(body) || (item.actual_impact ? 1 : 0),
+      outcomeText:actualImpact,
+      direction:actualImpact ? directionFromText(actualImpact) : 0,
       importance:importanceValue(item.priority),
       kind:"completed_proof",
       observedAt:item.completed_at || item.updated_at || item.created_at,
@@ -446,9 +584,10 @@ function evidenceFromWork(item, now) {
   return makeEvidence({
     id:`work:${item.id || "unknown"}`,
     title:text(item.title || "Open work"),
-    summary:text(item.description || item.expected_impact || item.title),
+    summary:text(item.title || item.description),
     searchText:body,
-    direction:directionFromText(body),
+    outcomeText:"",
+    direction:0,
     importance:importanceValue(item.priority),
     kind:"open_work",
     observedAt:item.updated_at || item.started_at || item.created_at,
@@ -460,7 +599,7 @@ function evidenceFromAlert(item, now) {
   const status = normalize(item.status);
   if (CLOSED_STATUSES.has(status)) return null;
 
-  const body = joinText(item.title, item.description, item.severity, item.status);
+  const body = joinText(item.title, item.description);
   if (!body) return null;
 
   return makeEvidence({
@@ -468,6 +607,7 @@ function evidenceFromAlert(item, now) {
     title:text(item.title || "Active alert"),
     summary:text(item.description || item.title),
     searchText:body,
+    outcomeText:text(item.description),
     direction:-1,
     importance:importanceValue(item.severity) + 1,
     kind:"active_risk",
@@ -481,6 +621,7 @@ function makeEvidence({
   title,
   summary,
   searchText,
+  outcomeText,
   direction,
   importance,
   kind,
@@ -488,16 +629,22 @@ function makeEvidence({
   now
 }) {
   const observed = validDate(observedAt);
+  const ageDays = observed
+    ? Math.max(0, Math.floor((now - observed) / 86400000))
+    : 9999;
+
   return {
     id,
     title,
     summary,
     searchText,
+    outcomeText:text(outcomeText),
     direction:clamp(Number(direction) || 0, -1, 1),
     importance:clamp(Number(importance) || 1, 1, 4),
     kind,
     observedAt:observed ? observed.toISOString() : null,
-    ageDays:observed ? Math.max(0, Math.floor((now - observed) / 86400000)) : 9999
+    ageDays,
+    recencyWeight:recencyWeight(ageDays)
   };
 }
 
@@ -510,22 +657,72 @@ function directionFromText(value, explicitTrend) {
   const body = text(value);
   const negative = NEGATIVE_RE.test(body);
   const positive = POSITIVE_RE.test(body);
+
   if (negative && !positive) return -1;
   if (positive && !negative) return 1;
   if (STABLE_RE.test(body)) return 0;
   return 0;
 }
 
+function recencyWeight(ageDays) {
+  if (ageDays <= 30) return 1;
+  if (ageDays <= 60) return 0.75;
+  if (ageDays <= 90) return 0.5;
+  if (ageDays <= 180) return 0.25;
+  if (ageDays <= 365) return 0.1;
+  return 0.05;
+}
+
+function evidenceReliability(item) {
+  if (item.kind === "active_risk") return 1;
+  if (item.kind === "completed_proof") return 1;
+  if (item.kind === "intelligence") return 0.9;
+  if (item.kind === "monitoring") return 0.75;
+  if (item.kind === "activity") return 0.75;
+  if (item.kind === "open_work") return 0.35;
+  return 0.6;
+}
+
 function overallTrend(evidence) {
-  const recent = evidence.filter(item => item.ageDays <= 45);
-  if (!recent.length) return "Unknown";
-  const total = recent.reduce(
-    (sum, item) => sum + (item.direction * Math.max(1, item.importance)),
+  const relevant = evidence.filter(item => item.ageDays <= 60);
+  if (!relevant.length) return "Unknown";
+
+  const total = relevant.reduce(
+    (sum, item) =>
+      sum +
+      (
+        item.direction *
+        Math.max(1, item.importance) *
+        item.recencyWeight *
+        evidenceReliability(item)
+      ),
     0
   );
-  if (total >= 4) return "Improving";
-  if (total <= -4) return "Declining";
+
+  if (total >= 5) return "Improving";
+  if (total <= -5) return "Declining";
   return "Stable";
+}
+
+function buildDimensionReason({
+  definition,
+  score,
+  trend,
+  matches,
+  recent,
+  primaryEvidence
+}) {
+  const recentPhrase = recent.length
+    ? `${recent.length} recent source${recent.length === 1 ? "" : "s"}`
+    : "no recent evidence";
+
+  const evidencePhrase = `${matches.length} supporting source${matches.length === 1 ? "" : "s"}`;
+
+  const primary = primaryEvidence[0]
+    ? ` Primary evidence: ${primaryEvidence[0]}`
+    : "";
+
+  return `${definition.label} is ${dimensionStatus(score).toLowerCase()} at ${score}/100 with a ${trend.toLowerCase()} trend, based on ${evidencePhrase} (${recentPhrase}).${primary}`;
 }
 
 function chooseHighestValueMove({ workItems, investigations, negatives }) {
@@ -573,26 +770,35 @@ function comparePriorityRecency(a, b) {
     if (n === "low") return 3;
     return 4;
   };
+
   const priority = rank(a.priority) - rank(b.priority);
   if (priority) return priority;
-  return dateNumber(b.updated_at || b.created_at) - dateNumber(a.updated_at || a.created_at);
+
+  return dateNumber(b.updated_at || b.created_at) -
+    dateNumber(a.updated_at || a.created_at);
 }
 
 function compareEvidence(a, b) {
+  const recency = b.recencyWeight - a.recencyWeight;
+  if (recency) return recency;
+
   const importance = b.importance - a.importance;
   if (importance) return importance;
+
   return a.ageDays - b.ageDays;
 }
 
 function uniqueEvidence(items) {
   const seen = new Set();
   const output = [];
+
   for (const item of items) {
     const key = normalize(item.title || item.summary);
     if (!key || seen.has(key)) continue;
     seen.add(key);
     output.push(item);
   }
+
   return output;
 }
 
@@ -639,13 +845,6 @@ function clipClientText(value, limit) {
   return `${clipped}…`;
 }
 
-function dimensionSummary(matches, trend) {
-  const top = uniqueEvidence(matches.slice().sort(compareEvidence))[0];
-  if (!top) return "Evidence is available.";
-  const core = clientSafeEvidenceText(top);
-  return core ? `${trend}: ${core}` : trend;
-}
-
 function healthStatus(score, confidenceScore) {
   if (!Number.isFinite(score)) return "Insufficient Evidence";
   if (confidenceScore < 25) return "Low-Confidence Estimate";
@@ -682,7 +881,10 @@ function normalize(value) {
 }
 
 function joinText(...values) {
-  return values.filter(value => value !== null && value !== undefined && text(value)).map(text).join(" ");
+  return values
+    .filter(value => value !== null && value !== undefined && text(value))
+    .map(text)
+    .join(" ");
 }
 
 function text(value) {
