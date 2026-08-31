@@ -1,0 +1,145 @@
+name: One-Time MediaForge Kristy LX40 LX50 Commit
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/one-time-mediaforge-kristy-lx-commit.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  finish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+
+      - name: Apply final Lincoln Signature naming convention
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+
+          def replace(path, old, new, count=None):
+              p=Path(path); text=p.read_text(); found=text.count(old)
+              if found == 0: raise SystemExit(f"Expected text not found in {path}: {old[:100]!r}")
+              if count is not None and found != count: raise SystemExit(f"Expected {count} matches in {path}, found {found}")
+              p.write_text(text.replace(old,new))
+
+          replace("mediaforge/naming.js", "Version: 1.1.0", "Version: 1.1.1", 1)
+          replace("mediaforge/naming.js", 'export const NAMING_ENGINE_VERSION = "1.1.0";', 'export const NAMING_ENGINE_VERSION = "1.1.1";', 1)
+          replace("mediaforge/naming.js", 'instructions: "Reusable Lincoln Signature Interior recipe. Size is parsed from the source filename. White Ivory Gloss and Black Gloss source variants are normalized to the established Lincoln naming convention. Textured Bronze is the next unique Lincoln exterior sequence after the established 22-position variant list.",', 'instructions: "Reusable Lincoln Signature Interior recipe using the accepted Lincoln 25 v2 convention. Size is parsed from the source filename. White Ivory Gloss and Black Gloss source variants are normalized. Textured Bronze is intentionally unresolved because the accepted Lincoln 25 job identified it as a Liberty source naming mistake.",', 1)
+          replace("mediaforge/naming.js", '      "Textured Bronze = 23"\n', '', 1)
+          replace("mediaforge/naming.js", '{ key: "suffix", label: "Suffix", enabled: true, source: "fixed", value: "Interior" }', '{ key: "suffix", label: "Suffix", enabled: false, source: "fixed", value: "Interior" }', 2)
+          replace("mediaforge/naming.js", 'record.exteriorColor = cleanText(m[2]);', 'record.exteriorColor = cleanText(m[2]).replace(/[-\\s]+$/g, "");', 1)
+          replace("mediaforge/naming.js", 'const size = source.match(/(?:^|[-_ ])(08|12|17|25)(?:[-_ ]|$)/i);', 'const size = source.match(/(?:^|[-_ ])(08|12|17|25|40|50)(?:[-_ ]|$)/i);', 1)
+
+          replace("mediaforge/naming-ui.js", "Version: 1.0.1", "Version: 1.0.2", 1)
+          replace("mediaforge/naming-ui.js", './naming.js?v=1.1.0', './naming.js?v=1.1.1', 1)
+          replace("mediaforge/index.html", "Version: 2.2.1", "Version: 2.2.2", 1)
+          replace("mediaforge/index.html", "Version 2.2.1 · Flexible Naming Recipes", "Version 2.2.2 · Flexible Naming Recipes", 1)
+          replace("mediaforge/index.html", './naming-ui.js?v=1.0.1', './naming-ui.js?v=1.0.2', 1)
+
+          p=Path("tests/mediaforgeNamingRecipe.test.js")
+          text=p.read_text().replace("Version: 1.1.0", "Version: 1.1.1", 1)
+          replacements={
+            '"liberty-lincoln-25-9-bronze-gloss-signature-interior-loaded-interior.webp"':'"liberty-lincoln-25-9-bronze-gloss-signature-interior-loaded.webp"',
+            '"liberty-lincoln-40-6-white-gloss-signature-interior-loaded-interior.webp"':'"liberty-lincoln-40-6-white-gloss-signature-interior-loaded.webp"',
+            '"liberty-lincoln-40-14-black-gloss-signature-interior-empty-interior.webp"':'"liberty-lincoln-40-14-black-gloss-signature-interior-empty.webp"',
+            '"liberty-lincoln-50-12-burgundy-gloss-signature-interior-loaded-interior.webp"':'"liberty-lincoln-50-12-burgundy-gloss-signature-interior-loaded.webp"',
+            '"LIBERTY_LINCOLN_25_9_BRONZE_GLOSS_BC_SIGNATURE_INTERIOR_LOADED_INTERIOR.webp"':'"LIBERTY_LINCOLN_25_9_BRONZE_GLOSS_BC_SIGNATURE_INTERIOR_LOADED.webp"',
+            '"Version 2.2.0"':'"Version 2.2.2"',
+            "'src=\"./naming-ui.js\"'":"'src=\"./naming-ui.js?v=1.0.2\"'"
+          }
+          for old,new in replacements.items(): text=text.replace(old,new)
+          old='''assert.equal(lx50Textured.ready, true);\nassert.equal(\n  lx50Textured.filename,\n  "liberty-lincoln-50-23-textured-bronze-signature-interior-full-no-guns-interior.webp"\n);'''
+          new='''assert.equal(lx50Textured.ready, false);\nassert.ok(lx50Textured.missing.includes("Color Order"));'''
+          if old not in text: raise SystemExit("Expected LX50 Textured Bronze test block not found")
+          text=text.replace(old,new,1)
+          marker='''const lx50Burgundy = buildProposedName(\n  reusable,\n  inferFileRecord("LX-Sig-50-Burgundy Gloss-Open-Loaded-ProFlex-interior.webp")\n);'''
+          insert='''const lx50DoubleHyphen = buildProposedName(\n  reusable,\n  inferFileRecord("LX-Sig-50-Champagne Marble--Open-Empty-ProFlex-interior.webp")\n);\nassert.equal(lx50DoubleHyphen.ready, true);\nassert.equal(\n  lx50DoubleHyphen.filename,\n  "liberty-lincoln-50-2-champagne-marble-signature-interior-empty.webp"\n);\n\n'''
+          if marker not in text: raise SystemExit("LX50 Burgundy marker missing")
+          text=text.replace(marker,insert+marker,1)
+          p.write_text(text)
+          PY
+
+      - name: Test final naming engine
+        run: npm run test:mediaforge-naming
+
+      - name: Build final Kristy ZIPs and manifests
+        shell: bash
+        run: |
+          mkdir -p /tmp/mediaforge mediaforge/downloads
+          cat temp/mediaforge-input/lx40/part-*.b64 | base64 -d > /tmp/mediaforge/lx40.zip
+          cat temp/mediaforge-input/lx50/part-*.b64 | base64 -d > /tmp/mediaforge/lx50.zip
+          python <<'PY'
+          import csv, os, re, zipfile
+          from pathlib import Path
+
+          COLORS={
+            "white marble":(1,"white-marble"),"champagne marble":(2,"champagne-marble"),"gray marble":(3,"gray-marble"),"burgundy marble":(4,"burgundy-marble"),"green marble":(5,"green-marble"),
+            "white ivory gloss":(6,"white-gloss"),"white gloss":(6,"white-gloss"),"champagne gloss":(7,"champagne-gloss"),"gray gloss":(8,"gray-gloss"),"bronze gloss":(9,"bronze-gloss"),
+            "forest mist gloss":(10,"forest-mist-gloss"),"green gloss":(11,"green-gloss"),"burgundy gloss":(12,"burgundy-gloss"),"black cherry gloss":(13,"black-cherry-gloss"),
+            "black gloss(sv and bv)":(14,"black-gloss"),"black gloss":(14,"black-gloss"),"blue gloss":(22,"blue-gloss")
+          }
+          OUT=Path("mediaforge/downloads")
+
+          def parse(name,size):
+            base=os.path.basename(name)
+            m=re.match(rf"^LX-Sig-{size}-(.+?)-+Open-(.+?)-interior\.webp$",base,re.I)
+            if not m: raise ValueError(f"Unrecognized source filename: {name}")
+            color=re.sub(r"[-\s]+$","",m.group(1)).strip(); tail=m.group(2)
+            if re.search(r"full\s*no\s*guns",tail,re.I): state="full-no-guns"
+            elif re.search(r"loaded",tail,re.I): state="loaded"
+            elif re.search(r"empty",tail,re.I): state="empty"
+            else: raise ValueError(f"Unrecognized state: {name}")
+            key=color.lower().strip()
+            if key=="textured bronze": return None,"textured-bronze",state
+            if key not in COLORS: raise ValueError(f"Unmapped color {color!r}: {name}")
+            order,slug=COLORS[key]
+            return f"liberty-lincoln-{size}-{order}-{slug}-signature-interior-{state}.webp",slug,state
+
+          for size,expected_ready in [(40,42),(50,45)]:
+            source=Path(f"/tmp/mediaforge/lx{size}.zip")
+            output=OUT/f"kristy-lincoln-{size}-signature-interiors-renamed.zip"
+            manifest=OUT/f"kristy-lincoln-{size}-signature-interiors-manifest.csv"
+            rows=[]; seen=set(); ready=excluded=0
+            with zipfile.ZipFile(source) as zin, zipfile.ZipFile(output,"w",zipfile.ZIP_DEFLATED,compresslevel=9) as zout:
+              for info in zin.infolist():
+                if info.is_dir(): continue
+                final,color,state=parse(info.filename,size)
+                if final is None:
+                  excluded+=1
+                  rows.append([info.filename,"","",color,state,"yes","excluded — Liberty source naming mistake"])
+                  continue
+                if final in seen: raise ValueError(f"Duplicate output {final}")
+                seen.add(final); ready+=1; zout.writestr(final,zin.read(info.filename))
+                order=final.split("-")[3]
+                rows.append([info.filename,final,order,color,state,"yes","ready"])
+            if ready!=expected_ready or excluded!=3: raise ValueError(f"LX{size} expected {expected_ready}/3, got {ready}/{excluded}")
+            with zipfile.ZipFile(output) as z:
+              if len(z.namelist())!=ready: raise ValueError("ZIP count mismatch")
+              if any(not re.search(r"signature-interior-(?:empty|loaded|full-no-guns)\.webp$",n) for n in z.namelist()): raise ValueError("Naming contract failure")
+            with manifest.open("w",newline="") as f:
+              w=csv.writer(f); w.writerow(["original_filename","final_filename","order","color","state","bytes_preserved","status"]); w.writerows(rows)
+            print(f"LX{size}_FINAL ready={ready} excluded={excluded} zip={output.stat().st_size} manifest={manifest.stat().st_size}")
+          PY
+
+      - name: Commit MediaForge engine and Kristy deliverables
+        shell: bash
+        run: |
+          git config user.name "globalconceptsmediallc-oss"
+          git config user.email "globalconceptsmediallc@gmail.com"
+          git add mediaforge/naming.js mediaforge/naming-ui.js mediaforge/index.html tests/mediaforgeNamingRecipe.test.js mediaforge/downloads/
+          git commit -m "Finish Kristy Lincoln 40 and 50 Signature Interior requests"
+          git pull --rebase origin main
+          git push origin HEAD:main
