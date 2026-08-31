@@ -1,0 +1,57 @@
+name: One-Time MediaForge Kristy LX Inspect
+
+on:
+  push:
+    paths:
+      - ".github/workflows/one-time-mediaforge-kristy-lx-inspect.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Reassemble source ZIPs
+        shell: bash
+        run: |
+          mkdir -p /tmp/mediaforge
+          cat temp/mediaforge-input/lx40/part-*.b64 | base64 -d > /tmp/mediaforge/lx40.zip
+          cat temp/mediaforge-input/lx50/part-*.b64 | base64 -d > /tmp/mediaforge/lx50.zip
+          unzip -t /tmp/mediaforge/lx40.zip
+          unzip -t /tmp/mediaforge/lx50.zip
+
+      - name: Inspect filenames and image metadata
+        shell: bash
+        run: |
+          python <<'PY'
+          import json, zipfile, io
+          from PIL import Image
+
+          for label in ("lx40","lx50"):
+              path=f"/tmp/mediaforge/{label}.zip"
+              rows=[]
+              with zipfile.ZipFile(path) as z:
+                  for name in z.namelist():
+                      if name.endswith("/"):
+                          continue
+                      info=z.getinfo(name)
+                      width=height=None
+                      try:
+                          with z.open(name) as f:
+                              data=f.read()
+                          with Image.open(io.BytesIO(data)) as im:
+                              width,height=im.size
+                      except Exception:
+                          pass
+                      rows.append({
+                          "name":name,
+                          "size":info.file_size,
+                          "width":width,
+                          "height":height
+                      })
+              print(f"{label.upper()}_FILES "+json.dumps(rows))
+          PY
