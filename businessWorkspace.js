@@ -2,7 +2,7 @@
  * GCM OS — Business Workspace Runtime
  *
  * File: businessWorkspace.js
- * Version: 1.0.1
+ * Version: 1.0.2
  *
  * Responsibility:
  * 1. Load a Business Record.
@@ -18,8 +18,8 @@
 (function initializeBusinessWorkspace(globalScope) {
   "use strict";
 
-  const RUNTIME_VERSION = "1.0.1";
-  const SUPPORTED_SCHEMA_VERSION = "1.1.0";
+  const RUNTIME_VERSION = "1.0.2";
+  const SUPPORTED_SCHEMA_VERSIONS = new Set(["1.1.0", "1.2.0"]);
   const DEFAULT_DATA_DIRECTORY = "data";
   const DEFAULT_RECENT_ACTIVITY_DAYS = 14;
 
@@ -43,6 +43,7 @@
     getRecord,
     getBusiness,
     getRelationship,
+    getClientHealthV2,
     getWorkspace,
     getExecutive,
 
@@ -262,6 +263,11 @@
   function getRelationship() {
     assertRecordLoaded();
     return deepClone(state.record.relationship);
+  }
+
+  function getClientHealthV2() {
+    assertRecordLoaded();
+    return deepClone(state.record.clientHealthV2 || null);
   }
 
   /**
@@ -1092,14 +1098,45 @@
 
     if (
       typeof record.schemaVersion === "string" &&
-      record.schemaVersion !== SUPPORTED_SCHEMA_VERSION
+      !SUPPORTED_SCHEMA_VERSIONS.has(record.schemaVersion)
     ) {
       errors.push(
         createValidationMessage(
           "schemaVersion",
-          `Unsupported schema version "${record.schemaVersion}". Expected "${SUPPORTED_SCHEMA_VERSION}".`
+          `Unsupported schema version "${record.schemaVersion}". Expected one of: ${[...SUPPORTED_SCHEMA_VERSIONS].join(", ")}.`
         )
       );
+    }
+
+    if (record.schemaVersion === "1.2.0") {
+      requireObject(record, "clientHealthV2", errors);
+
+      if (isPlainObject(record.clientHealthV2)) {
+        requireString(
+          record.clientHealthV2,
+          "status",
+          errors,
+          "clientHealthV2.status"
+        );
+        requireString(
+          record.clientHealthV2,
+          "trend",
+          errors,
+          "clientHealthV2.trend"
+        );
+        requireString(
+          record.clientHealthV2,
+          "confidence",
+          errors,
+          "clientHealthV2.confidence"
+        );
+        requireObject(
+          record.clientHealthV2,
+          "clientSafeSummary",
+          errors,
+          "clientHealthV2.clientSafeSummary"
+        );
+      }
     }
 
     if (
