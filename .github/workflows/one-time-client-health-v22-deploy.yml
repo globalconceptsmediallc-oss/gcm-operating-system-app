@@ -1,5 +1,5 @@
 name: One-Time Client Health v2.2 Deploy
-# rerun: stale-neutral
+# rerun: false-outcome-filter
 
 on:
   push:
@@ -51,8 +51,8 @@ jobs:
               throw new Error(data?.error || `HTTP ${response.status}`);
             }
             const h = data?.record?.clientHealthV2;
-            if (h?.version !== "2.2.0") {
-              throw new Error(`${clientCode} expected Client Health 2.2.0, got ${h?.version || "missing"}`);
+            if (h?.version !== "2.2.1") {
+              throw new Error(`${clientCode} expected Client Health 2.2.1, got ${h?.version || "missing"}`);
             }
             console.log(`${clientCode}_HEALTH`, JSON.stringify({
               score:h.score,
