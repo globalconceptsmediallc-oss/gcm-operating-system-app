@@ -394,8 +394,7 @@ function buildDimension(definition, matches) {
     trend,
     matches,
     recent,
-    primaryEvidence,
-    evidenceStrength
+    primaryEvidence
   });
 
   return {
@@ -618,7 +617,7 @@ function evidenceFromWork(item, now) {
       direction:actualImpact ? directionFromText(actualImpact) : 0,
       importance:importanceValue(item.priority),
       kind:"completed_proof",
-        sourceReference:item.source_reference || item.sourceReference,
+      sourceReference:item.source_reference || item.sourceReference,
       observedAt:item.completed_at || item.updated_at || item.created_at,
       now
     });
