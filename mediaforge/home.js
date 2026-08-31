@@ -1,7 +1,7 @@
 /* =========================================================
 MediaForge
 File: home.js
-Version: 1.0.0
+Version: 1.0.1
 Status: Production Candidate
 Purpose: User-friendly task launcher and simple workflows for rename,
          website preparation, unknown-image routing, and job analysis.
@@ -74,6 +74,24 @@ function status(el, message, tone = "") {
 
 function classifyJob(files) {
   const names = files.map(file => file.name);
+
+  const alreadyRenamed = names
+    .map(name => name.match(/^liberty-lincoln-(25|40|50)-\d+-.+?-signature-interior-(?:empty|loaded|full-no-guns)\.webp$/i))
+    .filter(Boolean);
+
+  if (alreadyRenamed.length && alreadyRenamed.length === files.length) {
+    const sizes = [...new Set(alreadyRenamed.map(match => match[1]))];
+    return {
+      task: "rename",
+      recipeId: "liberty-lincoln-signature-interiors",
+      alreadyNamed: true,
+      title: sizes.length === 1
+        ? `Lincoln ${sizes[0]} Signature Interiors`
+        : `Lincoln ${sizes.join(" / ")} Signature Interiors`,
+      detail: "These files already match the approved Lincoln naming pattern. MediaForge will verify the batch and keep correct names unchanged."
+    };
+  }
+
   const lincoln = names
     .map(name => name.match(/LX-Sig-(25|40|50)-/i)?.[1])
     .filter(Boolean);
@@ -82,6 +100,8 @@ function classifyJob(files) {
     const sizes = [...new Set(lincoln)];
     return {
       task: "rename",
+      recipeId: "liberty-lincoln-signature-interiors",
+      alreadyNamed: false,
       title: sizes.length === 1
         ? `Lincoln ${sizes[0]} Signature Interiors`
         : `Lincoln ${sizes.join(" / ")} Signature Interiors`,
@@ -90,12 +110,14 @@ function classifyJob(files) {
   }
 
   const generic = names.filter(name =>
-    /^(?:img|image|dsc|photo|untitled|screenshot)[-_ ]?d*/i.test(name)
+    /^(?:img|image|dsc|photo|untitled|screenshot)[-_ ]?\d*/i.test(name)
   ).length;
 
   if (generic >= Math.max(1, Math.ceil(files.length * 0.5))) {
     return {
       task: "identify",
+      recipeId: "",
+      alreadyNamed: false,
       title: "Unknown / generic product images",
       detail: "The filenames are not reliable enough to identify the variants."
     };
@@ -103,6 +125,8 @@ function classifyJob(files) {
 
   return {
     task: "prepare",
+    recipeId: "",
+    alreadyNamed: false,
     title: "Website image preparation",
     detail: "The filenames are usable; MediaForge can center, size, convert, and optimize the images."
   };
@@ -207,8 +231,8 @@ async function loadRenameFiles(fileList) {
   const job = classifyJob(files);
 
   const preset = $("namingPreset");
-  if (job.task === "rename" && preset) {
-    preset.value = "liberty-lincoln-signature-interiors";
+  if (job.task === "rename" && job.recipeId && preset) {
+    preset.value = job.recipeId;
     preset.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
@@ -217,9 +241,13 @@ async function loadRenameFiles(fileList) {
   status(
     renameStatus,
     job.task === "rename"
-      ? "Recipe detected. MediaForge has sent the files to the rename preview below."
-      : "Files loaded. Review the selected recipe before building the ZIP.",
-    "success"
+      ? (
+          job.alreadyNamed
+            ? "These files are already in the approved naming format. MediaForge is verifying them below and will keep correct names unchanged."
+            : "Recipe detected. MediaForge has sent the files to the rename preview below."
+        )
+      : "Files loaded. MediaForge could not prove a naming recipe, so review Advanced settings before building the ZIP.",
+    job.task === "rename" ? "success" : "warning"
   );
 
   window.dispatchEvent(new CustomEvent("mediaforge:naming-files", {
@@ -484,7 +512,8 @@ analyzeGo?.addEventListener("click", () => {
     setTimeout(() => {
       const preset = $("namingPreset");
       if (preset) {
-        preset.value = "liberty-lincoln-signature-interiors";
+        const job = classifyJob(files);
+        preset.value = job.recipeId || "liberty-lincoln-signature-interiors";
         preset.dispatchEvent(new Event("change", { bubbles: true }));
       }
       window.dispatchEvent(new CustomEvent("mediaforge:naming-files", {
