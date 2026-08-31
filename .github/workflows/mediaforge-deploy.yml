@@ -1,12 +1,13 @@
 # =========================================================
 # MediaForge
 # File: .github/workflows/mediaforge-deploy.yml
-# Version: 1.0.0
-# Status: Production Deployment
-# Purpose: Test and deploy the source-controlled MediaForge Pages app.
+# Version: 1.1.0
+# Status: Production Validation
+# Purpose: Test the source-controlled MediaForge app that is served from
+#          the GCM OS GitHub Pages deployment.
 # =========================================================
 
-name: MediaForge Deploy
+name: MediaForge Validate
 
 on:
   push:
@@ -15,7 +16,10 @@ on:
     paths:
       - "mediaforge/**"
       - "tests/mediaforgeNamingRecipe.test.js"
+      - "tests/mediaforgeHome.test.js"
       - "package.json"
+      - "shared/gcm-shell.js"
+      - "tests/sharedAssetVersionLock.test.js"
       - ".github/workflows/mediaforge-deploy.yml"
   workflow_dispatch:
 
@@ -24,10 +28,10 @@ permissions:
 
 concurrency:
   group: mediaforge-production
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
-  test-deploy-verify:
+  test-verify:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -45,42 +49,37 @@ jobs:
       - name: Run Production Tests
         run: npm test
 
-      - name: Deploy MediaForge Pages
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PAGES_API_TOKEN || secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_PAGES_ACCOUNT_ID || secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          cd mediaforge
-          npx --yes wrangler@4.122.0 pages deploy . \
-            --project-name=mediaforge-36x \
-            --branch=main \
-            --commit-hash="${GITHUB_SHA}" \
-            --commit-message="MediaForge flexible naming recipes"
-
-      - name: Verify Live MediaForge
-        env:
-          MEDIAFORGE_URL: https://mediaforge-36x.pages.dev
+      - name: Verify MediaForge 3.0 source contract
+        shell: bash
         run: |
           node <<'NODE'
-          const base = process.env.MEDIAFORGE_URL;
-          const pageResponse = await fetch(`${base}/?verify=${Date.now()}`, { cache:"no-store" });
-          if (!pageResponse.ok) throw new Error(`MediaForge page returned HTTP ${pageResponse.status}`);
-          const html = await pageResponse.text();
-          for (const marker of ["Version 2.2.0", "Flexible Naming Recipes", 'id="namingPreset"']) {
-            if (!html.includes(marker)) throw new Error(`Live MediaForge is missing ${marker}`);
+          const fs = await import("node:fs");
+          const html = fs.readFileSync("mediaforge/index.html", "utf8");
+          const home = fs.readFileSync("mediaforge/home.js", "utf8");
+          const shell = fs.readFileSync("shared/gcm-shell.js", "utf8");
+
+          for (const marker of [
+            "Version 3.0.0 · Task-First Workflow",
+            "What do you want to do today?",
+            "Rename Product Images",
+            "Prepare Images for the Website",
+            "Identify Unknown Images",
+            "I'm Not Sure — Analyze My Files",
+            "Catalog &amp; Settings",
+            'src="./home.js?v=1.0.0"'
+          ]) {
+            if (!html.includes(marker)) {
+              throw new Error(`MediaForge source missing: ${marker}`);
+            }
           }
 
-          const catalogResponse = await fetch(`${base}/api/catalog`, { cache:"no-store" });
-          if (!catalogResponse.ok) throw new Error(`MediaForge catalog returned HTTP ${catalogResponse.status}`);
-          const catalog = await catalogResponse.json();
-          if (catalog?.ok !== true || catalog?.version !== "1.8.0") {
-            throw new Error(`Expected catalog 1.8.0, received ${catalog?.version || "unknown"}`);
+          if (!home.includes("extractZipImages")) {
+            throw new Error("MediaForge ZIP intake is missing.");
           }
 
-          const proxyBoundary = await fetch(`${base}/api/reference-image`, { cache:"no-store" });
-          if (proxyBoundary.status !== 400) {
-            throw new Error(`Reference-image boundary expected HTTP 400, received ${proxyBoundary.status}`);
+          if (!shell.includes('mediaforge: { label: "MediaForge", href: "mediaforge/"')) {
+            throw new Error("GCM shell is not pointing at the integrated MediaForge path.");
           }
 
-          console.log("PASS live MediaForge 2.2.0 flexible naming UI + catalog 1.8.0 + reference-image function boundary");
+          console.log("PASS MediaForge 3.0 task-first source contract and integrated GCM OS navigation");
           NODE
