@@ -1,13 +1,13 @@
 /* =========================================================
 MediaForge
 File: home.js
-Version: 1.0.1
+Version: 1.0.2
 Status: Production Candidate
 Purpose: User-friendly task launcher and simple workflows for rename,
          website preparation, unknown-image routing, and job analysis.
 ========================================================= */
 
-import { createStoredZip } from "./naming.js?v=1.1.1";
+import { createStoredZip } from "./naming.js?v=1.2.0";
 
 const $ = id => document.getElementById(id);
 const taskCards = [...document.querySelectorAll("[data-mf-task]")];
@@ -32,7 +32,7 @@ function selectTask(task) {
   taskTitle.textContent = TITLES[task] || "MediaForge";
   taskSections.forEach(section => {
     const modes = String(section.dataset.mfTaskSection || "")
-      .split(/s+/)
+      .split(/\s+/)
       .filter(Boolean);
     section.hidden = !modes.includes(task);
   });
@@ -56,7 +56,7 @@ taskCards.forEach(card => {
 homeBtn?.addEventListener("click", showHome);
 
 function supportedImage(name) {
-  return /.(jpe?g|png|webp)$/i.test(String(name || ""));
+  return /\.(jpe?g|png|webp)$/i.test(String(name || ""));
 }
 
 function imageMime(name) {
@@ -212,7 +212,7 @@ async function filesFromSelection(fileList) {
   const selected = [...(fileList || [])];
   if (!selected.length) return [];
 
-  if (selected.length === 1 && /.zip$/i.test(selected[0].name)) {
+  if (selected.length === 1 && /\.zip$/i.test(selected[0].name)) {
     return extractZipImages(selected[0]);
   }
 
@@ -334,7 +334,7 @@ async function prepareOne(file, width, height, maxBytes) {
   bitmap.close?.();
 
   const result = await encodeWebp(canvas, maxBytes);
-  const stem = file.name.replace(/.[^.]+$/, "");
+  const stem = file.name.replace(/\.[^.]+$/, "");
   return {
     file: result.blob,
     name: `${stem}.webp`,
