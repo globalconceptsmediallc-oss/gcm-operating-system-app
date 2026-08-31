@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/mediaforgeNamingRecipe.test.js
-   Version: 1.2.1
+   Version: 1.3.0
    Status: Production Regression Test
    Purpose: Lock MediaForge flexible naming recipes, aliases,
             sequence maps, job overrides, unresolved-map blocking,
@@ -17,6 +17,7 @@ import {
   parseSequence,
   applyAlias,
   buildProposedName,
+  knownRenameException,
   createStoredZip
 } from "../mediaforge/naming.js";
 
@@ -86,6 +87,20 @@ const lx50Textured = buildProposedName(
 );
 assert.equal(lx50Textured.ready, false);
 assert.ok(lx50Textured.missing.includes("Color Order"));
+const lx50TexturedRecord = inferFileRecord(
+  "LX-Sig-50-Textured Bronze-Open-Full No Guns-ProFlex-interior.webp"
+);
+const knownTexturedException = knownRenameException(
+  reusable,
+  lx50TexturedRecord,
+  buildProposedName(reusable, lx50TexturedRecord)
+);
+assert.equal(knownTexturedException?.label, "Textured Bronze");
+assert.match(
+  knownTexturedException?.reason || "",
+  /leave this file out rather than guess/i
+);
+
 
 const lx50DoubleHyphen = buildProposedName(
   reusable,
@@ -144,16 +159,16 @@ assert.ok(zipText.includes("second.webp"));
 
 const html = fs.readFileSync(new URL("../mediaforge/index.html", import.meta.url), "utf8");
 for (const marker of [
-  "Version 3.0.1",
+  "Version 3.1.0",
   'id="namingPreset"',
   'id="namingAliases"',
   'id="namingSequence"',
   'id="namingZip"',
-  'src="./naming-ui.js?v=1.1.1"'
+  'src="./naming-ui.js?v=1.2.0"'
 ]) {
   assert.ok(html.includes(marker), `Missing MediaForge UI contract: ${marker}`);
 }
 
 console.log(
-  "PASS MediaForge flexible naming recipes, aliases, sequence maps, overrides, unresolved-map blocking, and rename-only ZIP export"
+  "PASS MediaForge naming recipes, known Textured Bronze exclusion, safe ZIP export, and 3.1 road-test UI contract"
 );
