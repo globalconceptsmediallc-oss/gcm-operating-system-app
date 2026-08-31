@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/clientHealthV2.test.js
-   Version: 1.1.0
+   Version: 1.2.0
    Status: Production Regression Test
    Purpose: Lock Client Health v2 to evidence-based scoring where unknown
             dimensions reduce confidence rather than health.
@@ -13,7 +13,7 @@ import {
   buildClientHealthV2
 } from "../shared/clientHealthV2.js";
 
-assert.equal(CLIENT_HEALTH_V2_VERSION, "2.1.0");
+assert.equal(CLIENT_HEALTH_V2_VERSION, "2.2.0");
 
 const health = buildClientHealthV2({
   now:"2026-08-31T12:00:00Z",
@@ -67,7 +67,7 @@ const health = buildClientHealthV2({
   alerts:[]
 });
 
-assert.equal(health.version, "2.1.0");
+assert.equal(health.version, "2.2.0");
 assert.equal(health.client.clientCode, "SES");
 assert.ok(Number.isInteger(health.score));
 assert.ok(health.score >= 60);
