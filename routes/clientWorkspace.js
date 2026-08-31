@@ -1,15 +1,22 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/clientWorkspace.js
-   Version: 7.3.1
+   Version: 7.4.0
    Status: Production Candidate
-   Source: Production routes/clientWorkspace.js 7.3.0
-   Sprint: Client Health — Open Work Runtime Alignment
+   Source: Production routes/clientWorkspace.js 7.3.1
+   Sprint: Client Health v2 — Evidence-Based Health Contract
    Purpose: Preserve the complete live D1 client workspace and client tool
             router while separating actionable Investigations from durable
             monitoring / awaiting-external-validation history.
 
-   Production changes:
+   Production changes — 7.4.0:
+   - Adds Client Health v2 as a deterministic, evidence-based contract inside each client workspace record.
+   - Loads durable Intelligence alongside Communications, Investigations, Work, Alerts, Evidence, and Activity Records.
+   - Unknown health dimensions reduce confidence instead of reducing the health score.
+   - Produces a client-safe summary layer for future status emails and client portal use.
+   - Preserves the existing v1 relationship.accountHealth field for UI compatibility until the client page is upgraded.
+
+   Previous production changes:
    - D1 Work status "open" now maps to Business Record status "Planned" so
      active open Work Items remain visible in Current Work and Open Work counts.
    - Monitoring Investigations remain preserved in the full Investigation history.
@@ -38,6 +45,10 @@ import {
   getDatabase,
   rowsOf
 } from "../shared/database.js";
+
+import {
+  buildClientHealthV2
+} from "../shared/clientHealthV2.js";
 
 /* =========================================================
    Client Workspace — D1 Operational Record
@@ -92,6 +103,7 @@ export async function handleClientWorkspace(body, env, requestId) {
       evidenceResult,
       alertsResult,
       proofResult,
+      intelligenceResult,
       clientToolsResult
     ] = await Promise.all([
       db.prepare(`
@@ -163,6 +175,15 @@ export async function handleClientWorkspace(body, env, requestId) {
       `).bind(client.id).all(),
 
       db.prepare(`
+        SELECT *
+        FROM intelligence
+        WHERE client_id = ?
+        ORDER BY
+          datetime(COALESCE(last_observed_at, first_observed_at, created_at)) DESC,
+          id DESC
+      `).bind(client.id).all(),
+
+      db.prepare(`
         SELECT
           id,
           client_id,
@@ -187,6 +208,7 @@ export async function handleClientWorkspace(body, env, requestId) {
     const evidence = rowsOf(evidenceResult);
     const alerts = rowsOf(alertsResult);
     const proofOfWork = rowsOf(proofResult);
+    const intelligence = rowsOf(intelligenceResult);
     const clientTools = rowsOf(clientToolsResult);
     const clientToolRouter = buildClientToolRouter(clientTools);
 
@@ -198,6 +220,7 @@ export async function handleClientWorkspace(body, env, requestId) {
       evidence,
       alerts,
       proofOfWork,
+      intelligence,
       clientTools
     });
 
@@ -229,6 +252,7 @@ export async function handleClientWorkspace(body, env, requestId) {
         evidence,
         alerts,
         proofOfWork,
+        intelligence,
         clientTools,
         clientToolRouter
       },
@@ -244,6 +268,7 @@ export async function handleClientWorkspace(body, env, requestId) {
         workItems: workItems.length,
         openWorkItems: openWorkItems.length,
         proofOfWork: proofOfWork.length,
+        intelligence: intelligence.length,
         activeAlerts: activeAlerts.length,
         evidence: evidence.length,
         clientTools: clientTools.length
@@ -305,11 +330,22 @@ function buildClientWorkspaceRecord({
   evidence,
   alerts,
   proofOfWork,
+  intelligence,
   clientTools
 }) {
   const openInvestigations = investigations.filter(isOpenInvestigation);
   const openWork = workItems.filter(isOpenWorkItem);
   const activeAlerts = alerts.filter(isActiveAlert);
+
+  const clientHealthV2 = buildClientHealthV2({
+    client,
+    communications,
+    investigations,
+    workItems,
+    alerts,
+    activityRecords:proofOfWork,
+    intelligence
+  });
 
   const latestActivity = latestDate([
     ...communications.map(item => item.occurred_at),
@@ -365,8 +401,9 @@ function buildClientWorkspaceRecord({
     activeAlerts.length > 0;
 
   return {
-    schemaVersion: "1.1.0",
+    schemaVersion: "1.2.0",
     businessId: slugify(client.name || client.client_code),
+    clientHealthV2,
 
     business: {
       name: client.name,
@@ -548,6 +585,7 @@ function buildClientWorkspaceRecord({
         workItems: workItems.length,
         openWorkItems: openWork.length,
         proofOfWork: proofOfWork.length,
+        intelligence: intelligence.length,
         alerts: activeAlerts.length,
         evidence: evidence.length,
         clientTools: clientTools.length
