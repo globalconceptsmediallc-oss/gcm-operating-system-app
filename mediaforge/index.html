@@ -7,7 +7,7 @@
 <!-- =========================================================
 MediaForge
 File: index.html
-Version: 2.2.0
+Version: 2.2.1
 Status: SES Product Catalog Import Road Test
 Source: Production Development
 Purpose: Import and save the canonical catalog, open product records
@@ -86,7 +86,7 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;padding:20px 12px 28
 </style>
 </head>
 <body>
-<header class="topbar"><div class="topbar-inner"><div class="brand"><span class="mark">▣</span><span>MediaForge</span></div><div class="version">Version 2.2.0 · Flexible Naming Recipes</div></div></header>
+<header class="topbar"><div class="topbar-inner"><div class="brand"><span class="mark">▣</span><span>MediaForge</span></div><div class="version">Version 2.2.1 · Flexible Naming Recipes</div></div></header>
 <main class="shell">
 <section class="hero"><h1>MediaForge</h1><p class="tag">Authoritative Product Catalog First</p><p>Import Liberty Premium variants directly from Southeast Safes and validate Kristy's complete 63-slot production catalog.</p></section>
 <div class="workflow">
@@ -508,6 +508,6 @@ els.clearReplacementBtn.onclick=()=>clearReplacement(true);
 
 try{const saved=localStorage.getItem("mediaforge-liberty-premium-catalog");if(saved){state.payload=JSON.parse(saved);state.saved=true;setStatus("Saved Liberty Premium catalog loaded from MediaForge.","success")}}catch(e){console.warn("Saved catalog could not be loaded",e)}renderAll();
 </script>
-<script type="module" src="./naming-ui.js"></script>
+<script type="module" src="./naming-ui.js?v=1.0.1"></script>
 </body>
 </html>
