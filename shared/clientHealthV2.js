@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/clientHealthV2.js
-   Version: 2.2.1
+   Version: 2.2.2
    Status: Production Candidate
    Sprint: Client Health v2 — Explainable Scoring Refinement
    Purpose:
@@ -19,7 +19,7 @@
    - Client-safe output never exposes raw email/thread text.
    ========================================================= */
 
-export const CLIENT_HEALTH_V2_VERSION = "2.2.1";
+export const CLIENT_HEALTH_V2_VERSION = "2.2.2";
 
 const DIMENSIONS = Object.freeze([
   {
@@ -151,6 +151,8 @@ const BUSINESS_OUTCOME_ASSERTION_RE = /\b(?:increas(?:e|ed|ing)|decreas(?:e|ed|i
 const BUSINESS_HYPOTHETICAL_RE = /\b(?:could|may|might|potential(?:ly)?|expected to|risk of|opportunity to)\b/i;
 const GENERIC_CLIENT_TEXT_RE = /^(?:high|medium|normal|low|urgent|critical|monitoring|information)$/i;
 const GENERIC_MONITORING_TEXT_RE = /^(?:human-routed monitoring evidence preserved from the source email\.?|monitoring evidence preserved from the source email\.?)$/i;
+const PROVEN_POSITIVE_CLIENT_RE = /\b(?:increas(?:e|ed)|improv(?:e|ed)|reached position\s*#?\d+|entered the top\s*10|top\s*10|restored|verified|passed|highest visibility|gained?)\b/i;
+const PROVEN_NEGATIVE_CLIENT_RE = /\b(?:declin(?:e|ed)|drop(?:ped)?|toxic|slow page|errors?|4xx|404|blocked|broken|disapproval|missing|hold|failed|needs attention)\b/i;
 
 export function buildClientHealthV2(input = {}) {
   const now = validDate(input.now) || new Date();
@@ -212,7 +214,11 @@ export function buildClientHealthV2(input = {}) {
       .filter(item =>
         item.dimensionKeys.length > 0 &&
         item.direction > 0 &&
-        item.recencyWeight >= 0.5
+        item.recencyWeight >= 0.5 &&
+        (
+          item.kind !== "monitoring" ||
+          PROVEN_POSITIVE_CLIENT_RE.test(clientSafeEvidenceText(item))
+        )
       )
       .sort(compareEvidence)
   ).slice(0, 6);
@@ -222,7 +228,11 @@ export function buildClientHealthV2(input = {}) {
       .filter(item =>
         item.dimensionKeys.length > 0 &&
         (item.direction < 0 || item.kind === "active_risk") &&
-        item.recencyWeight >= 0.25
+        item.recencyWeight >= 0.25 &&
+        (
+          item.kind !== "monitoring" ||
+          PROVEN_NEGATIVE_CLIENT_RE.test(clientSafeEvidenceText(item))
+        )
       )
       .sort(compareEvidence)
   ).slice(0, 6);
