@@ -1,14 +1,14 @@
 /* =========================================================
 MediaForge
 File: naming.js
-Version: 1.1.1
+Version: 1.2.0
 Status: Production Candidate
 Purpose: Generic, human-controlled batch naming engine for MediaForge.
          Recipes define included fields, field order, fixed/parsed/sequence
          values, aliases, case, separator, and extension policy.
 ========================================================= */
 
-export const NAMING_ENGINE_VERSION = "1.1.1";
+export const NAMING_ENGINE_VERSION = "1.2.0";
 
 export const BUILTIN_PRESETS = [
   {
@@ -285,6 +285,27 @@ export function buildProposedName(recipe, record) {
     ready: Boolean(baseName) && missing.length === 0,
     values: aliasedRecord
   };
+}
+
+export function knownRenameException(recipe, record, result) {
+  const recipeId = String(recipe?.id || "");
+  const color = normalizeLookup(record?.exteriorColor);
+  const missing = Array.isArray(result?.missing) ? result.missing : [];
+
+  if (
+    recipeId === "liberty-lincoln-signature-interiors" &&
+    color === "textured bronze" &&
+    missing.length === 1 &&
+    missing.includes("Color Order")
+  ) {
+    return {
+      code: "liberty-source-name-unreliable",
+      label: "Textured Bronze",
+      reason: "Liberty source naming is unreliable for Textured Bronze, so MediaForge will leave this file out rather than guess a production filename."
+    };
+  }
+
+  return null;
 }
 
 export function csvEscape(value) {
