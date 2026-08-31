@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/clientHealthV2.js
-   Version: 2.1.0
+   Version: 2.2.0
    Status: Production Candidate
    Sprint: Client Health v2 — Explainable Scoring Refinement
    Purpose:
@@ -19,7 +19,7 @@
    - Client-safe output never exposes raw email/thread text.
    ========================================================= */
 
-export const CLIENT_HEALTH_V2_VERSION = "2.1.0";
+export const CLIENT_HEALTH_V2_VERSION = "2.2.0";
 
 const DIMENSIONS = Object.freeze([
   {
@@ -52,8 +52,9 @@ const DIMENSIONS = Object.freeze([
       /\bsite health\b/i, /\bcore web vitals?\b/i, /\bcrawl/i,
       /\bredirect/i, /\b4xx\b/i, /\b404\b/i, /\bduplicate content\b/i,
       /\bmeta description\b/i, /\bcanonical\b/i, /\bsitemap\b/i,
-      /\bpage speed\b/i, /\bcheckout\b/i, /\badd to cart\b/i,
-      /\bview item\b/i, /\bshopify\b/i, /\bwebsite\b/i
+      /\bpage speed\b/i, /\bpage indexing\b/i, /\bindexing issue\b/i,
+      /\blanding page\b/i, /\bcheckout\b/i, /\badd to cart\b/i,
+      /\bview item\b/i, /\bshopify\b/i
     ]
   },
   {
@@ -146,6 +147,10 @@ const MONITORING_STATUSES = new Set([
 const NEGATIVE_RE = /\b(?:declin(?:e|ed|ing)|drop(?:ped|ping)?|down|failed|failure|broken|blocked|error|risk|hold|warning|needs attention|4xx|404|duplicate content|not working|inactive|unverified|missing)\b/i;
 const POSITIVE_RE = /\b(?:improv(?:e|ed|ing|ement)|increas(?:e|ed|ing)|gain(?:ed|ing)?|passed|healthy|excellent|success|successful|restored|verified|reached position|entered the top|in the top 10|win|winning)\b/i;
 const STABLE_RE = /\b(?:stable|no significant change|no change|monitoring|watching|unchanged|flat)\b/i;
+const BUSINESS_OUTCOME_ASSERTION_RE = /\b(?:increas(?:e|ed|ing)|decreas(?:e|ed|ing)|grew|fell|rose|declined|improved|dropped|generated|produced|recorded|converted|sold|sales were|revenue was|revenue reached|leads were|purchases were|orders were)\b/i;
+const BUSINESS_HYPOTHETICAL_RE = /\b(?:could|may|might|potential(?:ly)?|expected to|risk of|opportunity to)\b/i;
+const GENERIC_CLIENT_TEXT_RE = /^(?:high|medium|normal|low|urgent|critical|monitoring|information)$/i;
+const GENERIC_MONITORING_TEXT_RE = /^(?:human-routed monitoring evidence preserved from the source email\.?|monitoring evidence preserved from the source email\.?)$/i;
 
 export function buildClientHealthV2(input = {}) {
   const now = validDate(input.now) || new Date();
@@ -156,13 +161,13 @@ export function buildClientHealthV2(input = {}) {
   const workItems = array(input.workItems);
   const alerts = array(input.alerts);
 
-  const evidence = [
+  const evidence = dedupeEvidenceForScoring([
     ...intelligence.map(item => evidenceFromIntelligence(item, now)),
     ...activityRecords.map(item => evidenceFromActivity(item, now)),
     ...investigations.map(item => evidenceFromInvestigation(item, now)),
     ...workItems.map(item => evidenceFromWork(item, now)),
     ...alerts.map(item => evidenceFromAlert(item, now))
-  ].filter(Boolean);
+  ].filter(Boolean));
 
   const classifiedEvidence = evidence.map(item => ({
     ...item,
@@ -232,9 +237,9 @@ export function buildClientHealthV2(input = {}) {
     negatives
   });
 
-  const whatIsWorking = positives.map(clientSafeEvidenceText);
-  const needsAttention = negatives.map(clientSafeEvidenceText);
-  const whatWeAreWatching = watching.map(clientSafeEvidenceText);
+  const whatIsWorking = positives.map(clientSafeEvidenceText).filter(Boolean);
+  const needsAttention = negatives.map(clientSafeEvidenceText).filter(Boolean);
+  const whatWeAreWatching = watching.map(clientSafeEvidenceText).filter(Boolean);
 
   return {
     version:CLIENT_HEALTH_V2_VERSION,
@@ -306,10 +311,10 @@ function buildDimension(definition, matches) {
     };
   }
 
-  let positiveLift = 0;
-  let negativePenalty = 0;
+  let weightedDirection = 0;
+  let totalStrength = 0;
   let trendSignal = 0;
-  let evidenceStrength = 0;
+  let activeRiskPenalty = 0;
 
   for (const item of matches) {
     const reliability = evidenceReliability(item);
@@ -318,29 +323,40 @@ function buildDimension(definition, matches) {
       item.recencyWeight *
       reliability;
 
-    evidenceStrength += strength;
-    trendSignal += item.direction * strength;
+    const effectiveDirection =
+      definition.key === "risk_attention" &&
+      item.direction === 0 &&
+      NEGATIVE_RE.test(item.searchText)
+        ? -1
+        : item.direction;
 
-    if (item.direction > 0) {
-      positiveLift += (2.25 + (item.importance * 1.15)) *
-        item.recencyWeight *
-        reliability;
-    }
-
-    if (item.direction < 0) {
-      negativePenalty += (3.5 + (item.importance * 1.65)) *
-        item.recencyWeight *
-        reliability;
-    }
+    totalStrength += strength;
+    weightedDirection += effectiveDirection * strength;
+    trendSignal += effectiveDirection * strength;
 
     if (item.kind === "active_risk") {
-      negativePenalty += 5.5 * item.recencyWeight;
+      activeRiskPenalty +=
+        (3 + (item.importance * 1.5)) *
+        item.recencyWeight;
     }
   }
 
-  let score = 70;
-  score += Math.min(20, positiveLift);
-  score -= Math.min(38, negativePenalty);
+  const averageDirection = totalStrength > 0
+    ? weightedDirection / totalStrength
+    : 0;
+
+  let score;
+
+  if (definition.key === "risk_attention") {
+    score = 85 +
+      (Math.min(0, averageDirection) * 20) -
+      Math.min(30, activeRiskPenalty);
+  } else {
+    score = 70 +
+      (averageDirection * 20) -
+      Math.min(12, activeRiskPenalty);
+  }
+
   score = clamp(Math.round(score), 25, 95);
 
   const recent = matches.filter(item => item.ageDays <= 45);
@@ -367,7 +383,10 @@ function buildDimension(definition, matches) {
 
   const primaryEvidence = uniqueEvidence(
     matches.slice().sort(compareEvidence)
-  ).slice(0, 3).map(clientSafeEvidenceText);
+  )
+    .map(clientSafeEvidenceText)
+    .filter(Boolean)
+    .slice(0, 3);
 
   const reason = buildDimensionReason({
     definition,
@@ -431,7 +450,27 @@ function classifyEvidenceDimensions(item) {
 function dimensionMatchScore(definition, item) {
   if (definition.key === "business_performance") {
     if (!item.outcomeText) return 0;
-    return countPatternMatches(definition.patterns, item.outcomeText);
+
+    const metricMatches =
+      countPatternMatches(definition.patterns, item.outcomeText);
+
+    if (!metricMatches) return 0;
+
+    if (
+      BUSINESS_HYPOTHETICAL_RE.test(item.outcomeText) &&
+      !/\b\d+(?:\.\d+)?%?\b/.test(item.outcomeText)
+    ) {
+      return 0;
+    }
+
+    if (
+      !BUSINESS_OUTCOME_ASSERTION_RE.test(item.outcomeText) &&
+      !/\b\d+(?:\.\d+)?%?\b/.test(item.outcomeText)
+    ) {
+      return 0;
+    }
+
+    return metricMatches + 2;
   }
 
   if (definition.key === "risk_attention" && item.kind === "active_risk") {
@@ -488,6 +527,7 @@ function evidenceFromIntelligence(item, now) {
     kind:handling === "monitoring" || MONITORING_STATUSES.has(status)
       ? "monitoring"
       : "intelligence",
+    sourceReference:item.source_reference || item.sourceReference,
     observedAt:item.last_observed_at || item.lastObservedAt || item.first_observed_at || item.created_at,
     now
   });
@@ -523,6 +563,7 @@ function evidenceFromActivity(item, now) {
       : item.win
         ? "completed_proof"
         : "activity",
+    sourceReference:item.source_reference || item.sourceReference,
     observedAt:item.activity_date || item.created_at,
     now
   });
@@ -549,6 +590,7 @@ function evidenceFromInvestigation(item, now) {
     direction:-1,
     importance:importanceValue(item.priority) + 1,
     kind:"active_risk",
+    sourceReference:item.source_reference || item.sourceReference || `investigation:${item.id || "unknown"}`,
     observedAt:item.updated_at || item.opened_at || item.created_at,
     now
   });
@@ -576,10 +618,13 @@ function evidenceFromWork(item, now) {
       direction:actualImpact ? directionFromText(actualImpact) : 0,
       importance:importanceValue(item.priority),
       kind:"completed_proof",
+        sourceReference:item.source_reference || item.sourceReference,
       observedAt:item.completed_at || item.updated_at || item.created_at,
       now
     });
   }
+
+  const waitingOrBlocked = ["waiting","blocked"].includes(status);
 
   return makeEvidence({
     id:`work:${item.id || "unknown"}`,
@@ -587,9 +632,10 @@ function evidenceFromWork(item, now) {
     summary:text(item.title || item.description),
     searchText:body,
     outcomeText:"",
-    direction:0,
+    direction:waitingOrBlocked ? -1 : 0,
     importance:importanceValue(item.priority),
-    kind:"open_work",
+    kind:waitingOrBlocked ? "active_risk" : "open_work",
+    sourceReference:item.source_reference || item.sourceReference,
     observedAt:item.updated_at || item.started_at || item.created_at,
     now
   });
@@ -611,6 +657,7 @@ function evidenceFromAlert(item, now) {
     direction:-1,
     importance:importanceValue(item.severity) + 1,
     kind:"active_risk",
+    sourceReference:item.source_reference || item.sourceReference || `alert:${item.id || "unknown"}`,
     observedAt:item.updated_at || item.created_at,
     now
   });
@@ -625,6 +672,7 @@ function makeEvidence({
   direction,
   importance,
   kind,
+  sourceReference,
   observedAt,
   now
 }) {
@@ -642,6 +690,7 @@ function makeEvidence({
     direction:clamp(Number(direction) || 0, -1, 1),
     importance:clamp(Number(importance) || 1, 1, 4),
     kind,
+    sourceReference:text(sourceReference),
     observedAt:observed ? observed.toISOString() : null,
     ageDays,
     recencyWeight:recencyWeight(ageDays)
@@ -681,6 +730,26 @@ function evidenceReliability(item) {
   if (item.kind === "activity") return 0.75;
   if (item.kind === "open_work") return 0.35;
   return 0.6;
+}
+
+function dedupeEvidenceForScoring(items) {
+  const seen = new Set();
+  const output = [];
+
+  for (const item of items) {
+    const sourceKey = normalize(item.sourceReference);
+    const contentKey = normalize(
+      `${cleanClientTitle(item.title)}|${clipClientText(item.summary, 140)}`
+    );
+    const key = sourceKey || contentKey || item.id;
+
+    if (!key || seen.has(key)) continue;
+
+    seen.add(key);
+    output.push(item);
+  }
+
+  return output;
 }
 
 function overallTrend(evidence) {
@@ -811,10 +880,20 @@ function clientSafeEvidenceText(item) {
 
   const looksGeneric =
     /^The saved .+ evidence contains measurable client information/i.test(value) ||
-    /^Human operator routed/i.test(value);
+    /^Human operator routed/i.test(value) ||
+    GENERIC_MONITORING_TEXT_RE.test(value) ||
+    GENERIC_CLIENT_TEXT_RE.test(value);
 
   if (looksLikeRawSource || looksGeneric || value.length > 260) {
     value = title || value;
+  }
+
+  if (
+    !value ||
+    GENERIC_MONITORING_TEXT_RE.test(value) ||
+    GENERIC_CLIENT_TEXT_RE.test(value)
+  ) {
+    return "";
   }
 
   return clipClientText(value, 190);
