@@ -1,14 +1,14 @@
 /* =========================================================
 MediaForge
 File: naming.js
-Version: 1.0.0
+Version: 1.1.0
 Status: Production Candidate
 Purpose: Generic, human-controlled batch naming engine for MediaForge.
          Recipes define included fields, field order, fixed/parsed/sequence
          values, aliases, case, separator, and extension policy.
 ========================================================= */
 
-export const NAMING_ENGINE_VERSION = "1.0.0";
+export const NAMING_ENGINE_VERSION = "1.1.0";
 
 export const BUILTIN_PRESETS = [
   {
@@ -45,6 +45,53 @@ export const BUILTIN_PRESETS = [
       { key: "manufacturer", label: "Manufacturer", enabled: true, source: "fixed", value: "Liberty" },
       { key: "model", label: "Model", enabled: true, source: "fixed", value: "Lincoln" },
       { key: "size", label: "Size", enabled: true, source: "fixed", value: "25" },
+      { key: "colorOrder", label: "Color Order", enabled: true, source: "sequence", value: "" },
+      { key: "exteriorColor", label: "Exterior Color", enabled: true, source: "parsed", value: "" },
+      { key: "hardware", label: "Hardware", enabled: false, source: "parsed", value: "" },
+      { key: "interiorFamily", label: "Interior Family", enabled: true, source: "fixed", value: "Signature Interior" },
+      { key: "interiorState", label: "Interior State", enabled: true, source: "parsed", value: "" },
+      { key: "suffix", label: "Suffix", enabled: true, source: "fixed", value: "Interior" }
+    ]
+  },
+  {
+    id: "liberty-lincoln-signature-interiors",
+    name: "Liberty — Lincoln 25/40/50 — Signature Interiors",
+    builtIn: true,
+    jobName: "Lincoln Signature Interiors",
+    instructions: "Reusable Lincoln Signature Interior recipe. Size is parsed from the source filename. White Ivory Gloss and Black Gloss source variants are normalized to the established Lincoln naming convention. Textured Bronze is the next unique Lincoln exterior sequence after the established 22-position variant list.",
+    caseMode: "lower",
+    separator: "-",
+    extensionMode: "preserve",
+    sequenceSource: "exteriorColor",
+    aliasesText: [
+      "exteriorColor | White Ivory Gloss = White Gloss",
+      "exteriorColor | Black Gloss(SV and BV) = Black Gloss",
+      "exteriorColor | Black Mirror (Gloss) = Black Gloss",
+      "exteriorColor | Black Mirror Gloss = Black Gloss",
+      "exteriorColor | Black Cherry (Gloss) = Black Cherry Gloss"
+    ].join("\n"),
+    sequenceText: [
+      "White Marble = 1",
+      "Champagne Marble = 2",
+      "Gray Marble = 3",
+      "Burgundy Marble = 4",
+      "Green Marble = 5",
+      "White Gloss = 6",
+      "Champagne Gloss = 7",
+      "Gray Gloss = 8",
+      "Bronze Gloss = 9",
+      "Forest Mist Gloss = 10",
+      "Green Gloss = 11",
+      "Burgundy Gloss = 12",
+      "Black Cherry Gloss = 13",
+      "Black Gloss = 14",
+      "Blue Gloss = 22",
+      "Textured Bronze = 23"
+    ].join("\n"),
+    fields: [
+      { key: "manufacturer", label: "Manufacturer", enabled: true, source: "fixed", value: "Liberty" },
+      { key: "model", label: "Model", enabled: true, source: "fixed", value: "Lincoln" },
+      { key: "size", label: "Size", enabled: true, source: "parsed", value: "" },
       { key: "colorOrder", label: "Color Order", enabled: true, source: "sequence", value: "" },
       { key: "exteriorColor", label: "Exterior Color", enabled: true, source: "parsed", value: "" },
       { key: "hardware", label: "Hardware", enabled: false, source: "parsed", value: "" },
