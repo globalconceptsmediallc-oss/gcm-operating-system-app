@@ -1,16 +1,16 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.33",
+  "version": "6.1.34",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.33",
+    "fileVersion": "6.1.34",
     "status": "Production Road-Test Candidate",
-    "purpose": "Road-test MediaForge 3.0.1 with reliable Lincoln batch detection and simpler rename workflow.",
+    "purpose": "Make MediaForge road tests explain exactly what was found, what will change, what will be excluded, and why.",
     "changeNotes": [
-      "Recognizes both Kristy's raw LX-Sig files and already-renamed Lincoln 25/40/50 Signature Interior batches.",
-      "Defaults naming to the reusable Lincoln 25/40/50 recipe instead of the old Lincoln 25-only recipe.",
-      "Moves the recipe selector inside Advanced settings so normal rename jobs stay simple.",
-      "Keeps correctly named files unchanged while verifying the batch before ZIP export."
+      "Replaces the always-open filename table with a plain-English result summary and collapsed filename details.",
+      "Explains image count, ready count, review count, and filename changes without requiring the operator to infer what Ready means.",
+      "Treats Lincoln Textured Bronze as an explicit known exception that is excluded from output rather than guessed.",
+      "Allows a safe ZIP to be built from approved files when only known exceptions are excluded, while unresolved unknowns still block export."
     ]
   },
   "private": true,
