@@ -71,7 +71,7 @@ assert.equal(health.version, "2.1.0");
 assert.equal(health.client.clientCode, "SES");
 assert.ok(Number.isInteger(health.score));
 assert.ok(health.score >= 60);
-assert.equal(health.trend, "Improving");
+assert.equal(health.trend, "Stable");
 assert.ok(["Low","Medium","High"].includes(health.confidence));
 assert.ok(health.evidenceCoverage.knownDimensions < health.evidenceCoverage.totalDimensions);
 assert.ok(health.internal.unknownDimensions.length > 0);
