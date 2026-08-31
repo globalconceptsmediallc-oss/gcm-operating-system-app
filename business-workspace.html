@@ -1,15 +1,15 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: business-workspace.html
-   Version: 1.3.0
+   Version: 1.3.1
    Status: Production Candidate
-   Change: Shared Shell Consolidation
+   Change: Client Health v2 Workspace Compatibility
    Source: Production business-workspace.html 1.2.0
    Shared Shell: shared/gcm-shell.js 2.0.16
    Purpose: Preserve the existing Business Workspace engine,
             live get-client-workspace retrieval, Business Record intelligence,
-            and executable next actions while consolidating the page into the
-            authoritative shared GCM OS application shell.
+            and executable next actions while adding Client Health v2 score,
+            trend, and confidence to the client workspace.
    ========================================================= -->
 
 <!DOCTYPE html>
@@ -1094,7 +1094,7 @@
   </div>
 
   <script src="shared/gcm-shell.js"></script>
-  <script src="businessWorkspace.js"></script>
+  <script src="businessWorkspace.js?v=1.0.2"></script>
 
   <script>
     (function initializeBusinessWorkspacePage() {
@@ -1117,12 +1117,12 @@
 
       if (!window.GCMOShell) {
         console.error(
-          "Business Workspace 1.3.0: shared/gcm-shell.js did not load."
+          "Business Workspace 1.3.1: shared/gcm-shell.js did not load."
         );
       } else {
         window.GCMOShell.mount({
           currentPage:"clients",
-          statusText:"Client workspace connected · Business Workspace v1.3.0"
+          statusText:"Client workspace connected · Business Workspace v1.3.1"
         });
       }
 
@@ -1199,7 +1199,8 @@
         renderBusinessHeader(
           business,
           relationship,
-          workspace.record.workspace
+          workspace.record.workspace,
+          workspace.record.clientHealthV2 || null
         );
 
         renderExecutiveMetrics(executive.summary);
@@ -1219,21 +1220,37 @@
       function renderBusinessHeader(
         business,
         relationship,
-        workspaceRecord
+        workspaceRecord,
+        clientHealthV2
       ) {
         setText("business-name", business.name);
         setText("business-summary", business.summary);
 
-        setText(
-          "account-health",
-          relationship.accountHealth || "Unknown"
-        );
+        if (
+          clientHealthV2 &&
+          Number.isFinite(Number(clientHealthV2.score))
+        ) {
+          setText(
+            "account-health",
+            `${Math.round(Number(clientHealthV2.score))} / 100 — ${clientHealthV2.status || "Unknown"}`
+          );
 
-        setText(
-          "account-health-reason",
-          relationship.accountHealthReason ||
-            "No account-health reason has been recorded."
-        );
+          setText(
+            "account-health-reason",
+            `${clientHealthV2.trend || "Unknown"} · ${clientHealthV2.confidence || "Unknown"} Confidence`
+          );
+        } else {
+          setText(
+            "account-health",
+            relationship.accountHealth || "Unknown"
+          );
+
+          setText(
+            "account-health-reason",
+            relationship.accountHealthReason ||
+              "No account-health reason has been recorded."
+          );
+        }
 
         setText(
           "relationship-stage",
