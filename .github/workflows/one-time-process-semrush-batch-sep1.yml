@@ -1,0 +1,68 @@
+name: One-Time Process Semrush Batch Sep 1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/one-time-process-semrush-batch-sep1.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Process Semrush emails through OS Monitoring
+        shell: bash
+        run: |
+          node <<'NODE'
+          const url = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+          const items = [
+            {id:"1a0596f7f33c41b5", thread:"1a0596f7f33c41b5", clientCode:"SES", clientName:"Southeast Safes", label:"SES rank-change alert"},
+            {id:"1a05cb625c402b8d", thread:"1a05cb625c402b8d", clientCode:"NFS", clientName:"North Florida Safes", label:"NFS weekly position tracking"},
+            {id:"1a05cb627464c5b1", thread:"1a05cb627464c5b1", clientCode:"SES", clientName:"Southeast Safes", label:"SES weekly position tracking"},
+            {id:"1a05cb62754440a0", thread:"1a05cb62754440a0", clientCode:"GCM", clientName:"Global Concepts Media", label:"GCM weekly position tracking"},
+            {id:"1a05cb6298923bdf", thread:"1a05cb6298923bdf", clientCode:"A1", clientName:"A1 Action Safe & Lock", label:"A1 locksmith weekly position tracking"},
+            {id:"1a05cb629ccf16e1", thread:"1a05cb629ccf16e1", clientCode:"A1", clientName:"A1 Action Safe & Lock", label:"A1 rankings declined weekly position tracking"},
+            {id:"1a05cb62c3c1afc1", thread:"1a05cb62c3c1afc1", clientCode:"HBG", clientName:"HB Guns", label:"HBG weekly position tracking"},
+            {id:"1a05cb62dd2f2ebd", thread:"1a05cb62dd2f2ebd", clientCode:"PW", clientName:"Pickett Weaponry", label:"PW weekly position tracking"}
+          ];
+
+          for (const item of items) {
+            const body = {
+              action:"route-gmail-disposition",
+              disposition:"monitoring",
+              gmailMessageId:item.id,
+              gmailThreadId:item.thread,
+              clientCode:item.clientCode,
+              clientName:item.clientName
+            };
+            const response = await fetch(url, {
+              method:"POST",
+              headers:{"Content-Type":"application/json"},
+              body:JSON.stringify(body)
+            });
+            const data = await response.json();
+            console.log("SEMRUSH_RESULT", JSON.stringify({
+              label:item.label,
+              ok:data?.ok,
+              duplicate:data?.duplicate,
+              disposition:data?.disposition,
+              activityRecordId:data?.activityRecordId,
+              gmailArchived:data?.gmailArchived,
+              gmailThreadArchived:data?.gmailThreadArchived,
+              error:data?.error || null
+            }));
+            if (!response.ok || data?.ok !== true) {
+              throw new Error(item.label + ": " + (data?.error || `HTTP ${response.status}`));
+            }
+            if (data?.disposition !== "monitoring") {
+              throw new Error(item.label + ": expected monitoring disposition");
+            }
+            if (!data?.gmailThreadArchived) {
+              throw new Error(item.label + ": Gmail thread was not archived");
+            }
+          }
+          NODE
