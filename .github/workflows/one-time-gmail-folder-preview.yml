@@ -22,7 +22,7 @@ jobs:
           const response=await fetch(url,{
             method:"POST",
             headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({action:"preview-gmail-inbox",limit:20,scanLimit:100})
+            body:JSON.stringify({action:"preview-gmail-inbox",limit:20,scanLimit:30})
           });
           const data=await response.json();
           console.log("PREVIEW_RESULT",JSON.stringify({
