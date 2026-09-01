@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailDispositions.js
-   Version: 2.2.1
+   Version: 2.2.2
    Status: Production Road-Test Candidate
    Source: routes/gmailDispositions.js 1.3.3 production
    Sprint: Gmail — Human Routing / No AI Gate
@@ -10,6 +10,10 @@
    Show the live Gmail source, accept an explicit human disposition, preserve the
    source in D1 when appropriate, then clear the real Gmail Inbox only after the
    requested OS write is confirmed.
+
+   Folder preview bind-limit repair — 2.2.2:
+   - Reduces processed-thread lookup batches so combined Inbox + operational-folder previews stay under D1 SQL variable limits.
+   - Preserves processed-state suppression across Inbox, REPORTS-SEO, Kristy, and Frank without changing routing behavior.
 
    Processed-state repair — 2.2.1:
    - Treats the dedicated gmail_monitoring_evidence table as an authoritative processed-state source.
@@ -81,7 +85,7 @@ export const GMAIL_DISPOSITION_ACTIONS = Object.freeze([
 // Keep the existing public contract string for regression compatibility while
 // exposing the installed human-routing version separately.
 export const GMAIL_DISPOSITION_VERSION = "1.3.3";
-export const GMAIL_HUMAN_ROUTING_VERSION = "2.2.1";
+export const GMAIL_HUMAN_ROUTING_VERSION = "2.2.2";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GMAIL_API = "https://gmail.googleapis.com/gmail/v1";
@@ -633,7 +637,7 @@ async function findProcessedGmailThreads(db, threadGroups) {
   }
 
   const references = [...referenceToThread.keys()];
-  const chunkSize = 35;
+  const chunkSize = 15;
   const mark = reference => {
     const threadId = referenceToThread.get(clean(reference));
     if (threadId) processed.add(threadId);
