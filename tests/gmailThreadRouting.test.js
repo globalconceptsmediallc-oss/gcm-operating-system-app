@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/gmailThreadRouting.test.js
-   Version: 1.0.1
+   Version: 1.0.2
    Status: Production Regression Test
    Purpose: Lock Morning Command to one human decision per Gmail conversation.
    ========================================================= */
@@ -13,8 +13,8 @@ const backend = fs.readFileSync(new URL("../routes/gmailDispositions.js", import
 const frontend = fs.readFileSync(new URL("../shared/today-gmail-decisions.js", import.meta.url), "utf8");
 
 assert.doesNotThrow(() => new Function(frontend));
-assert.match(backend, /Version: 2\.2\.1/);
-assert.match(backend, /GMAIL_HUMAN_ROUTING_VERSION = "2\.2\.1"/);
+assert.match(backend, /Version: 2\.2\.2/);
+assert.match(backend, /GMAIL_HUMAN_ROUTING_VERSION = "2\.2\.2"/);
 assert.match(frontend, /Version: 2\.3\.1/);
 assert.match(frontend, /HUMAN_ROUTING_VERSION = "2\.3\.1"/);
 
@@ -32,6 +32,10 @@ assert.match(backend, /users\/me\/threads\/\$\{encodeURIComponent\(gmailThreadId
 assert.match(backend, /users\/me\/threads\/\$\{encodeURIComponent\(gmailThreadId\)\}\/trash/);
 assert.match(backend, /threadMessages:messages/);
 assert.match(backend, /writesPerformed:0/);
+assert.match(backend, /const chunkSize = 15;/);
+assert.match(backend, /REPORTS-SEO/);
+assert.match(backend, /label:Kristy/);
+assert.match(backend, /Frank & Adrianne Stuff/);
 
 assert.match(frontend, /function formatConversationSource\(message\)/);
 assert.match(frontend, /Source Conversation/);
