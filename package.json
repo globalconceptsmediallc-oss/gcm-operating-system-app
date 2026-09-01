@@ -1,15 +1,15 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.36",
+  "version": "6.1.37",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.36",
+    "fileVersion": "6.1.37",
     "status": "Production Road-Test Candidate",
-    "purpose": "Production-test and deploy the Gmail operational-folder preview repair.",
+    "purpose": "Deploy verified Gmail operational-folder preview repair.",
     "changeNotes": [
-      "Fixes D1 SQL-variable overflow in combined Inbox + REPORTS-SEO + Kristy + Frank processed-state checks.",
-      "Keeps archived/processed messages suppressed even when operational Gmail labels remain attached.",
-      "Adds regression coverage for the reduced safe query batch size."
+      "Repairs combined operational-folder preview D1 bind-limit failure.",
+      "Keeps processed labeled messages suppressed while exposing genuinely unprocessed folder items.",
+      "Aligns all Gmail routing regression tests with routing version 2.2.2."
     ]
   },
   "private": true,
