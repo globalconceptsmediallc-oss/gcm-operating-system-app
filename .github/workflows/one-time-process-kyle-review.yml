@@ -1,0 +1,46 @@
+name: One-Time Process Kyle Review
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/one-time-process-kyle-review.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Preserve Kyle review as HBG information and archive Gmail
+        shell: bash
+        run: |
+          node <<'NODE'
+          const url = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+          const body = {
+            action:"route-gmail-disposition",
+            disposition:"information",
+            gmailMessageId:"1a05a7d7fcdae4f3",
+            gmailThreadId:"1a05a7d7fcdae4f3",
+            clientCode:"HBG",
+            clientName:"HB Guns"
+          };
+          const response = await fetch(url, {
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify(body)
+          });
+          const data = await response.json();
+          console.log("REVIEW_RESULT", JSON.stringify(data));
+          if (!response.ok || data?.ok !== true) {
+            throw new Error(data?.error || `HTTP ${response.status}`);
+          }
+          if (data?.disposition !== "information") {
+            throw new Error("Expected information disposition.");
+          }
+          if (!data?.gmailThreadArchived) {
+            throw new Error("Expected Gmail thread archive.");
+          }
+          NODE
