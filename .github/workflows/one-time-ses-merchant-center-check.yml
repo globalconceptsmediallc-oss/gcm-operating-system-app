@@ -1,0 +1,53 @@
+name: One-Time SES Merchant Center Check
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/one-time-ses-merchant-center-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Inspect SES workspace for Merchant Center records
+        shell: bash
+        run: |
+          node <<'NODE'
+          const url = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+          const response = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type":"application/json" },
+            body: JSON.stringify({ action:"get-client-workspace", clientCode:"SES" })
+          });
+          const data = await response.json();
+          if (!response.ok || data?.ok !== true) throw new Error(data?.error || `HTTP ${response.status}`);
+
+          const record = data?.record || {};
+          const pools = {
+            workItems: record?.operational?.workItems || [],
+            investigations: record?.operational?.investigations || [],
+            communications: record?.communications || [],
+            proofOfWork: record?.proofOfWork || [],
+            intelligence: record?.intelligence || []
+          };
+
+          const rx = /merchant|missing product price|product price|google shopping|shopping/i;
+          const matches = {};
+          for (const [key, items] of Object.entries(pools)) {
+            matches[key] = items.filter(item => rx.test(JSON.stringify(item))).map(item => ({
+              id:item.id,
+              title:item.title || item.subject || item.activity || item.what_happened || "",
+              status:item.status || item.handling_state || "",
+              category:item.category || item.type || "",
+              created_at:item.created_at || item.activity_date || item.first_observed_at || "",
+              updated_at:item.updated_at || item.last_observed_at || "",
+              description:item.description || item.business_meaning || item.actual_impact || item.notes || ""
+            }));
+          }
+          console.log("MERCHANT_MATCHES", JSON.stringify(matches));
+          NODE
