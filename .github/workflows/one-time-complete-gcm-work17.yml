@@ -1,0 +1,40 @@
+name: One-Time Complete GCM Work 17
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/one-time-complete-gcm-work17.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  complete:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Complete GCM Work 17
+        shell: bash
+        run: |
+          node <<'NODE'
+          const url="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+          const body={
+            action:"process-work-item",
+            clientCode:"GCM",
+            workItemId:17,
+            workPerformed:"Resolved the redirect-chain request by establishing and communicating a reusable SEO operating rule for manufacturer model renames, retirements, replacements, revived names, internal links, sitemap canonicals, and historical redirects. This closes the original request as a completed decision/standard rather than leaving it as perpetual open work.",
+            actualImpact:"GCM now has a defined redirect-chain standard that can be reused across client sites. Future manufacturer model changes are handled under this established rule, and client-specific redirect implementation is created only when a concrete retired-model change requires execution.",
+            evidenceDescription:"Communication #104 preserves Kristy Schirmer's Aug. 13 REDIRECT CHAINS request and Andrew's Aug. 17 reply documenting the final operating rule: keep old product pages live while inventory/closeout stock remains; once retired, point every historical URL directly to the current best replacement; never chain redirects; review revived model names before changing mappings; point internal links directly to the current URL; keep only the current canonical URL in the sitemap; and preserve historical redirects. The GCM Business Record already identifies this as an established operating standard rather than perpetual open work.",
+            evidenceSource:"Communication #104 / GCM Operating Standard",
+            evidenceType:"completion"
+          };
+          const response=await fetch(url,{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify(body)
+          });
+          const data=await response.json();
+          console.log("WORK17_RESULT",JSON.stringify(data));
+          if(!response.ok||data?.ok!==true) throw new Error(data?.error||`HTTP ${response.status}`);
+          NODE
