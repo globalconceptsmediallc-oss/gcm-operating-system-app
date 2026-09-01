@@ -115,7 +115,7 @@ import {
   PREPARE_OPERATING_SESSION_ACTION
 } from "./routes/operatingSessionIntake.js";
 
-const WORKER_FILE_VERSION = "7.19.5";
+const WORKER_FILE_VERSION = "7.19.6";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
