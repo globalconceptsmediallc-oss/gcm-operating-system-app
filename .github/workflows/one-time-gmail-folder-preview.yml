@@ -1,0 +1,46 @@
+name: One-Time Gmail Folder Preview
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/one-time-gmail-folder-preview.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Preview unprocessed Gmail + operational folders
+        shell: bash
+        run: |
+          node <<'NODE'
+          const url="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+          const response=await fetch(url,{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({action:"preview-gmail-inbox",limit:20,scanLimit:100})
+          });
+          const data=await response.json();
+          console.log("PREVIEW_RESULT",JSON.stringify({
+            ok:data?.ok,
+            scannedCount:data?.scannedCount,
+            scannedThreadCount:data?.scannedThreadCount,
+            processedFilteredCount:data?.processedFilteredCount,
+            remainingUnprocessedCount:data?.remainingUnprocessedCount,
+            remainingUnprocessedMessageCount:data?.remainingUnprocessedMessageCount,
+            messages:(data?.messages||[]).map(m=>({
+              gmailMessageId:m.gmailMessageId,
+              threadId:m.threadId,
+              subject:m.subject,
+              from:m.from,
+              client:m?.intelligence?.client,
+              clientCode:m?.intelligence?.clientCode,
+              labels:m.labels
+            }))
+          }));
+          if(!response.ok||data?.ok!==true) throw new Error(data?.error||`HTTP ${response.status}`);
+          NODE
