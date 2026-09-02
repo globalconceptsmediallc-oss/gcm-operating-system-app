@@ -1,21 +1,23 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.37",
+  "version": "6.1.38",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.37",
+    "fileVersion": "6.1.38",
     "status": "Production Road-Test Candidate",
-    "purpose": "Deploy verified Gmail operational-folder preview repair.",
+    "purpose": "Deploy MediaForge reusable Liberty variant standards and interior numbering workflow.",
     "changeNotes": [
-      "Repairs combined operational-folder preview D1 bind-limit failure.",
-      "Keeps processed labeled messages suppressed while exposing genuinely unprocessed folder items.",
-      "Aligns all Gmail routing regression tests with routing version 2.2.2."
+      "Adds Kristy's 22-position Liberty merchandising standard as reusable MediaForge data.",
+      "Separates hardware-specific exterior positions from representative interior image numbering.",
+      "Adds Black Chrome/Chrome-to-Silver Velour and Brass-to-Beige Velour handling with safe review gates.",
+      "Adds Canto-style Lincoln interior batch parsing, audit manifests, and rename-only ZIP output.",
+      "Preserves existing MediaForge rename, preparation, catalog, and identification workflows."
     ]
   },
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:work-due-date && npm run test:gmail-decisions && npm run test:gmail-monitoring-parity && npm run test:gmail-backlink-investigation && npm run test:gmail-intake && npm run test:gmail-backlog && npm run test:gmail-source-display && npm run test:gmail-handle-now && npm run test:gmail-thread-routing && npm run test:gmail-requested-work-content && npm run test:prospect-crm && npm run test:mediaforge-home && npm run test:mediaforge-naming && npm run test:business-workspace-health-v2 && npm run test:client-health-v2 && npm run test:asset-versions",
+    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:work-due-date && npm run test:gmail-decisions && npm run test:gmail-monitoring-parity && npm run test:gmail-backlink-investigation && npm run test:gmail-intake && npm run test:gmail-backlog && npm run test:gmail-source-display && npm run test:gmail-handle-now && npm run test:gmail-thread-routing && npm run test:gmail-requested-work-content && npm run test:prospect-crm && npm run test:mediaforge-home && npm run test:mediaforge-variants && npm run test:mediaforge-naming && npm run test:business-workspace-health-v2 && npm run test:client-health-v2 && npm run test:asset-versions",
     "test:website-intelligence": "node tests/websiteIntelligence.test.js",
     "test:code-intelligence": "node tests/codeIntelligence.test.js",
     "test:operating-sessions": "node tests/operatingSessionTasks.test.js && node tests/osAuth.test.js && node tests/operatingSessionIntake.test.js",
@@ -35,6 +37,7 @@
     "test:mediaforge-naming": "node tests/mediaforgeNamingRecipe.test.js",
     "test:client-health-v2": "node tests/clientHealthV2.test.js",
     "test:business-workspace-health-v2": "node tests/businessWorkspaceClientHealthV2.test.js",
-    "test:mediaforge-home": "node --check mediaforge/home.js && node tests/mediaforgeHome.test.js"
+    "test:mediaforge-home": "node --check mediaforge/home.js && node tests/mediaforgeHome.test.js",
+    "test:mediaforge-variants": "node tests/mediaforgeVariantStandard.test.js"
   }
 }
