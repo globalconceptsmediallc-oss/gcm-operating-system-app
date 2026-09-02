@@ -1,7 +1,7 @@
 # =========================================================
 # MediaForge
 # File: .github/workflows/mediaforge-deploy.yml
-# Version: 1.3.0
+# Version: 1.3.1
 # Status: Production Validation
 # Purpose: Test the source-controlled MediaForge app that is served from
 #          the GCM OS GitHub Pages deployment.
@@ -49,6 +49,9 @@ jobs:
 
       - name: Run Production Tests
         run: npm test
+
+      - name: Check Variant UI JavaScript
+        run: node --check mediaforge/variant-ui.js
 
       - name: Verify MediaForge 3.2 source contract
         shell: bash
