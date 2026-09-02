@@ -1,0 +1,56 @@
+name: One-Time Log Justin Review
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/one-time-log-justin-review.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  log:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Log Justin Lawson Google review as HBG information
+        shell: bash
+        run: |
+          node <<'NODE'
+          const url="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+          const body={
+            action:"commit-operational-decision",
+            clientCode:"HBG",
+            externalId:"google-review-hbg-justin-lawson-2026-09-01",
+            direction:"incoming",
+            owner:"Andrew",
+            rawContent:"Google Business Profile review from Justin Lawson: 5 stars. Review text: Totally cool spot to shoot. Everyone there is very helpful and friendly to do business with. My girlfriend and I love going. Public owner reply was posted thanking Justin, acknowledging that he and his girlfriend enjoy visiting, and noting that the team is glad they feel welcome.",
+            decision:{
+              source:"Google Business Profile",
+              communicationType:"Customer Review",
+              title:"Justin Lawson 5-star review — Harry Beckwith Guns & Range",
+              operationalSummary:"Justin Lawson left a 5-star Google review for Harry Beckwith Guns & Range praising the range, staff helpfulness, friendliness, and saying he and his girlfriend love going. Andrew posted a public response.",
+              businessImpact:"Positive reputation evidence supporting customer experience and local trust for HB Guns.",
+              importance:"Informational",
+              operationalLabel:"Positive Review",
+              recordPurpose:"Preserve customer reputation evidence and the public response without creating unnecessary work.",
+              recommendedRoutes:{
+                saveCommunication:true,
+                createInvestigation:false,
+                createWorkItem:false,
+                replyRequired:false
+              },
+              recommendedAction:"Retain as reputation history; no further action required.",
+              reasoning:"The customer review is positive, the owner response is complete, and no unresolved operational issue exists."
+            }
+          };
+          const response=await fetch(url,{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify(body)
+          });
+          const data=await response.json();
+          console.log("JUSTIN_REVIEW_RESULT",JSON.stringify(data));
+          if(!response.ok||data?.ok!==true) throw new Error(data?.error||`HTTP ${response.status}`);
+          NODE
