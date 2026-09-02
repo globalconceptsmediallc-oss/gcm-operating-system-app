@@ -1,0 +1,40 @@
+name: One-Time Complete MediaForge Work 21
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/one-time-complete-mediaforge-work-21.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  complete:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Complete GCM Work Item 21
+        shell: bash
+        run: |
+          node <<'NODE'
+          const body={
+            action:"process-work-item",
+            clientCode:"GCM",
+            workItemId:21,
+            workPerformed:"Redesigned MediaForge 3.2.0 around Kristy's reusable Liberty variant standard. Added the 22-position exterior merchandising order, separate interior representative numbering, Black Chrome/Chrome to Silver Velour and Brass to Beige Velour logic, Canto-style Lincoln Pro Flex/Standard filename parsing, unsupported-combination review gates, exterior/interior/batch audit manifests, rename-only ZIP output, and Analyze My Files routing into the new variant workflow. Existing rename, prepare, identify, and catalog workflows were preserved.",
+            actualImpact:"Kristy's new rule is now reusable operating logic instead of a one-off Lincoln list. MediaForge distinguishes hardware-specific exterior positions from interior image numbers; for example White Gloss exterior #2/#3 uses interior representative #2, and a Black Gloss Beige Velour source associated with exterior #21 is named under interior representative #20 with the bv token. Unsupported combinations are blocked for review. The workflow is ready for a future Canto source connection once account access is available.",
+            evidenceDescription:"MediaForge Validate run #33644948756 passed the full production regression suite, the new Liberty variant-standard tests, existing MediaForge naming tests, source-contract validation, and variant-ui JavaScript syntax validation. GitHub Pages deployment run #33644946555 completed successfully with MediaForge 3.2.0.",
+            evidenceSource:"GitHub / MediaForge Production",
+            evidenceType:"completion",
+            evidenceUrl:"https://globalconceptsmediallc-oss.github.io/gcm-operating-system-app/mediaforge/"
+          };
+          const response=await fetch("https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify(body)
+          });
+          const data=await response.json();
+          console.log("MEDIAFORGE_WORK_21_RESULT",JSON.stringify(data));
+          if(!response.ok||data?.ok!==true) throw new Error(data?.error||`HTTP ${response.status}`);
+          NODE
