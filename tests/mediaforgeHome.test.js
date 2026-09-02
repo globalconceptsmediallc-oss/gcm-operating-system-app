@@ -1,7 +1,7 @@
 /* =========================================================
 MediaForge
 File: tests/mediaforgeHome.test.js
-Version: 1.1.0
+Version: 1.2.0
 Status: Production Regression Test
 Purpose: Lock the task-first MediaForge home, simple workflow routing,
          hidden advanced controls, and production website-image defaults.
@@ -16,13 +16,14 @@ const namingUi = fs.readFileSync(new URL("../mediaforge/naming-ui.js", import.me
 
 assert.match(html, /Version: 3\.1\.0/);
 assert.match(html, /What do you want to do today\?/);
+assert.match(html, /Build Product Variants/);
 assert.match(html, /Rename Product Images/);
 assert.match(html, /Prepare Images for the Website/);
 assert.match(html, /Identify Unknown Images/);
 assert.match(html, /I'm Not Sure — Analyze My Files/);
 assert.match(html, /Catalog &amp; Settings/);
 
-for (const task of ["rename","prepare","identify","analyze","catalog"]) {
+for (const task of ["variants","rename","prepare","identify","analyze","catalog"]) {
   assert.match(
     html,
     new RegExp(`data-mf-task(?:-section)?="[^"]*\\b${task}\\b[^"]*"`),
@@ -30,6 +31,10 @@ for (const task of ["rename","prepare","identify","analyze","catalog"]) {
   );
 }
 
+assert.match(html, /id="variantInput"[^>]+accept="[^"]*\.zip/);
+assert.match(html, /id="variantExteriorBody"/);
+assert.match(html, /id="variantInteriorBody"/);
+assert.match(html, /Interior image families inherit/i);
 assert.match(html, /id="renameQuickInput"[^>]+accept="[^"]*\.zip/);
 assert.match(html, /Drop Kristy's ZIP or image files here/);
 assert.match(html, /Advanced recipe settings/);
@@ -45,10 +50,13 @@ assert.match(html, /Filenames will change/);
 assert.match(html, /See All Filenames/);
 assert.match(html, /Download Audit Manifest/);
 assert.match(html, /src="\.\/naming-ui\.js\?v=1\.2\.0"/);
-assert.match(html, /src="\.\/home\.js\?v=1\.0\.2"/);
+assert.match(html, /src="\.\/variant-ui\.js\?v=1\.0\.0"/);
+assert.match(html, /src="\.\/home\.js\?v=1\.1\.0"/);
 
-assert.match(home, /Version: 1\.0\.2/);
+assert.match(home, /Version: 1\.1\.0/);
 assert.match(home, /function classifyJob/);
+assert.match(home, /task: "variants"/);
+assert.match(home, /mediaforge:variant-files/);
 assert.match(home, /alreadyRenamed/);
 assert.match(home, /liberty-lincoln-\(25\|40\|50\)/);
 assert.match(home, /already in the approved naming format/);
@@ -73,4 +81,4 @@ assert.doesNotMatch(
   "The catalog must no longer be the MediaForge opening experience."
 );
 
-console.log("PASS MediaForge 3.1.0 task-first road test, plain-English outcome, known exceptions, collapsed filenames, and safe ZIP rules");
+console.log("PASS MediaForge 3.2.0 task-first road test, reusable variant standards, plain-English outcome, known exceptions, collapsed filenames, and safe ZIP rules");
