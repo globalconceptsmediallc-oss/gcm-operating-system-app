@@ -1,7 +1,7 @@
 # =========================================================
 # MediaForge
 # File: .github/workflows/mediaforge-deploy.yml
-# Version: 1.2.0
+# Version: 1.3.0
 # Status: Production Validation
 # Purpose: Test the source-controlled MediaForge app that is served from
 #          the GCM OS GitHub Pages deployment.
@@ -17,6 +17,7 @@ on:
       - "mediaforge/**"
       - "tests/mediaforgeNamingRecipe.test.js"
       - "tests/mediaforgeHome.test.js"
+      - "tests/mediaforgeVariantStandard.test.js"
       - "package.json"
       - "shared/gcm-shell.js"
       - "tests/sharedAssetVersionLock.test.js"
@@ -49,7 +50,7 @@ jobs:
       - name: Run Production Tests
         run: npm test
 
-      - name: Verify MediaForge 3.0 source contract
+      - name: Verify MediaForge 3.2 source contract
         shell: bash
         run: |
           node <<'NODE'
@@ -59,8 +60,9 @@ jobs:
           const shell = fs.readFileSync("shared/gcm-shell.js", "utf8");
 
           for (const marker of [
-            "Version 3.1.0 · Plain-English Road Test",
+            "Version 3.2.0 · Variant Standards",
             "What do you want to do today?",
+            "Build Product Variants",
             "Rename Product Images",
             "Prepare Images for the Website",
             "Identify Unknown Images",
@@ -69,7 +71,8 @@ jobs:
             "Images found",
             "Need review",
             "Filenames will change",
-            'src="./home.js?v=1.0.2"'
+            'src="./variant-ui.js?v=1.0.0"',
+            'src="./home.js?v=1.1.0"'
           ]) {
             if (!html.includes(marker)) {
               throw new Error(`MediaForge source missing: ${marker}`);
@@ -84,5 +87,9 @@ jobs:
             throw new Error("GCM shell is not pointing at the integrated MediaForge path.");
           }
 
-          console.log("PASS MediaForge 3.1 plain-English road-test source contract and integrated GCM OS navigation");
+          if (!home.includes('task: "variants"') || !home.includes("mediaforge:variant-files")) {
+            throw new Error("MediaForge variant-standard routing is missing.");
+          }
+
+          console.log("PASS MediaForge 3.2 variant-standard source contract and integrated GCM OS navigation");
           NODE
