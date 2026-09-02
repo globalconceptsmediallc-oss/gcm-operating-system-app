@@ -14,7 +14,7 @@ const html = fs.readFileSync(new URL("../mediaforge/index.html", import.meta.url
 const home = fs.readFileSync(new URL("../mediaforge/home.js", import.meta.url), "utf8");
 const namingUi = fs.readFileSync(new URL("../mediaforge/naming-ui.js", import.meta.url), "utf8");
 
-assert.match(html, /Version: 3\.1\.0/);
+assert.match(html, /Version: 3\.2\.0/);
 assert.match(html, /What do you want to do today\?/);
 assert.match(html, /Build Product Variants/);
 assert.match(html, /Rename Product Images/);
