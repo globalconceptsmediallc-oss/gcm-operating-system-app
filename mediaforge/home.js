@@ -1,7 +1,7 @@
 /* =========================================================
 MediaForge
 File: home.js
-Version: 1.0.2
+Version: 1.1.0
 Status: Production Candidate
 Purpose: User-friendly task launcher and simple workflows for rename,
          website preparation, unknown-image routing, and job analysis.
@@ -18,6 +18,7 @@ const taskTitle = $("mfTaskTitle");
 const homeBtn = $("mfHomeBtn");
 
 const TITLES = {
+  variants: "Build Product Variants",
   rename: "Rename Product Images",
   prepare: "Prepare Images for the Website",
   identify: "Identify Unknown Images",
@@ -74,6 +75,23 @@ function status(el, message, tone = "") {
 
 function classifyJob(files) {
   const names = files.map(file => file.name);
+
+  const libertyVariantInteriors = names
+    .map(name => name.match(/^LX(25|40|50)-.+-Open-.+(?:Pro\s*Flex|ProFlex|Standard)/i)?.[1])
+    .filter(Boolean);
+
+  if (libertyVariantInteriors.length && libertyVariantInteriors.length === files.length) {
+    const sizes = [...new Set(libertyVariantInteriors)];
+    return {
+      task: "variants",
+      recipeId: "liberty-merchandising-v1",
+      alreadyNamed: false,
+      title: sizes.length === 1
+        ? `Lincoln ${sizes[0]} Interior Variant Batch`
+        : `Lincoln ${sizes.join(" / ")} Interior Variant Batch`,
+      detail: "These Canto-style Lincoln interior files match the saved Liberty merchandising standard. MediaForge will separate exterior variant position from interior image numbering."
+    };
+  }
 
   const alreadyRenamed = names
     .map(name => name.match(/^liberty-lincoln-(25|40|50)-\d+-.+?-signature-interior-(?:empty|loaded|full-no-guns)\.webp$/i))
@@ -276,6 +294,51 @@ if (renameDrop && renameInput) {
   renameDrop.addEventListener("drop", event => {
     loadRenameFiles(event.dataTransfer.files).catch(error =>
       status(renameStatus, error.message, "error")
+    );
+  });
+}
+
+/* Variant-standard workflow */
+const variantDrop = $("variantDrop");
+const variantInput = $("variantInput");
+const variantStatus = $("variantStatus");
+const variantDetected = $("variantDetected");
+
+async function loadVariantFiles(fileList) {
+  status(variantStatus, "Reading the Liberty variant batch…", "running");
+  const files = await filesFromSelection(fileList);
+  if (!files.length) throw new Error("No supported images were selected.");
+
+  const job = classifyJob(files);
+  variantDetected.textContent =
+    `${job.title} · ${files.length} image${files.length === 1 ? "" : "s"}`;
+
+  window.dispatchEvent(new CustomEvent("mediaforge:variant-files", {
+    detail: { files, detectedJob: job }
+  }));
+}
+
+if (variantDrop && variantInput) {
+  variantDrop.addEventListener("click", () => {
+    variantInput.value = "";
+    variantInput.click();
+  });
+  variantInput.addEventListener("change", event => {
+    loadVariantFiles(event.target.files).catch(error =>
+      status(variantStatus, error.message, "error")
+    );
+  });
+  ["dragenter","dragover"].forEach(name => variantDrop.addEventListener(name, event => {
+    event.preventDefault();
+    variantDrop.classList.add("drag");
+  }));
+  ["dragleave","drop"].forEach(name => variantDrop.addEventListener(name, event => {
+    event.preventDefault();
+    variantDrop.classList.remove("drag");
+  }));
+  variantDrop.addEventListener("drop", event => {
+    loadVariantFiles(event.dataTransfer.files).catch(error =>
+      status(variantStatus, error.message, "error")
     );
   });
 }
@@ -508,7 +571,16 @@ analyzeGo?.addEventListener("click", () => {
   const files = analyzedFiles;
   selectTask(analyzedTask);
 
-  if (analyzedTask === "rename" && files.length) {
+  if (analyzedTask === "variants" && files.length) {
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent("mediaforge:variant-files", {
+        detail: { files, detectedJob: classifyJob(files) }
+      }));
+      const job = classifyJob(files);
+      if (variantDetected) variantDetected.textContent = `${job.title} · ${files.length} images`;
+      status(variantStatus, "Liberty variant standard applied. Review the batch below.", "success");
+    }, 0);
+  } else if (analyzedTask === "rename" && files.length) {
     setTimeout(() => {
       const preset = $("namingPreset");
       if (preset) {
