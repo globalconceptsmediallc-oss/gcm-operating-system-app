@@ -159,7 +159,7 @@ assert.ok(zipText.includes("second.webp"));
 
 const html = fs.readFileSync(new URL("../mediaforge/index.html", import.meta.url), "utf8");
 for (const marker of [
-  "Version 3.1.0",
+  "Version 3.2.0",
   'id="namingPreset"',
   'id="namingAliases"',
   'id="namingSequence"',
@@ -170,5 +170,5 @@ for (const marker of [
 }
 
 console.log(
-  "PASS MediaForge naming recipes, known Textured Bronze exclusion, safe ZIP export, and 3.1 road-test UI contract"
+  "PASS MediaForge naming recipes, known Textured Bronze exclusion, safe ZIP export, and 3.2 road-test UI contract"
 );
