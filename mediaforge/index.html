@@ -7,12 +7,13 @@
 <!-- =========================================================
 MediaForge
 File: index.html
-Version: 3.1.0
+Version: 3.2.0
 Status: Production Road-Test Candidate
 Source: Production Development
-Purpose: Put the real MediaForge jobs first: rename product images,
-         prepare website images, identify unknown variants, analyze a batch,
-         and keep catalog management available only when needed.
+Purpose: Put the real MediaForge jobs first: apply saved product/variant
+         standards, rename product images, prepare website images, identify
+         unknown variants, analyze a batch, and keep catalog management
+         available only when needed.
 Backend Contract: functions/api/catalog.js v1.8.0
 ========================================================= -->
 <style>
@@ -134,12 +135,36 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;padding:20px 12px 28
 .mf-file-details summary{cursor:pointer;padding:12px 14px;font-weight:800;color:var(--blue-dark);background:#f8faff}
 .mf-file-details-body{padding:0 12px 12px}
 .mf-exception-row{background:#fffaf0}
+
+/* MediaForge variant standards — v3.2.0 */
+.variant-standard-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0}
+.variant-standard-stat{border:1px solid var(--line);border-radius:12px;background:#fbfcff;padding:12px}
+.variant-standard-stat strong{display:block;color:var(--blue-dark);font-size:1.15rem}
+.variant-standard-stat span{display:block;color:var(--muted);font-size:.73rem;margin-top:4px;line-height:1.4}
+.variant-rule-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0 16px}
+.variant-rule{border:1px solid var(--line);border-radius:12px;background:#fff;padding:12px}
+.variant-rule strong{display:block;font-size:.83rem;margin-bottom:5px}
+.variant-rule p{margin:0;color:var(--muted);font-size:.76rem;line-height:1.5}
+.variant-note{border:1px solid #cbd9ff;border-radius:12px;background:linear-gradient(135deg,#f8faff,#eef3ff);padding:13px 14px;margin:12px 0;font-size:.82rem;line-height:1.55}
+.variant-table-wrap{overflow:auto;border:1px solid var(--line);border-radius:11px;margin-top:10px}
+.variant-table{width:100%;border-collapse:collapse;min-width:760px}
+.variant-table th,.variant-table td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;font-size:.76rem}
+.variant-table th{background:#f7f9fd;color:var(--muted);font-weight:800}
+.variant-table tr:last-child td{border-bottom:0}
+.variant-example{margin-top:16px;border:1px solid var(--line);border-radius:12px;padding:14px;background:#fbfcff}
+.variant-example h3{margin:0 0 5px;font-size:.95rem}
+.variant-example p{margin:0 0 10px;color:var(--muted);font-size:.78rem;line-height:1.5}
+.variant-example-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.variant-example-row input{min-height:42px;border:1px solid var(--line);border-radius:9px;padding:9px 10px;background:#fff;color:var(--text)}
+.variant-example code{overflow-wrap:anywhere}
+@media(max-width:900px){.variant-standard-grid{grid-template-columns:1fr 1fr}.variant-rule-grid{grid-template-columns:1fr}}
+@media(max-width:560px){.variant-standard-grid{grid-template-columns:1fr}.variant-example-row{grid-template-columns:1fr}}
 @media(max-width:760px){.mf-outcome-grid{grid-template-columns:1fr 1fr}}
 
 </style>
 </head>
 <body>
-<header class="topbar"><div class="topbar-inner"><div class="brand"><span class="mark">▣</span><span>MediaForge</span></div><div class="version">Version 3.1.0 · Plain-English Road Test</div></div></header>
+<header class="topbar"><div class="topbar-inner"><div class="brand"><span class="mark">▣</span><span>MediaForge</span></div><div class="version">Version 3.2.0 · Variant Standards</div></div></header>
 <main class="shell">
 <section id="mfHome" class="mf-home">
   <div class="mf-home-copy">
@@ -147,6 +172,11 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;padding:20px 12px 28
     <p class="lead">Choose the job. MediaForge will show only the tools you need and keep the technical controls out of the way unless you ask for them.</p>
   </div>
   <div class="mf-task-grid">
+    <button class="mf-task-card" type="button" data-mf-task="variants">
+      <span class="mf-task-icon">22</span><span class="mf-arrow">→</span>
+      <h2>Build Product Variants</h2>
+      <p>Apply the saved merchandising order, interior numbering, and hardware/velour rules before naming a product-image batch.</p>
+    </button>
     <button class="mf-task-card" type="button" data-mf-task="rename">
       <span class="mf-task-icon">Aa</span><span class="mf-arrow">→</span>
       <h2>Rename Product Images</h2>
@@ -184,6 +214,127 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;padding:20px 12px 28
 <div style="height:14px"></div><div id="validation" class="validation warning">Import the catalog to begin validation.</div><div class="issue-grid"><div class="issue-box"><strong id="missingSlotCount">0 missing slots</strong><span>Every size must contain positions 1–21.</span></div><div class="issue-box"><strong id="duplicateCount">0 duplicate slots</strong><span>Each size and position must be unique.</span></div><div class="issue-box"><strong id="ignoredCount">0 excluded variants</strong><span>Site variants outside Kristy's approved order.</span></div></div>
 </div></section>
 
+
+<section class="card" id="variantStandardLab" data-mf-task-section="variants" hidden>
+  <div class="card-head"><h2>Build Product Variants</h2></div>
+  <div class="card-body">
+    <div class="mf-workflow-intro">
+      <strong>Kristy's Liberty merchandising rule is now a saved standard — not a one-off filename list.</strong>
+      <p>MediaForge keeps the 22 exterior positions separate from interior image numbering. Interior images inherit the first exterior position for the same color/finish, while Beige Velour can still be identified with the <b>bv</b> filename token.</p>
+    </div>
+
+    <div class="variant-standard-grid">
+      <div class="variant-standard-stat"><strong id="variantStandardVersion">v1.0.0</strong><span>Saved Liberty standard</span></div>
+      <div class="variant-standard-stat"><strong id="variantStandardEffective">2026-09-02</strong><span>Effective date</span></div>
+      <div class="variant-standard-stat"><strong id="variantStandardPositions">22</strong><span>Exterior variant positions</span></div>
+      <div class="variant-standard-stat"><strong id="variantStandardGroups">15</strong><span>Interior color/finish groups</span></div>
+    </div>
+
+    <div class="variant-rule-grid">
+      <div class="variant-rule">
+        <strong>1 · Color family progression</strong>
+        <p>White → Champagne → Gray → Bronze → Forest Mist → Green → Blue → Burgundy → Black Cherry → Black.</p>
+      </div>
+      <div class="variant-rule">
+        <strong>2 · Finish and hardware order</strong>
+        <p>Within a color: Textured → Marble → Gloss. Within the same finish: Black Chrome → Brass → Chrome.</p>
+      </div>
+      <div class="variant-rule">
+        <strong>3 · Interior image rule</strong>
+        <p>Use the first exterior position for that color/finish. Black Chrome/Chrome generally map to Silver Velour; Brass generally maps to Beige Velour.</p>
+      </div>
+    </div>
+
+    <div class="variant-note">
+      <strong>Example:</strong> White Gloss–Black Chrome is exterior <b>#2</b> and White Gloss–Brass is exterior <b>#3</b>. Both White Gloss interior image families inherit <b>#2</b>. A Beige Velour interior remains distinguishable with <b>-bv-</b>; MediaForge does not create a separate #3 interior family.
+    </div>
+
+    <div class="naming-actions">
+      <button id="variantExteriorManifest" class="btn secondary" type="button">Download 22-Position Exterior Standard</button>
+      <button id="variantInteriorManifest" class="btn secondary" type="button">Download Interior Numbering Standard</button>
+    </div>
+
+    <details class="mf-file-details">
+      <summary>Review the 22 exterior positions</summary>
+      <div class="mf-file-details-body">
+        <div class="variant-table-wrap">
+          <table class="variant-table">
+            <thead><tr><th>Position</th><th>Color family</th><th>Finish</th><th>Hardware</th><th>Expected interior velour</th></tr></thead>
+            <tbody id="variantExteriorBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+
+    <details class="mf-file-details">
+      <summary>Review the interior representative numbers</summary>
+      <div class="mf-file-details-body">
+        <div class="variant-table-wrap">
+          <table class="variant-table">
+            <thead><tr><th>Interior #</th><th>Color / finish</th><th>Exterior positions represented</th><th>Hardware variants</th><th>Velour options</th></tr></thead>
+            <tbody id="variantInteriorBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+
+    <div class="variant-example">
+      <h3>Test a Canto filename against the standard</h3>
+      <p>This is the same rule MediaForge will use when Canto becomes a direct image source. Unsupported combinations stop for review instead of being guessed.</p>
+      <div class="variant-example-row">
+        <input id="variantExampleInput" type="text" value="LX25-Black Gloss(BV)-Open-Empty-Pro Flex-2026.webp" aria-label="Canto filename">
+        <button id="variantExampleRun" class="btn primary" type="button">Apply Standard</button>
+      </div>
+      <div id="variantExampleResult" class="status" hidden></div>
+    </div>
+
+    <div style="height:18px"></div>
+    <div id="variantDrop" class="mf-drop">
+      <div class="mf-drop-icon">☁</div>
+      <h3>Drop a Lincoln Canto ZIP or image batch here</h3>
+      <p>MediaForge will identify each interior image, apply the saved variant standard, and preview every production filename before changing anything.</p>
+      <button class="btn primary" type="button">Choose ZIP or Images</button>
+      <input id="variantInput" type="file" accept=".zip,.jpg,.jpeg,.png,.webp,application/zip,image/jpeg,image/png,image/webp" multiple hidden>
+      <div id="variantDetected" class="mf-detected"></div>
+    </div>
+    <div id="variantStatus" class="status">No Liberty variant batch loaded yet.</div>
+
+    <section id="variantOutcome" class="mf-outcome" hidden aria-live="polite">
+      <div class="mf-outcome-head">
+        <h3>Liberty variant standard applied</h3>
+        <p>MediaForge separates the source exterior position from the interior representative number so the filename reflects the merchandising architecture.</p>
+      </div>
+      <div class="mf-outcome-grid">
+        <div class="mf-outcome-stat"><strong id="variantFoundCount">0</strong><span>Images found</span></div>
+        <div class="mf-outcome-stat"><strong id="variantReadyCount">0</strong><span>Ready</span></div>
+        <div class="mf-outcome-stat"><strong id="variantReviewCount">0</strong><span>Need review</span></div>
+        <div class="mf-outcome-stat"><strong id="variantChangeCount">0</strong><span>Filenames will change</span></div>
+      </div>
+      <div class="mf-outcome-copy">
+        <p id="variantOutcomeExplanation"></p>
+        <p id="variantOutcomePromise" class="promise"></p>
+      </div>
+      <div class="mf-outcome-actions">
+        <button id="variantZip" class="btn primary" type="button" disabled>Build Renamed ZIP</button>
+      </div>
+    </section>
+
+    <details id="variantBatchDetails" class="mf-file-details" hidden>
+      <summary>Review variant batch filenames</summary>
+      <div class="mf-file-details-body">
+        <div class="variant-table-wrap">
+          <table class="variant-table">
+            <thead><tr><th>Source filename</th><th>Color / finish</th><th>Velour</th><th>Source exterior #</th><th>Interior #</th><th>Production filename</th><th>Status</th></tr></thead>
+            <tbody id="variantBatchPreviewBody"><tr><td colspan="7" class="empty-cell">Add a Lincoln Canto batch to preview the standard.</td></tr></tbody>
+          </table>
+        </div>
+        <div class="naming-actions">
+          <button id="variantBatchManifest" class="btn secondary" type="button" disabled>Download Batch Audit Manifest</button>
+        </div>
+      </div>
+    </details>
+  </div>
+</section>
 
 <section class="card" id="namingLab" data-mf-task-section="rename" hidden><div class="card-head"><h2>Rename Product Images</h2></div><div class="card-body">
   <div class="mf-workflow-intro"><strong>1. Add the files → 2. MediaForge detects the recipe → 3. Review exceptions → 4. Build the ZIP</strong><p>For the Lincoln Signature jobs, drop Kristy's ZIP directly. MediaForge will use the approved Lincoln 25/40/50 naming convention automatically.</p></div>
@@ -686,6 +837,7 @@ els.clearReplacementBtn.onclick=()=>clearReplacement(true);
 try{const saved=localStorage.getItem("mediaforge-liberty-premium-catalog");if(saved){state.payload=JSON.parse(saved);state.saved=true;setStatus("Saved Liberty Premium catalog loaded from MediaForge.","success")}}catch(e){console.warn("Saved catalog could not be loaded",e)}renderAll();
 </script>
 <script type="module" src="./naming-ui.js?v=1.2.0"></script>
-<script type="module" src="./home.js?v=1.0.2"></script>
+<script type="module" src="./variant-ui.js?v=1.0.0"></script>
+<script type="module" src="./home.js?v=1.1.0"></script>
 </body>
 </html>
