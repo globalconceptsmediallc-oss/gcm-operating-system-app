@@ -1,0 +1,7 @@
+source_filename,expected_mediaforge_filename,proxy_state,source_exterior_position,interior_representative_position,test_only
+LX25-Black Gloss(BV)-Open-Empty-Pro Flex-2026.webp,liberty-lincoln-25-20-black-gloss-bv-pro-flex-interior-empty.webp,empty,21,20,YES
+LX25-Black Gloss(BV)-Open-ProFlex-Full No Guns-2026.webp,liberty-lincoln-25-20-black-gloss-bv-pro-flex-interior-full-no-guns.webp,full,21,20,YES
+LX25-Black Gloss(BV)-Open-ProFlex-Loaded-2026.webp,liberty-lincoln-25-20-black-gloss-bv-pro-flex-interior-loaded.webp,loaded,21,20,YES
+LX25-Black Gloss-Open-Empty-Pro Flex.copy.webp,liberty-lincoln-25-20-black-gloss-pro-flex-interior-empty.webp,empty,20,20,YES
+LX25-Black Gloss-Open-ProFlex-Full No Guns-2026.webp,liberty-lincoln-25-20-black-gloss-pro-flex-interior-full-no-guns.webp,full,20,20,YES
+LX25-Black Gloss-Open-ProFlex-Loaded-2026.webp,liberty-lincoln-25-20-black-gloss-pro-flex-interior-loaded.webp,loaded,20,20,YES
