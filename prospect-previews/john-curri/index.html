@@ -1,10 +1,13 @@
 <!-- =========================================================
    Global Concepts Media
    File: prospect-previews/john-curri/index.html
-   Version: 1.1.1
+   Version: 1.1.2
    Status: Prospect Concept Preview
    Purpose: Personalized, unlisted concept page for Realty World Curri Properties.
    Notes: noindex/nofollow; concept assets watermarked and not licensed for production use.
+   Change Notes — 1.1.2:
+   - Uses a verified clean postcard source split into cacheable static chunks.
+   - Preserves page layout and prospect engagement tracking.
    Change Notes — 1.1.1:
    - Replaces the damaged low-resolution postcard render with a clean web-optimized source.
    - Preserves page layout and prospect engagement tracking.
@@ -84,7 +87,7 @@
       <div class="section-body">
         <div class="grid2">
           <div class="evidence">
-            <img id="curri-original-postcard" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" width="500" height="667" decoding="async" alt="Original Realty World Curri Properties direct-mail postcard received by Global Concepts Media">
+            <img id="curri-original-postcard" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" width="400" height="533" decoding="async" alt="Original Realty World Curri Properties direct-mail postcard received by Global Concepts Media">
             <h3>The current mail piece</h3>
             <p>Strong local branding, multiple service lines, a direct call/text CTA and a QR code. The main opportunity is turning that attention into a trackable campaign path.</p>
           </div>
@@ -191,7 +194,10 @@
     const image = document.getElementById("curri-original-postcard");
     if (!image) return;
 
-    const parts = Array.from({ length: 9 }, (_, index) => `assets/original-postcard.b64.${index}`);
+    const parts = Array.from(
+      { length: 18 },
+      (_, index) => `assets/original-postcard-v2.b64.${String(index).padStart(2, "0")}`
+    );
 
     Promise.all(parts.map(async (url) => {
       const response = await fetch(url, { cache: "force-cache" });
@@ -210,7 +216,7 @@
   <script>
   (() => {
     "use strict";
-    const FILE_VERSION = "1.1.1";
+    const FILE_VERSION = "1.1.2";
     const WORKER = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
     const ACTION = "prospect-concept-view";
     const CONCEPT_KEY = "john-curri-v1";
