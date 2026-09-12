@@ -1,14 +1,20 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.19.0
+   Version: 7.19.7
    Status: OS 2.0 Production Road-Test Candidate
-   Source: Production worker.js 7.18.0
-   Sprint: Prospecting + CRM — Durable Relationship Record
+   Source: Production worker.js 7.19.6
+   Sprint: Prospecting + CRM — Prospect Concept Engagement Tracking
    Purpose: Preserve every verified production route while exposing the
             durable Prospecting Radar + CRM operations required to connect
             scheduled prospects, discovery, proposals, follow-up, agreements,
             payments, and eventual Client handoff.
+
+   Changes in 7.19.7:
+   - Adds privacy-minimized prospect-concept-view tracking to the Worker router.
+   - Records personalized concept-page engagement against the exact Radar or
+     promoted Prospect relationship without storing visitor PII.
+   - Preserves current Radar outreach dates and Next Action cadence.
 
    Changes in 7.19.0:
    - Adds prospect-crm to the Worker action allowlist and router.
@@ -51,6 +57,10 @@ import {
   handleProspectCrm,
   PROSPECT_CRM_ACTION
 } from "./routes/prospectCrm.js";
+import {
+  handleProspectConceptView,
+  PROSPECT_CONCEPT_VIEW_ACTION
+} from "./routes/prospectConceptTracking.js";
 import { handleClientWorkspace } from "./routes/clientWorkspace.js";
 import { handleClientDirectory } from "./routes/clientDirectory.js";
 import { handleCommitOperationalDecision } from "./routes/operationalDecision.js";
@@ -115,12 +125,13 @@ import {
   PREPARE_OPERATING_SESSION_ACTION
 } from "./routes/operatingSessionIntake.js";
 
-const WORKER_FILE_VERSION = "7.19.6";
+const WORKER_FILE_VERSION = "7.19.7";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
   ACTIONS.ANALYZE_PROSPECT_INTELLIGENCE,
   PROSPECT_CRM_ACTION,
+  PROSPECT_CONCEPT_VIEW_ACTION,
   ACTIONS.GET_CLIENT_WORKSPACE,
   ACTIONS.GET_CLIENT_DIRECTORY,
   ACTIONS.COMMIT_OPERATIONAL_DECISION,
@@ -171,12 +182,13 @@ export default {
         version: VERSION,
         workerFileVersion: WORKER_FILE_VERSION,
         contractVersion: API_CONTRACT_VERSION,
-        sprint: "Prospecting + CRM — Durable Relationship Record",
+        sprint: "Prospecting + CRM — Prospect Concept Engagement Tracking",
         architecture:
-          "Modular production router with Prospect CRM, Agency Command, Calendar Operations, Gmail operator decisions, Historical Rehabilitation, Intelligence Backlog, Intelligence Refresh, Communication Intelligence, Activity Intelligence, Intelligence Processing, Prospect Intelligence, Communications analysis, Guided Investigation, and operational processing.",
+          "Modular production router with Prospect CRM, Prospect Concept Tracking, Agency Command, Calendar Operations, Gmail operator decisions, Historical Rehabilitation, Intelligence Backlog, Intelligence Refresh, Communication Intelligence, Activity Intelligence, Intelligence Processing, Prospect Intelligence, Communications analysis, Guided Investigation, and operational processing.",
         actions: SUPPORTED_ACTIONS,
         engines: [
           "prospect-crm",
+          "prospect-concept-tracking",
           "agency-command",
           "calendar-operations",
           "gmail-work-requests",
@@ -208,6 +220,7 @@ export default {
           shared: ["config", "http", "database", "ai"],
           routes: [
             "prospect-crm",
+            "prospect-concept-tracking",
             "agency-command",
             "calendar-operations",
             "gmail-work-requests",
@@ -318,6 +331,9 @@ export default {
 
         case PROSPECT_CRM_ACTION:
           return await handleProspectCrm(body, env, requestId);
+
+        case PROSPECT_CONCEPT_VIEW_ACTION:
+          return await handleProspectConceptView(body, env, requestId);
 
         case ACTIONS.ANALYZE_COMMUNICATION:
           return await handleCommunicationAnalysisWithReviewAdapter(
