@@ -1,10 +1,14 @@
 <!-- =========================================================
    Global Concepts Media
    File: prospect-previews/john-curri/index.html
-   Version: 1.0.0
+   Version: 1.1.0
    Status: Prospect Concept Preview
    Purpose: Personalized, unlisted concept page for Realty World Curri Properties.
    Notes: noindex/nofollow; concept assets watermarked and not licensed for production use.
+   Change Notes — 1.1.0:
+   - Records one privacy-minimized concept-page view per browser session in GCM OS.
+   - Skips tracking when gcm_preview=1 is present so internal review does not
+     contaminate prospect engagement history.
    ========================================================= -->
 <!doctype html>
 <html lang="en">
@@ -177,5 +181,52 @@
 
     <footer><div>Prepared by <strong>Global Concepts Media</strong> · Melbourne, Florida</div><div><a href="https://globalconceptsmedia.com/" target="_blank" rel="noopener">globalconceptsmedia.com</a> · Concept preview only</div></footer>
   </div>
+
+  <script>
+  (() => {
+    "use strict";
+    const FILE_VERSION = "1.1.0";
+    const WORKER = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+    const ACTION = "prospect-concept-view";
+    const CONCEPT_KEY = "john-curri-v1";
+    const SESSION_KEY = `gcm-concept-view:${CONCEPT_KEY}`;
+    const params = new URLSearchParams(window.location.search);
+
+    if (params.get("gcm_preview") === "1") return;
+
+    try {
+      if (sessionStorage.getItem(SESSION_KEY)) return;
+    } catch {}
+
+    const trackView = async () => {
+      if (document.visibilityState !== "visible") return;
+
+      try {
+        const response = await fetch(WORKER, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: ACTION,
+            conceptKey: CONCEPT_KEY,
+            pagePath: window.location.pathname,
+            pageVersion: FILE_VERSION,
+            viewedAt: new Date().toISOString()
+          }),
+          keepalive: true
+        });
+
+        if (response.ok) {
+          try {
+            sessionStorage.setItem(SESSION_KEY, new Date().toISOString());
+          } catch {}
+        }
+      } catch {
+        // Engagement tracking must never interrupt the prospect experience.
+      }
+    };
+
+    window.setTimeout(trackView, 2500);
+  })();
+  </script>
 </body>
 </html>
