@@ -1,10 +1,14 @@
 <!-- =========================================================
    Global Concepts Media
    File: prospect-previews/john-curri/index.html
-   Version: 1.1.3
+   Version: 1.1.4
    Status: Prospect Concept Preview
    Purpose: Personalized, unlisted concept page for Realty World Curri Properties.
    Notes: noindex/nofollow; concept assets watermarked and not licensed for production use.
+   Change Notes — 1.1.4:
+   - Replaces both Section 02 images with verified standalone WebP assets.
+   - Removes the broken JPEG delivery path that Safari was failing to render.
+   - Preserves page layout and prospect engagement tracking.
    Change Notes — 1.1.3:
    - Repairs the Direct-mail concept as a standard baseline JPEG for Safari/GitHub Pages compatibility.
    - Restores the Digital extension with a clean standalone JPEG asset.
@@ -115,12 +119,12 @@
       <div class="section-body">
         <div class="grid2">
           <div class="asset">
-            <img src="assets/postcard-concept.jpg" alt="Watermarked Global Concepts Media postcard concept for Realty World Curri Properties">
+            <img src="assets/postcard-concept.webp?v=114" alt="Watermarked Global Concepts Media postcard concept for Realty World Curri Properties">
             <h3>Direct-mail concept</h3>
             <p>Refocuses the piece around a free property value and market review, while keeping residential, commercial and land visible.</p>
           </div>
           <div class="asset">
-            <img src="assets/social-concept.jpg" alt="Watermarked Global Concepts Media social campaign concept for Realty World Curri Properties">
+            <img src="assets/social-concept.webp?v=114" alt="Watermarked Global Concepts Media social campaign concept for Realty World Curri Properties">
             <h3>Digital extension</h3>
             <p>Uses the same offer and visual language for Meta prospecting, retargeting or seller-awareness campaigns.</p>
           </div>
@@ -219,7 +223,7 @@
   <script>
   (() => {
     "use strict";
-    const FILE_VERSION = "1.1.3";
+    const FILE_VERSION = "1.1.4";
     const WORKER = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
     const ACTION = "prospect-concept-view";
     const CONCEPT_KEY = "john-curri-v1";
