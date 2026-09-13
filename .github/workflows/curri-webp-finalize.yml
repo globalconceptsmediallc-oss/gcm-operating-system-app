@@ -1,0 +1,57 @@
+name: Finalize Curri WebP asset delivery
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/curri-webp-finalize.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache bust Curri WebP assets
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('prospect-previews/john-curri/index.html')
+          s = p.read_text()
+
+          s = s.replace('Version: 1.1.4', 'Version: 1.1.5', 1)
+          marker = '   Change Notes — 1.1.4:'
+          if 'Change Notes — 1.1.5:' not in s and marker in s:
+              s = s.replace(
+                  marker,
+                  '   Change Notes — 1.1.5:\n'
+                  '   - Installs verified binary WebP files for both Section 02 creative assets.\n'
+                  '   - Uses direct asset paths only; no Base64 or JavaScript reconstruction.\n'
+                  '   - Bumps asset query strings to force Safari and GitHub Pages to fetch the new files.\n'
+                  + marker,
+                  1,
+              )
+
+          s = s.replace('assets/postcard-concept.webp?v=114', 'assets/postcard-concept.webp?v=115')
+          s = s.replace('assets/social-concept.webp?v=114', 'assets/social-concept.webp?v=115')
+          s = s.replace('const FILE_VERSION = "1.1.4";', 'const FILE_VERSION = "1.1.5";')
+
+          p.write_text(s)
+          PY
+
+          rm -f .github/workflows/curri-webp-finalize.yml
+
+      - name: Commit finalized Curri page
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -m "Finalize Curri WebP asset delivery"
+          git push
