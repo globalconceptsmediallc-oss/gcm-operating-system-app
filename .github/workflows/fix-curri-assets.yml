@@ -37,7 +37,9 @@ jobs:
 
           python - <<'PY'
           from pathlib import Path
-          from PIL import Image
+          from PIL import Image, ImageFile
+
+          ImageFile.LOAD_TRUNCATED_IMAGES = True
 
           jobs = [
               (Path('/tmp/curri-assets/postcard-concept.jpg'), Path('prospect-previews/john-curri/assets/postcard-concept.jpg')),
@@ -46,16 +48,17 @@ jobs:
 
           for source, target in jobs:
               with Image.open(source) as im:
+                  im.load()
                   im = im.convert('RGB')
                   im.save(
                       target,
                       format='JPEG',
-                      quality=88,
+                      quality=90,
                       optimize=True,
                       progressive=False,
                       subsampling=0,
                   )
-                  print(f'{target}: {im.size[0]}x{im.size[1]} baseline JPEG')
+                  print(f'{target}: {im.size[0]}x{im.size[1]} repaired baseline JPEG')
 
           index = Path('prospect-previews/john-curri/index.html')
           text = index.read_text(encoding='utf-8')
@@ -63,16 +66,14 @@ jobs:
           text = text.replace(
               '   Change Notes — 1.1.2:\n',
               '   Change Notes — 1.1.3:\n'
-              '   - Re-encodes both Section 02 concept assets as standard baseline JPEGs for Safari/GitHub Pages compatibility.\n'
-              '   - Restores the Digital extension image and removes the damaged Direct-mail concept render.\n'
+              '   - Rebuilds both Section 02 concept assets as standard baseline JPEGs for Safari/GitHub Pages compatibility.\n'
+              '   - Restores the Digital extension image and repairs the Direct-mail concept render.\n'
               '   Change Notes — 1.1.2:\n',
               1,
           )
           text = text.replace('const FILE_VERSION = "1.1.2";', 'const FILE_VERSION = "1.1.3";', 1)
           index.write_text(text, encoding='utf-8')
           PY
-
-          rm .github/workflows/fix-curri-assets.yml
 
       - name: Commit repaired assets
         shell: bash
@@ -82,7 +83,6 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add prospect-previews/john-curri/index.html \
                   prospect-previews/john-curri/assets/postcard-concept.jpg \
-                  prospect-previews/john-curri/assets/social-concept.jpg \
-                  .github/workflows/fix-curri-assets.yml
+                  prospect-previews/john-curri/assets/social-concept.jpg
           git commit -m "Fix Curri Section 02 image rendering"
           git push origin HEAD:main
