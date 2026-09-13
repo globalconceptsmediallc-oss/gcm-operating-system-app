@@ -1,0 +1,43 @@
+name: Polish Curri landing-page concept
+
+on:
+  push:
+    paths:
+      - '.github/workflows/curri-landing-polish.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  polish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Tighten landing-page concept and watermark
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('prospect-previews/john-curri/index.html')
+          s = p.read_text()
+          s = s.replace('Version: 1.1.5', 'Version: 1.1.6', 1)
+          s = s.replace('Change Notes — 1.1.5:', 'Change Notes — 1.1.6:\n   - Tightens the Section 04 landing-page mockup so it reads as a polished campaign preview rather than an oversized full-page block.\n   - Reduces watermark interference while keeping the concept protected.\n   - Preserves all campaign copy, form fields, and tracking.\n   Change Notes — 1.1.5:', 1)
+          old = '.mock{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:22px;background:#fff}.wm{pointer-events:none;position:absolute;inset:-80px;z-index:4;opacity:.095;transform:rotate(-18deg);display:grid;align-content:center;gap:56px;color:var(--navy);font-weight:950;font-size:1.8rem;white-space:nowrap;text-transform:uppercase}.wm div:nth-child(even){transform:translateX(100px)}\n    .mock-inner{display:grid;grid-template-columns:1.2fr .8fr;min-height:520px;background:linear-gradient(135deg,#f8f4ea 0%,#fff 45%,#e8f2fb 100%)}\n    .mock-copy{padding:48px 42px;display:flex;flex-direction:column;justify-content:center}.mini{color:#8c6a23;font-size:.7rem;font-weight:900;letter-spacing:.13em;text-transform:uppercase}.mock-copy h3{margin:10px 0 0;color:var(--navy);font-family:Georgia,"Times New Roman",serif;font-size:clamp(2rem,4vw,4rem);line-height:1.02}.mock-copy p{margin:16px 0 0;color:#56657b}.trust{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.trust span{padding:8px 10px;border:1px solid var(--line);border-radius:999px;background:#fff;color:#5a687b;font-size:.72rem;font-weight:800}\n    .mock-form{align-self:center;margin:34px;padding:24px;border:1px solid var(--line);border-radius:20px;background:#fff;box-shadow:0 18px 50px rgba(7,25,46,.14)}.mock-form h4{margin:0;color:var(--navy);font-size:1.08rem}.mock-form p{margin:6px 0 18px;color:var(--muted);font-size:.78rem}.fields{display:grid;gap:9px}.field{height:43px;display:flex;align-items:center;padding:0 12px;border:1px solid #d9e0ea;border-radius:10px;background:#fafbfd;color:#9aa5b4;font-size:.78rem}.button-fake{height:46px;display:grid;place-items:center;border-radius:10px;background:var(--gold);color:#14243a;font-weight:950;font-size:.8rem}'
+          new = '.mock{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:22px;background:#fff}.wm{pointer-events:none;position:absolute;inset:-60px;z-index:4;opacity:.045;transform:rotate(-16deg);display:grid;align-content:center;gap:72px;color:var(--navy);font-weight:950;font-size:1.5rem;white-space:nowrap;text-transform:uppercase}.wm div:nth-child(even){transform:translateX(120px)}\n    .mock-inner{display:grid;grid-template-columns:1.18fr .82fr;min-height:440px;background:linear-gradient(135deg,#f8f4ea 0%,#fff 45%,#e8f2fb 100%)}\n    .mock-copy{padding:34px 36px;display:flex;flex-direction:column;justify-content:center}.mini{color:#8c6a23;font-size:.68rem;font-weight:900;letter-spacing:.13em;text-transform:uppercase}.mock-copy h3{margin:9px 0 0;color:var(--navy);font-family:Georgia,"Times New Roman",serif;font-size:clamp(2rem,3.4vw,3.5rem);line-height:1.02}.mock-copy p{margin:14px 0 0;color:#56657b}.trust{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}.trust span{padding:7px 9px;border:1px solid var(--line);border-radius:999px;background:#fff;color:#5a687b;font-size:.7rem;font-weight:800}\n    .mock-form{align-self:center;margin:26px;padding:20px;border:1px solid var(--line);border-radius:20px;background:#fff;box-shadow:0 18px 50px rgba(7,25,46,.14)}.mock-form h4{margin:0;color:var(--navy);font-size:1.04rem}.mock-form p{margin:6px 0 15px;color:var(--muted);font-size:.76rem}.fields{display:grid;gap:8px}.field{height:38px;display:flex;align-items:center;padding:0 11px;border:1px solid #d9e0ea;border-radius:10px;background:#fafbfd;color:#9aa5b4;font-size:.76rem}.button-fake{height:42px;display:grid;place-items:center;border-radius:10px;background:var(--gold);color:#14243a;font-weight:950;font-size:.78rem}'
+          if old not in s:
+              raise SystemExit('Expected Section 04 CSS block not found')
+          s = s.replace(old, new, 1)
+          old_wm = '<div class="wm"><div>GLOBAL CONCEPTS MEDIA · CONCEPT PREVIEW · NOT FOR USE</div><div>GLOBAL CONCEPTS MEDIA · CONCEPT PREVIEW · NOT FOR USE</div><div>GLOBAL CONCEPTS MEDIA · CONCEPT PREVIEW · NOT FOR USE</div><div>GLOBAL CONCEPTS MEDIA · CONCEPT PREVIEW · NOT FOR USE</div></div>'
+          new_wm = '<div class="wm"><div>GLOBAL CONCEPTS MEDIA · CONCEPT PREVIEW · NOT FOR USE</div><div>GLOBAL CONCEPTS MEDIA · CONCEPT PREVIEW · NOT FOR USE</div><div>GLOBAL CONCEPTS MEDIA · CONCEPT PREVIEW · NOT FOR USE</div></div>'
+          if old_wm not in s:
+              raise SystemExit('Expected watermark block not found')
+          s = s.replace(old_wm, new_wm, 1)
+          p.write_text(s)
+          PY
+          rm .github/workflows/curri-landing-polish.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add prospect-previews/john-curri/index.html .github/workflows/curri-landing-polish.yml
+          git commit -m 'Polish Curri landing-page concept section'
+          git push origin main
