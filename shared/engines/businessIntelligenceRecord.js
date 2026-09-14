@@ -1,9 +1,9 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/engines/businessIntelligenceRecord.js
-   Version: 1.1.2
+   Version: 1.1.3
    Status: Production Road-Test Candidate
-   Source: shared/engines/businessIntelligenceRecord.js 1.1.1
+   Source: shared/engines/businessIntelligenceRecord.js 1.1.2
    Sprint: Prospect Intelligence Evidence Reliability
    Purpose: Normalize advertisement and website evidence into one
             reusable, evidence-first Business Intelligence Record.
@@ -19,7 +19,7 @@
 
 import { clean } from "../http.js";
 
-export const BUSINESS_INTELLIGENCE_RECORD_VERSION = "1.1.2";
+export const BUSINESS_INTELLIGENCE_RECORD_VERSION = "1.1.3";
 
 const SERVICE_RULES = Object.freeze([
   ["Lawn Care", /\b(?:lawn care|lawn service|fertili[sz]ation|weed control|turf)\b/i],
@@ -36,7 +36,24 @@ const SERVICE_RULES = Object.freeze([
   ["Safes", /\b(?:gun safe|home safe|commercial safe|safe delivery)\b/i],
   ["Firearms", /\b(?:firearms|guns|ammunition|shooting range)\b/i],
   ["Legal Services", /\b(?:attorney|law firm|legal services)\b/i],
+
+  // Medical detail rules intentionally precede the broad Medical Services rule.
+  // This lets the record preserve the actual public service mix instead of
+  // collapsing a medical practice to one generic category.
+  ["Longevity Medicine", /\b(?:longevity medicine|longevity practice|healthspan)\b/i],
+  ["Regenerative Medicine", /\bregenerative medicine\b/i],
+  ["Stem Cell Therapy", /\b(?:stem cell therapy|stem cell protocols?|umbilical-derived stem cell)\b/i],
+  ["Peptide Therapy", /\b(?:peptide therapy|precision peptide therapy|peptide protocols?)\b/i],
+  ["Hormone Optimization", /\b(?:hormone optimization|bioidentical hormone therapy|hormone therapy|hormone & vitality care)\b/i],
+  ["Advanced Diagnostics", /\b(?:advanced diagnostics|advanced testing|biomarker panels?|genetic testing|epigenetic testing|diagnostic imaging)\b/i],
+  ["Hyperbaric Oxygen Therapy", /\b(?:hyperbaric oxygen therapy|HBOT)\b/i],
+  ["Metabolic Health & Weight Management", /\b(?:metabolic health|weight management|GLP-1|body composition)\b/i],
+  ["Hair Restoration", /\bhair restoration\b/i],
+  ["Sexual Health", /\bsexual health\b/i],
+  ["Cancer Screening & Prevention", /\b(?:cancer screening|early cancer detection|cancer prevention)\b/i],
+  ["Clinical Care & Second Opinions", /\b(?:clinical care|second opinions?|case review|specialist referrals?)\b/i],
   ["Medical Services", /\b(?:medical|medicine|clinic|physician|healthcare|health care|patient|regenerative|longevity|hormone therapy|stem cell|peptide therapy|hyperbaric)\b/i],
+
   ["Dental Services", /\b(?:dental|dentist|orthodont)\b/i],
   ["Real Estate", /\b(?:real estate|realtor|property management)\b/i],
   ["Restaurant", /\b(?:restaurant|menu|dining|catering)\b/i],
@@ -243,11 +260,12 @@ export function applyBusinessIntelligenceRecordToBrief(brief, record) {
       source.geographicMarket,
       geographicMarket
     ),
-    productsAndServices:
-      Array.isArray(source.productsAndServices) &&
-      source.productsAndServices.length
+    productsAndServices: unique([
+      ...(Array.isArray(source.productsAndServices)
         ? source.productsAndServices
-        : primaryServices,
+        : []),
+      ...primaryServices
+    ]).slice(0, 12),
     targetCustomer: preferVerified(
       source.targetCustomer,
       record?.identity?.targetCustomer
@@ -346,7 +364,7 @@ function extractServices(text) {
 function extractUsefulHeadings(value) {
   if (!Array.isArray(value)) return [];
 
-  const serviceHeadingPattern = /\b(?:lawn care|pest control|termite|irrigation|wildlife|insulation|hvac|roof|plumb|electric|locksmith|safe|firearm|legal|real estate|stem cell|regenerative medicine|hormone|peptide|hyperbaric|diagnostic|hair restoration|facial rejuvenation|body composition|sexual health|cancer screening|infusion|clinical care|dental|orthodont|vehicle service|vehicle sales|financing)\b/i;
+  const serviceHeadingPattern = /\b(?:lawn care|pest control|termite|irrigation|wildlife|insulation|hvac|roof|plumb|electric|locksmith|safe|firearm|legal|real estate|longevity|stem cell|regenerative medicine|hormone|peptide|hyperbaric|diagnostic|hair restoration|facial rejuvenation|body composition|metabolic health|weight management|sexual health|cancer screening|infusion|clinical care|second opinion|dental|orthodont|vehicle service|vehicle sales|financing)\b/i;
 
   return value
     .map(clean)
@@ -363,14 +381,21 @@ function normalizeServicesForIndustry(services, industry) {
   const normalizedIndustry = clean(industry).toLowerCase();
 
   if (/medical|healthcare|health care|clinic|physician/.test(normalizedIndustry)) {
-    return items.filter(item => {
+    const filtered = items.filter(item => {
       if (/^(restaurant|medical services)$/i.test(item)) return false;
       if (/\b(?:restaurant|dining|catering)\b/i.test(item)) return false;
-      if (/\bpractice\b/i.test(item) && !/\b(?:regenerative|hormone|diagnostic|stem cell|peptide|hyperbaric)\b/i.test(item)) {
+      if (
+        /\bpractice\b/i.test(item) &&
+        !/\b(?:longevity|regenerative|hormone|diagnostic|stem cell|peptide|hyperbaric)\b/i.test(item)
+      ) {
         return false;
       }
       return true;
     });
+
+    return filtered.length
+      ? filtered
+      : ["Medical Services"];
   }
 
   return items;
@@ -391,8 +416,10 @@ function inferIndustry(services, text) {
     return "Firearms Retail";
   }
 
-  if (/\b(automotive sales|automotive service|automotive financing)\b/i.test(joined) ||
-      /\b(?:bmw|mercedes|lexus|audi|dealership|vehicle inventory|certified pre-owned)\b/i.test(text)) {
+  if (
+    /\b(automotive sales|automotive service|automotive financing)\b/i.test(joined) ||
+    /\b(?:bmw|mercedes|lexus|audi|dealership|vehicle inventory|certified pre-owned)\b/i.test(text)
+  ) {
     return "Automotive Dealership";
   }
 
@@ -404,8 +431,10 @@ function inferIndustry(services, text) {
     return "Dental Services";
   }
 
-  if (/\bmedical services\b/i.test(joined) ||
-      /\b(?:medical institute|medical practice|physician|clinic|healthcare|health care|longevity medicine|regenerative medicine|patient care)\b/i.test(text)) {
+  if (
+    /\b(?:medical services|longevity medicine|regenerative medicine|stem cell therapy|peptide therapy|hormone optimization|advanced diagnostics|hyperbaric oxygen therapy)\b/i.test(joined) ||
+    /\b(?:medical institute|medical practice|physician|clinic|healthcare|health care|longevity medicine|regenerative medicine|patient care)\b/i.test(text)
+  ) {
     return "Medical Services";
   }
 
@@ -487,12 +516,17 @@ function inferTargetCustomer(audienceSignals, services, text, industry) {
   const serviceText = services.join(" ");
   const industryText = clean(industry);
 
-  if (/\bmedical services\b/i.test(industryText) ||
-      /\b(?:stem cell|regenerative medicine|hormone|peptide|hyperbaric|diagnostic|clinical care)\b/i.test(serviceText)) {
+  if (
+    /\bmedical services\b/i.test(industryText) ||
+    /\b(?:longevity medicine|stem cell|regenerative medicine|hormone|peptide|hyperbaric|diagnostic|clinical care)\b/i.test(serviceText)
+  ) {
     return "Patients seeking physician-led longevity, regenerative, diagnostic, preventive, hormone, or other direct-pay medical care.";
   }
 
-  if (/\bdental services\b/i.test(industryText) || /\bdental services\b/i.test(serviceText)) {
+  if (
+    /\bdental services\b/i.test(industryText) ||
+    /\bdental services\b/i.test(serviceText)
+  ) {
     return "Patients seeking dental or orthodontic care.";
   }
 
@@ -585,7 +619,10 @@ function calculateConfidence({
 
 function preferVerified(primary, fallback) {
   const first = clean(primary);
-  if (first && !/^(unknown|requires consultant verification|not clearly stated)/i.test(first)) {
+  if (
+    first &&
+    !/^(unknown|requires consultant verification|not clearly stated|target customer requires verification\.?)$/i.test(first)
+  ) {
     return first;
   }
 
