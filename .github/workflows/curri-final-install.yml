@@ -1,0 +1,74 @@
+name: Curri final image install
+
+on:
+  push:
+    branches: [curri-final-fix]
+    paths:
+      - '.github/workflows/curri-final-install.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: curri-final-fix
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build verified WebP assets
+        run: |
+          set -euo pipefail
+          mkdir -p prospect-previews/john-curri/assets
+          cat temp/curri-final/lib.00.b64 \
+              temp/curri-final2/lib.01.b64 temp/curri-final2/lib.02.b64 \
+              temp/curri-final2/lib.03.b64 temp/curri-final2/lib.04.b64 \
+              temp/curri-final2/lib.05.b64 temp/curri-final2/lib.06.b64 \
+              temp/curri-final2/lib.07.b64 temp/curri-final2/lib.08.b64 \
+            | base64 -d > prospect-previews/john-curri/assets/social-concept.webp
+
+          cat temp/curri-post-final/post.00.b64 temp/curri-post-final/post.01.b64 \
+              temp/curri-post-final/rem.00.b64 temp/curri-post-final/rem.01.b64 \
+              temp/curri-post-final/rem.02.b64 \
+            | base64 -d > prospect-previews/john-curri/assets/postcard-concept.webp
+
+          python3 - <<'PY'
+          from pathlib import Path
+          for name, minimum in [('social-concept.webp', 70000), ('postcard-concept.webp', 45000)]:
+              p = Path('prospect-previews/john-curri/assets') / name
+              b = p.read_bytes()
+              assert b[:4] == b'RIFF' and b[8:12] == b'WEBP', f'{name} is not a genuine WebP'
+              assert len(b) > minimum, f'{name} unexpectedly small: {len(b)}'
+              print(name, len(b), 'bytes OK')
+          PY
+
+      - name: Update page to use final assets
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('prospect-previews/john-curri/index.html')
+          s = p.read_text()
+          s = s.replace('Version: 1.1.8', 'Version: 1.1.10', 1)
+          s = s.replace('Change Notes — 1.1.8:', 'Change Notes — 1.1.10:\n   - Replaces Section 02 with verified high-resolution WebP assets built from the approved Curri concept artwork.\n   - Direct-mail preview uses the landscape postcard concept; digital extension uses the approved portrait library creative.\n   - Removes the broken low-resolution asset delivery path and adds a fresh cache version.\n\n   Change Notes — 1.1.8:', 1)
+          s = s.replace('assets/postcard-concept.webp?v=117', 'assets/postcard-concept.webp?v=120')
+          s = s.replace('assets/social-concept.webp?v=117', 'assets/social-concept.webp?v=120')
+          s = s.replace('Concept preview only · Version 1.1.8', 'Concept preview only · Version 1.1.10')
+          s = s.replace('const FILE_VERSION="1.1.8"', 'const FILE_VERSION="1.1.10"')
+          s = s.replace('const FILE_VERSION = "1.1.8"', 'const FILE_VERSION = "1.1.10"')
+          p.write_text(s)
+          PY
+
+      - name: Remove staging files and self
+        run: |
+          rm -rf temp/curri-final temp/curri-final2 temp/curri-post-final
+          rm -f .github/workflows/curri-final-install.yml
+
+      - name: Commit branch result
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Install verified Curri concept images"
+          git push origin HEAD:curri-final-fix
