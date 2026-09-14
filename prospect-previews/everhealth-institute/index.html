@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive,noimageindex">
+<meta name="referrer" content="no-referrer">
+<title>EverHealth Institute · Private Concept Preview</title>
+<style>
+:root {
+  --navy:#0d2944;
+  --navy-2:#123d63;
+  --blue:#1276b9;
+  --blue-soft:#eaf5fb;
+  --copper:#b26f45;
+  --ink:#172536;
+  --muted:#617181;
+  --line:#dce6ed;
+  --paper:#ffffff;
+  --bg:#f4f8fb;
+  --shadow:0 20px 60px rgba(13,41,68,.10);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  color:var(--ink);
+  background:
+    radial-gradient(circle at 8% 0%, rgba(18,118,185,.08), transparent 32rem),
+    linear-gradient(180deg,#fbfdff 0%,var(--bg) 100%);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+  line-height:1.62;
+}
+a{color:inherit}
+.shell{width:min(1180px,calc(100% - 34px));margin:auto;padding-bottom:60px}
+.topbar{
+  display:flex;justify-content:space-between;align-items:center;gap:18px;
+  padding:20px 4px 16px;font-size:.84rem;color:#435568
+}
+.gcm{display:flex;align-items:center;gap:10px;font-weight:850}
+.gmark{
+  width:32px;height:32px;border-radius:50%;display:grid;place-items:center;
+  color:#fff;background:var(--navy);font-family:Georgia,serif;font-size:1.08rem
+}
+.private{
+  border:1px solid #c9dce8;border-radius:999px;padding:7px 12px;
+  background:rgba(255,255,255,.82);font-weight:800;color:#41576a
+}
+.hero{
+  position:relative;overflow:hidden;padding:60px 58px 54px;border-radius:30px;
+  border:1px solid #d9e6ee;background:
+  linear-gradient(135deg,rgba(255,255,255,.98),rgba(239,248,253,.96));
+  box-shadow:var(--shadow)
+}
+.hero:after{
+  content:"";position:absolute;right:-120px;top:-150px;width:430px;height:430px;border-radius:50%;
+  border:54px solid rgba(18,118,185,.055)
+}
+.eyebrow,.kicker{
+  margin:0;color:var(--blue);font-size:.72rem;font-weight:900;
+  letter-spacing:.15em;text-transform:uppercase
+}
+h1,h2,h3{line-height:1.12}
+h1{
+  max-width:920px;margin:11px 0 18px;
+  font-family:Georgia,"Times New Roman",serif;font-weight:500;
+  font-size:clamp(2.7rem,5.7vw,5.7rem);letter-spacing:-.04em
+}
+.hero-copy{max-width:900px;color:#506273;font-size:1.12rem}
+.hero-note{
+  margin-top:28px;max-width:800px;padding:16px 18px;border-left:4px solid var(--copper);
+  border-radius:0 14px 14px 0;background:#fff;color:#506170
+}
+.section{
+  margin-top:24px;border:1px solid var(--line);border-radius:26px;background:var(--paper);
+  box-shadow:0 12px 36px rgba(13,41,68,.055);overflow:hidden
+}
+.inner{padding:40px 42px}
+.section h2{
+  margin:5px 0 14px;font-family:Georgia,"Times New Roman",serif;
+  font-weight:500;font-size:clamp(1.95rem,3vw,3.15rem)
+}
+.section p{color:var(--muted)}
+.callout{
+  margin-top:22px;padding:20px 22px;border:1px solid #d6e8f2;border-radius:18px;
+  background:linear-gradient(135deg,#f4fafd,#edf7fb);color:#334b5d
+}
+.evidence-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:28px}
+.evidence{
+  margin:0;padding:13px;border:1px solid #d8e5ec;border-radius:22px;background:#f9fcfe
+}
+.evidence img{
+  width:100%;height:auto;display:block;border-radius:15px;
+  box-shadow:0 12px 30px rgba(10,35,57,.13)
+}
+.evidence figcaption{padding:11px 4px 2px;color:#6b7a87;font-size:.79rem}
+.question{
+  display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:start;margin-top:24px
+}
+.question .qmark{
+  width:42px;height:42px;border-radius:50%;display:grid;place-items:center;
+  background:var(--navy);color:#fff;font-weight:900;font-size:1.2rem
+}
+.question strong{display:block;font-size:1.04rem}
+.flow{
+  display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-top:28px
+}
+.step{
+  position:relative;padding:17px 14px;min-height:120px;border-radius:18px;
+  border:1px solid #d6e3eb;background:linear-gradient(180deg,#fff,#f7fbfd)
+}
+.step:after{
+  content:"→";position:absolute;right:-12px;top:44%;z-index:2;
+  color:var(--blue);font-size:1.15rem;font-weight:900
+}
+.step:last-child:after{display:none}
+.step strong{display:block;color:var(--navy);font-size:.94rem}
+.step span{display:block;margin-top:7px;color:#687887;font-size:.77rem;line-height:1.4}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.card{padding:22px;border:1px solid #d9e6ed;border-radius:18px;background:#fbfdff}
+.card h3{margin:0;font-size:1.02rem;color:var(--navy)}
+.checks{list-style:none;padding:0;margin:16px 0 0;display:grid;gap:10px}
+.checks li{position:relative;padding-left:26px;color:#526473}
+.checks li:before{content:"✓";position:absolute;left:0;color:var(--blue);font-weight:900}
+.mock{
+  margin-top:25px;border:1px solid #cfe0ea;border-radius:24px;overflow:hidden;
+  background:linear-gradient(180deg,#f8fcfe,#fff);box-shadow:var(--shadow)
+}
+.mockbar{
+  padding:17px 21px;background:var(--navy);color:#fff;
+  display:flex;justify-content:space-between;gap:16px;align-items:center
+}
+.mockbrand{font-weight:900;letter-spacing:.06em}
+.mocksmall{font-size:.72rem;opacity:.75}
+.mockbody{padding:32px}
+.mockbody h3{margin:0;font-family:Georgia,serif;font-size:2.15rem;font-weight:500}
+.mockcta{
+  display:inline-block;margin-top:10px;padding:12px 16px;border-radius:10px;
+  background:var(--blue);color:#fff;text-decoration:none;font-weight:900
+}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:22px}
+.metric{padding:17px;border:1px solid #dbe7ed;border-radius:16px;background:#f7fbfd}
+.metric strong{display:block;color:var(--navy)}
+.metric span{display:block;margin-top:3px;color:#6b7986;font-size:.77rem}
+.close{
+  margin-top:24px;padding:42px;border-radius:26px;color:#fff;
+  background:linear-gradient(135deg,#0a2138,#0d3a5e);
+  display:grid;grid-template-columns:1fr auto;gap:28px;align-items:center;
+  box-shadow:var(--shadow)
+}
+.close h2{margin:0;font-family:Georgia,serif;font-size:clamp(2rem,3vw,3.15rem);font-weight:500}
+.close p{margin:10px 0 0;max-width:800px;color:rgba(255,255,255,.76)}
+.close a{
+  min-height:50px;display:inline-flex;align-items:center;justify-content:center;
+  padding:0 20px;border-radius:12px;background:#fff;color:var(--navy);
+  text-decoration:none;font-weight:900;white-space:nowrap
+}
+.footer{
+  padding:25px 7px 0;display:flex;justify-content:space-between;gap:16px;
+  flex-wrap:wrap;color:#75828d;font-size:.76rem
+}
+.version{font-weight:900;color:#566877}
+.notice{
+  margin-top:12px;font-size:.75rem;color:#7d8994
+}
+@media(max-width:900px){
+  .hero{padding:42px 28px}
+  .evidence-grid,.grid2,.close{grid-template-columns:1fr}
+  .flow{grid-template-columns:1fr 1fr}
+  .step:after{display:none}
+  .metrics{grid-template-columns:1fr 1fr}
+}
+@media(max-width:560px){
+  .topbar{flex-direction:column;align-items:flex-start}
+  .inner{padding:28px 22px}
+  .hero{padding:34px 22px}
+  .flow,.metrics{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="topbar">
+    <div class="gcm"><span class="gmark">G</span><span>Global Concepts Media</span></div>
+    <div class="private">Private concept preview · Not for use</div>
+  </div>
+  <section class="hero">
+    <p class="eyebrow">Prepared for EverHealth Institute · Ocoee / Greater Orlando, Florida</p>
+    <h1>You’re already generating patient interest. The next step is knowing what happens after the RSVP.</h1>
+    <p class="hero-copy">I received your recent dinner invitation and reviewed the path it creates from direct mail to RSVP, event attendance, consultation, and ultimately a new patient. This private concept shows how that existing acquisition investment could become easier to measure, follow up, and improve—without disrupting the EverHealth brand or clinical positioning.</p>
+    <div class="hero-note"><strong>Working premise:</strong> preserve what is already working, connect the response path, measure the handoffs, and improve only after the baseline is visible.</div>
+  </section>
+  <section class="section">
+    <div class="inner">
+      <p class="kicker">01 · What caught our attention</p>
+      <h2>The postcard already does the hard part: it gives someone a reason to respond.</h2>
+      <p>EverHealth is not trying to explain an entire medical practice in one mail piece. The invitation creates a simple first step: respond to a complimentary dinner event. That means the opportunity is not replacing the campaign. It is connecting that response to everything that happens afterward.</p>
+      <div class="evidence-grid">
+        <figure class="evidence">
+          <img id="everhealth-vip-mailer" alt="Cleaned EverHealth dinner invitation showing event offer and RSVP path">
+          <figcaption>Campaign evidence · cleaned and enhanced for private review.</figcaption>
+        </figure>
+        <figure class="evidence">
+          <img id="everhealth-companion-mailer" alt="Cleaned EverHealth companion invitation side showing personalized direct-mail creative">
+          <figcaption>Companion side · cleaned and enhanced for private review.</figcaption>
+        </figure>
+      </div>
+      <div class="question">
+        <div class="qmark">?</div>
+        <div><strong>The key question</strong><span>When someone responds to the invitation, can EverHealth see which campaign produced the RSVP, whether the person attended, whether they booked a consultation, and whether they ultimately became a patient?</span></div>
+      </div>
+    </div>
+  </section>
+  <section class="section">
+    <div class="inner">
+      <p class="kicker">02 · The business question</p>
+      <h2>The campaign should not end at the RSVP.</h2>
+      <p>The real value is understanding what happens after someone responds. A measurable patient-acquisition path should make it possible to connect the original campaign all the way through a meaningful business outcome.</p>
+      <div class="callout"><strong>The question is simple:</strong> Which direct-mail campaigns create patients—not just RSVPs?</div>
+    </div>
+  </section>
+  <section class="section">
+    <div class="inner">
+      <p class="kicker">03 · The acquisition path</p>
+      <h2>Every step should preserve the source.</h2>
+      <div class="flow">
+        <div class="step"><strong>Direct Mail</strong><span>Campaign-specific QR, URL, phone source or response code.</span></div>
+        <div class="step"><strong>RSVP</strong><span>Response captured with the original campaign attached.</span></div>
+        <div class="step"><strong>Dinner Event</strong><span>Attendance tied back to the original invitation.</span></div>
+        <div class="step"><strong>Discovery / Assessment</strong><span>Follow-up connected to the attendee record.</span></div>
+        <div class="step"><strong>Consultation</strong><span>Qualified opportunity tracked through scheduling.</span></div>
+        <div class="step"><strong>Patient</strong><span>New-patient conversion attributed back to source.</span></div>
+      </div>
+      <div class="callout"><strong>Objective:</strong> Campaign → Response → Appointment → Patient.</div>
+    </div>
+  </section>
+  <section class="section">
+    <div class="inner">
+      <p class="kicker">04 · Where measurement can break</p>
+      <h2>The biggest risk is not the campaign. It is losing the source between steps.</h2>
+      <div class="grid2">
+        <div class="card">
+          <h3>Response tracking</h3>
+          <ul class="checks">
+            <li>QR code or campaign URL does not preserve the original source</li>
+            <li>Phone responses cannot be tied back to the specific mail piece</li>
+            <li>RSVP data is captured separately from the patient record</li>
+            <li>Event attendance is not connected to the original RSVP</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Conversion tracking</h3>
+          <ul class="checks">
+            <li>Follow-up happens manually with no measurable sequence</li>
+            <li>Discovery calls or assessments lose the campaign source</li>
+            <li>Consultations are visible but cannot be attributed backward</li>
+            <li>New-patient conversion is known operationally but not tied to the marketing source</li>
+          </ul>
+        </div>
+      </div>
+      <div class="callout">The goal is not to create a complicated reporting system. It is to preserve one simple thread: <strong>Campaign → Response → Appointment → Patient.</strong></div>
+    </div>
+  </section>
+  <section class="section">
+    <div class="inner">
+      <p class="kicker">05 · Campaign landing-page concept</p>
+      <h2>Give the dinner campaign its own measurable destination.</h2>
+      <p>EverHealth’s main website already carries the broader clinical story, physician credibility, services, and practice information. The campaign page should do something narrower: continue the exact promise made by the invitation and make the next step obvious.</p>
+      <div class="mock">
+        <div class="mockbar">
+          <div class="mockbrand">EVERHEALTH · CAMPAIGN CONCEPT</div>
+          <div class="mocksmall">Private preview · not a live medical offer</div>
+        </div>
+        <div class="mockbody">
+          <p class="kicker">Complimentary Dinner Presentation</p>
+          <h3>A focused response path for one campaign.</h3>
+          <p>EverHealth branding and physician-led trust, the specific dinner invitation, event details, one primary RSVP action, campaign-specific tracking, a short “what to expect” section, and a clean handoff into the existing discovery or assessment process.</p>
+          <a class="mockcta" href="javascript:void(0)" aria-disabled="true">Reserve Your Seat · Concept Only</a>
+          <div class="metrics">
+            <div class="metric"><strong>Campaign source</strong><span>Mail piece / list / drop</span></div>
+            <div class="metric"><strong>RSVP</strong><span>Phone / web / QR</span></div>
+            <div class="metric"><strong>Attendance</strong><span>Event check-in</span></div>
+            <div class="metric"><strong>Outcome</strong><span>Consultation / patient</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="callout"><strong>Concept principle:</strong> One campaign. One destination. One measurable next step.</div>
+    </div>
+  </section>
+  <section class="section">
+    <div class="inner">
+      <p class="kicker">06 · What we would verify first</p>
+      <h2>Before recommending more media, verify the existing conversion path.</h2>
+      <div class="grid2">
+        <div class="card">
+          <h3>Attribution</h3>
+          <ul class="checks">
+            <li>Which postcard or campaign generated each RSVP?</li>
+            <li>Can phone, QR, and web responses be separated by source?</li>
+            <li>Is event attendance connected to the original RSVP record?</li>
+            <li>Does the original campaign source survive every handoff?</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Conversion</h3>
+          <ul class="checks">
+            <li>What percentage of attendees schedule a discovery call, assessment, or consultation?</li>
+            <li>What percentage of consultations become patients?</li>
+            <li>How quickly are non-converters followed up?</li>
+            <li>Are campaign message, landing page, follow-up, and clinical positioning appropriately aligned?</li>
+          </ul>
+        </div>
+      </div>
+      <div class="callout"><strong>First principle:</strong> Measure the current path before adding more traffic.</div>
+    </div>
+  </section>
+  <section class="section">
+    <div class="inner">
+      <p class="kicker">07 · The opportunity</p>
+      <h2>Get more measurable value from the marketing EverHealth is already doing.</h2>
+      <p>The direct-mail dinner campaign already creates attention and a reason to respond. The opportunity is to connect that response to the rest of the patient-acquisition journey so the team can see where value is being created—and where it may be leaking.</p>
+      <div class="grid2">
+        <div class="card">
+          <h3>Make the path visible</h3>
+          <ul class="checks">
+            <li>Campaign response</li>
+            <li>RSVP and attendance</li>
+            <li>Follow-up</li>
+            <li>Discovery calls and assessments</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Connect to the outcome</h3>
+          <ul class="checks">
+            <li>Consultations</li>
+            <li>New-patient conversion</li>
+            <li>Source-to-patient attribution</li>
+            <li>Evidence for future media decisions</li>
+          </ul>
+        </div>
+      </div>
+      <div class="callout"><strong>The objective:</strong> Get more measurable value from the marketing EverHealth is already doing.</div>
+    </div>
+  </section>
+  <section class="close">
+    <div>
+      <h2>Worth 20 minutes to compare notes?</h2>
+      <p>You already have the campaign, the offer, and the patient interest. I’m not suggesting more marketing for the sake of more marketing. I’d first want to understand how an RSVP moves through your current process, where the campaign source is preserved or lost, and whether EverHealth can connect that original response to a consultation and new patient. If there is a gap, I can show you what I would change.</p>
+    </div>
+    <a href="mailto:andy@globalconceptsmedia.com?subject=EverHealth%20campaign%20concept">Compare Notes with Andy</a>
+  </section>
+  <footer class="footer">
+    <div>Prepared by <strong>Global Concepts Media</strong> · Private concept preview only</div>
+    <div class="version">Version 1.0.0</div>
+  </footer>
+  <div class="notice">Conceptual marketing and measurement review only. This page does not make or modify clinical claims and is not intended as patient-facing medical content.</div>
+</div>
+<script>
+(async()=>{
+  for (const [id,file] of [['everhealth-vip-mailer','assets/vip.b64'],['everhealth-companion-mailer','assets/comp.b64']]) {
+    const r=await fetch(file,{cache:'force-cache'});
+    if(r.ok) document.getElementById(id).src='data:image/jpeg;base64,'+(await r.text()).trim();
+  }
+})();
+</script>
+</body>
+</html>
