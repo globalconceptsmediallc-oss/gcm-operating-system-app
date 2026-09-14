@@ -197,11 +197,11 @@ h1{
       <p>EverHealth is not trying to explain an entire medical practice in one mail piece. The invitation creates a simple first step: respond to a complimentary dinner event. That means the opportunity is not replacing the campaign. It is connecting that response to everything that happens afterward.</p>
       <div class="evidence-grid">
         <figure class="evidence">
-          <img id="everhealth-vip-mailer" alt="Cleaned EverHealth dinner invitation showing event offer and RSVP path">
+          <img src="assets/vip.jpg" alt="Cleaned EverHealth dinner invitation showing event offer and RSVP path">
           <figcaption>Campaign evidence · cleaned and enhanced for private review.</figcaption>
         </figure>
         <figure class="evidence">
-          <img id="everhealth-companion-mailer" alt="Cleaned EverHealth companion invitation side showing personalized direct-mail creative">
+          <img src="assets/comp.jpg" alt="Cleaned EverHealth companion invitation side showing personalized direct-mail creative">
           <figcaption>Companion side · cleaned and enhanced for private review.</figcaption>
         </figure>
       </div>
@@ -355,13 +355,5 @@ h1{
   </footer>
   <div class="notice">Conceptual marketing and measurement review only. This page does not make or modify clinical claims and is not intended as patient-facing medical content.</div>
 </div>
-<script>
-(async()=>{
-  for (const [id,file] of [['everhealth-vip-mailer','assets/vip.b64'],['everhealth-companion-mailer','assets/comp.b64']]) {
-    const r=await fetch(file,{cache:'force-cache'});
-    if(r.ok) document.getElementById(id).src='data:image/jpeg;base64,'+(await r.text()).trim();
-  }
-})();
-</script>
 </body>
 </html>
