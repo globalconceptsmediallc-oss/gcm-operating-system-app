@@ -1,9 +1,9 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/engines/businessIntelligenceRecord.js
-   Version: 1.1.1
+   Version: 1.1.2
    Status: Production Road-Test Candidate
-   Source: shared/engines/businessIntelligenceRecord.js 1.1.0
+   Source: shared/engines/businessIntelligenceRecord.js 1.1.1
    Sprint: Prospect Intelligence Evidence Reliability
    Purpose: Normalize advertisement and website evidence into one
             reusable, evidence-first Business Intelligence Record.
@@ -19,7 +19,7 @@
 
 import { clean } from "../http.js";
 
-export const BUSINESS_INTELLIGENCE_RECORD_VERSION = "1.1.1";
+export const BUSINESS_INTELLIGENCE_RECORD_VERSION = "1.1.2";
 
 const SERVICE_RULES = Object.freeze([
   ["Lawn Care", /\b(?:lawn care|lawn service|fertili[sz]ation|weed control|turf)\b/i],
@@ -92,18 +92,21 @@ export function buildBusinessIntelligenceRecord({
     hostnameLabel(websiteUrl)
   ]);
 
-  const services = unique([
+  const rawServices = unique([
     ...(Array.isArray(advertisementEvidence.visibleServices)
       ? advertisementEvidence.visibleServices
       : []),
     ...extractServices(evidenceText),
     ...extractUsefulHeadings(websiteEvidence.headings)
-  ]).slice(0, 12);
+  ]);
 
+  const inferredIndustry = inferIndustry(rawServices, evidenceText);
   const industry = firstStrongValue([
     websiteEvidence.identifiedIndustry,
-    inferIndustry(services, evidenceText)
+    inferredIndustry
   ]) || "Requires consultant verification";
+
+  const services = normalizeServicesForIndustry(rawServices, industry).slice(0, 12);
 
   const markets = unique([
     clean(prospectContext.location),
@@ -130,9 +133,10 @@ export function buildBusinessIntelligenceRecord({
 
   const trustSignals = extractTrustSignals(evidenceText);
   const targetCustomer = inferTargetCustomer(
-    advertisementEvidence.audienceSignals,
+    sanitizeAudienceSignals(advertisementEvidence.audienceSignals),
     services,
-    evidenceText
+    evidenceText,
+    industry
   );
 
   const strongestAsset = determineStrongestAsset({
@@ -342,6 +346,8 @@ function extractServices(text) {
 function extractUsefulHeadings(value) {
   if (!Array.isArray(value)) return [];
 
+  const serviceHeadingPattern = /\b(?:lawn care|pest control|termite|irrigation|wildlife|insulation|hvac|roof|plumb|electric|locksmith|safe|firearm|legal|real estate|stem cell|regenerative medicine|hormone|peptide|hyperbaric|diagnostic|hair restoration|facial rejuvenation|body composition|sexual health|cancer screening|infusion|clinical care|dental|orthodont|vehicle service|vehicle sales|financing)\b/i;
+
   return value
     .map(clean)
     .filter(item =>
@@ -349,9 +355,25 @@ function extractUsefulHeadings(value) {
       item.length <= 70 &&
       !/^(home|about|contact|learn more|get started|request a quote)$/i.test(item)
     )
-    .filter(item =>
-      SERVICE_RULES.some(([, pattern]) => pattern.test(item))
-    );
+    .filter(item => serviceHeadingPattern.test(item));
+}
+
+function normalizeServicesForIndustry(services, industry) {
+  const items = unique(services);
+  const normalizedIndustry = clean(industry).toLowerCase();
+
+  if (/medical|healthcare|health care|clinic|physician/.test(normalizedIndustry)) {
+    return items.filter(item => {
+      if (/^(restaurant|medical services)$/i.test(item)) return false;
+      if (/\b(?:restaurant|dining|catering)\b/i.test(item)) return false;
+      if (/\bpractice\b/i.test(item) && !/\b(?:regenerative|hormone|diagnostic|stem cell|peptide|hyperbaric)\b/i.test(item)) {
+        return false;
+      }
+      return true;
+    });
+  }
+
+  return items;
 }
 
 function inferIndustry(services, text) {
@@ -445,7 +467,17 @@ function extractTrustSignals(text) {
   return unique(signals).slice(0, 10);
 }
 
-function inferTargetCustomer(audienceSignals, services, text) {
+function sanitizeAudienceSignals(value) {
+  const sourceLabels = /^(?:direct mail(?: postcard)?|postcard|mailer|magazine(?: advertisement| ad)?|flyer|billboard|vehicle graphic|social(?: advertisement| ad)?|print(?: advertisement| ad)?|advertisement|ad)$/i;
+
+  return unique(
+    (Array.isArray(value) ? value : [])
+      .map(clean)
+      .filter(item => item && !sourceLabels.test(item))
+  );
+}
+
+function inferTargetCustomer(audienceSignals, services, text, industry) {
   const supplied = Array.isArray(audienceSignals)
     ? audienceSignals.map(clean).filter(Boolean)
     : [];
@@ -453,12 +485,14 @@ function inferTargetCustomer(audienceSignals, services, text) {
   if (supplied.length) return supplied.join("; ");
 
   const serviceText = services.join(" ");
+  const industryText = clean(industry);
 
-  if (/\bmedical services\b/i.test(serviceText)) {
-    return "Patients seeking physician-led medical, diagnostic, preventive, or treatment services.";
+  if (/\bmedical services\b/i.test(industryText) ||
+      /\b(?:stem cell|regenerative medicine|hormone|peptide|hyperbaric|diagnostic|clinical care)\b/i.test(serviceText)) {
+    return "Patients seeking physician-led longevity, regenerative, diagnostic, preventive, hormone, or other direct-pay medical care.";
   }
 
-  if (/\bdental services\b/i.test(serviceText)) {
+  if (/\bdental services\b/i.test(industryText) || /\bdental services\b/i.test(serviceText)) {
     return "Patients seeking dental or orthodontic care.";
   }
 
@@ -479,12 +513,12 @@ function determineStrongestAsset({
   advertisementEvidence,
   callsToAction
 }) {
-  if (services.length >= 4) {
-    return `Broad observable service offering: ${services.slice(0, 5).join(", ")}.`;
-  }
-
   if (trustSignals.length) {
     return trustSignals[0];
+  }
+
+  if (services.length >= 4) {
+    return `Broad observable service offering: ${services.slice(0, 5).join(", ")}.`;
   }
 
   if (
