@@ -1,10 +1,10 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/engines/businessIntelligenceRecord.js
-   Version: 1.1.0
+   Version: 1.1.1
    Status: Production Road-Test Candidate
-   Source: shared/engines/businessIntelligenceRecord.js 1.0.0
-   Sprint: Business Identification and Consultant Context
+   Source: shared/engines/businessIntelligenceRecord.js 1.1.0
+   Sprint: Prospect Intelligence Evidence Reliability
    Purpose: Normalize advertisement and website evidence into one
             reusable, evidence-first Business Intelligence Record.
 
@@ -19,7 +19,7 @@
 
 import { clean } from "../http.js";
 
-export const BUSINESS_INTELLIGENCE_RECORD_VERSION = "1.1.0";
+export const BUSINESS_INTELLIGENCE_RECORD_VERSION = "1.1.1";
 
 const SERVICE_RULES = Object.freeze([
   ["Lawn Care", /\b(?:lawn care|lawn service|fertili[sz]ation|weed control|turf)\b/i],
@@ -36,7 +36,7 @@ const SERVICE_RULES = Object.freeze([
   ["Safes", /\b(?:gun safe|home safe|commercial safe|safe delivery)\b/i],
   ["Firearms", /\b(?:firearms|guns|ammunition|shooting range)\b/i],
   ["Legal Services", /\b(?:attorney|law firm|legal services)\b/i],
-  ["Medical Services", /\b(?:medical|clinic|physician|healthcare)\b/i],
+  ["Medical Services", /\b(?:medical|medicine|clinic|physician|healthcare|health care|patient|regenerative|longevity|hormone therapy|stem cell|peptide therapy|hyperbaric)\b/i],
   ["Dental Services", /\b(?:dental|dentist|orthodont)\b/i],
   ["Real Estate", /\b(?:real estate|realtor|property management)\b/i],
   ["Restaurant", /\b(?:restaurant|menu|dining|catering)\b/i],
@@ -47,6 +47,8 @@ const SERVICE_RULES = Object.freeze([
 
 const MARKET_PATTERNS = [
   /\bCentral Florida\b/gi,
+  /\bGreater Orlando\b/gi,
+  /\bOcoee(?:,\s*Florida|\s+FL)?\b/gi,
   /\bBrevard County\b/gi,
   /\bMelbourne(?:,\s*Florida|\s+FL)?\b/gi,
   /\bOrlando(?:,\s*Florida|\s+FL)?\b/gi,
@@ -54,7 +56,6 @@ const MARKET_PATTERNS = [
   /\bTitusville(?:,\s*Florida|\s+FL)?\b/gi,
   /\bViera(?:,\s*Florida|\s+FL)?\b/gi,
   /\bJacksonville(?:,\s*Florida|\s+FL)?\b/gi,
-  /\bMelbourne(?:,\s*Florida|\s+FL)?\b/gi,
   /\bFlorida\b/gi
 ];
 
@@ -103,6 +104,7 @@ export function buildBusinessIntelligenceRecord({
     websiteEvidence.identifiedIndustry,
     inferIndustry(services, evidenceText)
   ]) || "Requires consultant verification";
+
   const markets = unique([
     clean(prospectContext.location),
     ...(Array.isArray(advertisementEvidence.geographicSignals)
@@ -376,12 +378,21 @@ function inferIndustry(services, text) {
     return "Real Estate";
   }
 
-  if (/\brestaurant\b/i.test(joined)) {
-    return "Restaurant and Hospitality";
+  if (/\bdental services\b/i.test(joined)) {
+    return "Dental Services";
+  }
+
+  if (/\bmedical services\b/i.test(joined) ||
+      /\b(?:medical institute|medical practice|physician|clinic|healthcare|health care|longevity medicine|regenerative medicine|patient care)\b/i.test(text)) {
+    return "Medical Services";
   }
 
   if (/\battorney|law firm\b/i.test(text)) {
     return "Legal Services";
+  }
+
+  if (/\brestaurant\b/i.test(joined)) {
+    return "Restaurant and Hospitality";
   }
 
   return services[0] || "Requires consultant verification";
@@ -402,7 +413,8 @@ function extractMarkets(text) {
 function extractOffer(text) {
   const matches = [
     text.match(/\$\s?\d+(?:\.\d{2})?\s*(?:off|credit|discount)/i),
-    text.match(/\bfree\s+(?:quote|estimate|consultation|inspection|evaluation)\b/i),
+    text.match(/\bfree\s+(?:quote|estimate|consultation|inspection|evaluation|discovery call|assessment)\b/i),
+    text.match(/\bcomplimentary\s+(?:dinner|consultation|assessment|event)\b/i),
     text.match(/\b\d+%\s*off\b/i)
   ].filter(Boolean);
 
@@ -425,6 +437,8 @@ function extractTrustSignals(text) {
   if (/\binsured\b/i.test(text)) signals.push("Insurance claim visible");
   if (/\bguarantee(?:d)?\b/i.test(text)) signals.push("Guarantee language visible");
   if (/\baward[- ]winning\b/i.test(text)) signals.push("Award claim visible");
+  if (/\bboard[- ]certified\b/i.test(text)) signals.push("Board-certified physician credentials visible");
+  if (/\bphysician[- ](?:owned|led|founded)\b/i.test(text)) signals.push("Physician-owned or physician-led practice visible");
   if (/\b\d(?:\.\d)?\s*(?:star|stars)\b/i.test(text)) signals.push("Review rating visible");
   if (/\btestimonial|reviews?\b/i.test(text)) signals.push("Customer review or testimonial content visible");
 
@@ -438,7 +452,17 @@ function inferTargetCustomer(audienceSignals, services, text) {
 
   if (supplied.length) return supplied.join("; ");
 
-  if (/\b(lawn care|pest control|termite|irrigation|wildlife management|insulation)\b/i.test(services.join(" "))) {
+  const serviceText = services.join(" ");
+
+  if (/\bmedical services\b/i.test(serviceText)) {
+    return "Patients seeking physician-led medical, diagnostic, preventive, or treatment services.";
+  }
+
+  if (/\bdental services\b/i.test(serviceText)) {
+    return "Patients seeking dental or orthodontic care.";
+  }
+
+  if (/\b(lawn care|pest control|termite|irrigation|wildlife management|insulation)\b/i.test(serviceText)) {
     return "Homeowners seeking recurring property care, protection, and curb-appeal services.";
   }
 
