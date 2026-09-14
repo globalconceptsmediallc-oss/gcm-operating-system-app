@@ -1,10 +1,10 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/prospectIntelligence.js
-   Version: 1.4.1
+   Version: 1.4.2
    Status: Production Road-Test Candidate
-   Source: routes/prospectIntelligence.js 1.4.0
-   Sprint: Consultant Intelligence Layer — Diagnosis and Action Separation
+   Source: routes/prospectIntelligence.js 1.4.1
+   Sprint: Prospect Intelligence Evidence Reliability
    Purpose: Preserve the Business Intelligence Record foundation and
             add consultant-grade reasoning that connects evidence to
             business meaning, action, expected result, and proof.
@@ -45,7 +45,7 @@ import {
   applyConsultantIntelligenceToBrief
 } from "../shared/engines/consultantIntelligence.js";
 
-export const PROSPECT_INTELLIGENCE_VERSION = "1.4.1";
+export const PROSPECT_INTELLIGENCE_VERSION = "1.4.2";
 
 const MAX_WEBSITE_TEXT = 18000;
 const MAX_IMAGES = 2;
@@ -412,52 +412,20 @@ async function analyzeAdvertisementEvidence({
 
   for (let index = 0; index < images.length; index += 1) {
     const image = images[index];
+    const prompt = buildAdvertisementVisionPrompt({
+      imageNumber: index + 1,
+      businessName,
+      websiteUrl,
+      source: prospectContext.source
+    });
 
     const result = await runAiJsonWithRetry({
       env,
       model: COMMUNICATION_VISION_MODEL,
       input: {
-        messages: [
-          {
-            role: "system",
-            content: [
-              "You extract visible advertising evidence for GCM OS.",
-              "Read only what is clearly visible.",
-              "Do not judge campaign performance or invent business facts.",
-              "Return one valid JSON object only."
-            ].join(" ")
-          },
-          {
-            role: "user",
-            content: JSON.stringify({
-              task: "Extract the visible facts and creative signals from this prospect advertisement.",
-              imageNumber: index + 1,
-              knownBusinessName: businessName || "Unknown",
-              knownWebsite: websiteUrl,
-              knownSource: prospectContext.source || "Unknown",
-              requiredOutput: {
-                format: "postcard | magazine_ad | flyer | billboard | vehicle_graphic | social_ad | print_ad | unknown",
-                visibleBusinessName: "string or Unknown",
-                visibleWebsite: "string or Unknown",
-                headline: "string or Unknown",
-                supportingMessage: "string or Unknown",
-                offer: "string or Unknown",
-                callsToAction: ["string"],
-                visibleServices: ["string"],
-                audienceSignals: ["string"],
-                geographicSignals: ["string"],
-                contactSignals: ["string"],
-                visualSignals: ["string"],
-                campaignSignals: ["string"],
-                uncertainties: ["string"],
-                confidence: "High | Medium | Low"
-              }
-            })
-          }
-        ],
-        image,
-        max_tokens: 1600,
-        temperature: 0
+        image: dataUrlToByteArray(image),
+        prompt,
+        max_tokens: 1600
       },
       stageName: `prospect_advertisement_image_${index + 1}`,
       requestId,
@@ -479,6 +447,41 @@ async function analyzeAdvertisementEvidence({
   });
 }
 
+function buildAdvertisementVisionPrompt({
+  imageNumber,
+  businessName,
+  websiteUrl,
+  source
+}) {
+  return [
+    "You extract visible advertising evidence for GCM OS.",
+    "Read only what is clearly visible in the supplied advertisement image.",
+    "Do not judge campaign performance or invent business facts.",
+    "Return one valid JSON object only. No markdown and no commentary.",
+    `Image number: ${imageNumber}.`,
+    `Known business name: ${businessName || "Unknown"}.`,
+    `Known website: ${websiteUrl || "Unknown"}.`,
+    `Known source: ${source || "Unknown"}.`,
+    "Return exactly this JSON shape:",
+    JSON.stringify({
+      format: "postcard | magazine_ad | flyer | billboard | vehicle_graphic | social_ad | print_ad | unknown",
+      visibleBusinessName: "string or Unknown",
+      visibleWebsite: "string or Unknown",
+      headline: "string or Unknown",
+      supportingMessage: "string or Unknown",
+      offer: "string or Unknown",
+      callsToAction: ["string"],
+      visibleServices: ["string"],
+      audienceSignals: ["string"],
+      geographicSignals: ["string"],
+      contactSignals: ["string"],
+      visualSignals: ["string"],
+      campaignSignals: ["string"],
+      uncertainties: ["string"],
+      confidence: "High | Medium | Low"
+    }, null, 2)
+  ].join("\n");
+}
 
 async function identifyBusinessProfile({
   websiteUrl,
@@ -602,6 +605,8 @@ async function collectWebsiteEvidence(websiteUrl) {
     }
 
     const html = await response.text();
+    const contentHtml = removeNonVisibleHtml(html);
+
     const title = firstMatch(html, /<title[^>]*>([\s\S]*?)<\/title>/i);
     const metaDescription =
       firstMatch(html, /<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)["']/i) ||
@@ -614,26 +619,22 @@ async function collectWebsiteEvidence(websiteUrl) {
     const structuredBusinessName =
       firstMatch(html, /"name"\s*:\s*"([^"]{2,120})"/i);
 
-    const headings = [...html.matchAll(/<h[1-3][^>]*>([\s\S]*?)<\/h[1-3]>/gi)]
+    const headings = [...contentHtml.matchAll(/<h[1-3][^>]*>([\s\S]*?)<\/h[1-3]>/gi)]
       .map(match => stripHtml(match[1]))
       .filter(Boolean)
       .slice(0, 30);
 
-    const callsToAction = [...html.matchAll(/<(?:a|button)[^>]*>([\s\S]*?)<\/(?:a|button)>/gi)]
+    const callsToAction = [...contentHtml.matchAll(/<(?:a|button)[^>]*>([\s\S]*?)<\/(?:a|button)>/gi)]
       .map(match => stripHtml(match[1]))
-      .filter(text => /quote|call|contact|schedule|book|learn|start|get|claim|save|request/i.test(text))
+      .filter(isUsefulCallToAction)
       .slice(0, 30);
 
-    const links = [...html.matchAll(/<a[^>]+href=["']([^"']+)["']/gi)]
+    const links = [...contentHtml.matchAll(/<a[^>]+href=["']([^"']+)["']/gi)]
       .map(match => clean(match[1]))
       .filter(Boolean)
       .slice(0, 50);
 
-    const visibleText = stripHtml(
-      html
-        .replace(/<script[\s\S]*?<\/script>/gi, " ")
-        .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    ).slice(0, MAX_WEBSITE_TEXT);
+    const visibleText = stripHtml(contentHtml).slice(0, MAX_WEBSITE_TEXT);
 
     return {
       status: visibleText.length >= 200 ? "complete" : "limited",
@@ -667,6 +668,24 @@ async function collectWebsiteEvidence(websiteUrl) {
   }
 }
 
+function removeNonVisibleHtml(value) {
+  return String(value || "")
+    .replace(/<script\b[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style\b[\s\S]*?<\/style>/gi, " ")
+    .replace(/<template\b[\s\S]*?<\/template>/gi, " ");
+}
+
+function isUsefulCallToAction(value) {
+  const text = clean(value);
+  if (!text || text.length > 180) return false;
+  if (/[{}]/.test(text)) return false;
+  if (/\b(?:window\.|function\s*\(|object\.assign|lazyload|@media|box-sizing|font-family)\b/i.test(text)) {
+    return false;
+  }
+
+  return /quote|call|contact|schedule|book|learn|start|get|claim|save|request/i.test(text);
+}
+
 function normalizeProspectContext(body) {
   const nested =
     body?.prospectContext && typeof body.prospectContext === "object"
@@ -697,6 +716,24 @@ function normalizeImages(value) {
     })
     .filter(item => /^data:image\/(?:png|jpe?g|webp);base64,/i.test(item))
     .slice(0, MAX_IMAGES);
+}
+
+function dataUrlToByteArray(dataUrl) {
+  const value = clean(dataUrl);
+  const match = value.match(/^data:([^;,]+)?(?:;charset=[^;,]+)?;base64,(.+)$/i);
+
+  if (!match) {
+    throw new Error("Advertisement image must be a valid base64 data URL.");
+  }
+
+  const binary = atob(match[2]);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  return [...bytes];
 }
 
 function normalizeUrl(value) {
@@ -813,7 +850,7 @@ function buildFallbackBrief({
     },
     discoveryCallScript: {
       opening:
-        `I received your advertisement and liked that it gives homeowners a clear reason to respond. ` +
+        `I received your advertisement and liked that it gives people a clear reason to respond. ` +
         `I reviewed the path from the advertisement to your website and found a few items worth discussing.`,
       questions: [
         "How are responses from this campaign currently tracked?",
@@ -906,7 +943,6 @@ function buildFallbackBrief({
     }
   };
 }
-
 
 function applyConsultantReasoningToBrief(brief) {
   const source = brief && typeof brief === "object" ? brief : {};
