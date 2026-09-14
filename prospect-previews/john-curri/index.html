@@ -1,23 +1,22 @@
 <!-- =========================================================
    Global Concepts Media
    File: prospect-previews/john-curri/index.html
-   Version: 1.2.2
+   Version: 1.2.3
    Status: Prospect Concept Preview
    Purpose: Personalized, unlisted concept page for Realty World Curri Properties.
 
-   Change Notes — 1.2.2:
-   - Rebuilds Section 04 as a true luxury real-estate landing-page concept.
-   - Stops reusing the Curri campaign flyer as the landing-page hero.
-   - Adds dedicated full-bleed luxury residential imagery.
-   - Restores premium headline, supporting copy, trust signals and seller CTA over the hero.
-   - Refines the form card to feel more like a high-end real-estate conversion experience.
-   - Preserves the sharp Section 02 Curri WebP artwork.
+   Change Notes — 1.2.3:
+   - Replaces Section 04 with the approved Curri luxury waterfront landing-page concept.
+   - Uses local asset: assets/curri-luxury-landing.webp.
+   - Preserves the complete approved landing-page artwork without cropping or duplicate overlays.
+   - Keeps the sharp Curri postcard and digital campaign concepts in Section 02.
    - Preserves prospect engagement tracking.
 
+   Change Notes — 1.2.2:
+   - Rebuilt Section 04 toward a luxury real-estate landing-page presentation.
+
    Change Notes — 1.2.1:
-   - Replaces the Curri library concept with the new sharp 1122 × 1402 WebP.
-   - Section 02 Digital Extension loads the high-resolution Curri library artwork.
-   - Adds cache-busting version ?v=121.
+   - Replaced Curri campaign images with high-resolution WebP assets.
    ========================================================= -->
 
 <!doctype html>
@@ -27,8 +26,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
 
-  <meta name="robots" content="noindex,nofollow,noarchive,noimageindex">
-  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta
+    name="robots"
+    content="noindex,nofollow,noarchive,noimageindex"
+  >
+
+  <meta
+    name="referrer"
+    content="strict-origin-when-cross-origin"
+  >
 
   <title>
     Realty World Curri Properties — Campaign Concept | Global Concepts Media
@@ -307,7 +313,7 @@
 
 
     /* ======================================================
-       IMAGES / EVIDENCE
+       IMAGES
        ====================================================== */
 
     .evidence img,
@@ -399,259 +405,41 @@
 
 
     /* ======================================================
-       LUXURY LANDING PAGE CONCEPT
+       APPROVED LUXURY LANDING PAGE
        ====================================================== */
 
-    .luxury-preview {
+    .landing-showcase {
       position:relative;
       overflow:hidden;
-      border-radius:26px;
-      border:1px solid #cfd8e4;
-      background:#071426;
+      border:1px solid #c8d1dc;
+      border-radius:24px;
+      background:#061425;
       box-shadow:
-        0 28px 70px rgba(4,17,33,.20);
+        0 28px 70px rgba(4,17,33,.18);
     }
 
-    .luxury-layout {
-      display:grid;
-      grid-template-columns:minmax(0,1.25fr) minmax(340px,.75fr);
-      min-height:610px;
-    }
-
-    .luxury-hero {
-      position:relative;
-      min-height:610px;
-      overflow:hidden;
-      background:#071426;
-    }
-
-    .luxury-hero img {
-      position:absolute;
-      inset:0;
-      width:100%;
-      height:100%;
-      object-fit:cover;
-      object-position:center;
+    .landing-showcase img {
       display:block;
+      width:100%;
+      height:auto;
     }
 
-    .luxury-hero:after {
-      content:"";
-      position:absolute;
-      inset:0;
-      background:
-        linear-gradient(
-          90deg,
-          rgba(4,14,28,.88) 0%,
-          rgba(4,14,28,.60) 40%,
-          rgba(4,14,28,.18) 76%,
-          rgba(4,14,28,.04) 100%
-        ),
-        linear-gradient(
-          0deg,
-          rgba(4,14,28,.58) 0%,
-          transparent 52%
-        );
-      z-index:1;
-    }
-
-    .luxury-content {
-      position:relative;
-      z-index:2;
+    .landing-caption {
       display:flex;
-      flex-direction:column;
-      justify-content:flex-end;
-      min-height:610px;
-      max-width:620px;
-      padding:48px 46px;
-      color:#fff;
-    }
-
-    .luxury-label {
-      display:inline-flex;
-      align-self:flex-start;
-      margin-bottom:16px;
-      padding:8px 10px;
-      border:1px solid rgba(242,211,142,.42);
-      border-radius:999px;
-      background:rgba(7,20,38,.52);
-      color:#f2d38e;
-      font-size:.67rem;
-      font-weight:900;
-      letter-spacing:.13em;
-      text-transform:uppercase;
-      backdrop-filter:blur(5px);
-    }
-
-    .luxury-content h3 {
-      max-width:570px;
-      margin:0;
-      font-family:Georgia,"Times New Roman",serif;
-      font-size:clamp(2.8rem,5vw,4.8rem);
-      line-height:.95;
-      letter-spacing:-.045em;
-      text-shadow:0 3px 24px rgba(0,0,0,.34);
-    }
-
-    .luxury-content p {
-      max-width:540px;
-      margin:19px 0 0;
-      color:rgba(255,255,255,.88);
-      font-size:1rem;
-      line-height:1.65;
-      text-shadow:0 2px 14px rgba(0,0,0,.26);
-    }
-
-    .luxury-trust {
-      display:flex;
-      gap:9px;
-      flex-wrap:wrap;
-      margin-top:24px;
-    }
-
-    .luxury-trust span {
-      padding:8px 11px;
-      border:1px solid rgba(255,255,255,.28);
-      border-radius:999px;
-      background:rgba(7,20,38,.50);
-      color:#fff;
-      font-size:.69rem;
-      font-weight:800;
-      backdrop-filter:blur(6px);
-    }
-
-    .luxury-signature {
-      display:flex;
+      justify-content:space-between;
       align-items:center;
-      gap:12px;
-      margin-top:28px;
-      color:rgba(255,255,255,.85);
+      gap:20px;
+      padding:15px 18px;
+      background:#071426;
+      color:rgba(255,255,255,.76);
       font-size:.73rem;
     }
 
-    .luxury-signature:before {
-      content:"";
-      width:38px;
-      height:1px;
-      background:var(--gold);
-    }
-
-
-    /* ======================================================
-       LANDING PAGE FORM
-       ====================================================== */
-
-    .luxury-form-area {
-      display:flex;
-      align-items:center;
-      padding:34px;
-      background:
-        linear-gradient(
-          145deg,
-          #f9fafc 0%,
-          #eef2f6 100%
-        );
-    }
-
-    .luxury-form {
-      width:100%;
-      padding:29px;
-      border:1px solid #d7dee8;
-      border-radius:21px;
-      background:#fff;
-      box-shadow:
-        0 22px 55px rgba(7,25,46,.13);
-    }
-
-    .form-kicker {
-      margin:0 0 8px;
-      color:#9a762b;
-      font-size:.66rem;
-      font-weight:900;
-      letter-spacing:.13em;
+    .landing-caption strong {
+      color:#f2d38e;
+      font-size:.68rem;
+      letter-spacing:.10em;
       text-transform:uppercase;
-    }
-
-    .luxury-form h4 {
-      margin:0;
-      color:var(--navy);
-      font-family:Georgia,"Times New Roman",serif;
-      font-size:1.7rem;
-      line-height:1.08;
-    }
-
-    .luxury-form .form-intro {
-      margin:10px 0 20px;
-      color:var(--muted);
-      font-size:.82rem;
-      line-height:1.55;
-    }
-
-    .fields {
-      display:grid;
-      gap:10px;
-    }
-
-    .field {
-      min-height:44px;
-      display:flex;
-      align-items:center;
-      padding:0 13px;
-      border:1px solid #d8e0ea;
-      border-radius:10px;
-      background:#fafbfd;
-      color:#8b98a8;
-      font-size:.77rem;
-    }
-
-    .button-fake {
-      min-height:48px;
-      display:grid;
-      place-items:center;
-      margin-top:3px;
-      border-radius:10px;
-      background:
-        linear-gradient(
-          135deg,
-          #d6a94a,
-          #e8c671
-        );
-      color:#11243d;
-      font-weight:950;
-      font-size:.78rem;
-      letter-spacing:.04em;
-    }
-
-    .form-note {
-      margin-top:13px;
-      color:#95a0ad;
-      text-align:center;
-      font-size:.62rem;
-      line-height:1.4;
-    }
-
-    .concept-wm {
-      pointer-events:none;
-      position:absolute;
-      inset:0;
-      z-index:5;
-      display:flex;
-      align-items:flex-start;
-      justify-content:flex-end;
-      padding:16px;
-    }
-
-    .concept-wm span {
-      padding:7px 9px;
-      border:1px solid rgba(255,255,255,.18);
-      border-radius:8px;
-      background:rgba(5,16,30,.32);
-      color:rgba(255,255,255,.50);
-      font-size:.56rem;
-      font-weight:900;
-      letter-spacing:.11em;
-      text-transform:uppercase;
-      backdrop-filter:blur(4px);
     }
 
 
@@ -765,8 +553,7 @@
       }
 
       .grid2,
-      .grid3,
-      .luxury-layout {
+      .grid3 {
         grid-template-columns:1fr;
       }
 
@@ -782,15 +569,6 @@
         grid-template-columns:1fr 1fr;
       }
 
-      .luxury-hero,
-      .luxury-content {
-        min-height:540px;
-      }
-
-      .luxury-form-area {
-        padding:26px;
-      }
-
       .cta {
         display:block;
       }
@@ -803,7 +581,9 @@
         align-items:flex-start;
         flex-direction:column;
       }
+
     }
+
 
     @media(max-width:560px) {
 
@@ -824,25 +604,19 @@
         grid-template-columns:1fr;
       }
 
-      .luxury-hero,
-      .luxury-content {
-        min-height:500px;
+      .landing-caption {
+        display:block;
       }
 
-      .luxury-content {
-        padding:30px 24px;
+      .landing-caption span {
+        display:block;
+        margin-top:4px;
       }
 
-      .luxury-form-area {
-        padding:18px;
-      }
-
-      .luxury-form {
-        padding:23px;
-      }
     }
 
   </style>
+
 </head>
 
 
@@ -1043,9 +817,8 @@
 
         <p>
           These are concept previews, not finished production assets.
-          They are intentionally watermarked so the strategic direction
-          can be reviewed without giving away finished creative before
-          an engagement begins.
+          The goal is to show how the same premium Curri visual language
+          can move from direct mail into digital campaign creative.
         </p>
 
       </div>
@@ -1060,7 +833,7 @@
 
             <img
               src="assets/curri-postcard-concept.webp?v=121"
-              alt="Watermarked Global Concepts Media postcard concept for Realty World Curri Properties"
+              alt="Global Concepts Media postcard concept for Realty World Curri Properties"
             >
 
             <h3>
@@ -1079,7 +852,7 @@
 
             <img
               src="assets/curri-library-concept.webp?v=121"
-              alt="Watermarked Global Concepts Media digital campaign concept for Realty World Curri Properties"
+              alt="Global Concepts Media digital campaign concept for Realty World Curri Properties"
             >
 
             <h3>
@@ -1087,8 +860,8 @@
             </h3>
 
             <p>
-              Uses the same offer and visual language for Meta prospecting,
-              retargeting or seller-awareness campaigns.
+              Uses the same Curri luxury positioning for prospecting,
+              retargeting and seller-awareness campaigns.
             </p>
 
           </div>
@@ -1098,10 +871,9 @@
 
         <div class="watermark-note">
 
-          Concept preview only. Creative is not licensed for production use.
-          Final work would use approved brand assets, photography,
-          required brokerage/legal language, working campaign URLs
-          and platform-specific formats.
+          Concept preview only. Final production creative would use
+          approved brokerage language, campaign URLs, disclosures
+          and channel-specific formats.
 
         </div>
 
@@ -1177,7 +949,7 @@
 
 
     <!-- ======================================================
-         SECTION 04 — LUXURY LANDING PAGE
+         SECTION 04 — APPROVED LUXURY LANDING PAGE
          ====================================================== -->
 
     <section class="section">
@@ -1189,13 +961,13 @@
         </p>
 
         <h2>
-          A premium destination built around one seller decision.
+          The campaign arrives at a destination that feels like Curri Properties.
         </h2>
 
         <p>
-          Instead of sending campaign traffic to a general website,
-          this gives the seller a focused, luxury-level experience
-          built specifically around requesting a property review.
+          This is the direction: waterfront luxury imagery, strong Curri branding,
+          one clear seller offer and a focused property-review form — all presented
+          as one premium experience.
         </p>
 
       </div>
@@ -1203,153 +975,25 @@
 
       <div class="section-body">
 
+        <div class="landing-showcase">
 
-        <div class="luxury-preview">
+          <img
+            src="assets/curri-luxury-landing.webp?v=123"
+            width="1536"
+            height="1024"
+            decoding="async"
+            alt="Luxury waterfront seller landing-page concept for Realty World Curri Properties"
+          >
 
+          <div class="landing-caption">
 
-          <div class="concept-wm">
+            <strong>
+              Landing-page concept
+            </strong>
+
             <span>
-              Global Concepts Media · Concept Preview
+              Luxury seller campaign · Curri Properties · Brevard County
             </span>
-          </div>
-
-
-          <div class="luxury-layout">
-
-
-            <!-- LUXURY HERO -->
-
-            <div class="luxury-hero">
-
-              <img
-                src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1800&q=88"
-                alt="Luxury residential property used as concept imagery for the Realty World Curri Properties seller campaign"
-              >
-
-
-              <div class="luxury-content">
-
-
-                <div class="luxury-label">
-                  Realty World Curri Properties · Seller Strategy
-                </div>
-
-
-                <h3>
-                  Thinking About Selling Your Property?
-                </h3>
-
-
-                <p>
-                  Start with a private local property review.
-                  Understand where your property may stand in today's market
-                  before deciding what comes next.
-                </p>
-
-
-                <div class="luxury-trust">
-
-                  <span>
-                    Brevard County
-                  </span>
-
-                  <span>
-                    Residential
-                  </span>
-
-                  <span>
-                    Luxury
-                  </span>
-
-                  <span>
-                    Commercial
-                  </span>
-
-                  <span>
-                    Land
-                  </span>
-
-                </div>
-
-
-                <div class="luxury-signature">
-                  Local guidance · Personal conversation · No pressure
-                </div>
-
-
-              </div>
-
-            </div>
-
-
-            <!-- FORM -->
-
-            <div class="luxury-form-area">
-
-              <div class="luxury-form">
-
-
-                <p class="form-kicker">
-                  Private Property Review
-                </p>
-
-
-                <h4>
-                  Request Your Property Review
-                </h4>
-
-
-                <p class="form-intro">
-                  Tell us a little about your property.
-                  The next step is a local review — not an automated estimate.
-                </p>
-
-
-                <div class="fields">
-
-                  <div class="field">
-                    Name
-                  </div>
-
-                  <div class="field">
-                    Phone
-                  </div>
-
-                  <div class="field">
-                    Email
-                  </div>
-
-                  <div class="field">
-                    Property address
-                  </div>
-
-                  <div class="field">
-                    Property type
-                  </div>
-
-                  <div class="field">
-                    When are you considering selling?
-                  </div>
-
-                  <div class="button-fake">
-                    REQUEST MY PRIVATE REVIEW
-                  </div>
-
-                </div>
-
-
-                <div class="form-note">
-
-                  Concept form · Final fields, disclosures and brokerage
-                  language would be approved before launch.
-
-                </div>
-
-
-              </div>
-
-            </div>
-
 
           </div>
 
@@ -1597,7 +1241,7 @@
         </a>
 
         · Concept preview only
-        · Version 1.2.2
+        · Version 1.2.3
 
       </div>
 
@@ -1618,7 +1262,7 @@
       "use strict";
 
 
-      const FILE_VERSION = "1.2.2";
+      const FILE_VERSION = "1.2.3";
 
       const WORKER =
         "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
@@ -1729,4 +1373,5 @@
 
 
 </body>
+
 </html>
