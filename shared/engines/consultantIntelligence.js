@@ -1,10 +1,10 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/engines/consultantIntelligence.js
-   Version: 1.0.1
+   Version: 1.0.2
    Status: Production Road-Test Candidate
-   Source: shared/engines/consultantIntelligence.js 1.0.0
-   Sprint: Consultant Intelligence Layer — Diagnosis and Action Separation
+   Source: shared/engines/consultantIntelligence.js 1.0.1
+   Sprint: Prospect Intelligence Medical Fallback Reliability
    Purpose: Convert verified business identity and public website evidence
             into industry-aware consultant reasoning before the public
             Business Snapshot is written.
@@ -25,7 +25,7 @@ import {
 
 import { runAiJsonWithRetry } from "../ai.js";
 
-export const CONSULTANT_INTELLIGENCE_VERSION = "1.0.1";
+export const CONSULTANT_INTELLIGENCE_VERSION = "1.0.2";
 
 const PLAYBOOKS = Object.freeze({
   automotive: {
@@ -87,6 +87,36 @@ const PLAYBOOKS = Object.freeze({
       "National brand strength masking weak local-market execution",
       "Practice-area or location pages competing without clear differentiation",
       "Incomplete attribution from inquiry to signed case"
+    ]
+  },
+
+  medical: {
+    label: "Medical Services",
+    likelyRevenueStreams: [
+      "Direct-pay consultations and assessments",
+      "Physician-supervised treatment programs",
+      "Advanced diagnostics and testing",
+      "Ongoing memberships or care programs"
+    ],
+    growthDrivers: [
+      "Inquiry or RSVP-to-consultation conversion",
+      "Consultation-to-patient conversion",
+      "Source-to-patient attribution",
+      "Physician credibility and patient trust",
+      "Follow-up after events and consultations",
+      "Compliance-safe offer and claims alignment"
+    ],
+    ownerQuestions: [
+      "How are campaign inquiries or event RSVPs tied back to the specific source?",
+      "What percentage of respondents or attendees schedule a discovery call, assessment, or consultation?",
+      "Can the practice follow a respondent from first response through consultation to a new patient or treatment plan?",
+      "Which services or programs is the campaign intended to grow?"
+    ],
+    risks: [
+      "Acquisition response that cannot be attributed through consultation and patient conversion",
+      "Strong clinical differentiation that is not carried consistently through the campaign journey",
+      "Follow-up gaps between first response, consultation, and patient decision",
+      "Healthcare claims or testimonial use that creates avoidable compliance risk"
     ]
   },
 
@@ -408,6 +438,14 @@ function selectPlaybook(industryValue) {
   }
 
   if (
+    /medical|healthcare|health care|physician|clinic|longevity|regenerative|concierge medicine/.test(
+      industry
+    )
+  ) {
+    return PLAYBOOKS.medical;
+  }
+
+  if (
     /home service|hvac|plumb|electric|roof|pest|lawn|landscap|locksmith/.test(
       industry
     )
@@ -457,62 +495,85 @@ function buildDeterministicConsultantIntelligence({
   const callsToAction =
     arrayOrEmpty(businessIntelligenceRecord?.offer?.primaryCallsToAction);
 
+  const isMedical = playbook === PLAYBOOKS.medical;
+  const hasAdvertisement = advertisementEvidence?.status === "complete";
+  const isEventCampaign = /dinner|event|rsvp/i.test([
+    clean(advertisementEvidence?.supportingMessage),
+    clean(advertisementEvidence?.headline),
+    clean(advertisementEvidence?.offer),
+    ...arrayOrEmpty(advertisementEvidence?.callsToAction)
+  ].join(" "));
+
   const strongest =
-    brandAssets[0] ||
     trustSignals[0] ||
+    brandAssets[0] ||
     services[0] ||
     "The website establishes a visible operating presence, but the strongest competitive advantage requires verification.";
 
-  const opportunity =
-    `${name} should verify which ${playbook.growthDrivers
-      .slice(0, 3)
-      .join(", ")} create qualified customer action before expanding disconnected marketing activity.`;
+  const opportunity = isMedical && hasAdvertisement
+    ? `${name} should verify how campaign response${isEventCampaign ? " and event RSVPs" : ""} progress into consultations and new patients, and where attribution or follow-up is lost between those stages.`
+    : `${name} should verify which ${playbook.growthDrivers
+        .slice(0, 3)
+        .join(", ")} create qualified customer action before expanding disconnected marketing activity.`;
 
-  const firstAction =
-    `Complete a focused ${playbook.label} growth review that verifies ${playbook.growthDrivers
-      .slice(0, 3)
-      .join(", ")} and establishes one measurable priority.`;
+  const firstAction = isMedical && hasAdvertisement
+    ? `Map the campaign${isEventCampaign ? " → RSVP → event" : " response"} → consultation → patient journey, verify tracking at each handoff, and establish a source-to-patient baseline.`
+    : `Complete a focused ${playbook.label} growth review that verifies ${playbook.growthDrivers
+        .slice(0, 3)
+        .join(", ")} and establishes one measurable priority.`;
 
-  const executiveBrief =
-    `${name} is identified as a ${industry.toLowerCase()} business` +
-    (market && !/requires|unknown/i.test(market)
-      ? ` serving ${market}`
-      : "") +
-    `. Public evidence shows ${services.length
-      ? `offers including ${services.slice(0, 4).join(", ")}`
-      : "an established public business presence"}. ` +
-    `The strongest visible asset is ${strongest}. ` +
-    `The first consulting priority is to verify ${playbook.growthDrivers
-      .slice(0, 3)
-      .join(", ")} so the next recommendation is tied to measurable business value.`;
+  const executiveBrief = isMedical
+    ? `${name} is a physician-led medical practice${market && !/requires|unknown/i.test(market) ? ` serving ${market}` : ""}. Public evidence shows ${services.length ? `services including ${services.slice(0, 4).join(", ")}` : "a broad clinical offering"}, and the strongest visible trust asset is ${strongest}. ${hasAdvertisement ? `The current acquisition campaign${isEventCampaign ? " uses an event/RSVP path" : " provides direct-response paths"}, making source-to-consultation and source-to-patient attribution the first business question to verify.` : "The first consulting priority is to verify the patient acquisition and conversion path before recommending additional marketing."}`
+    : `${name} is identified as a ${industry.toLowerCase()} business` +
+      (market && !/requires|unknown/i.test(market)
+        ? ` serving ${market}`
+        : "") +
+      `. Public evidence shows ${services.length
+        ? `offers including ${services.slice(0, 4).join(", ")}`
+        : "an established public business presence"}. ` +
+      `The strongest visible asset is ${strongest}. ` +
+      `The first consulting priority is to verify ${playbook.growthDrivers
+        .slice(0, 3)
+        .join(", ")} so the next recommendation is tied to measurable business value.`;
 
   const result = {
     intelligenceVersion: CONSULTANT_INTELLIGENCE_VERSION,
     playbook: playbook.label,
     businessModel:
       clean(businessProfile?.businessModel) ||
-      `${name} appears to create value through ${playbook.likelyRevenueStreams
-        .slice(0, 3)
-        .join(", ")}; the exact revenue mix requires verification.`,
+      (isMedical
+        ? `${name} appears to create value through direct-pay consultations, diagnostics, physician-supervised treatment programs, and ongoing care; the exact revenue mix requires verification.`
+        : `${name} appears to create value through ${playbook.likelyRevenueStreams
+            .slice(0, 3)
+            .join(", ")}; the exact revenue mix requires verification.`),
     likelyRevenueStreams: unique([
       ...arrayOrEmpty(businessProfile?.revenueStreams),
       ...playbook.likelyRevenueStreams
     ]).slice(0, 8),
-    primaryCustomerDecision:
-      "Whether the business provides enough relevance, confidence, and convenience to justify taking the next step.",
+    primaryCustomerDecision: isMedical
+      ? "Whether the practice's physician credibility, clinical fit, and next-step experience justify scheduling a consultation or assessment."
+      : "Whether the business provides enough relevance, confidence, and convenience to justify taking the next step.",
     visibleCompetitiveAdvantage: strongest,
     largestObservableRisk:
       playbook.risks[0],
     highestValueOpportunity: opportunity,
     recommendedFirstAction: firstAction,
-    whyThisActionFirst:
-      "It verifies the customer and measurement path before recommending additional implementation or spending.",
-    expectedBusinessResult:
-      "A prioritized improvement connected to qualified inquiries, appointments, sales, cases, booked work, or another measurable business outcome.",
-    whatNotToRecommendYet: [
-      "Do not recommend increasing advertising spend until conversion and attribution evidence is verified.",
-      "Do not promise revenue, rankings, or lead growth without a measured baseline."
-    ],
+    whyThisActionFirst: isMedical && hasAdvertisement
+      ? "It tests whether existing acquisition activity can be measured through the patient journey before more media, automation, or follow-up work is added."
+      : "It verifies the customer and measurement path before recommending additional implementation or spending.",
+    expectedBusinessResult: isMedical && hasAdvertisement
+      ? "A measurable baseline for campaign response, consultation, and new-patient conversion, with the first tracking or follow-up gap identified."
+      : "A prioritized improvement connected to qualified inquiries, appointments, sales, cases, booked work, or another measurable business outcome.",
+    whatNotToRecommendYet: isMedical
+      ? [
+          "Do not recommend increasing advertising spend until consultation and patient attribution is verified.",
+          "Do not recommend new healthcare claims, testimonials, or treatment-promotional creative without compliance review.",
+          "Do not promise patient volume, revenue, rankings, or lead growth without a measured baseline."
+        ]
+      : [
+          "Do not recommend increasing advertising spend until conversion and attribution evidence is verified.",
+          "Do not promise revenue, rankings, or lead growth without a measured baseline."
+        ],
     evidenceChain: unique([
       strongest
         ? {
@@ -526,35 +587,48 @@ function buildDeterministicConsultantIntelligence({
             evidence: `Visible response paths include ${callsToAction
               .slice(0, 4)
               .join(", ")}.`,
-            meaning: "The business provides observable conversion paths that should be tested for friction and tracking.",
+            meaning: isMedical
+              ? "The practice provides observable patient-response paths that should be connected to consultation and patient attribution."
+              : "The business provides observable conversion paths that should be tested for friction and tracking.",
             confidence: "High"
           }
         : null,
       advertisementEvidence?.status === "complete"
         ? {
-            evidence: "The business is using visible paid advertising.",
-            meaning: "Existing acquisition investment should be measured before more spending is recommended.",
+            evidence: isMedical && isEventCampaign
+              ? "The practice is using a direct-response advertisement tied to an RSVP/event path."
+              : "The business is using visible paid advertising.",
+            meaning: isMedical
+              ? "Existing acquisition activity should be measured through consultation and patient conversion before more spending is recommended."
+              : "Existing acquisition investment should be measured before more spending is recommended.",
             confidence: "High"
           }
         : null
     ].filter(Boolean)),
     missingEvidence: unique([
       ...playbook.ownerQuestions,
-      "Verified lead, appointment, sale, case, booking, or revenue attribution",
+      isMedical
+        ? "Verified RSVP or inquiry, consultation, new-patient, and treatment attribution"
+        : "Verified lead, appointment, sale, case, booking, or revenue attribution",
       "Current business priority and decision-maker goals"
     ]),
     proofToVerify: unique([
       ...playbook.growthDrivers,
-      "Working calls, forms, chats, appointments, or purchase paths",
-      "Source-to-outcome measurement baseline"
+      isMedical
+        ? "Working RSVP, call, form, discovery-call, and assessment paths"
+        : "Working calls, forms, chats, appointments, or purchase paths",
+      isMedical
+        ? "Source-to-patient measurement baseline"
+        : "Source-to-outcome measurement baseline"
     ]),
-    ownerConversation:
-      `${name} already shows a credible public foundation. ` +
-      `Before I recommend more marketing, I would verify which customer path and measurement gap has the greatest business impact, then focus the first engagement there.`,
+    ownerConversation: isMedical && hasAdvertisement
+      ? `${name} is already investing in a direct-response patient acquisition path${isEventCampaign ? " built around an RSVP event" : ""}. Before I suggest more marketing, I would map how that response becomes a consultation and new patient, then identify where attribution or follow-up is being lost.`
+      : `${name} already shows a credible public foundation. ` +
+        `Before I recommend more marketing, I would verify which customer path and measurement gap has the greatest business impact, then focus the first engagement there.`,
     executiveBrief,
     confidence:
+      clean(businessIntelligenceRecord?.confidence?.label) ||
       clean(businessProfile?.confidence) ||
-      clean(businessIntelligenceRecord?.confidence?.overall) ||
       "Medium"
   };
 
