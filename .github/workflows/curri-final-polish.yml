@@ -1,0 +1,77 @@
+name: Curri final page polish
+
+on:
+  push:
+    paths:
+      - '.github/workflows/curri-final-polish.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  polish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Replace remaining runtime Base64 and fix final references
+        run: |
+          set -euo pipefail
+
+          cat prospect-previews/john-curri/assets/original-postcard-v2.b64.* \
+            | base64 -d > prospect-previews/john-curri/assets/original-postcard-v2.jpg
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          jpg = Path('prospect-previews/john-curri/assets/original-postcard-v2.jpg')
+          b = jpg.read_bytes()
+          assert b[:2] == b'\xff\xd8' and b[-2:] == b'\xff\xd9', 'Section 01 source is not a complete JPEG'
+          print('verified Section 01 JPEG', len(b), 'bytes')
+
+          path = Path('prospect-previews/john-curri/index.html')
+          text = path.read_text()
+
+          text = text.replace(
+              'src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" width="400" height="533" decoding="async"',
+              'src="assets/original-postcard-v2.jpg?v=120" width="400" height="533" decoding="async"',
+              1
+          )
+
+          text = text.replace(
+              '<div class="mock-visual"><img src="assets/curri-postcard-concept.webp?v=120"',
+              '<div class="mock-visual"><img src="assets/curri-library-concept.webp?v=120"',
+              1
+          )
+
+          text = text.replace('const FILE_VERSION="1.1.7"', 'const FILE_VERSION="1.2.0"')
+          text = text.replace('const FILE_VERSION = "1.1.7"', 'const FILE_VERSION = "1.2.0"')
+
+          start = text.find('<script>(()=>{"use strict";const image=document.getElementById("curri-original-postcard");')
+          if start != -1:
+              end = text.find('</script>', start)
+              assert end != -1
+              text = text[:start] + text[end + len('</script>'):]
+
+          assert 'original-postcard-v2.b64.' not in text
+          assert 'data:image/gif;base64' not in text
+          assert 'assets/original-postcard-v2.jpg?v=120' in text
+          assert '<div class="mock-visual"><img src="assets/curri-library-concept.webp?v=120"' in text
+          assert 'const FILE_VERSION="1.2.0"' in text or 'const FILE_VERSION = "1.2.0"' in text
+
+          path.write_text(text)
+          PY
+
+          rm -f prospect-previews/john-curri/assets/original-postcard-v2.b64.*
+          rm -f .github/workflows/curri-final-polish.yml
+
+      - name: Commit clean final page
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Finish Curri image delivery cleanup"
+          git push
