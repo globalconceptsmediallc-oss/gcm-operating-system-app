@@ -1,99 +1,116 @@
 <!-- =========================================================
    Global Concepts Media
    File: prospect-previews/john-curri/index.html
-   Version: 1.2.1
+   Version: 1.2.2
    Status: Prospect Concept Preview
    Purpose: Personalized, unlisted concept page for Realty World Curri Properties.
 
+   Change Notes — 1.2.2:
+   - Rebuilds Section 04 as a true luxury real-estate landing-page concept.
+   - Stops reusing the Curri campaign flyer as the landing-page hero.
+   - Adds dedicated full-bleed luxury residential imagery.
+   - Restores premium headline, supporting copy, trust signals and seller CTA over the hero.
+   - Refines the form card to feel more like a high-end real-estate conversion experience.
+   - Preserves the sharp Section 02 Curri WebP artwork.
+   - Preserves prospect engagement tracking.
+
    Change Notes — 1.2.1:
    - Replaces the Curri library concept with the new sharp 1122 × 1402 WebP.
-   - Section 02 Digital Extension now loads the high-resolution Curri library artwork.
-   - Section 04 Landing Page Concept now loads the same high-resolution Curri library artwork.
-   - Adds cache-busting version ?v=121 for the upgraded artwork.
-   - Preserves page layout, lead form and engagement tracking.
-
-   Change Notes — 1.2.0:
-   - Replaces the Section 02 previews with verified, genuine binary WebP files.
-   - Uses the exact Luxury Waterfront Property Marketing Flyer artwork from the Curri Image Library for the digital extension.
-   - Uses the sharp horizontal Curri postcard concept for the direct-mail preview.
-   - Removes the low-quality preview assets and Base64 staging files after the verified binary assets are built.
-   - Preserves the lead form, page layout and engagement tracking.
-
-   Change Notes — 1.1.8:
-   - Restores the original Curri luxury waterfront concept image from the approved concept artwork.
-   - Uses the existing local WebP asset instead of the generic external placeholder image.
-   - Removes duplicate overlay copy so the original concept artwork remains readable.
-   - Preserves the lead form and engagement tracking.
-
-   Change Notes — 1.1.7:
-   - Restores a strong luxury-property visual to Section 04.
-   - Rebuilds Section 04 to read like a true premium real-estate landing page.
-   - Keeps seller campaign headline, trust points and lead form.
-   - Keeps watermark subtle so it protects the concept without hurting presentation.
-   - Preserves Section 02 WebP assets and prospect engagement tracking.
+   - Section 02 Digital Extension loads the high-resolution Curri library artwork.
+   - Adds cache-busting version ?v=121.
    ========================================================= -->
+
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+
   <meta name="robots" content="noindex,nofollow,noarchive,noimageindex">
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <title>Realty World Curri Properties — Campaign Concept | Global Concepts Media</title>
-  <meta name="description" content="A personalized campaign concept prepared for John Curri and Realty World Curri Properties by Global Concepts Media.">
+
+  <title>
+    Realty World Curri Properties — Campaign Concept | Global Concepts Media
+  </title>
+
+  <meta
+    name="description"
+    content="A personalized campaign concept prepared for John Curri and Realty World Curri Properties by Global Concepts Media."
+  >
 
   <style>
-    :root{
+
+    :root {
       --navy:#071426;
       --navy2:#0b1d33;
       --blue:#1f68d8;
       --gold:#d6a94a;
+      --gold-light:#f2d38e;
       --gold-soft:#fff7df;
       --bg:#f5f7fb;
-      --paper:#fff;
+      --paper:#ffffff;
       --text:#132238;
       --muted:#637083;
       --line:#dbe2ec;
       --shadow:0 18px 46px rgba(7,20,38,.10);
-      --radius:22px
+      --radius:22px;
     }
 
-    *{box-sizing:border-box}
+    * {
+      box-sizing:border-box;
+    }
 
-    html{scroll-behavior:smooth}
+    html {
+      scroll-behavior:smooth;
+    }
 
-    body{
+    body {
       margin:0;
       background:var(--bg);
       color:var(--text);
-      font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-      line-height:1.55
+      font-family:
+        Inter,
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+      line-height:1.55;
     }
 
-    a{color:inherit}
+    a {
+      color:inherit;
+    }
 
-    .wrap{
+    .wrap {
       width:min(1180px,calc(100% - 36px));
-      margin:0 auto
+      margin:0 auto;
     }
 
-    .topbar{
+
+    /* ======================================================
+       TOP BAR
+       ====================================================== */
+
+    .topbar {
       display:flex;
       justify-content:space-between;
       align-items:center;
       gap:20px;
-      padding:20px 0
+      padding:20px 0;
     }
 
-    .brand{
+    .brand {
       display:flex;
       align-items:center;
       gap:11px;
       font-weight:900;
-      color:var(--navy)
+      color:var(--navy);
     }
 
-    .mark{
+    .mark {
       width:42px;
       height:42px;
       display:grid;
@@ -101,10 +118,10 @@
       border-radius:13px;
       background:var(--navy);
       color:var(--gold);
-      font-weight:950
+      font-weight:950;
     }
 
-    .preview-pill{
+    .preview-pill {
       padding:9px 12px;
       border:1px solid #ead5a0;
       border-radius:999px;
@@ -113,20 +130,31 @@
       font-size:.72rem;
       font-weight:900;
       letter-spacing:.08em;
-      text-transform:uppercase
+      text-transform:uppercase;
     }
 
-    .hero{
+
+    /* ======================================================
+       MAIN HERO
+       ====================================================== */
+
+    .hero {
       position:relative;
       overflow:hidden;
       padding:62px 54px;
       border-radius:30px;
-      background:linear-gradient(135deg,#071426 0%,#0e3157 68%,#174875 100%);
+      background:
+        linear-gradient(
+          135deg,
+          #071426 0%,
+          #0e3157 68%,
+          #174875 100%
+        );
       color:#fff;
-      box-shadow:var(--shadow)
+      box-shadow:var(--shadow);
     }
 
-    .hero:after{
+    .hero:after {
       content:"";
       position:absolute;
       width:520px;
@@ -134,21 +162,26 @@
       right:-150px;
       top:-170px;
       border-radius:50%;
-      background:radial-gradient(circle,rgba(214,169,74,.25),transparent 68%)
+      background:
+        radial-gradient(
+          circle,
+          rgba(214,169,74,.25),
+          transparent 68%
+        );
     }
 
-    .eyebrow{
+    .eyebrow {
       position:relative;
       z-index:1;
       margin:0 0 12px;
-      color:#f2d38e;
+      color:var(--gold-light);
       font-size:.76rem;
       font-weight:900;
       letter-spacing:.14em;
-      text-transform:uppercase
+      text-transform:uppercase;
     }
 
-    h1{
+    h1 {
       position:relative;
       z-index:1;
       max-width:900px;
@@ -156,19 +189,19 @@
       font-family:Georgia,"Times New Roman",serif;
       font-size:clamp(2.7rem,6vw,5.5rem);
       line-height:.96;
-      letter-spacing:-.045em
+      letter-spacing:-.045em;
     }
 
-    .hero-copy{
+    .hero-copy {
       position:relative;
       z-index:1;
       max-width:790px;
       margin:22px 0 0;
       color:rgba(255,255,255,.82);
-      font-size:1.08rem
+      font-size:1.08rem;
     }
 
-    .hero-note{
+    .hero-note {
       position:relative;
       z-index:1;
       display:inline-flex;
@@ -178,119 +211,138 @@
       border-radius:12px;
       background:rgba(255,255,255,.07);
       font-size:.82rem;
-      color:#e8eef6
+      color:#e8eef6;
     }
 
-    .section{
+
+    /* ======================================================
+       STANDARD SECTIONS
+       ====================================================== */
+
+    .section {
       margin-top:22px;
       overflow:hidden;
       border:1px solid var(--line);
       border-radius:var(--radius);
       background:var(--paper);
-      box-shadow:0 8px 28px rgba(7,20,38,.055)
+      box-shadow:0 8px 28px rgba(7,20,38,.055);
     }
 
-    .section-head{
+    .section-head {
       padding:24px 28px 18px;
-      border-bottom:1px solid var(--line)
+      border-bottom:1px solid var(--line);
     }
 
-    .kicker{
+    .kicker {
       margin:0 0 5px;
       color:var(--blue);
-      font-size:.7rem;
+      font-size:.70rem;
       font-weight:900;
       letter-spacing:.12em;
-      text-transform:uppercase
+      text-transform:uppercase;
     }
 
-    h2{
+    h2 {
       margin:0;
       color:var(--navy);
-      font-size:1.6rem
+      font-size:1.6rem;
     }
 
-    .section-head p{
+    .section-head p {
       max-width:850px;
       margin:8px 0 0;
-      color:var(--muted)
+      color:var(--muted);
     }
 
-    .section-body{padding:28px}
+    .section-body {
+      padding:28px;
+    }
 
-    .grid2{
+    .grid2 {
       display:grid;
       grid-template-columns:1fr 1fr;
-      gap:22px
+      gap:22px;
     }
 
-    .grid3{
+    .grid3 {
       display:grid;
       grid-template-columns:repeat(3,1fr);
-      gap:14px
+      gap:14px;
     }
 
-    .card{
+
+    /* ======================================================
+       CARDS
+       ====================================================== */
+
+    .card {
       padding:18px;
       border:1px solid var(--line);
       border-radius:17px;
-      background:#fbfcfe
+      background:#fbfcfe;
     }
 
-    .card h3{
+    .card h3 {
       margin:0;
       color:var(--navy);
-      font-size:1rem
+      font-size:1rem;
     }
 
-    .card p{
+    .card p {
       margin:8px 0 0;
       color:var(--muted);
-      font-size:.87rem
+      font-size:.87rem;
     }
 
-    .card ul{
+    .card ul {
       margin:11px 0 0;
       padding-left:18px;
       color:#4f5e71;
-      font-size:.83rem
+      font-size:.83rem;
     }
 
-    .card li+li{margin-top:5px}
+    .card li + li {
+      margin-top:5px;
+    }
+
+
+    /* ======================================================
+       IMAGES / EVIDENCE
+       ====================================================== */
 
     .evidence img,
-    .asset img{
+    .asset img {
       display:block;
       width:100%;
       height:auto;
       border-radius:14px;
-      border:1px solid #d7dde7
+      border:1px solid #d7dde7;
     }
 
     .evidence h3,
-    .asset h3{
+    .asset h3 {
       margin:15px 0 6px;
       color:var(--navy);
-      font-size:1rem
+      font-size:1rem;
     }
 
     .evidence p,
-    .asset p{
+    .asset p {
       margin:0;
       color:var(--muted);
-      font-size:.88rem
+      font-size:.88rem;
     }
 
-    .callout{
+    .callout {
       margin-top:18px;
       padding:18px 20px;
       border-left:4px solid var(--gold);
       border-radius:0 14px 14px 0;
       background:#fff9ea;
-      color:#5e4b22
+      color:#5e4b22;
     }
 
-    .watermark-note{
+    .watermark-note {
       margin-top:15px;
       padding:13px 15px;
       border:1px solid #ecd493;
@@ -298,38 +350,43 @@
       background:#fff3d1;
       color:#6a5220;
       font-size:.82rem;
-      font-weight:750
+      font-weight:750;
     }
 
-    .funnel{
+
+    /* ======================================================
+       FUNNEL
+       ====================================================== */
+
+    .funnel {
       display:grid;
       grid-template-columns:repeat(5,1fr);
-      gap:10px
+      gap:10px;
     }
 
-    .step{
+    .step {
       position:relative;
       padding:17px 14px;
       border:1px solid var(--line);
       border-radius:15px;
       background:#fbfcfe;
-      text-align:center
+      text-align:center;
     }
 
-    .step b{
+    .step b {
       display:block;
       color:var(--navy);
-      font-size:.88rem
+      font-size:.88rem;
     }
 
-    .step span{
+    .step span {
       display:block;
       margin-top:6px;
       color:var(--muted);
-      font-size:.75rem
+      font-size:.75rem;
     }
 
-    .step:not(:last-child):after{
+    .step:not(:last-child):after {
       content:"→";
       position:absolute;
       right:-13px;
@@ -337,242 +394,333 @@
       z-index:2;
       color:var(--gold);
       font-weight:950;
-      font-size:1.2rem
+      font-size:1.2rem;
     }
 
-    .mock{
+
+    /* ======================================================
+       LUXURY LANDING PAGE CONCEPT
+       ====================================================== */
+
+    .luxury-preview {
       position:relative;
       overflow:hidden;
-      border:1px solid #ccd5e0;
-      border-radius:22px;
-      background:#fff;
-      box-shadow:0 24px 60px rgba(7,20,38,.13)
+      border-radius:26px;
+      border:1px solid #cfd8e4;
+      background:#071426;
+      box-shadow:
+        0 28px 70px rgba(4,17,33,.20);
     }
 
-    .mock-inner{
+    .luxury-layout {
       display:grid;
-      grid-template-columns:minmax(0,1.15fr) minmax(340px,.85fr);
-      min-height:500px;
-      background:#eef2f6
+      grid-template-columns:minmax(0,1.25fr) minmax(340px,.75fr);
+      min-height:610px;
     }
 
-    .mock-visual{
+    .luxury-hero {
       position:relative;
+      min-height:610px;
       overflow:hidden;
-      min-height:500px;
-      background:#0a1727
+      background:#071426;
     }
 
-    .mock-visual>img{
+    .luxury-hero img {
       position:absolute;
       inset:0;
       width:100%;
       height:100%;
-      object-fit:contain;
+      object-fit:cover;
       object-position:center;
       display:block;
-      background:#071426
     }
 
-    .mock-visual:after{content:none}
+    .luxury-hero:after {
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        linear-gradient(
+          90deg,
+          rgba(4,14,28,.88) 0%,
+          rgba(4,14,28,.60) 40%,
+          rgba(4,14,28,.18) 76%,
+          rgba(4,14,28,.04) 100%
+        ),
+        linear-gradient(
+          0deg,
+          rgba(4,14,28,.58) 0%,
+          transparent 52%
+        );
+      z-index:1;
+    }
 
-    .mock-copy{display:none}
+    .luxury-content {
+      position:relative;
+      z-index:2;
+      display:flex;
+      flex-direction:column;
+      justify-content:flex-end;
+      min-height:610px;
+      max-width:620px;
+      padding:48px 46px;
+      color:#fff;
+    }
 
-    .mini{
+    .luxury-label {
+      display:inline-flex;
+      align-self:flex-start;
+      margin-bottom:16px;
+      padding:8px 10px;
+      border:1px solid rgba(242,211,142,.42);
+      border-radius:999px;
+      background:rgba(7,20,38,.52);
       color:#f2d38e;
-      font-size:.68rem;
+      font-size:.67rem;
       font-weight:900;
       letter-spacing:.13em;
-      text-transform:uppercase
-    }
-
-    .mock-copy h3{
-      max-width:600px;
-      margin:10px 0 0;
-      color:#fff;
-      font-family:Georgia,"Times New Roman",serif;
-      font-size:clamp(2.35rem,4.2vw,4rem);
-      line-height:.98;
-      letter-spacing:-.035em;
-      text-shadow:0 2px 20px rgba(0,0,0,.22)
-    }
-
-    .mock-copy p{
-      max-width:560px;
-      margin:17px 0 0;
-      color:rgba(255,255,255,.90);
-      font-size:.96rem;
-      text-shadow:0 1px 10px rgba(0,0,0,.2)
-    }
-
-    .trust{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-      margin-top:20px
-    }
-
-    .trust span{
-      padding:8px 10px;
-      border:1px solid rgba(255,255,255,.34);
-      border-radius:999px;
-      background:rgba(5,16,30,.43);
+      text-transform:uppercase;
       backdrop-filter:blur(5px);
-      color:#fff;
-      font-size:.7rem;
-      font-weight:800
     }
 
-    .mock-form-wrap{
+    .luxury-content h3 {
+      max-width:570px;
+      margin:0;
+      font-family:Georgia,"Times New Roman",serif;
+      font-size:clamp(2.8rem,5vw,4.8rem);
+      line-height:.95;
+      letter-spacing:-.045em;
+      text-shadow:0 3px 24px rgba(0,0,0,.34);
+    }
+
+    .luxury-content p {
+      max-width:540px;
+      margin:19px 0 0;
+      color:rgba(255,255,255,.88);
+      font-size:1rem;
+      line-height:1.65;
+      text-shadow:0 2px 14px rgba(0,0,0,.26);
+    }
+
+    .luxury-trust {
+      display:flex;
+      gap:9px;
+      flex-wrap:wrap;
+      margin-top:24px;
+    }
+
+    .luxury-trust span {
+      padding:8px 11px;
+      border:1px solid rgba(255,255,255,.28);
+      border-radius:999px;
+      background:rgba(7,20,38,.50);
+      color:#fff;
+      font-size:.69rem;
+      font-weight:800;
+      backdrop-filter:blur(6px);
+    }
+
+    .luxury-signature {
       display:flex;
       align-items:center;
-      padding:30px;
-      background:linear-gradient(145deg,#f8fafc 0%,#eef3f8 100%)
+      gap:12px;
+      margin-top:28px;
+      color:rgba(255,255,255,.85);
+      font-size:.73rem;
     }
 
-    .mock-form{
+    .luxury-signature:before {
+      content:"";
+      width:38px;
+      height:1px;
+      background:var(--gold);
+    }
+
+
+    /* ======================================================
+       LANDING PAGE FORM
+       ====================================================== */
+
+    .luxury-form-area {
+      display:flex;
+      align-items:center;
+      padding:34px;
+      background:
+        linear-gradient(
+          145deg,
+          #f9fafc 0%,
+          #eef2f6 100%
+        );
+    }
+
+    .luxury-form {
       width:100%;
-      margin:0;
-      padding:25px;
+      padding:29px;
       border:1px solid #d7dee8;
-      border-radius:20px;
+      border-radius:21px;
       background:#fff;
-      box-shadow:0 18px 48px rgba(7,25,46,.13)
+      box-shadow:
+        0 22px 55px rgba(7,25,46,.13);
     }
 
-    .form-mini{
-      margin:0 0 7px;
+    .form-kicker {
+      margin:0 0 8px;
       color:#9a762b;
-      font-size:.64rem;
+      font-size:.66rem;
       font-weight:900;
       letter-spacing:.13em;
-      text-transform:uppercase
+      text-transform:uppercase;
     }
 
-    .mock-form h4{
+    .luxury-form h4 {
       margin:0;
       color:var(--navy);
       font-family:Georgia,"Times New Roman",serif;
-      font-size:1.35rem;
-      line-height:1.1
+      font-size:1.7rem;
+      line-height:1.08;
     }
 
-    .mock-form p{
-      margin:8px 0 18px;
+    .luxury-form .form-intro {
+      margin:10px 0 20px;
       color:var(--muted);
-      font-size:.78rem
+      font-size:.82rem;
+      line-height:1.55;
     }
 
-    .fields{
+    .fields {
       display:grid;
-      gap:9px
+      gap:10px;
     }
 
-    .field{
-      min-height:40px;
+    .field {
+      min-height:44px;
       display:flex;
       align-items:center;
-      padding:0 12px;
-      border:1px solid #d9e0ea;
+      padding:0 13px;
+      border:1px solid #d8e0ea;
       border-radius:10px;
       background:#fafbfd;
-      color:#8e9baa;
-      font-size:.76rem
+      color:#8b98a8;
+      font-size:.77rem;
     }
 
-    .button-fake{
-      min-height:44px;
+    .button-fake {
+      min-height:48px;
       display:grid;
       place-items:center;
-      margin-top:2px;
+      margin-top:3px;
       border-radius:10px;
-      background:var(--gold);
-      color:#14243a;
+      background:
+        linear-gradient(
+          135deg,
+          #d6a94a,
+          #e8c671
+        );
+      color:#11243d;
       font-weight:950;
       font-size:.78rem;
-      letter-spacing:.02em
+      letter-spacing:.04em;
     }
 
-    .form-disclaimer{
-      margin-top:11px;
-      color:#94a0af;
+    .form-note {
+      margin-top:13px;
+      color:#95a0ad;
       text-align:center;
-      font-size:.62rem
+      font-size:.62rem;
+      line-height:1.4;
     }
 
-    .wm{
+    .concept-wm {
       pointer-events:none;
       position:absolute;
-      inset:-80px;
+      inset:0;
       z-index:5;
-      opacity:.035;
-      transform:rotate(-15deg);
-      display:grid;
-      align-content:center;
-      gap:100px;
-      color:#fff;
-      font-weight:950;
-      font-size:1.35rem;
-      white-space:nowrap;
-      text-transform:uppercase
+      display:flex;
+      align-items:flex-start;
+      justify-content:flex-end;
+      padding:16px;
     }
 
-    .wm div:nth-child(even){
-      transform:translateX(130px)
+    .concept-wm span {
+      padding:7px 9px;
+      border:1px solid rgba(255,255,255,.18);
+      border-radius:8px;
+      background:rgba(5,16,30,.32);
+      color:rgba(255,255,255,.50);
+      font-size:.56rem;
+      font-weight:900;
+      letter-spacing:.11em;
+      text-transform:uppercase;
+      backdrop-filter:blur(4px);
     }
 
-    .metrics{
+
+    /* ======================================================
+       METRICS
+       ====================================================== */
+
+    .metrics {
       display:grid;
       grid-template-columns:repeat(6,1fr);
-      gap:10px
+      gap:10px;
     }
 
-    .metric{
+    .metric {
       padding:15px;
       border:1px solid var(--line);
       border-radius:14px;
-      background:#fbfcfe
+      background:#fbfcfe;
     }
 
-    .metric strong{
+    .metric strong {
       display:block;
       color:var(--navy);
-      font-size:.85rem
+      font-size:.85rem;
     }
 
-    .metric span{
+    .metric span {
       display:block;
       margin-top:5px;
       color:var(--muted);
-      font-size:.73rem
+      font-size:.73rem;
     }
 
-    .cta{
+
+    /* ======================================================
+       CTA
+       ====================================================== */
+
+    .cta {
       margin:22px 0 0;
       padding:34px;
       border-radius:24px;
-      background:linear-gradient(135deg,#071426,#0e3157);
+      background:
+        linear-gradient(
+          135deg,
+          #071426,
+          #0e3157
+        );
       color:#fff;
       display:flex;
       justify-content:space-between;
       align-items:center;
       gap:28px;
-      box-shadow:var(--shadow)
+      box-shadow:var(--shadow);
     }
 
-    .cta h2{
+    .cta h2 {
       color:#fff;
       font-family:Georgia,"Times New Roman",serif;
-      font-size:2rem
+      font-size:2rem;
     }
 
-    .cta p{
+    .cta p {
       max-width:730px;
       margin:8px 0 0;
-      color:rgba(255,255,255,.77)
+      color:rgba(255,255,255,.77);
     }
 
-    .cta a{
+    .cta a {
       display:inline-flex;
       align-items:center;
       justify-content:center;
@@ -583,86 +731,206 @@
       color:#0a1c31;
       text-decoration:none;
       font-weight:950;
-      white-space:nowrap
+      white-space:nowrap;
     }
 
-    footer{
+
+    /* ======================================================
+       FOOTER
+       ====================================================== */
+
+    footer {
       display:flex;
       justify-content:space-between;
       gap:20px;
       flex-wrap:wrap;
       padding:28px 8px 44px;
       color:#7a8798;
-      font-size:.75rem
+      font-size:.75rem;
     }
 
-    footer a{color:#56677c}
-
-    @media(max-width:900px){
-      .hero{padding:42px 28px}
-      .grid2,.grid3,.mock-inner{grid-template-columns:1fr}
-      .funnel{grid-template-columns:1fr 1fr}
-      .step:after{display:none}
-      .metrics{grid-template-columns:1fr 1fr}
-      .mock-visual,.mock-copy{min-height:440px}
-      .mock-form-wrap{padding:24px}
-      .cta{display:block}
-      .cta a{margin-top:18px}
-      .topbar{align-items:flex-start;flex-direction:column}
+    footer a {
+      color:#56677c;
     }
 
-    @media(max-width:560px){
-      .wrap{width:min(100% - 22px,1180px)}
-      .section-body{padding:20px}
-      .section-head{padding:22px 20px 17px}
-      .funnel,.metrics{grid-template-columns:1fr}
-      .mock-copy{padding:32px 25px}
-      .mock-visual,.mock-copy{min-height:420px}
-      .mock-form-wrap{padding:18px}
+
+    /* ======================================================
+       RESPONSIVE
+       ====================================================== */
+
+    @media(max-width:900px) {
+
+      .hero {
+        padding:42px 28px;
+      }
+
+      .grid2,
+      .grid3,
+      .luxury-layout {
+        grid-template-columns:1fr;
+      }
+
+      .funnel {
+        grid-template-columns:1fr 1fr;
+      }
+
+      .step:after {
+        display:none;
+      }
+
+      .metrics {
+        grid-template-columns:1fr 1fr;
+      }
+
+      .luxury-hero,
+      .luxury-content {
+        min-height:540px;
+      }
+
+      .luxury-form-area {
+        padding:26px;
+      }
+
+      .cta {
+        display:block;
+      }
+
+      .cta a {
+        margin-top:18px;
+      }
+
+      .topbar {
+        align-items:flex-start;
+        flex-direction:column;
+      }
     }
+
+    @media(max-width:560px) {
+
+      .wrap {
+        width:min(100% - 22px,1180px);
+      }
+
+      .section-body {
+        padding:20px;
+      }
+
+      .section-head {
+        padding:22px 20px 17px;
+      }
+
+      .funnel,
+      .metrics {
+        grid-template-columns:1fr;
+      }
+
+      .luxury-hero,
+      .luxury-content {
+        min-height:500px;
+      }
+
+      .luxury-content {
+        padding:30px 24px;
+      }
+
+      .luxury-form-area {
+        padding:18px;
+      }
+
+      .luxury-form {
+        padding:23px;
+      }
+    }
+
   </style>
 </head>
 
+
 <body>
+
   <div class="wrap">
 
+
+    <!-- ======================================================
+         TOP BAR
+         ====================================================== -->
+
     <div class="topbar">
+
       <div class="brand">
         <span class="mark">G</span>
         <span>Global Concepts Media</span>
       </div>
+
       <div class="preview-pill">
         Personalized concept preview · Not for production use
       </div>
+
     </div>
 
+
+    <!-- ======================================================
+         HERO
+         ====================================================== -->
+
     <section class="hero">
-      <p class="eyebrow">Prepared for John Curri · Realty World Curri Properties</p>
-      <h1>You are already paying to get attention. The next step should be measurable.</h1>
-      <p class="hero-copy">
-        I received your direct-mail piece and reviewed the path it creates from offline attention to your digital presence.
-        This page is a working concept showing how the same campaign could become a connected lead-generation system
-        without throwing away the brand equity you have already built.
+
+      <p class="eyebrow">
+        Prepared for John Curri · Realty World Curri Properties
       </p>
+
+      <h1>
+        You are already paying to get attention.
+        The next step should be measurable.
+      </h1>
+
+      <p class="hero-copy">
+        I received your direct-mail piece and reviewed the path it creates
+        from offline attention to your digital presence. This page is a
+        working concept showing how the same campaign could become a
+        connected lead-generation system without throwing away the brand
+        equity you have already built.
+      </p>
+
       <div class="hero-note">
         Concept prepared by Global Concepts Media · Melbourne, Florida · September 2026
       </div>
+
     </section>
 
+
+    <!-- ======================================================
+         SECTION 01
+         ====================================================== -->
+
     <section class="section">
+
       <div class="section-head">
-        <p class="kicker">01 · What caught our attention</p>
-        <h2>The postcard already proves you believe in marketing.</h2>
+
+        <p class="kicker">
+          01 · What caught our attention
+        </p>
+
+        <h2>
+          The postcard already proves you believe in marketing.
+        </h2>
+
         <p>
-          The opportunity is not “do more marketing.” It is making the investment you already make easier to measure,
+          The opportunity is not “do more marketing.”
+          It is making the investment you already make easier to measure,
           follow up, and extend across channels.
         </p>
+
       </div>
 
+
       <div class="section-body">
+
         <div class="grid2">
 
+
           <div class="evidence">
+
             <img
               id="curri-original-postcard"
               src="assets/original-postcard-v2.jpg?v=120"
@@ -671,351 +939,655 @@
               decoding="async"
               alt="Original Realty World Curri Properties direct-mail postcard received by Global Concepts Media"
             >
-            <h3>The current mail piece</h3>
+
+            <h3>
+              The current mail piece
+            </h3>
+
             <p>
-              Strong local branding, multiple service lines, a direct call/text CTA and a QR code.
-              The main opportunity is turning that attention into a trackable campaign path.
+              Strong local branding, multiple service lines,
+              a direct call/text CTA and a QR code.
+              The main opportunity is turning that attention
+              into a trackable campaign path.
             </p>
+
           </div>
 
+
           <div>
-            <div class="grid3" style="grid-template-columns:1fr">
+
+            <div
+              class="grid3"
+              style="grid-template-columns:1fr"
+            >
 
               <div class="card">
-                <h3>Clear campaign offer</h3>
+
+                <h3>
+                  Clear campaign offer
+                </h3>
+
                 <p>
-                  Give the property owner one primary reason to respond instead of asking the piece
-                  to carry every service message at once.
+                  Give the property owner one primary reason to respond
+                  instead of asking the piece to carry every service
+                  message at once.
                 </p>
+
               </div>
 
-              <div class="card">
-                <h3>Dedicated destination</h3>
-                <p>
-                  Send QR and digital traffic to a campaign-specific seller page rather than leaving
-                  attribution buried inside general website traffic.
-                </p>
-              </div>
 
               <div class="card">
-                <h3>Follow-up beyond mail</h3>
+
+                <h3>
+                  Dedicated destination
+                </h3>
+
                 <p>
-                  Use the same offer in paid social, search and retargeting so the postcard becomes
-                  the first touch — not the last.
+                  Send QR and digital traffic to a campaign-specific
+                  seller page rather than leaving attribution buried
+                  inside general website traffic.
                 </p>
+
+              </div>
+
+
+              <div class="card">
+
+                <h3>
+                  Follow-up beyond mail
+                </h3>
+
+                <p>
+                  Use the same offer in paid social, search and retargeting
+                  so the postcard becomes the first touch — not the last.
+                </p>
+
               </div>
 
             </div>
+
           </div>
+
         </div>
+
 
         <div class="callout">
-          <strong>The idea:</strong> keep the recognizable Curri brand, but connect the mail piece
+
+          <strong>The idea:</strong>
+
+          keep the recognizable Curri brand, but connect the mail piece
           to a measurable seller-acquisition system.
+
         </div>
+
       </div>
+
     </section>
 
+
+    <!-- ======================================================
+         SECTION 02
+         ====================================================== -->
+
     <section class="section">
+
       <div class="section-head">
-        <p class="kicker">02 · Example creative direction</p>
-        <h2>One offer. One visual language. Multiple channels.</h2>
-        <p>
-          These are concept previews, not finished production assets. They are intentionally watermarked
-          so the strategic direction can be reviewed without giving away finished creative before an engagement begins.
+
+        <p class="kicker">
+          02 · Example creative direction
         </p>
+
+        <h2>
+          One offer. One visual language. Multiple channels.
+        </h2>
+
+        <p>
+          These are concept previews, not finished production assets.
+          They are intentionally watermarked so the strategic direction
+          can be reviewed without giving away finished creative before
+          an engagement begins.
+        </p>
+
       </div>
 
+
       <div class="section-body">
+
         <div class="grid2">
 
+
           <div class="asset">
+
             <img
-              src="assets/curri-postcard-concept.webp?v=120"
+              src="assets/curri-postcard-concept.webp?v=121"
               alt="Watermarked Global Concepts Media postcard concept for Realty World Curri Properties"
             >
-            <h3>Direct-mail concept</h3>
+
+            <h3>
+              Direct-mail concept
+            </h3>
+
             <p>
               Refocuses the piece around a free property value and market review,
               while keeping residential, commercial and land visible.
             </p>
+
           </div>
 
+
           <div class="asset">
+
             <img
               src="assets/curri-library-concept.webp?v=121"
-              alt="Watermarked Global Concepts Media social campaign concept for Realty World Curri Properties"
+              alt="Watermarked Global Concepts Media digital campaign concept for Realty World Curri Properties"
             >
-            <h3>Digital extension</h3>
+
+            <h3>
+              Digital extension
+            </h3>
+
             <p>
               Uses the same offer and visual language for Meta prospecting,
               retargeting or seller-awareness campaigns.
             </p>
+
           </div>
 
         </div>
 
+
         <div class="watermark-note">
+
           Concept preview only. Creative is not licensed for production use.
-          Final work would use approved brand assets, photography, required brokerage/legal language,
-          working campaign URLs and platform-specific formats.
+          Final work would use approved brand assets, photography,
+          required brokerage/legal language, working campaign URLs
+          and platform-specific formats.
+
         </div>
+
       </div>
+
     </section>
 
+
+    <!-- ======================================================
+         SECTION 03
+         ====================================================== -->
+
     <section class="section">
+
       <div class="section-head">
-        <p class="kicker">03 · The campaign system</p>
-        <h2>The postcard becomes the first touch — not the whole campaign.</h2>
+
+        <p class="kicker">
+          03 · The campaign system
+        </p>
+
+        <h2>
+          The postcard becomes the first touch — not the whole campaign.
+        </h2>
+
         <p>
           Every channel points to a dedicated seller experience,
           and every meaningful action can be measured.
         </p>
+
       </div>
 
+
       <div class="section-body">
+
         <div class="funnel">
+
 
           <div class="step">
             <b>Direct Mail</b>
             <span>Postcard + tracked QR</span>
           </div>
 
+
           <div class="step">
             <b>Paid / Social</b>
             <span>Matching Meta + Google intent</span>
           </div>
+
 
           <div class="step">
             <b>Landing Page</b>
             <span>One seller offer + low-friction form</span>
           </div>
 
+
           <div class="step">
             <b>Follow-Up</b>
             <span>Call, email, text + retargeting</span>
           </div>
+
 
           <div class="step">
             <b>Attribution</b>
             <span>Source → lead → appointment</span>
           </div>
 
+
         </div>
+
       </div>
+
     </section>
 
+
+    <!-- ======================================================
+         SECTION 04 — LUXURY LANDING PAGE
+         ====================================================== -->
+
     <section class="section">
+
       <div class="section-head">
-        <p class="kicker">04 · Landing page concept</p>
-        <h2>A campaign-specific destination instead of a generic website visit.</h2>
-        <p>
-          The goal is not to replace your existing site. It is to give this campaign a dedicated,
-          premium conversion path that can be measured separately.
+
+        <p class="kicker">
+          04 · Landing page concept
         </p>
+
+        <h2>
+          A premium destination built around one seller decision.
+        </h2>
+
+        <p>
+          Instead of sending campaign traffic to a general website,
+          this gives the seller a focused, luxury-level experience
+          built specifically around requesting a property review.
+        </p>
+
       </div>
 
-      <div class="section-body">
-        <div class="mock">
 
-          <div class="wm">
-            <div>GLOBAL CONCEPTS MEDIA · CONCEPT PREVIEW · NOT FOR USE</div>
-            <div>GLOBAL CONCEPTS MEDIA · CONCEPT PREVIEW · NOT FOR USE</div>
-            <div>GLOBAL CONCEPTS MEDIA · CONCEPT PREVIEW · NOT FOR USE</div>
+      <div class="section-body">
+
+
+        <div class="luxury-preview">
+
+
+          <div class="concept-wm">
+            <span>
+              Global Concepts Media · Concept Preview
+            </span>
           </div>
 
-          <div class="mock-inner">
 
-            <div class="mock-visual">
+          <div class="luxury-layout">
+
+
+            <!-- LUXURY HERO -->
+
+            <div class="luxury-hero">
+
               <img
-                src="assets/curri-library-concept.webp?v=121"
-                alt="Luxury waterfront Curri Properties seller campaign concept"
+                src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1800&q=88"
+                alt="Luxury residential property used as concept imagery for the Realty World Curri Properties seller campaign"
               >
 
-              <div class="mock-copy">
-                <div class="mini">
-                  Realty World Curri Properties · Seller campaign concept
+
+              <div class="luxury-content">
+
+
+                <div class="luxury-label">
+                  Realty World Curri Properties · Seller Strategy
                 </div>
 
-                <h3>Thinking About Selling Your Property?</h3>
+
+                <h3>
+                  Thinking About Selling Your Property?
+                </h3>
+
 
                 <p>
-                  Get a local property value and market review before you decide what to do next.
-                  Residential, commercial, luxury and land opportunities across Brevard County.
+                  Start with a private local property review.
+                  Understand where your property may stand in today's market
+                  before deciding what comes next.
                 </p>
 
-                <div class="trust">
-                  <span>Local brokerage</span>
-                  <span>Residential · Commercial · Land</span>
-                  <span>Brevard County</span>
+
+                <div class="luxury-trust">
+
+                  <span>
+                    Brevard County
+                  </span>
+
+                  <span>
+                    Residential
+                  </span>
+
+                  <span>
+                    Luxury
+                  </span>
+
+                  <span>
+                    Commercial
+                  </span>
+
+                  <span>
+                    Land
+                  </span>
+
                 </div>
+
+
+                <div class="luxury-signature">
+                  Local guidance · Personal conversation · No pressure
+                </div>
+
+
               </div>
+
             </div>
 
-            <div class="mock-form-wrap">
-              <div class="mock-form">
 
-                <div class="form-mini">
-                  Private property review
-                </div>
+            <!-- FORM -->
 
-                <h4>Request Your Property Review</h4>
+            <div class="luxury-form-area">
 
-                <p>
-                  Tell us a little about your property and we will start with a local market review.
+              <div class="luxury-form">
+
+
+                <p class="form-kicker">
+                  Private Property Review
                 </p>
+
+
+                <h4>
+                  Request Your Property Review
+                </h4>
+
+
+                <p class="form-intro">
+                  Tell us a little about your property.
+                  The next step is a local review — not an automated estimate.
+                </p>
+
 
                 <div class="fields">
-                  <div class="field">Name</div>
-                  <div class="field">Phone</div>
-                  <div class="field">Email</div>
-                  <div class="field">Property address</div>
-                  <div class="field">Property type</div>
-                  <div class="field">When are you thinking about selling?</div>
-                  <div class="button-fake">REQUEST MY REVIEW</div>
+
+                  <div class="field">
+                    Name
+                  </div>
+
+                  <div class="field">
+                    Phone
+                  </div>
+
+                  <div class="field">
+                    Email
+                  </div>
+
+                  <div class="field">
+                    Property address
+                  </div>
+
+                  <div class="field">
+                    Property type
+                  </div>
+
+                  <div class="field">
+                    When are you considering selling?
+                  </div>
+
+                  <div class="button-fake">
+                    REQUEST MY PRIVATE REVIEW
+                  </div>
+
                 </div>
 
-                <div class="form-disclaimer">
-                  Concept form · Final fields and disclosures would be approved before launch.
+
+                <div class="form-note">
+
+                  Concept form · Final fields, disclosures and brokerage
+                  language would be approved before launch.
+
                 </div>
+
 
               </div>
+
             </div>
 
+
           </div>
+
         </div>
+
       </div>
+
     </section>
 
+
+    <!-- ======================================================
+         SECTION 05
+         ====================================================== -->
+
     <section class="section">
+
       <div class="section-head">
-        <p class="kicker">05 · Follow-up beyond the mailbox</p>
-        <h2>One campaign can keep working after the postcard is thrown away.</h2>
+
+        <p class="kicker">
+          05 · Follow-up beyond the mailbox
+        </p>
+
+        <h2>
+          One campaign can keep working after the postcard is thrown away.
+        </h2>
+
       </div>
 
+
       <div class="section-body">
+
         <div class="grid2">
 
+
           <div class="card">
-            <h3>Prospecting creative</h3>
+
+            <h3>
+              Prospecting creative
+            </h3>
+
             <p>
-              Reach the same homeowner/property-owner profile digitally with the same message.
+              Reach the same homeowner/property-owner profile digitally
+              with the same message.
             </p>
+
             <ul>
               <li>Meta seller-awareness campaign</li>
               <li>Google Search for high-intent seller queries</li>
               <li>Dedicated source/UTM tracking by channel</li>
             </ul>
+
           </div>
 
+
           <div class="card">
-            <h3>Retargeting</h3>
+
+            <h3>
+              Retargeting
+            </h3>
+
             <p>
-              Keep John visible to people who showed interest but were not ready to respond immediately.
+              Keep John visible to people who showed interest
+              but were not ready to respond immediately.
             </p>
+
             <ul>
               <li>“Still considering selling?” creative</li>
               <li>Short market videos and recent-sale proof</li>
               <li>Seller education and consultation CTA</li>
             </ul>
+
           </div>
 
+
           <div class="card">
-            <h3>Lead response</h3>
+
+            <h3>
+              Lead response
+            </h3>
+
             <p>
               Turn the inquiry into a real conversation quickly.
             </p>
+
             <ul>
               <li>Immediate email/text confirmation</li>
               <li>Internal lead alert with campaign source</li>
               <li>Follow-up sequence when a lead does not book</li>
             </ul>
+
           </div>
 
+
           <div class="card">
-            <h3>Measurement</h3>
+
+            <h3>
+              Measurement
+            </h3>
+
             <p>
               Know what the campaign actually creates.
             </p>
+
             <ul>
               <li>QR scans and landing-page visits</li>
               <li>Calls, forms and booked consultations</li>
               <li>Source-to-lead and source-to-close where available</li>
             </ul>
+
           </div>
 
+
         </div>
+
       </div>
+
     </section>
 
+
+    <!-- ======================================================
+         SECTION 06
+         ====================================================== -->
+
     <section class="section">
+
       <div class="section-head">
-        <p class="kicker">06 · What we would prove first</p>
-        <h2>Before adding budget, establish the baseline.</h2>
-        <p>
-          These are the signals we would want before claiming the campaign needs more spend.
+
+        <p class="kicker">
+          06 · What we would prove first
         </p>
+
+        <h2>
+          Before adding budget, establish the baseline.
+        </h2>
+
+        <p>
+          These are the signals we would want before claiming
+          the campaign needs more spend.
+        </p>
+
       </div>
 
+
       <div class="section-body">
+
         <div class="metrics">
+
 
           <div class="metric">
             <strong>QR scans</strong>
             <span>Direct-mail response signal</span>
           </div>
 
+
           <div class="metric">
             <strong>Landing visits</strong>
             <span>Campaign traffic volume</span>
           </div>
+
 
           <div class="metric">
             <strong>Calls</strong>
             <span>Tracked phone inquiries</span>
           </div>
 
+
           <div class="metric">
             <strong>Forms</strong>
             <span>Property-review requests</span>
           </div>
+
 
           <div class="metric">
             <strong>Appointments</strong>
             <span>Qualified conversations</span>
           </div>
 
+
           <div class="metric">
             <strong>Source outcome</strong>
             <span>Which channel created business</span>
           </div>
 
+
         </div>
+
       </div>
+
     </section>
+
+
+    <!-- ======================================================
+         FINAL CTA
+         ====================================================== -->
 
     <section class="cta">
+
       <div>
-        <h2>John, this is the conversation I would like to have.</h2>
+
+        <h2>
+          John, this is the conversation I would like to have.
+        </h2>
+
         <p>
-          You already have a credible brand and you are actively investing in marketing.
-          I am not proposing more activity for activity's sake.
-          I would first verify the response path, campaign tracking and highest-value seller segment —
-          then decide whether this concept deserves to become a live campaign.
+          You already have a credible brand and you are actively investing
+          in marketing. I am not proposing more activity for activity's sake.
+          I would first verify the response path, campaign tracking and
+          highest-value seller segment — then decide whether this concept
+          deserves to become a live campaign.
         </p>
+
       </div>
 
-      <a href="mailto:andy@globalconceptsmedia.com?subject=Curri%20campaign%20concept">
+
+      <a
+        href="mailto:andy@globalconceptsmedia.com?subject=Curri%20campaign%20concept"
+      >
         Reply to Andy
       </a>
+
     </section>
 
+
+    <!-- ======================================================
+         FOOTER
+         ====================================================== -->
+
     <footer>
-      <div>
-        Prepared by <strong>Global Concepts Media</strong> · Melbourne, Florida
-      </div>
 
       <div>
+        Prepared by
+        <strong>Global Concepts Media</strong>
+        · Melbourne, Florida
+      </div>
+
+
+      <div>
+
         <a
           href="https://globalconceptsmedia.com/"
           target="_blank"
@@ -1023,63 +1595,138 @@
         >
           globalconceptsmedia.com
         </a>
-        · Concept preview only · Version 1.2.1
+
+        · Concept preview only
+        · Version 1.2.2
+
       </div>
+
     </footer>
+
 
   </div>
 
+
+  <!-- ======================================================
+       PROSPECT VIEW TRACKING
+       ====================================================== -->
+
   <script>
+
     (() => {
+
       "use strict";
 
-      const FILE_VERSION = "1.2.1";
-      const WORKER = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
-      const ACTION = "prospect-concept-view";
-      const CONCEPT_KEY = "john-curri-v1";
-      const SESSION_KEY = `gcm-concept-view:${CONCEPT_KEY}`;
 
-      const params = new URLSearchParams(window.location.search);
+      const FILE_VERSION = "1.2.2";
 
-      if (params.get("gcm_preview") === "1") return;
+      const WORKER =
+        "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+
+      const ACTION =
+        "prospect-concept-view";
+
+      const CONCEPT_KEY =
+        "john-curri-v1";
+
+      const SESSION_KEY =
+        `gcm-concept-view:${CONCEPT_KEY}`;
+
+
+      const params =
+        new URLSearchParams(window.location.search);
+
+
+      if (
+        params.get("gcm_preview") === "1"
+      ) {
+        return;
+      }
+
 
       try {
-        if (sessionStorage.getItem(SESSION_KEY)) return;
+
+        if (
+          sessionStorage.getItem(SESSION_KEY)
+        ) {
+          return;
+        }
+
       } catch {}
 
+
       const trackView = async () => {
-        if (document.visibilityState !== "visible") return;
+
+        if (
+          document.visibilityState !== "visible"
+        ) {
+          return;
+        }
+
 
         try {
-          const response = await fetch(WORKER, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              action: ACTION,
-              conceptKey: CONCEPT_KEY,
-              pagePath: window.location.pathname,
-              pageVersion: FILE_VERSION,
-              viewedAt: new Date().toISOString()
-            }),
-            keepalive: true
-          });
 
-          if (response.ok) {
+          const response =
+            await fetch(
+              WORKER,
+              {
+                method:"POST",
+
+                headers:{
+                  "Content-Type":"application/json"
+                },
+
+                body:JSON.stringify({
+
+                  action:ACTION,
+
+                  conceptKey:CONCEPT_KEY,
+
+                  pagePath:
+                    window.location.pathname,
+
+                  pageVersion:
+                    FILE_VERSION,
+
+                  viewedAt:
+                    new Date().toISOString()
+
+                }),
+
+                keepalive:true
+              }
+            );
+
+
+          if (
+            response.ok
+          ) {
+
             try {
+
               sessionStorage.setItem(
                 SESSION_KEY,
                 new Date().toISOString()
               );
+
             } catch {}
+
           }
+
         } catch {}
+
       };
 
-      window.setTimeout(trackView, 2500);
+
+      window.setTimeout(
+        trackView,
+        2500
+      );
+
     })();
+
   </script>
+
 
 </body>
 </html>
