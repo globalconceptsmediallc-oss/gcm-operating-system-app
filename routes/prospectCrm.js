@@ -1,9 +1,15 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/prospectCrm.js
-   Version: 1.2.0
+   Version: 1.3.0
    Status: Production Road-Test Candidate
    Purpose: Durable Prospecting Radar + CRM operations for GCM.
+
+   Change Notes — 1.3.0:
+   - Adds update_radar so verified business/contact details can be edited directly.
+   - Adds replace_radar_intelligence so refreshed research replaces the latest
+     brief of the same type instead of creating duplicate intelligence history.
+   - Preserves outreach history, Next Action, and promotion state during record edits.
 
    Change Notes — 1.2.0:
    - Completes the pre-appointment Radar operating loop.
@@ -48,7 +54,7 @@ import {
 } from "../shared/http.js";
 
 export const PROSPECT_CRM_ACTION = "prospect-crm";
-export const PROSPECT_CRM_VERSION = "1.2.0";
+export const PROSPECT_CRM_VERSION = "1.3.0";
 
 const ACTIVE_MANAGED_STATUSES = new Set(["active", "nurture"]);
 const ALLOWED_STATUSES = new Set([
@@ -284,12 +290,16 @@ export async function handleProspectCrm(body, env, requestId) {
         return await listRadar(db, requestId);
       case "get_radar":
         return await getRadar(body, db, requestId);
+      case "update_radar":
+        return await updateRadar(body, db, requestId);
       case "create_radar":
         return await createRadar(body, db, requestId);
       case "add_radar_activity":
         return await addRadarActivity(body, db, requestId);
       case "add_radar_intelligence":
         return await addRadarIntelligence(body, db, requestId);
+      case "replace_radar_intelligence":
+        return await replaceRadarIntelligence(body, db, requestId);
       case "promote_radar":
         return await promoteRadar(body, db, requestId);
       case "create_prospect":
@@ -361,9 +371,11 @@ function supportedOperations() {
   return [
     "list_radar",
     "get_radar",
+    "update_radar",
     "create_radar",
     "add_radar_activity",
     "add_radar_intelligence",
+    "replace_radar_intelligence",
     "promote_radar",
     "create_prospect",
     "list_prospects",
@@ -459,6 +471,99 @@ async function getRadar(body, db, requestId) {
     prospectCrmVersion: PROSPECT_CRM_VERSION,
     radar,
     writesPerformed: 0
+  });
+}
+
+
+async function updateRadar(body, db, requestId) {
+  const radarId = positiveInteger(body?.radarId || body?.radar_id);
+  if (!radarId) {
+    return validationError(requestId, "update_radar", "update_radar requires a positive radarId.");
+  }
+
+  const existing = await readRadarById(db, radarId);
+  if (!existing) {
+    return validationError(requestId, "update_radar", `Radar record ${radarId} was not found.`, 404);
+  }
+  if (existing.promotedProspectId) {
+    return validationError(requestId, "update_radar", "This Radar record has already been promoted. Edit the formal Prospect instead.");
+  }
+
+  const businessName = bodyHas(body, "businessName", "business_name")
+    ? nullableText(body?.businessName ?? body?.business_name)
+    : existing.businessName;
+  const website = bodyHas(body, "website") ? nullableText(body.website) : existing.website;
+  const vertical = bodyHas(body, "vertical", "industry")
+    ? nullableText(body?.vertical ?? body?.industry)
+    : existing.vertical;
+  const market = bodyHas(body, "market", "location")
+    ? nullableText(body?.market ?? body?.location)
+    : existing.market;
+  const sourceType = bodyHas(body, "sourceType", "source_type")
+    ? cleanText(body?.sourceType ?? body?.source_type)
+    : existing.sourceType;
+  const sourceDescription = bodyHas(body, "sourceDescription", "source_description")
+    ? nullableText(body?.sourceDescription ?? body?.source_description)
+    : existing.sourceDescription;
+  const contactName = bodyHas(body, "contactName", "contact_name")
+    ? nullableText(body?.contactName ?? body?.contact_name)
+    : existing.contactName;
+  const contactEmail = bodyHas(body, "contactEmail", "contact_email")
+    ? nullableText(body?.contactEmail ?? body?.contact_email)
+    : existing.contactEmail;
+  const contactPhone = bodyHas(body, "contactPhone", "contact_phone")
+    ? nullableText(body?.contactPhone ?? body?.contact_phone)
+    : existing.contactPhone;
+  const evidenceReference = bodyHas(body, "evidenceReference", "evidence_reference")
+    ? nullableText(body?.evidenceReference ?? body?.evidence_reference)
+    : existing.evidenceReference;
+  const notes = bodyHas(body, "notes") ? nullableText(body.notes) : existing.notes;
+
+  if (!sourceType) {
+    return validationError(requestId, "update_radar", "Radar sourceType cannot be blank.");
+  }
+  if (!businessName && !vertical && !sourceDescription) {
+    return validationError(requestId, "update_radar", "Radar requires a businessName, vertical, or sourceDescription so the record keeps durable meaning.");
+  }
+
+  await db.prepare(`
+    UPDATE crm_prospect_radar
+    SET business_name = ?,
+        website = ?,
+        vertical = ?,
+        market = ?,
+        source_type = ?,
+        source_description = ?,
+        contact_name = ?,
+        contact_email = ?,
+        contact_phone = ?,
+        evidence_reference = ?,
+        notes = ?,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `).bind(
+    businessName,
+    website,
+    vertical,
+    market,
+    sourceType,
+    sourceDescription,
+    contactName,
+    contactEmail,
+    contactPhone,
+    evidenceReference,
+    notes,
+    radarId
+  ).run();
+
+  return jsonResponse({
+    ok: true,
+    requestId,
+    action: PROSPECT_CRM_ACTION,
+    operation: "update_radar",
+    prospectCrmVersion: PROSPECT_CRM_VERSION,
+    radar: await readRadarDetail(db, radarId),
+    writesPerformed: 1
   });
 }
 
@@ -669,6 +774,108 @@ async function addRadarIntelligence(body, db, requestId) {
     radar: await readRadarDetail(db, radarId),
     writesPerformed: 2
   }, 201);
+}
+
+
+async function replaceRadarIntelligence(body, db, requestId) {
+  const radarId = positiveInteger(body?.radarId || body?.radar_id);
+  const title = cleanText(body?.title);
+  const intelligenceType = normalizeKey(body?.intelligenceType || body?.intelligence_type || "prospect_research");
+  const capturedAt = normalizeDateTime(body?.capturedAt || body?.captured_at || new Date().toISOString());
+
+  if (!radarId || !title || !capturedAt) {
+    return validationError(requestId, "replace_radar_intelligence", "replace_radar_intelligence requires radarId, title, and a valid capturedAt.");
+  }
+
+  const radar = await readRadarById(db, radarId);
+  if (!radar) {
+    return validationError(requestId, "replace_radar_intelligence", `Radar record ${radarId} was not found.`, 404);
+  }
+  if (radar.promotedProspectId) {
+    return validationError(requestId, "replace_radar_intelligence", "This Radar record has already been promoted. Save refreshed intelligence to the formal Prospect instead.");
+  }
+
+  const intelligenceJson = body?.intelligence === undefined && body?.intelligenceJson === undefined
+    ? null
+    : JSON.stringify(body?.intelligence ?? body?.intelligenceJson);
+
+  const existingResult = await db.prepare(`
+    SELECT id
+    FROM crm_prospect_radar_intelligence
+    WHERE radar_id = ?
+      AND intelligence_type = ?
+    ORDER BY datetime(captured_at) DESC, id DESC
+    LIMIT 1
+  `).bind(radarId, intelligenceType).all();
+  const existingId = positiveInteger(rowsOf(existingResult)[0]?.id);
+
+  let intelligenceId = existingId;
+  if (existingId) {
+    await db.prepare(`
+      UPDATE crm_prospect_radar_intelligence
+      SET title = ?,
+          summary = ?,
+          intelligence_json = ?,
+          source_type = ?,
+          source_reference = ?,
+          external_key = ?,
+          captured_at = ?
+      WHERE id = ?
+    `).bind(
+      title,
+      nullableText(body?.summary),
+      intelligenceJson,
+      nullableText(body?.sourceType || body?.source_type || "prospect_research"),
+      nullableText(body?.sourceReference || body?.source_reference),
+      nullableText(body?.externalKey || body?.external_key),
+      capturedAt,
+      existingId
+    ).run();
+  } else {
+    const result = await db.prepare(`
+      INSERT INTO crm_prospect_radar_intelligence (
+        radar_id,
+        intelligence_type,
+        title,
+        summary,
+        intelligence_json,
+        source_type,
+        source_reference,
+        external_key,
+        captured_at,
+        created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    `).bind(
+      radarId,
+      intelligenceType,
+      title,
+      nullableText(body?.summary),
+      intelligenceJson,
+      nullableText(body?.sourceType || body?.source_type || "prospect_research"),
+      nullableText(body?.sourceReference || body?.source_reference),
+      nullableText(body?.externalKey || body?.external_key),
+      capturedAt
+    ).run();
+    intelligenceId = await insertedId(db, result);
+  }
+
+  await db.prepare(`
+    UPDATE crm_prospect_radar
+    SET updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `).bind(radarId).run();
+
+  return jsonResponse({
+    ok: true,
+    requestId,
+    action: PROSPECT_CRM_ACTION,
+    operation: "replace_radar_intelligence",
+    prospectCrmVersion: PROSPECT_CRM_VERSION,
+    intelligenceId,
+    replacedExisting: Boolean(existingId),
+    radar: await readRadarDetail(db, radarId),
+    writesPerformed: 2
+  }, existingId ? 200 : 201);
 }
 
 async function createRadar(body, db, requestId) {
@@ -3547,4 +3754,4 @@ function parseJson(value) {
   }
 }
 
-/* END OF FILE — routes/prospectCrm.js v1.2.0 — 3548-line full install */
+/* END OF FILE — routes/prospectCrm.js v1.3.0 — 3548-line full install */

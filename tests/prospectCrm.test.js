@@ -1,11 +1,11 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/prospectCrm.test.js
-   Version: 1.2.0
+   Version: 1.3.0
    Status: Production Test Candidate
    Purpose: Verify locked CRM timing/payment rules, Radar continuity,
             service-selection, and startup-package generation without production D1 writes.
-   Change Notes — 1.2.0:
+   Change Notes — 1.3.0:
    - Verifies pre-appointment outreach without a dated Next Action is unmanaged.
    - Verifies a dated Radar follow-up returns the record to managed state.
    - Preserves every CRM 1.1.0 timing, payment, service, and startup test.

@@ -1,15 +1,21 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: prospects.html
-   Version: 3.0.0
+   Version: 3.1.0
    Status: Production Road-Test Candidate
    Source: Production prospects.html 2.0.0 + client-pre-research.html 1.1.0
-   Backend: Prospect CRM 1.2.0
+   Backend: Prospect CRM 1.3.0
    Sprint: Prospecting Natural Workflow
    Purpose:
    One operating workspace for GCM prospecting from first evidence through
    Radar, outreach, appointment, CRM, services, signed scope, startup package,
    and the eventual Client handoff.
+
+   Change Notes — 3.1.0
+   - Adds Edit Radar Record so business/contact fields can be corrected without rerunning intelligence.
+   - Research saves now carry verified contact/context fields into the existing Radar record.
+   - Refreshed Radar research replaces the latest prospect_research record instead of appending duplicates.
+   - Shows Contact, Email, Phone, and Website directly in the Radar detail workspace.
 
    Change Notes — 3.0.0
    - Combines the verified Prospect Intelligence workflow and durable CRM UI.
@@ -271,6 +277,23 @@
   </div><div class="form-actions"><button class="btn btn-secondary" type="button" data-close="radar-dialog">Cancel</button><button class="btn btn-primary" type="submit">Save Radar Record</button></div></div>
 </form></dialog>
 
+<!-- Edit Radar -->
+<dialog id="radar-edit-dialog"><form id="radar-edit-form">
+  <div class="modal-head"><div><h2>Edit Radar Record</h2><p>Correct verified relationship information directly. This does not rerun Prospect Intelligence and does not create another intelligence record.</p></div><button class="modal-close" type="button" data-close="radar-edit-dialog">×</button></div>
+  <div class="modal-body"><div class="error" id="radar-edit-error" hidden></div><input type="hidden" name="radarId" /><div class="form-grid">
+    <div class="field"><label>Business Name</label><input class="input" name="businessName" /></div>
+    <div class="field"><label>Website</label><input class="input" name="website" /></div>
+    <div class="field"><label>Vertical / Industry</label><input class="input" name="vertical" /></div>
+    <div class="field"><label>Market</label><input class="input" name="market" /></div>
+    <div class="field"><label>Source *</label><input class="input" name="sourceType" required /></div>
+    <div class="field"><label>Contact Name</label><input class="input" name="contactName" /></div>
+    <div class="field"><label>Contact Email</label><input class="input" type="email" name="contactEmail" /></div>
+    <div class="field"><label>Contact Phone</label><input class="input" name="contactPhone" /></div>
+    <div class="field span-2"><label>Why is this on GCM's radar?</label><textarea class="textarea" name="sourceDescription"></textarea></div>
+    <div class="field span-2"><label>Notes</label><textarea class="textarea" name="notes"></textarea></div>
+  </div><div class="form-actions"><button class="btn btn-secondary" type="button" data-close="radar-edit-dialog">Cancel</button><button class="btn btn-primary" type="submit">Save Record Changes</button></div></div>
+</form></dialog>
+
 <!-- Scheduled Prospect -->
 <dialog id="prospect-dialog"><form id="prospect-form">
   <div class="modal-head"><div><h2>Add Scheduled Prospect</h2><p>For an existing real appointment that needs to enter CRM directly.</p></div><button class="modal-close" type="button" data-close="prospect-dialog">×</button></div>
@@ -359,7 +382,7 @@
 <script>
 (() => {
   "use strict";
-  const FILE_VERSION="3.0.0";
+  const FILE_VERSION="3.1.0";
   const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const state={prospects:[],radar:[],services:[],selectedProspect:null,selectedRadar:null,view:"pipeline",
     researchTarget:{type:"new",id:null},researchResult:null,researchContext:null,images:[]};
@@ -409,7 +432,7 @@
     try{
       const [p,r,s]=await Promise.all([api("list_prospects"),api("list_radar"),api("list_service_catalog")]);
       state.prospects=p.prospects||[];state.radar=r.radar||[];state.services=s.services||[];
-      if(p.prospectCrmVersion!=="1.2.0")throw new Error(`This page requires Prospect CRM 1.2.0; live version is ${p.prospectCrmVersion||"unknown"}.`);
+      if(p.prospectCrmVersion!=="1.3.0")throw new Error(`This page requires Prospect CRM 1.3.0; live version is ${p.prospectCrmVersion||"unknown"}.`);
       renderSummary(p.counts||{});renderPipeline();renderRadar();renderNurture();renderPriority();populateStages();
       $("system-state").textContent=`D1 connected · CRM ${p.prospectCrmVersion}`;
     }catch(e){$("system-state").textContent=`CRM unavailable · ${e.message}`;console.error(e)}
@@ -519,14 +542,31 @@
   }
   function renderRadarDetail(r){
     $("radar-title").textContent=r.businessName||r.vertical||"Radar Record";$("radar-subtitle").textContent=`${r.status==="outreach"?"Outreach":"Radar"} · ${r.contactName||"Contact not recorded"}`;
-    $("radar-body").innerHTML=`<div class="detail-grid">${detail("Source",r.sourceType||"Unknown")}${detail("Market",r.market||r.vertical||"Unknown")}${detail("Last Outreach",fmtDate(r.lastOutreachAt))}${detail("Next Action",r.isUnmanaged?"MISSING":r.nextAction?.title||"Not in active outreach")}</div>
+    $("radar-body").innerHTML=`<div class="detail-grid">${detail("Source",r.sourceType||"Unknown")}${detail("Market",r.market||r.vertical||"Unknown")}${detail("Contact",r.contactName||"Not recorded")}${detail("Email",r.contactEmail||"Not recorded")}${detail("Phone",r.contactPhone||"Not recorded")}${detail("Website",r.website||"Not recorded")}${detail("Last Outreach",fmtDate(r.lastOutreachAt))}${detail("Next Action",r.isUnmanaged?"MISSING":r.nextAction?.title||"Not in active outreach")}</div>
     <div class="section-title"><div><h3>Radar Actions</h3><p>Move naturally from evidence to outreach to appointment.</p></div></div>
-    <div class="quick-actions"><button class="btn btn-secondary btn-small" id="radar-research" type="button">Research / Update Intelligence</button><button class="btn btn-secondary btn-small" id="radar-outreach" type="button">Record Outreach</button><button class="btn btn-primary btn-small" id="radar-promote" type="button">Appointment Scheduled</button></div>
+    <div class="quick-actions"><button class="btn btn-secondary btn-small" id="radar-edit" type="button">Edit Radar Record</button><button class="btn btn-secondary btn-small" id="radar-research" type="button">Research / Update Intelligence</button><button class="btn btn-secondary btn-small" id="radar-outreach" type="button">Record Outreach</button><button class="btn btn-primary btn-small" id="radar-promote" type="button">Appointment Scheduled</button></div>
     <div class="section-title"><div><h3>Intelligence</h3><p>${(r.intelligence||[]).length} durable record(s).</p></div></div><div class="timeline">${(r.intelligence||[]).slice(0,5).map(i=>`<div class="timeline-item"><strong>${esc(i.title)}</strong><p>${esc(i.summary||"Prospect intelligence saved in Radar.")}</p><time>${esc(fmtDate(i.capturedAt))}</time></div>`).join("")||'<div class="timeline-item"><strong>No research saved yet.</strong><p>Run Research / Update Intelligence.</p></div>'}</div>
     <div class="section-title"><div><h3>Outreach History</h3></div></div><div class="timeline">${(r.activities||[]).slice(0,10).map(a=>`<div class="timeline-item"><strong>${esc(a.subject||a.activityType.replaceAll("_"," "))}</strong><p>${esc(a.summary)}</p><time>${esc(fmtDate(a.occurredAt))}${a.outcome?` · ${esc(a.outcome)}`:""}</time></div>`).join("")||'<div class="timeline-item"><strong>No outreach yet.</strong><p>Radar can remain passive until GCM decides to pursue it.</p></div>'}</div>`;
+    $("radar-edit").addEventListener("click",()=>openRadarEdit(r));
     $("radar-research").addEventListener("click",()=>startResearch({type:"radar",id:r.id,record:r}));
     $("radar-outreach").addEventListener("click",()=>{const f=$("outreach-form");f.elements.radarId.value=r.id;setDefaults(f);openDialog($("outreach-dialog"))});
     $("radar-promote").addEventListener("click",()=>{const f=$("promote-form");f.elements.radarId.value=r.id;setDefaults(f);openDialog($("promote-dialog"))});
+  }
+
+  function openRadarEdit(r){
+    const f=$("radar-edit-form");
+    f.elements.radarId.value=r.id;
+    f.elements.businessName.value=r.businessName||"";
+    f.elements.website.value=r.website||"";
+    f.elements.vertical.value=r.vertical||"";
+    f.elements.market.value=r.market||"";
+    f.elements.sourceType.value=r.sourceType||"";
+    f.elements.contactName.value=r.contactName||"";
+    f.elements.contactEmail.value=r.contactEmail||"";
+    f.elements.contactPhone.value=r.contactPhone||"";
+    f.elements.sourceDescription.value=r.sourceDescription||"";
+    f.elements.notes.value=r.notes||"";
+    openDialog($("radar-edit-dialog"));
   }
   $("close-radar").addEventListener("click",()=>{$("radar-detail").hidden=true;state.selectedRadar=null});
 
@@ -538,6 +578,7 @@
 
   $("add-radar").addEventListener("click",()=>openDialog($("radar-dialog")));$("add-prospect").addEventListener("click",()=>openDialog($("prospect-dialog")));$("research-new").addEventListener("click",()=>startResearch({type:"new",id:null,record:null}));
   $("radar-form").addEventListener("submit",async e=>{e.preventDefault();const v=formObj(e.currentTarget);try{await api("create_radar",v);closeDialog($("radar-dialog"));e.currentTarget.reset();await load();showView("radar")}catch(err){$("radar-error").textContent=err.message;$("radar-error").hidden=false}});
+  $("radar-edit-form").addEventListener("submit",async e=>{e.preventDefault();const v=formObj(e.currentTarget);try{const d=await api("update_radar",{radarId:Number(v.radarId),businessName:v.businessName,website:v.website,vertical:v.vertical,market:v.market,sourceType:v.sourceType,sourceDescription:v.sourceDescription,contactName:v.contactName,contactEmail:v.contactEmail,contactPhone:v.contactPhone,notes:v.notes});closeDialog($("radar-edit-dialog"));await load();state.selectedRadar=d.radar;renderRadarDetail(d.radar)}catch(err){$("radar-edit-error").textContent=err.message;$("radar-edit-error").hidden=false}});
   $("prospect-form").addEventListener("submit",async e=>{e.preventDefault();const v=formObj(e.currentTarget),appointmentAt=localDT(v.appointmentDate,v.appointmentTime);const last=v.lastContactDate?localDT(v.lastContactDate,v.lastContactTime||"12:00"):null;try{const d=await api("create_prospect",{businessName:v.businessName,stage:v.stage,appointmentAt,website:v.website||null,industry:v.industry||null,market:v.market||null,sourceType:v.sourceType||null,opportunitySummary:v.opportunitySummary||null,lastMeaningfulContactAt:last,estimatedValueLow:v.estimatedValueLow||null,estimatedValueHigh:v.estimatedValueHigh||null,recurringValue:v.recurringValue||null,recurringPeriod:v.recurringPeriod||null,notes:v.notes||null,primaryContact:v.contactName?{name:v.contactName,email:v.contactEmail||null,role:"decision_maker"}:null});closeDialog($("prospect-dialog"));e.currentTarget.reset();await load();openProspect(d.prospect.id)}catch(err){$("prospect-error").textContent=err.message;$("prospect-error").hidden=false}});
   $("outreach-form").addEventListener("submit",async e=>{e.preventDefault();const v=formObj(e.currentTarget);try{const d=await api("add_radar_activity",{radarId:Number(v.radarId),activityType:v.activityType,occurredAt:localDT(v.date,v.time),summary:v.summary,outcome:v.outcome||null,meaningfulContact:true,nextActionTitle:v.nextActionTitle,nextActionDueDate:v.nextActionDueDate});closeDialog($("outreach-dialog"));await load();renderRadarDetail(d.radar)}catch(err){$("outreach-error").textContent=err.message;$("outreach-error").hidden=false}});
   $("promote-form").addEventListener("submit",async e=>{e.preventDefault();const v=formObj(e.currentTarget);try{const d=await api("promote_radar",{radarId:Number(v.radarId),appointmentAt:localDT(v.date,v.time),opportunitySummary:v.opportunitySummary||null});closeDialog($("promote-dialog"));await load();openProspect(d.prospect.id)}catch(err){$("promote-error").textContent=err.message;$("promote-error").hidden=false}});
@@ -587,7 +628,18 @@
     const intelligence={...r,prospectContext:{...c,advertisementImages:c.advertisementEvidence}};
     try{
       if(state.researchTarget.type==="prospect"){const d=await api("add_intelligence",{prospectId:state.researchTarget.id,intelligenceType:"prospect_research",title:`Prospect Intelligence — ${r.businessName||c.businessName||"Business"}`,summary:r.businessSummary||"Prospect research preserved.",intelligence,capturedAt:new Date().toISOString(),sourceType:"prospect_intelligence"});await load();openProspect(d.prospect.id);return}
-      if(state.researchTarget.type==="radar"){await api("add_radar_intelligence",{radarId:state.researchTarget.id,intelligenceType:"prospect_research",title:`Prospect Intelligence — ${r.businessName||c.businessName||"Business"}`,summary:r.businessSummary||"Prospect research preserved.",intelligence,capturedAt:new Date().toISOString(),sourceType:"prospect_intelligence"});await load();openRadar(state.researchTarget.id);return}
+      if(state.researchTarget.type==="radar"){
+        const radarId=state.researchTarget.id;
+        const patch={radarId};
+        if(c.businessName)patch.businessName=c.businessName;
+        if(c.websiteUrl)patch.website=c.websiteUrl;
+        if(c.contactName)patch.contactName=c.contactName;
+        if(c.location)patch.market=c.location;
+        if(r.industry)patch.vertical=r.industry;
+        await api("update_radar",patch);
+        await api("replace_radar_intelligence",{radarId,intelligenceType:"prospect_research",title:`Prospect Intelligence — ${r.businessName||c.businessName||"Business"}`,summary:r.businessSummary||"Prospect research preserved.",intelligence,capturedAt:new Date().toISOString(),sourceType:"prospect_intelligence"});
+        await load();openRadar(radarId);return
+      }
       const d=await api("create_radar",{businessName:r.businessName||c.businessName||null,website:c.websiteUrl,vertical:r.industry||null,market:r.geographicMarket||c.location||null,sourceType:c.prospectSource||"research",sourceDescription:c.evidenceDescription||"Created from GCM Prospect Intelligence.",contactName:c.contactName||null,notes:c.researchNotes||null});
       await api("add_radar_intelligence",{radarId:d.radar.id,intelligenceType:"prospect_research",title:`Prospect Intelligence — ${r.businessName||c.businessName||"Business"}`,summary:r.businessSummary||"Prospect research preserved.",intelligence,capturedAt:new Date().toISOString(),sourceType:"prospect_intelligence"});
       await load();openRadar(d.radar.id);
