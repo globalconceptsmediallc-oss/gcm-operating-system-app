@@ -1,3 +1,16 @@
+<!-- =========================================================
+   Global Concepts Media
+   File: prospect-previews/everhealth-institute/index.html
+   Version: 1.0.1
+   Status: Prospect Concept Preview
+   Purpose: Personalized, unlisted concept page for EverHealth Institute.
+
+   Change Notes — 1.0.1:
+   - Adds privacy-minimized prospect concept view tracking.
+   - Suppresses GCM owner-preview visits when ?gcm_preview=1 is present.
+   - Preserves the approved EverHealth concept creative and copy.
+   ========================================================= -->
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -351,9 +364,66 @@ h1{
   </section>
   <footer class="footer">
     <div>Prepared by <strong>Global Concepts Media</strong> · Private concept preview only</div>
-    <div class="version">Version 1.0.0</div>
+    <div class="version">Version 1.0.1</div>
   </footer>
   <div class="notice">Conceptual marketing and measurement review only. This page does not make or modify clinical claims and is not intended as patient-facing medical content.</div>
 </div>
+
+  <!-- ======================================================
+       PROSPECT VIEW TRACKING
+       ====================================================== -->
+  <script>
+    (() => {
+      "use strict";
+
+      const FILE_VERSION = "1.0.1";
+      const WORKER =
+        "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+      const ACTION = "prospect-concept-view";
+      const CONCEPT_KEY = "everhealth-institute-v1";
+      const SESSION_KEY = `gcm-concept-view:${CONCEPT_KEY}`;
+
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("gcm_preview") === "1") {
+        return;
+      }
+
+      try {
+        if (sessionStorage.getItem(SESSION_KEY)) {
+          return;
+        }
+      } catch {}
+
+      const trackView = async () => {
+        if (document.visibilityState !== "visible") {
+          return;
+        }
+
+        try {
+          const response = await fetch(WORKER, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+              action: ACTION,
+              conceptKey: CONCEPT_KEY,
+              pagePath: window.location.pathname,
+              pageVersion: FILE_VERSION,
+              viewedAt: new Date().toISOString()
+            }),
+            keepalive: true
+          });
+
+          if (response.ok) {
+            try {
+              sessionStorage.setItem(SESSION_KEY, new Date().toISOString());
+            } catch {}
+          }
+        } catch {}
+      };
+
+      window.setTimeout(trackView, 2500);
+    })();
+  </script>
+
 </body>
 </html>
