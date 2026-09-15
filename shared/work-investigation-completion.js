@@ -1,13 +1,25 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/work-investigation-completion.js
-   Version: 1.2.0
+   Version: 1.3.0
    Status: Production Candidate
    Purpose: Add human-approved Investigation resolution controls for
             (1) corrective work already performed and verified during the
             Investigation, (2) unresolved Investigations waiting on external
-            validation, and (3) linked Work Items whose responsibility has
-            been reassigned outside GCM without claiming completion proof.
+            validation, (3) linked Work Items whose responsibility has been
+            reassigned outside GCM without claiming completion proof, and
+            (4) Work Items whose awaited external validation has now returned.
+
+   Changes in 1.3.0:
+   - Adds External Validation Passed — Complete to Awaiting External Validation cards.
+   - Requires the operator to record the returned external result and final proof.
+   - Reuses the card's preserved Verified So Far record as Work Performed so
+     completed implementation is not re-entered or falsely duplicated.
+   - Uses the existing process-work-item completion route so linked Investigations
+     close through the existing completion/Proof contract.
+   - Resolves client code from the deep link, selected client filter, or rendered
+     client directory option when the validation queue is showing all clients.
+   - Does not add a Worker route, D1 schema, or automatic completion decision.
 
    Changes in 1.2.0:
    - Adds Close — Reassigned / No Longer GCM Responsibility to linked Work Items.
@@ -39,11 +51,13 @@
 (() => {
   "use strict";
 
-  const FILE_VERSION = "1.2.0";
+  const FILE_VERSION = "1.3.0";
   const WORKER_URL = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const COMPLETE_BUTTON_ID = "gcm-complete-verified-investigation";
   const MONITOR_BUTTON_ID = "gcm-monitor-investigation";
   const REASSIGN_BUTTON_ATTR = "data-close-reassigned-work";
+  const EXTERNAL_COMPLETE_BUTTON_ATTR = "data-complete-external-validation";
+  const EXTERNAL_CONTROLS_ATTR = "data-external-validation-controls";
   let processing = false;
 
   function workerErrorMessage(value, fallback = "Worker request failed.") {
@@ -136,6 +150,13 @@
 
   function setWorkItemMessage(workItemId, type, text) {
     const message = document.getElementById(`work-message-${workItemId}`);
+    if (!message) return;
+    message.className = `status ${type}`;
+    message.textContent = text;
+  }
+
+  function setExternalValidationMessage(workItemId, type, text) {
+    const message = document.getElementById(`external-validation-message-${workItemId}`);
     if (!message) return;
     message.className = `status ${type}`;
     message.textContent = text;
@@ -341,6 +362,144 @@
     }
   }
 
+  function normalizedText(value) {
+    return String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
+  }
+
+  function validationClientCode(card) {
+    const params = new URLSearchParams(location.search);
+    const deepLinkedClient = String(params.get("client") || "").trim();
+    const filter = document.getElementById("client-filter");
+    const selectedClient = String(filter?.value || "").trim();
+    const subtitle = String(card?.querySelector(".detail-subtitle")?.textContent || "").trim();
+    const clientName = subtitle.split("·")[0]?.trim() || "";
+    const options = [...(filter?.options || [])];
+
+    const nameMatches = code => {
+      if (!code) return false;
+      const option = options.find(entry => String(entry.value || "").trim().toUpperCase() === code.toUpperCase());
+      return !clientName || normalizedText(option?.textContent) === normalizedText(clientName);
+    };
+
+    if (deepLinkedClient && nameMatches(deepLinkedClient)) return deepLinkedClient;
+    if (selectedClient && nameMatches(selectedClient)) return selectedClient;
+
+    const matchedOption = options.find(option =>
+      option.value && normalizedText(option.textContent) === normalizedText(clientName)
+    );
+
+    return String(matchedOption?.value || deepLinkedClient || selectedClient || "").trim();
+  }
+
+  function validationWorkPerformed(card) {
+    const verifiedSection = [...(card?.querySelectorAll(".detail-section") || [])]
+      .find(section => /verified so far/i.test(section.querySelector("h3")?.textContent || ""));
+    const verified = String(verifiedSection?.querySelector("p")?.textContent || "").trim();
+
+    if (verified) {
+      return `Implementation was previously completed and internally verified before external validation. Preserved verification: ${verified}`;
+    }
+
+    return "Implementation was previously completed and internally verified before external validation. Final external proof has now returned; no duplicate production work was performed to close this item.";
+  }
+
+  async function completeExternalValidation(button, card, workItemId) {
+    if (processing) return;
+
+    const clientCode = validationClientCode(card);
+    const actualImpact = String(document.getElementById(`external-result-${workItemId}`)?.value || "").trim();
+    const evidenceDescription = String(document.getElementById(`external-evidence-${workItemId}`)?.value || "").trim();
+    const workPerformed = validationWorkPerformed(card);
+    const subtitle = String(card?.querySelector(".detail-subtitle")?.textContent || "");
+    const investigationId = Number(subtitle.match(/Investigation\s+#(\d+)/i)?.[1] || 0);
+
+    if (!clientCode) {
+      setExternalValidationMessage(workItemId, "error", "The client code could not be resolved for this validation item. Select the client in the Work filter and try again.");
+      return;
+    }
+
+    if (!actualImpact || !evidenceDescription) {
+      setExternalValidationMessage(workItemId, "error", "Final External Result and Final Proof / Evidence are both required before completion.");
+      return;
+    }
+
+    const closeText = investigationId
+      ? `This closes Work Item #${workItemId} and linked Investigation #${investigationId} and records the returned proof.`
+      : `This closes Work Item #${workItemId} and records the returned proof.`;
+
+    if (!window.confirm(
+      `Complete Work Item #${workItemId} from returned external validation?\n\n${closeText}`
+    )) return;
+
+    processing = true;
+    button.disabled = true;
+    setExternalValidationMessage(workItemId, "loading", `Recording external validation and completing Work Item #${workItemId} in production D1…`);
+
+    try {
+      await post({
+        action: "process-work-item",
+        clientCode,
+        workItemId,
+        workPerformed,
+        actualImpact,
+        evidenceDescription,
+        evidenceSource: "External Validation Completion Evidence",
+        evidenceType: "completion"
+      });
+
+      setExternalValidationMessage(
+        workItemId,
+        "ready",
+        investigationId
+          ? `Work Item #${workItemId} completed from external validation proof and Investigation #${investigationId} closed.`
+          : `Work Item #${workItemId} completed from external validation proof.`
+      );
+      button.textContent = "Completed — External Validation Passed";
+      setTimeout(() => location.reload(), 700);
+    } catch (error) {
+      button.disabled = false;
+      setExternalValidationMessage(workItemId, "error", error.message || "The external validation completion could not be recorded.");
+    } finally {
+      processing = false;
+    }
+  }
+
+  function installExternalValidationControls() {
+    document.querySelectorAll("#external-validation-list .work-card[data-validation-work-id]").forEach(card => {
+      const workItemId = Number(card.getAttribute("data-validation-work-id"));
+      if (!Number.isInteger(workItemId) || workItemId <= 0) return;
+      if (card.querySelector(`[${EXTERNAL_CONTROLS_ATTR}="${workItemId}"]`)) return;
+
+      const legacyStatus = [...card.querySelectorAll(".status.ready")]
+        .find(node => /no completion action is available/i.test(node.textContent || ""));
+      if (legacyStatus) {
+        legacyStatus.textContent = "Final proof returned? Record the external result and proof below, then complete this Work Item.";
+      }
+
+      const section = document.createElement("section");
+      section.className = "detail-section";
+      section.setAttribute(EXTERNAL_CONTROLS_ATTR, String(workItemId));
+      section.innerHTML = `
+        <h3>Complete External Validation</h3>
+        <label for="external-result-${workItemId}">Final External Result</label>
+        <textarea id="external-result-${workItemId}" placeholder="Record what the external system now confirms."></textarea>
+        <label for="external-evidence-${workItemId}">Final Proof / Evidence</label>
+        <textarea id="external-evidence-${workItemId}" placeholder="Record the exact returned proof, date, source, and verification details."></textarea>
+        <div class="processing-actions">
+          <button class="button primary" type="button" ${EXTERNAL_COMPLETE_BUTTON_ATTR}="${workItemId}">
+            External Validation Passed — Complete
+          </button>
+        </div>
+        <div id="external-validation-message-${workItemId}"></div>
+      `;
+
+      card.appendChild(section);
+
+      const button = section.querySelector(`[${EXTERNAL_COMPLETE_BUTTON_ATTR}="${workItemId}"]`);
+      button?.addEventListener("click", () => completeExternalValidation(button, card, workItemId));
+    });
+  }
+
   function installWorkDispositionButtons() {
     const investigationId = currentInvestigationId();
     const eligible = decisionExplicitlySupportsReassignment();
@@ -378,6 +537,7 @@
   function installButtons() {
     if (!/\/work\.html$/i.test(location.pathname)) return;
 
+    installExternalValidationControls();
     installWorkDispositionButtons();
 
     const actions = document.querySelector("#detail-panel .processing-actions");
