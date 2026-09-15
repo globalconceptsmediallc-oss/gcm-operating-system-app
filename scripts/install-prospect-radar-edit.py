@@ -1,0 +1,442 @@
+from pathlib import Path
+
+
+def must_replace(text, old, new, label, count=1):
+    found = text.count(old)
+    if found != count:
+        raise SystemExit(f"{label}: expected {count} occurrence(s), found {found}")
+    return text.replace(old, new, count)
+
+
+# =========================================================
+# routes/prospectCrm.js -> 1.3.0
+# =========================================================
+p = Path("routes/prospectCrm.js")
+s = p.read_text()
+s = must_replace(s, "Version: 1.2.0", "Version: 1.3.0", "CRM header version")
+s = must_replace(
+    s,
+    "   Change Notes — 1.2.0:\n",
+    "   Change Notes — 1.3.0:\n"
+    "   - Adds update_radar so verified business/contact details can be edited directly.\n"
+    "   - Adds replace_radar_intelligence so refreshed research replaces the latest\n"
+    "     brief of the same type instead of creating duplicate intelligence history.\n"
+    "   - Preserves outreach history, Next Action, and promotion state during record edits.\n"
+    "\n"
+    "   Change Notes — 1.2.0:\n",
+    "CRM change notes"
+)
+s = must_replace(
+    s,
+    'export const PROSPECT_CRM_VERSION = "1.2.0";',
+    'export const PROSPECT_CRM_VERSION = "1.3.0";',
+    "CRM exported version"
+)
+s = must_replace(
+    s,
+    '      case "get_radar":\n        return await getRadar(body, db, requestId);\n      case "create_radar":',
+    '      case "get_radar":\n        return await getRadar(body, db, requestId);\n      case "update_radar":\n        return await updateRadar(body, db, requestId);\n      case "create_radar":',
+    "CRM update_radar switch"
+)
+s = must_replace(
+    s,
+    '      case "add_radar_intelligence":\n        return await addRadarIntelligence(body, db, requestId);\n      case "promote_radar":',
+    '      case "add_radar_intelligence":\n        return await addRadarIntelligence(body, db, requestId);\n      case "replace_radar_intelligence":\n        return await replaceRadarIntelligence(body, db, requestId);\n      case "promote_radar":',
+    "CRM replace_radar_intelligence switch"
+)
+s = must_replace(
+    s,
+    '    "get_radar",\n    "create_radar",',
+    '    "get_radar",\n    "update_radar",\n    "create_radar",',
+    "CRM supported update_radar"
+)
+s = must_replace(
+    s,
+    '    "add_radar_intelligence",\n    "promote_radar",',
+    '    "add_radar_intelligence",\n    "replace_radar_intelligence",\n    "promote_radar",',
+    "CRM supported replace intelligence"
+)
+
+update_radar_function = r'''
+async function updateRadar(body, db, requestId) {
+  const radarId = positiveInteger(body?.radarId || body?.radar_id);
+  if (!radarId) {
+    return validationError(requestId, "update_radar", "update_radar requires a positive radarId.");
+  }
+
+  const existing = await readRadarById(db, radarId);
+  if (!existing) {
+    return validationError(requestId, "update_radar", `Radar record ${radarId} was not found.`, 404);
+  }
+  if (existing.promotedProspectId) {
+    return validationError(requestId, "update_radar", "This Radar record has already been promoted. Edit the formal Prospect instead.");
+  }
+
+  const businessName = bodyHas(body, "businessName", "business_name")
+    ? nullableText(body?.businessName ?? body?.business_name)
+    : existing.businessName;
+  const website = bodyHas(body, "website") ? nullableText(body.website) : existing.website;
+  const vertical = bodyHas(body, "vertical", "industry")
+    ? nullableText(body?.vertical ?? body?.industry)
+    : existing.vertical;
+  const market = bodyHas(body, "market", "location")
+    ? nullableText(body?.market ?? body?.location)
+    : existing.market;
+  const sourceType = bodyHas(body, "sourceType", "source_type")
+    ? cleanText(body?.sourceType ?? body?.source_type)
+    : existing.sourceType;
+  const sourceDescription = bodyHas(body, "sourceDescription", "source_description")
+    ? nullableText(body?.sourceDescription ?? body?.source_description)
+    : existing.sourceDescription;
+  const contactName = bodyHas(body, "contactName", "contact_name")
+    ? nullableText(body?.contactName ?? body?.contact_name)
+    : existing.contactName;
+  const contactEmail = bodyHas(body, "contactEmail", "contact_email")
+    ? nullableText(body?.contactEmail ?? body?.contact_email)
+    : existing.contactEmail;
+  const contactPhone = bodyHas(body, "contactPhone", "contact_phone")
+    ? nullableText(body?.contactPhone ?? body?.contact_phone)
+    : existing.contactPhone;
+  const evidenceReference = bodyHas(body, "evidenceReference", "evidence_reference")
+    ? nullableText(body?.evidenceReference ?? body?.evidence_reference)
+    : existing.evidenceReference;
+  const notes = bodyHas(body, "notes") ? nullableText(body.notes) : existing.notes;
+
+  if (!sourceType) {
+    return validationError(requestId, "update_radar", "Radar sourceType cannot be blank.");
+  }
+  if (!businessName && !vertical && !sourceDescription) {
+    return validationError(requestId, "update_radar", "Radar requires a businessName, vertical, or sourceDescription so the record keeps durable meaning.");
+  }
+
+  await db.prepare(`
+    UPDATE crm_prospect_radar
+    SET business_name = ?,
+        website = ?,
+        vertical = ?,
+        market = ?,
+        source_type = ?,
+        source_description = ?,
+        contact_name = ?,
+        contact_email = ?,
+        contact_phone = ?,
+        evidence_reference = ?,
+        notes = ?,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `).bind(
+    businessName,
+    website,
+    vertical,
+    market,
+    sourceType,
+    sourceDescription,
+    contactName,
+    contactEmail,
+    contactPhone,
+    evidenceReference,
+    notes,
+    radarId
+  ).run();
+
+  return jsonResponse({
+    ok: true,
+    requestId,
+    action: PROSPECT_CRM_ACTION,
+    operation: "update_radar",
+    prospectCrmVersion: PROSPECT_CRM_VERSION,
+    radar: await readRadarDetail(db, radarId),
+    writesPerformed: 1
+  });
+}
+
+'''
+s = must_replace(
+    s,
+    'async function addRadarActivity(body, db, requestId) {',
+    update_radar_function + 'async function addRadarActivity(body, db, requestId) {',
+    "CRM insert updateRadar"
+)
+
+replace_intelligence_function = r'''
+async function replaceRadarIntelligence(body, db, requestId) {
+  const radarId = positiveInteger(body?.radarId || body?.radar_id);
+  const title = cleanText(body?.title);
+  const intelligenceType = normalizeKey(body?.intelligenceType || body?.intelligence_type || "prospect_research");
+  const capturedAt = normalizeDateTime(body?.capturedAt || body?.captured_at || new Date().toISOString());
+
+  if (!radarId || !title || !capturedAt) {
+    return validationError(requestId, "replace_radar_intelligence", "replace_radar_intelligence requires radarId, title, and a valid capturedAt.");
+  }
+
+  const radar = await readRadarById(db, radarId);
+  if (!radar) {
+    return validationError(requestId, "replace_radar_intelligence", `Radar record ${radarId} was not found.`, 404);
+  }
+  if (radar.promotedProspectId) {
+    return validationError(requestId, "replace_radar_intelligence", "This Radar record has already been promoted. Save refreshed intelligence to the formal Prospect instead.");
+  }
+
+  const intelligenceJson = body?.intelligence === undefined && body?.intelligenceJson === undefined
+    ? null
+    : JSON.stringify(body?.intelligence ?? body?.intelligenceJson);
+
+  const existingResult = await db.prepare(`
+    SELECT id
+    FROM crm_prospect_radar_intelligence
+    WHERE radar_id = ?
+      AND intelligence_type = ?
+    ORDER BY datetime(captured_at) DESC, id DESC
+    LIMIT 1
+  `).bind(radarId, intelligenceType).all();
+  const existingId = positiveInteger(rowsOf(existingResult)[0]?.id);
+
+  let intelligenceId = existingId;
+  if (existingId) {
+    await db.prepare(`
+      UPDATE crm_prospect_radar_intelligence
+      SET title = ?,
+          summary = ?,
+          intelligence_json = ?,
+          source_type = ?,
+          source_reference = ?,
+          external_key = ?,
+          captured_at = ?
+      WHERE id = ?
+    `).bind(
+      title,
+      nullableText(body?.summary),
+      intelligenceJson,
+      nullableText(body?.sourceType || body?.source_type || "prospect_research"),
+      nullableText(body?.sourceReference || body?.source_reference),
+      nullableText(body?.externalKey || body?.external_key),
+      capturedAt,
+      existingId
+    ).run();
+  } else {
+    const result = await db.prepare(`
+      INSERT INTO crm_prospect_radar_intelligence (
+        radar_id,
+        intelligence_type,
+        title,
+        summary,
+        intelligence_json,
+        source_type,
+        source_reference,
+        external_key,
+        captured_at,
+        created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    `).bind(
+      radarId,
+      intelligenceType,
+      title,
+      nullableText(body?.summary),
+      intelligenceJson,
+      nullableText(body?.sourceType || body?.source_type || "prospect_research"),
+      nullableText(body?.sourceReference || body?.source_reference),
+      nullableText(body?.externalKey || body?.external_key),
+      capturedAt
+    ).run();
+    intelligenceId = await insertedId(db, result);
+  }
+
+  await db.prepare(`
+    UPDATE crm_prospect_radar
+    SET updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `).bind(radarId).run();
+
+  return jsonResponse({
+    ok: true,
+    requestId,
+    action: PROSPECT_CRM_ACTION,
+    operation: "replace_radar_intelligence",
+    prospectCrmVersion: PROSPECT_CRM_VERSION,
+    intelligenceId,
+    replacedExisting: Boolean(existingId),
+    radar: await readRadarDetail(db, radarId),
+    writesPerformed: 2
+  }, existingId ? 200 : 201);
+}
+
+'''
+s = must_replace(
+    s,
+    'async function createRadar(body, db, requestId) {',
+    replace_intelligence_function + 'async function createRadar(body, db, requestId) {',
+    "CRM insert replaceRadarIntelligence"
+)
+s = s.replace('/* END OF FILE — routes/prospectCrm.js v1.2.0 —', '/* END OF FILE — routes/prospectCrm.js v1.3.0 —', 1)
+p.write_text(s)
+
+
+# =========================================================
+# prospects.html -> 3.1.0
+# =========================================================
+p = Path("prospects.html")
+s = p.read_text()
+s = must_replace(s, "Version: 3.0.0", "Version: 3.1.0", "Prospects header version")
+s = must_replace(s, "Backend: Prospect CRM 1.2.0", "Backend: Prospect CRM 1.3.0", "Prospects backend header")
+s = must_replace(
+    s,
+    "   Change Notes — 3.0.0\n",
+    "   Change Notes — 3.1.0\n"
+    "   - Adds Edit Radar Record so business/contact fields can be corrected without rerunning intelligence.\n"
+    "   - Research saves now carry verified contact/context fields into the existing Radar record.\n"
+    "   - Refreshed Radar research replaces the latest prospect_research record instead of appending duplicates.\n"
+    "   - Shows Contact, Email, Phone, and Website directly in the Radar detail workspace.\n"
+    "\n"
+    "   Change Notes — 3.0.0\n",
+    "Prospects change notes"
+)
+s = must_replace(s, 'const FILE_VERSION="3.0.0";', 'const FILE_VERSION="3.1.0";', "Prospects JS version")
+s = must_replace(
+    s,
+    'if(p.prospectCrmVersion!=="1.2.0")throw new Error(`This page requires Prospect CRM 1.2.0; live version is ${p.prospectCrmVersion||"unknown"}.`);',
+    'if(p.prospectCrmVersion!=="1.3.0")throw new Error(`This page requires Prospect CRM 1.3.0; live version is ${p.prospectCrmVersion||"unknown"}.`);',
+    "Prospects CRM lock"
+)
+
+edit_dialog = r'''
+
+<!-- Edit Radar -->
+<dialog id="radar-edit-dialog"><form id="radar-edit-form">
+  <div class="modal-head"><div><h2>Edit Radar Record</h2><p>Correct verified relationship information directly. This does not rerun Prospect Intelligence and does not create another intelligence record.</p></div><button class="modal-close" type="button" data-close="radar-edit-dialog">×</button></div>
+  <div class="modal-body"><div class="error" id="radar-edit-error" hidden></div><input type="hidden" name="radarId" /><div class="form-grid">
+    <div class="field"><label>Business Name</label><input class="input" name="businessName" /></div>
+    <div class="field"><label>Website</label><input class="input" name="website" /></div>
+    <div class="field"><label>Vertical / Industry</label><input class="input" name="vertical" /></div>
+    <div class="field"><label>Market</label><input class="input" name="market" /></div>
+    <div class="field"><label>Source *</label><input class="input" name="sourceType" required /></div>
+    <div class="field"><label>Contact Name</label><input class="input" name="contactName" /></div>
+    <div class="field"><label>Contact Email</label><input class="input" type="email" name="contactEmail" /></div>
+    <div class="field"><label>Contact Phone</label><input class="input" name="contactPhone" /></div>
+    <div class="field span-2"><label>Why is this on GCM's radar?</label><textarea class="textarea" name="sourceDescription"></textarea></div>
+    <div class="field span-2"><label>Notes</label><textarea class="textarea" name="notes"></textarea></div>
+  </div><div class="form-actions"><button class="btn btn-secondary" type="button" data-close="radar-edit-dialog">Cancel</button><button class="btn btn-primary" type="submit">Save Record Changes</button></div></div>
+</form></dialog>
+'''
+radar_dialog_end = '</form></dialog>\n\n<!-- Scheduled Prospect -->'
+s = must_replace(
+    s,
+    radar_dialog_end,
+    '</form></dialog>' + edit_dialog + '\n<!-- Scheduled Prospect -->',
+    "Insert Radar edit dialog"
+)
+
+old_detail = '$("radar-body").innerHTML=`<div class="detail-grid">${detail("Source",r.sourceType||"Unknown")}${detail("Market",r.market||r.vertical||"Unknown")}${detail("Last Outreach",fmtDate(r.lastOutreachAt))}${detail("Next Action",r.isUnmanaged?"MISSING":r.nextAction?.title||"Not in active outreach")}</div>'
+new_detail = '$("radar-body").innerHTML=`<div class="detail-grid">${detail("Source",r.sourceType||"Unknown")}${detail("Market",r.market||r.vertical||"Unknown")}${detail("Contact",r.contactName||"Not recorded")}${detail("Email",r.contactEmail||"Not recorded")}${detail("Phone",r.contactPhone||"Not recorded")}${detail("Website",r.website||"Not recorded")}${detail("Last Outreach",fmtDate(r.lastOutreachAt))}${detail("Next Action",r.isUnmanaged?"MISSING":r.nextAction?.title||"Not in active outreach")}</div>'
+s = must_replace(s, old_detail, new_detail, "Radar visible details")
+s = must_replace(
+    s,
+    '<div class="quick-actions"><button class="btn btn-secondary btn-small" id="radar-research" type="button">Research / Update Intelligence</button><button class="btn btn-secondary btn-small" id="radar-outreach" type="button">Record Outreach</button><button class="btn btn-primary btn-small" id="radar-promote" type="button">Appointment Scheduled</button></div>',
+    '<div class="quick-actions"><button class="btn btn-secondary btn-small" id="radar-edit" type="button">Edit Radar Record</button><button class="btn btn-secondary btn-small" id="radar-research" type="button">Research / Update Intelligence</button><button class="btn btn-secondary btn-small" id="radar-outreach" type="button">Record Outreach</button><button class="btn btn-primary btn-small" id="radar-promote" type="button">Appointment Scheduled</button></div>',
+    "Radar edit action button"
+)
+s = must_replace(
+    s,
+    '    $("radar-research").addEventListener("click",()=>startResearch({type:"radar",id:r.id,record:r}));',
+    '    $("radar-edit").addEventListener("click",()=>openRadarEdit(r));\n    $("radar-research").addEventListener("click",()=>startResearch({type:"radar",id:r.id,record:r}));',
+    "Radar edit action binding"
+)
+
+open_edit_function = r'''
+  function openRadarEdit(r){
+    const f=$("radar-edit-form");
+    f.elements.radarId.value=r.id;
+    f.elements.businessName.value=r.businessName||"";
+    f.elements.website.value=r.website||"";
+    f.elements.vertical.value=r.vertical||"";
+    f.elements.market.value=r.market||"";
+    f.elements.sourceType.value=r.sourceType||"";
+    f.elements.contactName.value=r.contactName||"";
+    f.elements.contactEmail.value=r.contactEmail||"";
+    f.elements.contactPhone.value=r.contactPhone||"";
+    f.elements.sourceDescription.value=r.sourceDescription||"";
+    f.elements.notes.value=r.notes||"";
+    openDialog($("radar-edit-dialog"));
+  }
+'''
+s = must_replace(
+    s,
+    '  $("close-radar").addEventListener("click",()=>{$("radar-detail").hidden=true;state.selectedRadar=null});',
+    open_edit_function + '  $("close-radar").addEventListener("click",()=>{$("radar-detail").hidden=true;state.selectedRadar=null});',
+    "Insert openRadarEdit"
+)
+
+s = must_replace(
+    s,
+    '  $("radar-form").addEventListener("submit",async e=>{e.preventDefault();const v=formObj(e.currentTarget);try{await api("create_radar",v);closeDialog($("radar-dialog"));e.currentTarget.reset();await load();showView("radar")}catch(err){$("radar-error").textContent=err.message;$("radar-error").hidden=false}});',
+    '  $("radar-form").addEventListener("submit",async e=>{e.preventDefault();const v=formObj(e.currentTarget);try{await api("create_radar",v);closeDialog($("radar-dialog"));e.currentTarget.reset();await load();showView("radar")}catch(err){$("radar-error").textContent=err.message;$("radar-error").hidden=false}});\n'
+    '  $("radar-edit-form").addEventListener("submit",async e=>{e.preventDefault();const v=formObj(e.currentTarget);try{const d=await api("update_radar",{radarId:Number(v.radarId),businessName:v.businessName,website:v.website,vertical:v.vertical,market:v.market,sourceType:v.sourceType,sourceDescription:v.sourceDescription,contactName:v.contactName,contactEmail:v.contactEmail,contactPhone:v.contactPhone,notes:v.notes});closeDialog($("radar-edit-dialog"));await load();state.selectedRadar=d.radar;renderRadarDetail(d.radar)}catch(err){$("radar-edit-error").textContent=err.message;$("radar-edit-error").hidden=false}});',
+    "Radar edit submit"
+)
+
+old_save = '      if(state.researchTarget.type==="radar"){await api("add_radar_intelligence",{radarId:state.researchTarget.id,intelligenceType:"prospect_research",title:`Prospect Intelligence — ${r.businessName||c.businessName||"Business"}`,summary:r.businessSummary||"Prospect research preserved.",intelligence,capturedAt:new Date().toISOString(),sourceType:"prospect_intelligence"});await load();openRadar(state.researchTarget.id);return}'
+new_save = '''      if(state.researchTarget.type==="radar"){
+        const radarId=state.researchTarget.id;
+        const patch={radarId};
+        if(c.businessName)patch.businessName=c.businessName;
+        if(c.websiteUrl)patch.website=c.websiteUrl;
+        if(c.contactName)patch.contactName=c.contactName;
+        if(c.location)patch.market=c.location;
+        if(r.industry)patch.vertical=r.industry;
+        await api("update_radar",patch);
+        await api("replace_radar_intelligence",{radarId,intelligenceType:"prospect_research",title:`Prospect Intelligence — ${r.businessName||c.businessName||"Business"}`,summary:r.businessSummary||"Prospect research preserved.",intelligence,capturedAt:new Date().toISOString(),sourceType:"prospect_intelligence"});
+        await load();openRadar(radarId);return
+      }'''
+s = must_replace(s, old_save, new_save, "Radar research save behavior")
+p.write_text(s)
+
+
+# =========================================================
+# Worker deploy/version locks
+# =========================================================
+p = Path(".github/workflows/gcm-worker-deploy.yml")
+s = p.read_text()
+s = s.replace("Version: 1.4.9", "Version: 1.5.0", 1)
+s = s.replace("Prospect CRM 1.2.0", "Prospect CRM 1.3.0")
+s = s.replace('prospectCrmVersion !== "1.2.0"', 'prospectCrmVersion !== "1.3.0"')
+s = s.replace('Expected Prospect CRM 1.2.0', 'Expected Prospect CRM 1.3.0')
+s = s.replace('radar?.prospectCrmVersion !== "1.2.0"', 'radar?.prospectCrmVersion !== "1.3.0"')
+s = s.replace('trackingVersion !== "1.0.0"', 'trackingVersion !== "1.0.1"')
+p.write_text(s)
+
+
+# =========================================================
+# Focused version-pinned tests
+# =========================================================
+for name in ["tests/prospectCrm.test.js", "tests/prospectNextActionUi.test.js"]:
+    p = Path(name)
+    if p.exists():
+        s = p.read_text().replace('1.2.0', '1.3.0').replace('3.0.0', '3.1.0')
+        p.write_text(s)
+
+
+# =========================================================
+# Source assertions
+# =========================================================
+crm = Path("routes/prospectCrm.js").read_text()
+ui = Path("prospects.html").read_text()
+for needle in [
+    'case "update_radar"',
+    'case "replace_radar_intelligence"',
+    'async function updateRadar(',
+    'async function replaceRadarIntelligence(',
+    'PROSPECT_CRM_VERSION = "1.3.0"'
+]:
+    if needle not in crm:
+        raise SystemExit(f"Missing CRM install marker: {needle}")
+
+for needle in [
+    'Version: 3.1.0',
+    'id="radar-edit-dialog"',
+    'id="radar-edit"',
+    'api("update_radar"',
+    'api("replace_radar_intelligence"'
+]:
+    if needle not in ui:
+        raise SystemExit(f"Missing Prospects install marker: {needle}")
+
+print("Prospect Radar direct-edit source patch prepared successfully.")
