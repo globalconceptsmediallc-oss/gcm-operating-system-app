@@ -1,0 +1,55 @@
+# =========================================================
+# Global Concepts Media Operating System
+# File: .github/workflows/fix-worker-deploy-locks.yml
+# Version: 1.0.0
+# Status: One-Time Production Installer
+# Purpose: Align Worker deployment verification with the live prospect contracts.
+# =========================================================
+
+name: Fix Worker Deploy Version Locks
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/fix-worker-deploy-locks.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Patch Deployment Contract Locks
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          p = Path('.github/workflows/gcm-worker-deploy.yml')
+          s = p.read_text()
+          s = s.replace('Version: 1.4.9', 'Version: 1.5.0', 1)
+          s = s.replace('Prospect Concept Tracking 1.0.0', 'Prospect Concept Tracking 1.0.1')
+          s = s.replace('trackingVersion !== "1.0.0"', 'trackingVersion !== "1.0.1"')
+          s = s.replace('Prospect CRM 1.2.0', 'Prospect CRM 1.3.0')
+          s = s.replace('prospectCrmVersion !== "1.2.0"', 'prospectCrmVersion !== "1.3.0"')
+          s = s.replace('radar?.prospectCrmVersion !== "1.2.0"', 'radar?.prospectCrmVersion !== "1.3.0"')
+          if 'trackingVersion !== "1.0.0"' in s or 'prospectCrmVersion !== "1.2.0"' in s:
+              raise SystemExit('Old version lock remains after patch.')
+          p.write_text(s)
+          PY
+          git diff --check
+
+      - name: Commit Deployment Contract Repair
+        run: |
+          git config user.name "globalconceptsmediallc-oss"
+          git config user.email "globalconceptsmediallc@gmail.com"
+          git add .github/workflows/gcm-worker-deploy.yml
+          git commit -m "Align Worker deploy prospect contract locks"
+          git push origin HEAD:main
