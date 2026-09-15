@@ -1,10 +1,15 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/prospectConceptTracking.js
-   Version: 1.0.0
+   Version: 1.0.1
    Status: Production Road-Test Candidate
    Purpose: Record privacy-minimized engagement when a personalized
             GCM prospect concept page is viewed.
+
+   Change Notes — 1.0.1:
+   - Adds EverHealth Institute to the prospect concept tracking allowlist.
+   - Preserves privacy-minimized tracking with no visitor IP, user agent,
+     email address, or other visitor PII stored.
 
    Change Notes — 1.0.0:
    - Adds an allowlisted concept-key route for personalized prospect pages.
@@ -23,7 +28,7 @@ import {
 } from "../shared/http.js";
 
 export const PROSPECT_CONCEPT_VIEW_ACTION = "prospect-concept-view";
-export const PROSPECT_CONCEPT_TRACKING_VERSION = "1.0.0";
+export const PROSPECT_CONCEPT_TRACKING_VERSION = "1.0.1";
 
 const CONCEPTS = new Map([
   ["john-curri-v1", {
@@ -31,6 +36,12 @@ const CONCEPTS = new Map([
     sourceReference: "/prospect-previews/john-curri/",
     subject: "Prospect concept page viewed",
     summary: "The personalized John Curri / Realty World Curri Properties prospect concept page was viewed."
+  }],
+  ["everhealth-institute-v1", {
+    businessName: "EverHealth Institute",
+    sourceReference: "/prospect-previews/everhealth-institute/",
+    subject: "Prospect concept page viewed",
+    summary: "The personalized EverHealth Institute prospect concept page was viewed."
   }]
 ]);
 
