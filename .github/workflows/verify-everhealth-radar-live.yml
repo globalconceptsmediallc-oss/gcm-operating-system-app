@@ -1,0 +1,78 @@
+# =========================================================
+# Global Concepts Media Operating System
+# File: .github/workflows/verify-everhealth-radar-live.yml
+# Version: 1.0.0
+# Status: One-Time Live Verification
+# Purpose: Verify the EverHealth Radar repair and direct-edit contract.
+# =========================================================
+
+name: Verify EverHealth Radar Live
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/verify-everhealth-radar-live.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify Live EverHealth Radar
+        env:
+          WORKER_URL: https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/
+        run: |
+          node <<'NODE'
+          const url = process.env.WORKER_URL;
+          async function call(body) {
+            const response = await fetch(url, {
+              method: "POST",
+              headers: {"Content-Type":"application/json"},
+              body: JSON.stringify({action:"prospect-crm", ...body})
+            });
+            const data = await response.json().catch(()=>({}));
+            return {response,data};
+          }
+
+          const list = await call({operation:"list_radar"});
+          if (!list.response.ok) throw new Error(`list_radar HTTP ${list.response.status}`);
+          if (list.data?.prospectCrmVersion !== "1.3.0") {
+            throw new Error(`Expected CRM 1.3.0, received ${list.data?.prospectCrmVersion||"unknown"}`);
+          }
+
+          const ever = (list.data.radar||[]).filter(
+            r => String(r.businessName||"").trim().toLowerCase() === "everhealth institute"
+          );
+          if (ever.length !== 1) throw new Error(`Expected one active EverHealth Radar record, found ${ever.length}.`);
+          if (ever[0].contactName !== "Dr. Sanjay Pattani") {
+            throw new Error(`EverHealth contact is ${ever[0].contactName||"blank"}.`);
+          }
+          if (ever[0].contactEmail !== "drpattani@everhealthinstitute.com") {
+            throw new Error(`EverHealth email is ${ever[0].contactEmail||"blank"}.`);
+          }
+
+          const detail = await call({operation:"get_radar",radarId:ever[0].id});
+          if (!detail.response.ok) throw new Error(`get_radar HTTP ${detail.response.status}`);
+          const research = (detail.data?.radar?.intelligence||[]).filter(
+            i => i.intelligenceType === "prospect_research"
+          );
+          if (research.length !== 1) {
+            throw new Error(`Expected one EverHealth research record, found ${research.length}.`);
+          }
+
+          const boundary = await call({
+            operation:"update_radar",
+            radarId:2147483647,
+            contactName:"Boundary Test"
+          });
+          if (boundary.response.status !== 404 || boundary.data?.operation !== "update_radar") {
+            throw new Error("update_radar live boundary is unavailable.");
+          }
+
+          console.log("PASS: EverHealth contact is repaired, duplicate research removed, and CRM 1.3.0 direct Radar editing is live.");
+          NODE
