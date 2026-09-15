@@ -1,12 +1,12 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gcm-worker-deploy.yml
-# Version: 1.4.9
+# Version: 1.5.0
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Cloudflare Worker from main.
 # Change Notes:
 # - Deploy Worker 7.19.7 with privacy-minimized prospect concept engagement tracking.
-# - LOCK: require Worker 7.19.7 and Prospect CRM 1.2.0 with durable Radar continuity.
+# - LOCK: require Worker 7.19.7, Prospect Concept Tracking 1.0.1, and Prospect CRM 1.3.0.
 # - Verify prospect-concept-view is live using an unknown-key no-write boundary test.
 # - Verify CRM D1 migrations are live by reading list_prospects and service catalog.
 # - Verify the core business rule that a formal Prospect cannot be created
@@ -134,7 +134,7 @@ jobs:
             throw new Error(`Prospect concept boundary expected HTTP 404 for an unknown concept key, received ${conceptBoundaryResponse.status}`);
           }
           const conceptBoundary = await conceptBoundaryResponse.json();
-          if (conceptBoundary?.action !== "prospect-concept-view" || conceptBoundary?.trackingVersion !== "1.0.0") {
+          if (conceptBoundary?.action !== "prospect-concept-view" || conceptBoundary?.trackingVersion !== "1.0.1") {
             throw new Error("Prospect concept tracking route is not live with the expected contract.");
           }
 
@@ -160,8 +160,8 @@ jobs:
             throw new Error(`Prospect CRM service catalog returned HTTP ${serviceCatalogResponse.status}`);
           }
           const serviceCatalog = await serviceCatalogResponse.json();
-          if (serviceCatalog?.prospectCrmVersion !== "1.2.0") {
-            throw new Error(`Expected Prospect CRM 1.2.0, received ${serviceCatalog?.prospectCrmVersion || "unknown"}`);
+          if (serviceCatalog?.prospectCrmVersion !== "1.3.0") {
+            throw new Error(`Expected Prospect CRM 1.3.0, received ${serviceCatalog?.prospectCrmVersion || "unknown"}`);
           }
           const requiredServices = ["website_rebuild", "seo_search_visibility", "analytics_measurement", "consulting_agency_of_record"];
           for (const serviceKey of requiredServices) {
@@ -188,7 +188,7 @@ jobs:
             throw new Error(`Prospect Radar list returned HTTP ${radarResponse.status}; Radar continuity migration may be unavailable.`);
           }
           const radar = await radarResponse.json();
-          if (radar?.prospectCrmVersion !== "1.2.0" || !Array.isArray(radar?.radar)) {
+          if (radar?.prospectCrmVersion !== "1.3.0" || !Array.isArray(radar?.radar)) {
             throw new Error("Prospect Radar live read contract is invalid or Radar continuity migration is unavailable.");
           }
 
@@ -325,5 +325,5 @@ jobs:
           if (protectedResponse.status !== 401) {
             throw new Error(`Expected authentication boundary HTTP 401, received ${protectedResponse.status}`);
           }
-          console.log("PASS live Worker 7.19.7, Prospect Concept Tracking 1.0.0, Prospect CRM 1.2.0, durable Radar intelligence/outreach continuity, service startup catalog, appointment boundary, Gmail decision routes, Calendar, Work due-date source, Operating Sessions, and authentication boundary");
+          console.log("PASS live Worker 7.19.7, Prospect Concept Tracking 1.0.1, Prospect CRM 1.3.0, durable Radar intelligence/outreach continuity, service startup catalog, appointment boundary, Gmail decision routes, Calendar, Work due-date source, Operating Sessions, and authentication boundary");
           NODE
