@@ -1,10 +1,10 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/engines/businessIntelligenceRecord.js
-   Version: 1.1.3
+   Version: 1.1.4
    Status: Production Road-Test Candidate
-   Source: shared/engines/businessIntelligenceRecord.js 1.1.2
-   Sprint: Prospect Intelligence Evidence Reliability
+   Source: shared/engines/businessIntelligenceRecord.js 1.1.3
+   Sprint: Prospect Intelligence Industry Classification Guardrail
    Purpose: Normalize advertisement and website evidence into one
             reusable, evidence-first Business Intelligence Record.
 
@@ -15,11 +15,13 @@
    - Preserves uncertainty instead of inventing facts.
    - Supplies one canonical record to Business Snapshot and
      Prospect Intelligence.
+   - Commodity/product phrases must not create false professional
+     service classifications.
    ========================================================= */
 
 import { clean } from "../http.js";
 
-export const BUSINESS_INTELLIGENCE_RECORD_VERSION = "1.1.3";
+export const BUSINESS_INTELLIGENCE_RECORD_VERSION = "1.1.4";
 
 const SERVICE_RULES = Object.freeze([
   ["Lawn Care", /\b(?:lawn care|lawn service|fertili[sz]ation|weed control|turf)\b/i],
@@ -36,6 +38,30 @@ const SERVICE_RULES = Object.freeze([
   ["Safes", /\b(?:gun safe|home safe|commercial safe|safe delivery)\b/i],
   ["Firearms", /\b(?:firearms|guns|ammunition|shooting range)\b/i],
   ["Legal Services", /\b(?:attorney|law firm|legal services)\b/i],
+
+  // Precious-metals / roadshow buyer rules.
+  // These intentionally precede professional-service rules so
+  // product phrases such as "Dental Gold" retain their real meaning.
+  [
+    "Precious Metals Buying",
+    /\b(?:precious metals?|gold buyers?|gold buying|buy gold|sell gold|gold and silver|gold & silver|scrap gold|scrap silver|scrap gold and silver|scrap gold & silver|bullion|\.999 gold|sterling silver|dental gold)\b/i
+  ],
+  [
+    "Coins & Currency",
+    /\b(?:coin buyers?|coin buying|gold coins?|silver coins?|graded gold|graded silver|graded coins?|rare coins?|numismatic|paper currency|u\.?s\.? paper currency|foreign silver|foreign gold|barber dime|mercury dime|roosevelt dime|peace dollar|morgan dollar|seated liberty|walking liberty|franklin half|kennedy half|washington quarter)\b/i
+  ],
+  [
+    "Jewelry & Watches",
+    /\b(?:scrap jewelry|estate jewelry|custom jewelry|jewelry buyers?|jewelry buying|class rings?|wrist watches?|pocket watches?|time pieces|timepieces)\b/i
+  ],
+  [
+    "Collectibles Buying",
+    /\b(?:collectibles?|comic books?|sports cards?|memorabilia|zippo lighters?|militaria|wwii german memorabilia)\b/i
+  ],
+  [
+    "Roadshow Buying Events",
+    /\b(?:road show|roadshow|buying event|free evaluation|evaluation experts? on site)\b/i
+  ],
 
   // Medical detail rules intentionally precede the broad Medical Services rule.
   // This lets the record preserve the actual public service mix instead of
@@ -54,7 +80,13 @@ const SERVICE_RULES = Object.freeze([
   ["Clinical Care & Second Opinions", /\b(?:clinical care|second opinions?|case review|specialist referrals?)\b/i],
   ["Medical Services", /\b(?:medical|medicine|clinic|physician|healthcare|health care|patient|regenerative|longevity|hormone therapy|stem cell|peptide therapy|hyperbaric)\b/i],
 
-  ["Dental Services", /\b(?:dental|dentist|orthodont)\b/i],
+  // Do not classify the standalone word "dental" as a dental practice.
+  // This prevents commodity phrases such as "Dental Gold" from firing.
+  [
+    "Dental Services",
+    /\b(?:dentist|dentistry|orthodont(?:ic|ics|ist)?|dental (?:care|clinic|office|practice|services?|implants?|cleaning|fillings?|crowns?|veneers?|exams?))\b/i
+  ],
+
   ["Real Estate", /\b(?:real estate|realtor|property management)\b/i],
   ["Restaurant", /\b(?:restaurant|menu|dining|catering)\b/i],
   ["Automotive Sales", /\b(?:new vehicles?|used vehicles?|certified pre-owned|vehicle inventory|dealership|auto dealer|bmw|mercedes|lexus|audi)\b/i],
@@ -118,10 +150,13 @@ export function buildBusinessIntelligenceRecord({
   ]);
 
   const inferredIndustry = inferIndustry(rawServices, evidenceText);
-  const industry = firstStrongValue([
-    websiteEvidence.identifiedIndustry,
-    inferredIndustry
-  ]) || "Requires consultant verification";
+
+  const industry = resolveIndustry({
+    websiteIndustry: websiteEvidence.identifiedIndustry,
+    inferredIndustry,
+    evidenceText,
+    services: rawServices
+  });
 
   const services = normalizeServicesForIndustry(rawServices, industry).slice(0, 12);
 
@@ -149,6 +184,7 @@ export function buildBusinessIntelligenceRecord({
   ]).slice(0, 10);
 
   const trustSignals = extractTrustSignals(evidenceText);
+
   const targetCustomer = inferTargetCustomer(
     sanitizeAudienceSignals(advertisementEvidence.audienceSignals),
     services,
@@ -332,6 +368,7 @@ function buildSummary(record) {
 
 function extractBusinessNameFromTitle(value) {
   const title = clean(value);
+
   if (!title || /^unknown$/i.test(title)) return "";
 
   return clean(
@@ -347,6 +384,7 @@ function hostnameLabel(value) {
       .replace(/^www\./i, "")
       .split(".")[0]
       .replace(/^my/i, "");
+
     return host
       .replace(/[-_]+/g, " ")
       .replace(/\b\w/g, char => char.toUpperCase());
@@ -364,7 +402,8 @@ function extractServices(text) {
 function extractUsefulHeadings(value) {
   if (!Array.isArray(value)) return [];
 
-  const serviceHeadingPattern = /\b(?:lawn care|pest control|termite|irrigation|wildlife|insulation|hvac|roof|plumb|electric|locksmith|safe|firearm|legal|real estate|longevity|stem cell|regenerative medicine|hormone|peptide|hyperbaric|diagnostic|hair restoration|facial rejuvenation|body composition|metabolic health|weight management|sexual health|cancer screening|infusion|clinical care|second opinion|dental|orthodont|vehicle service|vehicle sales|financing)\b/i;
+  const serviceHeadingPattern =
+    /\b(?:lawn care|pest control|termite|irrigation|wildlife|insulation|hvac|roof|plumb|electric|locksmith|safe|firearm|legal|real estate|gold|silver|coin|bullion|jewelry|watch|currency|collectible|memorabilia|road show|roadshow|longevity|stem cell|regenerative medicine|hormone|peptide|hyperbaric|diagnostic|hair restoration|facial rejuvenation|body composition|metabolic health|weight management|sexual health|cancer screening|infusion|clinical care|second opinion|dental care|dentist|orthodont|vehicle service|vehicle sales|financing)\b/i;
 
   return value
     .map(clean)
@@ -380,16 +419,28 @@ function normalizeServicesForIndustry(services, industry) {
   const items = unique(services);
   const normalizedIndustry = clean(industry).toLowerCase();
 
+  if (/precious metals|coins and collectibles|coin and collectible/.test(normalizedIndustry)) {
+    const filtered = items.filter(item =>
+      !/^dental services$/i.test(item)
+    );
+
+    return filtered.length
+      ? filtered
+      : ["Precious Metals Buying"];
+  }
+
   if (/medical|healthcare|health care|clinic|physician/.test(normalizedIndustry)) {
     const filtered = items.filter(item => {
       if (/^(restaurant|medical services)$/i.test(item)) return false;
       if (/\b(?:restaurant|dining|catering)\b/i.test(item)) return false;
+
       if (
         /\bpractice\b/i.test(item) &&
         !/\b(?:longevity|regenerative|hormone|diagnostic|stem cell|peptide|hyperbaric)\b/i.test(item)
       ) {
         return false;
       }
+
       return true;
     });
 
@@ -401,8 +452,40 @@ function normalizeServicesForIndustry(services, industry) {
   return items;
 }
 
+function resolveIndustry({
+  websiteIndustry,
+  inferredIndustry,
+  evidenceText,
+  services
+}) {
+  const websiteValue = clean(websiteIndustry);
+  const inferredValue = clean(inferredIndustry);
+  const joinedServices = unique(services).join(" ");
+
+  const preciousMetalsEvidence =
+    /\b(?:precious metals?|gold buyers?|gold buying|gold and silver|gold & silver|scrap gold|scrap silver|bullion|gold coins?|silver coins?|graded coins?|numismatic|paper currency|estate jewelry|scrap jewelry|road show|roadshow|buying event|dental gold)\b/i.test(
+      `${evidenceText} ${joinedServices}`
+    );
+
+  if (preciousMetalsEvidence) {
+    return "Precious Metals, Coins and Collectibles Buying";
+  }
+
+  return firstStrongValue([
+    websiteValue,
+    inferredValue
+  ]) || "Requires consultant verification";
+}
+
 function inferIndustry(services, text) {
   const joined = services.join(" ");
+
+  if (
+    /\b(?:precious metals buying|coins & currency|jewelry & watches|collectibles buying|roadshow buying events)\b/i.test(joined) ||
+    /\b(?:precious metals?|gold buyers?|gold buying|gold and silver|gold & silver|scrap gold|scrap silver|bullion|gold coins?|silver coins?|graded coins?|numismatic|paper currency|road show|roadshow|buying event|dental gold)\b/i.test(text)
+  ) {
+    return "Precious Metals, Coins and Collectibles Buying";
+  }
 
   if (/\b(lawn care|pest control|termite|irrigation|wildlife management|insulation)\b/i.test(joined)) {
     return "Residential Home Services";
@@ -479,25 +562,52 @@ function extractTrustSignals(text) {
     signals.push("Family-owned business");
   }
 
-  const yearMatch = text.match(/\b(?:serving|trusted|established|since)\D{0,18}((?:19|20)\d{2})\b/i);
+  const yearMatch = text.match(
+    /\b(?:serving|trusted|established|since)\D{0,18}((?:19|20)\d{2})\b/i
+  );
+
   if (yearMatch) {
     signals.push(`Established history visible since ${yearMatch[1]}`);
   }
 
-  if (/\blicensed\b/i.test(text)) signals.push("Licensing claim visible");
-  if (/\binsured\b/i.test(text)) signals.push("Insurance claim visible");
-  if (/\bguarantee(?:d)?\b/i.test(text)) signals.push("Guarantee language visible");
-  if (/\baward[- ]winning\b/i.test(text)) signals.push("Award claim visible");
-  if (/\bboard[- ]certified\b/i.test(text)) signals.push("Board-certified physician credentials visible");
-  if (/\bphysician[- ](?:owned|led|founded)\b/i.test(text)) signals.push("Physician-owned or physician-led practice visible");
-  if (/\b\d(?:\.\d)?\s*(?:star|stars)\b/i.test(text)) signals.push("Review rating visible");
-  if (/\btestimonial|reviews?\b/i.test(text)) signals.push("Customer review or testimonial content visible");
+  if (/\blicensed\b/i.test(text)) {
+    signals.push("Licensing claim visible");
+  }
+
+  if (/\binsured\b/i.test(text)) {
+    signals.push("Insurance claim visible");
+  }
+
+  if (/\bguarantee(?:d)?\b/i.test(text)) {
+    signals.push("Guarantee language visible");
+  }
+
+  if (/\baward[- ]winning\b/i.test(text)) {
+    signals.push("Award claim visible");
+  }
+
+  if (/\bboard[- ]certified\b/i.test(text)) {
+    signals.push("Board-certified physician credentials visible");
+  }
+
+  if (/\bphysician[- ](?:owned|led|founded)\b/i.test(text)) {
+    signals.push("Physician-owned or physician-led practice visible");
+  }
+
+  if (/\b\d(?:\.\d)?\s*(?:star|stars)\b/i.test(text)) {
+    signals.push("Review rating visible");
+  }
+
+  if (/\btestimonial|reviews?\b/i.test(text)) {
+    signals.push("Customer review or testimonial content visible");
+  }
 
   return unique(signals).slice(0, 10);
 }
 
 function sanitizeAudienceSignals(value) {
-  const sourceLabels = /^(?:direct mail(?: postcard)?|postcard|mailer|magazine(?: advertisement| ad)?|flyer|billboard|vehicle graphic|social(?: advertisement| ad)?|print(?: advertisement| ad)?|advertisement|ad)$/i;
+  const sourceLabels =
+    /^(?:direct mail(?: postcard)?|postcard|mailer|magazine(?: advertisement| ad)?|flyer|billboard|vehicle graphic|social(?: advertisement| ad)?|print(?: advertisement| ad)?|advertisement|ad)$/i;
 
   return unique(
     (Array.isArray(value) ? value : [])
@@ -511,10 +621,19 @@ function inferTargetCustomer(audienceSignals, services, text, industry) {
     ? audienceSignals.map(clean).filter(Boolean)
     : [];
 
-  if (supplied.length) return supplied.join("; ");
+  if (supplied.length) {
+    return supplied.join("; ");
+  }
 
   const serviceText = services.join(" ");
   const industryText = clean(industry);
+
+  if (
+    /precious metals|coins and collectibles|coin and collectible/i.test(industryText) ||
+    /\b(?:precious metals buying|coins & currency|jewelry & watches|collectibles buying|roadshow buying events)\b/i.test(serviceText)
+  ) {
+    return "People seeking to sell or have evaluated gold, silver, coins, jewelry, watches, currency, precious metals, and collectible items.";
+  }
 
   if (
     /\bmedical services\b/i.test(industryText) ||
@@ -530,11 +649,16 @@ function inferTargetCustomer(audienceSignals, services, text, industry) {
     return "Patients seeking dental or orthodontic care.";
   }
 
-  if (/\b(lawn care|pest control|termite|irrigation|wildlife management|insulation)\b/i.test(serviceText)) {
+  if (
+    /\b(lawn care|pest control|termite|irrigation|wildlife management|insulation)\b/i.test(serviceText)
+  ) {
     return "Homeowners seeking recurring property care, protection, and curb-appeal services.";
   }
 
-  if (/\bcommercial\b/i.test(text) && /\bresidential\b/i.test(text)) {
+  if (
+    /\bcommercial\b/i.test(text) &&
+    /\bresidential\b/i.test(text)
+  ) {
     return "Residential and commercial customers.";
   }
 
@@ -604,21 +728,50 @@ function calculateConfidence({
 }) {
   let score = 0;
 
-  if (businessName && !/^unknown$/i.test(businessName)) score += 0.2;
-  if (industry && !/requires|unknown/i.test(industry)) score += 0.2;
-  if (services.length) score += 0.2;
-  if (markets.length) score += 0.15;
-  if (clean(websiteEvidence.status) === "complete") score += 0.15;
-  if (clean(advertisementEvidence.status) === "complete") score += 0.1;
+  if (
+    businessName &&
+    !/^unknown$/i.test(businessName)
+  ) {
+    score += 0.2;
+  }
+
+  if (
+    industry &&
+    !/requires|unknown/i.test(industry)
+  ) {
+    score += 0.2;
+  }
+
+  if (services.length) {
+    score += 0.2;
+  }
+
+  if (markets.length) {
+    score += 0.15;
+  }
+
+  if (clean(websiteEvidence.status) === "complete") {
+    score += 0.15;
+  }
+
+  if (clean(advertisementEvidence.status) === "complete") {
+    score += 0.1;
+  }
 
   return {
     overall: Math.round(Math.min(1, score) * 100) / 100,
-    label: score >= 0.8 ? "High" : score >= 0.55 ? "Medium" : "Low"
+    label:
+      score >= 0.8
+        ? "High"
+        : score >= 0.55
+          ? "Medium"
+          : "Low"
   };
 }
 
 function preferVerified(primary, fallback) {
   const first = clean(primary);
+
   if (
     first &&
     !/^(unknown|requires consultant verification|not clearly stated|target customer requires verification\.?)$/i.test(first)
@@ -647,7 +800,10 @@ function unique(values) {
     const text = clean(value);
     const key = text.toLowerCase();
 
-    if (!text || seen.has(key)) continue;
+    if (!text || seen.has(key)) {
+      continue;
+    }
+
     seen.add(key);
     result.push(text);
   }
