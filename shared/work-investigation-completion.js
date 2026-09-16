@@ -1,14 +1,26 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/work-investigation-completion.js
-   Version: 1.3.0
+   Version: 1.4.0
    Status: Production Candidate
-   Purpose: Add human-approved Investigation resolution controls for
-            (1) corrective work already performed and verified during the
-            Investigation, (2) unresolved Investigations waiting on external
-            validation, (3) linked Work Items whose responsibility has been
+   Purpose: Add human-approved Investigation controls for
+            (1) direct evidence-based Investigation intake from Work,
+            (2) corrective work already performed and verified during the
+            Investigation, (3) unresolved Investigations waiting on external
+            validation, (4) linked Work Items whose responsibility has been
             reassigned outside GCM without claiming completion proof, and
-            (4) Work Items whose awaited external validation has now returned.
+            (5) Work Items whose awaited external validation has now returned.
+
+   Changes in 1.4.0:
+   - Adds Start Investigation directly to the Work page before Requested Work.
+   - Uses the proven commit-operational-decision route to create one internal
+     audit Communication plus one open Investigation; no Work Item is created.
+   - Requires client, Investigation title, question/issue, current evidence,
+     business meaning, and next evidence/step before creation.
+   - Loads the production client directory and honors client deep links.
+   - Deep-links immediately into the newly created Guided Investigation.
+   - Updates the visible Work page classification/status to v1.9.19.
+   - Does not add a Worker route, D1 schema, automatic finding, or Work Item.
 
    Changes in 1.3.0:
    - Adds External Validation Passed — Complete to Awaiting External Validation cards.
@@ -51,14 +63,18 @@
 (() => {
   "use strict";
 
-  const FILE_VERSION = "1.3.0";
+  const FILE_VERSION = "1.4.0";
+  const WORK_PAGE_VERSION = "1.9.19";
   const WORKER_URL = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const COMPLETE_BUTTON_ID = "gcm-complete-verified-investigation";
   const MONITOR_BUTTON_ID = "gcm-monitor-investigation";
   const REASSIGN_BUTTON_ATTR = "data-close-reassigned-work";
   const EXTERNAL_COMPLETE_BUTTON_ATTR = "data-complete-external-validation";
   const EXTERNAL_CONTROLS_ATTR = "data-external-validation-controls";
+  const INVESTIGATION_INTAKE_PANEL_ID = "gcm-investigation-intake-panel";
+  const INVESTIGATION_INTAKE_STYLE_ID = "gcm-investigation-intake-styles";
   let processing = false;
+  let intakeProcessing = false;
 
   function workerErrorMessage(value, fallback = "Worker request failed.") {
     if (value == null || value === "") return fallback;
@@ -112,6 +128,264 @@
     } finally {
       clearTimeout(timeout);
     }
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function updateVisibleWorkVersion() {
+    const classification = document.querySelector(".classification");
+    if (classification) {
+      classification.textContent = `Requested Work + Direct Investigation + WWPOWD · v${WORK_PAGE_VERSION}`;
+    }
+
+    const shellStatus = document.querySelector(".gcm-shell-status span:last-child");
+    if (shellStatus && /work v\d|wwpowd investigation/i.test(shellStatus.textContent || "")) {
+      shellStatus.textContent = `Requested work + direct Investigation + WWPOWD · Work v${WORK_PAGE_VERSION}`;
+    }
+
+    const subtitle = document.querySelector(".page-header .subtitle");
+    if (subtitle) {
+      subtitle.textContent = "Start an Investigation when evidence is still needed to decide the correct action. Create Requested Work only when the exact deliverable is already clear.";
+    }
+  }
+
+  function injectInvestigationIntakeStyles() {
+    if (document.getElementById(INVESTIGATION_INTAKE_STYLE_ID)) return;
+
+    const style = document.createElement("style");
+    style.id = INVESTIGATION_INTAKE_STYLE_ID;
+    style.textContent = `
+      #${INVESTIGATION_INTAKE_PANEL_ID}{border-top:4px solid var(--blue)}
+      #${INVESTIGATION_INTAKE_PANEL_ID} .intake-help{margin:0 0 13px;color:var(--muted);font-size:.78rem;line-height:1.5}
+      #${INVESTIGATION_INTAKE_PANEL_ID} .intake-contract{margin:0 0 14px;padding:11px 12px;border:1px solid #cbdcf4;border-radius:9px;background:var(--blue-soft);color:#205c9f;font-size:.76rem;font-weight:760;line-height:1.45}
+      #${INVESTIGATION_INTAKE_PANEL_ID} .intake-version{display:inline-flex;margin-left:8px;padding:3px 7px;border-radius:999px;background:#eef2f7;color:var(--muted);font-size:.62rem;font-weight:900;vertical-align:middle}
+    `;
+    document.head.appendChild(style);
+  }
+
+  async function loadInvestigationIntakeClients(select, message) {
+    try {
+      const payload = await post({ action: "get-client-directory" });
+      const clients = Array.isArray(payload?.clients) ? payload.clients : [];
+
+      select.innerHTML = '<option value="">Select client</option>' + clients.map(client => {
+        const code = String(client.client_code || client.clientCode || client.code || "").trim();
+        const name = String(client.name || client.client_name || client.clientName || code).trim();
+        const status = String(client.status || "").trim();
+        const suffix = status ? ` · ${status}` : "";
+        return `<option value="${escapeHtml(code)}">${escapeHtml(name)}${escapeHtml(suffix)}</option>`;
+      }).join("");
+
+      const params = new URLSearchParams(location.search);
+      const requestedClient = String(params.get("client") || "").trim().toUpperCase();
+      const selectedFilter = String(document.getElementById("client-filter")?.value || "").trim().toUpperCase();
+      const requestedWorkClient = String(document.getElementById("requested-client")?.value || "").trim().toUpperCase();
+      const preferred = requestedClient || selectedFilter || requestedWorkClient;
+
+      if (preferred) {
+        const option = [...select.options].find(entry => String(entry.value || "").trim().toUpperCase() === preferred);
+        if (option) select.value = option.value;
+      }
+    } catch (error) {
+      message.className = "status error";
+      message.textContent = error.message || "The client directory could not be loaded.";
+    }
+  }
+
+  function importanceFromPriority(priority) {
+    const normalized = String(priority || "Normal").trim().toLowerCase();
+    if (normalized === "urgent") return "Critical";
+    if (normalized === "high") return "High";
+    if (normalized === "low") return "Low";
+    return "Medium";
+  }
+
+  async function createInvestigationFromWorkQueue(form, button, message) {
+    if (intakeProcessing) return;
+
+    const clientCode = String(document.getElementById("investigation-intake-client")?.value || "").trim();
+    const title = String(document.getElementById("investigation-intake-title")?.value || "").trim();
+    const question = String(document.getElementById("investigation-intake-question")?.value || "").trim();
+    const evidence = String(document.getElementById("investigation-intake-evidence")?.value || "").trim();
+    const impact = String(document.getElementById("investigation-intake-impact")?.value || "").trim();
+    const nextEvidence = String(document.getElementById("investigation-intake-next")?.value || "").trim();
+    const sourceReference = String(document.getElementById("investigation-intake-source")?.value || "").trim();
+    const priority = String(document.getElementById("investigation-intake-priority")?.value || "Normal").trim();
+    const owner = String(document.getElementById("investigation-intake-owner")?.value || "Andy").trim() || "Andy";
+
+    if (!clientCode || !title || !question || !evidence || !impact || !nextEvidence) {
+      message.className = "status error";
+      message.textContent = "Client, Investigation, Question / Issue, Current Evidence, Why It Matters, and Next Evidence / Step are required.";
+      return;
+    }
+
+    const importance = importanceFromPriority(priority);
+    const operationalSummary = [
+      `Question / Issue:\n${question}`,
+      `What We Know / Current Evidence:\n${evidence}`
+    ].join("\n\n");
+    const rawContent = [
+      "Internal Investigation Intake — Work Queue",
+      `Investigation: ${title}`,
+      `Question / Issue: ${question}`,
+      `Current Evidence / Finding: ${evidence}`,
+      `Business Meaning / Why It Matters: ${impact}`,
+      `Next Evidence / Step: ${nextEvidence}`,
+      sourceReference ? `Source / Reference: ${sourceReference}` : "Source / Reference: Direct operator intake"
+    ].join("\n\n");
+
+    intakeProcessing = true;
+    button.disabled = true;
+    message.className = "status loading";
+    message.textContent = "Creating the internal audit record and opening the Investigation in production D1…";
+
+    try {
+      const payload = await post({
+        action: "commit-operational-decision",
+        clientCode,
+        occurredAt: new Date().toISOString(),
+        direction: "internal",
+        owner,
+        rawContent,
+        decision: {
+          source: "GCM Work Queue",
+          communicationType: "Internal Investigation Intake",
+          title,
+          operationalSummary,
+          businessImpact: impact,
+          importance,
+          operationalPriority: importance,
+          operationalLabel: "Investigation Required",
+          recordPurpose: "Evidence-based internal Investigation intake before corrective work is selected.",
+          recommendedAction: nextEvidence,
+          reasoning: sourceReference
+            ? `Current evidence was entered by the operator. Source/reference: ${sourceReference}`
+            : "Current evidence was entered directly by the operator from the Work Queue.",
+          recommendedRoutes: {
+            saveCommunication: true,
+            createInvestigation: true,
+            createWorkItem: false,
+            replyRequired: false
+          }
+        }
+      });
+
+      const investigationId = Number(payload?.investigationId || 0);
+      if (!Number.isInteger(investigationId) || investigationId <= 0) {
+        throw new Error("The Worker saved the intake but did not return the new Investigation ID.");
+      }
+
+      message.className = "status ready";
+      message.textContent = `Investigation #${investigationId} created. Opening Guided Investigation…`;
+      button.textContent = "Investigation Created ✓";
+
+      const nextUrl = new URL(location.href);
+      nextUrl.search = "";
+      nextUrl.searchParams.set("investigation", String(investigationId));
+      nextUrl.searchParams.set("client", clientCode);
+      setTimeout(() => { location.href = nextUrl.toString(); }, 450);
+    } catch (error) {
+      button.disabled = false;
+      message.className = "status error";
+      message.textContent = error.message || "The Investigation could not be created.";
+    } finally {
+      intakeProcessing = false;
+    }
+  }
+
+  function installInvestigationIntake() {
+    if (!/\/work\.html$/i.test(location.pathname)) return;
+    updateVisibleWorkVersion();
+    if (document.getElementById(INVESTIGATION_INTAKE_PANEL_ID)) return;
+
+    const requestedWorkPanel = document.getElementById("requested-work-panel");
+    if (!requestedWorkPanel) return;
+
+    injectInvestigationIntakeStyles();
+
+    const panel = document.createElement("section");
+    panel.id = INVESTIGATION_INTAKE_PANEL_ID;
+    panel.className = "panel";
+    panel.innerHTML = `
+      <div class="panel-header">
+        <h2>Start Investigation <span class="intake-version">v${FILE_VERSION}</span></h2>
+        <p>Use this when the problem or opportunity is known, but evidence is still needed before choosing corrective work.</p>
+      </div>
+      <div class="panel-body">
+        <p class="intake-help">This is the missing entrance to the WWPOWD workflow. The Investigation will appear in the Investigation Queue below and can be worked through evidence before any Work Item is created.</p>
+        <p class="intake-contract">Creates one internal audit Communication + one open Investigation. Creates no Work Item and makes no completion claim.</p>
+        <form id="investigation-intake-form">
+          <div class="requested-work-grid">
+            <div>
+              <label for="investigation-intake-client">Client</label>
+              <select id="investigation-intake-client" required><option value="">Loading clients…</option></select>
+            </div>
+            <div>
+              <label for="investigation-intake-priority">Priority</label>
+              <select id="investigation-intake-priority">
+                <option value="Normal">Normal</option>
+                <option value="High">High</option>
+                <option value="Urgent">Urgent</option>
+                <option value="Low">Low</option>
+              </select>
+            </div>
+            <div class="full">
+              <label for="investigation-intake-title">Investigation</label>
+              <input id="investigation-intake-title" type="text" required placeholder="Example: A1 Locksmith Competitive Visibility Gap" />
+            </div>
+            <div class="full">
+              <label for="investigation-intake-question">Question / Issue</label>
+              <textarea id="investigation-intake-question" required placeholder="What must we determine before deciding what work should be done?"></textarea>
+            </div>
+            <div class="full">
+              <label for="investigation-intake-evidence">What We Know / Current Evidence</label>
+              <textarea id="investigation-intake-evidence" required placeholder="Record the evidence already observed. Do not turn an assumption into a finding."></textarea>
+            </div>
+            <div class="full">
+              <label for="investigation-intake-impact">Business Meaning / Why It Matters</label>
+              <textarea id="investigation-intake-impact" required placeholder="Explain the client or business consequence that makes this worth investigating."></textarea>
+            </div>
+            <div class="full">
+              <label for="investigation-intake-next">Next Evidence / Step</label>
+              <textarea id="investigation-intake-next" required placeholder="What evidence should be reviewed next to prove the cause and select the correct action?"></textarea>
+            </div>
+            <div>
+              <label for="investigation-intake-owner">Owner</label>
+              <input id="investigation-intake-owner" type="text" value="Andy" />
+            </div>
+            <div>
+              <label for="investigation-intake-source">Source / Reference (optional)</label>
+              <input id="investigation-intake-source" type="text" placeholder="Example: SEMrush Position Tracking · Sep. 16, 2026" />
+            </div>
+          </div>
+          <div class="requested-work-actions">
+            <button id="investigation-intake-submit" class="button primary" type="submit">Start Investigation</button>
+            <div id="investigation-intake-message"></div>
+          </div>
+        </form>
+      </div>
+    `;
+
+    requestedWorkPanel.insertAdjacentElement("beforebegin", panel);
+
+    const form = document.getElementById("investigation-intake-form");
+    const button = document.getElementById("investigation-intake-submit");
+    const message = document.getElementById("investigation-intake-message");
+    const select = document.getElementById("investigation-intake-client");
+
+    form?.addEventListener("submit", event => {
+      event.preventDefault();
+      createInvestigationFromWorkQueue(form, button, message);
+    });
+
+    if (select && message) loadInvestigationIntakeClients(select, message);
   }
 
   function activeStepIsCompletion() {
@@ -537,6 +811,7 @@
   function installButtons() {
     if (!/\/work\.html$/i.test(location.pathname)) return;
 
+    installInvestigationIntake();
     installExternalValidationControls();
     installWorkDispositionButtons();
 
