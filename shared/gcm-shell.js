@@ -1,22 +1,23 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gcm-shell.js
-   Version: 2.0.36
+   Version: 2.0.37
    Status: Production Road-Test Candidate
    Purpose: Shared internal GCM OS application shell foundation.
-   Source: gcm-shell.js 2.0.35 production navigation
-   Sprint: MediaForge — Task-First Production Home
+   Source: gcm-shell.js 2.0.36 production navigation
+   Sprint: Work — Direct Investigation Intake
    Change:
-   - Routes MediaForge navigation into the GCM OS GitHub Pages deployment instead of the retired standalone Cloudflare Pages project.
-   - Preserves Gmail Human Routing v2.3.1, Media Dashboard Creative Queue v1.1.2,
-     Calendar Durable Sync, Media Production Sessions, Prospect Next Action,
-     and existing Work enhancements.
+   - Loads Work Investigation Completion/Intake enhancement v1.4.0 so the
+     Work page exposes direct evidence-based Investigation creation.
+   - Preserves MediaForge routing, Gmail Human Routing v2.3.1,
+     Media Dashboard Creative Queue v1.1.2, Calendar Durable Sync,
+     Media Production Sessions, Prospect Next Action, and existing Work enhancements.
    ========================================================= */
 
 (() => {
   "use strict";
 
-  const SHELL_VERSION = "2.0.36";
+  const SHELL_VERSION = "2.0.37";
   const WORKER_ENDPOINT =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const MISSION_CONTROL_ACTION = "get-mission-control";
@@ -294,7 +295,7 @@
 
     if (/\/work\.html$/i.test(path)) {
       appendScript(
-        "shared/work-investigation-completion.js?v=1.1.0",
+        "shared/work-investigation-completion.js?v=1.4.0",
         "data-gcm-work-investigation-completion"
       );
 
