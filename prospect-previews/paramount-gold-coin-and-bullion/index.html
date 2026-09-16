@@ -1,0 +1,495 @@
+<!-- =========================================================
+   Global Concepts Media
+   File: prospect-previews/paramount-gold-coin-and-bullion/index.html
+   Version: 1.0.0
+   Status: Prospect Concept Preview
+   Purpose: Personalized, unlisted concept page for Paramount Gold Coin and Bullion.
+
+   Change Notes — 1.0.0:
+   - Builds the Viera Road Show concept around the existing direct-mail campaign.
+   - Demonstrates a measurable market-by-market acquisition path.
+   - Uses only observed campaign details and clearly labeled concept elements.
+   - Adds privacy-minimized prospect concept view tracking.
+   - Suppresses GCM owner-preview visits when ?gcm_preview=1 is present.
+   ========================================================= -->
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive,noimageindex">
+<meta name="referrer" content="no-referrer">
+<title>Paramount Gold Coin and Bullion · Private Concept Preview</title>
+<style>
+:root{
+  --ink:#17202a;
+  --night:#101821;
+  --night-2:#162738;
+  --blue:#2867b2;
+  --blue-soft:#eaf2fb;
+  --gold:#c49a52;
+  --gold-soft:#f7f0e3;
+  --muted:#667482;
+  --line:#dce3ea;
+  --paper:#fff;
+  --bg:#f4f6f8;
+  --shadow:0 20px 60px rgba(15,24,34,.10);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  color:var(--ink);
+  background:
+    radial-gradient(circle at 4% 0%,rgba(40,103,178,.09),transparent 34rem),
+    radial-gradient(circle at 95% 10%,rgba(196,154,82,.09),transparent 28rem),
+    linear-gradient(180deg,#fbfcfd 0%,var(--bg) 100%);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+  line-height:1.62;
+}
+a{color:inherit}
+.shell{width:min(1180px,calc(100% - 34px));margin:auto;padding-bottom:62px}
+.topbar{
+  display:flex;justify-content:space-between;align-items:center;gap:18px;
+  padding:20px 4px 16px;font-size:.84rem;color:#465462
+}
+.gcm{display:flex;align-items:center;gap:10px;font-weight:850}
+.gmark{
+  width:32px;height:32px;border-radius:50%;display:grid;place-items:center;
+  color:#fff;background:var(--night);font-family:Georgia,serif;font-size:1.08rem
+}
+.private{
+  border:1px solid #d5dde5;border-radius:999px;padding:7px 12px;
+  background:rgba(255,255,255,.84);font-weight:800;color:#495867
+}
+.hero{
+  position:relative;overflow:hidden;padding:60px 58px 54px;border-radius:30px;
+  border:1px solid #d9e0e6;background:
+    linear-gradient(135deg,rgba(255,255,255,.98),rgba(244,248,252,.97));
+  box-shadow:var(--shadow)
+}
+.hero:before{
+  content:"";position:absolute;right:-100px;top:-130px;width:410px;height:410px;border-radius:50%;
+  border:58px solid rgba(40,103,178,.055)
+}
+.hero:after{
+  content:"";position:absolute;right:85px;bottom:-120px;width:270px;height:270px;border-radius:50%;
+  border:36px solid rgba(196,154,82,.07)
+}
+.eyebrow,.kicker{
+  margin:0;color:var(--blue);font-size:.72rem;font-weight:900;
+  letter-spacing:.15em;text-transform:uppercase
+}
+h1,h2,h3{line-height:1.12}
+h1{
+  position:relative;z-index:1;max-width:960px;margin:11px 0 18px;
+  font-family:Georgia,"Times New Roman",serif;font-weight:500;
+  font-size:clamp(2.7rem,5.6vw,5.6rem);letter-spacing:-.04em
+}
+.hero-copy{position:relative;z-index:1;max-width:900px;color:#53616e;font-size:1.12rem}
+.hero-note{
+  position:relative;z-index:1;margin-top:28px;max-width:850px;padding:16px 18px;
+  border-left:4px solid var(--gold);border-radius:0 14px 14px 0;background:#fff;color:#52606d
+}
+.section{
+  margin-top:24px;border:1px solid var(--line);border-radius:26px;background:var(--paper);
+  box-shadow:0 12px 36px rgba(15,24,34,.055);overflow:hidden
+}
+.inner{padding:40px 42px}
+.section h2{
+  margin:5px 0 14px;font-family:Georgia,"Times New Roman",serif;
+  font-weight:500;font-size:clamp(1.95rem,3vw,3.15rem)
+}
+.section p{color:var(--muted)}
+.callout{
+  margin-top:22px;padding:20px 22px;border:1px solid #d8e2ec;border-radius:18px;
+  background:linear-gradient(135deg,#f7fafd,#eef4f9);color:#344b5d
+}
+.mailpiece{
+  margin-top:28px;display:grid;grid-template-columns:1.08fr .92fr;gap:22px;align-items:stretch
+}
+.flyer-card{
+  position:relative;overflow:hidden;border-radius:24px;padding:30px;color:#fff;
+  background:linear-gradient(145deg,#111820,#17283a 70%,#1f3d5d);box-shadow:var(--shadow)
+}
+.flyer-card:after{
+  content:"";position:absolute;right:-80px;top:-70px;width:230px;height:230px;border-radius:50%;
+  border:28px solid rgba(40,103,178,.20)
+}
+.flyer-card .tag{
+  display:inline-block;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.10);
+  border:1px solid rgba(255,255,255,.18);font-size:.72rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase
+}
+.flyer-card h3{
+  position:relative;z-index:1;margin:18px 0 10px;font-family:Georgia,serif;font-size:2.35rem;font-weight:500
+}
+.flyer-card .event{position:relative;z-index:1;color:#dce9f5;font-weight:800}
+.flyer-card .venue{position:relative;z-index:1;margin-top:18px;color:#fff}
+.flyer-card .offer{
+  position:relative;z-index:1;margin-top:22px;padding:14px 16px;border-radius:14px;
+  background:rgba(196,154,82,.15);border:1px solid rgba(196,154,82,.45);color:#f4dfb9
+}
+.evidence-list{
+  padding:24px;border:1px solid #d9e2ea;border-radius:24px;background:#fbfcfd
+}
+.evidence-list h3{margin:0;color:var(--night)}
+.evidence-list ul{list-style:none;padding:0;margin:16px 0 0;display:grid;gap:10px}
+.evidence-list li{position:relative;padding-left:25px;color:#536575}
+.evidence-list li:before{content:"✓";position:absolute;left:0;color:var(--blue);font-weight:900}
+.question{
+  display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:start;margin-top:24px
+}
+.question .qmark{
+  width:42px;height:42px;border-radius:50%;display:grid;place-items:center;
+  background:var(--night);color:#fff;font-weight:900;font-size:1.2rem
+}
+.question strong{display:block;font-size:1.04rem}
+.flow{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-top:28px}
+.step{
+  position:relative;padding:17px 14px;min-height:122px;border-radius:18px;
+  border:1px solid #d9e2e9;background:linear-gradient(180deg,#fff,#f7f9fb)
+}
+.step:after{
+  content:"→";position:absolute;right:-12px;top:44%;z-index:2;color:var(--blue);font-size:1.15rem;font-weight:900
+}
+.step:last-child:after{display:none}
+.step strong{display:block;color:var(--night);font-size:.94rem}
+.step span{display:block;margin-top:7px;color:#6a7886;font-size:.77rem;line-height:1.4}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.card{padding:22px;border:1px solid #dce4eb;border-radius:18px;background:#fbfcfd}
+.card h3{margin:0;font-size:1.02rem;color:var(--night)}
+.checks{list-style:none;padding:0;margin:16px 0 0;display:grid;gap:10px}
+.checks li{position:relative;padding-left:26px;color:#556573}
+.checks li:before{content:"✓";position:absolute;left:0;color:var(--blue);font-weight:900}
+.mock{
+  margin-top:25px;border:1px solid #d2dce5;border-radius:24px;overflow:hidden;
+  background:linear-gradient(180deg,#f9fbfd,#fff);box-shadow:var(--shadow)
+}
+.mockbar{
+  padding:17px 21px;background:var(--night);color:#fff;
+  display:flex;justify-content:space-between;gap:16px;align-items:center
+}
+.mockbrand{font-weight:900;letter-spacing:.05em}
+.mocksmall{font-size:.72rem;opacity:.75}
+.mockbody{padding:32px}
+.mockbody h3{margin:0;font-family:Georgia,serif;font-size:2.15rem;font-weight:500}
+.event-strip{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:22px 0
+}
+.event-chip{padding:14px;border-radius:14px;background:var(--gold-soft);border:1px solid #ead9bc}
+.event-chip strong{display:block;color:#624a24;font-size:.82rem}
+.event-chip span{display:block;margin-top:4px;color:#7b6a50;font-size:.74rem}
+.mockcta{
+  display:inline-block;margin-top:10px;padding:12px 16px;border-radius:10px;
+  background:var(--blue);color:#fff;text-decoration:none;font-weight:900
+}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:22px}
+.metric{padding:17px;border:1px solid #dce4eb;border-radius:16px;background:#f7f9fb}
+.metric strong{display:block;color:var(--night)}
+.metric span{display:block;margin-top:3px;color:#6b7885;font-size:.77rem}
+.close{
+  margin-top:24px;padding:42px;border-radius:26px;color:#fff;
+  background:linear-gradient(135deg,#101820,#18324b);
+  display:grid;grid-template-columns:1fr auto;gap:28px;align-items:center;box-shadow:var(--shadow)
+}
+.close h2{margin:0;font-family:Georgia,serif;font-size:clamp(2rem,3vw,3.15rem);font-weight:500}
+.close p{margin:10px 0 0;max-width:800px;color:rgba(255,255,255,.77)}
+.close a{
+  min-height:50px;display:inline-flex;align-items:center;justify-content:center;padding:0 20px;
+  border-radius:12px;background:#fff;color:var(--night);text-decoration:none;font-weight:900;white-space:nowrap
+}
+.footer{
+  padding:25px 7px 0;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  color:#77838e;font-size:.76rem
+}
+.version{font-weight:900;color:#586977}
+.notice{margin-top:12px;font-size:.75rem;color:#7e8993}
+@media(max-width:900px){
+  .hero{padding:42px 28px}
+  .mailpiece,.grid2,.close{grid-template-columns:1fr}
+  .flow{grid-template-columns:1fr 1fr}
+  .step:after{display:none}
+  .metrics{grid-template-columns:1fr 1fr}
+}
+@media(max-width:620px){
+  .topbar{flex-direction:column;align-items:flex-start}
+  .inner{padding:28px 22px}
+  .hero{padding:34px 22px}
+  .flow,.metrics,.event-strip{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="topbar">
+    <div class="gcm"><span class="gmark">G</span><span>Global Concepts Media</span></div>
+    <div class="private">Private concept preview · Not for public use</div>
+  </div>
+
+  <section class="hero">
+    <p class="eyebrow">Prepared for Paramount Gold Coin and Bullion · Viera / Melbourne, Florida</p>
+    <h1>Your roadshow already gives people a reason to show up. The opportunity is knowing which markets create sellers.</h1>
+    <p class="hero-copy">I received your Viera Road Show mail piece and reviewed the path it creates from direct mail to a local event, evaluation, and purchase. This private concept shows how the same campaign could gain a measurable digital layer—without replacing the direct-mail strategy that is already generating attention.</p>
+    <div class="hero-note"><strong>Working premise:</strong> preserve the roadshow, strengthen the local response path, keep the campaign source attached, and use completed transactions—not clicks—as the decision signal.</div>
+  </section>
+
+  <section class="section">
+    <div class="inner">
+      <p class="kicker">01 · What caught our attention</p>
+      <h2>The mail piece already has a strong direct-response job.</h2>
+      <p>It gives the market a specific place, a specific week, a free evaluation, and a broad list of items Paramount is prepared to buy. That is a much stronger starting point than a generic “learn more” campaign. The opportunity is not to replace the flyer. It is to make the response path around it easier to find, track, and compare from one roadshow market to the next.</p>
+
+      <div class="mailpiece">
+        <div class="flyer-card" aria-label="Text reconstruction of observed Viera Road Show mail-piece details">
+          <span class="tag">Observed campaign evidence</span>
+          <h3>Viera Road Show</h3>
+          <div class="event">September 19–25, 2026 · Saturday–Friday · 10am–5pm</div>
+          <div class="venue"><strong>Fairfield Inn and Suites</strong><br>2400 Town Center Ave. · Melbourne, FL 32940</div>
+          <div class="offer"><strong>Free evaluation</strong><br>Gold, silver, coins, jewelry, watches, currency, collectibles and related items.</div>
+        </div>
+
+        <div class="evidence-list">
+          <h3>What the campaign already communicates</h3>
+          <ul>
+            <li>One defined market and one event window</li>
+            <li>Clear local venue and hours</li>
+            <li>Free evaluation as the response reason</li>
+            <li>Broad buying categories that make the event relevant to more households</li>
+            <li>Phone, email and website response paths</li>
+            <li>A repeatable roadshow format that can be measured market by market</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="question">
+        <div class="qmark">?</div>
+        <div><strong>The key question</strong><span>For a roadshow like Viera, can Paramount connect the original campaign to calls, web responses, event visits, completed evaluations, and actual purchases—then compare those outcomes against the next market?</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="inner">
+      <p class="kicker">02 · The business question</p>
+      <h2>The useful metric is not traffic. It is completed buying activity by market.</h2>
+      <p>A rotating roadshow model creates a powerful measurement opportunity because every market is effectively its own campaign. If the source survives from the original mail piece through the event outcome, Paramount can learn which markets, offers, response paths, and media combinations deserve more investment.</p>
+      <div class="callout"><strong>The question is simple:</strong> Which roadshow campaigns produce profitable seller transactions—not just calls, clicks, or foot traffic?</div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="inner">
+      <p class="kicker">03 · The measurable acquisition path</p>
+      <h2>Every response should keep the roadshow source attached.</h2>
+      <div class="flow">
+        <div class="step"><strong>Direct Mail</strong><span>Market-specific QR, URL, phone source or response code.</span></div>
+        <div class="step"><strong>Local Page</strong><span>Viera event details, buying categories and one clear next step.</span></div>
+        <div class="step"><strong>Response</strong><span>Call, form, QR visit or map/directions action tagged to Viera.</span></div>
+        <div class="step"><strong>Event Visit</strong><span>Walk-in or appointment tied back to the campaign when possible.</span></div>
+        <div class="step"><strong>Evaluation</strong><span>Item category and evaluation outcome connected to the event record.</span></div>
+        <div class="step"><strong>Purchase</strong><span>Completed transaction attributed back to market and campaign.</span></div>
+      </div>
+      <div class="callout"><strong>Objective:</strong> Market → Campaign → Response → Visit → Evaluation → Purchase.</div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="inner">
+      <p class="kicker">04 · Where measurement can break</p>
+      <h2>The biggest leak is usually between the campaign and the in-person transaction.</h2>
+      <div class="grid2">
+        <div class="card">
+          <h3>Before the event</h3>
+          <ul class="checks">
+            <li>The mail piece sends everyone to a general website instead of a Viera-specific destination</li>
+            <li>QR, phone and web responses are not separated by market or mail drop</li>
+            <li>Local search demand for “gold buyer,” “coin buyer,” or related needs is not connected to the event</li>
+            <li>Someone interested in attending cannot quickly confirm dates, venue, hours and what Paramount buys</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>At the event and after</h3>
+          <ul class="checks">
+            <li>Walk-ins are counted but their original campaign source is unknown</li>
+            <li>Calls and appointments are visible but do not connect to completed evaluations</li>
+            <li>Transactions are known operationally but cannot be compared back to the media source</li>
+            <li>The next roadshow starts without a clear market-by-market acquisition baseline</li>
+          </ul>
+        </div>
+      </div>
+      <div class="callout">The goal is not a complicated reporting stack. It is one simple thread: <strong>Which campaign created which seller and which transaction?</strong></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="inner">
+      <p class="kicker">05 · Viera landing-page concept</p>
+      <h2>Give each roadshow a focused local destination.</h2>
+      <p>The main Paramount site can carry the broader company story. A roadshow page should do something narrower: continue the exact promise made by the flyer, answer the local visitor’s immediate questions, and make every response measurable.</p>
+
+      <div class="mock">
+        <div class="mockbar">
+          <div class="mockbrand">PARAMOUNT · VIERA ROAD SHOW CONCEPT</div>
+          <div class="mocksmall">Private preview · not a live Paramount page</div>
+        </div>
+        <div class="mockbody">
+          <p class="kicker">Viera / Melbourne · September 19–25, 2026</p>
+          <h3>Turn the mail-piece promise into one measurable local destination.</h3>
+          <p>A focused roadshow page could carry the event schedule, Fairfield Inn location, free-evaluation promise, what Paramount buys, a simple “what to expect” section, map/directions, a tracked phone action, and one market-specific response path.</p>
+
+          <div class="event-strip">
+            <div class="event-chip"><strong>When</strong><span>Sat.–Fri. · 10am–5pm</span></div>
+            <div class="event-chip"><strong>Where</strong><span>Fairfield Inn and Suites · Melbourne</span></div>
+            <div class="event-chip"><strong>Reason to visit</strong><span>Free evaluation · multiple buying categories</span></div>
+          </div>
+
+          <a class="mockcta" href="javascript:void(0)" aria-disabled="true">Plan Your Visit · Concept Only</a>
+
+          <div class="metrics">
+            <div class="metric"><strong>Campaign source</strong><span>Mailer / list / drop</span></div>
+            <div class="metric"><strong>Response</strong><span>QR / web / phone</span></div>
+            <div class="metric"><strong>Event outcome</strong><span>Visit / evaluation</span></div>
+            <div class="metric"><strong>Business result</strong><span>Completed purchase</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout"><strong>Concept principle:</strong> One roadshow. One local destination. One measurable outcome path.</div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="inner">
+      <p class="kicker">06 · What we would verify first</p>
+      <h2>Before adding more media, verify what the current Viera campaign can already tell you.</h2>
+      <div class="grid2">
+        <div class="card">
+          <h3>Attribution</h3>
+          <ul class="checks">
+            <li>Can each mail drop or market use a unique URL, QR code, phone source or campaign ID?</li>
+            <li>Can calls, forms and site visits be tied specifically to the Viera roadshow?</li>
+            <li>Can event visits and evaluations retain that original campaign source?</li>
+            <li>Can completed purchases be summarized by market and source?</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Local demand capture</h3>
+          <ul class="checks">
+            <li>Does a Viera roadshow page exist early enough to support local search and paid media?</li>
+            <li>Can the page rank or advertise around the actual buying categories and event location?</li>
+            <li>Are map, phone, QR and directions actions measurable separately?</li>
+            <li>Can retargeting or follow-up support people who show interest but do not attend immediately?</li>
+          </ul>
+        </div>
+      </div>
+      <div class="callout"><strong>First principle:</strong> Measure the current roadshow path before recommending additional media spend.</div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="inner">
+      <p class="kicker">07 · The opportunity</p>
+      <h2>Turn a successful roadshow format into a repeatable market intelligence system.</h2>
+      <p>Paramount already has the valuable part: a clear buying event with a defined market, venue, offer and response reason. The digital opportunity is to make each stop easier to find and easier to measure, then use actual seller and transaction data to improve the next market.</p>
+      <div class="grid2">
+        <div class="card">
+          <h3>Make every market visible</h3>
+          <ul class="checks">
+            <li>Dedicated local event page</li>
+            <li>Campaign-specific calls, forms and QR visits</li>
+            <li>Local search and paid-search coverage where justified</li>
+            <li>Roadshow-to-roadshow comparison</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Connect media to the business result</h3>
+          <ul class="checks">
+            <li>Visits and evaluations</li>
+            <li>Completed purchases</li>
+            <li>Seller acquisition cost by market</li>
+            <li>Evidence for where the next marketing dollar should go</li>
+          </ul>
+        </div>
+      </div>
+      <div class="callout"><strong>The objective:</strong> Get more measurable value from the roadshow marketing Paramount is already doing.</div>
+    </div>
+  </section>
+
+  <section class="close">
+    <div>
+      <h2>Worth 20 minutes to compare notes?</h2>
+      <p>I am not suggesting Paramount replace a direct-mail program that is already creating awareness. I would first want to understand how the Viera campaign is tracked from the mail piece through the event and completed purchase. If that source is being lost anywhere in the path, I can show you a practical way to connect it before the next roadshow market.</p>
+    </div>
+    <a href="mailto:globalconceptsmediallc@gmail.com?subject=Paramount%20Viera%20Road%20Show%20concept">Compare Notes with Andy</a>
+  </section>
+
+  <footer class="footer">
+    <div>Prepared by <strong>Global Concepts Media</strong> · Private concept preview only</div>
+    <div class="version">Version 1.0.0</div>
+  </footer>
+
+  <div class="notice">Conceptual marketing and measurement review only. This page is not affiliated with Paramount Gold Coin and Bullion and does not represent a live Paramount offer, advertisement, or event registration page.</div>
+</div>
+
+<!-- ======================================================
+     PROSPECT VIEW TRACKING
+     ====================================================== -->
+<script>
+(() => {
+  "use strict";
+
+  const FILE_VERSION = "1.0.0";
+  const WORKER =
+    "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+  const ACTION = "prospect-concept-view";
+  const CONCEPT_KEY = "paramount-viera-roadshow-v1";
+  const SESSION_KEY = `gcm-concept-view:${CONCEPT_KEY}`;
+
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("gcm_preview") === "1") {
+    return;
+  }
+
+  try {
+    if (sessionStorage.getItem(SESSION_KEY)) {
+      return;
+    }
+  } catch {}
+
+  const trackView = async () => {
+    if (document.visibilityState !== "visible") {
+      return;
+    }
+
+    try {
+      const response = await fetch(WORKER, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          action: ACTION,
+          conceptKey: CONCEPT_KEY,
+          pagePath: window.location.pathname,
+          pageVersion: FILE_VERSION,
+          viewedAt: new Date().toISOString()
+        }),
+        keepalive: true
+      });
+
+      if (response.ok) {
+        try {
+          sessionStorage.setItem(SESSION_KEY, new Date().toISOString());
+        } catch {}
+      }
+    } catch {}
+  };
+
+  if (document.readyState === "complete") {
+    trackView();
+  } else {
+    window.addEventListener("load", trackView, {once:true});
+  }
+})();
+</script>
+</body>
+</html>
