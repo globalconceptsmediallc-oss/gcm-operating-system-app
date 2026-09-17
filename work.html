@@ -1,9 +1,9 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.19
+   Version: 1.9.20
    Status: FBDT Production Candidate
-   Source: Production work.html 1.9.18
+   Source: Production work.html 1.9.19
    Sprint: Targeted Work Deep-Link Loading
    Purpose: Preserve the complete audited SEMrush evidence and guided
             Investigation workflow while adding a direct D1 entrance for
@@ -19,6 +19,9 @@
    - communications-operational-decision-v3
 
    Audited changes:
+   - v1.9.20 retries the requested client through the normal full-queue path if
+     the client-first fast path fails, so a transient request cannot hide the target.
+   - v1.9.20 preserves the existing saved Investigation Progress parser escaping.
    - v1.9.19 fast-paths client-targeted Investigation and Work Item deep links.
    - Loads and renders the requested client workspace before waiting on the
      remaining agency queue, so Resume Investigation opens the requested record
@@ -182,7 +185,7 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Use Investigation when the correct action is unknown. Use Create Requested Work when the client need and deliverable are already clear.</p></div>
-        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.19</span>
+        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.20</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -267,7 +270,7 @@
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.19"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.20"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),externalValidation:byId("external-validation-list"),target:byId("target-banner"),requestedForm:byId("requested-work-form"),requestedClient:byId("requested-client"),requestedMessage:byId("requested-work-message"),createRequested:byId("create-requested-work")};
   let activeClients=[],directoryClients=[],investigations=[],monitoringInvestigations=[],workItems=[],validationWorkItems=[],selectedKey="",processing=false,processingWorkItem=false,processingRequestedWork=false;
 
@@ -289,12 +292,14 @@
       const targetClient=(requestedInvestigationId||requestedWorkItemId)&&requestedClientCode
         ? activeClients.find(client=>normalizedClientCode(client.code)===requestedClientCode)
         : null;
+      let targetLoaded=false;
 
       if(targetClient){
         setStatus("loading",`Loading ${targetClient.name} first so the requested record can open…`);
         try{
           const targetWorkspace=await loadWorkspace(targetClient);
           ingestWorkspace(targetClient,targetWorkspace);
+          targetLoaded=true;
           sortLoadedRecords();
           renderSummary();
           renderExternalValidationItems();
@@ -305,7 +310,7 @@
         }
       }
 
-      const clientsToLoad=targetClient
+      const clientsToLoad=targetClient&&targetLoaded
         ? activeClients.filter(client=>normalizedClientCode(client.code)!==normalizedClientCode(targetClient.code))
         : activeClients;
       const results=await Promise.allSettled(clientsToLoad.map(loadWorkspace));
@@ -963,7 +968,7 @@
     const readDescriptionField=(label,nextLabel)=>{
       const escaped=label.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
       const next=nextLabel
-        ? `(?=\n\n${nextLabel.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}:|$)`
+        ? `(?=\\n\\n${nextLabel.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}:|$)`
         : "$";
       return description.match(new RegExp(`${escaped}:\\s*([\\s\\S]*?)${next}`))?.[1]?.trim()||"";
     };
