@@ -1,7 +1,7 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/work-target-fastpath-install.yml
-# Version: 1.0.0
+# Version: 1.0.1
 # Status: One-Time Production Installer
 # Purpose: Make targeted Work deep links open before client-directory loading.
 # =========================================================
@@ -38,58 +38,14 @@ jobs:
           path = Path("work.html")
           text = path.read_text()
 
-          old = '''  async function load(){
-            setStatus("loading","Loading open Investigations and Work Items from production D1…");
-            el.refresh.disabled=true;
-            try{
-              directoryClients=await loadClientDirectory();
-              activeClients=directoryClients;
-              renderFilter(activeClients);
-              renderRequestedClientOptions(directoryClients);
-              resetLoadedRecords();
+          start_marker = "  async function load(){"
+          end_marker = "\n  function resetLoadedRecords(){"
+          start = text.find(start_marker)
+          end = text.find(end_marker, start)
+          if start < 0 or end < 0:
+              raise SystemExit("Could not locate Work load() boundaries; refusing to patch.")
 
-              const targetClient=(requestedInvestigationId||requestedWorkItemId)&&requestedClientCode
-                ? activeClients.find(client=>normalizedClientCode(client.code)===requestedClientCode)
-                : null;
-              let targetLoaded=false;
-
-              if(targetClient){
-                setStatus("loading",`Loading ${targetClient.name} first so the requested record can open…`);
-                try{
-                  const targetWorkspace=await loadWorkspace(targetClient);
-                  ingestWorkspace(targetClient,targetWorkspace);
-                  targetLoaded=true;
-                  sortLoadedRecords();
-                  renderSummary();
-                  renderExternalValidationItems();
-                  applyRequestedTarget();
-                  setStatus("loading",`Opened the requested ${targetClient.name} record. Loading the remaining agency queue…`);
-                }catch(error){
-                  console.warn(`Could not fast-path ${targetClient.code}; continuing with the full Work queue.`,error);
-                }
-              }
-
-              const clientsToLoad=targetClient&&targetLoaded
-                ? activeClients.filter(client=>normalizedClientCode(client.code)!==normalizedClientCode(targetClient.code))
-                : activeClients;
-              const results=await Promise.allSettled(clientsToLoad.map(loadWorkspace));
-              results.forEach((result,index)=>{
-                if(result.status!=="fulfilled")return;
-                ingestWorkspace(clientsToLoad[index],result.value);
-              });
-
-              sortLoadedRecords();
-              renderSummary();
-              renderExternalValidationItems();
-              applyRequestedTarget();
-              setStatus("ready",`Loaded ${investigations.length} active Investigation${investigations.length===1?"":"s"}, ${workItems.length} active Work Item${workItems.length===1?"":"s"}, and ${validationWorkItems.length} awaiting external validation.`);
-            }catch(error){
-              console.error(error);setStatus("error",error.message||"Work could not load.");el.list.innerHTML='<div class="empty">Work data unavailable.</div>';
-            }finally{el.refresh.disabled=false;}
-          }
-          '''
-
-          new = '''  async function load(){
+          new_load = '''  async function load(){
             setStatus("loading","Loading open Investigations and Work Items from production D1…");
             el.refresh.disabled=true;
             try{
@@ -153,10 +109,7 @@ jobs:
           }
           '''
 
-          if old not in text:
-              raise SystemExit("Expected v1.9.20 load() block was not found; refusing to patch.")
-
-          text = text.replace(old, new, 1)
+          text = text[:start] + new_load + text[end:]
           text = text.replace("Version: 1.9.20", "Version: 1.9.21", 1)
           text = text.replace("Source: Production work.html 1.9.19", "Source: Production work.html 1.9.20", 1)
           text = text.replace(
@@ -167,16 +120,8 @@ jobs:
               "   - v1.9.21 keeps the requested record usable even if client-directory loading fails.\n",
               1,
           )
-          text = text.replace(
-              "Requested Work + WWPOWD Investigation · v1.9.20",
-              "Requested Work + WWPOWD Investigation · v1.9.21",
-              1,
-          )
-          text = text.replace(
-              "Requested work + WWPOWD investigation · Work v1.9.20",
-              "Requested work + WWPOWD investigation · Work v1.9.21",
-              1,
-          )
+          text = text.replace("Requested Work + WWPOWD Investigation · v1.9.20", "Requested Work + WWPOWD Investigation · v1.9.21", 1)
+          text = text.replace("Requested work + WWPOWD investigation · Work v1.9.20", "Requested work + WWPOWD investigation · Work v1.9.21", 1)
           path.write_text(text)
 
           package_path = Path("package.json")
