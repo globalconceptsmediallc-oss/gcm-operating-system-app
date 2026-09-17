@@ -1,15 +1,23 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/today-gmail-decisions.js
-   Version: 2.3.1
+   Version: 2.3.2
    Status: Production Road-Test Candidate
-   Source: shared/today-gmail-decisions.js 2.1.0 production
-   Sprint: Gmail — Processed Thread Re-entry Guard
+   Source: shared/today-gmail-decisions.js 2.3.1 production
+   Sprint: Gmail — Batch Refresh Quota Safety
    Purpose:
    Make Morning Command a fast human decision surface: show the live source
    email, choose the client, expose every operational route, support immediate
    human action without creating artificial Work, and keep GCM OS as the home
    base until the operator confirms the selected outcome.
+
+   Changes — 2.3.2:
+   - Stops automatically re-fetching the Gmail queue after every successful route.
+   - Removes each processed conversation from the already-loaded browser batch locally.
+   - Keeps the remaining loaded conversations available without another Gmail API scan.
+   - Requires an explicit Refresh Inbox action after the current batch is complete.
+   - Preserves the initial Today load, manual Refresh Inbox, Gmail writes, D1 writes,
+     processed-thread guard, human routing, client selection, and Handle Now behavior.
 
    Changes — 2.3.1:
    - Adds a browser-side processed-thread safety ledger after a successful human route.
@@ -87,8 +95,8 @@
   "use strict";
 
   // Existing shell loader cache key. Installed behavior is HUMAN_ROUTING_VERSION.
-  const FILE_VERSION = "2.3.1";
-  const HUMAN_ROUTING_VERSION = "2.3.1";
+  const FILE_VERSION = "2.3.2";
+  const HUMAN_ROUTING_VERSION = "2.3.2";
   const WORKER_URL =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const PREVIEW = "preview-gmail-inbox";
@@ -518,8 +526,7 @@
       markThreadLocallyProcessed(gmailThreadId, gmailMessageId);
       setStatus("Handle Now complete: action confirmed · Gmail conversation moved to Trash · 0 OS records created.");
       await window.GCMOShell?.refreshNavAttention?.();
-      busy = false;
-      await refreshQueue({ preserveStatus:true });
+      removeProcessedCard(card);
     } catch (error) {
       clearCardBusy(card, `Completion was not cleared: ${error.message}`);
       setStatus(`Handle Now left Gmail unchanged: ${error.message}`);
@@ -543,6 +550,27 @@
     });
     const status = card.querySelector(".gcm-human-gmail-status");
     if (status) status.textContent = text;
+  }
+
+  function removeProcessedCard(card) {
+    card?.remove();
+
+    const remaining = preview
+      ? preview.querySelectorAll(".gcm-human-gmail-card").length
+      : 0;
+
+    if (previewButton) {
+      previewButton.disabled = false;
+      previewButton.textContent = "Refresh Inbox";
+    }
+
+    if (remaining > 0 || !preview) return remaining;
+
+    const empty = document.createElement("div");
+    empty.className = "gcm-human-gmail-empty";
+    empty.textContent = "This Gmail batch is complete. Use Refresh Inbox when you want to check for new conversations.";
+    preview.replaceChildren(empty);
+    return 0;
   }
 
   async function handleDisposition(card, button) {
@@ -578,8 +606,7 @@
       const resultText = buildResultText(result, button.textContent.trim());
       setStatus(resultText);
       await window.GCMOShell?.refreshNavAttention?.();
-      busy = false;
-      await refreshQueue({ preserveStatus:true });
+      removeProcessedCard(card);
     } catch (error) {
       clearCardBusy(card, `Not saved: ${error.message}`);
       setStatus(`Email was left unchanged: ${error.message}`);
