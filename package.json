@@ -1,17 +1,16 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.39",
+  "version": "6.1.40",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.39",
+    "fileVersion": "6.1.40",
     "status": "Production Road-Test Candidate",
-    "purpose": "Deploy targeted client Work deep links and keep the production regression gate aligned with Gmail routing v2.3.2.",
+    "purpose": "Open targeted Work records before client-directory and full-queue loading.",
     "changeNotes": [
-      "Adds authoritative client codes to client-workspace Investigation and Work Item deep links.",
-      "Loads a targeted client first on Work deep links so the requested record opens before the full agency queue finishes loading.",
-      "Preserves the full Work queue by loading remaining client workspaces after the requested record is visible.",
-      "Keeps the Gmail Source Email regression gate aligned with the installed Gmail routing v2.3.2 release.",
-      "Preserves D1 schemas, production records, Work decision rules, and existing evidence workflows."
+      "Uses the authoritative client code already present in Work deep links to load the requested workspace first.",
+      "Opens the targeted Investigation or Work Item before waiting on the agency client directory.",
+      "Keeps the targeted record usable if the directory request fails while preserving normal full-queue loading otherwise.",
+      "Preserves D1 schemas, Work decision rules, evidence workflow, and client-workspace deep-link format."
     ]
   },
   "private": true,
