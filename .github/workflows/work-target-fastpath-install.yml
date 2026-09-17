@@ -1,0 +1,225 @@
+# =========================================================
+# Global Concepts Media Operating System
+# File: .github/workflows/work-target-fastpath-install.yml
+# Version: 1.0.0
+# Status: One-Time Production Installer
+# Purpose: Make targeted Work deep links open before client-directory loading.
+# =========================================================
+
+name: Work Target Fast Path Install
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/work-target-fastpath-install.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Patch Work targeted loading
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+
+          path = Path("work.html")
+          text = path.read_text()
+
+          old = '''  async function load(){
+            setStatus("loading","Loading open Investigations and Work Items from production D1…");
+            el.refresh.disabled=true;
+            try{
+              directoryClients=await loadClientDirectory();
+              activeClients=directoryClients;
+              renderFilter(activeClients);
+              renderRequestedClientOptions(directoryClients);
+              resetLoadedRecords();
+
+              const targetClient=(requestedInvestigationId||requestedWorkItemId)&&requestedClientCode
+                ? activeClients.find(client=>normalizedClientCode(client.code)===requestedClientCode)
+                : null;
+              let targetLoaded=false;
+
+              if(targetClient){
+                setStatus("loading",`Loading ${targetClient.name} first so the requested record can open…`);
+                try{
+                  const targetWorkspace=await loadWorkspace(targetClient);
+                  ingestWorkspace(targetClient,targetWorkspace);
+                  targetLoaded=true;
+                  sortLoadedRecords();
+                  renderSummary();
+                  renderExternalValidationItems();
+                  applyRequestedTarget();
+                  setStatus("loading",`Opened the requested ${targetClient.name} record. Loading the remaining agency queue…`);
+                }catch(error){
+                  console.warn(`Could not fast-path ${targetClient.code}; continuing with the full Work queue.`,error);
+                }
+              }
+
+              const clientsToLoad=targetClient&&targetLoaded
+                ? activeClients.filter(client=>normalizedClientCode(client.code)!==normalizedClientCode(targetClient.code))
+                : activeClients;
+              const results=await Promise.allSettled(clientsToLoad.map(loadWorkspace));
+              results.forEach((result,index)=>{
+                if(result.status!=="fulfilled")return;
+                ingestWorkspace(clientsToLoad[index],result.value);
+              });
+
+              sortLoadedRecords();
+              renderSummary();
+              renderExternalValidationItems();
+              applyRequestedTarget();
+              setStatus("ready",`Loaded ${investigations.length} active Investigation${investigations.length===1?"":"s"}, ${workItems.length} active Work Item${workItems.length===1?"":"s"}, and ${validationWorkItems.length} awaiting external validation.`);
+            }catch(error){
+              console.error(error);setStatus("error",error.message||"Work could not load.");el.list.innerHTML='<div class="empty">Work data unavailable.</div>';
+            }finally{el.refresh.disabled=false;}
+          }
+          '''
+
+          new = '''  async function load(){
+            setStatus("loading","Loading open Investigations and Work Items from production D1…");
+            el.refresh.disabled=true;
+            try{
+              resetLoadedRecords();
+
+              const wantsTarget=Boolean((requestedInvestigationId||requestedWorkItemId)&&requestedClientCode);
+              const directTargetClient=wantsTarget
+                ? {code:requestedClientCode,name:requestedClientCode,website:""}
+                : null;
+              let targetLoaded=false;
+
+              if(directTargetClient){
+                setStatus("loading",`Loading ${requestedClientCode} requested record directly…`);
+                try{
+                  const targetWorkspace=await loadWorkspace(directTargetClient);
+                  ingestWorkspace(directTargetClient,targetWorkspace);
+                  targetLoaded=true;
+                  sortLoadedRecords();
+                  renderSummary();
+                  renderExternalValidationItems();
+                  applyRequestedTarget();
+                  setStatus("loading",`Opened the requested ${requestedClientCode} record. Loading the agency directory in the background…`);
+                }catch(error){
+                  console.warn(`Could not load requested client ${requestedClientCode} directly; continuing with the normal Work queue.`,error);
+                }
+              }
+
+              try{
+                directoryClients=await loadClientDirectory();
+              }catch(error){
+                if(!targetLoaded)throw error;
+                activeClients=[directTargetClient];
+                renderFilter(activeClients);
+                renderRequestedClientOptions(activeClients);
+                applyRequestedTarget();
+                setStatus("ready",`Opened the requested ${requestedClientCode} record. The agency directory did not load, so the rest of the Work queue is temporarily unavailable.`);
+                return;
+              }
+
+              activeClients=directoryClients;
+              renderFilter(activeClients);
+              renderRequestedClientOptions(directoryClients);
+
+              const clientsToLoad=targetLoaded
+                ? activeClients.filter(client=>normalizedClientCode(client.code)!==requestedClientCode)
+                : activeClients;
+              const results=await Promise.allSettled(clientsToLoad.map(loadWorkspace));
+              results.forEach((result,index)=>{
+                if(result.status!=="fulfilled")return;
+                ingestWorkspace(clientsToLoad[index],result.value);
+              });
+
+              sortLoadedRecords();
+              renderSummary();
+              renderExternalValidationItems();
+              applyRequestedTarget();
+              setStatus("ready",`Loaded ${investigations.length} active Investigation${investigations.length===1?"":"s"}, ${workItems.length} active Work Item${workItems.length===1?"":"s"}, and ${validationWorkItems.length} awaiting external validation.`);
+            }catch(error){
+              console.error(error);setStatus("error",error.message||"Work could not load.");el.list.innerHTML='<div class="empty">Work data unavailable.</div>';
+            }finally{el.refresh.disabled=false;}
+          }
+          '''
+
+          if old not in text:
+              raise SystemExit("Expected v1.9.20 load() block was not found; refusing to patch.")
+
+          text = text.replace(old, new, 1)
+          text = text.replace("Version: 1.9.20", "Version: 1.9.21", 1)
+          text = text.replace("Source: Production work.html 1.9.19", "Source: Production work.html 1.9.20", 1)
+          text = text.replace(
+              "   Audited changes:\n",
+              "   Audited changes:\n"
+              "   - v1.9.21 opens a client-targeted Investigation/Work Item directly from the\n"
+              "     client code already present in the deep link before loading the agency directory.\n"
+              "   - v1.9.21 keeps the requested record usable even if client-directory loading fails.\n",
+              1,
+          )
+          text = text.replace(
+              "Requested Work + WWPOWD Investigation · v1.9.20",
+              "Requested Work + WWPOWD Investigation · v1.9.21",
+              1,
+          )
+          text = text.replace(
+              "Requested work + WWPOWD investigation · Work v1.9.20",
+              "Requested work + WWPOWD investigation · Work v1.9.21",
+              1,
+          )
+          path.write_text(text)
+
+          package_path = Path("package.json")
+          package = json.loads(package_path.read_text())
+          package["version"] = "6.1.40"
+          package["gcm"]["fileVersion"] = "6.1.40"
+          package["gcm"]["purpose"] = "Open targeted Work records before client-directory and full-queue loading."
+          package["gcm"]["changeNotes"] = [
+              "Uses the authoritative client code already present in Work deep links to load the requested workspace first.",
+              "Opens the targeted Investigation or Work Item before waiting on the agency client directory.",
+              "Keeps the targeted record usable if the directory request fails while preserving normal full-queue loading otherwise.",
+              "Preserves D1 schemas, Work decision rules, evidence workflow, and client-workspace deep-link format."
+          ]
+          package_path.write_text(json.dumps(package, indent=2) + "\n")
+          PY
+
+      - name: Parse Work inline JavaScript
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const html=fs.readFileSync('work.html','utf8');
+          const scripts=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m=>m[1]).filter(Boolean);
+          for(const script of scripts)new Function(script);
+          console.log(`Parsed ${scripts.length} inline Work script(s).`);
+          NODE
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Production Tests
+        run: npm test
+
+      - name: Validate Patch
+        run: |
+          grep -q 'Version: 1.9.21' work.html
+          grep -q 'Loading ${requestedClientCode} requested record directly' work.html
+          git diff --check
+
+      - name: Commit Installed Application Files
+        run: |
+          git config user.name "globalconceptsmediallc-oss"
+          git config user.email "globalconceptsmediallc@gmail.com"
+          rm .github/workflows/work-target-fastpath-install.yml
+          git add work.html package.json .github/workflows/work-target-fastpath-install.yml
+          git commit -m "Open targeted Work record before directory loading"
+          git push origin HEAD:main
