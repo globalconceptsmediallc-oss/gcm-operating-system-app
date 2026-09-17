@@ -1,10 +1,10 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.18
+   Version: 1.9.19
    Status: FBDT Production Candidate
-   Source: Production work.html 1.9.17
-   Sprint: Durable Investigation Progress
+   Source: Production work.html 1.9.18
+   Sprint: Targeted Work Deep-Link Loading
    Purpose: Preserve the complete audited SEMrush evidence and guided
             Investigation workflow while adding a direct D1 entrance for
             known client-requested work that needs no artificial Investigation.
@@ -19,6 +19,13 @@
    - communications-operational-decision-v3
 
    Audited changes:
+   - v1.9.19 fast-paths client-targeted Investigation and Work Item deep links.
+   - Loads and renders the requested client workspace before waiting on the
+     remaining agency queue, so Resume Investigation opens the requested record
+     instead of leaving the operator at the static Work shell.
+   - Continues loading the remaining client workspaces after the requested
+     record is visible, preserving the full agency Work queue.
+   - Preserves normal full-queue loading when no client-targeted record is requested.
    - Removes unused investigationFamily() and unused page VERSION constant.
    - Eliminates repeated decision calculations during one analysis cycle.
    - Rejects only the exact same screenshot; a new screenshot may be locked even when the decision fingerprint is unchanged.
@@ -175,7 +182,7 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Use Investigation when the correct action is unknown. Use Create Requested Work when the client need and deliverable are already clear.</p></div>
-        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.18</span>
+        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.19</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -260,7 +267,7 @@
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.18"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.19"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),externalValidation:byId("external-validation-list"),target:byId("target-banner"),requestedForm:byId("requested-work-form"),requestedClient:byId("requested-client"),requestedMessage:byId("requested-work-message"),createRequested:byId("create-requested-work")};
   let activeClients=[],directoryClients=[],investigations=[],monitoringInvestigations=[],workItems=[],validationWorkItems=[],selectedKey="",processing=false,processingWorkItem=false,processingRequestedWork=false;
 
@@ -277,47 +284,88 @@
       activeClients=directoryClients;
       renderFilter(activeClients);
       renderRequestedClientOptions(directoryClients);
-      const results=await Promise.allSettled(activeClients.map(loadWorkspace));
-      investigations=[];monitoringInvestigations=[];workItems=[];validationWorkItems=[];
+      resetLoadedRecords();
+
+      const targetClient=(requestedInvestigationId||requestedWorkItemId)&&requestedClientCode
+        ? activeClients.find(client=>normalizedClientCode(client.code)===requestedClientCode)
+        : null;
+
+      if(targetClient){
+        setStatus("loading",`Loading ${targetClient.name} first so the requested record can open…`);
+        try{
+          const targetWorkspace=await loadWorkspace(targetClient);
+          ingestWorkspace(targetClient,targetWorkspace);
+          sortLoadedRecords();
+          renderSummary();
+          renderExternalValidationItems();
+          applyRequestedTarget();
+          setStatus("loading",`Opened the requested ${targetClient.name} record. Loading the remaining agency queue…`);
+        }catch(error){
+          console.warn(`Could not fast-path ${targetClient.code}; continuing with the full Work queue.`,error);
+        }
+      }
+
+      const clientsToLoad=targetClient
+        ? activeClients.filter(client=>normalizedClientCode(client.code)!==normalizedClientCode(targetClient.code))
+        : activeClients;
+      const results=await Promise.allSettled(clientsToLoad.map(loadWorkspace));
       results.forEach((result,index)=>{
         if(result.status!=="fulfilled")return;
-        const client=activeClients[index],op=result.value.operational||{};
-        const communications=Array.isArray(op.communications)?op.communications:[];
-        const communicationById=new Map(communications.map(c=>[Number(c.id),c]));
-        const progressByInvestigation=new Map();
-        (Array.isArray(op.evidence)?op.evidence:[])
-          .filter(entry=>norm(entry.evidence_type)==="investigation_progress"&&positiveInt(entry.investigation_id))
-          .forEach(entry=>{
-            const investigationId=Number(entry.investigation_id);
-            const existing=progressByInvestigation.get(investigationId)||[];
-            existing.push(entry);
-            progressByInvestigation.set(investigationId,existing);
-          });
-        const clientWebsite=normalizeWebsite(
-          op.client?.website_url ||
-          op.client?.website ||
-          op.client?.domain ||
-          op.client?.primary_domain ||
-          client.website
-        );
-        const sourceInvestigations=Array.isArray(op.investigations)?op.investigations:[];
-        const enrichInvestigation=i=>({...i,clientCode:op.client?.client_code||client.code,clientName:op.client?.name||client.name,clientWebsite,communication:communicationById.get(Number(i.communication_id))||null,progressUpdates:progressByInvestigation.get(Number(i.id))||[]});
-        sourceInvestigations.filter(i=>activeInvestigation(i)).forEach(i=>investigations.push(enrichInvestigation(i)));
-        sourceInvestigations.filter(i=>monitoringInvestigation(i)).forEach(i=>monitoringInvestigations.push(enrichInvestigation(i)));
-
-        (Array.isArray(op.workItems)?op.workItems:[]).filter(i=>!completed(i)).forEach(i=>{
-          const mapped={...i,clientCode:op.client?.client_code||client.code,clientName:op.client?.name||client.name,clientWebsite};
-          if(externalValidation(i))validationWorkItems.push(mapped);
-          else workItems.push(mapped);
-        });
+        ingestWorkspace(clientsToLoad[index],result.value);
       });
-      investigations.sort(sortInvestigations);
-      monitoringInvestigations.sort(sortInvestigations);
-      renderSummary();renderExternalValidationItems();applyRequestedTarget();
+
+      sortLoadedRecords();
+      renderSummary();
+      renderExternalValidationItems();
+      applyRequestedTarget();
       setStatus("ready",`Loaded ${investigations.length} active Investigation${investigations.length===1?"":"s"}, ${workItems.length} active Work Item${workItems.length===1?"":"s"}, and ${validationWorkItems.length} awaiting external validation.`);
     }catch(error){
       console.error(error);setStatus("error",error.message||"Work could not load.");el.list.innerHTML='<div class="empty">Work data unavailable.</div>';
     }finally{el.refresh.disabled=false;}
+  }
+
+  function resetLoadedRecords(){
+    investigations=[];
+    monitoringInvestigations=[];
+    workItems=[];
+    validationWorkItems=[];
+  }
+
+  function ingestWorkspace(client,payload){
+    const op=payload?.operational||{};
+    const communications=Array.isArray(op.communications)?op.communications:[];
+    const communicationById=new Map(communications.map(c=>[Number(c.id),c]));
+    const progressByInvestigation=new Map();
+    (Array.isArray(op.evidence)?op.evidence:[])
+      .filter(entry=>norm(entry.evidence_type)==="investigation_progress"&&positiveInt(entry.investigation_id))
+      .forEach(entry=>{
+        const investigationId=Number(entry.investigation_id);
+        const existing=progressByInvestigation.get(investigationId)||[];
+        existing.push(entry);
+        progressByInvestigation.set(investigationId,existing);
+      });
+    const clientWebsite=normalizeWebsite(
+      op.client?.website_url ||
+      op.client?.website ||
+      op.client?.domain ||
+      op.client?.primary_domain ||
+      client.website
+    );
+    const sourceInvestigations=Array.isArray(op.investigations)?op.investigations:[];
+    const enrichInvestigation=i=>({...i,clientCode:op.client?.client_code||client.code,clientName:op.client?.name||client.name,clientWebsite,communication:communicationById.get(Number(i.communication_id))||null,progressUpdates:progressByInvestigation.get(Number(i.id))||[]});
+    sourceInvestigations.filter(i=>activeInvestigation(i)).forEach(i=>investigations.push(enrichInvestigation(i)));
+    sourceInvestigations.filter(i=>monitoringInvestigation(i)).forEach(i=>monitoringInvestigations.push(enrichInvestigation(i)));
+
+    (Array.isArray(op.workItems)?op.workItems:[]).filter(i=>!completed(i)).forEach(i=>{
+      const mapped={...i,clientCode:op.client?.client_code||client.code,clientName:op.client?.name||client.name,clientWebsite};
+      if(externalValidation(i))validationWorkItems.push(mapped);
+      else workItems.push(mapped);
+    });
+  }
+
+  function sortLoadedRecords(){
+    investigations.sort(sortInvestigations);
+    monitoringInvestigations.sort(sortInvestigations);
   }
 
   async function loadAttentionClients(){
@@ -915,7 +963,7 @@
     const readDescriptionField=(label,nextLabel)=>{
       const escaped=label.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
       const next=nextLabel
-        ? `(?=\\n\\n${nextLabel.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}:|$)`
+        ? `(?=\n\n${nextLabel.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}:|$)`
         : "$";
       return description.match(new RegExp(`${escaped}:\\s*([\\s\\S]*?)${next}`))?.[1]?.trim()||"";
     };
