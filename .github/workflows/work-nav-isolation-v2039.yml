@@ -1,0 +1,103 @@
+name: Work Navigation Isolation v2.0.39
+
+on:
+  push:
+    paths:
+      - '.github/workflows/work-nav-isolation-v2039.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  isolate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Disable Work-only enhancement scripts and bump shell version
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('shared/gcm-shell.js')
+          text = path.read_text(encoding='utf-8')
+
+          text = text.replace('Version: 2.0.38', 'Version: 2.0.39', 1)
+          text = text.replace('Source: gcm-shell.js 2.0.37 production navigation', 'Source: gcm-shell.js 2.0.38 production navigation', 1)
+          text = text.replace('Sprint: Gmail — Batch Refresh Quota Safety', 'Sprint: Work Navigation Isolation', 1)
+          text = text.replace('const SHELL_VERSION = "2.0.38";', 'const SHELL_VERSION = "2.0.39";', 1)
+
+          old = '''    if (/\\/work\\.html$/i.test(path)) {
+      appendScript(
+        "shared/work-investigation-completion.js?v=1.4.0",
+        "data-gcm-work-investigation-completion"
+      );
+
+      appendScript(
+        "shared/work-due-date.js?v=1.0.0",
+        "data-gcm-work-due-date"
+      );
+    }
+'''
+
+          new = '''    if (/\\/work\\.html$/i.test(path)) {
+      // v2.0.39 isolation test: Work-only enhancement scripts are temporarily
+      // disabled to verify whether either script is causing Safari to become
+      // unresponsive and preventing navigation away from Work. Core Work,
+      // shared navigation, D1 data, and Worker routes remain unchanged.
+      console.info(
+        `GCM OS Shell ${SHELL_VERSION}: Work enhancement scripts temporarily disabled for navigation isolation.`
+      );
+    }
+'''
+
+          if old not in text:
+              raise SystemExit('Expected Work enhancement block was not found; refusing to modify shell.')
+
+          text = text.replace(old, new, 1)
+          path.write_text(text, encoding='utf-8')
+
+      - name: Parse Shared Shell JavaScript
+        run: node --check shared/gcm-shell.js
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Production Tests
+        run: npm test
+
+      - name: Validate Isolation Release
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path('shared/gcm-shell.js').read_text(encoding='utf-8')
+          required = [
+              'Version: 2.0.39',
+              'const SHELL_VERSION = "2.0.39";',
+              'Work enhancement scripts temporarily disabled for navigation isolation.'
+          ]
+          for item in required:
+              if item not in text:
+                  raise SystemExit(f'Missing expected isolation marker: {item}')
+          forbidden = [
+              'shared/work-investigation-completion.js?v=1.4.0',
+              'shared/work-due-date.js?v=1.0.0'
+          ]
+          for item in forbidden:
+              if item in text:
+                  raise SystemExit(f'Work-only script is still being auto-loaded: {item}')
+
+      - name: Commit Isolation Release
+        run: |
+          git config user.name "globalconceptsmediallc-oss"
+          git config user.email "globalconceptsmediallc@gmail.com"
+          git add shared/gcm-shell.js
+          if git diff --cached --quiet; then
+            echo "No shell changes to commit."
+            exit 0
+          fi
+          git commit -m "Isolate Work navigation from enhancement scripts v2.0.39"
+          git push origin HEAD:main
