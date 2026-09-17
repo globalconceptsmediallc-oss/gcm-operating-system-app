@@ -1,23 +1,23 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gcm-shell.js
-   Version: 2.0.37
+   Version: 2.0.38
    Status: Production Road-Test Candidate
    Purpose: Shared internal GCM OS application shell foundation.
-   Source: gcm-shell.js 2.0.36 production navigation
-   Sprint: Work — Direct Investigation Intake
+   Source: gcm-shell.js 2.0.37 production navigation
+   Sprint: Gmail — Batch Refresh Quota Safety
    Change:
-   - Loads Work Investigation Completion/Intake enhancement v1.4.0 so the
-     Work page exposes direct evidence-based Investigation creation.
-   - Preserves MediaForge routing, Gmail Human Routing v2.3.1,
+   - Loads Gmail Human Routing v2.3.2 so Morning Command processes the loaded
+     Gmail batch locally instead of re-fetching Gmail after every decision.
+   - Preserves Work Investigation Completion/Intake v1.4.0, MediaForge routing,
      Media Dashboard Creative Queue v1.1.2, Calendar Durable Sync,
-     Media Production Sessions, Prospect Next Action, and existing Work enhancements.
+     Media Production Sessions, Prospect Next Action, and existing enhancements.
    ========================================================= */
 
 (() => {
   "use strict";
 
-  const SHELL_VERSION = "2.0.37";
+  const SHELL_VERSION = "2.0.38";
   const WORKER_ENDPOINT =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const MISSION_CONTROL_ACTION = "get-mission-control";
@@ -281,7 +281,7 @@
 
     if (/\/today\.html$/i.test(path)) {
       appendScript(
-        "shared/today-gmail-decisions.js?v=2.3.1",
+        "shared/today-gmail-decisions.js?v=2.3.2",
         "data-gcm-today-gmail-decisions"
       );
     }
