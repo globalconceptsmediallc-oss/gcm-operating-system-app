@@ -1,0 +1,162 @@
+# =========================================================
+# Global Concepts Media Operating System
+# File: .github/workflows/work-load-recovery-install.yml
+# Version: 1.0.0
+# Status: One-Time Production Recovery Installer
+# Purpose: Restore the proven pre-deep-link Work Queue loading path while
+#          preserving current D1 records, Gmail fixes, client links, and
+#          all other production files.
+# =========================================================
+
+name: Work Load Recovery Install
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/work-load-recovery-install.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Restore stable Work loading path
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+
+          path = Path("work.html")
+          text = path.read_text()
+
+          start_marker = "  async function load(){"
+          end_marker = "\n  function resetLoadedRecords(){"
+          start = text.find(start_marker)
+          end = text.find(end_marker, start)
+          if start < 0 or end < 0:
+              raise SystemExit("Could not locate current Work load() boundaries; refusing recovery.")
+
+          stable_load = '''  async function load(){
+            setStatus("loading","Loading open Investigations and Work Items from production D1…");
+            el.refresh.disabled=true;
+            try{
+              directoryClients=await loadClientDirectory();
+              activeClients=directoryClients;
+              renderFilter(activeClients);
+              renderRequestedClientOptions(directoryClients);
+              const results=await Promise.allSettled(activeClients.map(loadWorkspace));
+              investigations=[];monitoringInvestigations=[];workItems=[];validationWorkItems=[];
+              results.forEach((result,index)=>{
+                if(result.status!=="fulfilled")return;
+                const client=activeClients[index],op=result.value.operational||{};
+                const communications=Array.isArray(op.communications)?op.communications:[];
+                const communicationById=new Map(communications.map(c=>[Number(c.id),c]));
+                const progressByInvestigation=new Map();
+                (Array.isArray(op.evidence)?op.evidence:[])
+                  .filter(entry=>norm(entry.evidence_type)==="investigation_progress"&&positiveInt(entry.investigation_id))
+                  .forEach(entry=>{
+                    const investigationId=Number(entry.investigation_id);
+                    const existing=progressByInvestigation.get(investigationId)||[];
+                    existing.push(entry);
+                    progressByInvestigation.set(investigationId,existing);
+                  });
+                const clientWebsite=normalizeWebsite(
+                  op.client?.website_url ||
+                  op.client?.website ||
+                  op.client?.domain ||
+                  op.client?.primary_domain ||
+                  client.website
+                );
+                const sourceInvestigations=Array.isArray(op.investigations)?op.investigations:[];
+                const enrichInvestigation=i=>({...i,clientCode:op.client?.client_code||client.code,clientName:op.client?.name||client.name,clientWebsite,communication:communicationById.get(Number(i.communication_id))||null,progressUpdates:progressByInvestigation.get(Number(i.id))||[]});
+                sourceInvestigations.filter(i=>activeInvestigation(i)).forEach(i=>investigations.push(enrichInvestigation(i)));
+                sourceInvestigations.filter(i=>monitoringInvestigation(i)).forEach(i=>monitoringInvestigations.push(enrichInvestigation(i)));
+
+                (Array.isArray(op.workItems)?op.workItems:[]).filter(i=>!completed(i)).forEach(i=>{
+                  const mapped={...i,clientCode:op.client?.client_code||client.code,clientName:op.client?.name||client.name,clientWebsite};
+                  if(externalValidation(i))validationWorkItems.push(mapped);
+                  else workItems.push(mapped);
+                });
+              });
+              investigations.sort(sortInvestigations);
+              monitoringInvestigations.sort(sortInvestigations);
+              renderSummary();renderExternalValidationItems();applyRequestedTarget();
+              setStatus("ready",`Loaded ${investigations.length} active Investigation${investigations.length===1?"":"s"}, ${workItems.length} active Work Item${workItems.length===1?"":"s"}, and ${validationWorkItems.length} awaiting external validation.`);
+            }catch(error){
+              console.error(error);setStatus("error",error.message||"Work could not load.");el.list.innerHTML='<div class="empty">Work data unavailable.</div>';
+            }finally{el.refresh.disabled=false;}
+          }
+          '''
+
+          text = text[:start] + stable_load + text[end:]
+          text = text.replace("Version: 1.9.21", "Version: 1.9.22", 1)
+          text = text.replace("Source: Production work.html 1.9.20", "Source: Production work.html 1.9.21", 1)
+          text = text.replace(
+              "   Audited changes:\n",
+              "   Audited changes:\n"
+              "   - v1.9.22 RECOVERY restores the proven pre-deep-link full Work Queue loading path.\n"
+              "   - v1.9.22 removes the new target-first loading behavior from page startup while preserving\n"
+              "     current D1 records, client links, Investigation logic, Work Item logic, and Gmail fixes.\n"
+              "   - v1.9.22 is a browser-lock recovery release; no D1 schema or Worker route changed.\n",
+              1,
+          )
+          text = text.replace("Requested Work + WWPOWD Investigation · v1.9.21", "Requested Work + WWPOWD Investigation · v1.9.22", 1)
+          text = text.replace("Requested work + WWPOWD investigation · Work v1.9.21", "Requested work + WWPOWD investigation · Work v1.9.22", 1)
+          path.write_text(text)
+
+          package_path = Path("package.json")
+          package = json.loads(package_path.read_text())
+          package["version"] = "6.1.41"
+          package["gcm"]["fileVersion"] = "6.1.41"
+          package["gcm"]["purpose"] = "Recover stable Work Queue loading after browser-lock regression."
+          package["gcm"]["changeNotes"] = [
+              "Restores the proven pre-deep-link full Work Queue startup loading sequence.",
+              "Removes target-first startup loading as the browser-lock recovery action.",
+              "Preserves current D1 records, Gmail fixes, client workspace links, Investigation rules, and Work Item rules.",
+              "No D1 schema or Worker route changes."
+          ]
+          package_path.write_text(json.dumps(package, indent=2) + "\n")
+          PY
+
+      - name: Parse Work inline JavaScript
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const html=fs.readFileSync('work.html','utf8');
+          const scripts=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m=>m[1]).filter(Boolean);
+          for(const script of scripts)new Function(script);
+          console.log(`Parsed ${scripts.length} inline Work script(s).`);
+          NODE
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Production Tests
+        run: npm test
+
+      - name: Validate Recovery
+        run: |
+          grep -q 'Version: 1.9.22' work.html
+          grep -q 'const results=await Promise.allSettled(activeClients.map(loadWorkspace));' work.html
+          grep -q 'v1.9.22 RECOVERY' work.html
+          git diff --check
+
+      - name: Commit Recovery
+        run: |
+          git config user.name "globalconceptsmediallc-oss"
+          git config user.email "globalconceptsmediallc@gmail.com"
+          rm .github/workflows/work-load-recovery-install.yml
+          git add work.html package.json .github/workflows/work-load-recovery-install.yml
+          git commit -m "Recover stable Work Queue loading v1.9.22"
+          git push origin HEAD:main
