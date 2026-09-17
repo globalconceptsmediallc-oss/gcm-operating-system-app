@@ -1,9 +1,13 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/gmailThreadRouting.test.js
-   Version: 1.0.2
+   Version: 1.0.3
    Status: Production Regression Test
    Purpose: Lock Morning Command to one human decision per Gmail conversation.
+   Change notes — 1.0.3:
+   - Aligns the frontend version contract with installed Gmail decision routing v2.3.2.
+   - Preserves the one-thread/one-decision routing contract while allowing the
+     quota-safety release to remove processed cards locally.
    ========================================================= */
 
 import assert from "node:assert/strict";
@@ -15,8 +19,8 @@ const frontend = fs.readFileSync(new URL("../shared/today-gmail-decisions.js", i
 assert.doesNotThrow(() => new Function(frontend));
 assert.match(backend, /Version: 2\.2\.2/);
 assert.match(backend, /GMAIL_HUMAN_ROUTING_VERSION = "2\.2\.2"/);
-assert.match(frontend, /Version: 2\.3\.1/);
-assert.match(frontend, /HUMAN_ROUTING_VERSION = "2\.3\.1"/);
+assert.match(frontend, /Version: 2\.3\.2/);
+assert.match(frontend, /HUMAN_ROUTING_VERSION = "2\.3\.2"/);
 
 assert.match(backend, /function groupListedMessagesByThread\(items\)/);
 assert.match(backend, /findProcessedGmailThreads\(db, threadGroups\)/);
@@ -45,5 +49,6 @@ assert.match(frontend, /post\(ROUTE, \{ gmailMessageId, gmailThreadId, dispositi
 assert.match(frontend, /post\(DELETE, \{ gmailMessageId, gmailThreadId \}\)/);
 assert.match(frontend, /unprocessed Gmail conversation/);
 assert.match(frontend, /One route applies to the whole Gmail thread/);
+assert.match(frontend, /removeProcessedCard\(card\)/);
 
-console.log("PASS Gmail Morning Command groups replies into one chronological conversation and applies one route to the whole thread");
+console.log("PASS Gmail Morning Command groups replies into one chronological conversation, applies one route to the whole thread, and removes processed conversations locally");
