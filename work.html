@@ -1,10 +1,10 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.22
+   Version: 1.9.23
    Status: FBDT Production Candidate
-   Source: Production work.html 1.9.21
-   Sprint: Targeted Work Deep-Link Loading
+   Source: Stable production work.html 1.9.18
+   Sprint: Work Queue Full Recovery
    Purpose: Preserve the complete audited SEMrush evidence and guided
             Investigation workflow while adding a direct D1 entrance for
             known client-requested work that needs no artificial Investigation.
@@ -19,23 +19,10 @@
    - communications-operational-decision-v3
 
    Audited changes:
-   - v1.9.22 RECOVERY restores the proven pre-deep-link full Work Queue loading path.
-   - v1.9.22 removes the new target-first loading behavior from page startup while preserving
-     current D1 records, client links, Investigation logic, Work Item logic, and Gmail fixes.
-   - v1.9.22 is a browser-lock recovery release; no D1 schema or Worker route changed.
-   - v1.9.21 opens a client-targeted Investigation/Work Item directly from the
-     client code already present in the deep link before loading the agency directory.
-   - v1.9.21 keeps the requested record usable even if client-directory loading fails.
-   - v1.9.20 retries the requested client through the normal full-queue path if
-     the client-first fast path fails, so a transient request cannot hide the target.
-   - v1.9.20 preserves the existing saved Investigation Progress parser escaping.
-   - v1.9.19 fast-paths client-targeted Investigation and Work Item deep links.
-   - Loads and renders the requested client workspace before waiting on the
-     remaining agency queue, so Resume Investigation opens the requested record
-     instead of leaving the operator at the static Work shell.
-   - Continues loading the remaining client workspaces after the requested
-     record is visible, preserving the full agency Work queue.
-   - Preserves normal full-queue loading when no client-targeted record is requested.
+   - v1.9.23 FULL RECOVERY restores the entire proven pre-deep-link Work page, not only load().
+   - Removes all Work-page changes introduced after the stable 1.9.18 production state.
+   - Preserves live D1 data, current Worker routes, Gmail fixes, Investigations, and Work Items.
+   - No D1 schema, production record, or Worker route is modified by this recovery.
    - Removes unused investigationFamily() and unused page VERSION constant.
    - Eliminates repeated decision calculations during one analysis cycle.
    - Rejects only the exact same screenshot; a new screenshot may be locked even when the decision fingerprint is unchanged.
@@ -192,7 +179,7 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Use Investigation when the correct action is unknown. Use Create Requested Work when the client need and deliverable are already clear.</p></div>
-        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.22</span>
+        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.23</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -277,7 +264,7 @@
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.22"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.23"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),externalValidation:byId("external-validation-list"),target:byId("target-banner"),requestedForm:byId("requested-work-form"),requestedClient:byId("requested-client"),requestedMessage:byId("requested-work-message"),createRequested:byId("create-requested-work")};
   let activeClients=[],directoryClients=[],investigations=[],monitoringInvestigations=[],workItems=[],validationWorkItems=[],selectedKey="",processing=false,processingWorkItem=false,processingRequestedWork=false;
 
@@ -287,98 +274,54 @@
   load();
 
   async function load(){
-  setStatus("loading","Loading open Investigations and Work Items from production D1…");
-  el.refresh.disabled=true;
-  try{
-    directoryClients=await loadClientDirectory();
-    activeClients=directoryClients;
-    renderFilter(activeClients);
-    renderRequestedClientOptions(directoryClients);
-    const results=await Promise.allSettled(activeClients.map(loadWorkspace));
-    investigations=[];monitoringInvestigations=[];workItems=[];validationWorkItems=[];
-    results.forEach((result,index)=>{
-      if(result.status!=="fulfilled")return;
-      const client=activeClients[index],op=result.value.operational||{};
-      const communications=Array.isArray(op.communications)?op.communications:[];
-      const communicationById=new Map(communications.map(c=>[Number(c.id),c]));
-      const progressByInvestigation=new Map();
-      (Array.isArray(op.evidence)?op.evidence:[])
-        .filter(entry=>norm(entry.evidence_type)==="investigation_progress"&&positiveInt(entry.investigation_id))
-        .forEach(entry=>{
-          const investigationId=Number(entry.investigation_id);
-          const existing=progressByInvestigation.get(investigationId)||[];
-          existing.push(entry);
-          progressByInvestigation.set(investigationId,existing);
+    setStatus("loading","Loading open Investigations and Work Items from production D1…");
+    el.refresh.disabled=true;
+    try{
+      directoryClients=await loadClientDirectory();
+      activeClients=directoryClients;
+      renderFilter(activeClients);
+      renderRequestedClientOptions(directoryClients);
+      const results=await Promise.allSettled(activeClients.map(loadWorkspace));
+      investigations=[];monitoringInvestigations=[];workItems=[];validationWorkItems=[];
+      results.forEach((result,index)=>{
+        if(result.status!=="fulfilled")return;
+        const client=activeClients[index],op=result.value.operational||{};
+        const communications=Array.isArray(op.communications)?op.communications:[];
+        const communicationById=new Map(communications.map(c=>[Number(c.id),c]));
+        const progressByInvestigation=new Map();
+        (Array.isArray(op.evidence)?op.evidence:[])
+          .filter(entry=>norm(entry.evidence_type)==="investigation_progress"&&positiveInt(entry.investigation_id))
+          .forEach(entry=>{
+            const investigationId=Number(entry.investigation_id);
+            const existing=progressByInvestigation.get(investigationId)||[];
+            existing.push(entry);
+            progressByInvestigation.set(investigationId,existing);
+          });
+        const clientWebsite=normalizeWebsite(
+          op.client?.website_url ||
+          op.client?.website ||
+          op.client?.domain ||
+          op.client?.primary_domain ||
+          client.website
+        );
+        const sourceInvestigations=Array.isArray(op.investigations)?op.investigations:[];
+        const enrichInvestigation=i=>({...i,clientCode:op.client?.client_code||client.code,clientName:op.client?.name||client.name,clientWebsite,communication:communicationById.get(Number(i.communication_id))||null,progressUpdates:progressByInvestigation.get(Number(i.id))||[]});
+        sourceInvestigations.filter(i=>activeInvestigation(i)).forEach(i=>investigations.push(enrichInvestigation(i)));
+        sourceInvestigations.filter(i=>monitoringInvestigation(i)).forEach(i=>monitoringInvestigations.push(enrichInvestigation(i)));
+
+        (Array.isArray(op.workItems)?op.workItems:[]).filter(i=>!completed(i)).forEach(i=>{
+          const mapped={...i,clientCode:op.client?.client_code||client.code,clientName:op.client?.name||client.name,clientWebsite};
+          if(externalValidation(i))validationWorkItems.push(mapped);
+          else workItems.push(mapped);
         });
-      const clientWebsite=normalizeWebsite(
-        op.client?.website_url ||
-        op.client?.website ||
-        op.client?.domain ||
-        op.client?.primary_domain ||
-        client.website
-      );
-      const sourceInvestigations=Array.isArray(op.investigations)?op.investigations:[];
-      const enrichInvestigation=i=>({...i,clientCode:op.client?.client_code||client.code,clientName:op.client?.name||client.name,clientWebsite,communication:communicationById.get(Number(i.communication_id))||null,progressUpdates:progressByInvestigation.get(Number(i.id))||[]});
-      sourceInvestigations.filter(i=>activeInvestigation(i)).forEach(i=>investigations.push(enrichInvestigation(i)));
-      sourceInvestigations.filter(i=>monitoringInvestigation(i)).forEach(i=>monitoringInvestigations.push(enrichInvestigation(i)));
-
-      (Array.isArray(op.workItems)?op.workItems:[]).filter(i=>!completed(i)).forEach(i=>{
-        const mapped={...i,clientCode:op.client?.client_code||client.code,clientName:op.client?.name||client.name,clientWebsite};
-        if(externalValidation(i))validationWorkItems.push(mapped);
-        else workItems.push(mapped);
       });
-    });
-    investigations.sort(sortInvestigations);
-    monitoringInvestigations.sort(sortInvestigations);
-    renderSummary();renderExternalValidationItems();applyRequestedTarget();
-    setStatus("ready",`Loaded ${investigations.length} active Investigation${investigations.length===1?"":"s"}, ${workItems.length} active Work Item${workItems.length===1?"":"s"}, and ${validationWorkItems.length} awaiting external validation.`);
-  }catch(error){
-    console.error(error);setStatus("error",error.message||"Work could not load.");el.list.innerHTML='<div class="empty">Work data unavailable.</div>';
-  }finally{el.refresh.disabled=false;}
-}
-
-  function resetLoadedRecords(){
-    investigations=[];
-    monitoringInvestigations=[];
-    workItems=[];
-    validationWorkItems=[];
-  }
-
-  function ingestWorkspace(client,payload){
-    const op=payload?.operational||{};
-    const communications=Array.isArray(op.communications)?op.communications:[];
-    const communicationById=new Map(communications.map(c=>[Number(c.id),c]));
-    const progressByInvestigation=new Map();
-    (Array.isArray(op.evidence)?op.evidence:[])
-      .filter(entry=>norm(entry.evidence_type)==="investigation_progress"&&positiveInt(entry.investigation_id))
-      .forEach(entry=>{
-        const investigationId=Number(entry.investigation_id);
-        const existing=progressByInvestigation.get(investigationId)||[];
-        existing.push(entry);
-        progressByInvestigation.set(investigationId,existing);
-      });
-    const clientWebsite=normalizeWebsite(
-      op.client?.website_url ||
-      op.client?.website ||
-      op.client?.domain ||
-      op.client?.primary_domain ||
-      client.website
-    );
-    const sourceInvestigations=Array.isArray(op.investigations)?op.investigations:[];
-    const enrichInvestigation=i=>({...i,clientCode:op.client?.client_code||client.code,clientName:op.client?.name||client.name,clientWebsite,communication:communicationById.get(Number(i.communication_id))||null,progressUpdates:progressByInvestigation.get(Number(i.id))||[]});
-    sourceInvestigations.filter(i=>activeInvestigation(i)).forEach(i=>investigations.push(enrichInvestigation(i)));
-    sourceInvestigations.filter(i=>monitoringInvestigation(i)).forEach(i=>monitoringInvestigations.push(enrichInvestigation(i)));
-
-    (Array.isArray(op.workItems)?op.workItems:[]).filter(i=>!completed(i)).forEach(i=>{
-      const mapped={...i,clientCode:op.client?.client_code||client.code,clientName:op.client?.name||client.name,clientWebsite};
-      if(externalValidation(i))validationWorkItems.push(mapped);
-      else workItems.push(mapped);
-    });
-  }
-
-  function sortLoadedRecords(){
-    investigations.sort(sortInvestigations);
-    monitoringInvestigations.sort(sortInvestigations);
+      investigations.sort(sortInvestigations);
+      monitoringInvestigations.sort(sortInvestigations);
+      renderSummary();renderExternalValidationItems();applyRequestedTarget();
+      setStatus("ready",`Loaded ${investigations.length} active Investigation${investigations.length===1?"":"s"}, ${workItems.length} active Work Item${workItems.length===1?"":"s"}, and ${validationWorkItems.length} awaiting external validation.`);
+    }catch(error){
+      console.error(error);setStatus("error",error.message||"Work could not load.");el.list.innerHTML='<div class="empty">Work data unavailable.</div>';
+    }finally{el.refresh.disabled=false;}
   }
 
   async function loadAttentionClients(){

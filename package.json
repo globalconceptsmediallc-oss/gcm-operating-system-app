@@ -1,16 +1,16 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.41",
+  "version": "6.1.42",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.41",
+    "fileVersion": "6.1.42",
     "status": "Production Road-Test Candidate",
-    "purpose": "Recover stable Work Queue loading after browser-lock regression.",
+    "purpose": "Full Work Queue browser-lock recovery using the proven pre-deep-link production page.",
     "changeNotes": [
-      "Restores the proven pre-deep-link full Work Queue startup loading sequence.",
-      "Removes target-first startup loading as the browser-lock recovery action.",
-      "Preserves current D1 records, Gmail fixes, client workspace links, Investigation rules, and Work Item rules.",
-      "No D1 schema or Worker route changes."
+      "Restores the complete Work page from stable production Work 1.9.18 and publishes it as 1.9.23.",
+      "Removes all post-1.9.18 Work page changes while retaining current live data and backend routes.",
+      "Leaves Gmail fixes, D1 records, Investigations, Work Items, schemas, and Worker routes unchanged.",
+      "Recovery target is Safari browser responsiveness before reintroducing deep-link behavior."
     ]
   },
   "private": true,
