@@ -1,16 +1,16 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.40",
+  "version": "6.1.41",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.40",
+    "fileVersion": "6.1.41",
     "status": "Production Road-Test Candidate",
-    "purpose": "Open targeted Work records before client-directory and full-queue loading.",
+    "purpose": "Recover stable Work Queue loading after browser-lock regression.",
     "changeNotes": [
-      "Uses the authoritative client code already present in Work deep links to load the requested workspace first.",
-      "Opens the targeted Investigation or Work Item before waiting on the agency client directory.",
-      "Keeps the targeted record usable if the directory request fails while preserving normal full-queue loading otherwise.",
-      "Preserves D1 schemas, Work decision rules, evidence workflow, and client-workspace deep-link format."
+      "Restores the proven pre-deep-link full Work Queue startup loading sequence.",
+      "Removes target-first startup loading as the browser-lock recovery action.",
+      "Preserves current D1 records, Gmail fixes, client workspace links, Investigation rules, and Work Item rules.",
+      "No D1 schema or Worker route changes."
     ]
   },
   "private": true,
