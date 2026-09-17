@@ -1,12 +1,16 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/gmailHandleNow.test.js
-   Version: 1.2.1
+   Version: 1.2.2
    Status: Production Regression Test
    Purpose: Lock the Morning Command Handle Now boundary so immediate human
             actions keep GCM OS as the home base, open external tasks beside it,
             do not create OS records, and do not clear Gmail until the operator
             explicitly confirms the action is complete.
+   Change notes — 1.2.2:
+   - Updates the production Gmail decision-surface contract to 2.3.2.
+   - Requires successful Handle Now completion to remove the processed card locally
+     instead of automatically re-fetching Gmail and consuming another API scan.
    ========================================================= */
 
 import assert from "node:assert/strict";
@@ -18,8 +22,8 @@ const source = fs.readFileSync(
 );
 
 assert.doesNotThrow(() => new Function(source));
-assert.match(source, /Version: 2\.3\.1/);
-assert.match(source, /const HUMAN_ROUTING_VERSION = "2\.3\.1"/);
+assert.match(source, /Version: 2\.3\.2/);
+assert.match(source, /const HUMAN_ROUTING_VERSION = "2\.3\.2"/);
 
 assert.match(source, />Handle Now<\/button>/);
 assert.match(source, /Open Email in Gmail ↗/);
@@ -57,6 +61,10 @@ assert.ok(completeHandleNow, "Handle Now completion function must exist");
 assert.match(completeHandleNow, /post\(DELETE, \{ gmailMessageId, gmailThreadId \}\)/);
 assert.match(completeHandleNow, /gmailMovedToTrash/);
 assert.match(completeHandleNow, /0 OS records created/);
-assert.match(completeHandleNow, /refreshQueue\(\{ preserveStatus:true \}\)/);
+assert.match(completeHandleNow, /removeProcessedCard\(card\)/);
+assert.doesNotMatch(completeHandleNow, /refreshQueue\(/);
 
-console.log("PASS Gmail Handle Now keeps GCM OS as home base, opens task links beside it, and clears Gmail only after explicit completion");
+assert.match(source, /function removeProcessedCard\(card\)/);
+assert.match(source, /This Gmail batch is complete\. Use Refresh Inbox when you want to check for new conversations\./);
+
+console.log("PASS Gmail Handle Now keeps GCM OS as home base, clears Gmail only after explicit completion, and removes the processed card without an automatic Gmail re-scan");
