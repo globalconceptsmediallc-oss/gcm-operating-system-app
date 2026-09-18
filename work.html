@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.23
+   Version: 1.9.24
    Status: FBDT Production Candidate
    Source: Stable production work.html 1.9.18
    Sprint: Work Queue Full Recovery
@@ -19,6 +19,10 @@
    - communications-operational-decision-v3
 
    Audited changes:
+   - v1.9.24 makes the Evidence Workflow progress rows real navigation controls without changing completion rules.
+   - CURRENT and COMPLETE steps are clickable and keyboard-accessible; WAITING steps remain disabled.
+   - Workflow navigation jumps to the matching evidence source, capture, analysis, findings, decision, or work control.
+   - The active step is brought into view when an Investigation renders.
    - v1.9.23 FULL RECOVERY restores the entire proven pre-deep-link Work page, not only load().
    - Removes all Work-page changes introduced after the stable 1.9.18 production state.
    - Preserves live D1 data, current Worker routes, Gmail fixes, Investigations, and Work Items.
@@ -163,6 +167,10 @@
     .evidence-step.active{border:2px solid var(--blue);background:var(--blue-soft)}
     .evidence-step.active .evidence-step-index{background:var(--blue);color:#fff}
     .evidence-step.active .evidence-step-status{color:var(--blue)}
+    .evidence-step.navigable{cursor:pointer;transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease}
+    .evidence-step.navigable:hover{border-color:#86afe8;box-shadow:0 5px 14px rgba(31,111,214,.11);transform:translateY(-1px)}
+    .evidence-step.navigable:focus{outline:3px solid rgba(31,111,214,.22);outline-offset:2px}
+    .evidence-step.waiting{cursor:not-allowed;opacity:.72}
     .evidence-workflow-actions{display:flex;justify-content:flex-end;margin-top:10px}
     .progress-history{margin-top:14px;padding:14px;border:1px solid #cbdcf4;border-radius:10px;background:#f8fbff}.progress-history h4{margin:0;color:var(--navy);font-size:.82rem}.progress-history p{margin:5px 0 0;color:var(--muted);font-size:.72rem;line-height:1.4}.progress-history-list{display:grid;gap:9px;margin-top:11px}.progress-history-entry{padding:11px;border:1px solid var(--border);border-radius:9px;background:#fff}.progress-history-entry strong{display:block;color:var(--navy);font-size:.75rem}.progress-history-entry dl{display:grid;gap:7px;margin:9px 0 0}.progress-history-entry dt{color:var(--muted);font-size:.65rem;font-weight:900;letter-spacing:.05em;text-transform:uppercase}.progress-history-entry dd{margin:2px 0 0;color:var(--text);font-size:.74rem;line-height:1.45;white-space:pre-wrap}
     @media(max-width:700px){.evidence-step{grid-template-columns:28px minmax(0,1fr)}.evidence-step-status{grid-column:2}.evidence-workflow-header{flex-direction:column}}
@@ -179,7 +187,7 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Use Investigation when the correct action is unknown. Use Create Requested Work when the client need and deliverable are already clear.</p></div>
-        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.23</span>
+        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.24</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -264,7 +272,7 @@
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.23"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.24"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),externalValidation:byId("external-validation-list"),target:byId("target-banner"),requestedForm:byId("requested-work-form"),requestedClient:byId("requested-client"),requestedMessage:byId("requested-work-message"),createRequested:byId("create-requested-work")};
   let activeClients=[],directoryClients=[],investigations=[],monitoringInvestigations=[],workItems=[],validationWorkItems=[],selectedKey="",processing=false,processingWorkItem=false,processingRequestedWork=false;
 
@@ -596,10 +604,73 @@
     updateDecisionControls({rootCauseProven:false});
   }
   function nextIncompleteStep(state){return EVIDENCE_STEPS.find(step=>!state[step.id])?.id||"";}
-  function buildEvidenceWorkflow(item){const state=getEvidenceWorkflowState(item);const completed=EVIDENCE_STEPS.filter(step=>state[step.id]).length;return `<section class="evidence-workflow" id="evidence-workflow"><div class="evidence-workflow-header"><div><h4>Evidence Workflow</h4><p>Follow the investigation in order. The next required step is highlighted.</p></div><span class="workflow-progress" id="workflow-progress">${completed} of ${EVIDENCE_STEPS.length} complete</span></div><ol class="evidence-step-list" id="evidence-step-list"></ol><div class="evidence-workflow-actions"><button class="button" id="reset-evidence-workflow" type="button">Reset Road Test</button></div></section>`;}
-  function renderEvidenceWorkflowState(item){const list=byId("evidence-step-list"),progress=byId("workflow-progress");if(!list||!progress)return;const state=getEvidenceWorkflowState(item),activeId=nextIncompleteStep(state),completed=EVIDENCE_STEPS.filter(step=>state[step.id]).length;progress.textContent=`${completed} of ${EVIDENCE_STEPS.length} complete`;list.innerHTML=EVIDENCE_STEPS.map((step,index)=>{const isComplete=Boolean(state[step.id]),isActive=!isComplete&&step.id===activeId,className=isComplete?"complete":isActive?"active":"",status=isComplete?"Complete":isActive?"Current":"Waiting";return `<li class="evidence-step ${className}"><span class="evidence-step-index">${isComplete?"✓":index+1}</span><span><strong>${esc(step.title)}</strong><small>${esc(step.detail)}</small></span><span class="evidence-step-status">${status}</span></li>`;}).join("");}
+  function buildEvidenceWorkflow(item){const state=getEvidenceWorkflowState(item);const completed=EVIDENCE_STEPS.filter(step=>state[step.id]).length;return `<section class="evidence-workflow" id="evidence-workflow"><div class="evidence-workflow-header"><div><h4>Evidence Workflow</h4><p>Follow the investigation in order. Current and completed steps can be clicked to jump to their action or saved result.</p></div><span class="workflow-progress" id="workflow-progress">${completed} of ${EVIDENCE_STEPS.length} complete</span></div><ol class="evidence-step-list" id="evidence-step-list"></ol><div class="evidence-workflow-actions"><button class="button" id="reset-evidence-workflow" type="button">Reset Road Test</button></div></section>`;}
+  function evidenceStepTarget(stepId,isComplete=false){
+    if((stepId==="capture_screenshot"||stepId==="analyze_evidence")&&isComplete&&!byId("evidence-history")?.hidden){
+      return {section:"#evidence-history",focus:""};
+    }
+    const targets={
+      open_semrush:{section:"#evidence-actions",focus:"[data-evidence-tool]"},
+      review_issues:{section:"#evidence-actions",focus:"[data-evidence-tool]"},
+      capture_screenshot:{section:"#evidence-capture",focus:"#investigation-evidence-file"},
+      analyze_evidence:{section:"#evidence-capture",focus:"#analyze-investigation-evidence"},
+      review_findings:{section:"#investigation-decision",focus:"#finding-summary"},
+      complete_investigation:{section:"#investigation-decision",focus:"#close-button"},
+      create_work:{section:"#investigation-decision",focus:"#create-button"}
+    };
+    return targets[stepId]||{section:"#evidence-workflow",focus:""};
+  }
+  function navigateEvidenceStep(stepId,isComplete=false){
+    const target=evidenceStepTarget(stepId,isComplete);
+    const section=document.querySelector(target.section);
+    if(!section)return;
+    section.scrollIntoView({behavior:"smooth",block:"center"});
+    if(!target.focus)return;
+    const focusTarget=document.querySelector(target.focus);
+    if(!focusTarget||focusTarget.disabled)return;
+    window.setTimeout(()=>{
+      try{focusTarget.focus({preventScroll:true});}catch(error){focusTarget.focus();}
+    },300);
+  }
+  function renderEvidenceWorkflowState(item){
+    const list=byId("evidence-step-list"),progress=byId("workflow-progress");
+    if(!list||!progress)return;
+    const state=getEvidenceWorkflowState(item);
+    const activeId=nextIncompleteStep(state);
+    const completed=EVIDENCE_STEPS.filter(step=>state[step.id]).length;
+    progress.textContent=`${completed} of ${EVIDENCE_STEPS.length} complete`;
+    list.innerHTML=EVIDENCE_STEPS.map((step,index)=>{
+      const isComplete=Boolean(state[step.id]);
+      const isActive=!isComplete&&step.id===activeId;
+      const canNavigate=isComplete||isActive;
+      const className=isComplete?"complete navigable":isActive?"active navigable":"waiting";
+      const status=isComplete?"Complete":isActive?"Current":"Waiting";
+      const interaction=canNavigate
+        ? `data-evidence-step-id="${esc(step.id)}" data-evidence-step-complete="${isComplete?"true":"false"}" role="button" tabindex="0" aria-label="Go to ${esc(step.title)}"`
+        : 'aria-disabled="true"';
+      return `<li class="evidence-step ${className}" ${interaction}><span class="evidence-step-index">${isComplete?"✓":index+1}</span><span><strong>${esc(step.title)}</strong><small>${esc(step.detail)}</small></span><span class="evidence-step-status">${status}</span></li>`;
+    }).join("");
+  }
   function bindEvidenceWorkflow(item){
     renderEvidenceWorkflowState(item);
+    const list=byId("evidence-step-list");
+    const activateStep=target=>{
+      const row=target?.closest?.("[data-evidence-step-id]");
+      if(!row)return;
+      navigateEvidenceStep(row.dataset.evidenceStepId,row.dataset.evidenceStepComplete==="true");
+    };
+    list?.addEventListener("click",event=>activateStep(event.target));
+    list?.addEventListener("keydown",event=>{
+      if(event.key!=="Enter"&&event.key!==" ")return;
+      const row=event.target?.closest?.("[data-evidence-step-id]");
+      if(!row)return;
+      event.preventDefault();
+      activateStep(row);
+    });
+    window.requestAnimationFrame(()=>{
+      const active=list?.querySelector(".evidence-step.active");
+      active?.scrollIntoView({behavior:"smooth",block:"nearest"});
+    });
     byId("reset-evidence-workflow")?.addEventListener("click",()=>{
       if(window.confirm("Clear the checklist and all locally locked road-test evidence for this Investigation?"))resetEvidenceWorkflow(item);
     });
@@ -959,13 +1030,13 @@
       <p class="guided-label">Current Next Step</p>
       <div class="guided-step">${esc(guidance?.current_next_step||item.recommendation||"Review the originating evidence and establish the next fact required.")}</div>
       ${buildEvidenceWorkflow(item)}
-      <div class="evidence-actions">
+      <div class="evidence-actions" id="evidence-actions">
         <span class="evidence-actions-label">Evidence Actions</span>
         <div class="evidence-actions-row">${buildEvidenceActions(item)}</div>
         ${buildSemrushLinkSetup(item)}
          ${buildSearchConsoleLinkSetup(item)}
       </div>
-      <div class="evidence-capture">
+      <div class="evidence-capture" id="evidence-capture">
         <h4>Capture the Next Evidence Screenshot</h4>
         <p>Each screenshot advances the Investigation by one step. Analyze it, follow the recommended next action, then return with the next screenshot. Completed evidence steps are locked below.</p>
         <div class="evidence-upload-row">
@@ -989,7 +1060,7 @@
       </div>
     </div>
     <section class="detail-section"><h3>Current Understanding</h3><p>${esc(guidance?.current_understanding||communication?.ai_summary||communication?.raw_content||item.description||"No summary stored.")}</p></section>
-    <section class="detail-section"><h3>Investigation Decision</h3><div class="processing-box"><label>What We Know</label><textarea id="finding-summary">${esc(savedFinding)}</textarea><label>Next Question to Answer</label><textarea id="work-title">${esc(savedQuestion)}</textarea><label>Next Evidence Needed</label><textarea id="work-description">${esc(savedEvidence)}</textarea><div class="processing-actions"><button id="close-button" class="button">Close — No Work Required</button><button id="continue-button" class="button primary">Save &amp; Continue Investigation</button><button id="create-button" class="button">Root Cause Proven — Create Work</button></div><div id="process-message"></div>${buildInvestigationProgressHistory(item)}</div></section>`;
+    <section class="detail-section" id="investigation-decision"><h3>Investigation Decision</h3><div class="processing-box"><label>What We Know</label><textarea id="finding-summary">${esc(savedFinding)}</textarea><label>Next Question to Answer</label><textarea id="work-title">${esc(savedQuestion)}</textarea><label>Next Evidence Needed</label><textarea id="work-description">${esc(savedEvidence)}</textarea><div class="processing-actions"><button id="close-button" class="button">Close — No Work Required</button><button id="continue-button" class="button primary">Save &amp; Continue Investigation</button><button id="create-button" class="button">Root Cause Proven — Create Work</button></div><div id="process-message"></div>${buildInvestigationProgressHistory(item)}</div></section>`;
     byId("close-button").addEventListener("click",()=>processInvestigation(item,"no_work_required"));
     byId("continue-button").addEventListener("click",()=>processInvestigation(item,"continue_investigation"));
     byId("create-button").disabled=true;
