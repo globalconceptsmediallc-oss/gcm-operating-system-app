@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/investigationProcessing.js
-   Version: 7.5.0
+   Version: 7.6.0
    Status: Production Candidate
    Source: Production routes/investigationProcessing.js 7.4.0
    Sprint: Durable Investigation Monitoring State
@@ -10,6 +10,12 @@
             an external result is pending, closing it when no Work Item is
             required, or creating one linked Work Item when specific work
             is required.
+
+   Changes in 7.6.0:
+   - Adds a direct human-started Investigation route for the Client Workspace.
+   - Creates an open Investigation without manufacturing a Communication record.
+   - Reuses an existing open Investigation when the same client/title is already active.
+   - Preserves the existing evidence-first Investigation and Work Item workflow.
 
    Changes in 7.5.0:
    - Adds the monitoring_external_validation outcome.
@@ -36,6 +42,206 @@ import {
 import {
   getDatabase
 } from "../shared/database.js";
+
+/* =========================================================
+   Investigation Processing — Direct Human Start
+   ========================================================= */
+
+export async function handleCreateInvestigation(body, env, requestId) {
+  const db = getDatabase(env);
+
+  const clientCode = clean(body?.clientCode || body?.client);
+  const title = clean(body?.title || body?.investigationTitle || body?.investigation_title);
+  const description = cleanMultiline(
+    body?.description ||
+    body?.objective ||
+    body?.investigationObjective ||
+    body?.investigation_objective
+  );
+  const requestedPriority = clean(body?.priority || "normal").toLowerCase();
+  const priority = ["low", "normal", "medium", "high", "urgent"].includes(requestedPriority)
+    ? requestedPriority
+    : "normal";
+  const assignedTo = clean(body?.assignedTo || body?.assigned_to || "Global Concepts Media");
+  const recommendation = cleanMultiline(
+    body?.recommendation ||
+    "Collect the next evidence required to determine what, if any, corrective work is justified."
+  );
+
+  if (!db || typeof db.prepare !== "function") {
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action: ACTIONS.CREATE_INVESTIGATION,
+      error:
+        "The D1 binding is unavailable. Bind the production database as DB, GCM_OS_DB, or DATABASE."
+    }, 503);
+  }
+
+  if (!clientCode) {
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action: ACTIONS.CREATE_INVESTIGATION,
+      error: "A clientCode is required."
+    }, 400);
+  }
+
+  if (!title) {
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action: ACTIONS.CREATE_INVESTIGATION,
+      error: "An Investigation title is required."
+    }, 400);
+  }
+
+  if (!description) {
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action: ACTIONS.CREATE_INVESTIGATION,
+      error: "An Investigation objective is required."
+    }, 400);
+  }
+
+  try {
+    const client = await db.prepare(`
+      SELECT id, client_code, name
+      FROM clients
+      WHERE client_code = ? COLLATE NOCASE
+      LIMIT 1
+    `).bind(clientCode).first();
+
+    if (!client) {
+      return jsonResponse({
+        ok: false,
+        requestId,
+        action: ACTIONS.CREATE_INVESTIGATION,
+        error: `Client "${clientCode}" was not found.`
+      }, 404);
+    }
+
+    const existing = await db.prepare(`
+      SELECT
+        i.id,
+        i.client_id,
+        i.communication_id,
+        i.title,
+        i.description,
+        i.priority,
+        i.status,
+        i.assigned_to,
+        i.finding_summary,
+        i.recommendation,
+        i.opened_at,
+        i.resolved_at,
+        i.closed_at,
+        i.created_at,
+        i.updated_at,
+        c.client_code,
+        c.name AS client_name
+      FROM investigations i
+      JOIN clients c ON c.id = i.client_id
+      WHERE i.client_id = ?
+        AND LOWER(TRIM(i.title)) = LOWER(TRIM(?))
+        AND LOWER(COALESCE(i.status, 'open')) NOT IN (
+          'complete','completed','closed','resolved',
+          'cancelled','canceled','archived','ignored','no_action'
+        )
+      ORDER BY i.id DESC
+      LIMIT 1
+    `).bind(client.id, title).first();
+
+    if (existing) {
+      return jsonResponse({
+        ok: true,
+        requestId,
+        action: ACTIONS.CREATE_INVESTIGATION,
+        created: false,
+        duplicatePrevented: true,
+        message: `Investigation #${existing.id} is already open for this client and title.`,
+        investigation: mapInvestigation(existing)
+      });
+    }
+
+    await db.prepare(`
+      INSERT INTO investigations (
+        client_id,
+        communication_id,
+        title,
+        description,
+        priority,
+        status,
+        assigned_to,
+        recommendation
+      )
+      VALUES (?, NULL, ?, ?, ?, 'open', ?, ?)
+    `).bind(
+      client.id,
+      title,
+      description,
+      priority,
+      assignedTo,
+      recommendation
+    ).run();
+
+    const created = await db.prepare(`
+      SELECT
+        i.id,
+        i.client_id,
+        i.communication_id,
+        i.title,
+        i.description,
+        i.priority,
+        i.status,
+        i.assigned_to,
+        i.finding_summary,
+        i.recommendation,
+        i.opened_at,
+        i.resolved_at,
+        i.closed_at,
+        i.created_at,
+        i.updated_at,
+        c.client_code,
+        c.name AS client_name
+      FROM investigations i
+      JOIN clients c ON c.id = i.client_id
+      WHERE i.client_id = ?
+        AND LOWER(TRIM(i.title)) = LOWER(TRIM(?))
+      ORDER BY i.id DESC
+      LIMIT 1
+    `).bind(client.id, title).first();
+
+    if (!created) {
+      throw new Error("D1 accepted the Investigation insert but the created Investigation could not be reloaded.");
+    }
+
+    return jsonResponse({
+      ok: true,
+      requestId,
+      action: ACTIONS.CREATE_INVESTIGATION,
+      created: true,
+      duplicatePrevented: false,
+      message: `Investigation #${created.id} created for ${client.name}.`,
+      investigation: mapInvestigation(created)
+    });
+  } catch (error) {
+    logWorkerError({
+      requestId,
+      route: ACTIONS.CREATE_INVESTIGATION,
+      stage: "create_investigation",
+      error
+    });
+
+    return jsonResponse({
+      ok: false,
+      requestId,
+      action: ACTIONS.CREATE_INVESTIGATION,
+      error: safeErrorMessage(error)
+    }, 500);
+  }
+}
 
 /* =========================================================
    Investigation Processing — Existing Investigation Update
