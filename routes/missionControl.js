@@ -1,13 +1,18 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/missionControl.js
-   Version: 7.8.0
+   Version: 7.8.1
    Status: Production Road-Test Candidate
-   Source: Production routes/missionControl.js 7.7.5
-   Sprint: Shared Navigation — Durable Deadline Urgency
+   Source: Production routes/missionControl.js 7.8.0
+   Sprint: Mission Control — Actionable Attention Deep Links
    Purpose: Preserve the live Mission Control contract while ranking
             only records that require current human action and expose
             one read-only deadline-urgency contract for the shared shell.
+
+   Production changes — v7.8.1:
+   - Each clientsRequiringAttention row now carries its strongest actionable record type/id and a direct work.html deep link.
+   - Work Items in monitoring / awaiting-external-validation states are excluded from attention and highest-priority work, matching the Work page contract.
+   - Preserves one-client-per-row ordering, D1 read-only behavior, and navAttention.
 
    Production changes — v7.8.0:
    - Preserves clientsRequiringAttention and highestPriorityDecision.
@@ -64,7 +69,7 @@ const NON_ACTION_INVESTIGATION_STATUSES = `
   'waiting_on_external'
 `;
 
-const CLOSED_WORK_STATUSES = `
+const NON_ACTION_WORK_STATUSES = `
   'complete',
   'completed',
   'closed',
@@ -74,7 +79,11 @@ const CLOSED_WORK_STATUSES = `
   'archived',
   'ignored',
   'no_action',
-  'published'
+  'published',
+  'monitoring',
+  'awaiting_external_validation',
+  'waiting_external',
+  'waiting_on_external'
 `;
 
 /* =========================================================
@@ -102,16 +111,30 @@ export async function handleMissionControl(body, env, requestId) {
       buildNavAttention(db)
     ]);
 
-    const clientsRequiringAttention = rowsOf(clientsResult).map((client) => ({
-      clientId: Number(client.id),
-      clientCode: String(client.client_code || ""),
-      clientName: String(
-        client.name ||
-        client.client_code ||
-        "Unknown Client"
-      ),
-      href: buildClientWorkspaceHref(client.client_code)
-    }));
+    const clientsRequiringAttention = rowsOf(clientsResult).map((client) => {
+      const recordType = String(client.record_type || "");
+      const recordId = Number(client.record_id);
+      const investigationId = nullablePositiveInteger(client.investigation_id);
+
+      return {
+        clientId: Number(client.id),
+        clientCode: String(client.client_code || ""),
+        clientName: String(
+          client.name ||
+          client.client_code ||
+          "Unknown Client"
+        ),
+        recordType,
+        recordId,
+        investigationId,
+        href: buildWorkHref({
+          clientCode: client.client_code,
+          recordType,
+          recordId,
+          investigationId
+        })
+      };
+    });
 
     const decisionRow = rowsOf(decisionResult)[0] || null;
     const highestPriorityDecision = decisionRow
@@ -159,7 +182,9 @@ async function loadClientsRequiringAttention(db) {
         i.client_id,
         c.client_code,
         c.name AS client_name,
+        'investigation' AS record_type,
         i.id AS record_id,
+        i.id AS investigation_id,
         CASE LOWER(COALESCE(i.priority, 'normal'))
           WHEN 'urgent' THEN 0
           WHEN 'critical' THEN 0
@@ -184,7 +209,9 @@ async function loadClientsRequiringAttention(db) {
         w.client_id,
         c.client_code,
         c.name AS client_name,
+        'work_item' AS record_type,
         w.id AS record_id,
+        w.investigation_id,
         CASE LOWER(COALESCE(w.priority, 'normal'))
           WHEN 'urgent' THEN 0
           WHEN 'critical' THEN 0
@@ -201,7 +228,7 @@ async function loadClientsRequiringAttention(db) {
       FROM work_items w
       INNER JOIN clients c ON c.id = w.client_id
       WHERE ${normalizedStatus("w.status", "open")}
-        NOT IN (${CLOSED_WORK_STATUSES})
+        NOT IN (${NON_ACTION_WORK_STATUSES})
     ),
     ranked_client_records AS (
       SELECT
@@ -219,7 +246,10 @@ async function loadClientsRequiringAttention(db) {
     SELECT
       client_id AS id,
       client_code,
-      client_name AS name
+      client_name AS name,
+      record_type,
+      record_id,
+      investigation_id
     FROM ranked_client_records
     WHERE client_record_rank = 1
     ORDER BY
@@ -316,7 +346,7 @@ async function loadHighestPriorityDecision(db) {
       FROM work_items w
       INNER JOIN clients c ON c.id = w.client_id
       WHERE ${normalizedStatus("w.status", "open")}
-        NOT IN (${CLOSED_WORK_STATUSES})
+        NOT IN (${NON_ACTION_WORK_STATUSES})
     )
     ORDER BY
       priority_rank ASC,
