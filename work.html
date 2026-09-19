@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.26
+   Version: 1.9.27
    Status: FBDT Production Candidate
    Source: Stable production work.html 1.9.18
    Sprint: Work Queue Full Recovery
@@ -19,6 +19,8 @@
    - communications-operational-decision-v3
 
    Audited changes:
+   - v1.9.27 adds Google Search Console Page Indexing/canonical evidence support and accepts a successful guarded evidence-recovery result when the fast single-pass extraction was incomplete.
+   - Canonical decisions use the visible user-declared and Google-selected canonical URLs; corrective Work unlocks only when preserved Investigation context also establishes the obsolete URL's current 404 state.
    - v1.9.26 refines Complete Investigation and Create Work Item navigation so those steps land on the actual decision buttons instead of the bottom of the page.
    - v1.9.25 makes ALL Evidence Workflow rows navigable, including WAITING steps, without changing completion rules or advancing checklist state.
    - Clicking a WAITING row only jumps to the matching section/control; it does not mark the step complete or unlock downstream work.
@@ -191,7 +193,7 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Use Investigation when the correct action is unknown. Use Create Requested Work when the client need and deliverable are already clear.</p></div>
-        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.26</span>
+        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.27</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -276,7 +278,7 @@
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.26"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.27"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),externalValidation:byId("external-validation-list"),target:byId("target-banner"),requestedForm:byId("requested-work-form"),requestedClient:byId("requested-client"),requestedMessage:byId("requested-work-message"),createRequested:byId("create-requested-work")};
   let activeClients=[],directoryClients=[],investigations=[],monitoringInvestigations=[],workItems=[],validationWorkItems=[],selectedKey="",processing=false,processingWorkItem=false,processingRequestedWork=false;
 
@@ -563,6 +565,44 @@
     return combined.includes("google search console") ||
       combined.includes("search_console") ||
       combined.includes("search console");
+  }
+
+  function isGoogleSearchConsolePageIndexing(item){
+    if(!isGoogleSearchConsole(item))return false;
+    const combined=[
+      item?.title,
+      item?.description,
+      item?.finding_summary,
+      item?.communication?.subject,
+      item?.communication?.notification_type,
+      item?.communication?.communication_family,
+      item?.communication?.ai_summary,
+      item?.communication?.raw_content
+    ].map(value=>norm(value)).join(" ");
+
+    return combined.includes("page_indexing") ||
+      combined.includes("page indexing") ||
+      combined.includes("being indexed") ||
+      combined.includes("canonical") ||
+      combined.includes("sitemap");
+  }
+
+  function investigationKnownContext(item){
+    const progress=typeof investigationProgressEntries==="function"
+      ? investigationProgressEntries(item)
+      : [];
+    return [
+      item?.finding_summary,
+      item?.description,
+      item?.recommendation,
+      item?.communication?.ai_summary,
+      item?.communication?.raw_content,
+      ...progress.flatMap(entry=>[
+        entry?.findingSummary,
+        entry?.nextQuestion,
+        entry?.nextEvidence
+      ])
+    ].filter(Boolean).join(" ");
   }
 
   function evidenceSourceName(item){
@@ -1340,16 +1380,41 @@
           ? payload.stages.filter(stage=>String(stage?.status||"").trim().toLowerCase()==="failed")
           : [];
 
+        const recoverySucceeded=Array.isArray(payload?.stages) &&
+          payload.stages.some(stage=>
+            String(stage?.stageName||"").trim().toLowerCase()==="guarded_evidence_recovery" &&
+            String(stage?.status||"").trim().toLowerCase()==="success"
+          );
+        const recoverableErrorCodes=new Set([
+          "OPERATIONAL_EVIDENCE_SINGLE_PASS_INCOMPLETE",
+          "OPERATIONAL_EVIDENCE_PARTIAL"
+        ]);
+        const blockingWorkerErrors=workerErrors.filter(error=>{
+          const code=String(error?.code||"").trim().toUpperCase();
+          return !(recoverySucceeded&&recoverableErrorCodes.has(code));
+        });
+        const blockingFailedStages=failedStages.filter(stage=>
+          !(
+            recoverySucceeded &&
+            String(stage?.stageName||"").trim().toLowerCase()==="operational_evidence_extraction"
+          )
+        );
+        const recoveredEvidenceUsable=recoverySucceeded && (
+          (Array.isArray(payload?.evidence?.visibleFacts)&&payload.evidence.visibleFacts.length>0) ||
+          (Array.isArray(payload?.evidence?.visibleMetrics)&&payload.evidence.visibleMetrics.length>0)
+        );
+
         if(
           payload?.ok!==true ||
-          processingStatus!=="complete" ||
-          workerErrors.length>0 ||
-          failedStages.length>0
+          (!recoveredEvidenceUsable&&processingStatus!=="complete") ||
+          blockingWorkerErrors.length>0 ||
+          blockingFailedStages.length>0
         ){
           const workerMessage=workerErrorMessage(
-            workerErrors[0] ||
+            blockingWorkerErrors[0] ||
             payload?.error ||
-            failedStages[0]?.rawAiError,
+            blockingFailedStages[0]?.rawAiError ||
+            workerErrors[0],
             "The analysis did not complete successfully."
           );
 
@@ -1452,6 +1517,20 @@
 
     if(stage==="overview" || (isGoogleSearchConsole(item) && stage==="extraction_failed")){
       if(isGoogleSearchConsole(item)){
+        if(isGoogleSearchConsolePageIndexing(item)){
+          return [
+            ...shared,
+            "Extract all visible Google Search Console URL Inspection and Page Indexing evidence for the inspected URL.",
+            "Preserve exact visible labels and values from Discovery, Crawl, and Indexing.",
+            "Return each visible field using:",
+            "FACT | exact visible label | exact visible value",
+            "Pay special attention to: inspected URL, Sitemaps, Referring page, Last crawl, Crawled as, Crawl allowed?, Page fetch, Indexing allowed?, User-declared canonical, and Google-selected canonical.",
+            "Preserve the complete visible URL for both canonical fields exactly as shown.",
+            "Do not infer a redirect, HTTP status, replacement page, or root cause unless that exact fact is visibly present.",
+            "Do not include navigation instructions, recommendations, or inferred causes."
+          ].join("\n");
+        }
+
         return [
           ...shared,
           "Extract all visible Google Search Console Merchant Listings diagnostic evidence needed to identify the exact validation problem.",
@@ -1681,7 +1760,43 @@
   }
 
   function buildGoogleSearchConsoleDecision({facts,joined,history,item}){
-    const factText=(facts||[]).join(" ");
+    const factText=(facts||[]).join("\n");
+    const userCanonicalMatch=factText.match(/User-declared canonical\s*(?:\||:|-)?\s*(https?:\/\/[^\s|]+)/i);
+    const googleCanonicalMatch=factText.match(/Google-selected canonical\s*(?:\||:|-)?\s*(https?:\/\/[^\s|]+)/i);
+    const userCanonical=userCanonicalMatch?String(userCanonicalMatch[1]||"").trim().replace(/[),.;]+$/,""):"";
+    const googleCanonical=googleCanonicalMatch?String(googleCanonicalMatch[1]||"").trim().replace(/[),.;]+$/,""):"";
+    const canonicalMismatch=Boolean(
+      userCanonical &&
+      googleCanonical &&
+      userCanonical.replace(/\/$/,"").toLowerCase()!==googleCanonical.replace(/\/$/,"").toLowerCase()
+    );
+
+    if(isGoogleSearchConsolePageIndexing(item)&&canonicalMismatch){
+      const knownContext=investigationKnownContext(item).toLowerCase();
+      const current404=/\b404\b|page not found|returns? (?:a )?404/.test(knownContext);
+      return {
+        evidenceType:"canonical_resolution",
+        issueName:"Duplicate, Google chose different canonical than user",
+        count:1,
+        severity:"error",
+        sampleUrl:userCanonical,
+        implementationSource:"Shopify URL redirect",
+        rootCauseProven:current404,
+        reason:current404
+          ? `Google Search Console shows ${userCanonical} as the user-declared canonical and ${googleCanonical} as Google's selected canonical. Preserved Investigation evidence also records that the obsolete URL now returns 404, establishing the current replacement relationship.`
+          : `Google Search Console shows ${userCanonical} as the user-declared canonical and ${googleCanonical} as Google's selected canonical. The canonical mismatch is proven, but the current live behavior of the old URL still needs verification.`,
+        expectedImpact:current404
+          ? "A permanent redirect should consolidate the obsolete URL into Google's already-selected replacement and eliminate the dead legacy path."
+          : "No corrective Work should be created until the current live behavior of the obsolete URL is verified.",
+        nextQuestion:current404
+          ? `Should the obsolete ${userCanonical} URL be permanently redirected to ${googleCanonical}?`
+          : `What does ${userCanonical} return on the live site now?`,
+        nextEvidence:current404
+          ? `Confirm no redirect already exists, then create and verify a 301 redirect from ${userCanonical} to ${googleCanonical}.`
+          : `Open ${userCanonical} on the live site and capture whether it loads, redirects, or returns 404.`
+      };
+    }
+
     const skuPatterns=[
       /FIELD\s*\|\s*sku\s*\|\s*["']?([^|"']{3,})["']?/i,
       /\bsku\b\s*[:=]\s*["']?([A-Z0-9][A-Z0-9._\/-]{2,})["']?/i,
@@ -2220,12 +2335,18 @@
     if(decision.rootCauseProven&&decision.evidenceType==="implementation_proof"){
       return `Correct ${decision.schemaType||"structured data"} ${decision.affectedField||"field"} output in ${decision.implementationSource||"the shared implementation"}`;
     }
+    if(decision.rootCauseProven&&decision.evidenceType==="canonical_resolution"){
+      return "301 redirect obsolete URL to Google-selected canonical";
+    }
     return decision.nextQuestion||"What is the next fact required to advance this Investigation?";
   }
 
   function buildSpecificAction(item,captured,decision){
     if(decision.rootCauseProven&&decision.evidenceType==="implementation_proof"){
       return `Update ${decision.implementationSource||"the shared implementation"} so every affected ${decision.schemaType||"structured data"} record outputs a valid ${decision.affectedField||"required"} property. Validate one corrected page and rerun the SEMrush Site Audit.`;
+    }
+    if(decision.rootCauseProven&&decision.evidenceType==="canonical_resolution"){
+      return decision.nextEvidence||"Create and verify the permanent redirect to the Google-selected canonical URL.";
     }
     return decision.nextEvidence||"Capture the next evidence screenshot required to answer the current question.";
   }
