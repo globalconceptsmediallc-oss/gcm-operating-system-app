@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.27
+   Version: 1.9.28
    Status: FBDT Production Candidate
    Source: Stable production work.html 1.9.18
    Sprint: Work Queue Full Recovery
@@ -19,6 +19,9 @@
    - communications-operational-decision-v3
 
    Audited changes:
+   - v1.9.28 adds a human-entered evidence fallback when screenshot extraction fails.
+   - Failed screenshot analysis now exposes a manual evidence box; operator-entered facts run through the same relevance, decision, duplicate, and Work-gating rules as screenshot evidence.
+   - Manual fallback evidence is clearly labeled in locked history and cannot silently bypass root-cause proof requirements.
    - v1.9.27 adds Google Search Console Page Indexing/canonical evidence support and accepts a successful guarded evidence-recovery result when the fast single-pass extraction was incomplete.
    - Canonical decisions use the visible user-declared and Google-selected canonical URLs; corrective Work unlocks only when preserved Investigation context also establishes the obsolete URL's current 404 state.
    - v1.9.26 refines Complete Investigation and Create Work Item navigation so those steps land on the actual decision buttons instead of the bottom of the page.
@@ -149,6 +152,13 @@
     .evidence-history-step p{margin:5px 0 0;color:var(--text);font-size:.74rem;line-height:1.45;white-space:pre-wrap}
     .evidence-history-step .next{color:var(--blue);font-weight:800}
     .capture-status{margin-top:10px}
+    .manual-evidence-fallback{margin-top:12px;padding:13px;border:1px dashed #d6a84a;border-radius:9px;background:#fffaf0}
+    .manual-evidence-fallback[hidden]{display:none}
+    .manual-evidence-fallback h4{margin:0 0 5px;color:var(--navy);font-size:.8rem}
+    .manual-evidence-fallback p{margin:0 0 9px;color:var(--muted);font-size:.72rem;line-height:1.45}
+    .manual-evidence-fallback textarea{min-height:120px;background:#fff}
+    .manual-evidence-actions{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-top:9px}
+    .manual-evidence-note{font-size:.68rem;color:var(--muted);font-weight:750}
     .tool-link-setup{margin-top:12px;padding:13px;border:1px dashed #aac7ed;border-radius:9px;background:#f8fbff}
     .tool-link-setup[hidden]{display:none}
     .tool-link-setup strong{display:block;color:var(--navy);font-size:.78rem}
@@ -193,7 +203,7 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Use Investigation when the correct action is unknown. Use Create Requested Work when the client need and deliverable are already clear.</p></div>
-        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.27</span>
+        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.28</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -278,7 +288,7 @@
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.27"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.28"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),externalValidation:byId("external-validation-list"),target:byId("target-banner"),requestedForm:byId("requested-work-form"),requestedClient:byId("requested-client"),requestedMessage:byId("requested-work-message"),createRequested:byId("create-requested-work")};
   let activeClients=[],directoryClients=[],investigations=[],monitoringInvestigations=[],workItems=[],validationWorkItems=[],selectedKey="",processing=false,processingWorkItem=false,processingRequestedWork=false;
 
@@ -1087,6 +1097,17 @@
         </div>
         <img class="evidence-preview" id="investigation-evidence-preview" alt="Selected Investigation evidence screenshot preview" />
         <div class="capture-status" id="investigation-evidence-status"></div>
+        <div class="manual-evidence-fallback" id="manual-evidence-fallback" hidden>
+          <h4>Screenshot analysis failed? Enter the evidence manually.</h4>
+          <p>Enter only facts you can verify on the source screen. Use one fact per line. The manual entry will use the same Investigation decision rules and will be preserved as operator-entered evidence.</p>
+          <textarea id="manual-evidence-input" placeholder="Example:
+User-declared canonical | https://example.com/old-page
+Google-selected canonical | https://example.com/current-page"></textarea>
+          <div class="manual-evidence-actions">
+            <button class="button primary" id="lock-manual-evidence" type="button">Use Manual Evidence</button>
+            <span class="manual-evidence-note">Manual entry does not automatically prove root cause.</span>
+          </div>
+        </div>
         <div class="captured-evidence" id="captured-evidence-panel" hidden>
           <h4>Current Evidence Step</h4>
           <ul id="captured-evidence-list"></ul>
@@ -1283,9 +1304,24 @@
     const preview=byId("investigation-evidence-preview");
     const analyze=byId("analyze-investigation-evidence");
     const status=byId("investigation-evidence-status");
+    const manualPanel=byId("manual-evidence-fallback");
+    const manualInput=byId("manual-evidence-input");
+    const manualLock=byId("lock-manual-evidence");
     let imageDataUrl="";
     let fileName="investigation-evidence";
     let analysisLocked=false;
+
+    const showManualFallback=(message="Screenshot extraction failed. Enter only the visible facts you can verify.")=>{
+      if(!manualPanel)return;
+      manualPanel.hidden=false;
+      const note=manualPanel.querySelector("p");
+      if(note&&message)note.textContent=message;
+    };
+
+    const hideManualFallback=()=>{
+      if(!manualPanel)return;
+      manualPanel.hidden=true;
+    };
 
     input.addEventListener("change",event=>{
       const [file]=event.target.files||[];
@@ -1311,6 +1347,7 @@
       const reader=new FileReader();
       reader.onload=()=>{
         analysisLocked=false;
+        hideManualFallback();
         imageDataUrl=String(reader.result||"");
         fileName=file.name||"investigation-evidence";
         preview.src=imageDataUrl;
@@ -1323,6 +1360,7 @@
       reader.onerror=()=>{
         status.className="status error capture-status";
         status.textContent="The screenshot could not be read.";
+        showManualFallback("The screenshot file could not be read. Enter the verified facts from the source screen manually.");
       };
       reader.readAsDataURL(file);
     });
@@ -1422,6 +1460,7 @@
           status.textContent=workerMessage
             ? `Evidence not locked. ${workerMessage}`
             : "Evidence not locked because the analysis did not complete successfully.";
+          showManualFallback("Screenshot analysis did not return usable evidence. Enter only the facts you can verify on the source screen, one per line.");
           analyze.disabled=false;
           analyze.textContent="Analyze Evidence";
           analysisLocked=false;
@@ -1442,6 +1481,7 @@
           });
           status.className="status error capture-status";
           status.textContent=relevance.reason;
+          showManualFallback("If this is the correct source but the screenshot was misread, enter the verified facts manually. Do not enter inferred conclusions.");
           analyze.disabled=false;
           analyze.textContent="Analyze Evidence";
           return;
@@ -1476,11 +1516,95 @@
         console.error(error);
         status.className="status error capture-status";
         status.textContent=error.message||"The evidence screenshot could not be analyzed.";
+        showManualFallback("Screenshot analysis failed. Enter only the visible source facts manually so the Investigation can continue.");
       }finally{
         if(!analysisLocked){
           analyze.disabled=!imageDataUrl;
           analyze.textContent="Analyze Evidence";
         }
+      }
+    });
+
+    manualLock?.addEventListener("click",event=>{
+      event.preventDefault();
+      event.stopPropagation();
+
+      const raw=String(manualInput?.value||"").trim();
+      if(!raw){
+        status.className="status error capture-status";
+        status.textContent="Enter at least one verified evidence fact before using the manual fallback.";
+        return;
+      }
+
+      const facts=raw
+        .split(/\n+/)
+        .map(line=>line.trim())
+        .filter(Boolean);
+
+      if(!facts.length){
+        status.className="status error capture-status";
+        status.textContent="Enter at least one verified evidence fact before using the manual fallback.";
+        return;
+      }
+
+      const captured={
+        facts,
+        summary:"",
+        source:`${evidenceSourceName(item)} · Operator-entered evidence`,
+        subject:"Manual evidence fallback",
+        confidence:"Human verified",
+        recommendation:""
+      };
+
+      const relevance=validateEvidenceRelevance(captured,item);
+      if(!relevance.ok){
+        renderCapturedEvidence(captured,{
+          evidenceType:"wrong_source",
+          issueName:"",
+          count:0,
+          rootCauseProven:false,
+          reason:relevance.reason,
+          nextQuestion:"Does this manual evidence belong to the selected Investigation?",
+          nextEvidence:`Enter facts verified from ${evidenceSourceName(item)} for Investigation #${item.id}.`
+        });
+        status.className="status error capture-status";
+        status.textContent=relevance.reason;
+        return;
+      }
+
+      const decision=buildNextStepDecision(captured,item);
+      renderCapturedEvidence(captured,decision);
+      prefillInvestigationFields(item,captured,decision);
+
+      const manualFingerprint=fingerprintImageData(
+        `manual:${evidenceSourceName(item)}:${raw}`
+      );
+      const historyResult=appendEvidenceHistory(
+        item,
+        captured,
+        decision,
+        manualFingerprint
+      );
+
+      if(historyResult.added){
+        analysisLocked=true;
+        completeEvidenceStep(item,"review_issues");
+        completeEvidenceStep(item,"analyze_evidence");
+        imageDataUrl="";
+        input.value="";
+        preview.removeAttribute("src");
+        preview.classList.remove("visible");
+        analyze.disabled=true;
+        analyze.textContent="Analyze Evidence";
+        manualInput.value="";
+        manualPanel.hidden=true;
+        status.className="status ready capture-status";
+        status.textContent="Manual evidence locked as operator-entered evidence. Review the finding before making the Investigation decision.";
+      }else{
+        status.className="status error capture-status";
+        status.textContent=historyResult.reason==="duplicate_image"
+          ? "This exact manual evidence is already locked for this Investigation."
+          : "The manual evidence could not be locked.";
       }
     });
   }
