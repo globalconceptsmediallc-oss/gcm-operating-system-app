@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.28
+   Version: 1.9.29
    Status: FBDT Production Candidate
    Source: Stable production work.html 1.9.18
    Sprint: Work Queue Full Recovery
@@ -19,6 +19,8 @@
    - communications-operational-decision-v3
 
    Audited changes:
+   - v1.9.29 makes Evidence Workflow completion monotonic: if a downstream step is complete, all prerequisite steps are automatically treated as complete.
+   - This repairs the impossible state where Create Work Item was COMPLETE while Open Evidence Source still showed CURRENT.
    - v1.9.28 adds a human-entered evidence fallback when screenshot extraction fails.
    - Failed screenshot analysis now exposes a manual evidence box; operator-entered facts run through the same relevance, decision, duplicate, and Work-gating rules as screenshot evidence.
    - Manual fallback evidence is clearly labeled in locked history and cannot silently bypass root-cause proof requirements.
@@ -203,7 +205,7 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Use Investigation when the correct action is unknown. Use Create Requested Work when the client need and deliverable are already clear.</p></div>
-        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.28</span>
+        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.29</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -288,7 +290,7 @@
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.28"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.29"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),externalValidation:byId("external-validation-list"),target:byId("target-banner"),requestedForm:byId("requested-work-form"),requestedClient:byId("requested-client"),requestedMessage:byId("requested-work-message"),createRequested:byId("create-requested-work")};
   let activeClients=[],directoryClients=[],investigations=[],monitoringInvestigations=[],workItems=[],validationWorkItems=[],selectedKey="",processing=false,processingWorkItem=false,processingRequestedWork=false;
 
@@ -631,8 +633,41 @@
     {id:"create_work",title:"Create Work Item",detail:"Create specific work only when evidence proves it is required."}
   ];
   function evidenceWorkflowKey(item){return `gcm-os-evidence-workflow:${String(item.clientCode||"").toUpperCase()}:${Number(item.id)}`;}
-  function getEvidenceWorkflowState(item){try{const raw=localStorage.getItem(evidenceWorkflowKey(item));const parsed=raw?JSON.parse(raw):{};return parsed&&typeof parsed==="object"?parsed:{};}catch(error){console.warn(error);return {};}}
-  function saveEvidenceWorkflowState(item,state){try{localStorage.setItem(evidenceWorkflowKey(item),JSON.stringify(state));}catch(error){console.warn(error);}}
+  function normalizeEvidenceWorkflowState(state){
+    const normalized=state&&typeof state==="object"?{...state}:{};
+    let furthestCompleteIndex=-1;
+    EVIDENCE_STEPS.forEach((step,index)=>{
+      if(normalized[step.id])furthestCompleteIndex=Math.max(furthestCompleteIndex,index);
+    });
+    if(furthestCompleteIndex>=0){
+      for(let index=0;index<=furthestCompleteIndex;index++){
+        normalized[EVIDENCE_STEPS[index].id]=true;
+      }
+    }
+    return normalized;
+  }
+  function getEvidenceWorkflowState(item){
+    try{
+      const raw=localStorage.getItem(evidenceWorkflowKey(item));
+      const parsed=raw?JSON.parse(raw):{};
+      const normalized=normalizeEvidenceWorkflowState(parsed);
+      if(JSON.stringify(normalized)!==JSON.stringify(parsed||{})){
+        localStorage.setItem(evidenceWorkflowKey(item),JSON.stringify(normalized));
+      }
+      return normalized;
+    }catch(error){
+      console.warn(error);
+      return {};
+    }
+  }
+  function saveEvidenceWorkflowState(item,state){
+    try{
+      localStorage.setItem(
+        evidenceWorkflowKey(item),
+        JSON.stringify(normalizeEvidenceWorkflowState(state))
+      );
+    }catch(error){console.warn(error);}
+  }
   function completeEvidenceStep(item,stepId){const state=getEvidenceWorkflowState(item);state[stepId]=true;saveEvidenceWorkflowState(item,state);renderEvidenceWorkflowState(item);}
   function resetEvidenceWorkflow(item){
     localStorage.removeItem(evidenceWorkflowKey(item));
