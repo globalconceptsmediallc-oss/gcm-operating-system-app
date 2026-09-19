@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.8.14
+   Version: 7.8.15
    Source: Production route 7.7.6
    Status: Production Candidate — Human Review Evidence Handoff
    Purpose: Complete production communication analysis route with one authoritative report-family decision before specialist dispatch,
@@ -16,6 +16,14 @@
             strict isolation of Workers AI/runtime diagnostic messages,
             an early stop when screenshot evidence cannot be produced,
             and routed SEMrush specialization through shared/engines/semrushEngine.js.
+
+   Production change — 7.8.15:
+   - Adds a focused Google Search Console Page Indexing / canonical screenshot
+     extractor inside guarded recovery.
+   - The focused pass reads the inspected URL, User-declared canonical, Google-selected
+     canonical, crawl/fetch state, and sitemap/referrer fields without relying on
+     the broader communication extractor.
+   - This pass is evidence-only; it does not infer redirects, 404s, or corrective work.
 
    Production change — 7.8.14:
    - Extends the forced guarded-recovery trigger to the partial-evidence code used
@@ -1231,6 +1239,8 @@ async function executeVisionExtractionStage({
   let tableEvidence = null;
   let merchantListingsResult = null;
   let merchantListingsEvidence = null;
+  let pageIndexingResult = null;
+  let pageIndexingEvidence = null;
   let siteAuditResult = null;
   let siteAuditEvidence = null;
   let siteAuditPreparedImage = null;
@@ -1254,6 +1264,85 @@ async function executeVisionExtractionStage({
     deterministicNotificationClassification(evidence).notificationType === "merchant_listing_structured_data" ||
     /\bmerchant listings?\b/i.test(clean(sourceText)) ||
     hasMerchantListingsEvidenceSignal(evidence);
+
+  const pageIndexingAnchored =
+    /\bpage indexing\b|\bbeing indexed\b|\bcanonical\b|\bsitemap\b/i.test(clean(sourceText)) &&
+    /\bgoogle search console\b|\bsearch console\b/i.test(clean(sourceText));
+
+  /*
+   * v7.8.15 SEARCH CONSOLE PAGE-INDEXING FOCUSED RECOVERY
+   *
+   * Generic screenshot extraction can miss small URL Inspection labels even when
+   * the screenshot is visually clear. When the Investigation context explicitly
+   * identifies Search Console Page Indexing/canonical evidence, run one narrow
+   * evidence-only pass for the visible URL Inspection fields.
+   */
+  if (pageIndexingAnchored) {
+    const pageIndexingPrompt = [
+      "Extract only clearly readable Google Search Console URL Inspection evidence from this screenshot.",
+      "Return one valid JSON object with this exact shape:",
+      '{"visibleSource":"Google Search Console","visibleSubject":"URL Inspection","visibleText":"","visibleFacts":[],"visibleMetrics":[],"responseExpected":false,"explicitActionRequested":false,"confidence":"High","uncertainty":"None"}',
+      "Put each readable field in visibleFacts using exact text:",
+      "FACT | Inspected URL | <exact URL>",
+      "FACT | Sitemaps | <exact visible value>",
+      "FACT | Referring page | <exact visible value>",
+      "FACT | Last crawl | <exact visible value>",
+      "FACT | Crawled as | <exact visible value>",
+      "FACT | Crawl allowed? | <exact visible value>",
+      "FACT | Page fetch | <exact visible value>",
+      "FACT | Indexing allowed? | <exact visible value>",
+      "FACT | User-declared canonical | <exact URL>",
+      "FACT | Google-selected canonical | <exact URL>",
+      "Do not infer a redirect, HTTP status, replacement page, diagnosis, or corrective action.",
+      "Do not include any field that is not readable."
+    ].join("\n");
+
+    pageIndexingResult = await runAiJsonWithRetry({
+      env,
+      model: COMMUNICATION_VISION_MODEL,
+      input: {
+        messages: [
+          {
+            role: "system",
+            content: "Extract only visible Google Search Console URL Inspection fields. Return one valid JSON object only."
+          },
+          { role: "user", content: pageIndexingPrompt }
+        ],
+        image: visionImageDataUrl,
+        max_tokens: 1200,
+        temperature: 0
+      },
+      stageName: `${stageName}_search_console_page_indexing`,
+      requestId,
+      route: ACTIONS.ANALYZE_COMMUNICATION,
+      timeoutMs: 30000,
+      maxRetries: 1
+    });
+
+    if (pageIndexingResult?.data && isPlainObject(pageIndexingResult.data)) {
+      pageIndexingEvidence = sanitizeVisibleEvidence(
+        normalizeVisibleEvidence(pageIndexingResult.data)
+      );
+
+      const pageIndexingText = [
+        pageIndexingEvidence?.visibleSource,
+        pageIndexingEvidence?.visibleSubject,
+        ...(pageIndexingEvidence?.visibleFacts || [])
+      ].filter(Boolean).join(" ");
+
+      if (
+        /google search console|url inspection/i.test(pageIndexingText) &&
+        /user-declared canonical|google-selected canonical|page fetch|last crawl/i.test(pageIndexingText)
+      ) {
+        evidence = sanitizeVisibleEvidence(
+          mergeVisibleEvidence(evidence, pageIndexingEvidence)
+        );
+        evidence = applyReportRecognitionToEvidence(evidence, reportRecognition);
+      } else {
+        pageIndexingEvidence = null;
+      }
+    }
+  }
 
   /*
    * v7.8.2 MERCHANT LISTINGS FOCUSED RECOVERY
@@ -1594,6 +1683,7 @@ async function executeVisionExtractionStage({
         + (recoveryResult?.retryCount || 0)
         + (tableResult?.retryCount || 0)
         + (merchantListingsResult?.retryCount || 0)
+        + (pageIndexingResult?.retryCount || 0)
         + (siteAuditResult?.retryCount || 0)
         + (siteAuditChangeVerificationResult?.retryCount || 0)
         + (reportRecognitionResult?.retryCount || 0),
@@ -1603,9 +1693,11 @@ async function executeVisionExtractionStage({
         ? "site_audit_authoritative_evidence_change_verification_succeeded"
         : siteAuditEvidence
           ? "site_audit_authoritative_evidence_succeeded"
-          : merchantListingsEvidence && !isWeakMerchantListingsEvidence(merchantListingsEvidence)
-            ? "merchant_listings_detail_recovery_succeeded"
-            : tableEvidence
+          : pageIndexingEvidence
+            ? "search_console_page_indexing_recovery_succeeded"
+            : merchantListingsEvidence && !isWeakMerchantListingsEvidence(merchantListingsEvidence)
+              ? "merchant_listings_detail_recovery_succeeded"
+              : tableEvidence
             ? "position_tracking_table_enrichment_succeeded"
             : usedRecovery
               ? "focused_recovery_succeeded"
