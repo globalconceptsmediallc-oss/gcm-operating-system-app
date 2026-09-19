@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/communicationAnalysis.js
-   Version: 7.8.13
+   Version: 7.8.14
    Source: Production route 7.7.6
    Status: Production Candidate — Human Review Evidence Handoff
    Purpose: Complete production communication analysis route with one authoritative report-family decision before specialist dispatch,
@@ -16,6 +16,12 @@
             strict isolation of Workers AI/runtime diagnostic messages,
             an early stop when screenshot evidence cannot be produced,
             and routed SEMrush specialization through shared/engines/semrushEngine.js.
+
+   Production change — 7.8.14:
+   - Extends the forced guarded-recovery trigger to the partial-evidence code used
+     by the same screenshot extraction path.
+   - Redeploys the recovery fix after aligning the Work due-date regression gate
+     with the intentional Safari isolation build.
 
    Production change — 7.8.13:
    - Forces guarded vision recovery when the fast screenshot extractor explicitly
@@ -258,6 +264,7 @@ export async function handleCommunicationAnalysis(body, env, requestId) {
     ).toUpperCase();
     const fastEvidenceExplicitlyIncomplete = [
       "OPERATIONAL_EVIDENCE_SINGLE_PASS_INCOMPLETE",
+      "OPERATIONAL_EVIDENCE_PARTIAL",
       "OPERATIONAL_EVIDENCE_EXTRACTION_FAILED"
     ].includes(fastEvidenceErrorCode);
 
