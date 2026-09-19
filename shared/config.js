@@ -1,12 +1,16 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/config.js
-   Version: 7.10.0
+   Version: 7.10.1
    Status: Production Road-Test Candidate
    Source: shared/config.js 7.9.0 production
    Sprint: Prospecting + CRM — Durable Relationship Record
    Purpose: Preserve all existing production constants and add the
             durable Prospect CRM action contract.
+
+   Change Notes in 7.10.1:
+   - Adds CREATE_INVESTIGATION for a human-started Investigation from the Client Workspace.
+   - Preserves all existing actions unchanged.
 
    Change Notes in 7.10.0:
    - Adds PROSPECT_CRM: "prospect-crm".
@@ -14,7 +18,7 @@
      Operating Session, and Calendar action unchanged.
    ========================================================= */
 
-export const VERSION = "7.10.0";
+export const VERSION = "7.10.1";
 export const API_CONTRACT_VERSION = "communications-operational-decision-v3";
 export const COMMUNICATION_ANALYSIS_ENGINE_VERSION = "3.4.1";
 
@@ -38,6 +42,7 @@ export const ACTIONS = Object.freeze({
   COMMIT_OPERATIONAL_DECISION: "commit-operational-decision",
   GET_MISSION_CONTROL: "get-mission-control",
   GET_GUIDED_INVESTIGATION: "get-guided-investigation",
+  CREATE_INVESTIGATION: "create-investigation",
   PROCESS_INVESTIGATION: "process-investigation",
   PROCESS_WORK_ITEM: "process-work-item",
   CREATE_REQUESTED_WORK: "create-requested-work",
