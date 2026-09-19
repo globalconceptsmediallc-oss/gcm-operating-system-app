@@ -1,11 +1,16 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/workDueDate.test.js
-   Version: 1.1.2
+   Version: 1.1.3
    Status: Production Regression Test
    Source: tests/workDueDate.test.js 1.1.1
    Purpose: Verify the durable Work due-date contract and the Work Queue
             visibility contract stay wired in production.
+   Change notes — 1.1.3:
+   - Recognizes shared/work-due-date.js 1.0.1 as the intentional Safari isolation build.
+   - Keeps durable D1 due-date, Work route, navigation attention, and queue-visibility
+     assertions active while the Work-only browser enhancement remains disabled.
+
    Change notes — 1.1.2:
    - Replaces the stale exact Work page version lock with a 1.9.x release-family check.
    - Keeps this regression test focused on the durable due-date and queue visibility behavior it owns.
@@ -83,22 +88,17 @@ assert.match(
 
 assert.match(
   enhancement,
-  /const FIELD_ID = "requested-due-date"/
+  /Version: 1\.0\.1/
 );
 
 assert.match(
   enhancement,
-  /<input id="\$\{FIELD_ID\}" type="date"/
+  /Status: Temporary Isolation Candidate/
 );
 
 assert.match(
   enhancement,
-  /payload\.dueDate = dueDateValue\(\) \|\| null/
-);
-
-assert.match(
-  enhancement,
-  /refreshNavAttention/
+  /temporarily disabled for Safari navigation isolation/
 );
 
 assert.match(
