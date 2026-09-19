@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.24
+   Version: 1.9.25
    Status: FBDT Production Candidate
    Source: Stable production work.html 1.9.18
    Sprint: Work Queue Full Recovery
@@ -19,6 +19,8 @@
    - communications-operational-decision-v3
 
    Audited changes:
+   - v1.9.25 makes ALL Evidence Workflow rows navigable, including WAITING steps, without changing completion rules or advancing checklist state.
+   - Clicking a WAITING row only jumps to the matching section/control; it does not mark the step complete or unlock downstream work.
    - v1.9.24 makes the Evidence Workflow progress rows real navigation controls without changing completion rules.
    - CURRENT and COMPLETE steps are clickable and keyboard-accessible; WAITING steps remain disabled.
    - Workflow navigation jumps to the matching evidence source, capture, analysis, findings, decision, or work control.
@@ -170,7 +172,8 @@
     .evidence-step.navigable{cursor:pointer;transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease}
     .evidence-step.navigable:hover{border-color:#86afe8;box-shadow:0 5px 14px rgba(31,111,214,.11);transform:translateY(-1px)}
     .evidence-step.navigable:focus{outline:3px solid rgba(31,111,214,.22);outline-offset:2px}
-    .evidence-step.waiting{cursor:not-allowed;opacity:.72}
+    .evidence-step.waiting{cursor:pointer;opacity:.82}
+    .evidence-step.waiting:hover{border-color:#c1d3eb;background:#f7faff}
     .evidence-workflow-actions{display:flex;justify-content:flex-end;margin-top:10px}
     .progress-history{margin-top:14px;padding:14px;border:1px solid #cbdcf4;border-radius:10px;background:#f8fbff}.progress-history h4{margin:0;color:var(--navy);font-size:.82rem}.progress-history p{margin:5px 0 0;color:var(--muted);font-size:.72rem;line-height:1.4}.progress-history-list{display:grid;gap:9px;margin-top:11px}.progress-history-entry{padding:11px;border:1px solid var(--border);border-radius:9px;background:#fff}.progress-history-entry strong{display:block;color:var(--navy);font-size:.75rem}.progress-history-entry dl{display:grid;gap:7px;margin:9px 0 0}.progress-history-entry dt{color:var(--muted);font-size:.65rem;font-weight:900;letter-spacing:.05em;text-transform:uppercase}.progress-history-entry dd{margin:2px 0 0;color:var(--text);font-size:.74rem;line-height:1.45;white-space:pre-wrap}
     @media(max-width:700px){.evidence-step{grid-template-columns:28px minmax(0,1fr)}.evidence-step-status{grid-column:2}.evidence-workflow-header{flex-direction:column}}
@@ -187,7 +190,7 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Use Investigation when the correct action is unknown. Use Create Requested Work when the client need and deliverable are already clear.</p></div>
-        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.24</span>
+        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.25</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -272,7 +275,7 @@
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.24"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.25"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),externalValidation:byId("external-validation-list"),target:byId("target-banner"),requestedForm:byId("requested-work-form"),requestedClient:byId("requested-client"),requestedMessage:byId("requested-work-message"),createRequested:byId("create-requested-work")};
   let activeClients=[],directoryClients=[],investigations=[],monitoringInvestigations=[],workItems=[],validationWorkItems=[],selectedKey="",processing=false,processingWorkItem=false,processingRequestedWork=false;
 
@@ -642,12 +645,9 @@
     list.innerHTML=EVIDENCE_STEPS.map((step,index)=>{
       const isComplete=Boolean(state[step.id]);
       const isActive=!isComplete&&step.id===activeId;
-      const canNavigate=isComplete||isActive;
-      const className=isComplete?"complete navigable":isActive?"active navigable":"waiting";
+      const className=isComplete?"complete navigable":isActive?"active navigable":"waiting navigable";
       const status=isComplete?"Complete":isActive?"Current":"Waiting";
-      const interaction=canNavigate
-        ? `data-evidence-step-id="${esc(step.id)}" data-evidence-step-complete="${isComplete?"true":"false"}" role="button" tabindex="0" aria-label="Go to ${esc(step.title)}"`
-        : 'aria-disabled="true"';
+      const interaction=`data-evidence-step-id="${esc(step.id)}" data-evidence-step-complete="${isComplete?"true":"false"}" role="button" tabindex="0" aria-label="Go to ${esc(step.title)}"`;
       return `<li class="evidence-step ${className}" ${interaction}><span class="evidence-step-index">${isComplete?"✓":index+1}</span><span><strong>${esc(step.title)}</strong><small>${esc(step.detail)}</small></span><span class="evidence-step-status">${status}</span></li>`;
     }).join("");
   }
