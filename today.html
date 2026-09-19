@@ -1,13 +1,19 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.5.4
+   Version: 3.5.5
    Status: Production Candidate
    Source: Production today.html 3.5.2
    Sprint: Today / Morning Command — Gmail Routing Cache Safety
    Purpose: Preserve the locked Today layout, Gmail approvals, Mission Control,
             Media logic, and operating workflow while keeping Mission Control's
             durable D1 ranking authoritative across both decision and queue views.
+
+   Production changes in 3.5.5:
+   - Makes every Needs Your Attention client row resolve to the authoritative record that should be worked next.
+   - Uses direct decision hrefs first, then deep-links Investigations and Work Items into work.html with client context.
+   - When an attention row represents the same client as Mission Control's highest-priority decision, falls back to that decision's authoritative deep link instead of the generic client workspace.
+   - Preserves Mission Control ranking, decision logic, Gmail, Media, Proof, and all existing D1 behavior.
 
    Production changes in 3.5.3:
    - Cache-busts the shared shell loader so Morning Command receives Gmail Human Routing v2.3.1 immediately.
@@ -2531,7 +2537,69 @@
 
         if (directHref) return directHref;
 
-        return buildBusinessWorkspaceHref(client?.clientCode || client?.client_code);
+        const clientCode = cleanDisplay(
+          client?.clientCode ||
+          client?.client_code
+        );
+
+        const recordType = cleanDisplay(
+          client?.recordType ||
+          client?.record_type ||
+          client?.sourceType ||
+          client?.source_type
+        ).toLowerCase();
+
+        const investigationId =
+          client?.investigationId ??
+          client?.investigation_id ??
+          (recordType === "investigation"
+            ? (client?.recordId ?? client?.record_id ?? client?.id)
+            : null);
+
+        if (investigationId) {
+          const params = new URLSearchParams({
+            investigation: String(investigationId)
+          });
+          if (clientCode) params.set("client", clientCode);
+          return `work.html?${params.toString()}`;
+        }
+
+        const workItemId =
+          client?.workItemId ??
+          client?.work_item_id ??
+          ((recordType === "work_item" || recordType === "work item")
+            ? (client?.recordId ?? client?.record_id ?? client?.id)
+            : null);
+
+        if (workItemId) {
+          const params = new URLSearchParams({
+            workItem: String(workItemId)
+          });
+          if (clientCode) params.set("client", clientCode);
+          return `work.html?${params.toString()}`;
+        }
+
+        const attentionClientName = cleanDisplay(client?.clientName);
+        const priorityClientCode = cleanDisplay(
+          highestPriorityDecisionState?.clientCode ||
+          highestPriorityDecisionState?.client_code
+        );
+        const priorityClientName = cleanDisplay(
+          highestPriorityDecisionState?.clientName
+        );
+
+        const samePriorityClient =
+          highestPriorityDecisionState &&
+          (
+            (clientCode && priorityClientCode && clientCode.toUpperCase() === priorityClientCode.toUpperCase()) ||
+            (attentionClientName && priorityClientName && attentionClientName.toLowerCase() === priorityClientName.toLowerCase())
+          );
+
+        if (samePriorityClient) {
+          return buildAuthoritativeDecisionHref(highestPriorityDecisionState);
+        }
+
+        return buildBusinessWorkspaceHref(clientCode);
       }
 
       function renderAttentionClients(clients) {
@@ -2961,11 +3029,11 @@
       });
 
       if (!window.GCMOShell) {
-        console.error("Today 3.5.4: shared/gcm-shell.js did not load.");
+        console.error("Today 3.5.5: shared/gcm-shell.js did not load.");
       } else {
         window.GCMOShell.mount({
           currentPage: "today",
-          statusText: "Agency Command Center operational · Today v3.5.4"
+          statusText: "Agency Command Center operational · Today v3.5.5"
         });
       }
 
