@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.25
+   Version: 1.9.26
    Status: FBDT Production Candidate
    Source: Stable production work.html 1.9.18
    Sprint: Work Queue Full Recovery
@@ -19,6 +19,7 @@
    - communications-operational-decision-v3
 
    Audited changes:
+   - v1.9.26 refines Complete Investigation and Create Work Item navigation so those steps land on the actual decision buttons instead of the bottom of the page.
    - v1.9.25 makes ALL Evidence Workflow rows navigable, including WAITING steps, without changing completion rules or advancing checklist state.
    - Clicking a WAITING row only jumps to the matching section/control; it does not mark the step complete or unlock downstream work.
    - v1.9.24 makes the Evidence Workflow progress rows real navigation controls without changing completion rules.
@@ -190,7 +191,7 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Use Investigation when the correct action is unknown. Use Create Requested Work when the client need and deliverable are already clear.</p></div>
-        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.25</span>
+        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.26</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -275,7 +276,7 @@
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.25"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.26"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),externalValidation:byId("external-validation-list"),target:byId("target-banner"),requestedForm:byId("requested-work-form"),requestedClient:byId("requested-client"),requestedMessage:byId("requested-work-message"),createRequested:byId("create-requested-work")};
   let activeClients=[],directoryClients=[],investigations=[],monitoringInvestigations=[],workItems=[],validationWorkItems=[],selectedKey="",processing=false,processingWorkItem=false,processingRequestedWork=false;
 
@@ -618,8 +619,8 @@
       capture_screenshot:{section:"#evidence-capture",focus:"#investigation-evidence-file"},
       analyze_evidence:{section:"#evidence-capture",focus:"#analyze-investigation-evidence"},
       review_findings:{section:"#investigation-decision",focus:"#finding-summary"},
-      complete_investigation:{section:"#investigation-decision",focus:"#close-button"},
-      create_work:{section:"#investigation-decision",focus:"#create-button"}
+      complete_investigation:{section:"#investigation-decision-actions",focus:"#close-button"},
+      create_work:{section:"#investigation-decision-actions",focus:"#create-button"}
     };
     return targets[stepId]||{section:"#evidence-workflow",focus:""};
   }
@@ -1060,7 +1061,7 @@
       </div>
     </div>
     <section class="detail-section"><h3>Current Understanding</h3><p>${esc(guidance?.current_understanding||communication?.ai_summary||communication?.raw_content||item.description||"No summary stored.")}</p></section>
-    <section class="detail-section" id="investigation-decision"><h3>Investigation Decision</h3><div class="processing-box"><label>What We Know</label><textarea id="finding-summary">${esc(savedFinding)}</textarea><label>Next Question to Answer</label><textarea id="work-title">${esc(savedQuestion)}</textarea><label>Next Evidence Needed</label><textarea id="work-description">${esc(savedEvidence)}</textarea><div class="processing-actions"><button id="close-button" class="button">Close — No Work Required</button><button id="continue-button" class="button primary">Save &amp; Continue Investigation</button><button id="create-button" class="button">Root Cause Proven — Create Work</button></div><div id="process-message"></div>${buildInvestigationProgressHistory(item)}</div></section>`;
+    <section class="detail-section" id="investigation-decision"><h3>Investigation Decision</h3><div class="processing-box"><label>What We Know</label><textarea id="finding-summary">${esc(savedFinding)}</textarea><label>Next Question to Answer</label><textarea id="work-title">${esc(savedQuestion)}</textarea><label>Next Evidence Needed</label><textarea id="work-description">${esc(savedEvidence)}</textarea><div class="processing-actions" id="investigation-decision-actions"><button id="close-button" class="button">Close — No Work Required</button><button id="continue-button" class="button primary">Save &amp; Continue Investigation</button><button id="create-button" class="button">Root Cause Proven — Create Work</button></div><div id="process-message"></div>${buildInvestigationProgressHistory(item)}</div></section>`;
     byId("close-button").addEventListener("click",()=>processInvestigation(item,"no_work_required"));
     byId("continue-button").addEventListener("click",()=>processInvestigation(item,"continue_investigation"));
     byId("create-button").disabled=true;
