@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.19.7
+   Version: 7.19.8
    Status: OS 2.0 Production Road-Test Candidate
    Source: Production worker.js 7.19.6
    Sprint: Prospecting + CRM — Prospect Concept Engagement Tracking
@@ -9,6 +9,11 @@
             durable Prospecting Radar + CRM operations required to connect
             scheduled prospects, discovery, proposals, follow-up, agreements,
             payments, and eventual Client handoff.
+
+   Changes in 7.19.8:
+   - Adds direct Client Workspace Investigation creation.
+   - Routes create-investigation to investigationProcessing.js v7.6.0.
+   - Preserves every existing production route unchanged.
 
    Changes in 7.19.7:
    - Adds privacy-minimized prospect-concept-view tracking to the Worker router.
@@ -69,7 +74,7 @@ import {
   handleCalendarOperations,
   CALENDAR_OPERATIONS_ACTION
 } from "./routes/calendarOperations.js";
-import { handleProcessInvestigation } from "./routes/investigationProcessing.js";
+import { handleCreateInvestigation, handleProcessInvestigation } from "./routes/investigationProcessing.js";
 import { handleGuidedInvestigation } from "./routes/guidedInvestigation.js";
 import { handleProcessWorkItem, handleCreateRequestedWork, CREATE_REQUESTED_WORK_ACTION } from "./routes/workItemProcessing.js";
 import { handleMediaOperations } from "./routes/mediaOperations.js";
@@ -125,7 +130,7 @@ import {
   PREPARE_OPERATING_SESSION_ACTION
 } from "./routes/operatingSessionIntake.js";
 
-const WORKER_FILE_VERSION = "7.19.7";
+const WORKER_FILE_VERSION = "7.19.8";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
@@ -138,6 +143,7 @@ const SUPPORTED_ACTIONS = [
   ACTIONS.GET_MISSION_CONTROL,
   CALENDAR_OPERATIONS_ACTION,
   ACTIONS.GET_GUIDED_INVESTIGATION,
+  ACTIONS.CREATE_INVESTIGATION,
   ACTIONS.PROCESS_INVESTIGATION,
   ACTIONS.PROCESS_WORK_ITEM,
   CREATE_REQUESTED_WORK_ACTION,
@@ -359,6 +365,9 @@ export default {
 
         case ACTIONS.GET_GUIDED_INVESTIGATION:
           return await handleGuidedInvestigation(body, env, requestId);
+
+        case ACTIONS.CREATE_INVESTIGATION:
+          return await handleCreateInvestigation(body, env, requestId);
 
         case ACTIONS.PROCESS_INVESTIGATION:
           return await handleProcessInvestigation(body, env, requestId);
