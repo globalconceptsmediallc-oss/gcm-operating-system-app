@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.29
+   Version: 1.9.30
    Status: FBDT Production Candidate
    Source: Stable production work.html 1.9.18
    Sprint: Work Queue Full Recovery
@@ -19,6 +19,9 @@
    - communications-operational-decision-v3
 
    Audited changes:
+   - v1.9.30 adds a SEMrush Core Web Vitals evidence path for page-level LCP/TBT/CLS investigations.
+   - Manual Core Web Vitals evidence can now isolate the affected page and failing metric without falsely proving root cause.
+   - The manual fallback placeholder is source-aware so SEMrush performance investigations no longer show a Google canonical example.
    - v1.9.29 makes Evidence Workflow completion monotonic: if a downstream step is complete, all prerequisite steps are automatically treated as complete.
    - This repairs the impossible state where Create Work Item was COMPLETE while Open Evidence Source still showed CURRENT.
    - v1.9.28 adds a human-entered evidence fallback when screenshot extraction fails.
@@ -205,7 +208,7 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Use Investigation when the correct action is unknown. Use Create Requested Work when the client need and deliverable are already clear.</p></div>
-        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.29</span>
+        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.30</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -290,7 +293,7 @@
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.29"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.30"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),externalValidation:byId("external-validation-list"),target:byId("target-banner"),requestedForm:byId("requested-work-form"),requestedClient:byId("requested-client"),requestedMessage:byId("requested-work-message"),createRequested:byId("create-requested-work")};
   let activeClients=[],directoryClients=[],investigations=[],monitoringInvestigations=[],workItems=[],validationWorkItems=[],selectedKey="",processing=false,processingWorkItem=false,processingRequestedWork=false;
 
@@ -563,6 +566,53 @@
 
     return combined.includes("semrush") &&
       (combined.includes("site_audit") || combined.includes("site audit"));
+  }
+
+  function isSemrushCoreWebVitals(item){
+    if(!isSemrushSiteAudit(item))return false;
+    const combined=[
+      item?.title,
+      item?.description,
+      item?.finding_summary,
+      item?.recommendation,
+      item?.communication?.subject,
+      item?.communication?.ai_summary,
+      item?.communication?.raw_content
+    ].map(value=>norm(value)).join(" ");
+
+    return combined.includes("core web vitals") ||
+      /\blcp\b/.test(combined) ||
+      /\btbt\b/.test(combined) ||
+      /\bcls\b/.test(combined) ||
+      combined.includes("largest contentful paint") ||
+      combined.includes("total blocking time") ||
+      combined.includes("cumulative layout shift");
+  }
+
+  function manualEvidencePlaceholder(item){
+    if(isSemrushCoreWebVitals(item)){
+      return [
+        "Example:",
+        "Page | https://example.com/pages/example",
+        "Page status | To Improve -> Poor",
+        "LCP | 4.00s",
+        "TBT | 534ms",
+        "CLS | 0.000"
+      ].join("\n");
+    }
+    if(isGoogleSearchConsolePageIndexing(item)){
+      return [
+        "Example:",
+        "User-declared canonical | https://example.com/old-page",
+        "Google-selected canonical | https://example.com/current-page"
+      ].join("\n");
+    }
+    return [
+      "Example:",
+      "Visible issue | Exact issue name",
+      "Affected pages | 1",
+      "Observed fact | Exact visible value"
+    ].join("\n");
   }
 
   function isGoogleSearchConsole(item){
@@ -1135,9 +1185,7 @@
         <div class="manual-evidence-fallback" id="manual-evidence-fallback" hidden>
           <h4>Screenshot analysis failed? Enter the evidence manually.</h4>
           <p>Enter only facts you can verify on the source screen. Use one fact per line. The manual entry will use the same Investigation decision rules and will be preserved as operator-entered evidence.</p>
-          <textarea id="manual-evidence-input" placeholder="Example:
-User-declared canonical | https://example.com/old-page
-Google-selected canonical | https://example.com/current-page"></textarea>
+          <textarea id="manual-evidence-input" placeholder="${esc(manualEvidencePlaceholder(item))}"></textarea>
           <div class="manual-evidence-actions">
             <button class="button primary" id="lock-manual-evidence" type="button">Use Manual Evidence</button>
             <span class="manual-evidence-note">Manual entry does not automatically prove root cause.</span>
@@ -2125,6 +2173,46 @@ Google-selected canonical | https://example.com/current-page"></textarea>
   }
 
   function buildSemrushSiteAuditDecision({facts,joined,history,item}){
+    if(isSemrushCoreWebVitals(item)){
+      const cwv=extractCoreWebVitalsEvidence(facts);
+      if(cwv.pageUrl && (cwv.statusChange || cwv.lcp || cwv.tbt || cwv.cls)){
+        const metricParts=[
+          cwv.lcp ? `LCP ${cwv.lcp}` : "",
+          cwv.tbt ? `TBT ${cwv.tbt}` : "",
+          cwv.cls ? `CLS ${cwv.cls}` : ""
+        ].filter(Boolean);
+
+        const decliningMetric=
+          cwv.lcpStatus==="poor" ? "LCP" :
+          cwv.tbtStatus==="poor" ? "TBT" :
+          cwv.clsStatus==="poor" ? "CLS" :
+          cwv.lcp && /poor|to improve\s*(?:->|→)\s*poor/i.test(joined) ? "LCP" :
+          "";
+
+        return {
+          evidenceType:"core_web_vitals_page",
+          issueName:"Core Web Vitals decline",
+          count:1,
+          severity:"warning",
+          sampleUrl:cwv.pageUrl,
+          metric:decliningMetric,
+          rootCauseProven:false,
+          reason:[
+            `SEMrush identifies ${cwv.pageUrl} as the affected page`,
+            cwv.statusChange ? `with status ${cwv.statusChange}` : "",
+            metricParts.length ? `and visible metrics ${metricParts.join(", ")}` : ""
+          ].filter(Boolean).join(" ") + ". The page and degraded metric are isolated, but the implementation cause is not yet proven.",
+          expectedImpact:"Do not create corrective Work yet. Identify the page-level Lighthouse/LCP cause first.",
+          nextQuestion:decliningMetric==="LCP"
+            ? `Which element or resource on ${cwv.pageUrl} is the Largest Contentful Paint candidate, and what is delaying it?`
+            : `Which page-level Lighthouse diagnostic explains the Core Web Vitals decline on ${cwv.pageUrl}?`,
+          nextEvidence:decliningMetric==="LCP"
+            ? "Open the vault-doors page details in the Core Web Vitals/Lighthouse report and capture the LCP element plus the page-specific improvement or diagnostic causing the delay."
+            : "Open the affected page details in the Core Web Vitals/Lighthouse report and capture the failing metric's page-specific diagnostic."
+        };
+      }
+    }
+
     const implementationSource=extractImplementationSource(facts);
     const affectedField=extractAffectedField(facts);
     const schemaType=extractSchemaType(facts);
@@ -2200,6 +2288,58 @@ Google-selected canonical | https://example.com/current-page"></textarea>
     }
 
     return null;
+  }
+
+  function extractCoreWebVitalsEvidence(facts){
+    const lines=(facts||[]).map(value=>String(value||"").trim()).filter(Boolean);
+    const text=lines.join(" ");
+
+    const pageMatch=text.match(/https?:\/\/[^\s|<>"')\]]+/i);
+    const pageUrl=pageMatch
+      ? pageMatch[0].replace(/[.,;:!?]+$/,"")
+      : "";
+
+    const statusMatch=text.match(/(?:page\s+)?status\s*(?:\||:|-)?\s*([^|\n]{2,80})/i) ||
+      text.match(/\b(to improve\s*(?:->|→)\s*poor)\b/i);
+
+    const lcpMatch=text.match(/(?:\bLCP\b|Largest Contentful Paint)\s*(?:\||:|-)?\s*(\d+(?:\.\d+)?\s*(?:ms|s)?)/i);
+    const tbtMatch=text.match(/(?:\bTBT\b|Total Blocking Time)\s*(?:\||:|-)?\s*(\d+(?:\.\d+)?\s*(?:ms|s)?)/i);
+    const clsMatch=text.match(/(?:\bCLS\b|Cumulative Layout Shift)\s*(?:\||:|-)?\s*(\d+(?:\.\d+)?)/i);
+
+    const explicitLcpStatus=text.match(/LCP\s+status\s*(?:\||:|-)?\s*(good|to improve|poor)/i);
+    const explicitTbtStatus=text.match(/TBT\s+status\s*(?:\||:|-)?\s*(good|to improve|poor)/i);
+    const explicitClsStatus=text.match(/CLS\s+status\s*(?:\||:|-)?\s*(good|to improve|poor)/i);
+
+    const lcpValue=lcpMatch?lcpMatch[1].replace(/\s+/g,""):"";
+    const tbtValue=tbtMatch?tbtMatch[1].replace(/\s+/g,""):"";
+    const clsValue=clsMatch?clsMatch[1].replace(/\s+/g,""):"";
+
+    return {
+      pageUrl,
+      statusChange:statusMatch?String(statusMatch[1]||statusMatch[0]).replace(/\s+/g," ").trim():"",
+      lcp:lcpValue,
+      tbt:tbtValue,
+      cls:clsValue,
+      lcpStatus:explicitLcpStatus?explicitLcpStatus[1].toLowerCase():(numericSeconds(lcpValue)>=4?"poor":numericSeconds(lcpValue)>=2.5?"to improve":""),
+      tbtStatus:explicitTbtStatus?explicitTbtStatus[1].toLowerCase():(numericMilliseconds(tbtValue)>600?"poor":numericMilliseconds(tbtValue)>200?"to improve":""),
+      clsStatus:explicitClsStatus?explicitClsStatus[1].toLowerCase():(Number(clsValue)>0.25?"poor":Number(clsValue)>0.1?"to improve":clsValue?"good":"")
+    };
+  }
+
+  function numericSeconds(value){
+    const text=String(value||"").trim().toLowerCase();
+    if(!text)return 0;
+    const number=Number.parseFloat(text);
+    if(!Number.isFinite(number))return 0;
+    return text.endsWith("ms")?number/1000:number;
+  }
+
+  function numericMilliseconds(value){
+    const text=String(value||"").trim().toLowerCase();
+    if(!text)return 0;
+    const number=Number.parseFloat(text);
+    if(!Number.isFinite(number))return 0;
+    return text.endsWith("s")&&!text.endsWith("ms")?number*1000:number;
   }
 
   function extractStructuredDataCount(facts){
