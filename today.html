@@ -1,13 +1,19 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.5.5
+   Version: 3.5.6
    Status: Production Candidate
    Source: Production today.html 3.5.2
    Sprint: Today / Morning Command — Gmail Routing Cache Safety
    Purpose: Preserve the locked Today layout, Gmail approvals, Mission Control,
             Media logic, and operating workflow while keeping Mission Control's
             durable D1 ranking authoritative across both decision and queue views.
+
+   Production changes in 3.5.6:
+   - Stops Needs Your Attention from accepting generic clients.html links as actionable destinations.
+   - If no exact Investigation/Work Item deep link is available, the row now opens Work filtered to that client so the operator lands in the active workflow instead of the Clients directory.
+   - Avoids routing a Needs Your Attention row into a highest-priority record that is only waiting on external validation.
+   - Preserves Mission Control ranking, client identity, and all existing Today behavior.
 
    Production changes in 3.5.5:
    - Makes every Needs Your Attention client row resolve to the authoritative record that should be worked next.
@@ -2535,12 +2541,13 @@
           client?.nextAction?.href
         );
 
-        if (directHref) return directHref;
-
         const clientCode = cleanDisplay(
           client?.clientCode ||
           client?.client_code
         );
+
+        const isGenericClientHref = /^clients\.html(?:\?|$)/i.test(directHref);
+        if (directHref && !isGenericClientHref) return directHref;
 
         const recordType = cleanDisplay(
           client?.recordType ||
@@ -2595,11 +2602,27 @@
             (attentionClientName && priorityClientName && attentionClientName.toLowerCase() === priorityClientName.toLowerCase())
           );
 
-        if (samePriorityClient) {
+        const priorityStatus = cleanDisplay(
+          highestPriorityDecisionState?.when?.status
+        ).toLowerCase().replaceAll(" ", "_");
+
+        const priorityIsExternalWait = [
+          "monitoring",
+          "awaiting_external_validation",
+          "waiting_external",
+          "waiting_on_external"
+        ].includes(priorityStatus);
+
+        if (samePriorityClient && !priorityIsExternalWait) {
           return buildAuthoritativeDecisionHref(highestPriorityDecisionState);
         }
 
-        return buildBusinessWorkspaceHref(clientCode);
+        if (clientCode) {
+          const params = new URLSearchParams({ client: clientCode });
+          return `work.html?${params.toString()}`;
+        }
+
+        return "work.html";
       }
 
       function renderAttentionClients(clients) {
@@ -3029,11 +3052,11 @@
       });
 
       if (!window.GCMOShell) {
-        console.error("Today 3.5.5: shared/gcm-shell.js did not load.");
+        console.error("Today 3.5.6: shared/gcm-shell.js did not load.");
       } else {
         window.GCMOShell.mount({
           currentPage: "today",
-          statusText: "Agency Command Center operational · Today v3.5.5"
+          statusText: "Agency Command Center operational · Today v3.5.6"
         });
       }
 
