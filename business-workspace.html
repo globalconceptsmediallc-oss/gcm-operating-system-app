@@ -1,15 +1,21 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: business-workspace.html
-   Version: 1.3.1
+   Version: 1.4.0
    Status: Production Candidate
-   Change: Client Health v2 Workspace Compatibility
+   Change: Start Investigation directly from the Client Workspace
    Source: Production business-workspace.html 1.2.0
    Shared Shell: shared/gcm-shell.js 2.0.16
    Purpose: Preserve the existing Business Workspace engine,
             live get-client-workspace retrieval, Business Record intelligence,
-            and executable next actions while adding Client Health v2 score,
-            trend, and confidence to the client workspace.
+            and executable next actions while adding a direct human-started
+            Investigation entry point from the client record.
+
+   Changes in 1.4.0:
+   - Adds Start Investigation to the Client Workspace header.
+   - Captures Investigation title, objective, and priority without manufacturing
+     a Communication record.
+   - Creates the Investigation in D1 and opens it immediately in Work.
    ========================================================= -->
 
 <!DOCTYPE html>
@@ -176,6 +182,19 @@
     .button-secondary {
       border-color:var(--border-color);
       box-shadow:var(--shadow);
+    }
+
+    .button-primary {
+      border-color:var(--brand-blue);
+      background:var(--brand-blue);
+      color:#fff;
+      box-shadow:var(--shadow);
+    }
+
+    .button-primary:hover,
+    .button-primary:focus-visible {
+      border-color:var(--brand-blue-dark);
+      background:var(--brand-blue-dark);
     }
 
     .button:hover,
@@ -450,6 +469,70 @@
 
     .panel-body {
       padding:22px 26px 26px;
+    }
+
+    .quick-investigation-panel {
+      margin-bottom:24px;
+    }
+
+    .quick-investigation-form {
+      display:grid;
+      grid-template-columns:minmax(0,1fr) 180px;
+      gap:16px;
+    }
+
+    .quick-investigation-field {
+      display:grid;
+      gap:7px;
+    }
+
+    .quick-investigation-field.full {
+      grid-column:1 / -1;
+    }
+
+    .quick-investigation-field label {
+      color:var(--navy-900);
+      font-size:.82rem;
+      font-weight:850;
+    }
+
+    .quick-investigation-field input,
+    .quick-investigation-field select,
+    .quick-investigation-field textarea {
+      width:100%;
+      border:1px solid var(--border-color);
+      border-radius:10px;
+      background:#fff;
+      color:var(--text-primary);
+      padding:11px 12px;
+    }
+
+    .quick-investigation-field textarea {
+      min-height:118px;
+      resize:vertical;
+    }
+
+    .quick-investigation-actions {
+      grid-column:1 / -1;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .quick-investigation-message {
+      min-height:1.4em;
+      color:var(--text-secondary);
+      font-size:.82rem;
+      font-weight:750;
+    }
+
+    .quick-investigation-message.error {
+      color:var(--danger);
+    }
+
+    .quick-investigation-message.success {
+      color:var(--success);
     }
 
     .next-action {
@@ -806,6 +889,15 @@
               Menu
             </button>
 
+            <button
+              id="start-investigation-button"
+              class="button button-primary"
+              type="button"
+              hidden
+            >
+              Start Investigation
+            </button>
+
             <a class="button button-secondary" href="clients.html">
               Back to Clients
             </a>
@@ -820,6 +912,60 @@
             </div>
           </div>
         </header>
+
+        <section id="new-investigation-panel" class="panel quick-investigation-panel" hidden>
+          <div class="panel-header">
+            <h2 class="panel-title">Start Investigation</h2>
+            <p class="panel-description">
+              Use this when the client record shows something that needs evidence before the correct work is known.
+            </p>
+          </div>
+          <div class="panel-body">
+            <form id="new-investigation-form" class="quick-investigation-form">
+              <div class="quick-investigation-field">
+                <label for="new-investigation-title">Investigation Title</label>
+                <input
+                  id="new-investigation-title"
+                  type="text"
+                  maxlength="180"
+                  autocomplete="off"
+                  placeholder="What needs to be investigated?"
+                  required
+                />
+              </div>
+
+              <div class="quick-investigation-field">
+                <label for="new-investigation-priority">Priority</label>
+                <select id="new-investigation-priority">
+                  <option value="normal" selected>Normal</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                  <option value="low">Low</option>
+                </select>
+              </div>
+
+              <div class="quick-investigation-field full">
+                <label for="new-investigation-objective">Investigation Objective</label>
+                <textarea
+                  id="new-investigation-objective"
+                  placeholder="What do we need to determine from the evidence?"
+                  required
+                ></textarea>
+              </div>
+
+              <div class="quick-investigation-actions">
+                <button id="create-investigation-button" class="button button-primary" type="submit">
+                  Create Investigation
+                </button>
+                <button id="cancel-investigation-button" class="button button-secondary" type="button">
+                  Cancel
+                </button>
+                <span id="new-investigation-message" class="quick-investigation-message" role="status" aria-live="polite"></span>
+              </div>
+            </form>
+          </div>
+        </section>
 
         <section id="loading-panel" class="loading-panel">
           <div class="loading-copy">
@@ -1114,15 +1260,42 @@
       );
 
       const statusText = document.getElementById("runtime-status-text");
+      const startInvestigationButton = document.getElementById("start-investigation-button");
+      const newInvestigationPanel = document.getElementById("new-investigation-panel");
+      const newInvestigationForm = document.getElementById("new-investigation-form");
+      const newInvestigationTitle = document.getElementById("new-investigation-title");
+      const newInvestigationPriority = document.getElementById("new-investigation-priority");
+      const newInvestigationObjective = document.getElementById("new-investigation-objective");
+      const createInvestigationButton = document.getElementById("create-investigation-button");
+      const cancelInvestigationButton = document.getElementById("cancel-investigation-button");
+      const newInvestigationMessage = document.getElementById("new-investigation-message");
+
+      let activeClientCode = "";
+
+      startInvestigationButton.addEventListener("click", () => {
+        newInvestigationPanel.hidden = false;
+        newInvestigationMessage.className = "quick-investigation-message";
+        newInvestigationMessage.textContent = "";
+        newInvestigationTitle.focus();
+        newInvestigationPanel.scrollIntoView({ behavior:"smooth", block:"start" });
+      });
+
+      cancelInvestigationButton.addEventListener("click", () => {
+        newInvestigationPanel.hidden = true;
+        newInvestigationMessage.className = "quick-investigation-message";
+        newInvestigationMessage.textContent = "";
+      });
+
+      newInvestigationForm.addEventListener("submit", createInvestigationFromWorkspace);
 
       if (!window.GCMOShell) {
         console.error(
-          "Business Workspace 1.3.1: shared/gcm-shell.js did not load."
+"Business Workspace 1.4.0: shared/gcm-shell.js did not load."
         );
       } else {
         window.GCMOShell.mount({
           currentPage:"clients",
-          statusText:"Client workspace connected · Business Workspace v1.3.1"
+          statusText:"Client workspace connected · Business Workspace v1.4.0"
         });
       }
 
@@ -1165,6 +1338,14 @@
             );
           }
 
+          activeClientCode = String(
+            payload?.record?.metadata?.clientCode ||
+            payload?.operational?.client?.client_code ||
+            (businessId === "southeast-safes" ? "SES" : businessId)
+          ).trim();
+
+          startInvestigationButton.hidden = !activeClientCode;
+
           BusinessWorkspace.loadFromObject(payload.record, {
             requestedBusinessId:businessId,
             recordUrl:WORKER_URL
@@ -1187,6 +1368,70 @@
           errorDetails.textContent = formatError(error);
 
           setRuntimeStatus("error", "Workspace Error");
+        }
+      }
+
+      async function createInvestigationFromWorkspace(event) {
+        event.preventDefault();
+
+        const title = String(newInvestigationTitle.value || "").trim();
+        const objective = String(newInvestigationObjective.value || "").trim();
+        const priority = String(newInvestigationPriority.value || "normal").trim();
+
+        if (!activeClientCode || !title || !objective) {
+          newInvestigationMessage.className = "quick-investigation-message error";
+          newInvestigationMessage.textContent =
+            "Client, Investigation Title, and Investigation Objective are required.";
+          return;
+        }
+
+        createInvestigationButton.disabled = true;
+        newInvestigationMessage.className = "quick-investigation-message";
+        newInvestigationMessage.textContent = "Creating Investigation in production D1…";
+
+        try {
+          const response = await fetch(WORKER_URL, {
+            method:"POST",
+            headers:{
+              "Content-Type":"application/json",
+              Accept:"application/json"
+            },
+            body:JSON.stringify({
+              action:"create-investigation",
+              clientCode:activeClientCode,
+              title,
+              description:objective,
+              priority,
+              assignedTo:"Global Concepts Media",
+              recommendation:
+                "Collect the next evidence required to determine what, if any, corrective work is justified."
+            })
+          });
+
+          const payload = await response.json().catch(() => null);
+
+          if (!response.ok || !payload?.ok || !payload?.investigation?.id) {
+            throw new Error(
+              payload?.error ||
+              payload?.message ||
+              `Investigation creation failed. HTTP ${response.status}.`
+            );
+          }
+
+          const investigationId = Number(payload.investigation.id);
+
+          newInvestigationMessage.className = "quick-investigation-message success";
+          newInvestigationMessage.textContent =
+            payload?.message ||
+            `Investigation #${investigationId} created. Opening Work…`;
+
+          window.location.href =
+            `work.html?investigation=${encodeURIComponent(investigationId)}&client=${encodeURIComponent(activeClientCode)}`;
+        } catch (error) {
+          console.error("Create Investigation failed:", error);
+          newInvestigationMessage.className = "quick-investigation-message error";
+          newInvestigationMessage.textContent = formatError(error);
+          createInvestigationButton.disabled = false;
         }
       }
 
