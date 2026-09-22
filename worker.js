@@ -1,14 +1,23 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.19.8
+   Version: 7.20.0
    Status: OS 2.0 Production Road-Test Candidate
-   Source: Production worker.js 7.19.6
-   Sprint: Prospecting + CRM — Prospect Concept Engagement Tracking
+   Source: Production worker.js 7.19.8
+   Sprint: Universal Email Intake — Cloudflare Email Routing
    Purpose: Preserve every verified production route while exposing the
             durable Prospecting Radar + CRM operations required to connect
             scheduled prospects, discovery, proposals, follow-up, agreements,
             payments, and eventual Client handoff.
+
+   Changes in 7.20.0:
+   - Adds a Cloudflare Email Routing email() handler.
+   - Receives operational email directly into durable D1 email_intake records.
+   - Uses postal-mime for provider-independent MIME parsing.
+   - Requires an active email_intake_addresses record before accepting mail.
+   - Deduplicates by Internet Message-ID, with SHA-256 fallback.
+   - Performs no AI classification and no Gmail API reads during receipt.
+   - Preserves every existing HTTP production route unchanged.
 
    Changes in 7.19.8:
    - Adds direct Client Workspace Investigation creation.
@@ -129,8 +138,12 @@ import {
   handleOperatingSessionIntake,
   PREPARE_OPERATING_SESSION_ACTION
 } from "./routes/operatingSessionIntake.js";
+import {
+  handleInboundEmail,
+  EMAIL_INTAKE_VERSION
+} from "./routes/emailIntake.js";
 
-const WORKER_FILE_VERSION = "7.19.8";
+const WORKER_FILE_VERSION = "7.20.0";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
@@ -187,12 +200,14 @@ export default {
         system: "GCM OS Operational Worker",
         version: VERSION,
         workerFileVersion: WORKER_FILE_VERSION,
+        emailIntakeVersion: EMAIL_INTAKE_VERSION,
         contractVersion: API_CONTRACT_VERSION,
-        sprint: "Prospecting + CRM — Prospect Concept Engagement Tracking",
+        sprint: "Universal Email Intake — Cloudflare Email Routing",
         architecture:
-          "Modular production router with Prospect CRM, Prospect Concept Tracking, Agency Command, Calendar Operations, Gmail operator decisions, Historical Rehabilitation, Intelligence Backlog, Intelligence Refresh, Communication Intelligence, Activity Intelligence, Intelligence Processing, Prospect Intelligence, Communications analysis, Guided Investigation, and operational processing.",
+          "Modular production router with Universal Email Intake, Prospect CRM, Prospect Concept Tracking, Agency Command, Calendar Operations, Gmail operator decisions, Historical Rehabilitation, Intelligence Backlog, Intelligence Refresh, Communication Intelligence, Activity Intelligence, Intelligence Processing, Prospect Intelligence, Communications analysis, Guided Investigation, and operational processing.",
         actions: SUPPORTED_ACTIONS,
         engines: [
+          "universal-email-intake",
           "prospect-crm",
           "prospect-concept-tracking",
           "agency-command",
@@ -225,6 +240,7 @@ export default {
         modules: {
           shared: ["config", "http", "database", "ai"],
           routes: [
+            "email-intake",
             "prospect-crm",
             "prospect-concept-tracking",
             "agency-command",
@@ -414,6 +430,10 @@ export default {
         executionTimeMs: Date.now() - requestStartedAt
       }, 500);
     }
+  },
+
+  async email(message, env, ctx) {
+    return await handleInboundEmail(message, env, ctx);
   }
 };
 

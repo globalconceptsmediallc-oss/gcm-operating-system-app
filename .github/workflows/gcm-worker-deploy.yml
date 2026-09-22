@@ -1,13 +1,13 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gcm-worker-deploy.yml
-# Version: 1.5.1
+# Version: 1.5.2
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Cloudflare Worker from main.
 # Change Notes:
-# - Verify the current production Worker 7.19.8 after the Client Workspace Investigation entry-point release.
-# - LOCK: require Worker 7.19.8, Prospect Concept Tracking 1.0.1, and Prospect CRM 1.3.0.
-# - Preserves the Universal Email Intake migration pipeline and all existing live boundary checks.
+# - Deploy and verify Worker 7.20.0 with Universal Email Intake 1.0.0.
+# - LOCK: require Worker 7.20.0, Email Intake 1.0.0, Prospect Concept Tracking 1.0.1, and Prospect CRM 1.3.0.
+# - Preserve all existing live boundary checks while adding the provider-independent inbound email handler.
 # - Verify prospect-concept-view is live using an unknown-key no-write boundary test.
 # - Verify CRM D1 migrations are live by reading list_prospects and service catalog.
 # - Verify the core business rule that a formal Prospect cannot be created
@@ -103,8 +103,11 @@ jobs:
           const healthResponse = await fetch(url);
           if (!healthResponse.ok) throw new Error(`Worker health returned HTTP ${healthResponse.status}`);
           const health = await healthResponse.json();
-          if (health.workerFileVersion !== "7.19.8") {
-            throw new Error(`Expected Worker 7.19.8, received ${health.workerFileVersion || "unknown"}`);
+          if (health.workerFileVersion !== "7.20.0") {
+            throw new Error(`Expected Worker 7.20.0, received ${health.workerFileVersion || "unknown"}`);
+          }
+          if (health.emailIntakeVersion !== "1.0.0") {
+            throw new Error(`Expected Email Intake 1.0.0, received ${health.emailIntakeVersion || "unknown"}`);
           }
           const requiredActions = [
             "prospect-crm",
@@ -326,5 +329,5 @@ jobs:
           if (protectedResponse.status !== 401) {
             throw new Error(`Expected authentication boundary HTTP 401, received ${protectedResponse.status}`);
           }
-          console.log("PASS live Worker 7.19.8, Prospect Concept Tracking 1.0.1, Prospect CRM 1.3.0, durable Radar intelligence/outreach continuity, service startup catalog, appointment boundary, Gmail decision routes, Calendar, Work due-date source, Operating Sessions, and authentication boundary");
+          console.log("PASS live Worker 7.20.0, Universal Email Intake 1.0.0, Prospect Concept Tracking 1.0.1, Prospect CRM 1.3.0, durable Radar intelligence/outreach continuity, service startup catalog, appointment boundary, Gmail decision routes, Calendar, Work due-date source, Operating Sessions, and authentication boundary");
           NODE
