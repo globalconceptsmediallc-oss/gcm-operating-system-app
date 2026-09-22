@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/universalEmailIntake.test.js
-   Version: 1.0.0
+   Version: 1.0.1
    Status: Production Regression Test
    Purpose: Verify Cloudflare Email Routing intake is provider-independent,
             duplicate-safe, requires an active intake address, and stores
@@ -93,8 +93,8 @@ function testMessage() {
   assert.equal(DB.state.insertArgs[2], "cloudflare_email_routing");
   assert.equal(DB.state.insertArgs[4], "<universal-intake-test@example.com>");
   assert.equal(DB.state.insertArgs[19], "ready_for_review");
-  assert.match(DB.state.insertArgs[14], /Universal intake test/);
-  assert.match(DB.state.insertArgs[15], /Hello from the universal intake test/);
+  assert.match(DB.state.insertArgs[13], /Universal intake test/);
+  assert.match(DB.state.insertArgs[14], /Hello from the universal intake test/);
 }
 
 {

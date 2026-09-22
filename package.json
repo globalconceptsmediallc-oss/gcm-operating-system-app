@@ -1,16 +1,14 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.43",
+  "version": "6.1.44",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.43",
+    "fileVersion": "6.1.44",
     "status": "Production Road-Test Candidate",
     "purpose": "Universal Email Intake foundation using Cloudflare Email Routing and durable D1 staging.",
     "changeNotes": [
-      "Adds provider-independent inbound email receipt through the Worker email() handler.",
-      "Parses MIME with postal-mime and stages normalized evidence in email_intake.",
-      "Uses active intake-address validation and duplicate protection before D1 writes.",
-      "Does not use AI or Gmail API reads during email receipt."
+      "Corrects the Universal Email Intake regression-test field indexes after the first CI road test.",
+      "Keeps Worker 7.20.0, Email Intake 1.0.0, schema, routing logic, and production behavior unchanged."
     ]
   },
   "private": true,
