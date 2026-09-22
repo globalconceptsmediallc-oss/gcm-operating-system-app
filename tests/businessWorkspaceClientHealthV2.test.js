@@ -1,10 +1,15 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/businessWorkspaceClientHealthV2.test.js
-   Version: 1.0.0
+   Version: 1.0.1
    Status: Production Regression Test
    Purpose: Prevent Business Workspace from rejecting the live Client Health v2
             Business Record schema or hiding its score from the client workspace.
+
+   Change Notes — 1.0.1
+   - Updates the Business Workspace version lock from 1.3.1 to the current
+     production 1.4.0 after the verified Start Investigation enhancement.
+   - Preserves all Client Health v2 schema and rendering assertions unchanged.
    ========================================================= */
 
 import assert from "node:assert/strict";
@@ -28,7 +33,7 @@ assert.match(runtime, /clientHealthV2\.status/);
 assert.match(runtime, /clientHealthV2\.trend/);
 assert.match(runtime, /clientHealthV2\.confidence/);
 
-assert.match(page, /Version: 1\.3\.1/);
+assert.match(page, /Version: 1\.4\.0/);
 assert.match(page, /businessWorkspace\.js\?v=1\.0\.2/);
 assert.match(page, /workspace\.record\.clientHealthV2 \|\| null/);
 assert.match(page, /\$\{Math\.round\(Number\(clientHealthV2\.score\)\)\} \/ 100 —/);
