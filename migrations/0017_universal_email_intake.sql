@@ -1,12 +1,16 @@
 -- =========================================================
 -- Global Concepts Media Operating System
 -- File: migrations/0017_universal_email_intake.sql
--- Version: 1.0.0
+-- Version: 1.0.1
 -- Status: Production Migration Candidate
 -- Sprint: Universal Email Intake — Durable Foundation
 -- Purpose:
 -- Create a provider-independent inbound email staging layer so Morning Command
 -- can operate from durable D1 records instead of repeatedly scanning Gmail.
+--
+-- Change Notes — 1.0.1:
+-- - Deployment retry after repairing the existing Business Workspace version regression test.
+-- - Schema remains unchanged from 1.0.0.
 --
 -- Design rules:
 -- - No existing Gmail, Communication, Investigation, Work, or Proof records change.
