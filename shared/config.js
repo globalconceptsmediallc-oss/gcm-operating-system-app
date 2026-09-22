@@ -1,12 +1,16 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/config.js
-   Version: 7.10.1
+   Version: 7.11.0
    Status: Production Road-Test Candidate
-   Source: shared/config.js 7.9.0 production
-   Sprint: Prospecting + CRM — Durable Relationship Record
+   Source: shared/config.js 7.10.1 production
+   Sprint: Universal Email Intake — D1 Review Queue
    Purpose: Preserve all existing production constants and add the
             durable Prospect CRM action contract.
+
+   Change Notes in 7.11.0:
+   - Adds GET_EMAIL_INTAKE_QUEUE for the provider-independent D1 review queue.
+   - Preserves all existing Gmail and operational actions unchanged.
 
    Change Notes in 7.10.1:
    - Adds CREATE_INVESTIGATION for a human-started Investigation from the Client Workspace.
@@ -18,7 +22,7 @@
      Operating Session, and Calendar action unchanged.
    ========================================================= */
 
-export const VERSION = "7.10.1";
+export const VERSION = "7.11.0";
 export const API_CONTRACT_VERSION = "communications-operational-decision-v3";
 export const COMMUNICATION_ANALYSIS_ENGINE_VERSION = "3.4.1";
 
@@ -37,6 +41,7 @@ export const ACTIONS = Object.freeze({
   APPROVE_GMAIL_MONITORING: "approve-gmail-monitoring",
   APPROVE_GMAIL_INVESTIGATION: "approve-gmail-investigation",
   CREATE_GMAIL_DRAFT: "create-gmail-draft",
+  GET_EMAIL_INTAKE_QUEUE: "get-email-intake-queue",
   GET_CLIENT_WORKSPACE: "get-client-workspace",
   GET_CLIENT_DIRECTORY: "get-client-directory",
   COMMIT_OPERATIONAL_DECISION: "commit-operational-decision",

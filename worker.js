@@ -1,14 +1,20 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.20.0
+   Version: 7.21.0
    Status: OS 2.0 Production Road-Test Candidate
-   Source: Production worker.js 7.19.8
+   Source: Production worker.js 7.20.0
    Sprint: Universal Email Intake — Cloudflare Email Routing
    Purpose: Preserve every verified production route while exposing the
             durable Prospecting Radar + CRM operations required to connect
             scheduled prospects, discovery, proposals, follow-up, agreements,
             payments, and eventual Client handoff.
+
+   Changes in 7.21.0:
+   - Adds the read-only get-email-intake-queue route.
+   - Reads ready_for_review email_intake rows directly from D1.
+   - Does not scan Gmail or mutate intake records.
+   - Preserves the live Cloudflare Email Routing handler unchanged.
 
    Changes in 7.20.0:
    - Adds a Cloudflare Email Routing email() handler.
@@ -142,8 +148,12 @@ import {
   handleInboundEmail,
   EMAIL_INTAKE_VERSION
 } from "./routes/emailIntake.js";
+import {
+  handleEmailIntakeQueue,
+  EMAIL_INTAKE_QUEUE_VERSION
+} from "./routes/emailIntakeQueue.js";
 
-const WORKER_FILE_VERSION = "7.20.0";
+const WORKER_FILE_VERSION = "7.21.0";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
@@ -176,6 +186,7 @@ const SUPPORTED_ACTIONS = [
   ACTIONS.APPROVE_GMAIL_MONITORING,
   ACTIONS.APPROVE_GMAIL_INVESTIGATION,
   ACTIONS.CREATE_GMAIL_DRAFT,
+  ACTIONS.GET_EMAIL_INTAKE_QUEUE,
   ...GMAIL_WORK_REQUEST_ACTIONS,
   ...GMAIL_DISPOSITION_ACTIONS,
   PREPARE_OPERATING_SESSION_ACTION,
@@ -201,6 +212,7 @@ export default {
         version: VERSION,
         workerFileVersion: WORKER_FILE_VERSION,
         emailIntakeVersion: EMAIL_INTAKE_VERSION,
+        emailIntakeQueueVersion: EMAIL_INTAKE_QUEUE_VERSION,
         contractVersion: API_CONTRACT_VERSION,
         sprint: "Universal Email Intake — Cloudflare Email Routing",
         architecture:
@@ -314,6 +326,9 @@ export default {
         return await handleGmailDispositions(body, env, requestId);
       }
       switch (action) {
+        case ACTIONS.GET_EMAIL_INTAKE_QUEUE:
+          return await handleEmailIntakeQueue(body, env, requestId);
+
         case ACTIONS.GET_GMAIL_STATUS:
         case ACTIONS.PREVIEW_GMAIL_INBOX:
         case ACTIONS.APPROVE_GMAIL_MONITORING:
