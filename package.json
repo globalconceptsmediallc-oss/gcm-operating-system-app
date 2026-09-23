@@ -1,15 +1,15 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.56",
+  "version": "6.1.57",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.56",
+    "fileVersion": "6.1.57",
     "status": "Production Road-Test Candidate",
-    "purpose": "Universal Email Intake requested_work constraint correction.",
+    "purpose": "Universal Email Intake requested_work response correction.",
     "changeNotes": [
-      "Corrects Create Work Item to use requested_work, matching the existing D1 CHECK constraint.",
-      "Preserves recovery of any Communication/Work Item created before the failed intake update.",
-      "Avoids duplicate downstream records on retry."
+      "Corrects the Create Work Item success response to requested_work.",
+      "Matches UI, worker contract, D1 CHECK constraint, and regression test.",
+      "Preserves duplicate recovery for the interrupted first attempt."
     ]
   },
   "private": true,

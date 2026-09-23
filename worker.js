@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.27.1
+   Version: 7.27.2
    Status: OS 2.0 Production Road-Test Candidate
    Source: Production worker.js 7.27.0
    Sprint: Universal Email Intake — Human Disposition
@@ -9,6 +9,10 @@
             durable Prospecting Radar + CRM operations required to connect
             scheduled prospects, discovery, proposals, follow-up, agreements,
             payments, and eventual Client handoff.
+
+   Changes in 7.27.2:
+   - Corrects the Work Item success contract to report requested_work consistently.
+   - Preserves recovery of the partially created first-attempt records.
 
    Changes in 7.27.1:
    - Corrects direct Work Item routing to use requested_work, matching the D1 CHECK constraint.
@@ -192,7 +196,7 @@ import {
   EMAIL_INTAKE_DISPOSITION_VERSION
 } from "./routes/emailIntakeDisposition.js";
 
-const WORKER_FILE_VERSION = "7.27.1";
+const WORKER_FILE_VERSION = "7.27.2";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,

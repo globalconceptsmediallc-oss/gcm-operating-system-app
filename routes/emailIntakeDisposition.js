@@ -1,12 +1,16 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/emailIntakeDisposition.js
-   Version: 1.5.1
+   Version: 1.5.2
    Status: Production Road-Test Candidate
    Sprint: Universal Email Intake — Human Disposition
    Purpose:
    Apply the operator's explicit disposition to a durable email_intake record
    without calling Gmail and without deleting source evidence from D1.
+
+   Changes — 1.5.2:
+   - Corrects the Work success response to return requested_work, matching the persisted D1 value.
+   - Keeps interrupted-attempt recovery and duplicate protection intact.
 
    Changes — 1.5.1:
    - Corrects the direct Work Item disposition value to the D1-approved value 'requested_work'.
@@ -55,7 +59,7 @@ import { ACTIONS } from "../shared/config.js";
 import { getDatabase } from "../shared/database.js";
 import { jsonResponse, logWorkerError, safeErrorMessage } from "../shared/http.js";
 
-export const EMAIL_INTAKE_DISPOSITION_VERSION = "1.5.1";
+export const EMAIL_INTAKE_DISPOSITION_VERSION = "1.5.2";
 const UNIVERSAL_INTAKE_SOURCE = "Universal Email Intake";
 
 export async function handleEmailIntakeDisposition(body, env, requestId) {
@@ -1267,7 +1271,7 @@ function workSuccess({
     emailIntakeDispositionVersion:EMAIL_INTAKE_DISPOSITION_VERSION,
     intakeId,
     workspaceKey,
-    disposition:"work",
+    disposition:"requested_work",
     processingStatus:"processed",
     evidenceRetained:true,
     duplicate:Boolean(duplicate),
