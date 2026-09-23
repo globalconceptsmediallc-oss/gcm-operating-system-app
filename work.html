@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.30
+   Version: 1.9.31
    Status: FBDT Production Candidate
    Source: Stable production work.html 1.9.18
    Sprint: Work Queue Full Recovery
@@ -19,6 +19,9 @@
    - communications-operational-decision-v3
 
    Audited changes:
+   - v1.9.31 recognizes page-specific Lighthouse evidence that directly identifies a lazy-loaded LCP image as a proven corrective-work cause.
+   - A verified LCP image plus the SEMrush "Lazy loaded LCP image" audit now unlocks Root Cause Proven — Create Work.
+   - The generated Work Item targets eager/high-priority LCP image loading and post-change Core Web Vitals verification without treating secondary TBT contributors as the primary root cause.
    - v1.9.30 adds a SEMrush Core Web Vitals evidence path for page-level LCP/TBT/CLS investigations.
    - Manual Core Web Vitals evidence can now isolate the affected page and failing metric without falsely proving root cause.
    - The manual fallback placeholder is source-aware so SEMrush performance investigations no longer show a Google canonical example.
@@ -293,7 +296,7 @@
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.30"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.31"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),externalValidation:byId("external-validation-list"),target:byId("target-banner"),requestedForm:byId("requested-work-form"),requestedClient:byId("requested-client"),requestedMessage:byId("requested-work-message"),createRequested:byId("create-requested-work")};
   let activeClients=[],directoryClients=[],investigations=[],monitoringInvestigations=[],workItems=[],validationWorkItems=[],selectedKey="",processing=false,processingWorkItem=false,processingRequestedWork=false;
 
@@ -2189,6 +2192,41 @@
           cwv.lcp && /poor|to improve\s*(?:->|→)\s*poor/i.test(joined) ? "LCP" :
           "";
 
+        const hasImageLcpElement=
+          /largest(?:\s+lcp)?\s+element[^\n]*(?:image|<img|\bimg\b)/i.test(joined) ||
+          /largest\s+contentful\s+paint[^\n]*(?:image|<img|\bimg\b)/i.test(joined);
+        const lazyLoadedLcpImage=/lazy[ -]?loaded\s+lcp\s+image/i.test(joined);
+        const preloadLcpImage=/preload\s+largest\s+contentful\s+paint\s+image/i.test(joined);
+        const renderBlocking=/eliminate\s+render[ -]?blocking\s+resources/i.test(joined);
+        const criticalRequestChain=/avoid\s+chaining\s+critical\s+requests/i.test(joined);
+
+        if(decliningMetric==="LCP"&&hasImageLcpElement&&lazyLoadedLcpImage){
+          const secondary=[
+            preloadLcpImage ? "the LCP image is not being prioritized/preloaded" : "",
+            criticalRequestChain ? "critical request chains add delivery delay" : "",
+            renderBlocking ? "render-blocking resources add delivery delay" : ""
+          ].filter(Boolean);
+
+          return {
+            evidenceType:"core_web_vitals_lcp_diagnostic",
+            issueName:"Core Web Vitals decline",
+            count:1,
+            severity:"warning",
+            sampleUrl:cwv.pageUrl,
+            metric:"LCP",
+            rootCauseProven:true,
+            reason:[
+              `SEMrush identifies ${cwv.pageUrl} as the affected page`,
+              metricParts.length ? `with visible metrics ${metricParts.join(", ")}` : "",
+              "and the page-specific Lighthouse audit identifies the Largest Contentful Paint element as an image that is lazy loaded.",
+              secondary.length ? `Supporting diagnostics also show ${secondary.join("; ")}.` : ""
+            ].filter(Boolean).join(" "),
+            expectedImpact:"Loading the LCP image eagerly and at high priority should remove the directly identified LCP-loading defect; rerun Lighthouse/Site Audit afterward to verify the measured result.",
+            nextQuestion:"Correct the vault-doors LCP hero image loading behavior.",
+            nextEvidence:"Update the vault-doors Largest Contentful Paint image so it is not lazy loaded; load it eagerly/high priority and preload it when appropriate. Then rerun the SEMrush Core Web Vitals/Lighthouse test and verify LCP improves. Treat remaining TBT/main-thread findings as a separate follow-up only if they remain after the LCP correction."
+          };
+        }
+
         return {
           evidenceType:"core_web_vitals_page",
           issueName:"Core Web Vitals decline",
@@ -2207,7 +2245,7 @@
             ? `Which element or resource on ${cwv.pageUrl} is the Largest Contentful Paint candidate, and what is delaying it?`
             : `Which page-level Lighthouse diagnostic explains the Core Web Vitals decline on ${cwv.pageUrl}?`,
           nextEvidence:decliningMetric==="LCP"
-            ? "Open the vault-doors page details in the Core Web Vitals/Lighthouse report and capture the LCP element plus the page-specific improvement or diagnostic causing the delay."
+            ? "Open the affected page details in the Core Web Vitals/Lighthouse report and capture the LCP element plus the page-specific improvement or diagnostic causing the delay."
             : "Open the affected page details in the Core Web Vitals/Lighthouse report and capture the failing metric's page-specific diagnostic."
         };
       }
@@ -2637,6 +2675,9 @@
     if(decision.rootCauseProven&&decision.evidenceType==="canonical_resolution"){
       return "301 redirect obsolete URL to Google-selected canonical";
     }
+    if(decision.rootCauseProven&&decision.evidenceType==="core_web_vitals_lcp_diagnostic"){
+      return "Correct vault-doors LCP hero image loading";
+    }
     return decision.nextQuestion||"What is the next fact required to advance this Investigation?";
   }
 
@@ -2646,6 +2687,9 @@
     }
     if(decision.rootCauseProven&&decision.evidenceType==="canonical_resolution"){
       return decision.nextEvidence||"Create and verify the permanent redirect to the Google-selected canonical URL.";
+    }
+    if(decision.rootCauseProven&&decision.evidenceType==="core_web_vitals_lcp_diagnostic"){
+      return decision.nextEvidence||"Correct the LCP image loading behavior and rerun Core Web Vitals verification.";
     }
     return decision.nextEvidence||"Capture the next evidence screenshot required to answer the current question.";
   }
