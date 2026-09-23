@@ -1,16 +1,15 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.49",
+  "version": "6.1.50",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.49",
+    "fileVersion": "6.1.50",
     "status": "Production Road-Test Candidate",
     "purpose": "Universal Email Intake no-action safety lock.",
     "changeNotes": [
-      "Requires explicit backend confirmation before a no-action intake write.",
-      "Requires a deliberate two-click UI confirmation within 10 seconds.",
-      "Unconfirmed requests are rejected before D1 is read or changed.",
-      "Preserves source evidence and zero-downstream-record behavior."
+      "Corrects the Universal Email Intake confirmation regression test.",
+      "Keeps Worker 7.23.0 and two-step no-action safety behavior unchanged.",
+      "Triggers full production verification on the corrected test set."
     ]
   },
   "private": true,
