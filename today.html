@@ -1,13 +1,19 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.5.6
+   Version: 3.5.7
    Status: Production Candidate
-   Source: Production today.html 3.5.2
-   Sprint: Today / Morning Command — Gmail Routing Cache Safety
+   Source: Production today.html 3.5.6
+   Sprint: Today / Morning Command — Universal Email Intake Read Path
    Purpose: Preserve the locked Today layout, Gmail approvals, Mission Control,
             Media logic, and operating workflow while keeping Mission Control's
             durable D1 ranking authoritative across both decision and queue views.
+
+   Production changes in 3.5.7:
+   - Stops Today from calling Gmail status or preview on page load.
+   - Loads Morning Command from the Universal Email Intake D1 queue through the shared shell.
+   - Keeps decision routing deferred until the read path is verified.
+   - Preserves Mission Control, Work, Media, Proof, and all other Today behavior.
 
    Production changes in 3.5.6:
    - Stops Needs Your Attention from accepting generic clients.html links as actionable destinations.
@@ -1702,7 +1708,7 @@
 <div class="date-chip">GCM OS online</div>
 </div>
 </header>
-<section aria-labelledby="morning-command-title" class="panel morning-command"><div class="morning-command-body"><div class="morning-command-copy"><p class="eyebrow">Morning Command</p><h2 id="morning-command-title">Turn today’s unread Gmail into agency intelligence.</h2><p id="gmail-status-copy">Checking Gmail connection…</p></div><div class="morning-command-actions"><a class="button button-secondary" hidden id="gmail-connect-button" href="#">Connect Gmail</a><button class="button button-primary" disabled id="gmail-preview-button" type="button">Analyze Inbox</button></div></div><div class="gmail-preview" hidden id="gmail-preview"></div></section>
+<section aria-labelledby="morning-command-title" class="panel morning-command"><div class="morning-command-body"><div class="morning-command-copy"><p class="eyebrow">Morning Command</p><h2 id="morning-command-title">Review incoming operational email from the Universal Intake queue.</h2><p id="gmail-status-copy">Loading Universal Email Intake from D1…</p></div><div class="morning-command-actions"><a class="button button-secondary" hidden id="gmail-connect-button" href="#">Legacy Gmail Connection</a><button class="button button-primary" disabled id="gmail-preview-button" type="button">Refresh Intake</button></div></div><div class="gmail-preview" hidden id="gmail-preview"></div></section>
 <section aria-labelledby="command-brief-title" class="command-brief">
 <div class="brief-grid">
 <div>
@@ -1849,7 +1855,7 @@
 <div aria-hidden="true" hidden="" id="mission-control-state-values"><span id="prospect-count">0</span><span id="attention-count">0</span><span id="open-task-count">0</span><span id="proof-count">0</span><span id="media-pulse-count">0</span></div></div>
 </main>
 </div>
-<script src="shared/gcm-shell.js?v=2.0.36"></script>
+<script src="shared/gcm-shell.js?v=2.0.39"></script>
 <script>
     (() => {
       "use strict";
@@ -3056,7 +3062,7 @@
       } else {
         window.GCMOShell.mount({
           currentPage: "today",
-          statusText: "Agency Command Center operational · Today v3.5.6"
+          statusText: "Agency Command Center operational · Today v3.5.7"
         });
       }
 
@@ -3177,9 +3183,10 @@
         }));
       }
 
-      gmailPreviewButton.addEventListener("click",async()=>{gmailPreviewButton.disabled=true;gmailPreviewButton.textContent="Analyzing Inbox…";gmailStatusCopy.textContent="Reading unread email and generating operational recommendations. Nothing will be saved.";try{const p=await gmailPost("preview-gmail-inbox",{limit:10});gmailPreview.hidden=false;gmailPreview.innerHTML=(p.messages||[]).length?p.messages.map(renderGmailMessage).join(""):`<article class="gmail-message"><h3 class="gmail-message-title">No unread operational emails found</h3></article>`;gmailStatusCopy.textContent=`${p.reviewedCount} unread emails analyzed. ${p.writesPerformed||0} OS records were created.`;bindGmailApprovals();gmailPreviewButton.textContent="Refresh Intelligence"}catch(e){gmailStatusCopy.textContent=`Inbox intelligence preview failed: ${e.message}`;gmailPreviewButton.textContent="Try Again"}finally{gmailPreviewButton.disabled=false}});
+      // Universal Email Intake v1.0.0 owns the Morning Command read path.
+      // Legacy Gmail preview handlers remain below for rollback/reference only
+      // and are intentionally not bound or called in production.
       setDateAndGreeting();
-      loadGmailStatus();
       renderDashboard(loadData());
       updatePriority();
       renderOperationalBriefing();

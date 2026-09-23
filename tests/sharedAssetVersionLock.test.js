@@ -1,13 +1,13 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/sharedAssetVersionLock.test.js
-   Version: 1.1.1
+   Version: 1.2.0
    Status: Regression Test
    Purpose: Prevent shared shell enhancement loaders from silently requesting
             an older cached asset than the version declared by that asset and
             protect canonical shared navigation entries.
    Change notes:
-   - Locks Today Gmail decision loader to the decision file's declared version.
+   - Locks Today Universal Email Intake loader to the intake file's declared version.
    - Locks shared shell's visible version header to SHELL_VERSION.
    - Locks MediaForge into the canonical Workspace navigation between Media and Prospects.
    - Locks the MediaForge navigation destination to the GCM OS GitHub Pages subdirectory.
@@ -17,14 +17,14 @@ import fs from "node:fs";
 import assert from "node:assert/strict";
 
 const shell = fs.readFileSync(new URL("../shared/gcm-shell.js", import.meta.url), "utf8");
-const decisions = fs.readFileSync(new URL("../shared/today-gmail-decisions.js", import.meta.url), "utf8");
+const intake = fs.readFileSync(new URL("../shared/today-email-intake.js", import.meta.url), "utf8");
 
-const decisionVersion = decisions.match(/const FILE_VERSION = "([^"]+)";/)?.[1];
-assert.ok(decisionVersion, "today-gmail-decisions.js must declare FILE_VERSION");
+const intakeVersion = intake.match(/const FILE_VERSION = "([^"]+)";/)?.[1];
+assert.ok(intakeVersion, "today-email-intake.js must declare FILE_VERSION");
 assert.match(
   shell,
-  new RegExp(`shared/today-gmail-decisions\\.js\\?v=${decisionVersion.replaceAll(".", "\\.")}`),
-  `gcm-shell.js must request today-gmail-decisions.js with cache key v=${decisionVersion}`
+  new RegExp(`shared/today-email-intake\\.js\\?v=${intakeVersion.replaceAll(".", "\\.")}`),
+  `gcm-shell.js must request today-email-intake.js with cache key v=${intakeVersion}`
 );
 
 const shellHeaderVersion = shell.match(/File: shared\/gcm-shell\.js[\s\S]*?Version: ([0-9.]+)/)?.[1];
@@ -44,4 +44,4 @@ assert.ok(mediaIndex >= 0, "Media must exist in PAGE_MAP");
 assert.ok(mediaForgeIndex > mediaIndex, "MediaForge must appear after Media");
 assert.ok(prospectsIndex > mediaForgeIndex, "MediaForge must appear before Prospects");
 
-console.log(`PASS shared asset/navigation lock: shell ${shellRuntimeVersion} -> Today Gmail decisions ${decisionVersion} + MediaForge`);
+console.log(`PASS shared asset/navigation lock: shell ${shellRuntimeVersion} -> Today Universal Email Intake ${intakeVersion} + MediaForge`);

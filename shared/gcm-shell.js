@@ -1,14 +1,14 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gcm-shell.js
-   Version: 2.0.38
+   Version: 2.0.39
    Status: Production Road-Test Candidate
    Purpose: Shared internal GCM OS application shell foundation.
-   Source: gcm-shell.js 2.0.37 production navigation
-   Sprint: Gmail — Batch Refresh Quota Safety
+   Source: gcm-shell.js 2.0.38 production navigation
+   Sprint: Morning Command — Universal Email Intake
    Change:
-   - Loads Gmail Human Routing v2.3.2 so Morning Command processes the loaded
-     Gmail batch locally instead of re-fetching Gmail after every decision.
+   - Replaces the Today Gmail loader with Universal Email Intake v1.0.0.
+   - Morning Command now reads the durable D1 intake queue instead of scanning Gmail.
    - Preserves Work Investigation Completion/Intake v1.4.0, MediaForge routing,
      Media Dashboard Creative Queue v1.1.2, Calendar Durable Sync,
      Media Production Sessions, Prospect Next Action, and existing enhancements.
@@ -17,7 +17,7 @@
 (() => {
   "use strict";
 
-  const SHELL_VERSION = "2.0.38";
+  const SHELL_VERSION = "2.0.39";
   const WORKER_ENDPOINT =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const MISSION_CONTROL_ACTION = "get-mission-control";
@@ -281,8 +281,8 @@
 
     if (/\/today\.html$/i.test(path)) {
       appendScript(
-        "shared/today-gmail-decisions.js?v=2.3.2",
-        "data-gcm-today-gmail-decisions"
+        "shared/today-email-intake.js?v=1.0.0",
+        "data-gcm-today-email-intake"
       );
     }
 
