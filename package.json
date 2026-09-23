@@ -1,16 +1,16 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.54",
+  "version": "6.1.55",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.54",
+    "fileVersion": "6.1.55",
     "status": "Production Road-Test Candidate",
-    "purpose": "Universal Email Intake Investigation routing.",
+    "purpose": "Universal Email Intake direct Work Item routing.",
     "changeNotes": [
-      "Adds Start Investigation to Universal Email Intake.",
-      "Investigation creates one Communication and one Investigation.",
-      "No Activity Record or Work Item is created by Investigation routing.",
-      "Triggers production verification for the Investigation route."
+      "Adds Create Work Item to Morning Command intake cards.",
+      "Work Item requires explicit client selection.",
+      "Work routing creates exactly one Communication and one Work Item.",
+      "No Activity Record or Investigation is created by direct Work routing."
     ]
   },
   "private": true,

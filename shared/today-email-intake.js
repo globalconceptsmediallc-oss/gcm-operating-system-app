@@ -1,13 +1,19 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/today-email-intake.js
-   Version: 1.5.0
+   Version: 1.6.0
    Status: Production Road-Test Candidate
    Sprint: Morning Command — Universal Email Intake No-Action Routing
    Purpose:
    Replace Gmail inbox scanning on Today with the durable D1 Universal Email
    Intake queue. This phase is intentionally read-only: it proves Morning
    Command can load provider-independent email evidence without Google API use.
+
+   Changes — 1.6.0:
+   - Adds Create Work Item for direct, already-defined requested work.
+   - Work Item requires client selection and creates one Communication plus one Work Item.
+   - Work Item creates no Proof/history Activity Record and no Investigation.
+   - Preserves Information, Monitoring, Investigation, and Delete routes unchanged.
 
    Changes — 1.5.0:
    - Adds Start Investigation.
@@ -50,7 +56,7 @@
 (() => {
   "use strict";
 
-  const FILE_VERSION = "1.5.0";
+  const FILE_VERSION = "1.6.0";
   const WORKER_URL =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const QUEUE_ACTION = "get-email-intake-queue";
@@ -99,6 +105,9 @@
       .gcm-intake-investigation{min-height:36px;padding:0 12px;border:1px solid #d7c49c;border-radius:9px;background:#fffaf0;color:#7b5a1d;font-weight:850;cursor:pointer}
       .gcm-intake-investigation:hover,.gcm-intake-investigation:focus-visible{background:#fff5df;outline:none}
       .gcm-intake-investigation:disabled{opacity:.55;cursor:not-allowed}
+      .gcm-intake-work{min-height:36px;padding:0 12px;border:1px solid #cabdf1;border-radius:9px;background:#f8f5ff;color:#5d42a5;font-weight:850;cursor:pointer}
+      .gcm-intake-work:hover,.gcm-intake-work:focus-visible{background:#f1ecff;outline:none}
+      .gcm-intake-work:disabled{opacity:.55;cursor:not-allowed}
       .gcm-intake-information:hover,.gcm-intake-information:focus-visible{background:#eaf3ff;outline:none}
       .gcm-intake-information:disabled{opacity:.55;cursor:not-allowed}
       .gcm-intake-delete{min-height:36px;padding:0 12px;border:1px solid #e5bcbc;border-radius:9px;background:#fff7f7;color:#9d3030;font-weight:850;cursor:pointer}
@@ -188,6 +197,9 @@
         <button class="gcm-intake-investigation" type="button" data-gcm-intake-investigation data-intake-id="${escapeHtml(record?.id || "")}">
           Start Investigation
         </button>
+        <button class="gcm-intake-work" type="button" data-gcm-intake-work data-intake-id="${escapeHtml(record?.id || "")}">
+          Create Work Item
+        </button>
         <button class="gcm-intake-delete" type="button" data-gcm-intake-delete data-intake-id="${escapeHtml(record?.id || "")}">
           Delete — No Action Required
         </button>
@@ -205,6 +217,9 @@
 
     const investigationButton = article.querySelector("[data-gcm-intake-investigation]");
     investigationButton?.addEventListener("click", () => handleInvestigation(article, investigationButton));
+
+    const workButton = article.querySelector("[data-gcm-intake-work]");
+    workButton?.addEventListener("click", () => handleWork(article, workButton));
 
     const deleteButton = article.querySelector("[data-gcm-intake-delete]");
     deleteButton?.addEventListener("click", () => handleNoAction(article, deleteButton));
@@ -385,6 +400,61 @@
       if (select) select.disabled = false;
       if (actionStatus) actionStatus.textContent = `Investigation save failed: ${error.message}`;
       setStatus(`Investigation disposition failed: ${error.message}`);
+    }
+  }
+
+  async function handleWork(card, button) {
+    if (busy || !card || !button) return;
+
+    const intakeId = Number(button.dataset.intakeId || card.dataset.intakeId);
+    const select = card.querySelector("[data-gcm-intake-client]");
+    const clientId = Number(select?.value);
+    const actionStatus = card.querySelector("[data-gcm-intake-action-status]");
+
+    if (!Number.isInteger(clientId) || clientId <= 0) {
+      if (actionStatus) actionStatus.textContent = "Choose the client before creating a Work Item.";
+      select?.focus();
+      return;
+    }
+
+    busy = true;
+    button.disabled = true;
+    button.textContent = "Creating Work Item…";
+    if (select) select.disabled = true;
+    if (actionStatus) actionStatus.textContent = "Creating one Communication and one Work Item while preserving the source email in D1…";
+
+    try {
+      const result = await post(DISPOSITION_ACTION, {
+        workspaceKey:"gcm",
+        intakeId,
+        disposition:"work",
+        clientId
+      });
+
+      if (
+        Number(result?.communicationsCreated || 0) > 1 ||
+        Number(result?.activityRecordsCreated || 0) !== 0 ||
+        Number(result?.investigationsCreated || 0) !== 0 ||
+        Number(result?.workItemsCreated || 0) > 1 ||
+        !Number(result?.communicationId) ||
+        !Number(result?.workItemId) ||
+        result?.evidenceRetained !== true
+      ) {
+        throw new Error("Work Item routing safety check failed.");
+      }
+
+      busy = false;
+      setStatus(
+        `Intake #${intakeId} routed to Work Item #${result.workItemId}. Communication #${result.communicationId} linked; source evidence retained; no Investigation created.`
+      );
+      await refreshQueue();
+    } catch (error) {
+      busy = false;
+      button.disabled = false;
+      button.textContent = "Create Work Item";
+      if (select) select.disabled = false;
+      if (actionStatus) actionStatus.textContent = `Work Item save failed: ${error.message}`;
+      setStatus(`Work Item disposition failed: ${error.message}`);
     }
   }
 

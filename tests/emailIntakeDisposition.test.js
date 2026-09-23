@@ -1,11 +1,11 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/emailIntakeDisposition.test.js
-   Version: 1.4.0
+   Version: 1.5.0
    Status: Production Regression Test
    Purpose:
    Verify no-action confirmation, Information routing, Monitoring Proof/history,
-   and Investigation routing for durable Universal Email Intake records.
+   Investigation routing, and direct Work Item routing for durable intake.
    ========================================================= */
 
 import assert from "node:assert/strict";
@@ -14,7 +14,7 @@ import {
   EMAIL_INTAKE_DISPOSITION_VERSION
 } from "../routes/emailIntakeDisposition.js";
 
-assert.equal(EMAIL_INTAKE_DISPOSITION_VERSION,"1.4.0");
+assert.equal(EMAIL_INTAKE_DISPOSITION_VERSION,"1.5.0");
 
 function makeDeleteDb(record) {
   const state={ updateSql:"", updateCount:0, selects:0 };
@@ -358,4 +358,101 @@ function makeInvestigationDb() {
   assert.doesNotMatch(allSql,/INSERT INTO activity_records/i);
 }
 
-console.log("PASS Universal Email Intake no-action, Information, Monitoring, and Investigation routing");
+function makeWorkDb() {
+  const intake={
+    id:5,
+    workspace_key:"gcm",
+    received_at:"2026-09-23T15:20:00.000Z",
+    from_address:"client@example.com",
+    from_name:"Work Test",
+    subject:"GCM OS Work Item Route Test",
+    body_text:"Please complete this defined client request.",
+    processing_status:"ready_for_review",
+    disposition:null,
+    client_id:null,
+    communication_id:null,
+    activity_record_id:null,
+    investigation_id:null,
+    work_item_id:null
+  };
+  const client={id:10,client_code:"GCM",name:"Global Concepts Media"};
+  const state={
+    sql:[],
+    communicationInserted:false,
+    workInserted:false,
+    intakeUpdated:false
+  };
+
+  return {
+    state,
+    prepare(sql) {
+      state.sql.push(sql);
+      return {
+        bind() {
+          return {
+            async first() {
+              if (/FROM email_intake/i.test(sql)) return intake;
+              if (/FROM clients/i.test(sql)) return client;
+              if (/FROM communications/i.test(sql)) {
+                return state.communicationInserted ? {id:1001} : null;
+              }
+              if (/FROM work_items/i.test(sql)) {
+                return state.workInserted ? {id:1101} : null;
+              }
+              return null;
+            },
+            async run() {
+              if (/INSERT INTO communications/i.test(sql)) {
+                state.communicationInserted=true;
+                return {meta:{changes:1,last_row_id:1001}};
+              }
+              if (/INSERT INTO work_items/i.test(sql)) {
+                state.workInserted=true;
+                return {meta:{changes:1,last_row_id:1101}};
+              }
+              if (/UPDATE email_intake/i.test(sql)) {
+                state.intakeUpdated=true;
+                return {meta:{changes:1}};
+              }
+              return {meta:{changes:0}};
+            }
+          };
+        }
+      };
+    }
+  };
+}
+
+{
+  const DB=makeWorkDb();
+  const response=await handleEmailIntakeDisposition(
+    {
+      intakeId:5,
+      workspaceKey:"gcm",
+      disposition:"work",
+      clientId:10
+    },
+    {DB},
+    "work"
+  );
+  const payload=await response.json();
+  assert.equal(response.status,200);
+  assert.equal(payload.ok,true);
+  assert.equal(payload.disposition,"work");
+  assert.equal(payload.communicationId,1001);
+  assert.equal(payload.workItemId,1101);
+  assert.equal(payload.communicationsCreated,1);
+  assert.equal(payload.activityRecordsCreated,0);
+  assert.equal(payload.investigationsCreated,0);
+  assert.equal(payload.workItemsCreated,1);
+  assert.equal(DB.state.communicationInserted,true);
+  assert.equal(DB.state.workInserted,true);
+  assert.equal(DB.state.intakeUpdated,true);
+  const allSql=DB.state.sql.join("\n");
+  assert.match(allSql,/INSERT INTO communications/i);
+  assert.match(allSql,/INSERT INTO work_items/i);
+  assert.doesNotMatch(allSql,/INSERT INTO investigations/i);
+  assert.doesNotMatch(allSql,/INSERT INTO activity_records/i);
+}
+
+console.log("PASS Universal Email Intake no-action, Information, Monitoring, Investigation, and Work Item routing");

@@ -1,12 +1,19 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/emailIntakeDisposition.js
-   Version: 1.4.0
+   Version: 1.5.0
    Status: Production Road-Test Candidate
    Sprint: Universal Email Intake — Human Disposition
    Purpose:
    Apply the operator's explicit disposition to a durable email_intake record
    without calling Gmail and without deleting source evidence from D1.
+
+   Changes — 1.5.0:
+   - Adds Work Item disposition for direct, already-defined requested work.
+   - Work requires an explicit client selection.
+   - Creates exactly one Communication and one Work Item.
+   - Creates no Activity Record and no Investigation.
+   - Links both downstream records back to email_intake and marks the intake processed.
 
    Changes — 1.4.0:
    - Adds Investigation disposition.
@@ -43,7 +50,7 @@ import { ACTIONS } from "../shared/config.js";
 import { getDatabase } from "../shared/database.js";
 import { jsonResponse, logWorkerError, safeErrorMessage } from "../shared/http.js";
 
-export const EMAIL_INTAKE_DISPOSITION_VERSION = "1.4.0";
+export const EMAIL_INTAKE_DISPOSITION_VERSION = "1.5.0";
 const UNIVERSAL_INTAKE_SOURCE = "Universal Email Intake";
 
 export async function handleEmailIntakeDisposition(body, env, requestId) {
@@ -125,11 +132,22 @@ export async function handleEmailIntakeDisposition(body, env, requestId) {
     });
   }
 
+  if (disposition === "work") {
+    return handleWork({
+      db,
+      intakeId,
+      workspaceKey,
+      clientId:Number(body?.clientId),
+      owner:clean(body?.owner) || "Andrew",
+      requestId
+    });
+  }
+
   return jsonResponse({
     ok:false,
     requestId,
     action:ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
-    error:"Supported dispositions in this phase are Delete — No Action Required, Information, Monitoring, and Investigation."
+    error:"Supported dispositions in this phase are Delete — No Action Required, Information, Monitoring, Investigation, and Work Item."
   },400);
 }
 
@@ -906,6 +924,287 @@ async function handleInvestigation({
   }
 }
 
+async function handleWork({
+  db,
+  intakeId,
+  workspaceKey,
+  clientId,
+  owner,
+  requestId
+}) {
+  if (!Number.isInteger(clientId) || clientId <= 0) {
+    return jsonResponse({
+      ok:false,
+      requestId,
+      action:ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
+      error:"Choose a client before creating a Work Item."
+    },400);
+  }
+
+  try {
+    const existing = await loadIntake(db, intakeId, workspaceKey);
+
+    if (!existing) {
+      return notFoundResponse(requestId, intakeId);
+    }
+
+    if (
+      existing.processing_status === "processed" &&
+      existing.disposition === "work" &&
+      existing.communication_id &&
+      existing.work_item_id
+    ) {
+      return workSuccess({
+        requestId,
+        intakeId,
+        workspaceKey,
+        clientId:Number(existing.client_id || clientId),
+        communicationId:Number(existing.communication_id),
+        workItemId:Number(existing.work_item_id),
+        duplicate:true,
+        communicationCreated:false,
+        workItemCreated:false
+      });
+    }
+
+    if (existing.processing_status !== "ready_for_review") {
+      return notReadyResponse(requestId, intakeId, existing);
+    }
+
+    if (hasDownstreamLink(existing)) {
+      return jsonResponse({
+        ok:false,
+        requestId,
+        action:ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
+        error:"Work Item disposition was blocked because downstream OS records are already linked to this intake record."
+      },409);
+    }
+
+    const client = await db.prepare(`
+      SELECT id, client_code, name
+      FROM clients
+      WHERE id = ?
+      LIMIT 1
+    `).bind(clientId).first();
+
+    if (!client) {
+      return jsonResponse({
+        ok:false,
+        requestId,
+        action:ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
+        error:`Client #${clientId} was not found.`
+      },404);
+    }
+
+    const externalId = `email-intake:${workspaceKey}:${intakeId}`;
+    let communication = await db.prepare(`
+      SELECT id
+      FROM communications
+      WHERE source = ?
+        AND external_id = ?
+      LIMIT 1
+    `).bind(UNIVERSAL_INTAKE_SOURCE, externalId).first();
+
+    let communicationCreated = false;
+
+    if (!communication?.id) {
+      const rawContent = clean(existing.body_text) || clean(existing.subject) || "(No content)";
+      const summary = buildInformationSummary(existing);
+      const analysisJson = JSON.stringify({
+        source:UNIVERSAL_INTAKE_SOURCE,
+        route:"work",
+        intakeId,
+        workspaceKey,
+        operator:"human",
+        sender:{
+          name:existing.from_name || null,
+          address:existing.from_address || null
+        },
+        evidenceRetained:true,
+        recommendedRoutes:{
+          saveCommunication:true,
+          createInvestigation:false,
+          createWorkItem:true,
+          replyRequired:false
+        }
+      });
+
+      await db.prepare(`
+        INSERT INTO communications (
+          client_id, external_id, occurred_at, direction, source, category,
+          subject, raw_content, ai_summary, ai_analysis_json,
+          operational_decision, status, requires_investigation,
+          owner, minutes_spent, notes
+        ) VALUES (?, ?, ?, 'incoming', ?, 'Requested Work', ?, ?, ?, ?, 'work', 'work_open', 0, ?, 0, ?)
+      `).bind(
+        Number(client.id),
+        externalId,
+        existing.received_at || new Date().toISOString(),
+        UNIVERSAL_INTAKE_SOURCE,
+        clean(existing.subject) || "(No subject)",
+        rawContent,
+        summary,
+        analysisJson,
+        owner,
+        [
+          `Universal Email Intake #${intakeId}`,
+          `Client: ${client.name || client.client_code || client.id}`,
+          "Human disposition: Work Item",
+          "Source evidence retained in email_intake.",
+          "Direct work created because the requested action is already defined.",
+          "No Investigation created."
+        ].join("\n")
+      ).run();
+
+      communication = await db.prepare(`
+        SELECT id
+        FROM communications
+        WHERE source = ?
+          AND external_id = ?
+        ORDER BY id DESC
+        LIMIT 1
+      `).bind(UNIVERSAL_INTAKE_SOURCE, externalId).first();
+
+      communicationCreated = true;
+    }
+
+    const communicationId = Number(communication?.id);
+
+    if (!Number.isInteger(communicationId) || communicationId <= 0) {
+      throw new Error("The Communication was not available after the Work Item save.");
+    }
+
+    let workItem = await db.prepare(`
+      SELECT id
+      FROM work_items
+      WHERE communication_id = ?
+      ORDER BY id DESC
+      LIMIT 1
+    `).bind(communicationId).first();
+
+    let workItemCreated = false;
+
+    if (!workItem?.id) {
+      const title = clean(existing.subject) || "Requested Work";
+      const description = clean(existing.body_text) || title;
+
+      const result = await db.prepare(`
+        INSERT INTO work_items (
+          client_id, investigation_id, communication_id,
+          title, description, category, priority, status,
+          owner, expected_impact
+        ) VALUES (?, NULL, ?, ?, ?, 'Client Requested Work', 'normal', 'open', ?, ?)
+      `).bind(
+        Number(client.id),
+        communicationId,
+        title,
+        description,
+        owner,
+        "Complete the requested work and preserve completion evidence for Proof."
+      ).run();
+
+      workItem = {id:Number(result?.meta?.last_row_id || 0)};
+      workItemCreated = true;
+    }
+
+    let workItemId = Number(workItem?.id);
+
+    if (!Number.isInteger(workItemId) || workItemId <= 0) {
+      workItem = await db.prepare(`
+        SELECT id
+        FROM work_items
+        WHERE communication_id = ?
+        ORDER BY id DESC
+        LIMIT 1
+      `).bind(communicationId).first();
+
+      workItemId = Number(workItem?.id);
+    }
+
+    if (!Number.isInteger(workItemId) || workItemId <= 0) {
+      throw new Error("The Work Item was not available after save.");
+    }
+
+    const classificationJson = JSON.stringify({
+      disposition:"work",
+      operator:"human",
+      clientId:Number(client.id),
+      communicationId,
+      workItemId
+    });
+
+    const update = await db.prepare(`
+      UPDATE email_intake
+      SET
+        processing_status = 'processed',
+        disposition = 'work',
+        classification_source = 'human_operator',
+        classification_json = ?,
+        classification_confidence = 'high',
+        client_id = ?,
+        communication_id = ?,
+        work_item_id = ?,
+        processed_at = CURRENT_TIMESTAMP,
+        failure_stage = NULL,
+        failure_message = NULL,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+        AND workspace_key = ?
+        AND processing_status = 'ready_for_review'
+        AND activity_record_id IS NULL
+        AND investigation_id IS NULL
+    `).bind(
+      classificationJson,
+      Number(client.id),
+      communicationId,
+      workItemId,
+      intakeId,
+      workspaceKey
+    ).run();
+
+    if (Number(update?.meta?.changes || 0) !== 1) {
+      const reconciled = await loadIntake(db, intakeId, workspaceKey);
+      if (
+        reconciled?.processing_status === "processed" &&
+        reconciled?.disposition === "work" &&
+        Number(reconciled?.communication_id) === communicationId &&
+        Number(reconciled?.work_item_id) === workItemId
+      ) {
+        return workSuccess({
+          requestId,
+          intakeId,
+          workspaceKey,
+          clientId:Number(client.id),
+          communicationId,
+          workItemId,
+          duplicate:true,
+          communicationCreated:false,
+          workItemCreated:false
+        });
+      }
+      return staleResponse(requestId);
+    }
+
+    return workSuccess({
+      requestId,
+      intakeId,
+      workspaceKey,
+      clientId:Number(client.id),
+      communicationId,
+      workItemId,
+      duplicate:false,
+      communicationCreated,
+      workItemCreated
+    });
+  } catch (error) {
+    return dispositionFailure({
+      requestId,
+      stage:"d1_email_intake_work",
+      error
+    });
+  }
+}
+
 async function loadIntake(db, intakeId, workspaceKey) {
   return db.prepare(`
     SELECT
@@ -943,6 +1242,39 @@ function buildInformationSummary(record) {
   const body = clean(record?.body_text).replace(/\s+/g," ");
   if (body) return body.slice(0,800);
   return clean(record?.subject) || "Inbound email saved as Information.";
+}
+
+function workSuccess({
+  requestId,
+  intakeId,
+  workspaceKey,
+  clientId,
+  communicationId,
+  workItemId,
+  duplicate,
+  communicationCreated,
+  workItemCreated
+}) {
+  return jsonResponse({
+    ok:true,
+    requestId,
+    action:ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
+    emailIntakeDispositionVersion:EMAIL_INTAKE_DISPOSITION_VERSION,
+    intakeId,
+    workspaceKey,
+    disposition:"work",
+    processingStatus:"processed",
+    evidenceRetained:true,
+    duplicate:Boolean(duplicate),
+    clientId,
+    communicationId,
+    workItemId,
+    writesPerformed:(communicationCreated ? 1 : 0) + (workItemCreated ? 1 : 0),
+    communicationsCreated:communicationCreated ? 1 : 0,
+    activityRecordsCreated:0,
+    investigationsCreated:0,
+    workItemsCreated:workItemCreated ? 1 : 0
+  });
 }
 
 function investigationSuccess({
