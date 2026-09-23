@@ -1,16 +1,16 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.59",
+  "version": "6.1.60",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.59",
+    "fileVersion": "6.1.60",
     "status": "Production Road-Test Candidate",
-    "purpose": "Recognize proven page-specific LCP image loading defects in Guided Investigation.",
+    "purpose": "Refresh derived Investigation decisions from preserved locked evidence after rule upgrades.",
     "changeNotes": [
-      "Work v1.9.31 recognizes a verified image LCP element plus the SEMrush Lazy loaded LCP image audit as sufficient root-cause evidence.",
-      "Root Cause Proven — Create Work now unlocks for that evidence state.",
-      "Generated work targets eager/high-priority LCP image loading and requires a post-change Core Web Vitals rerun.",
-      "Secondary TBT/main-thread findings remain separate unless they persist after the LCP correction."
+      "Work v1.9.32 re-evaluates the newest locked raw evidence using the current decision rules.",
+      "Locked source facts remain unchanged; only derived decision metadata is refreshed.",
+      "A newly proven root cause overrides stale visible saved-progress text and unlocks supported corrective Work.",
+      "This allows Investigation #44 evidence entered under v1.9.30 to benefit from the v1.9.31 LCP rule without re-entering evidence."
     ]
   },
   "private": true,

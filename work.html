@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.31
+   Version: 1.9.32
    Status: FBDT Production Candidate
    Source: Stable production work.html 1.9.18
    Sprint: Work Queue Full Recovery
@@ -19,6 +19,9 @@
    - communications-operational-decision-v3
 
    Audited changes:
+   - v1.9.32 re-evaluates previously locked evidence after a decision-rule upgrade.
+   - Existing locked raw facts are preserved; only the derived finding/root-cause decision is refreshed when the newer rule produces a stronger supported conclusion.
+   - When re-evaluation proves root cause, stale saved Investigation-progress text is replaced in the visible decision fields so the operator can create the supported Work Item without re-entering evidence.
    - v1.9.31 recognizes page-specific Lighthouse evidence that directly identifies a lazy-loaded LCP image as a proven corrective-work cause.
    - A verified LCP image plus the SEMrush "Lazy loaded LCP image" audit now unlocks Root Cause Proven — Create Work.
    - The generated Work Item targets eager/high-priority LCP image loading and post-change Core Web Vitals verification without treating secondary TBT contributors as the primary root cause.
@@ -296,7 +299,7 @@
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.31"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.32"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),externalValidation:byId("external-validation-list"),target:byId("target-banner"),requestedForm:byId("requested-work-form"),requestedClient:byId("requested-client"),requestedMessage:byId("requested-work-message"),createRequested:byId("create-requested-work")};
   let activeClients=[],directoryClients=[],investigations=[],monitoringInvestigations=[],workItems=[],validationWorkItems=[],selectedKey="",processing=false,processingWorkItem=false,processingRequestedWork=false;
 
@@ -1341,32 +1344,103 @@
   }
 
   function restoreInvestigationState(item){
-    const history=getDecisionEvidenceHistory(item);
+    let history=getDecisionEvidenceHistory(item);
 
     if(!history.length){
       updateDecisionControls({rootCauseProven:false});
       return;
     }
 
+    const latest=history.at(-1);
+    const latestFacts=Array.isArray(latest?.facts)
+      ? latest.facts.map(value=>String(value||"").trim()).filter(Boolean)
+      : [];
+
+    /*
+     * v1.9.32 DERIVED-DECISION REFRESH
+     *
+     * Locked evidence facts are immutable source evidence. Decision rules may
+     * improve later. Re-evaluate the newest locked facts with the current rule
+     * set so an older derived conclusion cannot permanently block supported
+     * corrective work. Only the derived fields on the local evidence entry are
+     * refreshed; the locked source facts themselves are never changed.
+     */
+    if(latestFacts.length){
+      const captured={
+        facts:latestFacts,
+        summary:"",
+        source:`${evidenceSourceName(item)} · Locked evidence re-evaluation`,
+        subject:latest.screen||"Locked evidence",
+        confidence:"Human verified",
+        recommendation:""
+      };
+      const refreshedDecision=buildNextStepDecision(captured,item);
+      const refreshedFinding=buildInvestigationFinding(item,captured,refreshedDecision);
+      const refreshedAction=buildSpecificAction(item,captured,refreshedDecision);
+      const refreshedQuestion=buildSpecificWorkTitle(item,captured,refreshedDecision);
+      const changed=
+        Boolean(latest.rootCauseProven)!==Boolean(refreshedDecision.rootCauseProven) ||
+        String(latest.evidenceType||"")!==String(refreshedDecision.evidenceType||"") ||
+        String(latest.finding||"")!==String(refreshedFinding||"") ||
+        String(latest.nextAction||"")!==String(refreshedAction||"");
+
+      if(changed){
+        const fullHistory=getEvidenceHistory(item);
+        const targetIndex=fullHistory.findIndex(entry=>
+          Number(entry?.step)===Number(latest.step) &&
+          String(entry?.capturedAt||"")===String(latest.capturedAt||"")
+        );
+        if(targetIndex>=0){
+          fullHistory[targetIndex]={
+            ...fullHistory[targetIndex],
+            finding:refreshedFinding,
+            nextAction:refreshedAction,
+            evidenceType:refreshedDecision.evidenceType||"unknown",
+            issueName:refreshedDecision.issueName||"",
+            issueCount:Number(refreshedDecision.count)||0,
+            sampleUrl:refreshedDecision.sampleUrl||"",
+            schemaType:refreshedDecision.schemaType||"",
+            affectedField:refreshedDecision.affectedField||"",
+            implementationSource:refreshedDecision.implementationSource||"",
+            systemic:Boolean(refreshedDecision.systemic),
+            rootCauseProven:Boolean(refreshedDecision.rootCauseProven),
+            nextQuestion:refreshedDecision.nextQuestion||refreshedQuestion||"",
+            fingerprint:evidenceDecisionFingerprint(refreshedDecision)
+          };
+          saveEvidenceHistory(item,fullHistory);
+          renderEvidenceHistory(item);
+          history=getDecisionEvidenceHistory(item);
+        }
+      }
+    }
+
     const finding=byId("finding-summary");
     const question=byId("work-title");
     const evidence=byId("work-description");
-    const latest=history.at(-1);
+    const refreshedLatest=history.at(-1);
 
-    if(finding&&!finding.value.trim()){
+    if(refreshedLatest?.rootCauseProven){
       finding.value=history
         .map(entry=>`Step ${entry.step}: ${entry.finding}`)
         .join("\n\n");
-    }
-    if(question&&!question.value.trim()){
-      question.value=latest.nextQuestion||extractNextQuestion(latest.nextAction);
-    }
-    if(evidence&&!evidence.value.trim()){
-      evidence.value=latest.nextAction||"";
+      question.value=refreshedLatest.nextQuestion||extractNextQuestion(refreshedLatest.nextAction);
+      evidence.value=refreshedLatest.nextAction||"";
+    }else{
+      if(finding&&!finding.value.trim()){
+        finding.value=history
+          .map(entry=>`Step ${entry.step}: ${entry.finding}`)
+          .join("\n\n");
+      }
+      if(question&&!question.value.trim()){
+        question.value=refreshedLatest.nextQuestion||extractNextQuestion(refreshedLatest.nextAction);
+      }
+      if(evidence&&!evidence.value.trim()){
+        evidence.value=refreshedLatest.nextAction||"";
+      }
     }
 
     updateDecisionControls({
-      rootCauseProven:Boolean(latest.rootCauseProven)
+      rootCauseProven:Boolean(refreshedLatest.rootCauseProven)
     });
   }
 
