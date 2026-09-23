@@ -1,12 +1,19 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/emailIntakeDisposition.js
-   Version: 1.1.0
+   Version: 1.2.0
    Status: Production Road-Test Candidate
    Sprint: Universal Email Intake — Human Disposition
    Purpose:
    Apply the operator's explicit disposition to a durable email_intake record
    without calling Gmail and without deleting source evidence from D1.
+
+   Changes — 1.2.0:
+   - Adds Information disposition.
+   - Information requires an explicit client selection.
+   - Creates exactly one Communication/history record.
+   - Creates no Activity Record, Investigation, or Work Item.
+   - Links the Communication back to email_intake and marks the intake processed.
 
    Safety update — 1.1.0:
    - Requires an explicit backend confirmation token before any no-action write.
@@ -14,17 +21,16 @@
    - Prevents refreshes, stale handlers, or accidental single requests from processing intake.
 
    Phase 1 behavior:
-   - Supports Delete — No Action Required only.
-   - Marks the intake record processed with disposition=delete.
-   - Retains the full source email evidence in email_intake.
-   - Creates 0 Communications, 0 Investigations, 0 Work Items, and 0 Proof rows.
+   - Delete — No Action Required preserves the intake row and creates 0 downstream records.
+   - Information preserves the intake row and creates exactly 1 Communication.
    ========================================================= */
 
 import { ACTIONS } from "../shared/config.js";
 import { getDatabase } from "../shared/database.js";
 import { jsonResponse, logWorkerError, safeErrorMessage } from "../shared/http.js";
 
-export const EMAIL_INTAKE_DISPOSITION_VERSION = "1.1.0";
+export const EMAIL_INTAKE_DISPOSITION_VERSION = "1.2.0";
+const UNIVERSAL_INTAKE_SOURCE = "Universal Email Intake";
 
 export async function handleEmailIntakeDisposition(body, env, requestId) {
   const db = getDatabase(env);
@@ -41,17 +47,6 @@ export async function handleEmailIntakeDisposition(body, env, requestId) {
   const intakeId = Number(body?.intakeId);
   const workspaceKey = clean(body?.workspaceKey) || "gcm";
   const disposition = clean(body?.disposition).toLowerCase();
-  const confirmed = body?.confirmed === true;
-  const confirmation = clean(body?.confirmation).toLowerCase();
-
-  if (!confirmed || confirmation !== "delete-no-action-required") {
-    return jsonResponse({
-      ok:false,
-      requestId,
-      action:ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
-      error:"Explicit confirmation is required before Delete — No Action Required can be saved."
-    },400);
-  }
 
   if (!Number.isInteger(intakeId) || intakeId <= 0) {
     return jsonResponse({
@@ -62,45 +57,64 @@ export async function handleEmailIntakeDisposition(body, env, requestId) {
     },400);
   }
 
-  if (disposition !== "delete") {
-    return jsonResponse({
-      ok:false,
-      requestId,
-      action:ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
-      error:"This phase supports only Delete — No Action Required."
-    },400);
-  }
+  if (disposition === "delete") {
+    const confirmed = body?.confirmed === true;
+    const confirmation = clean(body?.confirmation).toLowerCase();
 
-  try {
-    const existing = await db.prepare(`
-      SELECT
-        id,
-        processing_status,
-        disposition,
-        communication_id,
-        activity_record_id,
-        investigation_id,
-        work_item_id
-      FROM email_intake
-      WHERE id = ?
-        AND workspace_key = ?
-      LIMIT 1
-    `).bind(intakeId, workspaceKey).first();
-
-    if (!existing) {
+    if (!confirmed || confirmation !== "delete-no-action-required") {
       return jsonResponse({
         ok:false,
         requestId,
         action:ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
-        error:`Email intake record #${intakeId} was not found.`
-      },404);
+        error:"Explicit confirmation is required before Delete — No Action Required can be saved."
+      },400);
+    }
+
+    return handleDeleteNoAction({
+      db,
+      intakeId,
+      workspaceKey,
+      requestId
+    });
+  }
+
+  if (disposition === "information") {
+    return handleInformation({
+      db,
+      intakeId,
+      workspaceKey,
+      clientId:Number(body?.clientId),
+      owner:clean(body?.owner) || "Andrew",
+      requestId
+    });
+  }
+
+  return jsonResponse({
+    ok:false,
+    requestId,
+    action:ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
+    error:"Supported dispositions in this phase are Delete — No Action Required and Information."
+  },400);
+}
+
+async function handleDeleteNoAction({
+  db,
+  intakeId,
+  workspaceKey,
+  requestId
+}) {
+  try {
+    const existing = await loadIntake(db, intakeId, workspaceKey);
+
+    if (!existing) {
+      return notFoundResponse(requestId, intakeId);
     }
 
     if (
       existing.processing_status === "processed" &&
       existing.disposition === "delete"
     ) {
-      return successResponse({
+      return deleteSuccess({
         requestId,
         intakeId,
         workspaceKey,
@@ -109,24 +123,10 @@ export async function handleEmailIntakeDisposition(body, env, requestId) {
     }
 
     if (existing.processing_status !== "ready_for_review") {
-      return jsonResponse({
-        ok:false,
-        requestId,
-        action:ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
-        error:`Email intake record #${intakeId} is not ready for review.`,
-        processingStatus:existing.processing_status || null,
-        disposition:existing.disposition || null
-      },409);
+      return notReadyResponse(requestId, intakeId, existing);
     }
 
-    const linkedRecord = [
-      existing.communication_id,
-      existing.activity_record_id,
-      existing.investigation_id,
-      existing.work_item_id
-    ].some(value => value !== null && value !== undefined);
-
-    if (linkedRecord) {
+    if (hasDownstreamLink(existing)) {
       return jsonResponse({
         ok:false,
         requestId,
@@ -154,41 +154,290 @@ export async function handleEmailIntakeDisposition(body, env, requestId) {
         AND work_item_id IS NULL
     `).bind(intakeId, workspaceKey).run();
 
-    const changes = Number(update?.meta?.changes || 0);
-
-    if (changes !== 1) {
-      return jsonResponse({
-        ok:false,
-        requestId,
-        action:ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
-        error:"The intake record changed before the no-action disposition could be saved. Refresh Morning Command and review it again."
-      },409);
+    if (Number(update?.meta?.changes || 0) !== 1) {
+      return staleResponse(requestId);
     }
 
-    return successResponse({
+    return deleteSuccess({
       requestId,
       intakeId,
       workspaceKey,
       duplicate:false
     });
   } catch (error) {
-    logWorkerError({
+    return dispositionFailure({
       requestId,
-      route:ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
-      stage:"d1_email_intake_disposition",
+      stage:"d1_email_intake_delete",
       error
     });
+  }
+}
 
+async function handleInformation({
+  db,
+  intakeId,
+  workspaceKey,
+  clientId,
+  owner,
+  requestId
+}) {
+  if (!Number.isInteger(clientId) || clientId <= 0) {
     return jsonResponse({
       ok:false,
       requestId,
       action:ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
-      error:safeErrorMessage(error)
-    },500);
+      error:"Choose a client before saving this intake as Information."
+    },400);
+  }
+
+  try {
+    const existing = await loadIntake(db, intakeId, workspaceKey);
+
+    if (!existing) {
+      return notFoundResponse(requestId, intakeId);
+    }
+
+    if (
+      existing.processing_status === "processed" &&
+      existing.disposition === "information" &&
+      existing.communication_id
+    ) {
+      return informationSuccess({
+        requestId,
+        intakeId,
+        workspaceKey,
+        clientId:Number(existing.client_id || clientId),
+        communicationId:Number(existing.communication_id),
+        duplicate:true,
+        communicationCreated:false
+      });
+    }
+
+    if (existing.processing_status !== "ready_for_review") {
+      return notReadyResponse(requestId, intakeId, existing);
+    }
+
+    if (hasDownstreamLink(existing)) {
+      return jsonResponse({
+        ok:false,
+        requestId,
+        action:ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
+        error:"Information disposition was blocked because downstream OS records are already linked to this intake record."
+      },409);
+    }
+
+    const client = await db.prepare(`
+      SELECT id, client_code, name
+      FROM clients
+      WHERE id = ?
+      LIMIT 1
+    `).bind(clientId).first();
+
+    if (!client) {
+      return jsonResponse({
+        ok:false,
+        requestId,
+        action:ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
+        error:`Client #${clientId} was not found.`
+      },404);
+    }
+
+    const externalId = `email-intake:${workspaceKey}:${intakeId}`;
+    let communication = await db.prepare(`
+      SELECT id
+      FROM communications
+      WHERE source = ?
+        AND external_id = ?
+      LIMIT 1
+    `).bind(UNIVERSAL_INTAKE_SOURCE, externalId).first();
+
+    let communicationCreated = false;
+
+    if (!communication?.id) {
+      const rawContent = clean(existing.body_text) || clean(existing.subject) || "(No content)";
+      const summary = buildInformationSummary(existing);
+      const analysisJson = JSON.stringify({
+        source:UNIVERSAL_INTAKE_SOURCE,
+        route:"information",
+        intakeId,
+        workspaceKey,
+        operator:"human",
+        sender:{
+          name:existing.from_name || null,
+          address:existing.from_address || null
+        },
+        evidenceRetained:true,
+        recommendedRoutes:{
+          saveCommunication:true,
+          createInvestigation:false,
+          createWorkItem:false,
+          replyRequired:false
+        }
+      });
+
+      await db.prepare(`
+        INSERT INTO communications (
+          client_id, external_id, occurred_at, direction, source, category,
+          subject, raw_content, ai_summary, ai_analysis_json,
+          operational_decision, status, requires_investigation,
+          owner, minutes_spent, notes
+        ) VALUES (?, ?, ?, 'incoming', ?, 'Information', ?, ?, ?, ?, 'information', 'analyzed', 0, ?, 0, ?)
+      `).bind(
+        Number(client.id),
+        externalId,
+        existing.received_at || new Date().toISOString(),
+        UNIVERSAL_INTAKE_SOURCE,
+        clean(existing.subject) || "(No subject)",
+        rawContent,
+        summary,
+        analysisJson,
+        owner,
+        [
+          `Universal Email Intake #${intakeId}`,
+          `Client: ${client.name || client.client_code || client.id}`,
+          "Human disposition: Information",
+          "Source evidence retained in email_intake.",
+          "No Investigation created.",
+          "No Work Item created."
+        ].join("\n")
+      ).run();
+
+      communication = await db.prepare(`
+        SELECT id
+        FROM communications
+        WHERE source = ?
+          AND external_id = ?
+        ORDER BY id DESC
+        LIMIT 1
+      `).bind(UNIVERSAL_INTAKE_SOURCE, externalId).first();
+
+      communicationCreated = true;
+    }
+
+    const communicationId = Number(communication?.id);
+
+    if (!Number.isInteger(communicationId) || communicationId <= 0) {
+      throw new Error("The Communication was not available after the Information save.");
+    }
+
+    const classificationJson = JSON.stringify({
+      disposition:"information",
+      operator:"human",
+      clientId:Number(client.id),
+      communicationId
+    });
+
+    const update = await db.prepare(`
+      UPDATE email_intake
+      SET
+        processing_status = 'processed',
+        disposition = 'information',
+        classification_source = 'human_operator',
+        classification_json = ?,
+        classification_confidence = 'high',
+        client_id = ?,
+        communication_id = ?,
+        processed_at = CURRENT_TIMESTAMP,
+        failure_stage = NULL,
+        failure_message = NULL,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+        AND workspace_key = ?
+        AND processing_status = 'ready_for_review'
+        AND activity_record_id IS NULL
+        AND investigation_id IS NULL
+        AND work_item_id IS NULL
+    `).bind(
+      classificationJson,
+      Number(client.id),
+      communicationId,
+      intakeId,
+      workspaceKey
+    ).run();
+
+    if (Number(update?.meta?.changes || 0) !== 1) {
+      const reconciled = await loadIntake(db, intakeId, workspaceKey);
+      if (
+        reconciled?.processing_status === "processed" &&
+        reconciled?.disposition === "information" &&
+        Number(reconciled?.communication_id) === communicationId
+      ) {
+        return informationSuccess({
+          requestId,
+          intakeId,
+          workspaceKey,
+          clientId:Number(client.id),
+          communicationId,
+          duplicate:true,
+          communicationCreated:false
+        });
+      }
+      return staleResponse(requestId);
+    }
+
+    return informationSuccess({
+      requestId,
+      intakeId,
+      workspaceKey,
+      clientId:Number(client.id),
+      communicationId,
+      duplicate:false,
+      communicationCreated
+    });
+  } catch (error) {
+    return dispositionFailure({
+      requestId,
+      stage:"d1_email_intake_information",
+      error
+    });
   }
 }
 
-function successResponse({ requestId, intakeId, workspaceKey, duplicate }) {
+async function loadIntake(db, intakeId, workspaceKey) {
+  return db.prepare(`
+    SELECT
+      id,
+      workspace_key,
+      received_at,
+      from_address,
+      from_name,
+      subject,
+      body_text,
+      processing_status,
+      disposition,
+      client_id,
+      communication_id,
+      activity_record_id,
+      investigation_id,
+      work_item_id
+    FROM email_intake
+    WHERE id = ?
+      AND workspace_key = ?
+    LIMIT 1
+  `).bind(intakeId, workspaceKey).first();
+}
+
+function hasDownstreamLink(record) {
+  return [
+    record?.communication_id,
+    record?.activity_record_id,
+    record?.investigation_id,
+    record?.work_item_id
+  ].some(value => value !== null && value !== undefined);
+}
+
+function buildInformationSummary(record) {
+  const body = clean(record?.body_text).replace(/\s+/g," ");
+  if (body) return body.slice(0,800);
+  return clean(record?.subject) || "Inbound email saved as Information.";
+}
+
+function deleteSuccess({
+  requestId,
+  intakeId,
+  workspaceKey,
+  duplicate
+}) {
   return jsonResponse({
     ok:true,
     requestId,
@@ -206,6 +455,85 @@ function successResponse({ requestId, intakeId, workspaceKey, duplicate }) {
     investigationsCreated:0,
     workItemsCreated:0
   });
+}
+
+function informationSuccess({
+  requestId,
+  intakeId,
+  workspaceKey,
+  clientId,
+  communicationId,
+  duplicate,
+  communicationCreated
+}) {
+  return jsonResponse({
+    ok:true,
+    requestId,
+    action:ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
+    emailIntakeDispositionVersion:EMAIL_INTAKE_DISPOSITION_VERSION,
+    intakeId,
+    workspaceKey,
+    disposition:"information",
+    processingStatus:"processed",
+    evidenceRetained:true,
+    duplicate:Boolean(duplicate),
+    clientId,
+    communicationId,
+    writesPerformed:communicationCreated ? 1 : 0,
+    communicationsCreated:communicationCreated ? 1 : 0,
+    activityRecordsCreated:0,
+    investigationsCreated:0,
+    workItemsCreated:0
+  });
+}
+
+function notFoundResponse(requestId, intakeId) {
+  return jsonResponse({
+    ok:false,
+    requestId,
+    action:ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
+    error:`Email intake record #${intakeId} was not found.`
+  },404);
+}
+
+function notReadyResponse(requestId, intakeId, record) {
+  return jsonResponse({
+    ok:false,
+    requestId,
+    action:ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
+    error:`Email intake record #${intakeId} is not ready for review.`,
+    processingStatus:record?.processing_status || null,
+    disposition:record?.disposition || null
+  },409);
+}
+
+function staleResponse(requestId) {
+  return jsonResponse({
+    ok:false,
+    requestId,
+    action:ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
+    error:"The intake record changed before the disposition could be saved. Refresh Morning Command and review it again."
+  },409);
+}
+
+function dispositionFailure({
+  requestId,
+  stage,
+  error
+}) {
+  logWorkerError({
+    requestId,
+    route:ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
+    stage,
+    error
+  });
+
+  return jsonResponse({
+    ok:false,
+    requestId,
+    action:ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
+    error:safeErrorMessage(error)
+  },500);
 }
 
 function clean(value) {

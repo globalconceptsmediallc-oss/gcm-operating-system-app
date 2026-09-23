@@ -1,15 +1,16 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.50",
+  "version": "6.1.51",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.50",
+    "fileVersion": "6.1.51",
     "status": "Production Road-Test Candidate",
-    "purpose": "Universal Email Intake no-action safety lock.",
+    "purpose": "Universal Email Intake Information routing.",
     "changeNotes": [
-      "Corrects the Universal Email Intake confirmation regression test.",
-      "Keeps Worker 7.23.0 and two-step no-action safety behavior unchanged.",
-      "Triggers full production verification on the corrected test set."
+      "Adds explicit client selection to Morning Command intake cards.",
+      "Adds Save as Information as the second intake disposition.",
+      "Information creates exactly one Communication/history record.",
+      "No Activity Record, Investigation, or Work Item is created for Information."
     ]
   },
   "private": true,

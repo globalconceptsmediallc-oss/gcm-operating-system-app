@@ -1,13 +1,18 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.5.10
+   Version: 3.5.11
    Status: Production Candidate
-   Source: Production today.html 3.5.9
+   Source: Production today.html 3.5.10
    Sprint: Today / Morning Command — Universal Email Intake No-Action Routing
    Purpose: Preserve the locked Today layout, Gmail approvals, Mission Control,
             Media logic, and operating workflow while keeping Mission Control's
             durable D1 ranking authoritative across both decision and queue views.
+
+   Production changes in 3.5.11:
+   - Adds client selection and Save as Information to Universal Email Intake.
+   - Information creates exactly one Communication and no Investigation or Work Item.
+   - Preserves the no-action safety lock and D1-only intake path.
 
    Production changes in 3.5.10:
    - Adds two-step confirmation before Delete — No Action Required can write.
@@ -1869,7 +1874,7 @@
 <div aria-hidden="true" hidden="" id="mission-control-state-values"><span id="prospect-count">0</span><span id="attention-count">0</span><span id="open-task-count">0</span><span id="proof-count">0</span><span id="media-pulse-count">0</span></div></div>
 </main>
 </div>
-<script src="shared/gcm-shell.js?v=2.0.41"></script>
+<script src="shared/gcm-shell.js?v=2.0.42"></script>
 <script>
     (() => {
       "use strict";
@@ -3076,7 +3081,7 @@
       } else {
         window.GCMOShell.mount({
           currentPage: "today",
-          statusText: "Agency Command Center operational · Today v3.5.10"
+          statusText: "Agency Command Center operational · Today v3.5.11"
         });
       }
 

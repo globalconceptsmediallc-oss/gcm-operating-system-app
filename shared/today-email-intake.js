@@ -1,13 +1,19 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/today-email-intake.js
-   Version: 1.2.0
+   Version: 1.3.0
    Status: Production Road-Test Candidate
    Sprint: Morning Command — Universal Email Intake No-Action Routing
    Purpose:
    Replace Gmail inbox scanning on Today with the durable D1 Universal Email
    Intake queue. This phase is intentionally read-only: it proves Morning
    Command can load provider-independent email evidence without Google API use.
+
+   Changes — 1.3.0:
+   - Adds Information as the second Universal Email Intake decision.
+   - Loads the D1 client directory and requires an explicit client selection.
+   - Information creates one Communication/history record and no Investigation or Work Item.
+   - Keeps Delete — No Action Required two-step confirmation unchanged.
 
    Changes — 1.2.0:
    - Requires two deliberate operator clicks before no-action processing.
@@ -32,11 +38,12 @@
 (() => {
   "use strict";
 
-  const FILE_VERSION = "1.2.0";
+  const FILE_VERSION = "1.3.0";
   const WORKER_URL =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const QUEUE_ACTION = "get-email-intake-queue";
   const DISPOSITION_ACTION = "route-email-intake-disposition";
+  const CLIENT_DIRECTORY_ACTION = "get-client-directory";
   const MAX_VISIBLE_EMAILS = 10;
 
   let previewButton = null;
@@ -44,6 +51,7 @@
   let statusCopy = null;
   let connectButton = null;
   let busy = false;
+  let clientDirectory = [];
 
   function escapeHtml(value) {
     return String(value ?? "")
@@ -68,14 +76,20 @@
       .gcm-intake-source{margin-top:13px}
       .gcm-intake-label{display:block;margin-bottom:7px;color:var(--text-soft,#8290a3);font-size:.64rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em}
       .gcm-intake-body{max-height:390px;overflow:auto;margin:0;padding:13px 14px;border:1px solid var(--border,#dbe2ec);border-radius:10px;background:#fbfcfe;color:var(--text,#132238);font-family:inherit;font-size:.77rem;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
-      .gcm-intake-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:13px;padding-top:13px;border-top:1px solid var(--border,#dbe2ec)}
+      .gcm-intake-client-row{display:grid;grid-template-columns:auto minmax(220px,420px);align-items:center;gap:10px;margin-top:13px;padding-top:13px;border-top:1px solid var(--border,#dbe2ec)}
+      .gcm-intake-client-label{color:var(--text-soft,#8290a3);font-size:.64rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em}
+      .gcm-intake-client-select{min-height:36px;border:1px solid var(--border,#dbe2ec);border-radius:9px;background:#fff;padding:0 10px;color:var(--text,#132238);font:inherit;font-size:.75rem}
+      .gcm-intake-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px}
+      .gcm-intake-information{min-height:36px;padding:0 12px;border:1px solid #b9d3f5;border-radius:9px;background:#f3f8ff;color:#1f5fae;font-weight:850;cursor:pointer}
+      .gcm-intake-information:hover,.gcm-intake-information:focus-visible{background:#eaf3ff;outline:none}
+      .gcm-intake-information:disabled{opacity:.55;cursor:not-allowed}
       .gcm-intake-delete{min-height:36px;padding:0 12px;border:1px solid #e5bcbc;border-radius:9px;background:#fff7f7;color:#9d3030;font-weight:850;cursor:pointer}
       .gcm-intake-delete:hover,.gcm-intake-delete:focus-visible{background:#fff0f0;outline:none}
       .gcm-intake-delete[data-confirm-armed="true"]{background:#ffe8e8;border-color:#d78484;color:#7f2020}
       .gcm-intake-delete:disabled{opacity:.6;cursor:wait}
       .gcm-intake-action-status{color:var(--text-muted,#637083);font-size:.72rem;font-weight:750}
       .gcm-intake-empty{padding:18px;border:1px dashed var(--border,#dbe2ec);border-radius:12px;background:#fbfcfe;color:var(--text-muted,#637083);font-size:.8rem;text-align:center}
-      @media(max-width:760px){.gcm-intake-header{display:block}.gcm-intake-route{margin-top:9px}}
+      @media(max-width:760px){.gcm-intake-header{display:block}.gcm-intake-route{margin-top:9px}.gcm-intake-client-row{grid-template-columns:1fr}}
     `;
 
     document.head.appendChild(style);
@@ -121,6 +135,7 @@
 
     const intakeAddress = String(record?.intake?.address || "").trim();
     const body = String(record?.bodyText || "").trim() || "[No readable message body was preserved.]";
+    const clientOptions = buildClientOptions(record?.client?.id);
 
     const article = document.createElement("article");
     article.className = "gcm-intake-card";
@@ -139,7 +154,16 @@
         <span class="gcm-intake-label">Source Email</span>
         <pre class="gcm-intake-body">${escapeHtml(body)}</pre>
       </div>
+      <div class="gcm-intake-client-row">
+        <span class="gcm-intake-client-label">Client</span>
+        <select class="gcm-intake-client-select" data-gcm-intake-client aria-label="Choose client for ${escapeHtml(record?.subject || "email intake")}">
+          ${clientOptions}
+        </select>
+      </div>
       <div class="gcm-intake-actions">
+        <button class="gcm-intake-information" type="button" data-gcm-intake-information data-intake-id="${escapeHtml(record?.id || "")}">
+          Save as Information
+        </button>
         <button class="gcm-intake-delete" type="button" data-gcm-intake-delete data-intake-id="${escapeHtml(record?.id || "")}">
           Delete — No Action Required
         </button>
@@ -149,10 +173,80 @@
       </div>
     `;
 
+    const informationButton = article.querySelector("[data-gcm-intake-information]");
+    informationButton?.addEventListener("click", () => handleInformation(article, informationButton));
+
     const deleteButton = article.querySelector("[data-gcm-intake-delete]");
     deleteButton?.addEventListener("click", () => handleNoAction(article, deleteButton));
 
     return article;
+  }
+
+  function buildClientOptions(selectedId) {
+    const selected = Number(selectedId);
+    const options = [
+      '<option value="">Choose client…</option>',
+      ...clientDirectory.map(client => {
+        const value = Number(client?.id);
+        const label = client?.name || client?.clientCode || `Client #${value}`;
+        return `<option value="${escapeHtml(value)}"${selected === value ? " selected" : ""}>${escapeHtml(label)}</option>`;
+      })
+    ];
+    return options.join("");
+  }
+
+  async function handleInformation(card, button) {
+    if (busy || !card || !button) return;
+
+    const intakeId = Number(button.dataset.intakeId || card.dataset.intakeId);
+    const select = card.querySelector("[data-gcm-intake-client]");
+    const clientId = Number(select?.value);
+    const actionStatus = card.querySelector("[data-gcm-intake-action-status]");
+
+    if (!Number.isInteger(clientId) || clientId <= 0) {
+      if (actionStatus) actionStatus.textContent = "Choose the client before saving this email as Information.";
+      select?.focus();
+      return;
+    }
+
+    busy = true;
+    button.disabled = true;
+    button.textContent = "Saving Information…";
+    if (select) select.disabled = true;
+    if (actionStatus) actionStatus.textContent = "Saving one Communication record and preserving the source email in D1…";
+
+    try {
+      const result = await post(DISPOSITION_ACTION, {
+        workspaceKey:"gcm",
+        intakeId,
+        disposition:"information",
+        clientId
+      });
+
+      if (
+        Number(result?.communicationsCreated || 0) > 1 ||
+        Number(result?.activityRecordsCreated || 0) !== 0 ||
+        Number(result?.investigationsCreated || 0) !== 0 ||
+        Number(result?.workItemsCreated || 0) !== 0 ||
+        !Number(result?.communicationId) ||
+        result?.evidenceRetained !== true
+      ) {
+        throw new Error("Information routing safety check failed.");
+      }
+
+      busy = false;
+      setStatus(
+        `Intake #${intakeId} saved as Information. Communication #${result.communicationId} created/linked; source evidence retained; no Investigation or Work Item created.`
+      );
+      await refreshQueue();
+    } catch (error) {
+      busy = false;
+      button.disabled = false;
+      button.textContent = "Save as Information";
+      if (select) select.disabled = false;
+      if (actionStatus) actionStatus.textContent = `Information save failed: ${error.message}`;
+      setStatus(`Information disposition failed: ${error.message}`);
+    }
   }
 
   async function handleNoAction(card, button) {
@@ -230,6 +324,12 @@
     if (statusCopy) statusCopy.textContent = text;
   }
 
+  async function loadClientDirectory() {
+    const result = await post(CLIENT_DIRECTORY_ACTION);
+    clientDirectory = (Array.isArray(result?.clients) ? result.clients : [])
+      .filter(client => ["active","prospect"].includes(String(client?.status || "").toLowerCase()));
+  }
+
   async function refreshQueue() {
     if (busy || !preview || !previewButton) return;
 
@@ -240,6 +340,10 @@
     setStatus("Loading the Universal Email Intake queue from D1. No Gmail scan is running.");
 
     try {
+      if (!clientDirectory.length) {
+        await loadClientDirectory();
+      }
+
       const result = await post(QUEUE_ACTION, {
         workspaceKey: "gcm",
         limit: MAX_VISIBLE_EMAILS
