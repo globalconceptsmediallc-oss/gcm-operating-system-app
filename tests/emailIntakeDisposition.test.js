@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/emailIntakeDisposition.test.js
-   Version: 1.5.0
+   Version: 1.5.1
    Status: Production Regression Test
    Purpose:
    Verify no-action confirmation, Information routing, Monitoring Proof/history,
@@ -14,7 +14,7 @@ import {
   EMAIL_INTAKE_DISPOSITION_VERSION
 } from "../routes/emailIntakeDisposition.js";
 
-assert.equal(EMAIL_INTAKE_DISPOSITION_VERSION,"1.5.0");
+assert.equal(EMAIL_INTAKE_DISPOSITION_VERSION,"1.5.1");
 
 function makeDeleteDb(record) {
   const state={ updateSql:"", updateCount:0, selects:0 };
@@ -429,7 +429,7 @@ function makeWorkDb() {
     {
       intakeId:5,
       workspaceKey:"gcm",
-      disposition:"work",
+      disposition:"requested_work",
       clientId:10
     },
     {DB},
@@ -438,7 +438,7 @@ function makeWorkDb() {
   const payload=await response.json();
   assert.equal(response.status,200);
   assert.equal(payload.ok,true);
-  assert.equal(payload.disposition,"work");
+  assert.equal(payload.disposition,"requested_work");
   assert.equal(payload.communicationId,1001);
   assert.equal(payload.workItemId,1101);
   assert.equal(payload.communicationsCreated,1);

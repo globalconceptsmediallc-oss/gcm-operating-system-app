@@ -1,13 +1,17 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/today-email-intake.js
-   Version: 1.6.0
+   Version: 1.6.1
    Status: Production Road-Test Candidate
    Sprint: Morning Command — Universal Email Intake No-Action Routing
    Purpose:
    Replace Gmail inbox scanning on Today with the durable D1 Universal Email
    Intake queue. This phase is intentionally read-only: it proves Morning
    Command can load provider-independent email evidence without Google API use.
+
+   Changes — 1.6.1:
+   - Sends the D1-approved disposition key requested_work for Create Work Item.
+   - Preserves the visible Create Work Item label and all route safety checks.
 
    Changes — 1.6.0:
    - Adds Create Work Item for direct, already-defined requested work.
@@ -56,7 +60,7 @@
 (() => {
   "use strict";
 
-  const FILE_VERSION = "1.6.0";
+  const FILE_VERSION = "1.6.1";
   const WORKER_URL =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const QUEUE_ACTION = "get-email-intake-queue";
@@ -427,7 +431,7 @@
       const result = await post(DISPOSITION_ACTION, {
         workspaceKey:"gcm",
         intakeId,
-        disposition:"work",
+        disposition:"requested_work",
         clientId
       });
 

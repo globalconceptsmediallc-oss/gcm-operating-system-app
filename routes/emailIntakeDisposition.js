@@ -1,12 +1,17 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/emailIntakeDisposition.js
-   Version: 1.5.0
+   Version: 1.5.1
    Status: Production Road-Test Candidate
    Sprint: Universal Email Intake — Human Disposition
    Purpose:
    Apply the operator's explicit disposition to a durable email_intake record
    without calling Gmail and without deleting source evidence from D1.
+
+   Changes — 1.5.1:
+   - Corrects the direct Work Item disposition value to the D1-approved value 'requested_work'.
+   - Reuses any Communication/Work Item created by the interrupted first attempt before linking intake.
+   - Prevents duplicate downstream records during recovery.
 
    Changes — 1.5.0:
    - Adds Work Item disposition for direct, already-defined requested work.
@@ -50,7 +55,7 @@ import { ACTIONS } from "../shared/config.js";
 import { getDatabase } from "../shared/database.js";
 import { jsonResponse, logWorkerError, safeErrorMessage } from "../shared/http.js";
 
-export const EMAIL_INTAKE_DISPOSITION_VERSION = "1.5.0";
+export const EMAIL_INTAKE_DISPOSITION_VERSION = "1.5.1";
 const UNIVERSAL_INTAKE_SOURCE = "Universal Email Intake";
 
 export async function handleEmailIntakeDisposition(body, env, requestId) {
@@ -132,7 +137,7 @@ export async function handleEmailIntakeDisposition(body, env, requestId) {
     });
   }
 
-  if (disposition === "work") {
+  if (disposition === "requested_work") {
     return handleWork({
       db,
       intakeId,
@@ -950,7 +955,7 @@ async function handleWork({
 
     if (
       existing.processing_status === "processed" &&
-      existing.disposition === "work" &&
+      existing.disposition === "requested_work" &&
       existing.communication_id &&
       existing.work_item_id
     ) {
@@ -1012,7 +1017,7 @@ async function handleWork({
       const summary = buildInformationSummary(existing);
       const analysisJson = JSON.stringify({
         source:UNIVERSAL_INTAKE_SOURCE,
-        route:"work",
+        route:"requested_work",
         intakeId,
         workspaceKey,
         operator:"human",
@@ -1035,7 +1040,7 @@ async function handleWork({
           subject, raw_content, ai_summary, ai_analysis_json,
           operational_decision, status, requires_investigation,
           owner, minutes_spent, notes
-        ) VALUES (?, ?, ?, 'incoming', ?, 'Requested Work', ?, ?, ?, ?, 'work', 'work_open', 0, ?, 0, ?)
+        ) VALUES (?, ?, ?, 'incoming', ?, 'Requested Work', ?, ?, ?, ?, 'requested_work', 'work_open', 0, ?, 0, ?)
       `).bind(
         Number(client.id),
         externalId,
@@ -1126,7 +1131,7 @@ async function handleWork({
     }
 
     const classificationJson = JSON.stringify({
-      disposition:"work",
+      disposition:"requested_work",
       operator:"human",
       clientId:Number(client.id),
       communicationId,
@@ -1137,7 +1142,7 @@ async function handleWork({
       UPDATE email_intake
       SET
         processing_status = 'processed',
-        disposition = 'work',
+        disposition = 'requested_work',
         classification_source = 'human_operator',
         classification_json = ?,
         classification_confidence = 'high',
@@ -1166,7 +1171,7 @@ async function handleWork({
       const reconciled = await loadIntake(db, intakeId, workspaceKey);
       if (
         reconciled?.processing_status === "processed" &&
-        reconciled?.disposition === "work" &&
+        reconciled?.disposition === "requested_work" &&
         Number(reconciled?.communication_id) === communicationId &&
         Number(reconciled?.work_item_id) === workItemId
       ) {

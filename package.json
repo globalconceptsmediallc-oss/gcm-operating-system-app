@@ -1,16 +1,15 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.55",
+  "version": "6.1.56",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.55",
+    "fileVersion": "6.1.56",
     "status": "Production Road-Test Candidate",
-    "purpose": "Universal Email Intake direct Work Item routing.",
+    "purpose": "Universal Email Intake requested_work constraint correction.",
     "changeNotes": [
-      "Adds Create Work Item to Morning Command intake cards.",
-      "Work Item requires explicit client selection.",
-      "Work routing creates exactly one Communication and one Work Item.",
-      "No Activity Record or Investigation is created by direct Work routing."
+      "Corrects Create Work Item to use requested_work, matching the existing D1 CHECK constraint.",
+      "Preserves recovery of any Communication/Work Item created before the failed intake update.",
+      "Avoids duplicate downstream records on retry."
     ]
   },
   "private": true,

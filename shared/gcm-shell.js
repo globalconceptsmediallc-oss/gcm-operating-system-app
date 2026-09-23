@@ -1,12 +1,13 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gcm-shell.js
-   Version: 2.0.45
+   Version: 2.0.46
    Status: Production Road-Test Candidate
    Purpose: Shared internal GCM OS application shell foundation.
-   Source: gcm-shell.js 2.0.44 production navigation
+   Source: gcm-shell.js 2.0.45 production navigation
    Sprint: Morning Command — Universal Email Intake No-Action Routing
    Change:
+   - Loads Universal Email Intake v1.6.1 with corrected requested_work D1 routing.
    - Loads Universal Email Intake v1.6.0 with direct Work Item routing.
    - Loads Universal Email Intake v1.5.0 with Investigation routing.
    - Loads Universal Email Intake v1.4.0 with Monitoring Proof/history routing.
@@ -24,7 +25,7 @@
 (() => {
   "use strict";
 
-  const SHELL_VERSION = "2.0.45";
+  const SHELL_VERSION = "2.0.46";
   const WORKER_ENDPOINT =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const MISSION_CONTROL_ACTION = "get-mission-control";
@@ -288,7 +289,7 @@
 
     if (/\/today\.html$/i.test(path)) {
       appendScript(
-        "shared/today-email-intake.js?v=1.6.0",
+        "shared/today-email-intake.js?v=1.6.1",
         "data-gcm-today-email-intake"
       );
     }
