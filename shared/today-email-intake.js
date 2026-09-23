@@ -1,13 +1,19 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/today-email-intake.js
-   Version: 1.4.0
+   Version: 1.5.0
    Status: Production Road-Test Candidate
    Sprint: Morning Command — Universal Email Intake No-Action Routing
    Purpose:
    Replace Gmail inbox scanning on Today with the durable D1 Universal Email
    Intake queue. This phase is intentionally read-only: it proves Morning
    Command can load provider-independent email evidence without Google API use.
+
+   Changes — 1.5.0:
+   - Adds Start Investigation.
+   - Investigation requires client selection and creates one Communication plus one Investigation.
+   - Investigation creates no Proof/history Activity Record and no Work Item.
+   - Preserves Information, Monitoring, and Delete routes unchanged.
 
    Changes — 1.4.0:
    - Adds Save as Monitoring.
@@ -44,7 +50,7 @@
 (() => {
   "use strict";
 
-  const FILE_VERSION = "1.4.0";
+  const FILE_VERSION = "1.5.0";
   const WORKER_URL =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const QUEUE_ACTION = "get-email-intake-queue";
@@ -90,6 +96,9 @@
       .gcm-intake-monitoring{min-height:36px;padding:0 12px;border:1px solid #c9d6b7;border-radius:9px;background:#f7faF2;color:#4d6b2f;font-weight:850;cursor:pointer}
       .gcm-intake-monitoring:hover,.gcm-intake-monitoring:focus-visible{background:#f0f7e8;outline:none}
       .gcm-intake-monitoring:disabled{opacity:.55;cursor:not-allowed}
+      .gcm-intake-investigation{min-height:36px;padding:0 12px;border:1px solid #d7c49c;border-radius:9px;background:#fffaf0;color:#7b5a1d;font-weight:850;cursor:pointer}
+      .gcm-intake-investigation:hover,.gcm-intake-investigation:focus-visible{background:#fff5df;outline:none}
+      .gcm-intake-investigation:disabled{opacity:.55;cursor:not-allowed}
       .gcm-intake-information:hover,.gcm-intake-information:focus-visible{background:#eaf3ff;outline:none}
       .gcm-intake-information:disabled{opacity:.55;cursor:not-allowed}
       .gcm-intake-delete{min-height:36px;padding:0 12px;border:1px solid #e5bcbc;border-radius:9px;background:#fff7f7;color:#9d3030;font-weight:850;cursor:pointer}
@@ -176,11 +185,14 @@
         <button class="gcm-intake-monitoring" type="button" data-gcm-intake-monitoring data-intake-id="${escapeHtml(record?.id || "")}">
           Save as Monitoring
         </button>
+        <button class="gcm-intake-investigation" type="button" data-gcm-intake-investigation data-intake-id="${escapeHtml(record?.id || "")}">
+          Start Investigation
+        </button>
         <button class="gcm-intake-delete" type="button" data-gcm-intake-delete data-intake-id="${escapeHtml(record?.id || "")}">
           Delete — No Action Required
         </button>
         <span class="gcm-intake-action-status" data-gcm-intake-action-status>
-          Evidence remains in D1 · 0 downstream records
+          Evidence remains in D1 · choose one route
         </span>
       </div>
     `;
@@ -190,6 +202,9 @@
 
     const monitoringButton = article.querySelector("[data-gcm-intake-monitoring]");
     monitoringButton?.addEventListener("click", () => handleMonitoring(article, monitoringButton));
+
+    const investigationButton = article.querySelector("[data-gcm-intake-investigation]");
+    investigationButton?.addEventListener("click", () => handleInvestigation(article, investigationButton));
 
     const deleteButton = article.querySelector("[data-gcm-intake-delete]");
     deleteButton?.addEventListener("click", () => handleNoAction(article, deleteButton));
@@ -318,6 +333,61 @@
     }
   }
 
+  async function handleInvestigation(card, button) {
+    if (busy || !card || !button) return;
+
+    const intakeId = Number(button.dataset.intakeId || card.dataset.intakeId);
+    const select = card.querySelector("[data-gcm-intake-client]");
+    const clientId = Number(select?.value);
+    const actionStatus = card.querySelector("[data-gcm-intake-action-status]");
+
+    if (!Number.isInteger(clientId) || clientId <= 0) {
+      if (actionStatus) actionStatus.textContent = "Choose the client before starting an Investigation.";
+      select?.focus();
+      return;
+    }
+
+    busy = true;
+    button.disabled = true;
+    button.textContent = "Starting Investigation…";
+    if (select) select.disabled = true;
+    if (actionStatus) actionStatus.textContent = "Creating one Communication and one Investigation while preserving the source email in D1…";
+
+    try {
+      const result = await post(DISPOSITION_ACTION, {
+        workspaceKey:"gcm",
+        intakeId,
+        disposition:"investigation",
+        clientId
+      });
+
+      if (
+        Number(result?.communicationsCreated || 0) > 1 ||
+        Number(result?.activityRecordsCreated || 0) !== 0 ||
+        Number(result?.investigationsCreated || 0) > 1 ||
+        Number(result?.workItemsCreated || 0) !== 0 ||
+        !Number(result?.communicationId) ||
+        !Number(result?.investigationId) ||
+        result?.evidenceRetained !== true
+      ) {
+        throw new Error("Investigation routing safety check failed.");
+      }
+
+      busy = false;
+      setStatus(
+        `Intake #${intakeId} routed to Investigation #${result.investigationId}. Communication #${result.communicationId} linked; source evidence retained; no Work Item created.`
+      );
+      await refreshQueue();
+    } catch (error) {
+      busy = false;
+      button.disabled = false;
+      button.textContent = "Start Investigation";
+      if (select) select.disabled = false;
+      if (actionStatus) actionStatus.textContent = `Investigation save failed: ${error.message}`;
+      setStatus(`Investigation disposition failed: ${error.message}`);
+    }
+  }
+
   async function handleNoAction(card, button) {
     if (busy || !card || !button) return;
 
@@ -342,7 +412,7 @@
         button.dataset.confirmArmed = "false";
         button.textContent = "Delete — No Action Required";
         if (actionStatus) {
-          actionStatus.textContent = "Evidence remains in D1 · 0 downstream records";
+          actionStatus.textContent = "Evidence remains in D1 · choose one route";
         }
       }, 10000);
       return;

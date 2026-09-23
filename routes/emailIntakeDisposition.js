@@ -1,12 +1,19 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/emailIntakeDisposition.js
-   Version: 1.3.0
+   Version: 1.4.0
    Status: Production Road-Test Candidate
    Sprint: Universal Email Intake — Human Disposition
    Purpose:
    Apply the operator's explicit disposition to a durable email_intake record
    without calling Gmail and without deleting source evidence from D1.
+
+   Changes — 1.4.0:
+   - Adds Investigation disposition.
+   - Investigation requires an explicit client selection.
+   - Creates exactly one Communication and one Investigation.
+   - Creates no Activity Record and no Work Item.
+   - Links both downstream records back to email_intake and marks the intake processed.
 
    Changes — 1.3.0:
    - Adds Monitoring disposition.
@@ -36,7 +43,7 @@ import { ACTIONS } from "../shared/config.js";
 import { getDatabase } from "../shared/database.js";
 import { jsonResponse, logWorkerError, safeErrorMessage } from "../shared/http.js";
 
-export const EMAIL_INTAKE_DISPOSITION_VERSION = "1.3.0";
+export const EMAIL_INTAKE_DISPOSITION_VERSION = "1.4.0";
 const UNIVERSAL_INTAKE_SOURCE = "Universal Email Intake";
 
 export async function handleEmailIntakeDisposition(body, env, requestId) {
@@ -107,11 +114,22 @@ export async function handleEmailIntakeDisposition(body, env, requestId) {
     });
   }
 
+  if (disposition === "investigation") {
+    return handleInvestigation({
+      db,
+      intakeId,
+      workspaceKey,
+      clientId:Number(body?.clientId),
+      owner:clean(body?.owner) || "Andrew",
+      requestId
+    });
+  }
+
   return jsonResponse({
     ok:false,
     requestId,
     action:ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
-    error:"Supported dispositions in this phase are Delete — No Action Required, Information, and Monitoring."
+    error:"Supported dispositions in this phase are Delete — No Action Required, Information, Monitoring, and Investigation."
   },400);
 }
 
@@ -608,6 +626,286 @@ async function handleMonitoring({
   }
 }
 
+async function handleInvestigation({
+  db,
+  intakeId,
+  workspaceKey,
+  clientId,
+  owner,
+  requestId
+}) {
+  if (!Number.isInteger(clientId) || clientId <= 0) {
+    return jsonResponse({
+      ok:false,
+      requestId,
+      action:ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
+      error:"Choose a client before starting an Investigation."
+    },400);
+  }
+
+  try {
+    const existing = await loadIntake(db, intakeId, workspaceKey);
+
+    if (!existing) {
+      return notFoundResponse(requestId, intakeId);
+    }
+
+    if (
+      existing.processing_status === "processed" &&
+      existing.disposition === "investigation" &&
+      existing.communication_id &&
+      existing.investigation_id
+    ) {
+      return investigationSuccess({
+        requestId,
+        intakeId,
+        workspaceKey,
+        clientId:Number(existing.client_id || clientId),
+        communicationId:Number(existing.communication_id),
+        investigationId:Number(existing.investigation_id),
+        duplicate:true,
+        communicationCreated:false,
+        investigationCreated:false
+      });
+    }
+
+    if (existing.processing_status !== "ready_for_review") {
+      return notReadyResponse(requestId, intakeId, existing);
+    }
+
+    if (hasDownstreamLink(existing)) {
+      return jsonResponse({
+        ok:false,
+        requestId,
+        action:ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
+        error:"Investigation disposition was blocked because downstream OS records are already linked to this intake record."
+      },409);
+    }
+
+    const client = await db.prepare(`
+      SELECT id, client_code, name
+      FROM clients
+      WHERE id = ?
+      LIMIT 1
+    `).bind(clientId).first();
+
+    if (!client) {
+      return jsonResponse({
+        ok:false,
+        requestId,
+        action:ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
+        error:`Client #${clientId} was not found.`
+      },404);
+    }
+
+    const externalId = `email-intake:${workspaceKey}:${intakeId}`;
+    let communication = await db.prepare(`
+      SELECT id
+      FROM communications
+      WHERE source = ?
+        AND external_id = ?
+      LIMIT 1
+    `).bind(UNIVERSAL_INTAKE_SOURCE, externalId).first();
+
+    let communicationCreated = false;
+
+    if (!communication?.id) {
+      const rawContent = clean(existing.body_text) || clean(existing.subject) || "(No content)";
+      const summary = buildInformationSummary(existing);
+      const analysisJson = JSON.stringify({
+        source:UNIVERSAL_INTAKE_SOURCE,
+        route:"investigation",
+        intakeId,
+        workspaceKey,
+        operator:"human",
+        sender:{
+          name:existing.from_name || null,
+          address:existing.from_address || null
+        },
+        evidenceRetained:true,
+        recommendedRoutes:{
+          saveCommunication:true,
+          createInvestigation:true,
+          createWorkItem:false,
+          replyRequired:false
+        }
+      });
+
+      await db.prepare(`
+        INSERT INTO communications (
+          client_id, external_id, occurred_at, direction, source, category,
+          subject, raw_content, ai_summary, ai_analysis_json,
+          operational_decision, status, requires_investigation,
+          owner, minutes_spent, notes
+        ) VALUES (?, ?, ?, 'incoming', ?, 'Investigation', ?, ?, ?, ?, 'investigation', 'investigation_open', 1, ?, 0, ?)
+      `).bind(
+        Number(client.id),
+        externalId,
+        existing.received_at || new Date().toISOString(),
+        UNIVERSAL_INTAKE_SOURCE,
+        clean(existing.subject) || "(No subject)",
+        rawContent,
+        summary,
+        analysisJson,
+        owner,
+        [
+          `Universal Email Intake #${intakeId}`,
+          `Client: ${client.name || client.client_code || client.id}`,
+          "Human disposition: Investigation",
+          "Source evidence retained in email_intake.",
+          "Investigation created for evidence review.",
+          "No Work Item created."
+        ].join("\n")
+      ).run();
+
+      communication = await db.prepare(`
+        SELECT id
+        FROM communications
+        WHERE source = ?
+          AND external_id = ?
+        ORDER BY id DESC
+        LIMIT 1
+      `).bind(UNIVERSAL_INTAKE_SOURCE, externalId).first();
+
+      communicationCreated = true;
+    }
+
+    const communicationId = Number(communication?.id);
+
+    if (!Number.isInteger(communicationId) || communicationId <= 0) {
+      throw new Error("The Communication was not available after the Investigation save.");
+    }
+
+    let investigation = await db.prepare(`
+      SELECT id
+      FROM investigations
+      WHERE communication_id = ?
+      ORDER BY id DESC
+      LIMIT 1
+    `).bind(communicationId).first();
+
+    let investigationCreated = false;
+
+    if (!investigation?.id) {
+      const title = clean(existing.subject) || "Email Intake Investigation";
+      const description = clean(existing.body_text) || title;
+
+      const result = await db.prepare(`
+        INSERT INTO investigations (
+          client_id, communication_id, title, description,
+          priority, status, assigned_to, recommendation
+        ) VALUES (?, ?, ?, ?, 'normal', 'open', ?, ?)
+      `).bind(
+        Number(client.id),
+        communicationId,
+        title,
+        description,
+        owner,
+        "Review the preserved source evidence and determine whether work is required."
+      ).run();
+
+      investigation = {id:Number(result?.meta?.last_row_id || 0)};
+      investigationCreated = true;
+    }
+
+    const investigationId = Number(investigation?.id);
+
+    if (!Number.isInteger(investigationId) || investigationId <= 0) {
+      investigation = await db.prepare(`
+        SELECT id
+        FROM investigations
+        WHERE communication_id = ?
+        ORDER BY id DESC
+        LIMIT 1
+      `).bind(communicationId).first();
+    }
+
+    const finalInvestigationId = Number(investigation?.id);
+
+    if (!Number.isInteger(finalInvestigationId) || finalInvestigationId <= 0) {
+      throw new Error("The Investigation was not available after save.");
+    }
+
+    const classificationJson = JSON.stringify({
+      disposition:"investigation",
+      operator:"human",
+      clientId:Number(client.id),
+      communicationId,
+      investigationId:finalInvestigationId
+    });
+
+    const update = await db.prepare(`
+      UPDATE email_intake
+      SET
+        processing_status = 'processed',
+        disposition = 'investigation',
+        classification_source = 'human_operator',
+        classification_json = ?,
+        classification_confidence = 'high',
+        client_id = ?,
+        communication_id = ?,
+        investigation_id = ?,
+        processed_at = CURRENT_TIMESTAMP,
+        failure_stage = NULL,
+        failure_message = NULL,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+        AND workspace_key = ?
+        AND processing_status = 'ready_for_review'
+        AND activity_record_id IS NULL
+        AND work_item_id IS NULL
+    `).bind(
+      classificationJson,
+      Number(client.id),
+      communicationId,
+      finalInvestigationId,
+      intakeId,
+      workspaceKey
+    ).run();
+
+    if (Number(update?.meta?.changes || 0) !== 1) {
+      const reconciled = await loadIntake(db, intakeId, workspaceKey);
+      if (
+        reconciled?.processing_status === "processed" &&
+        reconciled?.disposition === "investigation" &&
+        Number(reconciled?.communication_id) === communicationId &&
+        Number(reconciled?.investigation_id) === finalInvestigationId
+      ) {
+        return investigationSuccess({
+          requestId,
+          intakeId,
+          workspaceKey,
+          clientId:Number(client.id),
+          communicationId,
+          investigationId:finalInvestigationId,
+          duplicate:true,
+          communicationCreated:false,
+          investigationCreated:false
+        });
+      }
+      return staleResponse(requestId);
+    }
+
+    return investigationSuccess({
+      requestId,
+      intakeId,
+      workspaceKey,
+      clientId:Number(client.id),
+      communicationId,
+      investigationId:finalInvestigationId,
+      duplicate:false,
+      communicationCreated,
+      investigationCreated
+    });
+  } catch (error) {
+    return dispositionFailure({
+      requestId,
+      stage:"d1_email_intake_investigation",
+      error
+    });
+  }
+}
+
 async function loadIntake(db, intakeId, workspaceKey) {
   return db.prepare(`
     SELECT
@@ -645,6 +943,39 @@ function buildInformationSummary(record) {
   const body = clean(record?.body_text).replace(/\s+/g," ");
   if (body) return body.slice(0,800);
   return clean(record?.subject) || "Inbound email saved as Information.";
+}
+
+function investigationSuccess({
+  requestId,
+  intakeId,
+  workspaceKey,
+  clientId,
+  communicationId,
+  investigationId,
+  duplicate,
+  communicationCreated,
+  investigationCreated
+}) {
+  return jsonResponse({
+    ok:true,
+    requestId,
+    action:ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
+    emailIntakeDispositionVersion:EMAIL_INTAKE_DISPOSITION_VERSION,
+    intakeId,
+    workspaceKey,
+    disposition:"investigation",
+    processingStatus:"processed",
+    evidenceRetained:true,
+    duplicate:Boolean(duplicate),
+    clientId,
+    communicationId,
+    investigationId,
+    writesPerformed:(communicationCreated ? 1 : 0) + (investigationCreated ? 1 : 0),
+    communicationsCreated:communicationCreated ? 1 : 0,
+    activityRecordsCreated:0,
+    investigationsCreated:investigationCreated ? 1 : 0,
+    workItemsCreated:0
+  });
 }
 
 function monitoringSuccess({
