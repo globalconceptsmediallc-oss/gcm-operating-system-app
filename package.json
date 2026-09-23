@@ -1,16 +1,15 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.46",
+  "version": "6.1.47",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.46",
+    "fileVersion": "6.1.47",
     "status": "Production Road-Test Candidate",
     "purpose": "Morning Command read-path cutover from Gmail scanning to Universal Email Intake in D1.",
     "changeNotes": [
-      "Loads Today Morning Command from get-email-intake-queue instead of Gmail preview/status.",
-      "Adds shared/today-email-intake.js v1.0.0 as a read-only D1 verification surface.",
-      "Hides the Gmail reconnect control and replaces Refresh Inbox with Refresh Intake.",
-      "Leaves decision routing deferred until the D1 read path is visually verified."
+      "Updates the Gmail decision regression lock for the Universal Email Intake read-path cutover.",
+      "Legacy Gmail decision code remains regression-covered but is no longer loaded by Today.",
+      "No production behavior changes beyond the existing Morning Command D1 cutover."
     ]
   },
   "private": true,

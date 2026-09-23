@@ -1,12 +1,17 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/gmailDecisionRoutes.test.js
-   Version: 1.3.1
+   Version: 1.3.2
    Status: Production Regression Test
    Purpose: Verify Morning Command can distinguish delete, information,
             monitoring, Decision Hold / Work Lite, direct requested work,
             explicit approval-to-proceed work, source-proven automated work,
             and investigation paths without inventing committed Work.
+
+   Change notes — 1.3.2:
+   - Keeps the legacy Gmail decision asset regression-covered but no longer requires
+     the Today shell to load it after the Universal Email Intake read-path cutover.
+   - Requires the shell to load today-email-intake.js v1.0.0 instead.
 
    Change notes — 1.3.1:
    - Reproduces flattened Merchant Center issue text that includes impact copy,
@@ -285,9 +290,10 @@ assert.match(todayDecisions, /source_proven_work/);
 
 const decisionVersion = todayDecisions.match(/const FILE_VERSION = "([^"]+)";/)?.[1];
 assert.ok(decisionVersion, "Today Gmail decision asset must declare FILE_VERSION");
-assert.match(
+assert.doesNotMatch(
   shell,
   new RegExp(`shared/today-gmail-decisions\\.js\\?v=${decisionVersion.replaceAll(".", "\\.")}`)
 );
+assert.match(shell, /shared\/today-email-intake\.js\?v=1\.0\.0/);
 
 console.log("PASS Gmail operator decisions route clean human approvals and source-proven corrective alerts to Work before Decision Hold");
