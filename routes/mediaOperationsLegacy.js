@@ -1,13 +1,20 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/mediaOperations.js
-   Version: 7.9.0
+   Version: 7.10.0
    Status: Production Candidate
-   Source: Production routes/mediaOperations.js 7.8.3
+   Source: Production routes/mediaOperations.js 7.9.0
    Sprint: Media Production Recordkeeping
    Purpose: Preserve authoritative Media retrieval, campaign create/update,
             traffic confirmation state, and attention logic while adding
             production-state recordkeeping and append-only dated production notes.
+
+   Changes in 7.10.0:
+   - Restores the 17-day agency preparation window as the primary Media attention trigger.
+   - Active placements surface an end-of-run decision before expiration even when current traffic is already sent and confirmed.
+   - Pending/planned placements surface preparation 17 calendar days before first air.
+   - Preserves the 3-business-day station deadline as the critical deadline.
+   - Honors a saved placement disposition for the current end date so decided flights do not keep re-alerting.
 
    Production rules:
    - media_records remains the source of truth for Media Operations.
@@ -310,10 +317,19 @@ function mapMediaRecord(row) {
 
 function enrichMediaRecord(record, now) {
   const storedAttention = String(record.attentionStatus||"").toLowerCase()==="attention";
-  const deadline = stationDeadlineForRecord(record);
-  const calculatedAttention = isCalculatedAttention(record,deadline,now);
-  const calculatedReason = calculatedAttentionReason(record);
-  return {...record,stationDeadline:deadline?formatDateOnly(deadline):null,stationDeadlineTime:deadline?"12:00 noon":null,needsAttention:storedAttention||calculatedAttention,calculatedAttention,calculatedAttentionReason:calculatedAttention?calculatedReason:null,effectiveAttentionReason:calculatedAttention?calculatedReason:storedAttention?(record.attentionReason||"Stored media attention flag."):null};
+  const deadlineState = mediaDeadlineState(record,now);
+  const calculatedAttention = deadlineState.needsAttention;
+  const calculatedReason = deadlineState.reason;
+  return {...record,
+    stationDeadline:deadlineState.stationDeadline,
+    stationDeadlineTime:deadlineState.stationDeadline?"12:00 noon":null,
+    agencyPreparationDate:deadlineState.agencyPreparationDate,
+    trafficLeadDays:deadlineState.trafficLeadDays,
+    needsAttention:storedAttention||calculatedAttention,
+    calculatedAttention,
+    calculatedAttentionReason:calculatedAttention?calculatedReason:null,
+    effectiveAttentionReason:calculatedAttention?calculatedReason:storedAttention?(record.attentionReason||"Stored media attention flag."):null
+  };
 }
 
 const PRODUCTION_LABELS = Object.freeze({stage:"Production Stage:",topic:"Production Topic:",scriptStage:"Script Stage:",workingScript:"Working Script:",voiceTalent:"Voice Talent:",recordingReceivedDate:"Recording Received:",recordingStatus:"Recording Status:",revisionNotes:"Revision Notes:",productionStatus:"Production Status:",finalProductionDate:"Final Production Date:",coopScriptStatus:"Co-op Script Status:",trafficPackageStatus:"Traffic Package Status:",replacementFor:"Replacement For:"});
@@ -322,9 +338,32 @@ function stripManagedProductionLines(notes){const labels=Object.values(PRODUCTIO
 function productionLinesFromNotes(notes){const labels=Object.values(PRODUCTION_LABELS).map(label=>label.toLowerCase());return String(notes||"").split(/\r?\n/).filter(line=>labels.some(label=>line.toLowerCase().startsWith(label))||line.startsWith("Production History |"));}
 function parseProductionFromNotes(notes){const lines=String(notes||"").split(/\r?\n/);const result={};for(const [key,label] of Object.entries(PRODUCTION_LABELS)){const line=lines.find(item=>item.toLowerCase().startsWith(label.toLowerCase()));result[key]=line?line.slice(label.length).trim().replace(/\\n/g,"\n"):null;}return result;}
 function parseProductionHistory(notes){return String(notes||"").split(/\r?\n/).filter(line=>line.startsWith("Production History |")).map(line=>{const parts=line.split(" | ");return {timestamp:parts[1]||null,author:parts[2]||null,note:parts.slice(3).join(" | ")||null};}).filter(item=>item.note);}
-function stationDeadlineForRecord(record){const status=String(record.status||"").toLowerCase();if(status==="active")return subtractWorkingDays(parseDateOnly(record.endDate),3);if(status==="pending"||status==="planned")return subtractWorkingDays(parseDateOnly(record.startDate),3);return null;}
-function isCalculatedAttention(record,deadline,now){if(!deadline)return false;const attentionStatus=String(record.attentionStatus||"").toLowerCase();const confirmationStatus=String(record.confirmationStatus||"").toLowerCase();const trafficStatus=String(record.trafficStatus||"").toLowerCase();if(attentionStatus==="clear"&&confirmationStatus==="confirmed"&&trafficStatus==="sent")return false;const status=String(record.status||"").toLowerCase();if(!["active","pending","planned"].includes(status))return false;const warningStart=previousWorkingDay(deadline);if(!warningStart)return false;const start=new Date(warningStart.getFullYear(),warningStart.getMonth(),warningStart.getDate(),0,0,0,0);return now>=start;}
-function calculatedAttentionReason(record){const status=String(record.status||"").toLowerCase();if(status==="active")return "CURRENT PLACEMENT TRAFFIC DEADLINE";if(status==="pending"||status==="planned")return "UPCOMING PLACEMENT TRAFFIC DEADLINE";return null;}
+export function mediaDeadlineState(record,now=new Date()){
+  const status=String(record?.status||"").toLowerCase();
+  const trafficLeadDays=trafficLeadDaysFromNotes(record?.notes);
+  const anchor=status==="active"?parseDateOnly(record?.endDate):(status==="pending"||status==="planned")?parseDateOnly(record?.startDate):null;
+  const stationDeadline=anchor?subtractWorkingDays(anchor,3):null;
+  const agencyPreparation=anchor?subtractCalendarDays(anchor,trafficLeadDays):null;
+  let needsAttention=false,reason=null;
+  if(anchor&&agencyPreparation&&["active","pending","planned"].includes(status)){
+    const start=new Date(agencyPreparation.getFullYear(),agencyPreparation.getMonth(),agencyPreparation.getDate(),0,0,0,0);
+    if(status==="active"){
+      const disposition=placementDispositionFromNotes(record?.notes);
+      const decided=disposition.endDate&&record?.endDate&&disposition.endDate===String(record.endDate).slice(0,10)&&["retire_at_end","replacement_in_progress"].includes(disposition.disposition);
+      needsAttention=!decided&&now>=start;
+      reason=needsAttention?"END-OF-RUN DECISION DUE — EXTEND CURRENT CREATIVE OR PREPARE REPLACEMENT":null;
+    }else{
+      const alreadyTrafficked=String(record?.confirmationStatus||"").toLowerCase()==="confirmed"&&String(record?.trafficStatus||"").toLowerCase()==="sent";
+      needsAttention=!alreadyTrafficked&&now>=start;
+      reason=needsAttention?"MEDIA PREPARATION WINDOW OPEN — TRAFFIC DUE BEFORE FIRST AIR":null;
+    }
+  }
+  return {trafficLeadDays,stationDeadline:stationDeadline?formatDateOnly(stationDeadline):null,agencyPreparationDate:agencyPreparation?formatDateOnly(agencyPreparation):null,needsAttention,reason};
+}
+function trafficLeadDaysFromNotes(notes){const match=String(notes||"").match(/Agency traffic preparation:\s*(\d+)\s+calendar days/i);const value=match?Number(match[1]):17;return Number.isInteger(value)&&value>0?value:17;}
+function placementDispositionFromNotes(notes){const text=String(notes||"");const value=label=>text.split(/\r?\n/).find(line=>line.toLowerCase().startsWith(label.toLowerCase()))?.slice(label.length).trim()||"";return {disposition:value("Placement Disposition:").toLowerCase(),endDate:value("Disposition End Date:")};}
+function stationDeadlineForRecord(record){const state=mediaDeadlineState(record,new Date(0));return parseDateOnly(state.stationDeadline);}
+function subtractCalendarDays(date,count){if(!date)return null;const result=new Date(date);result.setDate(result.getDate()-Math.max(0,Number(count)||0));return result;}
 function subtractWorkingDays(date,count){if(!date)return null;const result=new Date(date);let remaining=count;while(remaining>0){result.setDate(result.getDate()-1);if(isWorkingDay(result))remaining--;}return result;}
 function previousWorkingDay(date){if(!date)return null;const result=new Date(date);do{result.setDate(result.getDate()-1);}while(!isWorkingDay(result));return result;}
 function isWorkingDay(date){const day=date.getDay();return day!==0&&day!==6;}

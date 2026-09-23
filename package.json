@@ -1,22 +1,22 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.60",
+  "version": "6.1.61",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.60",
+    "fileVersion": "6.1.61",
     "status": "Production Road-Test Candidate",
-    "purpose": "Refresh derived Investigation decisions from preserved locked evidence after rule upgrades.",
+    "purpose": "Restore proactive Media deadline control before station-rep follow-up.",
     "changeNotes": [
-      "Work v1.9.32 re-evaluates the newest locked raw evidence using the current decision rules.",
-      "Locked source facts remain unchanged; only derived decision metadata is refreshed.",
-      "A newly proven root cause overrides stale visible saved-progress text and unlocks supported corrective Work.",
-      "This allows Investigation #44 evidence entered under v1.9.30 to benefit from the v1.9.31 LCP rule without re-entering evidence."
+      "Media attention now opens 17 calendar days before active-flight end or upcoming first air.",
+      "Confirmed current traffic no longer suppresses the next end-of-run extend-or-replace decision.",
+      "Today exposes the top Media deadline with agency preparation and critical station dates.",
+      "Saved placement dispositions suppress repeat alerts for a decided end date."
     ]
   },
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:work-due-date && npm run test:work-core-web-vitals && npm run test:universal-email-intake && npm run test:email-intake-queue && npm run test:email-intake-disposition && npm run test:gmail-decisions && npm run test:gmail-monitoring-parity && npm run test:gmail-backlink-investigation && npm run test:gmail-intake && npm run test:gmail-backlog && npm run test:gmail-source-display && npm run test:gmail-handle-now && npm run test:gmail-thread-routing && npm run test:gmail-requested-work-content && npm run test:prospect-crm && npm run test:mediaforge-home && npm run test:mediaforge-variants && npm run test:mediaforge-naming && npm run test:business-workspace-health-v2 && npm run test:client-health-v2 && npm run test:asset-versions",
+    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:work-due-date && npm run test:work-core-web-vitals && npm run test:media-deadline-attention && npm run test:universal-email-intake && npm run test:email-intake-queue && npm run test:email-intake-disposition && npm run test:gmail-decisions && npm run test:gmail-monitoring-parity && npm run test:gmail-backlink-investigation && npm run test:gmail-intake && npm run test:gmail-backlog && npm run test:gmail-source-display && npm run test:gmail-handle-now && npm run test:gmail-thread-routing && npm run test:gmail-requested-work-content && npm run test:prospect-crm && npm run test:mediaforge-home && npm run test:mediaforge-variants && npm run test:mediaforge-naming && npm run test:business-workspace-health-v2 && npm run test:client-health-v2 && npm run test:asset-versions",
     "test:website-intelligence": "node tests/websiteIntelligence.test.js",
     "test:code-intelligence": "node tests/codeIntelligence.test.js",
     "test:operating-sessions": "node tests/operatingSessionTasks.test.js && node tests/osAuth.test.js && node tests/operatingSessionIntake.test.js",
@@ -41,7 +41,8 @@
     "test:universal-email-intake": "node tests/universalEmailIntake.test.js",
     "test:email-intake-queue": "node tests/emailIntakeQueue.test.js",
     "test:email-intake-disposition": "node tests/emailIntakeDisposition.test.js",
-    "test:work-core-web-vitals": "node tests/workCoreWebVitalsDecision.test.js"
+    "test:work-core-web-vitals": "node tests/workCoreWebVitalsDecision.test.js",
+    "test:media-deadline-attention": "node tests/mediaDeadlineAttention.test.js"
   },
   "dependencies": {
     "postal-mime": "^3.0.0"
