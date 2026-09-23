@@ -1,16 +1,16 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.51",
+  "version": "6.1.52",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.51",
+    "fileVersion": "6.1.52",
     "status": "Production Road-Test Candidate",
-    "purpose": "Universal Email Intake Information routing.",
+    "purpose": "Universal Email Intake Monitoring Proof/history routing.",
     "changeNotes": [
-      "Adds explicit client selection to Morning Command intake cards.",
-      "Adds Save as Information as the second intake disposition.",
-      "Information creates exactly one Communication/history record.",
-      "No Activity Record, Investigation, or Work Item is created for Information."
+      "Adds Save as Monitoring to Morning Command intake cards.",
+      "Monitoring requires explicit client selection.",
+      "Monitoring creates exactly one activity_records Proof/history row.",
+      "Monitoring creates no Communication, Investigation, or Work Item."
     ]
   },
   "private": true,

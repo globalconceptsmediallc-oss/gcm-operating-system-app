@@ -1,13 +1,19 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/today-email-intake.js
-   Version: 1.3.0
+   Version: 1.4.0
    Status: Production Road-Test Candidate
    Sprint: Morning Command — Universal Email Intake No-Action Routing
    Purpose:
    Replace Gmail inbox scanning on Today with the durable D1 Universal Email
    Intake queue. This phase is intentionally read-only: it proves Morning
    Command can load provider-independent email evidence without Google API use.
+
+   Changes — 1.4.0:
+   - Adds Save as Monitoring.
+   - Monitoring requires client selection and creates one Proof/history activity record.
+   - Monitoring creates no Communication, Investigation, or Work Item.
+   - Preserves Information and Delete routes unchanged.
 
    Changes — 1.3.0:
    - Adds Information as the second Universal Email Intake decision.
@@ -38,7 +44,7 @@
 (() => {
   "use strict";
 
-  const FILE_VERSION = "1.3.0";
+  const FILE_VERSION = "1.4.0";
   const WORKER_URL =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const QUEUE_ACTION = "get-email-intake-queue";
@@ -81,6 +87,9 @@
       .gcm-intake-client-select{min-height:36px;border:1px solid var(--border,#dbe2ec);border-radius:9px;background:#fff;padding:0 10px;color:var(--text,#132238);font:inherit;font-size:.75rem}
       .gcm-intake-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px}
       .gcm-intake-information{min-height:36px;padding:0 12px;border:1px solid #b9d3f5;border-radius:9px;background:#f3f8ff;color:#1f5fae;font-weight:850;cursor:pointer}
+      .gcm-intake-monitoring{min-height:36px;padding:0 12px;border:1px solid #c9d6b7;border-radius:9px;background:#f7faF2;color:#4d6b2f;font-weight:850;cursor:pointer}
+      .gcm-intake-monitoring:hover,.gcm-intake-monitoring:focus-visible{background:#f0f7e8;outline:none}
+      .gcm-intake-monitoring:disabled{opacity:.55;cursor:not-allowed}
       .gcm-intake-information:hover,.gcm-intake-information:focus-visible{background:#eaf3ff;outline:none}
       .gcm-intake-information:disabled{opacity:.55;cursor:not-allowed}
       .gcm-intake-delete{min-height:36px;padding:0 12px;border:1px solid #e5bcbc;border-radius:9px;background:#fff7f7;color:#9d3030;font-weight:850;cursor:pointer}
@@ -164,6 +173,9 @@
         <button class="gcm-intake-information" type="button" data-gcm-intake-information data-intake-id="${escapeHtml(record?.id || "")}">
           Save as Information
         </button>
+        <button class="gcm-intake-monitoring" type="button" data-gcm-intake-monitoring data-intake-id="${escapeHtml(record?.id || "")}">
+          Save as Monitoring
+        </button>
         <button class="gcm-intake-delete" type="button" data-gcm-intake-delete data-intake-id="${escapeHtml(record?.id || "")}">
           Delete — No Action Required
         </button>
@@ -175,6 +187,9 @@
 
     const informationButton = article.querySelector("[data-gcm-intake-information]");
     informationButton?.addEventListener("click", () => handleInformation(article, informationButton));
+
+    const monitoringButton = article.querySelector("[data-gcm-intake-monitoring]");
+    monitoringButton?.addEventListener("click", () => handleMonitoring(article, monitoringButton));
 
     const deleteButton = article.querySelector("[data-gcm-intake-delete]");
     deleteButton?.addEventListener("click", () => handleNoAction(article, deleteButton));
@@ -246,6 +261,60 @@
       if (select) select.disabled = false;
       if (actionStatus) actionStatus.textContent = `Information save failed: ${error.message}`;
       setStatus(`Information disposition failed: ${error.message}`);
+    }
+  }
+
+  async function handleMonitoring(card, button) {
+    if (busy || !card || !button) return;
+
+    const intakeId = Number(button.dataset.intakeId || card.dataset.intakeId);
+    const select = card.querySelector("[data-gcm-intake-client]");
+    const clientId = Number(select?.value);
+    const actionStatus = card.querySelector("[data-gcm-intake-action-status]");
+
+    if (!Number.isInteger(clientId) || clientId <= 0) {
+      if (actionStatus) actionStatus.textContent = "Choose the client before saving this email as Monitoring.";
+      select?.focus();
+      return;
+    }
+
+    busy = true;
+    button.disabled = true;
+    button.textContent = "Saving Monitoring…";
+    if (select) select.disabled = true;
+    if (actionStatus) actionStatus.textContent = "Saving one Proof/history record and preserving the source email in D1…";
+
+    try {
+      const result = await post(DISPOSITION_ACTION, {
+        workspaceKey:"gcm",
+        intakeId,
+        disposition:"monitoring",
+        clientId
+      });
+
+      if (
+        Number(result?.communicationsCreated || 0) !== 0 ||
+        Number(result?.activityRecordsCreated || 0) > 1 ||
+        Number(result?.investigationsCreated || 0) !== 0 ||
+        Number(result?.workItemsCreated || 0) !== 0 ||
+        !Number(result?.activityRecordId) ||
+        result?.evidenceRetained !== true
+      ) {
+        throw new Error("Monitoring routing safety check failed.");
+      }
+
+      busy = false;
+      setStatus(
+        `Intake #${intakeId} saved as Monitoring. Proof/history #${result.activityRecordId} created/linked; source evidence retained; no Communication, Investigation, or Work Item created.`
+      );
+      await refreshQueue();
+    } catch (error) {
+      busy = false;
+      button.disabled = false;
+      button.textContent = "Save as Monitoring";
+      if (select) select.disabled = false;
+      if (actionStatus) actionStatus.textContent = `Monitoring save failed: ${error.message}`;
+      setStatus(`Monitoring disposition failed: ${error.message}`);
     }
   }
 

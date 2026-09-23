@@ -1,12 +1,19 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/emailIntakeDisposition.js
-   Version: 1.2.0
+   Version: 1.3.0
    Status: Production Road-Test Candidate
    Sprint: Universal Email Intake — Human Disposition
    Purpose:
    Apply the operator's explicit disposition to a durable email_intake record
    without calling Gmail and without deleting source evidence from D1.
+
+   Changes — 1.3.0:
+   - Adds Monitoring disposition.
+   - Monitoring requires an explicit client selection.
+   - Creates exactly one activity_records Proof/history row.
+   - Creates no Communication, Investigation, or Work Item.
+   - Links the activity record back to email_intake and marks the intake processed.
 
    Changes — 1.2.0:
    - Adds Information disposition.
@@ -29,7 +36,7 @@ import { ACTIONS } from "../shared/config.js";
 import { getDatabase } from "../shared/database.js";
 import { jsonResponse, logWorkerError, safeErrorMessage } from "../shared/http.js";
 
-export const EMAIL_INTAKE_DISPOSITION_VERSION = "1.2.0";
+export const EMAIL_INTAKE_DISPOSITION_VERSION = "1.3.0";
 const UNIVERSAL_INTAKE_SOURCE = "Universal Email Intake";
 
 export async function handleEmailIntakeDisposition(body, env, requestId) {
@@ -89,11 +96,22 @@ export async function handleEmailIntakeDisposition(body, env, requestId) {
     });
   }
 
+  if (disposition === "monitoring") {
+    return handleMonitoring({
+      db,
+      intakeId,
+      workspaceKey,
+      clientId:Number(body?.clientId),
+      owner:clean(body?.owner) || "Andrew",
+      requestId
+    });
+  }
+
   return jsonResponse({
     ok:false,
     requestId,
     action:ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
-    error:"Supported dispositions in this phase are Delete — No Action Required and Information."
+    error:"Supported dispositions in this phase are Delete — No Action Required, Information, and Monitoring."
   },400);
 }
 
@@ -393,6 +411,203 @@ async function handleInformation({
   }
 }
 
+async function handleMonitoring({
+  db,
+  intakeId,
+  workspaceKey,
+  clientId,
+  owner,
+  requestId
+}) {
+  if (!Number.isInteger(clientId) || clientId <= 0) {
+    return jsonResponse({
+      ok:false,
+      requestId,
+      action:ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
+      error:"Choose a client before saving this intake as Monitoring."
+    },400);
+  }
+
+  try {
+    const existing = await loadIntake(db, intakeId, workspaceKey);
+
+    if (!existing) {
+      return notFoundResponse(requestId, intakeId);
+    }
+
+    if (
+      existing.processing_status === "processed" &&
+      existing.disposition === "monitoring" &&
+      existing.activity_record_id
+    ) {
+      return monitoringSuccess({
+        requestId,
+        intakeId,
+        workspaceKey,
+        clientId:Number(existing.client_id || clientId),
+        activityRecordId:Number(existing.activity_record_id),
+        duplicate:true,
+        activityCreated:false
+      });
+    }
+
+    if (existing.processing_status !== "ready_for_review") {
+      return notReadyResponse(requestId, intakeId, existing);
+    }
+
+    if (hasDownstreamLink(existing)) {
+      return jsonResponse({
+        ok:false,
+        requestId,
+        action:ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
+        error:"Monitoring disposition was blocked because downstream OS records are already linked to this intake record."
+      },409);
+    }
+
+    const client = await db.prepare(`
+      SELECT id, client_code, name
+      FROM clients
+      WHERE id = ?
+      LIMIT 1
+    `).bind(clientId).first();
+
+    if (!client) {
+      return jsonResponse({
+        ok:false,
+        requestId,
+        action:ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
+        error:`Client #${clientId} was not found.`
+      },404);
+    }
+
+    const sourceReference = `email-intake:${workspaceKey}:${intakeId}`;
+    let activity = await db.prepare(`
+      SELECT id
+      FROM activity_records
+      WHERE source_reference = ?
+      LIMIT 1
+    `).bind(sourceReference).first();
+
+    let activityCreated = false;
+
+    if (!activity?.id) {
+      const activityDate = normalizeActivityDate(existing.received_at);
+      const subject = clean(existing.subject) || "Monitoring update";
+      const body = clean(existing.body_text);
+      const notes = [
+        `Universal Email Intake #${intakeId}`,
+        `Client: ${client.name || client.client_code || client.id}`,
+        "Human disposition: Monitoring",
+        existing.from_address ? `Sender: ${existing.from_address}` : "",
+        body ? `Source evidence excerpt: ${body.slice(0,1200)}` : "",
+        "Source evidence retained in email_intake.",
+        "No Communication created.",
+        "No Investigation created.",
+        "No Work Item created."
+      ].filter(Boolean).join("\n");
+
+      const result = await db.prepare(`
+        INSERT INTO activity_records (
+          client_id, activity_date, category, activity, evidence_type, evidence_reference,
+          status, owner, time_minutes, expected_impact, actual_impact, notes, source_type,
+          source_reference, priority, win, created_at, updated_at
+        ) VALUES (?, ?, 'Monitoring Intelligence', ?, 'Email', ?, 'completed', ?, 0,
+                  'Monitoring / trend evidence', ?, ?, 'email_intake_monitoring', ?, 'Low', 0,
+                  CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      `).bind(
+        Number(client.id),
+        activityDate,
+        subject,
+        sourceReference,
+        owner,
+        body.slice(0,800),
+        notes,
+        sourceReference
+      ).run();
+
+      activity = {id:Number(result?.meta?.last_row_id || 0)};
+      activityCreated = true;
+    }
+
+    const activityRecordId = Number(activity?.id);
+
+    if (!Number.isInteger(activityRecordId) || activityRecordId <= 0) {
+      throw new Error("The Monitoring activity record was not available after save.");
+    }
+
+    const classificationJson = JSON.stringify({
+      disposition:"monitoring",
+      operator:"human",
+      clientId:Number(client.id),
+      activityRecordId
+    });
+
+    const update = await db.prepare(`
+      UPDATE email_intake
+      SET
+        processing_status = 'processed',
+        disposition = 'monitoring',
+        classification_source = 'human_operator',
+        classification_json = ?,
+        classification_confidence = 'high',
+        client_id = ?,
+        activity_record_id = ?,
+        processed_at = CURRENT_TIMESTAMP,
+        failure_stage = NULL,
+        failure_message = NULL,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+        AND workspace_key = ?
+        AND processing_status = 'ready_for_review'
+        AND communication_id IS NULL
+        AND investigation_id IS NULL
+        AND work_item_id IS NULL
+    `).bind(
+      classificationJson,
+      Number(client.id),
+      activityRecordId,
+      intakeId,
+      workspaceKey
+    ).run();
+
+    if (Number(update?.meta?.changes || 0) !== 1) {
+      const reconciled = await loadIntake(db, intakeId, workspaceKey);
+      if (
+        reconciled?.processing_status === "processed" &&
+        reconciled?.disposition === "monitoring" &&
+        Number(reconciled?.activity_record_id) === activityRecordId
+      ) {
+        return monitoringSuccess({
+          requestId,
+          intakeId,
+          workspaceKey,
+          clientId:Number(client.id),
+          activityRecordId,
+          duplicate:true,
+          activityCreated:false
+        });
+      }
+      return staleResponse(requestId);
+    }
+
+    return monitoringSuccess({
+      requestId,
+      intakeId,
+      workspaceKey,
+      clientId:Number(client.id),
+      activityRecordId,
+      duplicate:false,
+      activityCreated
+    });
+  } catch (error) {
+    return dispositionFailure({
+      requestId,
+      stage:"d1_email_intake_monitoring",
+      error
+    });
+  }
+}
+
 async function loadIntake(db, intakeId, workspaceKey) {
   return db.prepare(`
     SELECT
@@ -430,6 +645,36 @@ function buildInformationSummary(record) {
   const body = clean(record?.body_text).replace(/\s+/g," ");
   if (body) return body.slice(0,800);
   return clean(record?.subject) || "Inbound email saved as Information.";
+}
+
+function monitoringSuccess({
+  requestId,
+  intakeId,
+  workspaceKey,
+  clientId,
+  activityRecordId,
+  duplicate,
+  activityCreated
+}) {
+  return jsonResponse({
+    ok:true,
+    requestId,
+    action:ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
+    emailIntakeDispositionVersion:EMAIL_INTAKE_DISPOSITION_VERSION,
+    intakeId,
+    workspaceKey,
+    disposition:"monitoring",
+    processingStatus:"processed",
+    evidenceRetained:true,
+    duplicate:Boolean(duplicate),
+    clientId,
+    activityRecordId,
+    writesPerformed:activityCreated ? 1 : 0,
+    communicationsCreated:0,
+    activityRecordsCreated:activityCreated ? 1 : 0,
+    investigationsCreated:0,
+    workItemsCreated:0
+  });
 }
 
 function deleteSuccess({
@@ -534,6 +779,13 @@ function dispositionFailure({
     action:ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
     error:safeErrorMessage(error)
   },500);
+}
+
+function normalizeActivityDate(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? new Date().toISOString().slice(0,10)
+    : date.toISOString().slice(0,10);
 }
 
 function clean(value) {
