@@ -1,12 +1,17 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/emailIntakeDisposition.js
-   Version: 1.5.2
+   Version: 1.5.3
    Status: Production Road-Test Candidate
    Sprint: Universal Email Intake — Human Disposition
    Purpose:
    Apply the operator's explicit disposition to a durable email_intake record
    without calling Gmail and without deleting source evidence from D1.
+
+   Changes — 1.5.3:
+   - Aligns the Work-route Communication with the existing OS operational decision contract.
+   - Uses operational_decision 'work_required' and status 'work_item_open'.
+   - Keeps email_intake disposition 'requested_work' as required by its D1 constraint.
 
    Changes — 1.5.2:
    - Corrects the Work success response to return requested_work, matching the persisted D1 value.
@@ -59,7 +64,7 @@ import { ACTIONS } from "../shared/config.js";
 import { getDatabase } from "../shared/database.js";
 import { jsonResponse, logWorkerError, safeErrorMessage } from "../shared/http.js";
 
-export const EMAIL_INTAKE_DISPOSITION_VERSION = "1.5.2";
+export const EMAIL_INTAKE_DISPOSITION_VERSION = "1.5.3";
 const UNIVERSAL_INTAKE_SOURCE = "Universal Email Intake";
 
 export async function handleEmailIntakeDisposition(body, env, requestId) {
@@ -1044,7 +1049,7 @@ async function handleWork({
           subject, raw_content, ai_summary, ai_analysis_json,
           operational_decision, status, requires_investigation,
           owner, minutes_spent, notes
-        ) VALUES (?, ?, ?, 'incoming', ?, 'Requested Work', ?, ?, ?, ?, 'requested_work', 'work_open', 0, ?, 0, ?)
+        ) VALUES (?, ?, ?, 'incoming', ?, 'Requested Work', ?, ?, ?, ?, 'work_required', 'work_item_open', 0, ?, 0, ?)
       `).bind(
         Number(client.id),
         externalId,

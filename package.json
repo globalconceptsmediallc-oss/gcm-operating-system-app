@@ -1,15 +1,16 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.57",
+  "version": "6.1.58",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.57",
+    "fileVersion": "6.1.58",
     "status": "Production Road-Test Candidate",
-    "purpose": "Universal Email Intake requested_work response correction.",
+    "purpose": "Align Universal Email Intake Work Item communication metadata with the OS contract.",
     "changeNotes": [
-      "Corrects the Create Work Item success response to requested_work.",
-      "Matches UI, worker contract, D1 CHECK constraint, and regression test.",
-      "Preserves duplicate recovery for the interrupted first attempt."
+      "Keeps email_intake disposition requested_work.",
+      "Uses communication operational_decision work_required.",
+      "Uses communication status work_item_open.",
+      "Preserves direct Work Item routing with no Investigation."
     ]
   },
   "private": true,
