@@ -43,7 +43,7 @@ function makeDb(record) {
 {
   const DB=makeDb(null);
   const response=await handleEmailIntakeDisposition(
-    {action:"route-email-intake-disposition",intakeId:1,workspaceKey:"gcm",disposition:"delete",confirmed:true,confirmation:"delete-no-action-required"},
+    {action:"route-email-intake-disposition",intakeId:1,workspaceKey:"gcm",disposition:"delete"},
     {DB},
     "test-unconfirmed"
   );
@@ -66,7 +66,7 @@ function makeDb(record) {
   });
 
   const response=await handleEmailIntakeDisposition(
-    {action:"route-email-intake-disposition",intakeId:1,workspaceKey:"gcm",disposition:"delete"},
+    {action:"route-email-intake-disposition",intakeId:1,workspaceKey:"gcm",disposition:"delete",confirmed:true,confirmation:"delete-no-action-required"},
     {DB},
     "test-delete"
   );
@@ -124,7 +124,7 @@ function makeDb(record) {
   });
 
   const response=await handleEmailIntakeDisposition(
-    {intakeId:1,workspaceKey:"gcm",disposition:"delete"},
+    {intakeId:1,workspaceKey:"gcm",disposition:"delete",confirmed:true,confirmation:"delete-no-action-required"},
     {DB},
     "test-linked"
   );
