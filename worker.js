@@ -1,14 +1,20 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.21.0
+   Version: 7.22.0
    Status: OS 2.0 Production Road-Test Candidate
-   Source: Production worker.js 7.20.0
-   Sprint: Universal Email Intake — Cloudflare Email Routing
+   Source: Production worker.js 7.21.0
+   Sprint: Universal Email Intake — Human Disposition
    Purpose: Preserve every verified production route while exposing the
             durable Prospecting Radar + CRM operations required to connect
             scheduled prospects, discovery, proposals, follow-up, agreements,
             payments, and eventual Client handoff.
+
+   Changes in 7.22.0:
+   - Adds route-email-intake-disposition for durable human routing.
+   - Phase 1 supports Delete — No Action Required only.
+   - Preserves the email_intake evidence row and creates zero downstream OS records.
+   - Makes no Gmail API call.
 
    Changes in 7.21.0:
    - Adds the read-only get-email-intake-queue route.
@@ -152,8 +158,12 @@ import {
   handleEmailIntakeQueue,
   EMAIL_INTAKE_QUEUE_VERSION
 } from "./routes/emailIntakeQueue.js";
+import {
+  handleEmailIntakeDisposition,
+  EMAIL_INTAKE_DISPOSITION_VERSION
+} from "./routes/emailIntakeDisposition.js";
 
-const WORKER_FILE_VERSION = "7.21.0";
+const WORKER_FILE_VERSION = "7.22.0";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
@@ -187,6 +197,7 @@ const SUPPORTED_ACTIONS = [
   ACTIONS.APPROVE_GMAIL_INVESTIGATION,
   ACTIONS.CREATE_GMAIL_DRAFT,
   ACTIONS.GET_EMAIL_INTAKE_QUEUE,
+  ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
   ...GMAIL_WORK_REQUEST_ACTIONS,
   ...GMAIL_DISPOSITION_ACTIONS,
   PREPARE_OPERATING_SESSION_ACTION,
@@ -213,6 +224,7 @@ export default {
         workerFileVersion: WORKER_FILE_VERSION,
         emailIntakeVersion: EMAIL_INTAKE_VERSION,
         emailIntakeQueueVersion: EMAIL_INTAKE_QUEUE_VERSION,
+        emailIntakeDispositionVersion: EMAIL_INTAKE_DISPOSITION_VERSION,
         contractVersion: API_CONTRACT_VERSION,
         sprint: "Universal Email Intake — Cloudflare Email Routing",
         architecture:
@@ -328,6 +340,9 @@ export default {
       switch (action) {
         case ACTIONS.GET_EMAIL_INTAKE_QUEUE:
           return await handleEmailIntakeQueue(body, env, requestId);
+
+        case ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION:
+          return await handleEmailIntakeDisposition(body, env, requestId);
 
         case ACTIONS.GET_GMAIL_STATUS:
         case ACTIONS.PREVIEW_GMAIL_INBOX:

@@ -1,12 +1,17 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/config.js
-   Version: 7.11.0
+   Version: 7.12.0
    Status: Production Road-Test Candidate
-   Source: shared/config.js 7.10.1 production
-   Sprint: Universal Email Intake — D1 Review Queue
+   Source: shared/config.js 7.11.0 production
+   Sprint: Universal Email Intake — Human Disposition
    Purpose: Preserve all existing production constants and add the
             durable Prospect CRM action contract.
+
+   Change Notes in 7.12.0:
+   - Adds ROUTE_EMAIL_INTAKE_DISPOSITION for provider-independent human routing.
+   - Phase 1 supports Delete — No Action Required only.
+   - Preserves source evidence and creates zero downstream records.
 
    Change Notes in 7.11.0:
    - Adds GET_EMAIL_INTAKE_QUEUE for the provider-independent D1 review queue.
@@ -22,7 +27,7 @@
      Operating Session, and Calendar action unchanged.
    ========================================================= */
 
-export const VERSION = "7.11.0";
+export const VERSION = "7.12.0";
 export const API_CONTRACT_VERSION = "communications-operational-decision-v3";
 export const COMMUNICATION_ANALYSIS_ENGINE_VERSION = "3.4.1";
 
@@ -42,6 +47,7 @@ export const ACTIONS = Object.freeze({
   APPROVE_GMAIL_INVESTIGATION: "approve-gmail-investigation",
   CREATE_GMAIL_DRAFT: "create-gmail-draft",
   GET_EMAIL_INTAKE_QUEUE: "get-email-intake-queue",
+  ROUTE_EMAIL_INTAKE_DISPOSITION: "route-email-intake-disposition",
   GET_CLIENT_WORKSPACE: "get-client-workspace",
   GET_CLIENT_DIRECTORY: "get-client-directory",
   COMMIT_OPERATIONAL_DECISION: "commit-operational-decision",

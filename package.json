@@ -1,21 +1,22 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.47",
+  "version": "6.1.48",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.47",
+    "fileVersion": "6.1.48",
     "status": "Production Road-Test Candidate",
-    "purpose": "Morning Command read-path cutover from Gmail scanning to Universal Email Intake in D1.",
+    "purpose": "Universal Email Intake first human disposition: Delete — No Action Required.",
     "changeNotes": [
-      "Updates the Gmail decision regression lock for the Universal Email Intake read-path cutover.",
-      "Legacy Gmail decision code remains regression-covered but is no longer loaded by Today.",
-      "No production behavior changes beyond the existing Morning Command D1 cutover."
+      "Adds route-email-intake-disposition v1.0.0 with no-action/delete only.",
+      "Preserves source email evidence while marking the intake record processed.",
+      "Adds the first Morning Command decision button without Gmail API use.",
+      "Creates zero Communications, Activity Records, Investigations, and Work Items."
     ]
   },
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:work-due-date && npm run test:universal-email-intake && npm run test:email-intake-queue && npm run test:gmail-decisions && npm run test:gmail-monitoring-parity && npm run test:gmail-backlink-investigation && npm run test:gmail-intake && npm run test:gmail-backlog && npm run test:gmail-source-display && npm run test:gmail-handle-now && npm run test:gmail-thread-routing && npm run test:gmail-requested-work-content && npm run test:prospect-crm && npm run test:mediaforge-home && npm run test:mediaforge-variants && npm run test:mediaforge-naming && npm run test:business-workspace-health-v2 && npm run test:client-health-v2 && npm run test:asset-versions",
+    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:work-due-date && npm run test:universal-email-intake && npm run test:email-intake-queue && npm run test:email-intake-disposition && npm run test:gmail-decisions && npm run test:gmail-monitoring-parity && npm run test:gmail-backlink-investigation && npm run test:gmail-intake && npm run test:gmail-backlog && npm run test:gmail-source-display && npm run test:gmail-handle-now && npm run test:gmail-thread-routing && npm run test:gmail-requested-work-content && npm run test:prospect-crm && npm run test:mediaforge-home && npm run test:mediaforge-variants && npm run test:mediaforge-naming && npm run test:business-workspace-health-v2 && npm run test:client-health-v2 && npm run test:asset-versions",
     "test:website-intelligence": "node tests/websiteIntelligence.test.js",
     "test:code-intelligence": "node tests/codeIntelligence.test.js",
     "test:operating-sessions": "node tests/operatingSessionTasks.test.js && node tests/osAuth.test.js && node tests/operatingSessionIntake.test.js",
@@ -38,7 +39,8 @@
     "test:mediaforge-home": "node --check mediaforge/home.js && node tests/mediaforgeHome.test.js",
     "test:mediaforge-variants": "node tests/mediaforgeVariantStandard.test.js",
     "test:universal-email-intake": "node tests/universalEmailIntake.test.js",
-    "test:email-intake-queue": "node tests/emailIntakeQueue.test.js"
+    "test:email-intake-queue": "node tests/emailIntakeQueue.test.js",
+    "test:email-intake-disposition": "node tests/emailIntakeDisposition.test.js"
   },
   "dependencies": {
     "postal-mime": "^3.0.0"
