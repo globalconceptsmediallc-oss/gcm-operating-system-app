@@ -1,16 +1,16 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.48",
+  "version": "6.1.49",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.48",
+    "fileVersion": "6.1.49",
     "status": "Production Road-Test Candidate",
-    "purpose": "Universal Email Intake first human disposition: Delete — No Action Required.",
+    "purpose": "Universal Email Intake no-action safety lock.",
     "changeNotes": [
-      "Adds route-email-intake-disposition v1.0.0 with no-action/delete only.",
-      "Preserves source email evidence while marking the intake record processed.",
-      "Adds the first Morning Command decision button without Gmail API use.",
-      "Creates zero Communications, Activity Records, Investigations, and Work Items."
+      "Requires explicit backend confirmation before a no-action intake write.",
+      "Requires a deliberate two-click UI confirmation within 10 seconds.",
+      "Unconfirmed requests are rejected before D1 is read or changed.",
+      "Preserves source evidence and zero-downstream-record behavior."
     ]
   },
   "private": true,

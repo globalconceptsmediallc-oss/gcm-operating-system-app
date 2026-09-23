@@ -1,13 +1,19 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/today-email-intake.js
-   Version: 1.1.0
+   Version: 1.2.0
    Status: Production Road-Test Candidate
    Sprint: Morning Command — Universal Email Intake No-Action Routing
    Purpose:
    Replace Gmail inbox scanning on Today with the durable D1 Universal Email
    Intake queue. This phase is intentionally read-only: it proves Morning
    Command can load provider-independent email evidence without Google API use.
+
+   Changes — 1.2.0:
+   - Requires two deliberate operator clicks before no-action processing.
+   - First click only arms the control; it performs no network request.
+   - Second click within 10 seconds sends an explicit backend confirmation token.
+   - The Worker independently rejects any unconfirmed no-action request.
 
    Changes — 1.1.0:
    - Adds Delete — No Action Required for a durable intake record.
@@ -26,7 +32,7 @@
 (() => {
   "use strict";
 
-  const FILE_VERSION = "1.1.0";
+  const FILE_VERSION = "1.2.0";
   const WORKER_URL =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const QUEUE_ACTION = "get-email-intake-queue";
@@ -65,6 +71,7 @@
       .gcm-intake-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:13px;padding-top:13px;border-top:1px solid var(--border,#dbe2ec)}
       .gcm-intake-delete{min-height:36px;padding:0 12px;border:1px solid #e5bcbc;border-radius:9px;background:#fff7f7;color:#9d3030;font-weight:850;cursor:pointer}
       .gcm-intake-delete:hover,.gcm-intake-delete:focus-visible{background:#fff0f0;outline:none}
+      .gcm-intake-delete[data-confirm-armed="true"]{background:#ffe8e8;border-color:#d78484;color:#7f2020}
       .gcm-intake-delete:disabled{opacity:.6;cursor:wait}
       .gcm-intake-action-status{color:var(--text-muted,#637083);font-size:.72rem;font-weight:750}
       .gcm-intake-empty{padding:18px;border:1px dashed var(--border,#dbe2ec);border-radius:12px;background:#fbfcfe;color:var(--text-muted,#637083);font-size:.8rem;text-align:center}
@@ -159,16 +166,38 @@
       return;
     }
 
+    if (button.dataset.confirmArmed !== "true") {
+      button.dataset.confirmArmed = "true";
+      button.textContent = "Confirm No Action";
+      if (actionStatus) {
+        actionStatus.textContent = "Nothing has been changed. Click Confirm No Action again within 10 seconds to process this intake.";
+      }
+
+      window.setTimeout(() => {
+        if (!button.isConnected || button.disabled) return;
+        if (button.dataset.confirmArmed !== "true") return;
+        button.dataset.confirmArmed = "false";
+        button.textContent = "Delete — No Action Required";
+        if (actionStatus) {
+          actionStatus.textContent = "Evidence remains in D1 · 0 downstream records";
+        }
+      }, 10000);
+      return;
+    }
+
+    button.dataset.confirmArmed = "false";
     busy = true;
     button.disabled = true;
     button.textContent = "Saving…";
-    if (actionStatus) actionStatus.textContent = "Marking no action while retaining the source evidence…";
+    if (actionStatus) actionStatus.textContent = "Confirmed. Marking no action while retaining the source evidence…";
 
     try {
       const result = await post(DISPOSITION_ACTION, {
         workspaceKey:"gcm",
         intakeId,
-        disposition:"delete"
+        disposition:"delete",
+        confirmed:true,
+        confirmation:"delete-no-action-required"
       });
 
       if (

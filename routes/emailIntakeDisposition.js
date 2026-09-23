@@ -1,12 +1,17 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/emailIntakeDisposition.js
-   Version: 1.0.0
+   Version: 1.1.0
    Status: Production Road-Test Candidate
    Sprint: Universal Email Intake — Human Disposition
    Purpose:
    Apply the operator's explicit disposition to a durable email_intake record
    without calling Gmail and without deleting source evidence from D1.
+
+   Safety update — 1.1.0:
+   - Requires an explicit backend confirmation token before any no-action write.
+   - A missing or incorrect confirmation is rejected before D1 is read or changed.
+   - Prevents refreshes, stale handlers, or accidental single requests from processing intake.
 
    Phase 1 behavior:
    - Supports Delete — No Action Required only.
@@ -19,7 +24,7 @@ import { ACTIONS } from "../shared/config.js";
 import { getDatabase } from "../shared/database.js";
 import { jsonResponse, logWorkerError, safeErrorMessage } from "../shared/http.js";
 
-export const EMAIL_INTAKE_DISPOSITION_VERSION = "1.0.0";
+export const EMAIL_INTAKE_DISPOSITION_VERSION = "1.1.0";
 
 export async function handleEmailIntakeDisposition(body, env, requestId) {
   const db = getDatabase(env);
@@ -36,6 +41,17 @@ export async function handleEmailIntakeDisposition(body, env, requestId) {
   const intakeId = Number(body?.intakeId);
   const workspaceKey = clean(body?.workspaceKey) || "gcm";
   const disposition = clean(body?.disposition).toLowerCase();
+  const confirmed = body?.confirmed === true;
+  const confirmation = clean(body?.confirmation).toLowerCase();
+
+  if (!confirmed || confirmation !== "delete-no-action-required") {
+    return jsonResponse({
+      ok:false,
+      requestId,
+      action:ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
+      error:"Explicit confirmation is required before Delete — No Action Required can be saved."
+    },400);
+  }
 
   if (!Number.isInteger(intakeId) || intakeId <= 0) {
     return jsonResponse({

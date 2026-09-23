@@ -1,14 +1,19 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.22.0
+   Version: 7.23.0
    Status: OS 2.0 Production Road-Test Candidate
-   Source: Production worker.js 7.21.0
+   Source: Production worker.js 7.22.0
    Sprint: Universal Email Intake — Human Disposition
    Purpose: Preserve every verified production route while exposing the
             durable Prospecting Radar + CRM operations required to connect
             scheduled prospects, discovery, proposals, follow-up, agreements,
             payments, and eventual Client handoff.
+
+   Changes in 7.23.0:
+   - Requires explicit confirmation for Universal Email Intake no-action writes.
+   - Exposes Email Intake Disposition 1.1.0.
+   - Prevents unconfirmed requests from reaching D1.
 
    Changes in 7.22.0:
    - Adds route-email-intake-disposition for durable human routing.
@@ -163,7 +168,7 @@ import {
   EMAIL_INTAKE_DISPOSITION_VERSION
 } from "./routes/emailIntakeDisposition.js";
 
-const WORKER_FILE_VERSION = "7.22.0";
+const WORKER_FILE_VERSION = "7.23.0";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
