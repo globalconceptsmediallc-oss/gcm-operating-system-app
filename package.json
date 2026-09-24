@@ -1,15 +1,15 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.68",
+  "version": "6.1.69",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.68",
+    "fileVersion": "6.1.69",
     "status": "Production Road-Test Candidate",
-    "purpose": "Allow historical and inactive clients to be selected during Signal Review.",
+    "purpose": "Backfill the Sept. 16 GCM Search Console indexing-resolution email into Signal Review.",
     "changeNotes": [
-      "Signal Review now uses the full D1 client directory instead of active/prospect-only filtering.",
-      "Inactive and historical clients remain selectable for older reporting evidence.",
-      "Non-active status is shown in the client dropdown rather than silently hiding the client."
+      "Adds the Sept. 16 globalconceptsmedia.com noindex validation email to email_intake as ready_for_review.",
+      "Preserves the resolution email as source evidence without creating downstream records.",
+      "Allows the Sept. 6 opening alert and Sept. 16 validation to be resolved as one reviewed finding."
     ]
   },
   "private": true,
