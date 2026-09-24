@@ -1,15 +1,20 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/today-email-intake.js
-   Version: 2.0.4
+   Version: 2.1.0
    Status: Production Road-Test Candidate
-   Sprint: Signal Review — Human Findings Capture
+   Sprint: Signal Review — Explicit Human Routing
    Purpose:
    Keep Today lightweight. Incoming email is a signal title only until Andy
    chooses Ready for Review. Client and reporting period are inferred from
-   source metadata when the evidence supports them. Investigation happens
-   outside rigid rules; only the useful final details, analysis, and decision
-   are saved to D1.
+   source metadata when the evidence supports them. The operator must explicitly
+   choose the durable route before the reviewed finding can be saved to D1.
+
+   Changes — 2.1.0:
+   - Restores an explicit Decision / Route control to Signal Review.
+   - Requires Monitoring, Information, Investigation, or Work Item before save.
+   - Saves the three reviewed finding fields with the selected route in one action.
+   - Keeps Delete — No Action Required as a separate two-step safety action.
 
    Changes — 2.0.4:
    - Prefills weekly Semrush reporting periods from explicit Date lines such as
@@ -39,7 +44,7 @@
 (() => {
   "use strict";
 
-  const FILE_VERSION = "2.0.4";
+  const FILE_VERSION = "2.1.0";
   const WORKER_URL =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const QUEUE_ACTION = "get-email-intake-queue";
@@ -84,6 +89,7 @@
       .gcm-review-input,.gcm-review-select,.gcm-review-textarea{width:100%;border:1px solid var(--border,#dbe2ec);border-radius:9px;background:#fff;color:var(--text,#132238);font:inherit;font-size:.78rem}
       .gcm-review-input,.gcm-review-select{min-height:38px;padding:0 10px}
       .gcm-review-textarea{min-height:118px;padding:10px 11px;line-height:1.5;resize:vertical}
+      .gcm-review-route-note{margin:0;color:var(--text-muted,#637083);font-size:.7rem;line-height:1.45}
       .gcm-review-source{margin:12px 0;border:1px solid var(--border,#dbe2ec);border-radius:10px;background:#fff}
       .gcm-review-source summary{padding:10px 12px;cursor:pointer;color:var(--gcm-navy-900,#0b1d33);font-size:.75rem;font-weight:850}
       .gcm-review-body{max-height:360px;overflow:auto;margin:0;padding:12px;border-top:1px solid var(--border,#dbe2ec);white-space:pre-wrap;overflow-wrap:anywhere;color:var(--text,#132238);font-family:inherit;font-size:.75rem;line-height:1.5}
@@ -261,6 +267,20 @@
           </label>
 
           <label class="gcm-review-field gcm-review-wide">
+            <span class="gcm-review-label">Decision / Route</span>
+            <select class="gcm-review-select" data-gcm-review-route>
+              <option value="">Choose route…</option>
+              <option value="monitoring">Monitoring / Finding</option>
+              <option value="investigation">Investigation</option>
+              <option value="requested_work">Work Item</option>
+              <option value="information">Information / Communication</option>
+            </select>
+            <p class="gcm-review-route-note">
+              Monitoring saves the reviewed finding only. Investigation creates a Communication + Investigation. Work Item creates a Communication + Work Item. Information creates a Communication/history record.
+            </p>
+          </label>
+
+          <label class="gcm-review-field gcm-review-wide">
             <span class="gcm-review-label">Details to preserve</span>
             <textarea class="gcm-review-textarea" data-gcm-review-details placeholder="The important facts, measurements, comparisons, gains, declines, pages, queries, products, or other details we learned during review."></textarea>
           </label>
@@ -282,10 +302,10 @@
         </details>
 
         <div class="gcm-review-actions">
-          <button class="gcm-review-save" type="button" data-gcm-save-finding>Save Finding</button>
+          <button class="gcm-review-save" type="button" data-gcm-save-finding>Save &amp; Route</button>
           <button class="gcm-review-secondary" type="button" data-gcm-close-review>Close Review</button>
           <button class="gcm-review-no-action" type="button" data-gcm-no-action>Delete — No Action Required</button>
-          <span class="gcm-review-status" data-gcm-review-status>Nothing is saved until the review is complete.</span>
+          <span class="gcm-review-status" data-gcm-review-status>Nothing is saved until a route is chosen and the review is complete.</span>
         </div>
       </div>
     `;
@@ -320,6 +340,7 @@
     const intakeId = Number(card.dataset.intakeId);
     const clientId = Number(card.querySelector("[data-gcm-review-client]")?.value);
     const reportingPeriod = String(card.querySelector("[data-gcm-review-period]")?.value || "").trim();
+    const disposition = String(card.querySelector("[data-gcm-review-route]")?.value || "").trim();
     const details = String(card.querySelector("[data-gcm-review-details]")?.value || "").trim();
     const analysis = String(card.querySelector("[data-gcm-review-analysis]")?.value || "").trim();
     const decision = String(card.querySelector("[data-gcm-review-decision]")?.value || "").trim();
@@ -331,6 +352,12 @@
       return;
     }
 
+    if (!["monitoring","information","investigation","requested_work"].includes(disposition)) {
+      if (status) status.textContent = "Choose the Decision / Route before saving.";
+      card.querySelector("[data-gcm-review-route]")?.focus();
+      return;
+    }
+
     if (!details) {
       if (status) status.textContent = "Enter the important details we learned before saving.";
       card.querySelector("[data-gcm-review-details]")?.focus();
@@ -339,8 +366,8 @@
 
     busy = true;
     button.disabled = true;
-    button.textContent = "Saving Finding…";
-    if (status) status.textContent = "Saving the business finding to D1. Source email remains evidence.";
+    button.textContent = "Saving & Routing…";
+    if (status) status.textContent = "Saving the reviewed finding and applying the selected route. Source email remains evidence.";
 
     try {
       const result = await post(SAVE_FINDING_ACTION, {
@@ -350,29 +377,84 @@
         reportingPeriod,
         details,
         analysis,
-        decision
+        decision,
+        disposition
       });
 
-      if (
-        !Number(result?.findingId) ||
-        Number(result?.communicationsCreated || 0) !== 0 ||
-        Number(result?.activityRecordsCreated || 0) !== 0 ||
-        Number(result?.investigationsCreated || 0) !== 0 ||
-        Number(result?.workItemsCreated || 0) !== 0 ||
-        result?.evidenceRetained !== true
-      ) {
+      if (!Number(result?.findingId) || result?.evidenceRetained !== true) {
         throw new Error("Finding save safety check failed.");
       }
 
+      if (
+        disposition === "monitoring" &&
+        (
+          Number(result?.communicationsCreated || 0) !== 0 ||
+          Number(result?.activityRecordsCreated || 0) !== 0 ||
+          Number(result?.investigationsCreated || 0) !== 0 ||
+          Number(result?.workItemsCreated || 0) !== 0
+        )
+      ) {
+        throw new Error("Monitoring routing safety check failed.");
+      }
+
+      if (
+        disposition === "information" &&
+        (
+          !Number(result?.communicationId) ||
+          Number(result?.activityRecordsCreated || 0) !== 0 ||
+          Number(result?.investigationId || 0) !== 0 ||
+          Number(result?.workItemId || 0) !== 0
+        )
+      ) {
+        throw new Error("Information routing safety check failed.");
+      }
+
+      if (
+        disposition === "investigation" &&
+        (
+          !Number(result?.communicationId) ||
+          !Number(result?.investigationId) ||
+          Number(result?.activityRecordsCreated || 0) !== 0 ||
+          Number(result?.workItemId || 0) !== 0
+        )
+      ) {
+        throw new Error("Investigation routing safety check failed.");
+      }
+
+      if (
+        disposition === "requested_work" &&
+        (
+          !Number(result?.communicationId) ||
+          !Number(result?.workItemId) ||
+          Number(result?.activityRecordsCreated || 0) !== 0 ||
+          Number(result?.investigationId || 0) !== 0
+        )
+      ) {
+        throw new Error("Work Item routing safety check failed.");
+      }
+
       busy = false;
+      const routeLabel = {
+        monitoring:"Monitoring / Finding",
+        information:"Information / Communication",
+        investigation:"Investigation",
+        requested_work:"Work Item"
+      }[disposition] || disposition;
+
+      const linked = [
+        result?.communicationId ? `Communication #${result.communicationId}` : "",
+        result?.investigationId ? `Investigation #${result.investigationId}` : "",
+        result?.workItemId ? `Work Item #${result.workItemId}` : ""
+      ].filter(Boolean).join(" + ");
+
       setStatus(
-        `Finding #${result.findingId} saved. The source email remains evidence; no Proof, Communication, Investigation, or Work record was created.`
+        `Finding #${result.findingId} saved as ${routeLabel}.${linked ? ` ${linked} linked.` : ""} Source email remains evidence.`
       );
       await refreshQueue();
     } catch (error) {
       busy = false;
       button.disabled = false;
-      button.textContent = "Save Finding";
+      button.textContent = "Save & Route";
       if (status) status.textContent = `Finding save failed: ${error.message}`;
       setStatus(`Finding save failed: ${error.message}`);
     }
@@ -393,7 +475,7 @@
         if (button.dataset.confirmArmed !== "true") return;
         button.dataset.confirmArmed = "false";
         button.textContent = "Delete — No Action Required";
-        if (status) status.textContent = "Nothing is saved until the review is complete.";
+        if (status) status.textContent = "Nothing is saved until a route is chosen and the review is complete.";
       },10000);
       return;
     }
