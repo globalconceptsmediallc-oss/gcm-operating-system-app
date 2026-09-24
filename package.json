@@ -1,15 +1,15 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.69",
+  "version": "6.1.71",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.69",
+    "fileVersion": "6.1.71",
     "status": "Production Road-Test Candidate",
-    "purpose": "Backfill the Sept. 16 GCM Search Console indexing-resolution email into Signal Review.",
+    "purpose": "Stage the remaining operational Gmail backlog into Today Signal Review.",
     "changeNotes": [
-      "Adds the Sept. 16 globalconceptsmedia.com noindex validation email to email_intake as ready_for_review.",
-      "Preserves the resolution email as source evidence without creating downstream records.",
-      "Allows the Sept. 6 opening alert and Sept. 16 validation to be resolved as one reviewed finding."
+      "Backfills 75 operational Gmail source messages received after Sept. 8 into email_intake with dedupe protection.",
+      "Uses title and Gmail snippet for bulk staging; the source Gmail message remains the evidence reference for detailed human review.",
+      "Excludes the already-processed NFS Core Web Vitals source issue to avoid duplicate operational work."
     ]
   },
   "private": true,
