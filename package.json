@@ -1,15 +1,15 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.64",
+  "version": "6.1.65",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.64",
+    "fileVersion": "6.1.65",
     "status": "Production Road-Test Candidate",
-    "purpose": "Make reviewed client findings the primary intelligence source in Proof reporting.",
+    "purpose": "Keep Proof client selection responsive and load report workspaces on demand.",
     "changeNotes": [
-      "Client Workspace now exposes durable client_findings to Proof.",
-      "Proof includes Reviewed Findings in all four outputs and treats raw monitoring as supporting evidence.",
-      "Intelligence Audit presents human-reviewed findings before automated monitoring patterns."
+      "Proof Client dropdown now loads from the D1 client directory instead of waiting for every client workspace.",
+      "Selected client workspaces load on demand when Generate Proof is clicked.",
+      "Known client list remains available as a fallback if the directory request fails."
     ]
   },
   "private": true,

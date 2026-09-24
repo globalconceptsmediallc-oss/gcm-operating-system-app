@@ -13,10 +13,10 @@
 <!-- =========================================================
  Global Concepts Media Operating System
  File: proof.html
- Version: 2.3.0
+ Version: 2.3.1
  Status: Production Candidate
  Purpose: Read-only Proof / Client Reporting view over existing D1 records, including completed Work Items and historical activity records, using the shared GCM OS shell.
- Change Notes: v2.2.1 corrects the This Week preset to use the current rolling 7-day reporting window ending today; no D1 write behavior or reporting logic changed.
+ Change Notes: v2.3.1 loads the Client dropdown from the D1 client directory first, then loads only the workspace records needed for the selected report. This keeps the dropdown usable even if a workspace request is slow or fails.
  ========================================================= -->
 <div class="shell">
 <aside class="sidebar" data-gcm-shell-sidebar></aside>
@@ -63,22 +63,76 @@ window.addEventListener("DOMContentLoaded", () => {
   if (window.GCMOShell) {
     window.GCMOShell.mount({
       currentPage: "proof",
-      statusText: "Proof reporting operational · Proof v2.2.1"
+      statusText: "Proof reporting operational · Proof v2.3.1"
     });
   }
 });
 </script>
 <script>
 (()=>{"use strict";
-const VERSION="2.3.0",WORKER_URL="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+const VERSION="2.3.1",WORKER_URL="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
 const C=[{code:"SES",name:"Southeast Safes"},{code:"SFS",name:"South Florida Safes"},{code:"A1",name:"A1 Action Safe & Lock"},{code:"HBG",name:"HB Guns"},{code:"PW",name:"Pickett Weaponry"},{code:"NFS",name:"North Florida Safes"},{code:"MAS",name:"Move A Safe"},{code:"GCM",name:"Global Concepts Media"},{code:"LUMI",name:"Lumi Studio"},{code:"4A",name:"1-800 4A Gun Safe"}];
 const $=id=>document.getElementById(id),e={client:$("client"),period:$("period"),outputType:$("outputType"),groupMode:$("groupMode"),dates:$("dates"),startDate:$("startDate"),endDate:$("endDate"),includeWork:$("includeWork"),includeMonitoring:$("includeMonitoring"),generate:$("generate"),refresh:$("refresh"),copy:$("copy"),status:$("status"),recordList:$("recordList"),output:$("output"),outputMeta:$("outputMeta"),completed:$("completed"),results:$("results"),monitoring:$("monitoring"),time:$("time")};
-let W=[],R=[];
+let W=[],R=[],D=[];
 [e.client,e.period,e.outputType,e.groupMode,e.includeWork,e.includeMonitoring,e.startDate,e.endDate].forEach(x=>x.addEventListener("change",()=>{syncDates();status("pending","Selection changed. Click Generate Proof to rebuild. Your current draft has not been overwritten.")}));
 e.generate.onclick=generate;e.refresh.onclick=load;e.copy.onclick=copy;setDates("this_week");load();
-async function load(){status("loading","Loading client workspaces from production D1…");e.generate.disabled=e.refresh.disabled=true;const a=await Promise.all(C.map(async c=>{try{const r=await fetch(WORKER_URL,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify({action:"get-client-workspace",clientCode:c.code})}),p=await r.json();return r.ok&&p.ok?{code:p.operational.client.client_code||c.code,name:p.operational.client.name||c.name,p}:null}catch{return null}}));W=a.filter(Boolean).sort((a,b)=>a.name.localeCompare(b.name));e.client.innerHTML='<option value="ALL">All Clients</option>'+W.map(w=>`<option value="${esc(w.code)}">${esc(w.name)}</option>`).join('');e.generate.disabled=e.refresh.disabled=false;status("ready",`Loaded ${W.length} client workspaces. Choose the report and click Generate Proof.`)}
+
+async function api(action,extra={}){
+  const r=await fetch(WORKER_URL,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify({action,...extra})});
+  const p=await r.json().catch(()=>({}));
+  if(!r.ok||p?.ok!==true)throw new Error(typeof p?.error==="string"?p.error:`HTTP ${r.status}`);
+  return p;
+}
+async function load(){
+  const selected=e.client.value||"ALL";
+  status("loading","Loading client directory from production D1…");
+  e.generate.disabled=e.refresh.disabled=true;
+  try{
+    const p=await api("get-client-directory");
+    D=(Array.isArray(p?.clients)?p.clients:[])
+      .filter(c=>["active","prospect"].includes(String(c?.status||"").toLowerCase()))
+      .map(c=>({code:c.clientCode,name:c.name}))
+      .filter(c=>c.code&&c.name)
+      .sort((a,b)=>a.name.localeCompare(b.name));
+    if(!D.length)D=[...C].sort((a,b)=>a.name.localeCompare(b.name));
+    e.client.innerHTML='<option value="ALL">All Clients</option>'+D.map(c=>`<option value="${esc(c.code)}">${esc(c.name)}</option>`).join('');
+    if(selected==="ALL"||D.some(c=>c.code===selected))e.client.value=selected;
+    e.generate.disabled=e.refresh.disabled=false;
+    status("ready",`Loaded ${D.length} clients. Choose the report and click Generate Proof.`);
+  }catch(error){
+    D=[...C].sort((a,b)=>a.name.localeCompare(b.name));
+    e.client.innerHTML='<option value="ALL">All Clients</option>'+D.map(c=>`<option value="${esc(c.code)}">${esc(c.name)}</option>`).join('');
+    if(selected==="ALL"||D.some(c=>c.code===selected))e.client.value=selected;
+    e.generate.disabled=e.refresh.disabled=false;
+    status("error",`D1 client directory could not load, so the known client list is available as a fallback. ${error.message}`);
+  }
+}
+async function workspace(c){
+  const cached=W.find(w=>w.code===c.code);
+  if(cached)return cached;
+  try{
+    const p=await api("get-client-workspace",{clientCode:c.code});
+    const w={code:p.operational?.client?.client_code||c.code,name:p.operational?.client?.name||c.name,p};
+    W.push(w);
+    return w;
+  }catch{return null}
+}
 function syncDates(){e.dates.hidden=e.period.value!=="custom";if(!["custom","historical"].includes(e.period.value))setDates(e.period.value)}
-function generate(){const T=e.client.value==="ALL"?W:W.filter(w=>w.code===e.client.value),range=resolveRange(T);R=T.flatMap(w=>records(w,range));R.sort((a,b)=>(e.period.value==="historical"||e.groupMode.value==="date")?a.date.localeCompare(b.date):b.date.localeCompare(a.date));summary();renderRecords();renderOutput(range);status("ready",`Generated ${labelOutput(e.outputType.value)} from ${R.length} supporting records. You may edit the draft before copying.`)}
+async function generate(){
+  const selected=e.client.value;
+  const targets=selected==="ALL"?D:D.filter(c=>c.code===selected);
+  if(!targets.length)return status("error","Choose a client before generating Proof.");
+  e.generate.disabled=true;
+  status("loading",`Loading ${targets.length===1?targets[0].name:`${targets.length} client workspaces`} from D1…`);
+  const loaded=(await Promise.all(targets.map(workspace))).filter(Boolean);
+  e.generate.disabled=false;
+  if(!loaded.length)return status("error","No selected client workspace could be loaded from D1.");
+  const range=resolveRange(loaded);
+  R=loaded.flatMap(w=>records(w,range));
+  R.sort((a,b)=>(e.period.value==="historical"||e.groupMode.value==="date")?a.date.localeCompare(b.date):b.date.localeCompare(a.date));
+  summary();renderRecords();renderOutput(range);
+  status("ready",`Generated ${labelOutput(e.outputType.value)} from ${R.length} supporting records.`);
+}
 function records(w,range){
   const o=w.p.operational||{},out=[],completedWorkIds=new Set;
 
@@ -199,7 +253,7 @@ function dedupe(a){const s=new Set;return a.filter(r=>{const k=r.sourceId||[r.st
 function resolveRange(T){if(e.period.value!=="historical")return{start:e.startDate.value,end:e.endDate.value,historical:false};const ds=[];T.forEach(w=>{const o=w.p.operational||{};(o.workItems||[]).forEach(x=>{const d=date(x.completed_at||x.updated_at||x.created_at);if(d)ds.push(d)});(o.proofOfWork||[]).forEach(x=>{const d=date(x.activity_date||x.created_at);if(d)ds.push(d)});(o.communications||[]).forEach(x=>{const d=date(x.occurred_at||x.created_at);if(d)ds.push(d)});(o.clientFindings||[]).forEach(x=>{const d=findingDate(x);if(d)ds.push(d)});(o.baselines||[]).forEach(x=>{const d=date(x.baseline_date||x.created_at);if(d)ds.push(d)})});ds.sort();return{start:ds[0]||iso(new Date()),end:iso(new Date()),historical:true}}
 function summary(){const w=R.filter(r=>r.stream==='work'),f=R.filter(r=>r.stream==='finding');e.completed.textContent=w.length;e.results.textContent=w.filter(r=>r.win||r.result).length;e.monitoring.textContent=f.length;e.time.textContent=duration(w.reduce((s,r)=>s+r.minutes,0))}
 function renderRecords(){if(!R.length){e.recordList.innerHTML='<div class="empty">No records match the selected report.</div>';return}e.recordList.innerHTML=R.map(r=>{const label=r.stream==='work'?'Completed Work':r.stream==='finding'?'Reviewed Finding':'Supporting Monitoring';return `<article class="record"><div><span class="badge ${r.stream==='work'?'result':'monitor'}">${label}</span><span class="badge">${esc(r.category)}</span></div><strong>${esc(r.title)}</strong><div class="meta">${esc(r.client)} · ${esc(r.reportingPeriod||fmt(r.date))}${r.minutes?` · ${esc(duration(r.minutes))}`:''}</div>${r.summary?`<p><strong>${r.stream==='finding'?'Details':'Observed'}:</strong> ${esc(short(r.summary,r.stream==='finding'?900:240))}</p>`:''}${r.why?`<p><strong>${r.stream==='finding'?'What we learned':'Why it matters'}:</strong> ${esc(r.why)}</p>`:''}${r.result?`<p><strong>${r.stream==='finding'?'Decision / next action':'Recorded result'}:</strong> ${esc(r.result)}</p>`:''}</article>`}).join('')}
-function renderOutput(range){const cn=e.client.value==='ALL'?'All Clients':W.find(w=>w.code===e.client.value)?.name||e.client.value;e.outputMeta.innerHTML=`<span class="badge">${esc(cn)}</span><span class="badge">${esc(period(range))}</span><span class="badge">${esc(labelOutput(e.outputType.value))}</span>`;if(!R.length){e.output.value=`No supporting records were found for ${cn} during ${period(range)}.`;return}e.output.value=e.outputType.value==='client_email'?clientEmail(range,cn):e.outputType.value==='proof_digest'?digest(range):e.outputType.value==='intelligence_audit'?audit(range,cn):internal(range)}
+function renderOutput(range){const cn=e.client.value==='ALL'?'All Clients':D.find(w=>w.code===e.client.value)?.name||W.find(w=>w.code===e.client.value)?.name||e.client.value;e.outputMeta.innerHTML=`<span class="badge">${esc(cn)}</span><span class="badge">${esc(period(range))}</span><span class="badge">${esc(labelOutput(e.outputType.value))}</span>`;if(!R.length){e.output.value=`No supporting records were found for ${cn} during ${period(range)}.`;return}e.output.value=e.outputType.value==='client_email'?clientEmail(range,cn):e.outputType.value==='proof_digest'?digest(range):e.outputType.value==='intelligence_audit'?audit(range,cn):internal(range)}
 function clientEmail(range,cn){const w=R.filter(r=>r.stream==='work'),f=R.filter(r=>r.stream==='finding'),m=R.filter(r=>r.stream==='monitoring'),intel=f.length?f:m,themes=themesFor(w,intel).slice(0,4);return[`Subject: ${subject(range)}`,"",`Hi ${cn==='All Clients'?'there':cn},`,"",w.length&&intel.length?'Here’s the business-level update from this period — what we improved, protected, and learned from the performance data:':w.length?'Here’s the business-level update on the work completed during this period:':'Here’s the business-level update on the meaningful performance findings from this period:',"",themes.map(x=>`• ${x}`).join('\n'),"",intel.length?'We’ll keep measuring the trends that matter and turn meaningful declines or opportunities into action when the evidence supports it.':'We’ll continue monitoring performance and focus next on the actions most likely to strengthen results.',"","Best,","Andrew","Global Concepts Media"].join('\n')}
 function themesFor(w,m){const B={search:[],technical:[],authority:[],content:[],other:[]};[...w,...m].forEach(r=>B[theme(r)].push(r));return Object.entries(B).filter(([,a])=>a.length).map(([k,a])=>themeSentence(k,a))}
 function theme(r){const x=`${r.category} ${r.title} ${r.summary}`.toLowerCase();if(/position tracking|ranking|keyword|visibility|search performance/.test(x))return'search';if(/backlink|toxic|disavow|referring domain|authority/.test(x))return'authority';if(/site audit|technical|schema|structured data|crawl|index|sitemap|robots|redirect|website/.test(x))return'technical';if(/content|video|youtube|social|business profile|review/.test(x))return'content';return'other'}
