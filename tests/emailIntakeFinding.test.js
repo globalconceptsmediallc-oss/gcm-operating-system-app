@@ -1,11 +1,11 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/emailIntakeFinding.test.js
-   Version: 1.4.0
+   Version: 1.5.0
    Status: Production Regression Test
    Purpose:
-   Verify human-reviewed Signal Findings save useful business details while
-   preserving source evidence and creating no Proof/Communication/Work noise.
+   Verify human-reviewed Signal Findings preserve useful business details,
+   require explicit routing in the UI, and keep Monitoring free of downstream noise.
    ========================================================= */
 
 import fs from "node:fs";
@@ -15,7 +15,7 @@ import {
   EMAIL_INTAKE_FINDING_VERSION
 } from "../routes/emailIntakeFinding.js";
 
-assert.equal(EMAIL_INTAKE_FINDING_VERSION,"1.0.0");
+assert.equal(EMAIL_INTAKE_FINDING_VERSION,"1.1.0");
 
 function makeDb() {
   const intake = {
@@ -121,7 +121,7 @@ assert.match(ui,/Ready for Review/);
 assert.match(ui,/Details to preserve/);
 assert.match(ui,/What we learned/);
 assert.match(ui,/Decision \/ next action/);
-assert.match(ui,/Save Finding/);
+assert.match(ui,/Save &amp; Route/);
 assert.match(ui,/function inferClientId\(record\)/);
 assert.match(ui,/function inferReportingPeriod\(record\)/);
 assert.match(ui,/normalizeHost\(client\?\.website\)/);
@@ -145,8 +145,17 @@ assert.match(backfill,/1a0818419adeb7b8/);
 assert.match(backfill,/1a081842d018fd10/);
 assert.match(backfill,/1a081878af21cf2c/);
 assert.match(backfill,/ready_for_review/);
-assert.doesNotMatch(ui,/Save as Monitoring/);
-assert.doesNotMatch(ui,/Start Investigation/);
-assert.doesNotMatch(ui,/Create Work Item/);
+assert.match(ui,/Decision \/ Route/);
+assert.match(ui,/Monitoring \/ Finding/);
+assert.match(ui,/Investigation/);
+assert.match(ui,/Work Item/);
+assert.match(ui,/Information \/ Communication/);
+assert.match(ui,/data-gcm-review-route/);
+assert.match(ui,/disposition/);
 
-console.log("PASS Signal Review saves human-reviewed client findings and keeps Today title-first");
+const findingRoute = fs.readFileSync(new URL("../routes/emailIntakeFinding.js", import.meta.url),"utf8");
+assert.match(findingRoute,/handleEmailIntakeDisposition/);
+assert.match(findingRoute,/requested_work/);
+assert.match(findingRoute,/SUPPORTED_DISPOSITIONS/);
+
+console.log("PASS Signal Review saves reviewed findings with explicit human routing");
