@@ -1,14 +1,19 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.28.0
+   Version: 7.29.0
    Status: OS 2.0 Production Road-Test Candidate
-   Source: Production worker.js 7.27.3
+   Source: Production worker.js 7.28.0
    Sprint: Universal Email Intake — Human Disposition
    Purpose: Preserve every verified production route while exposing the
             durable Prospecting Radar + CRM operations required to connect
             scheduled prospects, discovery, proposals, follow-up, agreements,
             payments, and eventual Client handoff.
+
+   Changes in 7.29.0:
+   - Adds human-reviewed Signal Finding capture for Universal Email Intake.
+   - Stores final business details, analysis, and decision in client_findings without creating Proof, Communication, Investigation, or Work records.
+   - Preserves the source email in email_intake as evidence and keeps analysis human-led.
 
    Changes in 7.28.0:
    - Restores proactive Media deadline attention from the 17-day agency preparation window.
@@ -205,8 +210,12 @@ import {
   handleEmailIntakeDisposition,
   EMAIL_INTAKE_DISPOSITION_VERSION
 } from "./routes/emailIntakeDisposition.js";
+import {
+  handleEmailIntakeFinding,
+  EMAIL_INTAKE_FINDING_VERSION
+} from "./routes/emailIntakeFinding.js";
 
-const WORKER_FILE_VERSION = "7.28.0";
+const WORKER_FILE_VERSION = "7.29.0";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
@@ -240,6 +249,7 @@ const SUPPORTED_ACTIONS = [
   ACTIONS.APPROVE_GMAIL_INVESTIGATION,
   ACTIONS.CREATE_GMAIL_DRAFT,
   ACTIONS.GET_EMAIL_INTAKE_QUEUE,
+  ACTIONS.SAVE_EMAIL_INTAKE_FINDING,
   ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
   ...GMAIL_WORK_REQUEST_ACTIONS,
   ...GMAIL_DISPOSITION_ACTIONS,
@@ -268,6 +278,7 @@ export default {
         emailIntakeVersion: EMAIL_INTAKE_VERSION,
         emailIntakeQueueVersion: EMAIL_INTAKE_QUEUE_VERSION,
         emailIntakeDispositionVersion: EMAIL_INTAKE_DISPOSITION_VERSION,
+        emailIntakeFindingVersion: EMAIL_INTAKE_FINDING_VERSION,
         contractVersion: API_CONTRACT_VERSION,
         sprint: "Universal Email Intake — Cloudflare Email Routing",
         architecture:
@@ -383,6 +394,9 @@ export default {
       switch (action) {
         case ACTIONS.GET_EMAIL_INTAKE_QUEUE:
           return await handleEmailIntakeQueue(body, env, requestId);
+
+        case ACTIONS.SAVE_EMAIL_INTAKE_FINDING:
+          return await handleEmailIntakeFinding(body, env, requestId);
 
         case ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION:
           return await handleEmailIntakeDisposition(body, env, requestId);

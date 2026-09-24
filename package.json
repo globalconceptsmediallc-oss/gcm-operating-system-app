@@ -1,22 +1,21 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.61",
+  "version": "6.1.62",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.61",
+    "fileVersion": "6.1.62",
     "status": "Production Road-Test Candidate",
-    "purpose": "Restore proactive Media deadline control before station-rep follow-up.",
+    "purpose": "Redesign Morning Command around human-led signal review and durable business findings.",
     "changeNotes": [
-      "Media attention now opens 17 calendar days before active-flight end or upcoming first air.",
-      "Confirmed current traffic no longer suppresses the next end-of-run extend-or-replace decision.",
-      "Today exposes the top Media deadline with agency preparation and critical station dates.",
-      "Saved placement dispositions suppress repeat alerts for a decided end date."
+      "Today now shows unprocessed email as a compact title-only signal with Ready for Review.",
+      "Reviewed signals save durable client findings instead of turning monitoring email into Proof.",
+      "Source email remains evidence; details, analysis, and decision are the permanent business record."
     ]
   },
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:work-due-date && npm run test:work-core-web-vitals && npm run test:media-deadline-attention && npm run test:universal-email-intake && npm run test:email-intake-queue && npm run test:email-intake-disposition && npm run test:gmail-decisions && npm run test:gmail-monitoring-parity && npm run test:gmail-backlink-investigation && npm run test:gmail-intake && npm run test:gmail-backlog && npm run test:gmail-source-display && npm run test:gmail-handle-now && npm run test:gmail-thread-routing && npm run test:gmail-requested-work-content && npm run test:prospect-crm && npm run test:mediaforge-home && npm run test:mediaforge-variants && npm run test:mediaforge-naming && npm run test:business-workspace-health-v2 && npm run test:client-health-v2 && npm run test:asset-versions",
+    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:work-due-date && npm run test:work-core-web-vitals && npm run test:media-deadline-attention && npm run test:universal-email-intake && npm run test:email-intake-queue && npm run test:email-intake-finding && npm run test:email-intake-disposition && npm run test:gmail-decisions && npm run test:gmail-monitoring-parity && npm run test:gmail-backlink-investigation && npm run test:gmail-intake && npm run test:gmail-backlog && npm run test:gmail-source-display && npm run test:gmail-handle-now && npm run test:gmail-thread-routing && npm run test:gmail-requested-work-content && npm run test:prospect-crm && npm run test:mediaforge-home && npm run test:mediaforge-variants && npm run test:mediaforge-naming && npm run test:business-workspace-health-v2 && npm run test:client-health-v2 && npm run test:asset-versions",
     "test:website-intelligence": "node tests/websiteIntelligence.test.js",
     "test:code-intelligence": "node tests/codeIntelligence.test.js",
     "test:operating-sessions": "node tests/operatingSessionTasks.test.js && node tests/osAuth.test.js && node tests/operatingSessionIntake.test.js",
@@ -42,7 +41,8 @@
     "test:email-intake-queue": "node tests/emailIntakeQueue.test.js",
     "test:email-intake-disposition": "node tests/emailIntakeDisposition.test.js",
     "test:work-core-web-vitals": "node tests/workCoreWebVitalsDecision.test.js",
-    "test:media-deadline-attention": "node tests/mediaDeadlineAttention.test.js"
+    "test:media-deadline-attention": "node tests/mediaDeadlineAttention.test.js",
+    "test:email-intake-finding": "node tests/emailIntakeFinding.test.js"
   },
   "dependencies": {
     "postal-mime": "^3.0.0"
