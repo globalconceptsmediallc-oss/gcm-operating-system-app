@@ -1,12 +1,16 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/config.js
-   Version: 7.13.0
+   Version: 7.14.0
    Status: Production Road-Test Candidate
-   Source: shared/config.js 7.12.0 production
+   Source: shared/config.js 7.13.0 production
    Sprint: Universal Email Intake — Human Disposition
    Purpose: Preserve all existing production constants and add the
             durable Prospect CRM action contract.
+
+   Change Notes in 7.14.0:
+   - Adds GET_CLIENT_FINDINGS as a lightweight read-only reporting route.
+   - Keeps reviewed Findings out of the operational Client Workspace query path.
 
    Change Notes in 7.13.0:
    - Adds SAVE_EMAIL_INTAKE_FINDING for human-reviewed signal findings.
@@ -31,7 +35,7 @@
      Operating Session, and Calendar action unchanged.
    ========================================================= */
 
-export const VERSION = "7.13.0";
+export const VERSION = "7.14.0";
 export const API_CONTRACT_VERSION = "communications-operational-decision-v3";
 export const COMMUNICATION_ANALYSIS_ENGINE_VERSION = "3.4.1";
 
@@ -54,6 +58,7 @@ export const ACTIONS = Object.freeze({
   SAVE_EMAIL_INTAKE_FINDING: "save-email-intake-finding",
   ROUTE_EMAIL_INTAKE_DISPOSITION: "route-email-intake-disposition",
   GET_CLIENT_WORKSPACE: "get-client-workspace",
+  GET_CLIENT_FINDINGS: "get-client-findings",
   GET_CLIENT_DIRECTORY: "get-client-directory",
   COMMIT_OPERATIONAL_DECISION: "commit-operational-decision",
   GET_MISSION_CONTROL: "get-mission-control",

@@ -1,15 +1,15 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.65",
+  "version": "6.1.66",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.65",
+    "fileVersion": "6.1.66",
     "status": "Production Road-Test Candidate",
-    "purpose": "Keep Proof client selection responsive and load report workspaces on demand.",
+    "purpose": "Restore stable Client Workspace reads and load reviewed Findings through a dedicated Proof route.",
     "changeNotes": [
-      "Proof Client dropdown now loads from the D1 client directory instead of waiting for every client workspace.",
-      "Selected client workspaces load on demand when Generate Proof is clicked.",
-      "Known client list remains available as a fallback if the directory request fails."
+      "Reverts the Client Workspace regression introduced by adding client_findings to its query set.",
+      "Adds a lightweight get-client-findings read-only route for Proof.",
+      "Proof now surfaces the actual D1 error instead of hiding failed workspace reads."
     ]
   },
   "private": true,

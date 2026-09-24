@@ -1,19 +1,20 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/clientWorkspace.js
-   Version: 7.5.0
+   Version: 7.5.1
    Status: Production Candidate
-   Source: Production routes/clientWorkspace.js 7.4.1
-   Sprint: Client Workspace — Reviewed Findings
+   Source: Production routes/clientWorkspace.js 7.5.0
+   Sprint: Client Workspace — Stability Restore
    Purpose: Preserve the complete live D1 client workspace and client tool
-            router while exposing human-reviewed client findings as a separate
-            reporting/intelligence source.
+            router while keeping reporting-only Findings on their own lightweight
+            read route.
 
-   Production changes — 7.5.0:
-   - Loads durable client_findings records for the selected client.
-   - Exposes them as operational.clientFindings for Proof and reporting.
-   - Keeps Findings separate from Proof of Work, Communications, Investigations,
-     Work Items, raw monitoring, and existing Intelligence records.
+   Production changes — 7.5.1:
+   - Restores the verified Client Workspace query set after the Proof Findings
+     experiment made this operational route fail.
+   - Reviewed Findings now load through get-client-findings instead of adding
+     another query to every Client Workspace request.
+   - Keeps the operational workspace lightweight and backward compatible.
 
    Previous production changes — 7.4.1:
    - Adds the authoritative D1 client_code to Investigation and Work Item links
@@ -116,7 +117,6 @@ export async function handleClientWorkspace(body, env, requestId) {
       alertsResult,
       proofResult,
       intelligenceResult,
-      clientFindingsResult,
       clientToolsResult
     ] = await Promise.all([
       db.prepare(`
@@ -197,13 +197,6 @@ export async function handleClientWorkspace(body, env, requestId) {
       `).bind(client.id).all(),
 
       db.prepare(`
-        SELECT *
-        FROM client_findings
-        WHERE client_id = ?
-        ORDER BY datetime(created_at) DESC, id DESC
-      `).bind(client.id).all(),
-
-      db.prepare(`
         SELECT
           id,
           client_id,
@@ -229,7 +222,6 @@ export async function handleClientWorkspace(body, env, requestId) {
     const alerts = rowsOf(alertsResult);
     const proofOfWork = rowsOf(proofResult);
     const intelligence = rowsOf(intelligenceResult);
-    const clientFindings = rowsOf(clientFindingsResult);
     const clientTools = rowsOf(clientToolsResult);
     const clientToolRouter = buildClientToolRouter(clientTools);
 
@@ -274,7 +266,6 @@ export async function handleClientWorkspace(body, env, requestId) {
         alerts,
         proofOfWork,
         intelligence,
-        clientFindings,
         clientTools,
         clientToolRouter
       },
@@ -612,7 +603,6 @@ function buildClientWorkspaceRecord({
         openWorkItems: openWork.length,
         proofOfWork: proofOfWork.length,
         intelligence: intelligence.length,
-        clientFindings: clientFindings.length,
         alerts: activeAlerts.length,
         evidence: evidence.length,
         clientTools: clientTools.length

@@ -13,10 +13,10 @@
 <!-- =========================================================
  Global Concepts Media Operating System
  File: proof.html
- Version: 2.3.1
+ Version: 2.3.2
  Status: Production Candidate
  Purpose: Read-only Proof / Client Reporting view over existing D1 records, including completed Work Items and historical activity records, using the shared GCM OS shell.
- Change Notes: v2.3.1 loads the Client dropdown from the D1 client directory first, then loads only the workspace records needed for the selected report. This keeps the dropdown usable even if a workspace request is slow or fails.
+ Change Notes: v2.3.2 keeps the stable Client Workspace read and loads reviewed Findings through a separate lightweight D1 route. It also reports the actual D1 error instead of hiding it behind a generic workspace message.
  ========================================================= -->
 <div class="shell">
 <aside class="sidebar" data-gcm-shell-sidebar></aside>
@@ -63,14 +63,14 @@ window.addEventListener("DOMContentLoaded", () => {
   if (window.GCMOShell) {
     window.GCMOShell.mount({
       currentPage: "proof",
-      statusText: "Proof reporting operational · Proof v2.3.1"
+      statusText: "Proof reporting operational · Proof v2.3.2"
     });
   }
 });
 </script>
 <script>
 (()=>{"use strict";
-const VERSION="2.3.1",WORKER_URL="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+const VERSION="2.3.2",WORKER_URL="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
 const C=[{code:"SES",name:"Southeast Safes"},{code:"SFS",name:"South Florida Safes"},{code:"A1",name:"A1 Action Safe & Lock"},{code:"HBG",name:"HB Guns"},{code:"PW",name:"Pickett Weaponry"},{code:"NFS",name:"North Florida Safes"},{code:"MAS",name:"Move A Safe"},{code:"GCM",name:"Global Concepts Media"},{code:"LUMI",name:"Lumi Studio"},{code:"4A",name:"1-800 4A Gun Safe"}];
 const $=id=>document.getElementById(id),e={client:$("client"),period:$("period"),outputType:$("outputType"),groupMode:$("groupMode"),dates:$("dates"),startDate:$("startDate"),endDate:$("endDate"),includeWork:$("includeWork"),includeMonitoring:$("includeMonitoring"),generate:$("generate"),refresh:$("refresh"),copy:$("copy"),status:$("status"),recordList:$("recordList"),output:$("output"),outputMeta:$("outputMeta"),completed:$("completed"),results:$("results"),monitoring:$("monitoring"),time:$("time")};
 let W=[],R=[],D=[];
@@ -110,12 +110,29 @@ async function load(){
 async function workspace(c){
   const cached=W.find(w=>w.code===c.code);
   if(cached)return cached;
+
+  const p=await api("get-client-workspace",{clientCode:c.code});
+  let findings=[];
+  let findingsWarning="";
+
   try{
-    const p=await api("get-client-workspace",{clientCode:c.code});
-    const w={code:p.operational?.client?.client_code||c.code,name:p.operational?.client?.name||c.name,p};
-    W.push(w);
-    return w;
-  }catch{return null}
+    const f=await api("get-client-findings",{clientCode:c.code});
+    findings=Array.isArray(f?.findings)?f.findings:[];
+  }catch(error){
+    findingsWarning=error.message;
+  }
+
+  if(!p.operational)p.operational={};
+  p.operational.clientFindings=findings;
+
+  const w={
+    code:p.operational?.client?.client_code||c.code,
+    name:p.operational?.client?.name||c.name,
+    p,
+    findingsWarning
+  };
+  W.push(w);
+  return w;
 }
 function syncDates(){e.dates.hidden=e.period.value!=="custom";if(!["custom","historical"].includes(e.period.value))setDates(e.period.value)}
 async function generate(){
@@ -124,14 +141,18 @@ async function generate(){
   if(!targets.length)return status("error","Choose a client before generating Proof.");
   e.generate.disabled=true;
   status("loading",`Loading ${targets.length===1?targets[0].name:`${targets.length} client workspaces`} from D1…`);
-  const loaded=(await Promise.all(targets.map(workspace))).filter(Boolean);
+  const settled=await Promise.allSettled(targets.map(workspace));
+  const loaded=settled.filter(x=>x.status==="fulfilled").map(x=>x.value).filter(Boolean);
+  const errors=settled.filter(x=>x.status==="rejected").map(x=>x.reason?.message||String(x.reason||"Unknown D1 error"));
   e.generate.disabled=false;
-  if(!loaded.length)return status("error","No selected client workspace could be loaded from D1.");
+  if(!loaded.length)return status("error",`Could not load the selected client from D1: ${errors.join(" | ")||"Unknown error"}`);
   const range=resolveRange(loaded);
   R=loaded.flatMap(w=>records(w,range));
   R.sort((a,b)=>(e.period.value==="historical"||e.groupMode.value==="date")?a.date.localeCompare(b.date):b.date.localeCompare(a.date));
   summary();renderRecords();renderOutput(range);
-  status("ready",`Generated ${labelOutput(e.outputType.value)} from ${R.length} supporting records.`);
+  const findingWarnings=loaded.map(w=>w.findingsWarning).filter(Boolean);
+  if(findingWarnings.length)status("error",`Generated the report, but Reviewed Findings could not load: ${findingWarnings.join(" | ")}`);
+  else status("ready",`Generated ${labelOutput(e.outputType.value)} from ${R.length} supporting records.`);
 }
 function records(w,range){
   const o=w.p.operational||{},out=[],completedWorkIds=new Set;

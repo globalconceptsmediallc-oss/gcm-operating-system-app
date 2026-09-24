@@ -1,14 +1,20 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.30.0
+   Version: 7.31.0
    Status: OS 2.0 Production Road-Test Candidate
-   Source: Production worker.js 7.29.0
+   Source: Production worker.js 7.30.0
    Sprint: Universal Email Intake — Human Disposition
    Purpose: Preserve every verified production route while exposing the
             durable Prospecting Radar + CRM operations required to connect
             scheduled prospects, discovery, proposals, follow-up, agreements,
             payments, and eventual Client handoff.
+
+   Changes in 7.31.0:
+   - Adds the lightweight read-only get-client-findings route for Proof.
+   - Restores Client Workspace to its verified operational query boundary.
+   - Keeps reviewed Findings available to reporting without slowing or breaking
+     operational client workspace reads.
 
    Changes in 7.30.0:
    - Exposes durable client_findings through the Client Workspace for Proof/reporting.
@@ -140,6 +146,7 @@ import {
   PROSPECT_CONCEPT_VIEW_ACTION
 } from "./routes/prospectConceptTracking.js";
 import { handleClientWorkspace } from "./routes/clientWorkspace.js";
+import { handleClientFindings, CLIENT_FINDINGS_VERSION } from "./routes/clientFindings.js";
 import { handleClientDirectory } from "./routes/clientDirectory.js";
 import { handleCommitOperationalDecision } from "./routes/operationalDecision.js";
 import { handleMissionControl } from "./routes/missionControl.js";
@@ -219,7 +226,7 @@ import {
   EMAIL_INTAKE_FINDING_VERSION
 } from "./routes/emailIntakeFinding.js";
 
-const WORKER_FILE_VERSION = "7.30.0";
+const WORKER_FILE_VERSION = "7.31.0";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
@@ -227,6 +234,7 @@ const SUPPORTED_ACTIONS = [
   PROSPECT_CRM_ACTION,
   PROSPECT_CONCEPT_VIEW_ACTION,
   ACTIONS.GET_CLIENT_WORKSPACE,
+  ACTIONS.GET_CLIENT_FINDINGS,
   ACTIONS.GET_CLIENT_DIRECTORY,
   ACTIONS.COMMIT_OPERATIONAL_DECISION,
   ACTIONS.GET_MISSION_CONTROL,
@@ -283,6 +291,7 @@ export default {
         emailIntakeQueueVersion: EMAIL_INTAKE_QUEUE_VERSION,
         emailIntakeDispositionVersion: EMAIL_INTAKE_DISPOSITION_VERSION,
         emailIntakeFindingVersion: EMAIL_INTAKE_FINDING_VERSION,
+        clientFindingsVersion: CLIENT_FINDINGS_VERSION,
         contractVersion: API_CONTRACT_VERSION,
         sprint: "Universal Email Intake — Cloudflare Email Routing",
         architecture:
@@ -457,6 +466,9 @@ export default {
 
         case ACTIONS.GET_CLIENT_WORKSPACE:
           return await handleClientWorkspace(body, env, requestId);
+
+        case ACTIONS.GET_CLIENT_FINDINGS:
+          return await handleClientFindings(body, env, requestId);
 
         case ACTIONS.GET_CLIENT_DIRECTORY:
           return await handleClientDirectory(body, env, requestId);
