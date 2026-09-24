@@ -1,12 +1,12 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gcm-worker-deploy.yml
-# Version: 1.5.16
+# Version: 1.5.17
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Worker with human-led Signal Finding capture.
 # Change Notes:
-# - Deploy and verify Worker 7.31.0 with Signal Finding capture and client_findings migration.
-# - LOCK: require Worker 7.31.0, Email Intake 1.0.0, Email Intake Queue 1.0.0, Email Intake Disposition 1.5.3, Prospect Concept Tracking 1.0.1, and Prospect CRM 1.3.0.
+# - Deploy and verify Worker 7.32.0 with explicit Signal Review routing.
+# - LOCK: require Worker 7.32.0, Email Intake 1.0.0, Email Intake Queue 1.0.0, Email Intake Disposition 1.5.3, Email Intake Finding 1.1.0, Prospect Concept Tracking 1.0.1, and Prospect CRM 1.3.0.
 # - Preserve all existing live boundary checks while adding the no-action D1 disposition route.
 # - Verify prospect-concept-view is live using an unknown-key no-write boundary test.
 # - Verify CRM D1 migrations are live by reading list_prospects and service catalog.
@@ -103,8 +103,8 @@ jobs:
           const healthResponse = await fetch(url);
           if (!healthResponse.ok) throw new Error(`Worker health returned HTTP ${healthResponse.status}`);
           const health = await healthResponse.json();
-          if (health.workerFileVersion !== "7.31.0") {
-            throw new Error(`Expected Worker 7.31.0, received ${health.workerFileVersion || "unknown"}`);
+          if (health.workerFileVersion !== "7.32.0") {
+            throw new Error(`Expected Worker 7.32.0, received ${health.workerFileVersion || "unknown"}`);
           }
           if (health.emailIntakeVersion !== "1.0.0") {
             throw new Error(`Expected Email Intake 1.0.0, received ${health.emailIntakeVersion || "unknown"}`);
@@ -115,8 +115,8 @@ jobs:
           if (health.emailIntakeDispositionVersion !== "1.5.3") {
             throw new Error(`Expected Email Intake Disposition 1.5.3, received ${health.emailIntakeDispositionVersion || "unknown"}`);
           }
-          if (health.emailIntakeFindingVersion !== "1.0.0") {
-            throw new Error(`Expected Email Intake Finding 1.0.0, received ${health.emailIntakeFindingVersion || "unknown"}`);
+          if (health.emailIntakeFindingVersion !== "1.1.0") {
+            throw new Error(`Expected Email Intake Finding 1.1.0, received ${health.emailIntakeFindingVersion || "unknown"}`);
           }
           if (health.clientFindingsVersion !== "1.0.0") {
             throw new Error(`Expected Client Findings 1.0.0, received ${health.clientFindingsVersion || "unknown"}`);
