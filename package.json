@@ -1,15 +1,15 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.71",
+  "version": "6.1.70",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.71",
+    "fileVersion": "6.1.70",
     "status": "Production Road-Test Candidate",
-    "purpose": "Stage the remaining operational Gmail backlog into Today Signal Review.",
+    "purpose": "Backfill Sept. 8 Semrush Position Tracking reports into Signal Review.",
     "changeNotes": [
-      "Backfills 75 operational Gmail source messages received after Sept. 8 into email_intake with dedupe protection.",
-      "Uses title and Gmail snippet for bulk staging; the source Gmail message remains the evidence reference for detailed human review.",
-      "Excludes the already-processed NFS Core Web Vitals source issue to avoid duplicate operational work."
+      "Adds NFS, Pickett Weaponry, and A1 Sept. 8 Position Tracking reports to email_intake as ready_for_review.",
+      "Preserves useful visibility, keyword, traffic, competitor, and landing-page details from the source reports.",
+      "Signal Review now prefills weekly Semrush reporting periods from the source Date line."
     ]
   },
   "private": true,

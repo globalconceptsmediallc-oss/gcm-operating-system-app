@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/today-email-intake.js
-   Version: 2.0.3
+   Version: 2.0.4
    Status: Production Road-Test Candidate
    Sprint: Signal Review — Human Findings Capture
    Purpose:
@@ -10,6 +10,11 @@
    source metadata when the evidence supports them. Investigation happens
    outside rigid rules; only the useful final details, analysis, and decision
    are saved to D1.
+
+   Changes — 2.0.4:
+   - Prefills weekly Semrush reporting periods from explicit Date lines such as
+     "Date: Sep, 1-8, 2026".
+   - Keeps reporting-period extraction limited to source metadata only.
 
    Changes — 2.0.3:
    - Signal Review client selection now includes the full D1 client directory,
@@ -34,7 +39,7 @@
 (() => {
   "use strict";
 
-  const FILE_VERSION = "2.0.3";
+  const FILE_VERSION = "2.0.4";
   const WORKER_URL =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const QUEUE_ACTION = "get-email-intake-queue";
@@ -173,6 +178,13 @@
     if (explicit?.[1]) {
       const value = explicit[1].trim().replace(/[.;]+$/,"");
       if (value) return value;
+    }
+
+    const semrushDate = body.match(/^Date:\s*([A-Za-z]{3,9}),?\s*([^\n\r]+)/im);
+    if (semrushDate?.[1] && semrushDate?.[2]) {
+      const months = {jan:"January",january:"January",feb:"February",february:"February",mar:"March",march:"March",apr:"April",april:"April",may:"May",jun:"June",june:"June",jul:"July",july:"July",aug:"August",august:"August",sep:"September",sept:"September",september:"September",oct:"October",october:"October",nov:"November",november:"November",dec:"December",december:"December"};
+      const month = months[String(semrushDate[1]).toLowerCase()];
+      if (month) return `${month} ${semrushDate[2].trim()}`;
     }
 
     const monthPattern = /(January|February|March|April|May|June|July|August|September|October|November|December)\s+(20\d{2})/i;
