@@ -1,12 +1,12 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gcm-worker-deploy.yml
-# Version: 1.5.14
+# Version: 1.5.15
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Worker with human-led Signal Finding capture.
 # Change Notes:
-# - Deploy and verify Worker 7.29.0 with Signal Finding capture and client_findings migration.
-# - LOCK: require Worker 7.29.0, Email Intake 1.0.0, Email Intake Queue 1.0.0, Email Intake Disposition 1.5.3, Prospect Concept Tracking 1.0.1, and Prospect CRM 1.3.0.
+# - Deploy and verify Worker 7.30.0 with Signal Finding capture and client_findings migration.
+# - LOCK: require Worker 7.30.0, Email Intake 1.0.0, Email Intake Queue 1.0.0, Email Intake Disposition 1.5.3, Prospect Concept Tracking 1.0.1, and Prospect CRM 1.3.0.
 # - Preserve all existing live boundary checks while adding the no-action D1 disposition route.
 # - Verify prospect-concept-view is live using an unknown-key no-write boundary test.
 # - Verify CRM D1 migrations are live by reading list_prospects and service catalog.
@@ -103,8 +103,8 @@ jobs:
           const healthResponse = await fetch(url);
           if (!healthResponse.ok) throw new Error(`Worker health returned HTTP ${healthResponse.status}`);
           const health = await healthResponse.json();
-          if (health.workerFileVersion !== "7.29.0") {
-            throw new Error(`Expected Worker 7.29.0, received ${health.workerFileVersion || "unknown"}`);
+          if (health.workerFileVersion !== "7.30.0") {
+            throw new Error(`Expected Worker 7.30.0, received ${health.workerFileVersion || "unknown"}`);
           }
           if (health.emailIntakeVersion !== "1.0.0") {
             throw new Error(`Expected Email Intake 1.0.0, received ${health.emailIntakeVersion || "unknown"}`);
@@ -350,5 +350,5 @@ jobs:
           if (protectedResponse.status !== 401) {
             throw new Error(`Expected authentication boundary HTTP 401, received ${protectedResponse.status}`);
           }
-          console.log("PASS live Worker 7.29.0, Universal Email Intake 1.0.0, Email Intake Finding 1.0.0, Email Intake Queue 1.0.0, Email Intake Disposition 1.5.3, Prospect Concept Tracking 1.0.1, Prospect CRM 1.3.0, durable Radar intelligence/outreach continuity, service startup catalog, appointment boundary, Gmail decision routes, Calendar, Work due-date source, Operating Sessions, and authentication boundary");
+          console.log("PASS live Worker 7.30.0, Universal Email Intake 1.0.0, Email Intake Finding 1.0.0, Email Intake Queue 1.0.0, Email Intake Disposition 1.5.3, Prospect Concept Tracking 1.0.1, Prospect CRM 1.3.0, durable Radar intelligence/outreach continuity, service startup catalog, appointment boundary, Gmail decision routes, Calendar, Work due-date source, Operating Sessions, and authentication boundary");
           NODE
