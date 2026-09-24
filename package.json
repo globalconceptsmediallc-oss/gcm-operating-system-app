@@ -1,15 +1,15 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.66",
+  "version": "6.1.67",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.66",
+    "fileVersion": "6.1.67",
     "status": "Production Road-Test Candidate",
-    "purpose": "Restore stable Client Workspace reads and load reviewed Findings through a dedicated Proof route.",
+    "purpose": "Backfill Sept. 8 Search Console reports into Signal Review without restoring Gmail polling.",
     "changeNotes": [
-      "Reverts the Client Workspace regression introduced by adding client_findings to its query set.",
-      "Adds a lightweight get-client-findings read-only route for Proof.",
-      "Proof now surfaces the actual D1 error instead of hiding failed workspace reads."
+      "Adds a one-time D1 backfill for A1, Pickett Weaponry, South Florida Safes, and HB Guns August Search Console reports received Sept. 8.",
+      "Backfilled records enter Today as ready_for_review and create no downstream operational records until human review.",
+      "Signal Review now infers August 2026 from month-only report subjects using the source email year."
     ]
   },
   "private": true,

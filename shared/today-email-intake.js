@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/today-email-intake.js
-   Version: 2.0.1
+   Version: 2.0.2
    Status: Production Road-Test Candidate
    Sprint: Signal Review — Human Findings Capture
    Purpose:
@@ -10,6 +10,12 @@
    source metadata when the evidence supports them. Investigation happens
    outside rigid rules; only the useful final details, analysis, and decision
    are saved to D1.
+
+   Changes — 2.0.2:
+   - Infers month-only report subjects such as "Your August Search performance"
+     using the source email year, so historical Search Console reports prefill
+     August 2026 instead of forcing manual entry.
+   - Preserves human-led analysis and the existing Finding workflow.
 
    Changes — 2.0.1:
    - Prefills Client from the durable client directory by matching the source
@@ -22,7 +28,7 @@
 (() => {
   "use strict";
 
-  const FILE_VERSION = "2.0.1";
+  const FILE_VERSION = "2.0.2";
   const WORKER_URL =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const QUEUE_ACTION = "get-email-intake-queue";
@@ -172,6 +178,14 @@
     const bodyMonth = body.match(monthPattern);
     if (bodyMonth) {
       return `${bodyMonth[1][0].toUpperCase()}${bodyMonth[1].slice(1).toLowerCase()} ${bodyMonth[2]}`;
+    }
+
+    const monthOnlyPattern = /(January|February|March|April|May|June|July|August|September|October|November|December)/i;
+    const monthOnly = subject.match(monthOnlyPattern) || body.match(monthOnlyPattern);
+    const sourceDate = new Date(record?.sourceDate || record?.receivedAt || "");
+    if (monthOnly && !Number.isNaN(sourceDate.getTime())) {
+      const reportMonth = `${monthOnly[1][0].toUpperCase()}${monthOnly[1].slice(1).toLowerCase()}`;
+      return `${reportMonth} ${sourceDate.getFullYear()}`;
     }
 
     return "";
