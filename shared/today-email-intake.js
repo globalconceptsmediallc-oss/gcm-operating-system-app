@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/today-email-intake.js
-   Version: 2.0.2
+   Version: 2.0.3
    Status: Production Road-Test Candidate
    Sprint: Signal Review — Human Findings Capture
    Purpose:
@@ -10,6 +10,12 @@
    source metadata when the evidence supports them. Investigation happens
    outside rigid rules; only the useful final details, analysis, and decision
    are saved to D1.
+
+   Changes — 2.0.3:
+   - Signal Review client selection now includes the full D1 client directory,
+     including inactive/historical clients, so older reports such as South
+     Florida Safes can still be reviewed and recorded accurately.
+   - Non-active client statuses are labeled in the dropdown instead of hidden.
 
    Changes — 2.0.2:
    - Infers month-only report subjects such as "Your August Search performance"
@@ -28,7 +34,7 @@
 (() => {
   "use strict";
 
-  const FILE_VERSION = "2.0.2";
+  const FILE_VERSION = "2.0.3";
   const WORKER_URL =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const QUEUE_ACTION = "get-email-intake-queue";
@@ -197,7 +203,11 @@
       '<option value="">Choose client…</option>',
       ...clientDirectory.map(client => {
         const value = Number(client?.id);
-        const label = client?.name || client?.clientCode || `Client #${value}`;
+        const baseLabel = client?.name || client?.clientCode || `Client #${value}`;
+        const status = String(client?.status || "").toLowerCase();
+        const label = status && status !== "active"
+          ? `${baseLabel} (${client?.statusLabel || status})`
+          : baseLabel;
         return `<option value="${escapeHtml(value)}"${selected === value ? " selected" : ""}>${escapeHtml(label)}</option>`;
       })
     ].join("");
@@ -412,7 +422,7 @@
   async function loadClientDirectory() {
     const result = await post(CLIENT_DIRECTORY_ACTION);
     clientDirectory = (Array.isArray(result?.clients) ? result.clients : [])
-      .filter(client => ["active","prospect"].includes(String(client?.status || "").toLowerCase()));
+      .filter(client => Number(client?.id) > 0 && (client?.name || client?.clientCode));
   }
 
   async function refreshQueue() {
