@@ -1,19 +1,28 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/today-email-intake.js
-   Version: 2.0.0
+   Version: 2.0.1
    Status: Production Road-Test Candidate
    Sprint: Signal Review — Human Findings Capture
    Purpose:
    Keep Today lightweight. Incoming email is a signal title only until Andy
-   chooses Ready for Review. Investigation happens outside rigid rules; only
-   the useful final details, analysis, and decision are saved to D1.
+   chooses Ready for Review. Client and reporting period are inferred from
+   source metadata when the evidence supports them. Investigation happens
+   outside rigid rules; only the useful final details, analysis, and decision
+   are saved to D1.
+
+   Changes — 2.0.1:
+   - Prefills Client from the durable client directory by matching the source
+     subject/body to the client's website domain or exact client name.
+   - Prefills Reporting period from explicit source text first, then from a
+     month/year named in the subject.
+   - These are metadata conveniences only; they do not make business decisions.
    ========================================================= */
 
 (() => {
   "use strict";
 
-  const FILE_VERSION = "2.0.0";
+  const FILE_VERSION = "2.0.1";
   const WORKER_URL =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const QUEUE_ACTION = "get-email-intake-queue";
@@ -105,6 +114,69 @@
       : date.toLocaleString();
   }
 
+  function normalizeHost(value) {
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+    try {
+      const url = /^https?:\/\//i.test(raw) ? new URL(raw) : new URL(`https://${raw}`);
+      return String(url.hostname || "").toLowerCase().replace(/^www\./,"");
+    } catch {
+      return raw.toLowerCase()
+        .replace(/^https?:\/\//,"")
+        .replace(/^www\./,"")
+        .split("/")[0]
+        .trim();
+    }
+  }
+
+  function inferClientId(record) {
+    const existing = Number(record?.client?.id);
+    if (Number.isInteger(existing) && existing > 0) return existing;
+
+    const haystack = [
+      record?.subject,
+      record?.bodyText,
+      record?.sender?.name,
+      record?.sender?.address
+    ].map(value => String(value || "").toLowerCase()).join("\n");
+
+    for (const client of clientDirectory) {
+      const host = normalizeHost(client?.website);
+      if (host && haystack.includes(host)) return Number(client.id);
+    }
+
+    for (const client of clientDirectory) {
+      const name = String(client?.name || "").trim().toLowerCase();
+      if (name && name.length >= 4 && haystack.includes(name)) return Number(client.id);
+    }
+
+    return null;
+  }
+
+  function inferReportingPeriod(record) {
+    const body = String(record?.bodyText || "");
+    const subject = String(record?.subject || "");
+
+    const explicit = body.match(/(?:reporting\s*period|performance\s*period)\s*:\s*([^\n\r]+)/i);
+    if (explicit?.[1]) {
+      const value = explicit[1].trim().replace(/[.;]+$/,"");
+      if (value) return value;
+    }
+
+    const monthPattern = /(January|February|March|April|May|June|July|August|September|October|November|December)\s+(20\d{2})/i;
+    const subjectMonth = subject.match(monthPattern);
+    if (subjectMonth) {
+      return `${subjectMonth[1][0].toUpperCase()}${subjectMonth[1].slice(1).toLowerCase()} ${subjectMonth[2]}`;
+    }
+
+    const bodyMonth = body.match(monthPattern);
+    if (bodyMonth) {
+      return `${bodyMonth[1][0].toUpperCase()}${bodyMonth[1].slice(1).toLowerCase()} ${bodyMonth[2]}`;
+    }
+
+    return "";
+  }
+
   function buildClientOptions(selectedId) {
     const selected = Number(selectedId);
     return [
@@ -121,6 +193,9 @@
     const article = document.createElement("article");
     article.className = "gcm-signal-card";
     article.dataset.intakeId = String(record?.id || "");
+
+    const inferredClientId = inferClientId(record);
+    const inferredReportingPeriod = inferReportingPeriod(record);
 
     article.innerHTML = `
       <div class="gcm-signal-row">
@@ -140,13 +215,13 @@
           <label class="gcm-review-field">
             <span class="gcm-review-label">Client</span>
             <select class="gcm-review-select" data-gcm-review-client>
-              ${buildClientOptions(record?.client?.id)}
+              ${buildClientOptions(inferredClientId)}
             </select>
           </label>
 
           <label class="gcm-review-field">
             <span class="gcm-review-label">Reporting period</span>
-            <input class="gcm-review-input" data-gcm-review-period placeholder="Example: August 2026" />
+            <input class="gcm-review-input" data-gcm-review-period value="${escapeHtml(inferredReportingPeriod)}" placeholder="Example: August 2026" />
           </label>
 
           <label class="gcm-review-field gcm-review-wide">

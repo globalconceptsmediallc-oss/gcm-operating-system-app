@@ -1,15 +1,15 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.62",
+  "version": "6.1.63",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.62",
+    "fileVersion": "6.1.63",
     "status": "Production Road-Test Candidate",
-    "purpose": "Redesign Morning Command around human-led signal review and durable business findings.",
+    "purpose": "Prefill obvious Signal Review metadata without adding decision rules.",
     "changeNotes": [
-      "Today now shows unprocessed email as a compact title-only signal with Ready for Review.",
-      "Reviewed signals save durable client findings instead of turning monitoring email into Proof.",
-      "Source email remains evidence; details, analysis, and decision are the permanent business record."
+      "Signal Review infers client from the D1 client directory using source domain or exact client name.",
+      "Signal Review infers reporting period from explicit report text or month/year in the subject.",
+      "Business analysis remains human-led; the prefill only removes repetitive data entry."
     ]
   },
   "private": true,
