@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/today-email-intake.js
-   Version: 2.2.1
+   Version: 2.2.2
    Status: Production Road-Test Candidate
    Sprint: Google Review Quick Action
    Purpose:
@@ -9,6 +9,11 @@
    chooses Ready for Review. Client and reporting period are inferred from
    source metadata when the evidence supports them. The operator must explicitly
    choose the durable route before the reviewed finding can be saved to D1.
+
+   Changes — 2.2.2:
+   - Fixes Google review detection for notifications whose preserved body does not expose a parseable star rating.
+   - The review-subject pattern is enough to use Quick Action unless the source explicitly shows a rating below 4 stars.
+   - Keeps explicitly low-rated reviews in the full review workflow.
 
    Changes — 2.2.0:
    - Detects routine positive Google Business Profile review notifications.
@@ -63,7 +68,7 @@
 (() => {
   "use strict";
 
-  const FILE_VERSION = "2.2.1";
+  const FILE_VERSION = "2.2.2";
   const WORKER_URL =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const QUEUE_ACTION = "get-email-intake-queue";
@@ -464,9 +469,14 @@
     }
   }
 
+  function isRoutineGoogleReview(review) {
+    if (!review) return false;
+    return review.rating === 0 || review.rating >= 4;
+  }
+
   function renderRecord(record, options = {}) {
     const googleReview = parseGoogleReview(record);
-    if (googleReview && !options.forceStandard && googleReview.rating >= 4) {
+    if (googleReview && !options.forceStandard && isRoutineGoogleReview(googleReview)) {
       return renderGoogleReviewRecord(record, googleReview);
     }
 
