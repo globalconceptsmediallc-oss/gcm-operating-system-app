@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/gmailIntakeSync.test.js
-   Version: 1.0.1
+   Version: 1.0.2
    Status: Regression Test
    Purpose:
    Lock live Gmail Inbox ↔ Universal Intake reconciliation.
@@ -20,7 +20,7 @@ assert.match(worker,/handleGmailIntakeSync/);
 assert.match(worker,/gmailIntakeSyncVersion:\s*GMAIL_INTAKE_SYNC_VERSION/);
 assert.match(worker,/case ACTIONS\.SYNC_GMAIL_INTAKE:/);
 
-assert.match(route,/Version: 1\.0\.0/);
+assert.match(route,/Version: 1\.0\.1/);
 assert.match(route,/in:inbox -in:spam -in:trash/);
 assert.match(route,/INSERT OR IGNORE INTO email_intake/);
 assert.match(route,/gmail_live_sync/);
@@ -28,14 +28,16 @@ assert.match(route,/processing_status='ready_for_review'/);
 assert.match(route,/status === "processed"/);
 assert.match(route,/trashGmailMessage/);
 assert.match(route,/internetMessageId/);
+assert.doesNotMatch(route,/\?,NULL,\'gmail_live_sync\',\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,/);
 
-assert.match(ui,/Version: 2\.4\.1/);
+assert.match(ui,/Version: 2\.4\.2/);
 assert.match(ui,/sync-gmail-intake/);
 assert.match(ui,/trashProcessed:true/);
 assert.match(ui,/Refresh Inbox & Intake/);
 assert.match(ui,/processed cleared from Gmail/);
 assert.match(ui,/Reconnect Gmail/);
 assert.match(ui,/Gmail reconnect required/);
+assert.match(ui,/Gmail sync error/);
 assert.match(ui,/isGmailAuthorizationError/);
 
 console.log("PASS Gmail Inbox ↔ Universal Intake reconciliation");
