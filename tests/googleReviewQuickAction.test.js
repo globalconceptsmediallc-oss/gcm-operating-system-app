@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/googleReviewQuickAction.test.js
-   Version: 1.0.0
+   Version: 1.0.1
    Status: Regression Test
    Purpose:
    Lock routine Google Business Profile reviews to the compact reply/count flow.
@@ -22,7 +22,7 @@ assert.match(worker,/handleGoogleReviewQuickAction/);
 assert.match(worker,/googleReviewQuickActionVersion:\s*GOOGLE_REVIEW_QUICK_ACTION_VERSION/);
 assert.match(worker,/case ACTIONS\.GOOGLE_REVIEW_QUICK_ACTION:/);
 
-assert.match(route,/Version: 1\.0\.1/);
+assert.match(route,/Version: 1\.0\.2/);
 assert.match(route,/CLASSIFICATION_SOURCE = "google_review_quick_action"/);
 assert.match(route,/operation === "get_month_count"/);
 assert.match(route,/operation !== "count_and_close"/);
@@ -40,7 +40,7 @@ assert.doesNotMatch(route,/INSERT INTO investigations/i);
 assert.doesNotMatch(route,/INSERT INTO work_items/i);
 assert.doesNotMatch(route,/INSERT INTO activity_records/i);
 
-assert.match(ui,/Version: 2\.2\.0/);
+assert.match(ui,/Version: 2\.2\.1/);
 assert.match(ui,/left a review for/);
 assert.match(ui,/Quick Action/);
 assert.match(ui,/Reply Now/);
