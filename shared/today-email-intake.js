@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/today-email-intake.js
-   Version: 2.3.0
+   Version: 2.4.0
    Status: Production Road-Test Candidate
    Sprint: Google Review Quick Action
    Purpose:
@@ -9,6 +9,12 @@
    chooses Ready for Review. Client and reporting period are inferred from
    source metadata when the evidence supports them. The operator must explicitly
    choose the durable route before the reviewed finding can be saved to D1.
+
+   Changes — 2.4.0:
+   - Refresh Intake now reconciles the live Global Concepts Media Gmail Inbox against D1 before rendering the queue.
+   - Newly arrived Inbox messages are staged into Universal Intake.
+   - Gmail messages are moved to Trash only when the matching D1 intake record is already processed.
+   - The refresh status reports how many messages were staged and how many processed messages were cleared.
 
    Changes — 2.3.0:
    - Adds an editable suggested response to the Google review Quick Action card.
@@ -73,10 +79,11 @@
 (() => {
   "use strict";
 
-  const FILE_VERSION = "2.3.0";
+  const FILE_VERSION = "2.4.0";
   const WORKER_URL =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const QUEUE_ACTION = "get-email-intake-queue";
+  const SYNC_GMAIL_ACTION = "sync-gmail-intake";
   const SAVE_FINDING_ACTION = "save-email-intake-finding";
   const DISPOSITION_ACTION = "route-email-intake-disposition";
   const CLIENT_DIRECTORY_ACTION = "get-client-directory";
@@ -824,6 +831,12 @@
         await loadClientDirectory();
       }
 
+      const sync = await post(SYNC_GMAIL_ACTION, {
+        workspaceKey:"gcm",
+        scanLimit:200,
+        trashProcessed:true
+      });
+
       const result = await post(QUEUE_ACTION, {
         workspaceKey:"gcm",
         limit:MAX_VISIBLE_EMAILS
@@ -837,11 +850,21 @@
         empty.className = "gcm-intake-empty";
         empty.textContent = "No email signals are waiting for review.";
         preview.replaceChildren(empty);
-        if (!preserveStatus) setStatus("Morning Command is clear.");
+        if (!preserveStatus) {
+          const staged = Number(sync?.newlyStaged || 0);
+          const cleared = Number(sync?.movedToTrash || 0);
+          const account = sync?.accountEmail ? ` · ${sync.accountEmail}` : "";
+          setStatus(`Morning Command is clear · ${staged} new staged · ${cleared} processed cleared from Gmail${account}.`);
+        }
       } else {
         const total = Number(result?.counts?.readyForReview || records.length);
         if (!preserveStatus) {
-          setStatus(`${total} signal${total === 1 ? "" : "s"} waiting. Open one only when you are ready to understand it.`);
+          const staged = Number(sync?.newlyStaged || 0);
+          const cleared = Number(sync?.movedToTrash || 0);
+          const account = sync?.accountEmail ? ` · ${sync.accountEmail}` : "";
+          setStatus(
+            `${total} signal${total === 1 ? "" : "s"} waiting · ${staged} new staged · ${cleared} processed cleared from Gmail${account}.`
+          );
         }
       }
     } catch (error) {
@@ -853,7 +876,7 @@
     } finally {
       busy = false;
       previewButton.disabled = false;
-      previewButton.textContent = "Refresh Intake";
+      previewButton.textContent = "Refresh Inbox & Intake";
     }
   }
 
@@ -865,7 +888,7 @@
     oldButton.replaceWith(replacement);
 
     replacement.disabled = false;
-    replacement.textContent = "Refresh Intake";
+    replacement.textContent = "Refresh Inbox & Intake";
     replacement.addEventListener("click", refreshQueue);
 
     return replacement;
