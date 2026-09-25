@@ -1,15 +1,15 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.73",
+  "version": "6.1.74",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.73",
+    "fileVersion": "6.1.74",
     "status": "Production Road-Test Candidate",
-    "purpose": "Keep Universal Intake usable when Gmail authorization expires and provide a reconnect path.",
+    "purpose": "Repair Gmail Inbox ↔ D1 reconciliation after live test exposed an intake INSERT mismatch.",
     "changeNotes": [
-      "Gmail authorization failure no longer blocks the D1 Signal Review queue.",
-      "Today shows Reconnect Gmail when Google reports an expired or revoked token.",
-      "Refresh Inbox & Intake resumes normal Gmail↔D1 reconciliation after reauthorization."
+      "Fixes the gmail_live_sync INSERT to provide exactly 24 values for the 24 email_intake columns.",
+      "Keeps D1 Signal Review available when Gmail sync fails.",
+      "Shows Reconnect Gmail only for actual authorization failures; D1/SQL failures are labeled as sync errors."
     ]
   },
   "private": true,
