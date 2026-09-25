@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/googleReviewQuickAction.js
-   Version: 1.0.1
+   Version: 1.0.2
    Status: Production Road-Test Candidate
    Sprint: Google Review Quick Action
    Purpose:
@@ -16,7 +16,7 @@ import { ACTIONS, VERSION } from "../shared/config.js";
 import { getDatabase } from "../shared/database.js";
 import { jsonResponse, logWorkerError, safeErrorMessage } from "../shared/http.js";
 
-export const GOOGLE_REVIEW_QUICK_ACTION_VERSION = "1.0.1";
+export const GOOGLE_REVIEW_QUICK_ACTION_VERSION = "1.0.2";
 
 const CLASSIFICATION_SOURCE = "google_review_quick_action";
 
@@ -339,8 +339,13 @@ function hasDownstreamLink(record) {
 
 function monthFromDate(value) {
   const raw = clean(value);
-  const match = raw.match(/^(\d{4}-\d{2})/);
-  return match?.[1] || "";
+  const direct = raw.match(/^(\d{4}-\d{2})/);
+  if (direct?.[1]) return direct[1];
+
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return "";
+
+  return `${parsed.getUTCFullYear()}-${String(parsed.getUTCMonth() + 1).padStart(2,"0")}`;
 }
 
 function normalizeMonth(value) {
