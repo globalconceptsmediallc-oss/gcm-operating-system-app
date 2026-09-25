@@ -1,15 +1,20 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailDispositions.js
-   Version: 2.2.2
+   Version: 2.2.3
    Status: Production Road-Test Candidate
-   Source: routes/gmailDispositions.js 1.3.3 production
+   Source: routes/gmailDispositions.js 1.3.4 production
    Sprint: Gmail — Human Routing / No AI Gate
    Purpose:
    Keep AI and classifier eligibility out of the Morning Command critical path.
    Show the live Gmail source, accept an explicit human disposition, preserve the
    source in D1 when appropriate, then clear the real Gmail Inbox only after the
    requested OS write is confirmed.
+
+   Gmail intake sync support — 2.2.3:
+   - Exposes the verified Gmail access-token, message-loader, and fetch helpers for Universal Intake reconciliation.
+   - Preserves the source Internet Message-ID on loaded Gmail messages so D1 and Gmail can be matched exactly.
+   - Does not change existing Gmail human-routing behavior.
 
    Folder preview bind-limit repair — 2.2.2:
    - Reduces processed-thread lookup batches so combined Inbox + operational-folder previews stay under D1 SQL variable limits.
@@ -50,7 +55,7 @@
    Legacy regression compatibility markers retained intentionally:
    RETIRED helper names: markMessageRead markMessageUnread
    Legacy validation text: Monitoring requires a verified production client
-   Version: 1.3.3
+   Version: 1.3.4
    RETIRED: INSERT INTO decision_holds (... source_content ...)
    RETIRED result fields: workItemsCreated:0 investigationsCreated:0
    ========================================================= */
@@ -84,8 +89,8 @@ export const GMAIL_DISPOSITION_ACTIONS = Object.freeze([
 
 // Keep the existing public contract string for regression compatibility while
 // exposing the installed human-routing version separately.
-export const GMAIL_DISPOSITION_VERSION = "1.3.3";
-export const GMAIL_HUMAN_ROUTING_VERSION = "2.2.2";
+export const GMAIL_DISPOSITION_VERSION = "1.3.4";
+export const GMAIL_HUMAN_ROUTING_VERSION = "2.2.3";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GMAIL_API = "https://gmail.googleapis.com/gmail/v1";
@@ -851,7 +856,7 @@ async function loadLiveGmailMessage(gmailMessageId, env) {
   return { accessToken, message };
 }
 
-async function loadLiveGmailMessageWithAccessToken(gmailMessageId, accessToken) {
+export async function loadLiveGmailMessageWithAccessToken(gmailMessageId, accessToken) {
   const data = await gmailFetch(
     `${GMAIL_API}/users/me/messages/${encodeURIComponent(gmailMessageId)}?format=full`,
     accessToken
@@ -891,6 +896,7 @@ function gmailMessageFromData(data) {
     to:header("To"),
     subject:header("Subject") || "(No subject)",
     date:header("Date"),
+    internetMessageId:header("Message-ID"),
     snippet:clean(data?.snippet),
     bodyText:bodyText || clean(data?.snippet),
     labels:Array.isArray(data?.labelIds) ? data.labelIds : []
@@ -930,7 +936,7 @@ function formatThreadSource(messages) {
     .join("\n\n------------------------------\n\n");
 }
 
-async function liveGmailAccessToken(env) {
+export async function liveGmailAccessToken(env) {
   requireSecrets(env);
   const db = requireDb(env);
   const connection = await db.prepare(`
@@ -1085,7 +1091,7 @@ async function decrypt(value, secret) {
   return new TextDecoder().decode(bytes);
 }
 
-async function gmailFetch(url, accessToken) {
+export async function gmailFetch(url, accessToken) {
   const response = await fetch(url, {
     headers:{ Authorization:`Bearer ${accessToken}` }
   });
