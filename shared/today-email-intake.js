@@ -1,14 +1,20 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/today-email-intake.js
-   Version: 2.1.0
+   Version: 2.1.1
    Status: Production Road-Test Candidate
-   Sprint: Signal Review — Explicit Human Routing
+   Sprint: Signal Review — Durable Route Confirmation
    Purpose:
    Keep Today lightweight. Incoming email is a signal title only until Andy
    chooses Ready for Review. Client and reporting period are inferred from
    source metadata when the evidence supports them. The operator must explicitly
    choose the durable route before the reviewed finding can be saved to D1.
+
+   Changes — 2.1.1:
+   - Preserves the route success confirmation after the queue refreshes.
+   - Keeps the processed card removed while leaving the exact Finding / Communication /
+     Investigation / Work Item confirmation visible in Morning Command.
+   - Applies the same durable confirmation behavior to Delete — No Action Required.
 
    Changes — 2.1.0:
    - Restores an explicit Decision / Route control to Signal Review.
@@ -44,7 +50,7 @@
 (() => {
   "use strict";
 
-  const FILE_VERSION = "2.1.0";
+  const FILE_VERSION = "2.1.1";
   const WORKER_URL =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const QUEUE_ACTION = "get-email-intake-queue";
@@ -447,10 +453,11 @@
         result?.workItemId ? `Work Item #${result.workItemId}` : ""
       ].filter(Boolean).join(" + ");
 
-      setStatus(
-        `Finding #${result.findingId} saved as ${routeLabel}.${linked ? ` ${linked} linked.` : ""} Source email remains evidence.`
-      );
-      await refreshQueue();
+      const successMessage =
+        `Finding #${result.findingId} saved as ${routeLabel}.${linked ? ` ${linked} linked.` : ""} Source email remains evidence.`;
+
+      await refreshQueue({preserveStatus:true});
+      setStatus(successMessage);
     } catch (error) {
       busy = false;
       button.disabled = false;
@@ -499,8 +506,10 @@
       }
 
       busy = false;
-      setStatus(`Intake #${intakeId} closed with no action. Source evidence remains in D1.`);
-      await refreshQueue();
+      const successMessage =
+        `Intake #${intakeId} closed with no action. Source evidence remains in D1.`;
+      await refreshQueue({preserveStatus:true});
+      setStatus(successMessage);
     } catch (error) {
       busy = false;
       button.disabled = false;
@@ -519,14 +528,14 @@
       .filter(client => Number(client?.id) > 0 && (client?.name || client?.clientCode));
   }
 
-  async function refreshQueue() {
+  async function refreshQueue({preserveStatus=false} = {}) {
     if (busy || !preview || !previewButton) return;
 
     busy = true;
     preview.hidden = false;
     previewButton.disabled = true;
     previewButton.textContent = "Loading…";
-    setStatus("Loading unprocessed signals from D1.");
+    if (!preserveStatus) setStatus("Loading unprocessed signals from D1.");
 
     try {
       if (!clientDirectory.length) {
@@ -546,10 +555,12 @@
         empty.className = "gcm-intake-empty";
         empty.textContent = "No email signals are waiting for review.";
         preview.replaceChildren(empty);
-        setStatus("Morning Command is clear.");
+        if (!preserveStatus) setStatus("Morning Command is clear.");
       } else {
         const total = Number(result?.counts?.readyForReview || records.length);
-        setStatus(`${total} signal${total === 1 ? "" : "s"} waiting. Open one only when you are ready to understand it.`);
+        if (!preserveStatus) {
+          setStatus(`${total} signal${total === 1 ? "" : "s"} waiting. Open one only when you are ready to understand it.`);
+        }
       }
     } catch (error) {
       const failed = document.createElement("div");
