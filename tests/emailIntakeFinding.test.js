@@ -1,11 +1,12 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/emailIntakeFinding.test.js
-   Version: 1.5.0
+   Version: 1.6.0
    Status: Production Regression Test
    Purpose:
    Verify human-reviewed Signal Findings preserve useful business details,
-   require explicit routing in the UI, and keep Monitoring free of downstream noise.
+   require explicit routing in the UI, keep Monitoring free of downstream noise,
+   and preserve the route confirmation after the queue refreshes.
    ========================================================= */
 
 import fs from "node:fs";
@@ -152,10 +153,13 @@ assert.match(ui,/Work Item/);
 assert.match(ui,/Information \/ Communication/);
 assert.match(ui,/data-gcm-review-route/);
 assert.match(ui,/disposition/);
+assert.match(ui,/refreshQueue\(\{preserveStatus:true\}\)/);
+assert.match(ui,/async function refreshQueue\(\{preserveStatus=false\} = \{\}\)/);
+assert.match(ui,/setStatus\(successMessage\)/);
 
 const findingRoute = fs.readFileSync(new URL("../routes/emailIntakeFinding.js", import.meta.url),"utf8");
 assert.match(findingRoute,/handleEmailIntakeDisposition/);
 assert.match(findingRoute,/requested_work/);
 assert.match(findingRoute,/SUPPORTED_DISPOSITIONS/);
 
-console.log("PASS Signal Review saves reviewed findings with explicit human routing");
+console.log("PASS Signal Review saves reviewed findings with explicit human routing and durable confirmation");
