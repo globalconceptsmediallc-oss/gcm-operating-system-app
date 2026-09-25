@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/today-email-intake.js
-   Version: 2.4.1
+   Version: 2.4.2
    Status: Production Road-Test Candidate
    Sprint: Google Review Quick Action
    Purpose:
@@ -9,6 +9,11 @@
    chooses Ready for Review. Client and reporting period are inferred from
    source metadata when the evidence supports them. The operator must explicitly
    choose the durable route before the reviewed finding can be saved to D1.
+
+   Changes — 2.4.2:
+   - Distinguishes Gmail authorization failures from D1 reconciliation failures.
+   - Reconnect Gmail is shown only for actual Google authorization problems.
+   - D1/SQL sync failures report as sync errors without falsely telling the operator to reconnect Gmail.
 
    Changes — 2.4.1:
    - Gmail authorization failure no longer blocks the durable D1 Signal Review queue.
@@ -84,7 +89,7 @@
 (() => {
   "use strict";
 
-  const FILE_VERSION = "2.4.1";
+  const FILE_VERSION = "2.4.2";
   const WORKER_URL =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const QUEUE_ACTION = "get-email-intake-queue";
@@ -100,6 +105,7 @@
   let statusCopy = null;
   let connectButton = null;
   let gmailSyncWarning = "";
+  let gmailReconnectRequired = false;
   let busy = false;
   let clientDirectory = [];
 
@@ -874,6 +880,7 @@
 
       let sync = null;
       gmailSyncWarning = "";
+      gmailReconnectRequired = false;
 
       try {
         sync = await post(SYNC_GMAIL_ACTION, {
@@ -884,7 +891,9 @@
         hideReconnectButton();
       } catch (syncError) {
         gmailSyncWarning = String(syncError?.message || syncError || "Gmail sync failed.");
-        if (isGmailAuthorizationError(syncError)) showReconnectButton();
+        gmailReconnectRequired = isGmailAuthorizationError(syncError);
+        if (gmailReconnectRequired) showReconnectButton();
+        else hideReconnectButton();
       }
 
       const result = await post(QUEUE_ACTION, {
@@ -902,7 +911,11 @@
         preview.replaceChildren(empty);
         if (!preserveStatus) {
           if (gmailSyncWarning) {
-            setStatus(`Morning Command is clear in D1 · Gmail reconnect required: ${gmailSyncWarning}`);
+            setStatus(
+              gmailReconnectRequired
+                ? `Morning Command is clear in D1 · Gmail reconnect required: ${gmailSyncWarning}`
+                : `Morning Command is clear in D1 · Gmail sync error: ${gmailSyncWarning}`
+            );
           } else {
             const staged = Number(sync?.newlyStaged || 0);
             const cleared = Number(sync?.movedToTrash || 0);
@@ -914,7 +927,11 @@
         const total = Number(result?.counts?.readyForReview || records.length);
         if (!preserveStatus) {
           if (gmailSyncWarning) {
-            setStatus(`${total} signal${total === 1 ? "" : "s"} waiting in D1 · Gmail reconnect required: ${gmailSyncWarning}`);
+            setStatus(
+              gmailReconnectRequired
+                ? `${total} signal${total === 1 ? "" : "s"} waiting in D1 · Gmail reconnect required: ${gmailSyncWarning}`
+                : `${total} signal${total === 1 ? "" : "s"} waiting in D1 · Gmail sync error: ${gmailSyncWarning}`
+            );
           } else {
             const staged = Number(sync?.newlyStaged || 0);
             const cleared = Number(sync?.movedToTrash || 0);
