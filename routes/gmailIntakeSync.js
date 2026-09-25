@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailIntakeSync.js
-   Version: 1.0.0
+   Version: 1.0.1
    Status: Production Road-Test Candidate
    Sprint: Gmail ↔ Universal Intake Reconciliation
    Purpose:
@@ -9,6 +9,10 @@
    email_intake records. New Inbox messages are staged into Universal Intake.
    Gmail messages whose matching D1 intake record is already processed are
    moved to Trash only after D1 confirms that processed state.
+
+   Changes — 1.0.1:
+   - Fixes the live Gmail staging INSERT to provide exactly 24 values for 24 columns.
+   - Removes the extra placeholder that caused D1_ERROR: 25 values for 24 columns.
    ========================================================= */
 
 import { getDatabase } from "../shared/database.js";
@@ -20,7 +24,7 @@ import {
   loadLiveGmailMessageWithAccessToken
 } from "./gmailDispositions.js";
 
-export const GMAIL_INTAKE_SYNC_VERSION = "1.0.0";
+export const GMAIL_INTAKE_SYNC_VERSION = "1.0.1";
 const GMAIL_API = "https://gmail.googleapis.com/gmail/v1";
 const DEFAULT_SCAN_LIMIT = 100;
 const MAX_SCAN_LIMIT = 200;
@@ -254,7 +258,7 @@ async function insertGmailIntake(db, {
       created_at,
       updated_at
     ) VALUES (
-      ?,NULL,'gmail_live_sync',?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
+      ?,NULL,'gmail_live_sync',?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
       'ready_for_review',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP
     )
   `).bind(
