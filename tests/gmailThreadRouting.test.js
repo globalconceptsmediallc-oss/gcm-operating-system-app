@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/gmailThreadRouting.test.js
-   Version: 1.0.3
+   Version: 1.0.4
    Status: Production Regression Test
    Purpose: Lock Morning Command to one human decision per Gmail conversation.
    Change notes — 1.0.3:
