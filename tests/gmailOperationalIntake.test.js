@@ -147,7 +147,7 @@ assert.match(route, /writesPerformed:0/);
 assert.match(route, /excludeIds/);
 assert.match(route, /evaluateExplicitHumanWorkRequest/);
 
-assert.match(dispositions, /Version: 1\.3\.3/);
+assert.match(dispositions, /Version: 1\.3\.4/);
 assert.match(dispositions, /GMAIL_DISPOSITION_VERSION = "1\.3\.3"/);
 assert.match(dispositions, /PREVIEW_GMAIL_INBOX_EVIDENCE_ACTION = "preview-gmail-inbox"/);
 assert.match(dispositions, /APPROVE_GMAIL_MONITORING_EVIDENCE_ACTION = "approve-gmail-monitoring"/);
