@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/today-email-intake.js
-   Version: 2.2.2
+   Version: 2.3.0
    Status: Production Road-Test Candidate
    Sprint: Google Review Quick Action
    Purpose:
@@ -9,6 +9,11 @@
    chooses Ready for Review. Client and reporting period are inferred from
    source metadata when the evidence supports them. The operator must explicitly
    choose the durable route before the reviewed finding can be saved to D1.
+
+   Changes — 2.3.0:
+   - Adds an editable suggested response to the Google review Quick Action card.
+   - Renames the review link to Open Review so the operator remains in control of posting.
+   - Keeps Mark Responded & Count Review as the final completion action.
 
    Changes — 2.2.2:
    - Fixes Google review detection for notifications whose preserved body does not expose a parseable star rating.
@@ -68,7 +73,7 @@
 (() => {
   "use strict";
 
-  const FILE_VERSION = "2.2.2";
+  const FILE_VERSION = "2.3.0";
   const WORKER_URL =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const QUEUE_ACTION = "get-email-intake-queue";
@@ -292,14 +297,43 @@
           .format(new Date(`${reviewMonth}-01T00:00:00Z`))
       : "Review month";
 
+    const reviewer = subjectMatch[1].trim();
+    const business = subjectMatch[2].trim();
+    const reviewText = extractGoogleReviewText(body, reviewer);
+
     return {
-      reviewer:subjectMatch[1].trim(),
-      business:subjectMatch[2].trim(),
+      reviewer,
+      business,
       rating,
       replyUrl:replyMatch?.[1] || "",
+      reviewText,
       reviewMonth,
       reviewMonthLabel
     };
+  }
+
+  function extractGoogleReviewText(body, reviewer) {
+    const normalized = String(body || "").replace(/\u200d|\u200c|\u200b|\ufeff/g,"").trim();
+    if (!normalized) return "";
+
+    const reviewerIndex = normalized.toLowerCase().indexOf(String(reviewer || "").toLowerCase());
+    if (reviewerIndex < 0) return "";
+
+    const afterReviewer = normalized.slice(reviewerIndex + String(reviewer || "").length).trim();
+    const replyIndex = afterReviewer.indexOf("[Reply to review]");
+    return (replyIndex >= 0 ? afterReviewer.slice(0,replyIndex) : afterReviewer).trim();
+  }
+
+  function buildGoogleReviewSuggestedResponse(review) {
+    const firstName = String(review?.reviewer || "").trim().split(/\s+/)[0] || "Thank you";
+    const business = String(review?.business || "").trim();
+    const reviewText = String(review?.reviewText || "").toLowerCase();
+
+    if (/40 years|decades|many years|for years/.test(reviewText)) {
+      return `${firstName}, thank you for your continued support over the years and for sharing your connection to Harry. We truly appreciate you continuing to choose ${business}. It means a lot to our team, and we look forward to seeing you again.`;
+    }
+
+    return `${firstName}, thank you for taking the time to leave a review. We truly appreciate your support of ${business} and are grateful you chose us. We look forward to seeing you again.`;
   }
 
   function renderGoogleReviewRecord(record, review) {
@@ -309,6 +343,7 @@
 
     const inferredClientId = inferClientId(record);
     const stars = review.rating > 0 ? "★".repeat(review.rating) : "Google review";
+    const suggestedResponse = buildGoogleReviewSuggestedResponse(review);
 
     article.innerHTML = `
       <div class="gcm-signal-row">
@@ -345,9 +380,14 @@
             </div>
           </div>
 
+          <label class="gcm-review-field">
+            <span class="gcm-review-label">Suggested response</span>
+            <textarea class="gcm-review-textarea" data-gcm-review-response>${escapeHtml(suggestedResponse)}</textarea>
+          </label>
+
           <div class="gcm-review-actions">
             ${review.replyUrl
-              ? `<a class="gcm-review-reply" href="${escapeHtml(review.replyUrl)}" target="_blank" rel="noopener">Reply Now</a>`
+              ? `<a class="gcm-review-reply" href="${escapeHtml(review.replyUrl)}" target="_blank" rel="noopener">Open Review</a>`
               : ""}
             <button class="gcm-review-count-button" type="button" data-gcm-count-review>
               Mark Responded &amp; Count Review
@@ -356,7 +396,7 @@
               Use Full Review
             </button>
             <span class="gcm-review-status" data-gcm-review-status>
-              Reply to the customer, then count the review. No Finding, Communication, Investigation, Work Item, or Proof record will be created.
+              Use the suggested response, open the review, post it, then count the review. No Finding, Communication, Investigation, Work Item, or Proof record will be created.
             </span>
           </div>
         </div>
@@ -371,7 +411,7 @@
     ready?.addEventListener("click", async () => {
       panel.hidden = false;
       ready.hidden = true;
-      setStatus("Routine Google review: reply now, then count it for the client month.");
+      setStatus("Routine Google review: use the suggested response, open the review, post it, then count it for the client month.");
       article.querySelector("[data-gcm-review-client]")?.focus();
       await loadGoogleReviewMonthCount(article, review);
     });
