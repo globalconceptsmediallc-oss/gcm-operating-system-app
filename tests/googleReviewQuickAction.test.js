@@ -1,12 +1,12 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/googleReviewQuickAction.test.js
-   Version: 1.0.1
+   Version: 1.0.2
    Status: Regression Test
    Purpose:
    Lock routine Google Business Profile reviews to the compact reply/count flow.
-   Positive reviews must not create Findings, Communications, Investigations,
-   Work Items, or Proof rows. Lower-rated reviews must retain the full-review path.
+   Routine reviews, including notifications with no parseable rating, must not create
+   Findings, Communications, Investigations, Work Items, or Proof rows. Explicitly low-rated reviews retain the full-review path.
    ========================================================= */
 
 import fs from "node:fs";
@@ -40,7 +40,7 @@ assert.doesNotMatch(route,/INSERT INTO investigations/i);
 assert.doesNotMatch(route,/INSERT INTO work_items/i);
 assert.doesNotMatch(route,/INSERT INTO activity_records/i);
 
-assert.match(ui,/Version: 2\.2\.1/);
+assert.match(ui,/Version: 2\\.2\\.2/);
 assert.match(ui,/left a review for/);
 assert.match(ui,/Quick Action/);
 assert.match(ui,/Reply Now/);
@@ -49,8 +49,9 @@ assert.match(ui,/get_month_count/);
 assert.match(ui,/count_and_close/);
 assert.match(ui,/Only the monthly count is preserved as the business metric/);
 assert.match(ui,/No Finding, Communication, Investigation, Work Item, or Proof record will be created/);
-assert.match(ui,/googleReview\.rating >= 4/);
+assert.match(ui,/function isRoutineGoogleReview\(review\)/);
+assert.match(ui,/review\.rating === 0 \|\| review\.rating >= 4/);
 assert.match(ui,/Use Full Review/);
 assert.match(ui,/forceStandard:true/);
 
-console.log("PASS Google review quick action: positive reviews reply/count without downstream OS clutter");
+console.log("PASS Google review quick action: review notifications without a parseable rating still use reply/count; explicit low ratings remain full review");
