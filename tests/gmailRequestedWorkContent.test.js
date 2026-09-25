@@ -18,8 +18,8 @@ const dispositions = read("routes/gmailDispositions.js");
 const operationalDecision = read("routes/operationalDecision.js");
 const migration = read("migrations/0015_gmail_requested_work_content_repair.sql");
 
-assert.match(dispositions, /Version: 2\.2\.2/);
-assert.match(dispositions, /GMAIL_HUMAN_ROUTING_VERSION = "2\.2\.2"/);
+assert.match(dispositions, /Version: 2\.2\.3/);
+assert.match(dispositions, /GMAIL_HUMAN_ROUTING_VERSION = "2\.2\.3"/);
 assert.match(dispositions, /workTitle:disposition === "requested_work"/);
 assert.match(dispositions, /workDescription:requestedWorkSource/);
 assert.match(dispositions, /sanitizeEmailText\(message\.bodyText \|\| message\.snippet \|\| message\.subject\)/);
