@@ -1,14 +1,19 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.33.0
+   Version: 7.34.0
    Status: OS 2.0 Production Road-Test Candidate
-   Source: Production worker.js 7.32.0
+   Source: Production worker.js 7.33.0
    Sprint: Universal Email Intake — Human Disposition
    Purpose: Preserve every verified production route while exposing the
             durable Prospecting Radar + CRM operations required to connect
             scheduled prospects, discovery, proposals, follow-up, agreements,
             payments, and eventual Client handoff.
+
+   Changes in 7.34.0:
+   - Adds Gmail ↔ Universal Intake reconciliation.
+   - Refresh can stage newly arrived Gmail Inbox messages into D1 and move only D1-confirmed processed messages to Gmail Trash.
+   - Exposes the Gmail Intake Sync version in Worker health.
 
    Changes in 7.33.0:
    - Adds a dedicated Google Business Profile review quick-action route.
@@ -242,8 +247,12 @@ import {
   handleGoogleReviewQuickAction,
   GOOGLE_REVIEW_QUICK_ACTION_VERSION
 } from "./routes/googleReviewQuickAction.js";
+import {
+  handleGmailIntakeSync,
+  GMAIL_INTAKE_SYNC_VERSION
+} from "./routes/gmailIntakeSync.js";
 
-const WORKER_FILE_VERSION = "7.33.0";
+const WORKER_FILE_VERSION = "7.34.0";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
@@ -281,6 +290,7 @@ const SUPPORTED_ACTIONS = [
   ACTIONS.SAVE_EMAIL_INTAKE_FINDING,
   ACTIONS.ROUTE_EMAIL_INTAKE_DISPOSITION,
   ACTIONS.GOOGLE_REVIEW_QUICK_ACTION,
+  ACTIONS.SYNC_GMAIL_INTAKE,
   ...GMAIL_WORK_REQUEST_ACTIONS,
   ...GMAIL_DISPOSITION_ACTIONS,
   PREPARE_OPERATING_SESSION_ACTION,
@@ -310,6 +320,7 @@ export default {
         emailIntakeDispositionVersion: EMAIL_INTAKE_DISPOSITION_VERSION,
         emailIntakeFindingVersion: EMAIL_INTAKE_FINDING_VERSION,
         googleReviewQuickActionVersion: GOOGLE_REVIEW_QUICK_ACTION_VERSION,
+        gmailIntakeSyncVersion: GMAIL_INTAKE_SYNC_VERSION,
         clientFindingsVersion: CLIENT_FINDINGS_VERSION,
         contractVersion: API_CONTRACT_VERSION,
         sprint: "Universal Email Intake — Cloudflare Email Routing",
@@ -435,6 +446,9 @@ export default {
 
         case ACTIONS.GOOGLE_REVIEW_QUICK_ACTION:
           return await handleGoogleReviewQuickAction(body, env, requestId);
+
+        case ACTIONS.SYNC_GMAIL_INTAKE:
+          return await handleGmailIntakeSync(body, env, requestId);
 
         case ACTIONS.GET_GMAIL_STATUS:
         case ACTIONS.PREVIEW_GMAIL_INBOX:
