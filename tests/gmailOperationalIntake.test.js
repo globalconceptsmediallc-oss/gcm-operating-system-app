@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/gmailOperationalIntake.test.js
-   Version: 1.3.12
+   Version: 1.3.13
    Status: Production Regression Test
    Purpose: Verify Morning Command uses GCM OS disposition state rather than
             Gmail read/unread state and preserves exact source evidence before
