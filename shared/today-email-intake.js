@@ -1,14 +1,19 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/today-email-intake.js
-   Version: 2.1.1
+   Version: 2.1.2
    Status: Production Road-Test Candidate
-   Sprint: Signal Review — Durable Route Confirmation
+   Sprint: Signal Review — Decision-Last Routing
    Purpose:
    Keep Today lightweight. Incoming email is a signal title only until Andy
    chooses Ready for Review. Client and reporting period are inferred from
    source metadata when the evidence supports them. The operator must explicitly
    choose the durable route before the reviewed finding can be saved to D1.
+
+   Changes — 2.1.2:
+   - Moves Decision / Route below Decision / next action so routing is the final human choice.
+   - Keeps Client and Reporting period first, then Details, What we learned, Decision,
+     and only then the final route selection before source evidence and Save & Route.
 
    Changes — 2.1.1:
    - Preserves the route success confirmation after the queue refreshes.
@@ -50,7 +55,7 @@
 (() => {
   "use strict";
 
-  const FILE_VERSION = "2.1.1";
+  const FILE_VERSION = "2.1.2";
   const WORKER_URL =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const QUEUE_ACTION = "get-email-intake-queue";
@@ -273,20 +278,6 @@
           </label>
 
           <label class="gcm-review-field gcm-review-wide">
-            <span class="gcm-review-label">Decision / Route</span>
-            <select class="gcm-review-select" data-gcm-review-route>
-              <option value="">Choose route…</option>
-              <option value="monitoring">Monitoring / Finding</option>
-              <option value="investigation">Investigation</option>
-              <option value="requested_work">Work Item</option>
-              <option value="information">Information / Communication</option>
-            </select>
-            <p class="gcm-review-route-note">
-              Monitoring saves the reviewed finding only. Investigation creates a Communication + Investigation. Work Item creates a Communication + Work Item. Information creates a Communication/history record.
-            </p>
-          </label>
-
-          <label class="gcm-review-field gcm-review-wide">
             <span class="gcm-review-label">Details to preserve</span>
             <textarea class="gcm-review-textarea" data-gcm-review-details placeholder="The important facts, measurements, comparisons, gains, declines, pages, queries, products, or other details we learned during review."></textarea>
           </label>
@@ -299,6 +290,20 @@
           <label class="gcm-review-field gcm-review-wide">
             <span class="gcm-review-label">Decision / next action</span>
             <textarea class="gcm-review-textarea" data-gcm-review-decision placeholder="What we decided after the review. Leave blank if this is only a recorded finding."></textarea>
+          </label>
+
+          <label class="gcm-review-field gcm-review-wide">
+            <span class="gcm-review-label">Final Decision / Route</span>
+            <select class="gcm-review-select" data-gcm-review-route>
+              <option value="">Choose route…</option>
+              <option value="monitoring">Monitoring / Finding</option>
+              <option value="investigation">Investigation</option>
+              <option value="requested_work">Work Item</option>
+              <option value="information">Information / Communication</option>
+            </select>
+            <p class="gcm-review-route-note">
+              Choose this last, after reviewing the evidence and writing the decision. Monitoring saves the finding only. Investigation creates a Communication + Investigation. Work Item creates a Communication + Work Item. Information creates a Communication/history record.
+            </p>
           </label>
         </div>
 
