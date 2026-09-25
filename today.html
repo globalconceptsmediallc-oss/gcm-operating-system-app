@@ -1,13 +1,17 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.5.28
+   Version: 3.5.29
    Status: Production Candidate
-   Source: Production today.html 3.5.27
+   Source: Production today.html 3.5.28
    Sprint: Today / Morning Command — Universal Email Intake No-Action Routing
    Purpose: Preserve the locked Today layout, Gmail approvals, Mission Control,
             Media logic, and operating workflow while keeping Mission Control's
             durable D1 ranking authoritative across both decision and queue views.
+
+   Production changes in 3.5.29:
+   - Gmail token expiration no longer hides the durable D1 Signal Review queue.
+   - Adds a Reconnect Gmail action when Google authorization must be renewed.
 
    Production changes in 3.5.28:
    - Refresh Intake now reconciles the live Global Concepts Media Gmail Inbox against D1.
@@ -1945,7 +1949,7 @@
 <div aria-hidden="true" hidden="" id="mission-control-state-values"><span id="prospect-count">0</span><span id="attention-count">0</span><span id="open-task-count">0</span><span id="proof-count">0</span><span id="media-pulse-count">0</span></div></div>
 </main>
 </div>
-<script src="shared/gcm-shell.js?v=2.0.58"></script>
+<script src="shared/gcm-shell.js?v=2.0.59"></script>
 <script>
     (() => {
       "use strict";
