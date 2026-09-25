@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/today-email-intake.js
-   Version: 2.2.0
+   Version: 2.2.1
    Status: Production Road-Test Candidate
    Sprint: Google Review Quick Action
    Purpose:
@@ -63,7 +63,7 @@
 (() => {
   "use strict";
 
-  const FILE_VERSION = "2.2.0";
+  const FILE_VERSION = "2.2.1";
   const WORKER_URL =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const QUEUE_ACTION = "get-email-intake-queue";
@@ -275,8 +275,13 @@
       body.match(/(https?:\/\/business\.google\.com\/[^\s)]+)/i);
 
     const dateValue = String(record?.sourceDate || record?.receivedAt || "");
-    const dateMatch = dateValue.match(/^(\d{4})-(\d{2})/);
-    const reviewMonth = dateMatch ? `${dateMatch[1]}-${dateMatch[2]}` : "";
+    const directDateMatch = dateValue.match(/^(\d{4})-(\d{2})/);
+    const parsedDate = new Date(dateValue);
+    const reviewMonth = directDateMatch
+      ? `${directDateMatch[1]}-${directDateMatch[2]}`
+      : !Number.isNaN(parsedDate.getTime())
+        ? `${parsedDate.getUTCFullYear()}-${String(parsedDate.getUTCMonth() + 1).padStart(2,"0")}`
+        : "";
     const reviewMonthLabel = reviewMonth
       ? new Intl.DateTimeFormat("en-US",{month:"long",year:"numeric",timeZone:"UTC"})
           .format(new Date(`${reviewMonth}-01T00:00:00Z`))
