@@ -1,15 +1,15 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.72",
+  "version": "6.1.73",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.72",
+    "fileVersion": "6.1.73",
     "status": "Production Road-Test Candidate",
-    "purpose": "Reconcile the live Gmail Inbox with Universal Email Intake and clear D1-confirmed processed messages.",
+    "purpose": "Keep Universal Intake usable when Gmail authorization expires and provide a reconnect path.",
     "changeNotes": [
-      "Refresh Intake now stages newly arrived Gmail Inbox messages into D1.",
-      "Only messages whose matching email_intake row is already processed are moved to Gmail Trash.",
-      "Keeps Today current by syncing Gmail before rendering the durable review queue."
+      "Gmail authorization failure no longer blocks the D1 Signal Review queue.",
+      "Today shows Reconnect Gmail when Google reports an expired or revoked token.",
+      "Refresh Inbox & Intake resumes normal Gmail↔D1 reconciliation after reauthorization."
     ]
   },
   "private": true,
