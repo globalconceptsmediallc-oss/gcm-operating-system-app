@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/today-email-intake.js
-   Version: 2.4.0
+   Version: 2.4.1
    Status: Production Road-Test Candidate
    Sprint: Google Review Quick Action
    Purpose:
@@ -9,6 +9,11 @@
    chooses Ready for Review. Client and reporting period are inferred from
    source metadata when the evidence supports them. The operator must explicitly
    choose the durable route before the reviewed finding can be saved to D1.
+
+   Changes — 2.4.1:
+   - Gmail authorization failure no longer blocks the durable D1 Signal Review queue.
+   - Shows Reconnect Gmail when Google reports an expired or revoked token.
+   - Keeps Refresh Inbox & Intake available while Gmail is disconnected so already-staged D1 signals remain reviewable.
 
    Changes — 2.4.0:
    - Refresh Intake now reconciles the live Global Concepts Media Gmail Inbox against D1 before rendering the queue.
@@ -79,7 +84,7 @@
 (() => {
   "use strict";
 
-  const FILE_VERSION = "2.4.0";
+  const FILE_VERSION = "2.4.1";
   const WORKER_URL =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const QUEUE_ACTION = "get-email-intake-queue";
@@ -94,6 +99,7 @@
   let preview = null;
   let statusCopy = null;
   let connectButton = null;
+  let gmailSyncWarning = "";
   let busy = false;
   let clientDirectory = [];
 
@@ -147,6 +153,7 @@
       .gcm-review-count-button{min-height:38px;padding:0 14px;border:0;border-radius:9px;background:#0b7a46;color:#fff;font-weight:900;cursor:pointer}
       .gcm-review-full-button{min-height:38px;padding:0 13px;border:1px solid var(--border,#dbe2ec);border-radius:9px;background:#fff;color:var(--gcm-navy-900,#0b1d33);font-weight:850;cursor:pointer}
       .gcm-intake-empty{padding:18px;border:1px dashed var(--border,#dbe2ec);border-radius:12px;background:#fbfcfe;color:var(--text-muted,#637083);font-size:.8rem;text-align:center}
+      .gcm-gmail-reconnect{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 14px;border:1px solid var(--border,#dbe2ec);border-radius:9px;background:#fff;color:var(--gcm-navy-900,#0b1d33);text-decoration:none;font-weight:900}
       @media(max-width:760px){.gcm-signal-row{align-items:flex-start}.gcm-review-grid{grid-template-columns:1fr}}
     `;
 
@@ -811,6 +818,40 @@
     if (statusCopy) statusCopy.textContent = text;
   }
 
+  function ensureReconnectButton() {
+    if (connectButton && document.body.contains(connectButton)) return connectButton;
+    const actions = document.querySelector(".morning-command-actions");
+    if (!actions) return null;
+    const link = document.createElement("a");
+    link.id = "gmail-connect-button";
+    link.className = "gcm-gmail-reconnect";
+    link.textContent = "Reconnect Gmail";
+    link.hidden = true;
+    actions.appendChild(link);
+    connectButton = link;
+    return link;
+  }
+
+  function showReconnectButton() {
+    const button = ensureReconnectButton();
+    if (!button) return;
+    button.hidden = false;
+    button.textContent = "Reconnect Gmail";
+    button.href = WORKER_URL + "auth/google?return_to=" + encodeURIComponent(location.href) + "&reauthorize=1";
+  }
+
+  function hideReconnectButton() {
+    const button = ensureReconnectButton();
+    if (!button) return;
+    button.hidden = true;
+    button.removeAttribute("href");
+  }
+
+  function isGmailAuthorizationError(error) {
+    const message = String(error?.message || error || "");
+    return /expired|revoked|invalid_grant|gmail is not connected|authorization/i.test(message);
+  }
+
   async function loadClientDirectory() {
     const result = await post(CLIENT_DIRECTORY_ACTION);
     clientDirectory = (Array.isArray(result?.clients) ? result.clients : [])
@@ -831,11 +872,20 @@
         await loadClientDirectory();
       }
 
-      const sync = await post(SYNC_GMAIL_ACTION, {
-        workspaceKey:"gcm",
-        scanLimit:200,
-        trashProcessed:true
-      });
+      let sync = null;
+      gmailSyncWarning = "";
+
+      try {
+        sync = await post(SYNC_GMAIL_ACTION, {
+          workspaceKey:"gcm",
+          scanLimit:200,
+          trashProcessed:true
+        });
+        hideReconnectButton();
+      } catch (syncError) {
+        gmailSyncWarning = String(syncError?.message || syncError || "Gmail sync failed.");
+        if (isGmailAuthorizationError(syncError)) showReconnectButton();
+      }
 
       const result = await post(QUEUE_ACTION, {
         workspaceKey:"gcm",
@@ -851,20 +901,28 @@
         empty.textContent = "No email signals are waiting for review.";
         preview.replaceChildren(empty);
         if (!preserveStatus) {
-          const staged = Number(sync?.newlyStaged || 0);
-          const cleared = Number(sync?.movedToTrash || 0);
-          const account = sync?.accountEmail ? ` · ${sync.accountEmail}` : "";
-          setStatus(`Morning Command is clear · ${staged} new staged · ${cleared} processed cleared from Gmail${account}.`);
+          if (gmailSyncWarning) {
+            setStatus(`Morning Command is clear in D1 · Gmail reconnect required: ${gmailSyncWarning}`);
+          } else {
+            const staged = Number(sync?.newlyStaged || 0);
+            const cleared = Number(sync?.movedToTrash || 0);
+            const account = sync?.accountEmail ? ` · ${sync.accountEmail}` : "";
+            setStatus(`Morning Command is clear · ${staged} new staged · ${cleared} processed cleared from Gmail${account}.`);
+          }
         }
       } else {
         const total = Number(result?.counts?.readyForReview || records.length);
         if (!preserveStatus) {
-          const staged = Number(sync?.newlyStaged || 0);
-          const cleared = Number(sync?.movedToTrash || 0);
-          const account = sync?.accountEmail ? ` · ${sync.accountEmail}` : "";
-          setStatus(
-            `${total} signal${total === 1 ? "" : "s"} waiting · ${staged} new staged · ${cleared} processed cleared from Gmail${account}.`
-          );
+          if (gmailSyncWarning) {
+            setStatus(`${total} signal${total === 1 ? "" : "s"} waiting in D1 · Gmail reconnect required: ${gmailSyncWarning}`);
+          } else {
+            const staged = Number(sync?.newlyStaged || 0);
+            const cleared = Number(sync?.movedToTrash || 0);
+            const account = sync?.accountEmail ? ` · ${sync.accountEmail}` : "";
+            setStatus(
+              `${total} signal${total === 1 ? "" : "s"} waiting · ${staged} new staged · ${cleared} processed cleared from Gmail${account}.`
+            );
+          }
         }
       }
     } catch (error) {
@@ -902,6 +960,7 @@
     preview = document.getElementById("gmail-preview");
     statusCopy = document.getElementById("gmail-status-copy");
     connectButton = document.getElementById("gmail-connect-button");
+    ensureReconnectButton();
     previewButton = replacePreviewButton();
 
     if (!preview || !statusCopy || !previewButton) {
@@ -909,10 +968,7 @@
       return;
     }
 
-    if (connectButton) {
-      connectButton.hidden = true;
-      connectButton.removeAttribute("href");
-    }
+    hideReconnectButton();
 
     const title = document.getElementById("morning-command-title");
     if (title) {
