@@ -17,7 +17,7 @@ const backend = fs.readFileSync(new URL("../routes/gmailDispositions.js", import
 const frontend = fs.readFileSync(new URL("../shared/today-gmail-decisions.js", import.meta.url), "utf8");
 
 assert.doesNotThrow(() => new Function(frontend));
-assert.match(backend, /Version: 2\.2\.2/);
+assert.match(backend, /Version: 2\.2\.3/);
 assert.match(backend, /GMAIL_HUMAN_ROUTING_VERSION = "2\.2\.2"/);
 assert.match(frontend, /Version: 2\.3\.2/);
 assert.match(frontend, /HUMAN_ROUTING_VERSION = "2\.3\.2"/);
