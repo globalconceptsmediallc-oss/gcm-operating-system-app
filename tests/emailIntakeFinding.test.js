@@ -1,12 +1,13 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/emailIntakeFinding.test.js
-   Version: 1.6.0
+   Version: 1.7.0
    Status: Production Regression Test
    Purpose:
    Verify human-reviewed Signal Findings preserve useful business details,
    require explicit routing in the UI, keep Monitoring free of downstream noise,
-   and preserve the route confirmation after the queue refreshes.
+   preserve the route confirmation after the queue refreshes, and keep routing
+   as the final human decision after the written review.
    ========================================================= */
 
 import fs from "node:fs";
@@ -146,7 +147,7 @@ assert.match(backfill,/1a0818419adeb7b8/);
 assert.match(backfill,/1a081842d018fd10/);
 assert.match(backfill,/1a081878af21cf2c/);
 assert.match(backfill,/ready_for_review/);
-assert.match(ui,/Decision \/ Route/);
+assert.match(ui,/Final Decision \/ Route/);
 assert.match(ui,/Monitoring \/ Finding/);
 assert.match(ui,/Investigation/);
 assert.match(ui,/Work Item/);
@@ -156,10 +157,13 @@ assert.match(ui,/disposition/);
 assert.match(ui,/refreshQueue\(\{preserveStatus:true\}\)/);
 assert.match(ui,/async function refreshQueue\(\{preserveStatus=false\} = \{\}\)/);
 assert.match(ui,/setStatus\(successMessage\)/);
+const decisionIndex = ui.indexOf('data-gcm-review-decision');
+const routeIndex = ui.indexOf('data-gcm-review-route');
+assert.ok(decisionIndex >= 0 && routeIndex > decisionIndex,"Decision / Route must render after Decision / next action");
 
 const findingRoute = fs.readFileSync(new URL("../routes/emailIntakeFinding.js", import.meta.url),"utf8");
 assert.match(findingRoute,/handleEmailIntakeDisposition/);
 assert.match(findingRoute,/requested_work/);
 assert.match(findingRoute,/SUPPORTED_DISPOSITIONS/);
 
-console.log("PASS Signal Review saves reviewed findings with explicit human routing and durable confirmation");
+console.log("PASS Signal Review saves reviewed findings with decision-last routing and durable confirmation");
