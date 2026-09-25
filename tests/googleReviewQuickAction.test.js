@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/googleReviewQuickAction.test.js
-   Version: 1.0.3
+   Version: 1.0.4
    Status: Regression Test
    Purpose:
    Lock routine Google Business Profile reviews to the compact reply/count flow.
@@ -40,10 +40,10 @@ assert.doesNotMatch(route,/INSERT INTO investigations/i);
 assert.doesNotMatch(route,/INSERT INTO work_items/i);
 assert.doesNotMatch(route,/INSERT INTO activity_records/i);
 
-assert.match(ui,/Version: 2\.2\.2/);
+assert.match(ui,/Version: 2\.4\.0/);
 assert.match(ui,/left a review for/);
 assert.match(ui,/Quick Action/);
-assert.match(ui,/Reply Now/);
+assert.match(ui,/Open Review/);
 assert.match(ui,/Mark Responded &amp; Count Review/);
 assert.match(ui,/get_month_count/);
 assert.match(ui,/count_and_close/);
@@ -54,4 +54,4 @@ assert.match(ui,/review\.rating === 0 \|\| review\.rating >= 4/);
 assert.match(ui,/Use Full Review/);
 assert.match(ui,/forceStandard:true/);
 
-console.log("PASS Google review quick action: review notifications without a parseable rating still use reply/count; explicit low ratings remain full review");
+console.log("PASS Google review quick action: routine reviews use suggested response/open/count; explicit low ratings remain full review");
