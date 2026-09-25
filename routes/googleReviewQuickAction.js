@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/googleReviewQuickAction.js
-   Version: 1.0.0
+   Version: 1.0.1
    Status: Production Road-Test Candidate
    Sprint: Google Review Quick Action
    Purpose:
@@ -16,7 +16,7 @@ import { ACTIONS, VERSION } from "../shared/config.js";
 import { getDatabase } from "../shared/database.js";
 import { jsonResponse, logWorkerError, safeErrorMessage } from "../shared/http.js";
 
-export const GOOGLE_REVIEW_QUICK_ACTION_VERSION = "1.0.0";
+export const GOOGLE_REVIEW_QUICK_ACTION_VERSION = "1.0.1";
 
 const CLASSIFICATION_SOURCE = "google_review_quick_action";
 
@@ -316,12 +316,12 @@ async function getMonthlyCount(db, workspaceKey, clientId, reviewMonth) {
       AND client_id = ?
       AND processing_status = 'processed'
       AND classification_source = ?
-      AND substr(COALESCE(source_date, received_at), 1, 7) = ?
+      AND classification_json LIKE ?
   `).bind(
     workspaceKey,
     clientId,
     CLASSIFICATION_SOURCE,
-    reviewMonth
+    `%"reviewMonth":"${reviewMonth}"%`
   ).first();
 
   return Number(result?.count || 0);
