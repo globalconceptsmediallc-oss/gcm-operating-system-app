@@ -1,12 +1,16 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/config.js
-   Version: 7.14.0
+   Version: 7.15.0
    Status: Production Road-Test Candidate
-   Source: shared/config.js 7.13.0 production
+   Source: shared/config.js 7.14.0 production
    Sprint: Universal Email Intake — Human Disposition
    Purpose: Preserve all existing production constants and add the
             durable Prospect CRM action contract.
+
+   Change Notes in 7.15.0:
+   - Adds GOOGLE_REVIEW_QUICK_ACTION for routine Google Business Profile review notifications.
+   - Keeps routine reviews out of Findings, Communications, Investigations, Work, and Proof while preserving monthly review counts from durable intake evidence.
 
    Change Notes in 7.14.0:
    - Adds GET_CLIENT_FINDINGS as a lightweight read-only reporting route.
@@ -35,7 +39,7 @@
      Operating Session, and Calendar action unchanged.
    ========================================================= */
 
-export const VERSION = "7.14.0";
+export const VERSION = "7.15.0";
 export const API_CONTRACT_VERSION = "communications-operational-decision-v3";
 export const COMMUNICATION_ANALYSIS_ENGINE_VERSION = "3.4.1";
 
@@ -57,6 +61,7 @@ export const ACTIONS = Object.freeze({
   GET_EMAIL_INTAKE_QUEUE: "get-email-intake-queue",
   SAVE_EMAIL_INTAKE_FINDING: "save-email-intake-finding",
   ROUTE_EMAIL_INTAKE_DISPOSITION: "route-email-intake-disposition",
+  GOOGLE_REVIEW_QUICK_ACTION: "google-review-quick-action",
   GET_CLIENT_WORKSPACE: "get-client-workspace",
   GET_CLIENT_FINDINGS: "get-client-findings",
   GET_CLIENT_DIRECTORY: "get-client-directory",
