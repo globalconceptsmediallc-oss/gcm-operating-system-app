@@ -1,14 +1,22 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/today-email-intake.js
-   Version: 2.1.2
+   Version: 2.2.0
    Status: Production Road-Test Candidate
-   Sprint: Signal Review — Decision-Last Routing
+   Sprint: Google Review Quick Action
    Purpose:
    Keep Today lightweight. Incoming email is a signal title only until Andy
    chooses Ready for Review. Client and reporting period are inferred from
    source metadata when the evidence supports them. The operator must explicitly
    choose the durable route before the reviewed finding can be saved to D1.
+
+   Changes — 2.2.0:
+   - Detects routine positive Google Business Profile review notifications.
+   - Replaces the full analysis form with a compact Reply Now + Mark Responded & Count Review workflow.
+   - Shows the client's recorded review count for the source month.
+   - Routine review completion creates no Finding, Communication, Investigation,
+     Work Item, or Proof row; the durable email_intake source remains evidence.
+   - Keeps a Use Full Review escape hatch for reviews that need operational judgment.
 
    Changes — 2.1.2:
    - Moves Decision / Route below Decision / next action so routing is the final human choice.
@@ -55,13 +63,14 @@
 (() => {
   "use strict";
 
-  const FILE_VERSION = "2.1.2";
+  const FILE_VERSION = "2.2.0";
   const WORKER_URL =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const QUEUE_ACTION = "get-email-intake-queue";
   const SAVE_FINDING_ACTION = "save-email-intake-finding";
   const DISPOSITION_ACTION = "route-email-intake-disposition";
   const CLIENT_DIRECTORY_ACTION = "get-client-directory";
+  const GOOGLE_REVIEW_ACTION = "google-review-quick-action";
   const MAX_VISIBLE_EMAILS = 25;
 
   let previewButton = null;
@@ -110,6 +119,16 @@
       .gcm-review-no-action{min-height:38px;padding:0 13px;border:1px solid #e5bcbc;border-radius:9px;background:#fff7f7;color:#9d3030;font-weight:850;cursor:pointer}
       .gcm-review-no-action[data-confirm-armed="true"]{background:#ffe8e8;border-color:#d78484;color:#7f2020}
       .gcm-review-status{color:var(--text-muted,#637083);font-size:.72rem;font-weight:750}
+      .gcm-review-quick{display:grid;gap:14px}
+      .gcm-review-quick-summary{display:grid;grid-template-columns:minmax(220px,1fr) minmax(180px,.65fr);gap:12px}
+      .gcm-review-quick-card{border:1px solid var(--border,#dbe2ec);border-radius:11px;background:#fff;padding:14px}
+      .gcm-review-quick-kicker{margin:0 0 5px;color:var(--text-soft,#8290a3);font-size:.64rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em}
+      .gcm-review-quick-value{margin:0;color:var(--gcm-navy-950,#071426);font-size:1rem;font-weight:900;line-height:1.35}
+      .gcm-review-count{font-size:1.55rem}
+      .gcm-review-quick-note{margin:5px 0 0;color:var(--text-muted,#637083);font-size:.72rem;line-height:1.45}
+      .gcm-review-reply{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 14px;border-radius:9px;background:var(--gcm-blue-600,#1f68d8);color:#fff;text-decoration:none;font-weight:900}
+      .gcm-review-count-button{min-height:38px;padding:0 14px;border:0;border-radius:9px;background:#0b7a46;color:#fff;font-weight:900;cursor:pointer}
+      .gcm-review-full-button{min-height:38px;padding:0 13px;border:1px solid var(--border,#dbe2ec);border-radius:9px;background:#fff;color:var(--gcm-navy-900,#0b1d33);font-weight:850;cursor:pointer}
       .gcm-intake-empty{padding:18px;border:1px dashed var(--border,#dbe2ec);border-radius:12px;background:#fbfcfe;color:var(--text-muted,#637083);font-size:.8rem;text-align:center}
       @media(max-width:760px){.gcm-signal-row{align-items:flex-start}.gcm-review-grid{grid-template-columns:1fr}}
     `;
@@ -242,7 +261,210 @@
     ].join("");
   }
 
-  function renderRecord(record) {
+  function parseGoogleReview(record) {
+    const subject = String(record?.subject || "");
+    const body = String(record?.bodyText || "");
+    const subjectMatch = subject.match(/^(.+?)\s+left a review for\s+(.+)$/i);
+
+    if (!subjectMatch) return null;
+
+    const ratingMatch = body.match(/new\s+([1-5])-star review/i);
+    const rating = Number(ratingMatch?.[1] || 0);
+    const replyMatch =
+      body.match(/\[Reply to review\]\((https?:\/\/[^)\s]+)\)/i) ||
+      body.match(/(https?:\/\/business\.google\.com\/[^\s)]+)/i);
+
+    const dateValue = String(record?.sourceDate || record?.receivedAt || "");
+    const dateMatch = dateValue.match(/^(\d{4})-(\d{2})/);
+    const reviewMonth = dateMatch ? `${dateMatch[1]}-${dateMatch[2]}` : "";
+    const reviewMonthLabel = reviewMonth
+      ? new Intl.DateTimeFormat("en-US",{month:"long",year:"numeric",timeZone:"UTC"})
+          .format(new Date(`${reviewMonth}-01T00:00:00Z`))
+      : "Review month";
+
+    return {
+      reviewer:subjectMatch[1].trim(),
+      business:subjectMatch[2].trim(),
+      rating,
+      replyUrl:replyMatch?.[1] || "",
+      reviewMonth,
+      reviewMonthLabel
+    };
+  }
+
+  function renderGoogleReviewRecord(record, review) {
+    const article = document.createElement("article");
+    article.className = "gcm-signal-card";
+    article.dataset.intakeId = String(record?.id || "");
+
+    const inferredClientId = inferClientId(record);
+    const stars = review.rating > 0 ? "★".repeat(review.rating) : "Google review";
+
+    article.innerHTML = `
+      <div class="gcm-signal-row">
+        <h3 class="gcm-signal-title">${escapeHtml(record?.subject || "(No subject)")}</h3>
+        <button class="gcm-signal-review-button" type="button" data-gcm-ready-review>
+          Quick Action
+        </button>
+      </div>
+      <div class="gcm-review-panel" data-gcm-review-panel hidden>
+        <div class="gcm-review-context">
+          <span>Google Business Profile review</span>
+          <span>·</span>
+          <span>${escapeHtml(formatReceivedAt(record?.receivedAt))}</span>
+        </div>
+
+        <div class="gcm-review-quick">
+          <label class="gcm-review-field">
+            <span class="gcm-review-label">Client</span>
+            <select class="gcm-review-select" data-gcm-review-client>
+              ${buildClientOptions(inferredClientId)}
+            </select>
+          </label>
+
+          <div class="gcm-review-quick-summary">
+            <div class="gcm-review-quick-card">
+              <p class="gcm-review-quick-kicker">New review</p>
+              <p class="gcm-review-quick-value">${escapeHtml(stars)} · ${escapeHtml(review.reviewer)}</p>
+              <p class="gcm-review-quick-note">${escapeHtml(review.business)} · ${escapeHtml(review.reviewMonthLabel)}</p>
+            </div>
+            <div class="gcm-review-quick-card">
+              <p class="gcm-review-quick-kicker">${escapeHtml(review.reviewMonthLabel)} reviews recorded</p>
+              <p class="gcm-review-quick-value gcm-review-count" data-gcm-review-month-count>—</p>
+              <p class="gcm-review-quick-note">Only the monthly count is preserved as the business metric.</p>
+            </div>
+          </div>
+
+          <div class="gcm-review-actions">
+            ${review.replyUrl
+              ? `<a class="gcm-review-reply" href="${escapeHtml(review.replyUrl)}" target="_blank" rel="noopener">Reply Now</a>`
+              : ""}
+            <button class="gcm-review-count-button" type="button" data-gcm-count-review>
+              Mark Responded &amp; Count Review
+            </button>
+            <button class="gcm-review-full-button" type="button" data-gcm-full-review>
+              Use Full Review
+            </button>
+            <span class="gcm-review-status" data-gcm-review-status>
+              Reply to the customer, then count the review. No Finding, Communication, Investigation, Work Item, or Proof record will be created.
+            </span>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const ready = article.querySelector("[data-gcm-ready-review]");
+    const panel = article.querySelector("[data-gcm-review-panel]");
+    const countButton = article.querySelector("[data-gcm-count-review]");
+    const fullReview = article.querySelector("[data-gcm-full-review]");
+
+    ready?.addEventListener("click", async () => {
+      panel.hidden = false;
+      ready.hidden = true;
+      setStatus("Routine Google review: reply now, then count it for the client month.");
+      article.querySelector("[data-gcm-review-client]")?.focus();
+      await loadGoogleReviewMonthCount(article, review);
+    });
+
+    article.querySelector("[data-gcm-review-client]")?.addEventListener("change", () => {
+      loadGoogleReviewMonthCount(article, review);
+    });
+
+    countButton?.addEventListener("click", () => countGoogleReview(article, countButton, review));
+
+    fullReview?.addEventListener("click", () => {
+      const replacement = renderRecord(record,{forceStandard:true});
+      article.replaceWith(replacement);
+      replacement.querySelector("[data-gcm-ready-review]")?.click();
+    });
+
+    return article;
+  }
+
+  async function loadGoogleReviewMonthCount(card, review) {
+    const clientId = Number(card.querySelector("[data-gcm-review-client]")?.value);
+    const count = card.querySelector("[data-gcm-review-month-count]");
+    const status = card.querySelector("[data-gcm-review-status]");
+
+    if (!Number.isInteger(clientId) || clientId <= 0 || !review.reviewMonth) {
+      if (count) count.textContent = "—";
+      return;
+    }
+
+    try {
+      const result = await post(GOOGLE_REVIEW_ACTION,{
+        operation:"get_month_count",
+        workspaceKey:"gcm",
+        clientId,
+        reviewMonth:review.reviewMonth
+      });
+      if (count) count.textContent = String(Number(result?.monthlyCount || 0));
+    } catch (error) {
+      if (count) count.textContent = "—";
+      if (status) status.textContent = `Could not load the monthly review count: ${error.message}`;
+    }
+  }
+
+  async function countGoogleReview(card, button, review) {
+    if (busy || !card || !button) return;
+
+    const intakeId = Number(card.dataset.intakeId);
+    const clientId = Number(card.querySelector("[data-gcm-review-client]")?.value);
+    const status = card.querySelector("[data-gcm-review-status]");
+
+    if (!Number.isInteger(clientId) || clientId <= 0) {
+      if (status) status.textContent = "Choose the client before counting the review.";
+      card.querySelector("[data-gcm-review-client]")?.focus();
+      return;
+    }
+
+    busy = true;
+    button.disabled = true;
+    button.textContent = "Counting…";
+    if (status) status.textContent = "Closing the review intake and updating the monthly review count.";
+
+    try {
+      const result = await post(GOOGLE_REVIEW_ACTION,{
+        operation:"count_and_close",
+        workspaceKey:"gcm",
+        intakeId,
+        clientId,
+        reviewMonth:review.reviewMonth
+      });
+
+      if (
+        result?.evidenceRetained !== true ||
+        result?.findingCreated !== false ||
+        result?.communicationCreated !== false ||
+        result?.activityRecordCreated !== false ||
+        result?.investigationCreated !== false ||
+        result?.workItemCreated !== false
+      ) {
+        throw new Error("Google review quick-action safety check failed.");
+      }
+
+      busy = false;
+      const monthLabel = review.reviewMonthLabel || result?.reviewMonth || "this month";
+      const successMessage =
+        `${result?.clientName || "Client"} — ${monthLabel} reviews recorded: ${Number(result?.monthlyCount || 0)}. Review counted and intake closed.`;
+
+      await refreshQueue({preserveStatus:true});
+      setStatus(successMessage);
+    } catch (error) {
+      busy = false;
+      button.disabled = false;
+      button.textContent = "Mark Responded & Count Review";
+      if (status) status.textContent = `Review quick action failed: ${error.message}`;
+      setStatus(`Review quick action failed: ${error.message}`);
+    }
+  }
+
+  function renderRecord(record, options = {}) {
+    const googleReview = parseGoogleReview(record);
+    if (googleReview && !options.forceStandard && googleReview.rating >= 4) {
+      return renderGoogleReviewRecord(record, googleReview);
+    }
+
     const article = document.createElement("article");
     article.className = "gcm-signal-card";
     article.dataset.intakeId = String(record?.id || "");
