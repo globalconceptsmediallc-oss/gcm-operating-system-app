@@ -1,13 +1,17 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.5.32
+   Version: 3.5.33
    Status: Production Candidate
-   Source: Production today.html 3.5.31
+   Source: Production today.html 3.5.32
    Sprint: Today / Morning Command — Universal Email Intake No-Action Routing
    Purpose: Preserve the locked Today layout, Gmail approvals, Mission Control,
             Media logic, and operating workflow while keeping Mission Control's
             durable D1 ranking authoritative across both decision and queue views.
+
+   Production changes in 3.5.33:
+   - Fixes the visible Today version label that was still hard-coded to v3.5.28.
+   - Uses one TODAY_VERSION constant for the shell status and console message so the displayed version cannot silently lag the file header.
 
    Production changes in 3.5.32:
    - Successful Save & Route now clears that exact processed source email from Gmail Inbox immediately.
@@ -3177,12 +3181,13 @@
         renderDashboard(data);
       });
 
+      const TODAY_VERSION = "3.5.33";
       if (!window.GCMOShell) {
-        console.error("Today 3.5.28: shared/gcm-shell.js did not load.");
+        console.error(`Today ${TODAY_VERSION}: shared/gcm-shell.js did not load.`);
       } else {
         window.GCMOShell.mount({
           currentPage: "today",
-          statusText: "Agency Command Center operational · Today v3.5.28"
+          statusText: `Agency Command Center operational · Today v${TODAY_VERSION}`
         });
       }
 
