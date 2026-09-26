@@ -1,14 +1,18 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.34.1
+   Version: 7.35.0
    Status: OS 2.0 Production Road-Test Candidate
-   Source: Production worker.js 7.34.0
+   Source: Production worker.js 7.34.1
    Sprint: Universal Email Intake — Human Disposition
    Purpose: Preserve every verified production route while exposing the
             durable Prospecting Radar + CRM operations required to connect
             scheduled prospects, discovery, proposals, follow-up, agreements,
             payments, and eventual Client handoff.
+
+   Changes in 7.35.0:
+   - Moves Gmail↔D1 reconciliation to paged scan + verified trash batches so Worker subrequest limits are not exceeded.
+   - Keeps the same D1-authoritative processed-message safety boundary.
 
    Changes in 7.34.1:
    - Fixes Gmail Intake Sync D1 staging after live test exposed a 25-values-for-24-columns INSERT error.
@@ -256,7 +260,7 @@ import {
   GMAIL_INTAKE_SYNC_VERSION
 } from "./routes/gmailIntakeSync.js";
 
-const WORKER_FILE_VERSION = "7.34.1";
+const WORKER_FILE_VERSION = "7.35.0";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
