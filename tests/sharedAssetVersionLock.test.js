@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/sharedAssetVersionLock.test.js
-   Version: 1.2.0
+   Version: 1.3.0
    Status: Regression Test
    Purpose: Prevent shared shell enhancement loaders from silently requesting
             an older cached asset than the version declared by that asset and
@@ -18,6 +18,7 @@ import assert from "node:assert/strict";
 
 const shell = fs.readFileSync(new URL("../shared/gcm-shell.js", import.meta.url), "utf8");
 const intake = fs.readFileSync(new URL("../shared/today-email-intake.js", import.meta.url), "utf8");
+const today = fs.readFileSync(new URL("../today.html", import.meta.url), "utf8");
 
 const intakeVersion = intake.match(/const FILE_VERSION = "([^"]+)";/)?.[1];
 assert.ok(intakeVersion, "today-email-intake.js must declare FILE_VERSION");
