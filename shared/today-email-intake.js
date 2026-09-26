@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/today-email-intake.js
-   Version: 2.5.0
+   Version: 2.6.0
    Status: Production Road-Test Candidate
    Sprint: Google Review Quick Action
    Purpose:
@@ -9,6 +9,12 @@
    chooses Ready for Review. Client and reporting period are inferred from
    source metadata when the evidence supports them. The operator must explicitly
    choose the durable route before the reviewed finding can be saved to D1.
+
+   Changes — 2.6.0:
+   - Save & Route now immediately asks the Worker to clear that exact finalized source message from Gmail Inbox.
+   - Google Review Count & Close uses the same exact-intake cleanup path.
+   - Gmail cleanup failure does not roll back a successful D1 save; the operator gets a clear pending-cleanup status.
+   - Reporting Period now falls back to the source email date when the historical intake body does not contain a readable month/year.
 
    Changes — 2.5.0:
    - Refresh Inbox & Intake scans Gmail in small paged Worker calls so Cloudflare subrequest limits are not exceeded.
@@ -94,7 +100,7 @@
 (() => {
   "use strict";
 
-  const FILE_VERSION = "2.5.0";
+  const FILE_VERSION = "2.6.0";
   const WORKER_URL =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const QUEUE_ACTION = "get-email-intake-queue";
@@ -192,6 +198,34 @@
     }
 
     return payload;
+  }
+
+  async function cleanupProcessedIntake(intakeId) {
+    try {
+      return await post(SYNC_GMAIL_ACTION,{
+        operation:"trash_intake",
+        workspaceKey:"gcm",
+        intakeId
+      });
+    } catch (error) {
+      return {
+        ok:false,
+        cleanupError:String(error?.message || error || "Gmail cleanup failed.")
+      };
+    }
+  }
+
+  function gmailCleanupMessage(result) {
+    if (Number(result?.movedToTrash || 0) === 1) {
+      return " Gmail source moved to Trash.";
+    }
+    if (result?.verifiedProcessed === true && result?.wasInInbox === false) {
+      return " Gmail source was already out of Inbox.";
+    }
+    if (result?.cleanupError) {
+      return ` Gmail cleanup pending: ${result.cleanupError}`;
+    }
+    return "";
   }
 
   function formatReceivedAt(value) {
@@ -292,6 +326,13 @@
     if (monthOnly && !Number.isNaN(sourceDate.getTime())) {
       const reportMonth = `${monthOnly[1][0].toUpperCase()}${monthOnly[1].slice(1).toLowerCase()}`;
       return `${reportMonth} ${sourceDate.getFullYear()}`;
+    }
+
+    if (!Number.isNaN(sourceDate.getTime())) {
+      return sourceDate.toLocaleString("en-US",{
+        month:"long",
+        year:"numeric"
+      });
     }
 
     return "";
@@ -537,8 +578,9 @@
 
       busy = false;
       const monthLabel = review.reviewMonthLabel || result?.reviewMonth || "this month";
+      const gmailCleanup = await cleanupProcessedIntake(intakeId);
       const successMessage =
-        `${result?.clientName || "Client"} — ${monthLabel} reviews recorded: ${Number(result?.monthlyCount || 0)}. Review counted and intake closed.`;
+        `${result?.clientName || "Client"} — ${monthLabel} reviews recorded: ${Number(result?.monthlyCount || 0)}. Review counted and intake closed.${gmailCleanupMessage(gmailCleanup)}`;
 
       await refreshQueue({preserveStatus:true});
       setStatus(successMessage);
@@ -777,8 +819,9 @@
         result?.workItemId ? `Work Item #${result.workItemId}` : ""
       ].filter(Boolean).join(" + ");
 
+      const gmailCleanup = await cleanupProcessedIntake(intakeId);
       const successMessage =
-        `Finding #${result.findingId} saved as ${routeLabel}.${linked ? ` ${linked} linked.` : ""} Source email remains evidence.`;
+        `Finding #${result.findingId} saved as ${routeLabel}.${linked ? ` ${linked} linked.` : ""} Source email remains evidence.${gmailCleanupMessage(gmailCleanup)}`;
 
       await refreshQueue({preserveStatus:true});
       setStatus(successMessage);
