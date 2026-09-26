@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailIntakeSync.js
-   Version: 1.1.0
+   Version: 1.2.0
    Status: Production Road-Test Candidate
    Sprint: Gmail ↔ Universal Intake Reconciliation
    Purpose:
@@ -9,6 +9,11 @@
    email_intake records without exceeding the Cloudflare Worker subrequest
    limit. Browser orchestration scans Gmail in small pages, stages new mail,
    then trashes only D1-confirmed processed messages in separate safe batches.
+
+   Changes — 1.2.0:
+   - Adds trash_intake for immediate post-save Gmail cleanup using the exact D1 intake row.
+   - Re-verifies processing_status + disposition in D1 before any Gmail mutation.
+   - Checks the live Gmail labels first and moves the message to Trash only when it is still in INBOX.
 
    Changes — 1.1.0:
    - Replaces one 200-message Worker invocation with paged scan_page calls.
@@ -30,7 +35,7 @@ import {
   loadLiveGmailMessageWithAccessToken
 } from "./gmailDispositions.js";
 
-export const GMAIL_INTAKE_SYNC_VERSION = "1.1.0";
+export const GMAIL_INTAKE_SYNC_VERSION = "1.2.0";
 const GMAIL_API = "https://gmail.googleapis.com/gmail/v1";
 const DEFAULT_SCAN_LIMIT = 20;
 const MAX_SCAN_LIMIT = 20;
@@ -57,6 +62,10 @@ export async function handleGmailIntakeSync(body, env, requestId) {
 
     if (operation === "trash_batch") {
       return await trashBatch(body, env, db, requestId);
+    }
+
+    if (operation === "trash_intake") {
+      return await trashIntake(body, env, db, requestId);
     }
 
     return jsonResponse({
@@ -266,6 +275,116 @@ async function trashBatch(body, env, db, requestId) {
     verifiedProcessed:verified.length,
     movedToTrash:movedMessageIds.length,
     movedMessageIds
+  });
+}
+
+async function trashIntake(body, env, db, requestId) {
+  const workspaceKey = clean(body?.workspaceKey) || "gcm";
+  const intakeId = Number(body?.intakeId);
+
+  if (!Number.isInteger(intakeId) || intakeId <= 0) {
+    return jsonResponse({
+      ok:false,
+      requestId,
+      action:"sync-gmail-intake",
+      operation:"trash_intake",
+      gmailIntakeSyncVersion:GMAIL_INTAKE_SYNC_VERSION,
+      error:"A valid intakeId is required."
+    },400);
+  }
+
+  const intake = await db.prepare(`
+    SELECT
+      id,
+      provider_message_id,
+      processing_status,
+      disposition
+    FROM email_intake
+    WHERE id=?
+      AND workspace_key=?
+    LIMIT 1
+  `).bind(intakeId,workspaceKey).first();
+
+  if (!intake) {
+    return jsonResponse({
+      ok:false,
+      requestId,
+      action:"sync-gmail-intake",
+      operation:"trash_intake",
+      gmailIntakeSyncVersion:GMAIL_INTAKE_SYNC_VERSION,
+      error:`Email intake record #${intakeId} was not found.`
+    },404);
+  }
+
+  const processed =
+    clean(intake?.processing_status).toLowerCase() === "processed" &&
+    Boolean(clean(intake?.disposition));
+
+  if (!processed) {
+    return jsonResponse({
+      ok:false,
+      requestId,
+      action:"sync-gmail-intake",
+      operation:"trash_intake",
+      gmailIntakeSyncVersion:GMAIL_INTAKE_SYNC_VERSION,
+      error:`Email intake record #${intakeId} is not finalized in D1.`
+    },409);
+  }
+
+  const gmailMessageId = clean(intake?.provider_message_id);
+  if (!gmailMessageId) {
+    return jsonResponse({
+      ok:true,
+      requestId,
+      action:"sync-gmail-intake",
+      operation:"trash_intake",
+      gmailIntakeSyncVersion:GMAIL_INTAKE_SYNC_VERSION,
+      intakeId,
+      verifiedProcessed:true,
+      gmailMessageId:null,
+      wasInInbox:false,
+      movedToTrash:0,
+      reason:"No Gmail provider message ID is stored on this intake."
+    });
+  }
+
+  const accessToken = await liveGmailAccessToken(env);
+  const metadata = await gmailFetch(
+    `${GMAIL_API}/users/me/messages/${encodeURIComponent(gmailMessageId)}?format=minimal`,
+    accessToken
+  );
+  const labels = Array.isArray(metadata?.labelIds) ? metadata.labelIds : [];
+  const wasInInbox = labels.includes("INBOX");
+
+  if (!wasInInbox) {
+    return jsonResponse({
+      ok:true,
+      requestId,
+      action:"sync-gmail-intake",
+      operation:"trash_intake",
+      gmailIntakeSyncVersion:GMAIL_INTAKE_SYNC_VERSION,
+      intakeId,
+      verifiedProcessed:true,
+      gmailMessageId,
+      wasInInbox:false,
+      movedToTrash:0,
+      reason:"The Gmail message is already out of Inbox."
+    });
+  }
+
+  await trashGmailMessage(gmailMessageId, accessToken);
+
+  return jsonResponse({
+    ok:true,
+    requestId,
+    action:"sync-gmail-intake",
+    operation:"trash_intake",
+    gmailIntakeSyncVersion:GMAIL_INTAKE_SYNC_VERSION,
+    intakeId,
+    verifiedProcessed:true,
+    gmailMessageId,
+    wasInInbox:true,
+    movedToTrash:1
   });
 }
 
