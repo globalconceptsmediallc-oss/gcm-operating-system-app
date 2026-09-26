@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/gmailIntakeSync.test.js
-   Version: 1.2.0
+   Version: 1.2.1
    Status: Regression Test
    Purpose:
    Lock live Gmail Inbox ↔ Universal Intake reconciliation.
@@ -30,7 +30,7 @@ assert.match(route,/trashGmailMessage/);
 assert.match(route,/internetMessageId/);
 assert.doesNotMatch(route,/\?,NULL,\'gmail_live_sync\',\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,/);
 
-assert.match(ui,/Version: 2\.6\.0/);
+assert.match(ui,/Version: 2\.6\.1/);
 assert.match(ui,/sync-gmail-intake/);
 assert.match(route,/operation === "scan_page"/);
 assert.match(route,/operation === "trash_batch"/);
@@ -56,5 +56,6 @@ assert.match(ui,/cleanupProcessedIntake/);
 assert.match(ui,/operation:"trash_intake"/);
 assert.match(ui,/Gmail source moved to Trash/);
 assert.match(ui,/month:"long"/);
+assert.doesNotMatch(ui,/monthOnlyPattern/);
 
 console.log("PASS Gmail Intake: paged refresh, exact post-save Trash cleanup, client prefill, and reporting-period fallback");
