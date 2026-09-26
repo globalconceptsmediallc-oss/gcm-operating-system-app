@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/today-email-intake.js
-   Version: 2.6.0
+   Version: 2.6.1
    Status: Production Road-Test Candidate
    Sprint: Google Review Quick Action
    Purpose:
@@ -9,6 +9,10 @@
    chooses Ready for Review. Client and reporting period are inferred from
    source metadata when the evidence supports them. The operator must explicitly
    choose the durable route before the reviewed finding can be saved to D1.
+
+   Changes — 2.6.1:
+   - Fixes Reporting Period false positives where ordinary prose such as “may negatively affect” was interpreted as the month May.
+   - Uses explicit month/year evidence first, then falls back to the source email date.
 
    Changes — 2.6.0:
    - Save & Route now immediately asks the Worker to clear that exact finalized source message from Gmail Inbox.
@@ -100,7 +104,7 @@
 (() => {
   "use strict";
 
-  const FILE_VERSION = "2.6.0";
+  const FILE_VERSION = "2.6.1";
   const WORKER_URL =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const QUEUE_ACTION = "get-email-intake-queue";
@@ -320,14 +324,7 @@
       return `${bodyMonth[1][0].toUpperCase()}${bodyMonth[1].slice(1).toLowerCase()} ${bodyMonth[2]}`;
     }
 
-    const monthOnlyPattern = /(January|February|March|April|May|June|July|August|September|October|November|December)/i;
-    const monthOnly = subject.match(monthOnlyPattern) || body.match(monthOnlyPattern);
     const sourceDate = new Date(record?.sourceDate || record?.receivedAt || "");
-    if (monthOnly && !Number.isNaN(sourceDate.getTime())) {
-      const reportMonth = `${monthOnly[1][0].toUpperCase()}${monthOnly[1].slice(1).toLowerCase()}`;
-      return `${reportMonth} ${sourceDate.getFullYear()}`;
-    }
-
     if (!Number.isNaN(sourceDate.getTime())) {
       return sourceDate.toLocaleString("en-US",{
         month:"long",
