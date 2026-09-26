@@ -1,15 +1,15 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.74",
+  "version": "6.1.75",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.74",
+    "fileVersion": "6.1.75",
     "status": "Production Road-Test Candidate",
-    "purpose": "Repair Gmail Inbox ↔ D1 reconciliation after live test exposed an intake INSERT mismatch.",
+    "purpose": "Page Gmail↔D1 reconciliation under Worker subrequest limits and restore automatic client prefills.",
     "changeNotes": [
-      "Fixes the gmail_live_sync INSERT to provide exactly 24 values for the 24 email_intake columns.",
-      "Keeps D1 Signal Review available when Gmail sync fails.",
-      "Shows Reconnect Gmail only for actual authorization failures; D1/SQL failures are labeled as sync errors."
+      "Scans Gmail in 20-message pages so each Worker invocation stays under the external subrequest ceiling.",
+      "Collects D1-confirmed processed mail during scan and trashes it only in separately re-verified batches.",
+      "Prefills clients from compact names and website roots used by automated alert subjects."
     ]
   },
   "private": true,
