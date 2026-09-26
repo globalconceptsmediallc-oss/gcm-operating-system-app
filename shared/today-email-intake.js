@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/today-email-intake.js
-   Version: 2.4.2
+   Version: 2.5.0
    Status: Production Road-Test Candidate
    Sprint: Google Review Quick Action
    Purpose:
@@ -9,6 +9,11 @@
    chooses Ready for Review. Client and reporting period are inferred from
    source metadata when the evidence supports them. The operator must explicitly
    choose the durable route before the reviewed finding can be saved to D1.
+
+   Changes — 2.5.0:
+   - Refresh Inbox & Intake scans Gmail in small paged Worker calls so Cloudflare subrequest limits are not exceeded.
+   - Processed Gmail messages are collected during scan, then trashed in separately verified batches.
+   - Improves client prefill by matching compact client names and website roots such as A1actionsafeandlock, Northfloridasafes, Hbguns, and Sesafes.
 
    Changes — 2.4.2:
    - Distinguishes Gmail authorization failures from D1 reconciliation failures.
@@ -89,7 +94,7 @@
 (() => {
   "use strict";
 
-  const FILE_VERSION = "2.4.2";
+  const FILE_VERSION = "2.5.0";
   const WORKER_URL =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const QUEUE_ACTION = "get-email-intake-queue";
@@ -231,6 +236,23 @@
     for (const client of clientDirectory) {
       const name = String(client?.name || "").trim().toLowerCase();
       if (name && name.length >= 4 && haystack.includes(name)) return Number(client.id);
+    }
+
+    const compactHaystack = haystack.replace(/[^a-z0-9]/g,"");
+    for (const client of clientDirectory) {
+      const compactName = String(client?.name || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g,"");
+      const hostRoot = normalizeHost(client?.website)
+        .split(".")[0]
+        .replace(/[^a-z0-9]/g,"");
+
+      if (compactName.length >= 5 && compactHaystack.includes(compactName)) {
+        return Number(client.id);
+      }
+      if (hostRoot.length >= 5 && compactHaystack.includes(hostRoot)) {
+        return Number(client.id);
+      }
     }
 
     return null;
@@ -882,12 +904,61 @@
       gmailSyncWarning = "";
       gmailReconnectRequired = false;
 
+      let pageToken = "";
+      let pageCount = 0;
+      let totalStaged = 0;
+      let totalScanned = 0;
+      const processedByMessage = new Map();
+      let accountEmail = "";
+
       try {
-        sync = await post(SYNC_GMAIL_ACTION, {
-          workspaceKey:"gcm",
-          scanLimit:200,
-          trashProcessed:true
-        });
+        do {
+          sync = await post(SYNC_GMAIL_ACTION, {
+            operation:"scan_page",
+            workspaceKey:"gcm",
+            scanLimit:20,
+            pageToken
+          });
+
+          pageCount += 1;
+          totalStaged += Number(sync?.newlyStaged || 0);
+          totalScanned += Number(sync?.scannedInboxMessages || 0);
+          accountEmail = sync?.accountEmail || accountEmail;
+
+          for (const item of Array.isArray(sync?.processedItems) ? sync.processedItems : []) {
+            if (item?.gmailMessageId && Number(item?.intakeId) > 0) {
+              processedByMessage.set(item.gmailMessageId,{
+                gmailMessageId:item.gmailMessageId,
+                intakeId:Number(item.intakeId)
+              });
+            }
+          }
+
+          pageToken = String(sync?.nextPageToken || "");
+        } while (pageToken && pageCount < 10);
+
+        let movedToTrash = 0;
+        const processedItems = [...processedByMessage.values()];
+        for (let start = 0; start < processedItems.length; start += 20) {
+          const batch = processedItems.slice(start,start + 20);
+          const trashResult = await post(SYNC_GMAIL_ACTION, {
+            operation:"trash_batch",
+            workspaceKey:"gcm",
+            items:batch
+          });
+          movedToTrash += Number(trashResult?.movedToTrash || 0);
+        }
+
+        sync = {
+          ...(sync || {}),
+          newlyStaged:totalStaged,
+          movedToTrash,
+          scannedInboxMessages:totalScanned,
+          accountEmail,
+          scanPages:pageCount,
+          partialScan:Boolean(pageToken)
+        };
+
         hideReconnectButton();
       } catch (syncError) {
         gmailSyncWarning = String(syncError?.message || syncError || "Gmail sync failed.");
@@ -920,7 +991,10 @@
             const staged = Number(sync?.newlyStaged || 0);
             const cleared = Number(sync?.movedToTrash || 0);
             const account = sync?.accountEmail ? ` · ${sync.accountEmail}` : "";
-            setStatus(`Morning Command is clear · ${staged} new staged · ${cleared} processed cleared from Gmail${account}.`);
+            const scanNote = sync?.partialScan
+              ? ` · scanned first ${Number(sync?.scannedInboxMessages || 0)} inbox messages`
+              : "";
+            setStatus(`Morning Command is clear · ${staged} new staged · ${cleared} processed cleared from Gmail${account}${scanNote}.`);
           }
         }
       } else {
@@ -936,8 +1010,11 @@
             const staged = Number(sync?.newlyStaged || 0);
             const cleared = Number(sync?.movedToTrash || 0);
             const account = sync?.accountEmail ? ` · ${sync.accountEmail}` : "";
+            const scanNote = sync?.partialScan
+              ? ` · scanned first ${Number(sync?.scannedInboxMessages || 0)} inbox messages`
+              : "";
             setStatus(
-              `${total} signal${total === 1 ? "" : "s"} waiting · ${staged} new staged · ${cleared} processed cleared from Gmail${account}.`
+              `${total} signal${total === 1 ? "" : "s"} waiting · ${staged} new staged · ${cleared} processed cleared from Gmail${account}${scanNote}.`
             );
           }
         }
