@@ -1,15 +1,15 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.75",
+  "version": "6.1.76",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.75",
+    "fileVersion": "6.1.76",
     "status": "Production Road-Test Candidate",
-    "purpose": "Page Gmail↔D1 reconciliation under Worker subrequest limits and restore automatic client prefills.",
+    "purpose": "Clear the exact Gmail source immediately after a successful D1 processing decision.",
     "changeNotes": [
-      "Scans Gmail in 20-message pages so each Worker invocation stays under the external subrequest ceiling.",
-      "Collects D1-confirmed processed mail during scan and trashes it only in separately re-verified batches.",
-      "Prefills clients from compact names and website roots used by automated alert subjects."
+      "Save & Route now calls a D1-verified trash_intake operation for the exact source message.",
+      "The Worker checks live Gmail labels and only trashes a source that is still in Inbox.",
+      "Reporting Period falls back to the source email month and year for historical staged messages."
     ]
   },
   "private": true,
