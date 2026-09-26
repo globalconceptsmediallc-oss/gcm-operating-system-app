@@ -1,13 +1,17 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.5.31
+   Version: 3.5.32
    Status: Production Candidate
-   Source: Production today.html 3.5.30
+   Source: Production today.html 3.5.31
    Sprint: Today / Morning Command — Universal Email Intake No-Action Routing
    Purpose: Preserve the locked Today layout, Gmail approvals, Mission Control,
             Media logic, and operating workflow while keeping Mission Control's
             durable D1 ranking authoritative across both decision and queue views.
+
+   Production changes in 3.5.32:
+   - Successful Save & Route now clears that exact processed source email from Gmail Inbox immediately.
+   - Reporting Period falls back to the source email date when older staged records contain only summary text.
 
    Production changes in 3.5.31:
    - Gmail/D1 refresh now scans in small pages to stay under Worker subrequest limits.
@@ -1957,7 +1961,7 @@
 <div aria-hidden="true" hidden="" id="mission-control-state-values"><span id="prospect-count">0</span><span id="attention-count">0</span><span id="open-task-count">0</span><span id="proof-count">0</span><span id="media-pulse-count">0</span></div></div>
 </main>
 </div>
-<script src="shared/gcm-shell.js?v=2.0.61"></script>
+<script src="shared/gcm-shell.js?v=2.0.62"></script>
 <script>
     (() => {
       "use strict";
