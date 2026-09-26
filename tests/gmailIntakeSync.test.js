@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/gmailIntakeSync.test.js
-   Version: 1.1.0
+   Version: 1.2.0
    Status: Regression Test
    Purpose:
    Lock live Gmail Inbox ↔ Universal Intake reconciliation.
@@ -20,7 +20,7 @@ assert.match(worker,/handleGmailIntakeSync/);
 assert.match(worker,/gmailIntakeSyncVersion:\s*GMAIL_INTAKE_SYNC_VERSION/);
 assert.match(worker,/case ACTIONS\.SYNC_GMAIL_INTAKE:/);
 
-assert.match(route,/Version: 1\.1\.0/);
+assert.match(route,/Version: 1\.2\.0/);
 assert.match(route,/in:inbox -in:spam -in:trash/);
 assert.match(route,/INSERT OR IGNORE INTO email_intake/);
 assert.match(route,/gmail_live_sync/);
@@ -30,10 +30,14 @@ assert.match(route,/trashGmailMessage/);
 assert.match(route,/internetMessageId/);
 assert.doesNotMatch(route,/\?,NULL,\'gmail_live_sync\',\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,/);
 
-assert.match(ui,/Version: 2\.5\.0/);
+assert.match(ui,/Version: 2\.6\.0/);
 assert.match(ui,/sync-gmail-intake/);
 assert.match(route,/operation === "scan_page"/);
 assert.match(route,/operation === "trash_batch"/);
+assert.match(route,/operation === "trash_intake"/);
+assert.match(route,/format=minimal/);
+assert.match(route,/verifiedProcessed:true/);
+assert.match(route,/wasInInbox/);
 assert.match(route,/MAX_SCAN_LIMIT = 20/);
 assert.match(route,/processedItems/);
 assert.match(route,/nextPageToken/);
@@ -48,5 +52,9 @@ assert.match(ui,/Gmail sync error/);
 assert.match(ui,/isGmailAuthorizationError/);
 assert.match(ui,/compactHaystack/);
 assert.match(ui,/hostRoot/);
+assert.match(ui,/cleanupProcessedIntake/);
+assert.match(ui,/operation:"trash_intake"/);
+assert.match(ui,/Gmail source moved to Trash/);
+assert.match(ui,/month:"long"/);
 
-console.log("PASS Gmail Inbox ↔ Universal Intake reconciliation stays under Worker subrequest limits and prefills compact client identities");
+console.log("PASS Gmail Intake: paged refresh, exact post-save Trash cleanup, client prefill, and reporting-period fallback");
