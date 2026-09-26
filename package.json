@@ -1,15 +1,15 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.76",
+  "version": "6.1.77",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.76",
+    "fileVersion": "6.1.77",
     "status": "Production Road-Test Candidate",
-    "purpose": "Clear the exact Gmail source immediately after a successful D1 processing decision.",
+    "purpose": "Correct Reporting Period inference so ordinary prose cannot be mistaken for a month.",
     "changeNotes": [
-      "Save & Route now calls a D1-verified trash_intake operation for the exact source message.",
-      "The Worker checks live Gmail labels and only trashes a source that is still in Inbox.",
-      "Reporting Period falls back to the source email month and year for historical staged messages."
+      "Removes month-name scanning from arbitrary email prose.",
+      "Uses explicit reporting-period/date evidence first, then the source email month and year.",
+      "Prevents words such as “may” in robots.txt guidance from becoming May 2026."
     ]
   },
   "private": true,
