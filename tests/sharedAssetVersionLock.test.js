@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/sharedAssetVersionLock.test.js
-   Version: 1.3.0
+   Version: 1.3.1
    Status: Regression Test
    Purpose: Prevent shared shell enhancement loaders from silently requesting
             an older cached asset than the version declared by that asset and
