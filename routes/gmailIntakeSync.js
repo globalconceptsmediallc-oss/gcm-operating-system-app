@@ -1,18 +1,24 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailIntakeSync.js
-   Version: 1.0.1
+   Version: 1.1.0
    Status: Production Road-Test Candidate
    Sprint: Gmail ↔ Universal Intake Reconciliation
    Purpose:
    Reconcile the live Global Concepts Media Gmail Inbox against durable D1
-   email_intake records. New Inbox messages are staged into Universal Intake.
-   Gmail messages whose matching D1 intake record is already processed are
-   moved to Trash only after D1 confirms that processed state.
+   email_intake records without exceeding the Cloudflare Worker subrequest
+   limit. Browser orchestration scans Gmail in small pages, stages new mail,
+   then trashes only D1-confirmed processed messages in separate safe batches.
+
+   Changes — 1.1.0:
+   - Replaces one 200-message Worker invocation with paged scan_page calls.
+   - scan_page performs no Gmail deletes, keeping Gmail pagination stable.
+   - Returns exact gmailMessageId + intakeId pairs for D1-confirmed processed mail.
+   - trash_batch re-verifies processed D1 rows before moving Gmail messages to Trash.
+   - Keeps each Worker invocation below the external subrequest ceiling.
 
    Changes — 1.0.1:
    - Fixes the live Gmail staging INSERT to provide exactly 24 values for 24 columns.
-   - Removes the extra placeholder that caused D1_ERROR: 25 values for 24 columns.
    ========================================================= */
 
 import { getDatabase } from "../shared/database.js";
@@ -24,10 +30,11 @@ import {
   loadLiveGmailMessageWithAccessToken
 } from "./gmailDispositions.js";
 
-export const GMAIL_INTAKE_SYNC_VERSION = "1.0.1";
+export const GMAIL_INTAKE_SYNC_VERSION = "1.1.0";
 const GMAIL_API = "https://gmail.googleapis.com/gmail/v1";
-const DEFAULT_SCAN_LIMIT = 100;
-const MAX_SCAN_LIMIT = 200;
+const DEFAULT_SCAN_LIMIT = 20;
+const MAX_SCAN_LIMIT = 20;
+const MAX_TRASH_BATCH = 20;
 const MAX_BODY_CHARS = 120000;
 
 export async function handleGmailIntakeSync(body, env, requestId) {
@@ -41,51 +48,101 @@ export async function handleGmailIntakeSync(body, env, requestId) {
     },503);
   }
 
+  const operation = clean(body?.operation || "scan_page").toLowerCase();
+
+  try {
+    if (operation === "scan_page") {
+      return await scanPage(body, env, db, requestId);
+    }
+
+    if (operation === "trash_batch") {
+      return await trashBatch(body, env, db, requestId);
+    }
+
+    return jsonResponse({
+      ok:false,
+      requestId,
+      action:"sync-gmail-intake",
+      gmailIntakeSyncVersion:GMAIL_INTAKE_SYNC_VERSION,
+      error:"Unsupported Gmail Intake Sync operation."
+    },400);
+  } catch (error) {
+    logWorkerError({
+      requestId,
+      route:"sync-gmail-intake",
+      stage:operation || "gmail_d1_reconciliation",
+      error
+    });
+    return jsonResponse({
+      ok:false,
+      requestId,
+      action:"sync-gmail-intake",
+      gmailIntakeSyncVersion:GMAIL_INTAKE_SYNC_VERSION,
+      error:safeErrorMessage(error)
+    },500);
+  }
+}
+
+async function scanPage(body, env, db, requestId) {
   const workspaceKey = clean(body?.workspaceKey) || "gcm";
   const requestedLimit = Number(body?.scanLimit);
   const scanLimit = Number.isFinite(requestedLimit)
     ? Math.min(MAX_SCAN_LIMIT, Math.max(1, Math.trunc(requestedLimit)))
     : DEFAULT_SCAN_LIMIT;
-  const trashProcessed = body?.trashProcessed !== false;
+  const pageToken = clean(body?.pageToken);
 
-  try {
-    const accessToken = await liveGmailAccessToken(env);
-    const account = await db.prepare(`
-      SELECT account_email
-      FROM gmail_connections
-      ORDER BY updated_at DESC
-      LIMIT 1
-    `).first();
+  const accessToken = await liveGmailAccessToken(env);
+  const account = await db.prepare(`
+    SELECT account_email
+    FROM gmail_connections
+    ORDER BY updated_at DESC
+    LIMIT 1
+  `).first();
 
-    const listUrl = new URL(`${GMAIL_API}/users/me/messages`);
-    listUrl.searchParams.set("q","in:inbox -in:spam -in:trash");
-    listUrl.searchParams.set("maxResults",String(scanLimit));
+  const listUrl = new URL(`${GMAIL_API}/users/me/messages`);
+  listUrl.searchParams.set("q","in:inbox -in:spam -in:trash");
+  listUrl.searchParams.set("maxResults",String(scanLimit));
+  if (pageToken) listUrl.searchParams.set("pageToken",pageToken);
 
-    const list = await gmailFetch(listUrl.toString(), accessToken);
-    const refs = (Array.isArray(list?.messages) ? list.messages : [])
-      .map(item => ({
-        gmailMessageId:clean(item?.id),
-        threadId:clean(item?.threadId || item?.id)
-      }))
-      .filter(item => item.gmailMessageId);
+  const list = await gmailFetch(listUrl.toString(), accessToken);
+  const refs = (Array.isArray(list?.messages) ? list.messages : [])
+    .map(item => ({
+      gmailMessageId:clean(item?.id),
+      threadId:clean(item?.threadId || item?.id)
+    }))
+    .filter(item => item.gmailMessageId);
 
-    const messages = await mapWithConcurrency(
-      refs,
-      4,
-      item => loadLiveGmailMessageWithAccessToken(item.gmailMessageId, accessToken)
-    );
+  const direct = await loadDirectIntakeMatches(db, workspaceKey, refs.map(item => item.gmailMessageId));
+  const unresolvedRefs = refs.filter(item => !direct.has(item.gmailMessageId));
 
-    let inserted = 0;
-    let alreadyReady = 0;
-    let processedMatched = 0;
-    let movedToTrash = 0;
-    let retainedForReview = 0;
-    let unresolved = 0;
-    const movedSubjects = [];
-    const newlyStagedSubjects = [];
+  const loadedMessages = await mapWithConcurrency(
+    unresolvedRefs,
+    4,
+    item => loadLiveGmailMessageWithAccessToken(item.gmailMessageId, accessToken)
+  );
+  const loadedById = new Map(
+    loadedMessages
+      .filter(message => clean(message?.gmailMessageId))
+      .map(message => [clean(message.gmailMessageId),message])
+  );
 
-    for (const message of messages) {
-      let intake = await findExistingIntake(db, workspaceKey, message);
+  let inserted = 0;
+  let readyMatched = 0;
+  let unresolved = 0;
+  const processedItems = [];
+  const newlyStagedSubjects = [];
+
+  for (const ref of refs) {
+    let intake = direct.get(ref.gmailMessageId) || null;
+
+    if (!intake) {
+      const message = loadedById.get(ref.gmailMessageId);
+      if (!message) {
+        unresolved += 1;
+        continue;
+      }
+
+      intake = await findExistingIntake(db, workspaceKey, message);
 
       if (!intake) {
         const clientId = await resolveClientId(db, message);
@@ -96,80 +153,146 @@ export async function handleGmailIntakeSync(body, env, requestId) {
           accountEmail:clean(account?.account_email)
         });
         intake = await findExistingIntake(db, workspaceKey, message);
+
         if (intake) {
           inserted += 1;
           newlyStagedSubjects.push(clean(message?.subject) || "(No subject)");
         }
       }
-
-      if (!intake) {
-        unresolved += 1;
-        continue;
-      }
-
-      const status = clean(intake.processing_status).toLowerCase();
-      const disposition = clean(intake.disposition).toLowerCase();
-
-      if (status === "processed" && disposition) {
-        processedMatched += 1;
-        if (trashProcessed && Array.isArray(message?.labels) && message.labels.includes("INBOX")) {
-          await trashGmailMessage(message.gmailMessageId, accessToken);
-          movedToTrash += 1;
-          movedSubjects.push(clean(message?.subject) || "(No subject)");
-        }
-        continue;
-      }
-
-      if (status === "ready_for_review") {
-        if (clean(intake.provider_message_id) === clean(message?.gmailMessageId)) {
-          alreadyReady += 1;
-        }
-        retainedForReview += 1;
-        continue;
-      }
-
-      retainedForReview += 1;
     }
 
-    const countRow = await db.prepare(`
-      SELECT COUNT(*) AS count
-      FROM email_intake
-      WHERE workspace_key=?
-        AND processing_status='ready_for_review'
-    `).bind(workspaceKey).first();
+    if (!intake) {
+      unresolved += 1;
+      continue;
+    }
 
+    const status = clean(intake.processing_status).toLowerCase();
+    const disposition = clean(intake.disposition).toLowerCase();
+
+    if (status === "processed" && disposition) {
+      processedItems.push({
+        gmailMessageId:ref.gmailMessageId,
+        intakeId:Number(intake.id)
+      });
+      continue;
+    }
+
+    if (status === "ready_for_review") {
+      readyMatched += 1;
+    }
+  }
+
+  const countRow = await db.prepare(`
+    SELECT COUNT(*) AS count
+    FROM email_intake
+    WHERE workspace_key=?
+      AND processing_status='ready_for_review'
+  `).bind(workspaceKey).first();
+
+  return jsonResponse({
+    ok:true,
+    requestId,
+    action:"sync-gmail-intake",
+    operation:"scan_page",
+    gmailIntakeSyncVersion:GMAIL_INTAKE_SYNC_VERSION,
+    accountEmail:clean(account?.account_email) || null,
+    scannedInboxMessages:refs.length,
+    newlyStaged:inserted,
+    readyMatched,
+    processedMatched:processedItems.length,
+    unresolved,
+    readyForReview:Number(countRow?.count || 0),
+    processedItems,
+    newlyStagedSubjects:newlyStagedSubjects.slice(0,25),
+    nextPageToken:clean(list?.nextPageToken) || null
+  });
+}
+
+async function trashBatch(body, env, db, requestId) {
+  const rawItems = Array.isArray(body?.items) ? body.items : [];
+  const items = rawItems
+    .map(item => ({
+      gmailMessageId:clean(item?.gmailMessageId),
+      intakeId:Number(item?.intakeId)
+    }))
+    .filter(item => item.gmailMessageId && Number.isInteger(item.intakeId) && item.intakeId > 0)
+    .slice(0,MAX_TRASH_BATCH);
+
+  if (!items.length) {
     return jsonResponse({
       ok:true,
       requestId,
       action:"sync-gmail-intake",
+      operation:"trash_batch",
       gmailIntakeSyncVersion:GMAIL_INTAKE_SYNC_VERSION,
-      accountEmail:clean(account?.account_email) || null,
-      scannedInboxMessages:messages.length,
-      newlyStaged:inserted,
-      alreadyReady,
-      processedMatched,
-      movedToTrash,
-      retainedForReview,
-      unresolved,
-      readyForReview:Number(countRow?.count || 0),
-      movedSubjects:movedSubjects.slice(0,25),
-      newlyStagedSubjects:newlyStagedSubjects.slice(0,25),
-      trashProcessed
+      verifiedProcessed:0,
+      movedToTrash:0,
+      movedMessageIds:[]
     });
-  } catch (error) {
-    logWorkerError({
-      requestId,
-      route:"sync-gmail-intake",
-      stage:"gmail_d1_reconciliation",
-      error
-    });
-    return jsonResponse({
-      ok:false,
-      requestId,
-      action:"sync-gmail-intake",
-      error:safeErrorMessage(error)
-    },500);
   }
+
+  const ids = [...new Set(items.map(item => item.intakeId))];
+  const placeholders = ids.map(() => "?").join(",");
+  const rows = await db.prepare(`
+    SELECT id,processing_status,disposition
+    FROM email_intake
+    WHERE id IN (${placeholders})
+  `).bind(...ids).all();
+
+  const processedIds = new Set(
+    (rows?.results || [])
+      .filter(row =>
+        clean(row?.processing_status).toLowerCase() === "processed" &&
+        Boolean(clean(row?.disposition))
+      )
+      .map(row => Number(row.id))
+  );
+
+  const verified = items.filter(item => processedIds.has(item.intakeId));
+  const accessToken = await liveGmailAccessToken(env);
+  const movedMessageIds = [];
+
+  for (const item of verified) {
+    await trashGmailMessage(item.gmailMessageId, accessToken);
+    movedMessageIds.push(item.gmailMessageId);
+  }
+
+  return jsonResponse({
+    ok:true,
+    requestId,
+    action:"sync-gmail-intake",
+    operation:"trash_batch",
+    gmailIntakeSyncVersion:GMAIL_INTAKE_SYNC_VERSION,
+    verifiedProcessed:verified.length,
+    movedToTrash:movedMessageIds.length,
+    movedMessageIds
+  });
+}
+
+async function loadDirectIntakeMatches(db, workspaceKey, gmailMessageIds) {
+  const ids = [...new Set(gmailMessageIds.map(clean).filter(Boolean))];
+  const map = new Map();
+  if (!ids.length) return map;
+
+  const placeholders = ids.map(() => "?").join(",");
+  const rows = await db.prepare(`
+    SELECT
+      id,
+      provider_message_id,
+      processing_status,
+      disposition,
+      processed_at
+    FROM email_intake
+    WHERE workspace_key=?
+      AND provider_message_id IN (${placeholders})
+    ORDER BY id DESC
+  `).bind(workspaceKey,...ids).all();
+
+  for (const row of rows?.results || []) {
+    const gmailMessageId = clean(row?.provider_message_id);
+    if (gmailMessageId && !map.has(gmailMessageId)) map.set(gmailMessageId,row);
+  }
+  return map;
 }
 
 async function findExistingIntake(db, workspaceKey, message) {
