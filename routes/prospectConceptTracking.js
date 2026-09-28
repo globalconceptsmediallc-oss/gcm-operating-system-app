@@ -1,10 +1,14 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/prospectConceptTracking.js
-   Version: 1.0.7
+   Version: 1.0.8
    Status: Production Road-Test Candidate
    Purpose: Record privacy-minimized engagement when a personalized
             GCM prospect concept page is viewed.
+
+   Change Notes — 1.0.8:
+   - Adds Leonard Financial Group's personalized 321 Living print-attribution concept to the prospect engagement allowlist.
+   - Preserves privacy-minimized page-view tracking.
 
    Change Notes — 1.0.7:
    - Adds Corvex Roofing's personalized 321 Living magazine campaign concept to the prospect engagement allowlist.
@@ -52,7 +56,7 @@ import {
 } from "../shared/http.js";
 
 export const PROSPECT_CONCEPT_VIEW_ACTION = "prospect-concept-view";
-export const PROSPECT_CONCEPT_TRACKING_VERSION = "1.0.7";
+export const PROSPECT_CONCEPT_TRACKING_VERSION = "1.0.8";
 
 const CONCEPTS = new Map([
   ["john-curri-v1", {
@@ -102,6 +106,12 @@ const CONCEPTS = new Map([
     sourceReference: "/prospect-previews/corvex-roofing/",
     subject: "Corvex Roofing 321 Living campaign concept viewed",
     summary: "The personalized Corvex Roofing 321 Living magazine-to-estimate concept was viewed."
+  }],
+  ["leonard-financial-group-321-living-v1", {
+    businessName: "Leonard Financial Group",
+    sourceReference: "/prospect-previews/leonard-financial-group/",
+    subject: "Leonard Financial Group 321 Living campaign concept viewed",
+    summary: "The personalized Leonard Financial Group 321 Living print-attribution concept was viewed."
   }]
 ]);
 
