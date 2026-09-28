@@ -1,10 +1,14 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/prospectConceptTracking.js
-   Version: 1.0.4
+   Version: 1.0.5
    Status: Production Road-Test Candidate
    Purpose: Record privacy-minimized engagement when a personalized
             GCM prospect concept page is viewed.
+
+   Change Notes — 1.0.5:
+   - Adds McPherson Financial Group's personalized retirement-lunch attribution concept to the prospect engagement allowlist.
+   - Preserves privacy-minimized page-view tracking.
 
    Change Notes — 1.0.4:
    - Adds Kitchen Saver's personalized Melbourne direct-mail growth concept to the prospect engagement allowlist.
@@ -40,7 +44,7 @@ import {
 } from "../shared/http.js";
 
 export const PROSPECT_CONCEPT_VIEW_ACTION = "prospect-concept-view";
-export const PROSPECT_CONCEPT_TRACKING_VERSION = "1.0.4";
+export const PROSPECT_CONCEPT_TRACKING_VERSION = "1.0.5";
 
 const CONCEPTS = new Map([
   ["john-curri-v1", {
@@ -72,6 +76,12 @@ const CONCEPTS = new Map([
     sourceReference: "/prospect-previews/kitchen-saver/",
     subject: "Kitchen Saver Melbourne campaign concept viewed",
     summary: "The personalized Kitchen Saver Melbourne direct-mail growth concept was viewed."
+  }],
+  ["mcpherson-financial-group-lunch-v1", {
+    businessName: "McPherson Financial Group",
+    sourceReference: "/prospect-previews/mcpherson-financial-group/",
+    subject: "McPherson Financial Group campaign concept viewed",
+    summary: "The personalized McPherson Financial Group retirement-lunch attribution concept was viewed."
   }]
 ]);
 
