@@ -1,13 +1,18 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/missionControl.js
-   Version: 7.8.1
+   Version: 7.8.2
    Status: Production Road-Test Candidate
    Source: Production routes/missionControl.js 7.8.0
    Sprint: Mission Control — Actionable Attention Deep Links
    Purpose: Preserve the live Mission Control contract while ranking
             only records that require current human action and expose
             one read-only deadline-urgency contract for the shared shell.
+
+   Production changes — v7.8.2:
+   - Adds recentProspectEngagements from tracked prospect concept-page views during the last 7 days.
+   - Returns the prospect/business name and exact recorded view timestamp for Today-page visibility.
+   - Read-only: no prospect stage, outreach cadence, or Next Action is changed.
 
    Production changes — v7.8.1:
    - Each clientsRequiringAttention row now carries its strongest actionable record type/id and a direct work.html deep link.
@@ -105,9 +110,10 @@ export async function handleMissionControl(body, env, requestId) {
   }
 
   try {
-    const [clientsResult, decisionResult, navAttention] = await Promise.all([
+    const [clientsResult, decisionResult, prospectEngagementResult, navAttention] = await Promise.all([
       loadClientsRequiringAttention(db),
       loadHighestPriorityDecision(db),
+      loadRecentProspectEngagements(db),
       buildNavAttention(db)
     ]);
 
@@ -141,6 +147,17 @@ export async function handleMissionControl(body, env, requestId) {
       ? mapHighestPriorityDecision(decisionRow)
       : null;
 
+    const recentProspectEngagements = rowsOf(prospectEngagementResult).map((row) => ({
+      activityId: Number(row.activity_id),
+      relationshipType: String(row.relationship_type || ""),
+      relationshipId: Number(row.relationship_id),
+      businessName: String(row.business_name || "Unknown Prospect"),
+      viewedAt: String(row.occurred_at || ""),
+      subject: String(row.subject || "Prospect concept page viewed"),
+      sourceReference: String(row.source_reference || ""),
+      href: "prospects.html"
+    }));
+
     return jsonResponse({
       ok: true,
       requestId,
@@ -149,6 +166,7 @@ export async function handleMissionControl(body, env, requestId) {
       missionControl: {
         clientsRequiringAttention,
         highestPriorityDecision,
+        recentProspectEngagements,
         navAttention
       }
     });
@@ -259,6 +277,55 @@ async function loadClientsRequiringAttention(db) {
       record_id DESC,
       LOWER(client_name) ASC,
       client_id ASC
+  `).all();
+}
+
+/* =========================================================
+   Recent Prospect Concept Engagement
+   ========================================================= */
+
+async function loadRecentProspectEngagements(db) {
+  return db.prepare(`
+    SELECT
+      activity_id,
+      relationship_type,
+      relationship_id,
+      business_name,
+      occurred_at,
+      subject,
+      source_reference
+    FROM (
+      SELECT
+        ra.id AS activity_id,
+        'radar' AS relationship_type,
+        r.id AS relationship_id,
+        COALESCE(NULLIF(TRIM(r.business_name), ''), 'Unknown Prospect') AS business_name,
+        ra.occurred_at,
+        ra.subject,
+        ra.source_reference
+      FROM crm_prospect_radar_activities ra
+      INNER JOIN crm_prospect_radar r ON r.id = ra.radar_id
+      WHERE ra.activity_type = 'concept_page_view'
+        AND ra.promoted_prospect_activity_id IS NULL
+        AND datetime(ra.occurred_at) >= datetime('now', '-7 days')
+
+      UNION ALL
+
+      SELECT
+        pa.id AS activity_id,
+        'prospect' AS relationship_type,
+        p.id AS relationship_id,
+        COALESCE(NULLIF(TRIM(p.business_name), ''), 'Unknown Prospect') AS business_name,
+        pa.occurred_at,
+        pa.subject,
+        pa.source_reference
+      FROM crm_prospect_activities pa
+      INNER JOIN crm_prospects p ON p.id = pa.prospect_id
+      WHERE pa.activity_type = 'concept_page_view'
+        AND datetime(pa.occurred_at) >= datetime('now', '-7 days')
+    )
+    ORDER BY datetime(occurred_at) DESC, activity_id DESC
+    LIMIT 10
   `).all();
 }
 
