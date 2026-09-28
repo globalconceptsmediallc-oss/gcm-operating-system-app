@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/prospectConceptTracking.test.js
-   Version: 1.5.0
+   Version: 1.6.0
    Status: Regression Test
    Purpose: Lock privacy-minimized Agnor Aviation 90-day plan engagement tracking.
    ========================================================= */
@@ -16,8 +16,9 @@ const kitchenSaverPage = fs.readFileSync(new URL("../prospect-previews/kitchen-s
 const mcphersonPage = fs.readFileSync(new URL("../prospect-previews/mcpherson-financial-group/index.html", import.meta.url),"utf8");
 const wadadliPage = fs.readFileSync(new URL("../prospect-previews/wadadli-financial-group/index.html", import.meta.url),"utf8");
 const corvexPage = fs.readFileSync(new URL("../prospect-previews/corvex-roofing/index.html", import.meta.url),"utf8");
+const leonardPage = fs.readFileSync(new URL("../prospect-previews/leonard-financial-group/index.html", import.meta.url),"utf8");
 
-assert.match(route,/Version: 1\.0\.7/);
+assert.match(route,/Version: 1\.0\.8/);
 assert.match(route,/agnor-aviation-90-day-v1/);
 assert.match(route,/businessName: "Agnor Aviation"/);
 assert.match(route,/sourceReference: "\/prospect-previews\/agnor-aviation\/"/);
@@ -81,7 +82,17 @@ assert.match(corvexPage,/gcm_preview/);
 assert.match(corvexPage,/321 Living/);
 assert.match(corvexPage,/Free roof readiness assessment/);
 
+assert.match(route,/leonard-financial-group-321-living-v1/);
+assert.match(route,/businessName: "Leonard Financial Group"/);
+assert.match(route,/Leonard Financial Group 321 Living campaign concept viewed/);
+assert.match(leonardPage,/Version: 1\.0\.0/);
+assert.match(leonardPage,/CONCEPT_KEY = "leonard-financial-group-321-living-v1"/);
+assert.match(leonardPage,/prospect-concept-view/);
+assert.match(leonardPage,/gcm_preview/);
+assert.match(leonardPage,/321 Living/);
+assert.match(leonardPage,/Financial-services compliance stays in control/);
+
 assert.doesNotMatch(route,/user[_-]?agent/i);
 assert.doesNotMatch(route,/visitor[_-]?ip/i);
 
-console.log("PASS tracked prospect concepts preserve privacy-minimized engagement for Agnor, Honor Financial Group, Kitchen Saver, McPherson Financial Group, Wadadli Financial Group, and Corvex Roofing");
+console.log("PASS tracked prospect concepts preserve privacy-minimized engagement for Agnor, Honor Financial Group, Kitchen Saver, McPherson Financial Group, Wadadli Financial Group, Corvex Roofing, and Leonard Financial Group");
