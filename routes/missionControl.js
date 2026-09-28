@@ -1,13 +1,17 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/missionControl.js
-   Version: 7.8.2
+   Version: 7.8.3
    Status: Production Road-Test Candidate
    Source: Production routes/missionControl.js 7.8.0
    Sprint: Mission Control — Actionable Attention Deep Links
    Purpose: Preserve the live Mission Control contract while ranking
             only records that require current human action and expose
             one read-only deadline-urgency contract for the shared shell.
+
+   Production changes — v7.8.3:
+   - Adds the intended contact name/email to recent prospect engagement details.
+   - Preserves the distinction between the tracked recipient and the person physically clicking the URL.
 
    Production changes — v7.8.2:
    - Adds recentProspectEngagements from tracked prospect concept-page views during the last 7 days.
@@ -152,6 +156,8 @@ export async function handleMissionControl(body, env, requestId) {
       relationshipType: String(row.relationship_type || ""),
       relationshipId: Number(row.relationship_id),
       businessName: String(row.business_name || "Unknown Prospect"),
+      contactName: String(row.contact_name || ""),
+      contactEmail: String(row.contact_email || ""),
       viewedAt: String(row.occurred_at || ""),
       subject: String(row.subject || "Prospect concept page viewed"),
       sourceReference: String(row.source_reference || ""),
@@ -300,6 +306,8 @@ async function loadRecentProspectEngagements(db) {
         'radar' AS relationship_type,
         r.id AS relationship_id,
         COALESCE(NULLIF(TRIM(r.business_name), ''), 'Unknown Prospect') AS business_name,
+        COALESCE(NULLIF(TRIM(r.contact_name), ''), '') AS contact_name,
+        COALESCE(NULLIF(TRIM(r.contact_email), ''), '') AS contact_email,
         ra.occurred_at,
         ra.subject,
         ra.source_reference
@@ -316,6 +324,38 @@ async function loadRecentProspectEngagements(db) {
         'prospect' AS relationship_type,
         p.id AS relationship_id,
         COALESCE(NULLIF(TRIM(p.business_name), ''), 'Unknown Prospect') AS business_name,
+        COALESCE(
+          NULLIF(TRIM((
+            SELECT pc.name
+            FROM crm_prospect_contacts pc
+            WHERE pc.prospect_id = p.id
+            ORDER BY pc.is_primary DESC, pc.id ASC
+            LIMIT 1
+          )), ''),
+          NULLIF(TRIM((
+            SELECT r2.contact_name
+            FROM crm_prospect_radar r2
+            WHERE r2.id = p.radar_id
+            LIMIT 1
+          )), ''),
+          ''
+        ) AS contact_name,
+        COALESCE(
+          NULLIF(TRIM((
+            SELECT pc.email
+            FROM crm_prospect_contacts pc
+            WHERE pc.prospect_id = p.id
+            ORDER BY pc.is_primary DESC, pc.id ASC
+            LIMIT 1
+          )), ''),
+          NULLIF(TRIM((
+            SELECT r2.contact_email
+            FROM crm_prospect_radar r2
+            WHERE r2.id = p.radar_id
+            LIMIT 1
+          )), ''),
+          ''
+        ) AS contact_email,
         pa.occurred_at,
         pa.subject,
         pa.source_reference
