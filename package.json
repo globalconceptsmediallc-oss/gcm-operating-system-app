@@ -1,15 +1,15 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.86",
+  "version": "6.1.87",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.86",
+    "fileVersion": "6.1.87",
     "status": "Production Road-Test Candidate",
-    "purpose": "Surface near-real-time tracked prospect concept-page engagement on Today and preserve collapsible Radar workflow.",
+    "purpose": "Show tracked prospect proposal opens on Today with the intended recipient details.",
     "changeNotes": [
-      "Shows tracked prospect proposal opens on Today with the prospect name and exact Eastern Time timestamp.",
-      "Refreshes the prospect engagement notice every 60 seconds while Today remains visible.",
-      "Reads durable Prospect/Radar concept-page activity only and does not change stages, outreach dates, or Next Actions."
+      "Adds the Radar/Prospect contact name and email to recent tracked proposal-open details.",
+      "Today labels the identity as Recipient on record so the UI does not overstate who physically clicked a forwarded URL.",
+      "Preserves the 60-second engagement refresh and existing prospect follow-up state."
     ]
   },
   "private": true,
