@@ -1,10 +1,14 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/prospectConceptTracking.js
-   Version: 1.0.5
+   Version: 1.0.6
    Status: Production Road-Test Candidate
    Purpose: Record privacy-minimized engagement when a personalized
             GCM prospect concept page is viewed.
+
+   Change Notes — 1.0.6:
+   - Adds Wadadli Financial Group's personalized retirement-dinner attribution concept to the prospect engagement allowlist.
+   - Preserves privacy-minimized page-view tracking.
 
    Change Notes — 1.0.5:
    - Adds McPherson Financial Group's personalized retirement-lunch attribution concept to the prospect engagement allowlist.
@@ -44,7 +48,7 @@ import {
 } from "../shared/http.js";
 
 export const PROSPECT_CONCEPT_VIEW_ACTION = "prospect-concept-view";
-export const PROSPECT_CONCEPT_TRACKING_VERSION = "1.0.5";
+export const PROSPECT_CONCEPT_TRACKING_VERSION = "1.0.6";
 
 const CONCEPTS = new Map([
   ["john-curri-v1", {
@@ -82,6 +86,12 @@ const CONCEPTS = new Map([
     sourceReference: "/prospect-previews/mcpherson-financial-group/",
     subject: "McPherson Financial Group campaign concept viewed",
     summary: "The personalized McPherson Financial Group retirement-lunch attribution concept was viewed."
+  }],
+  ["wadadli-financial-group-dinner-v1", {
+    businessName: "Wadadli Financial Group",
+    sourceReference: "/prospect-previews/wadadli-financial-group/",
+    subject: "Wadadli Financial Group campaign concept viewed",
+    summary: "The personalized Wadadli Financial Group retirement-dinner attribution concept was viewed."
   }]
 ]);
 
