@@ -1,21 +1,21 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.77",
+  "version": "6.1.78",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.77",
+    "fileVersion": "6.1.78",
     "status": "Production Road-Test Candidate",
-    "purpose": "Correct Reporting Period inference so ordinary prose cannot be mistaken for a month.",
+    "purpose": "Publish and track the Agnor Aviation first-90-days prospect presentation.",
     "changeNotes": [
-      "Removes month-name scanning from arbitrary email prose.",
-      "Uses explicit reporting-period/date evidence first, then the source email month and year.",
-      "Prevents words such as “may” in robots.txt guidance from becoming May 2026."
+      "Adds a public noindex Agnor Aviation 90-day prospect presentation.",
+      "Records a privacy-minimized page-view activity against the existing Agnor Prospect relationship.",
+      "Uses a preview bypass so internal testing does not create false engagement."
     ]
   },
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:work-due-date && npm run test:work-core-web-vitals && npm run test:media-deadline-attention && npm run test:universal-email-intake && npm run test:email-intake-queue && npm run test:gmail-intake-sync && npm run test:email-intake-finding && npm run test:google-review-quick-action && npm run test:proof-findings && npm run test:email-intake-disposition && npm run test:gmail-decisions && npm run test:gmail-monitoring-parity && npm run test:gmail-backlink-investigation && npm run test:gmail-intake && npm run test:gmail-backlog && npm run test:gmail-source-display && npm run test:gmail-handle-now && npm run test:gmail-thread-routing && npm run test:gmail-requested-work-content && npm run test:prospect-crm && npm run test:mediaforge-home && npm run test:mediaforge-variants && npm run test:mediaforge-naming && npm run test:business-workspace-health-v2 && npm run test:client-health-v2 && npm run test:asset-versions",
+    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:work-due-date && npm run test:work-core-web-vitals && npm run test:media-deadline-attention && npm run test:universal-email-intake && npm run test:email-intake-queue && npm run test:gmail-intake-sync && npm run test:email-intake-finding && npm run test:google-review-quick-action && npm run test:proof-findings && npm run test:email-intake-disposition && npm run test:gmail-decisions && npm run test:gmail-monitoring-parity && npm run test:gmail-backlink-investigation && npm run test:gmail-intake && npm run test:gmail-backlog && npm run test:gmail-source-display && npm run test:gmail-handle-now && npm run test:gmail-thread-routing && npm run test:gmail-requested-work-content && npm run test:prospect-crm && npm run test:prospect-concept-tracking && npm run test:mediaforge-home && npm run test:mediaforge-variants && npm run test:mediaforge-naming && npm run test:business-workspace-health-v2 && npm run test:client-health-v2 && npm run test:asset-versions",
     "test:website-intelligence": "node tests/websiteIntelligence.test.js",
     "test:code-intelligence": "node tests/codeIntelligence.test.js",
     "test:operating-sessions": "node tests/operatingSessionTasks.test.js && node tests/osAuth.test.js && node tests/operatingSessionIntake.test.js",
@@ -45,7 +45,8 @@
     "test:email-intake-finding": "node tests/emailIntakeFinding.test.js",
     "test:proof-findings": "node tests/proofFindings.test.js",
     "test:google-review-quick-action": "node tests/googleReviewQuickAction.test.js",
-    "test:gmail-intake-sync": "node tests/gmailIntakeSync.test.js"
+    "test:gmail-intake-sync": "node tests/gmailIntakeSync.test.js",
+    "test:prospect-concept-tracking": "node tests/prospectConceptTracking.test.js"
   },
   "dependencies": {
     "postal-mime": "^3.0.0"
