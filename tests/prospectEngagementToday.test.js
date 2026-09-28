@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/prospectEngagementToday.test.js
-   Version: 1.0.0
+   Version: 1.1.0
    Status: Regression Test
    Purpose: Lock Today visibility for privacy-minimized tracked prospect opens.
    ========================================================= */
@@ -20,13 +20,15 @@ assert.match(route,/recentProspectEngagements/);
 assert.match(route,/businessName/);
 assert.match(route,/viewedAt/);
 
-assert.match(today,/Version: 3\.5\.35/);
+assert.match(today,/Version: 3\.5\.36/);
 assert.match(today,/id="prospect-open-panel"/);
 assert.match(today,/id="prospect-open-list"/);
 assert.match(today,/id="brief-prospect-opens"/);
 assert.match(today,/renderProspectEngagements/);
 assert.match(today,/America\/New_York/);
 assert.match(today,/opened the tracked proposal/);
+assert.match(today,/refreshProspectEngagements/);
+assert.match(today,/setInterval\(refreshProspectEngagements, 60000\)/);
 assert.match(today,/href="prospects\.html"/);
 
 console.log("PASS Today surfaces recent tracked prospect concept opens with business and timestamp");
