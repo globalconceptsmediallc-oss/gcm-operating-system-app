@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: prospects.html
-   Version: 3.1.0
+   Version: 3.2.0
    Status: Production Road-Test Candidate
    Source: Production prospects.html 2.0.0 + client-pre-research.html 1.1.0
    Backend: Prospect CRM 1.3.0
@@ -10,6 +10,11 @@
    One operating workspace for GCM prospecting from first evidence through
    Radar, outreach, appointment, CRM, services, signed scope, startup package,
    and the eventual Client handoff.
+
+   Change Notes — 3.2.0
+   - Makes the Radar & Outreach list panel collapsible without hiding an open Radar detail record.
+   - Persists the operator's collapsed/expanded preference in local browser storage.
+   - Keeps the current Radar count visible while the list is collapsed.
 
    Change Notes — 3.1.0
    - Adds Edit Radar Record so business/contact fields can be corrected without rerunning intelligence.
@@ -94,6 +99,11 @@
     .panel{border:1px solid var(--border);border-radius:var(--r-lg);background:#fff;box-shadow:var(--shadow);overflow:hidden;margin-bottom:16px}
     .panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:19px 21px 15px;border-bottom:1px solid var(--border)}
     .panel-head h2,.panel-head h3{margin:0;color:var(--navy-950);font-size:1rem;font-weight:900}.panel-head p{margin:5px 0 0;color:var(--muted);font-size:.78rem}
+    .panel-head-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+    .collapse-toggle{min-height:29px;padding:0 10px;border:1px solid var(--border);border-radius:999px;background:#fff;color:var(--muted);font-size:.68rem;font-weight:850}
+    .collapse-toggle:hover{background:var(--surface-soft);color:var(--navy-950)}
+    .collapse-toggle:focus-visible{outline:3px solid rgba(52,124,232,.18);outline-offset:2px}
+    .collapsible-content[hidden]{display:none!important}
     .panel-body{padding:20px 21px}
     .count{min-width:32px;height:29px;display:grid;place-items:center;padding:0 8px;border-radius:999px;background:var(--surface-muted);color:var(--muted);font-size:.7rem;font-weight:900}
     .workspace{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(330px,.55fr);gap:16px;align-items:start}
@@ -211,10 +221,18 @@
       </section>
 
       <section id="view-radar" hidden>
-        <article class="panel">
-          <div class="panel-head"><div><h2>Radar & Outreach</h2><p>Pre-appointment intelligence. Once outreach begins, the record must have a dated follow-up.</p></div><span class="count" id="radar-list-count">0</span></div>
-          <div class="list" id="radar-list"></div>
-          <div class="empty" id="radar-empty" hidden><strong>Radar is clear.</strong>Research, referrals, business cards, advertisements, and target verticals can enter here.</div>
+        <article class="panel" id="radar-list-panel">
+          <div class="panel-head">
+            <div><h2>Radar & Outreach</h2><p>Pre-appointment intelligence. Once outreach begins, the record must have a dated follow-up.</p></div>
+            <div class="panel-head-actions">
+              <span class="count" id="radar-list-count">0</span>
+              <button class="collapse-toggle" id="radar-collapse" type="button" aria-expanded="true" aria-controls="radar-list-content">Collapse</button>
+            </div>
+          </div>
+          <div class="collapsible-content" id="radar-list-content">
+            <div class="list" id="radar-list"></div>
+            <div class="empty" id="radar-empty" hidden><strong>Radar is clear.</strong>Research, referrals, business cards, advertisements, and target verticals can enter here.</div>
+          </div>
         </article>
         <article class="panel" id="radar-detail" hidden>
           <div class="panel-head"><div><p class="eyebrow">Pre-Appointment Record</p><h2 id="radar-title">Radar</h2><p id="radar-subtitle"></p></div><button class="btn btn-secondary btn-small" id="close-radar" type="button">Close</button></div>
@@ -382,7 +400,7 @@
 <script>
 (() => {
   "use strict";
-  const FILE_VERSION="3.1.0";
+  const FILE_VERSION="3.2.0";
   const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const state={prospects:[],radar:[],services:[],selectedProspect:null,selectedRadar:null,view:"pipeline",
     researchTarget:{type:"new",id:null},researchResult:null,researchContext:null,images:[]};
@@ -419,6 +437,22 @@
     return data;
   }
 
+  const RADAR_COLLAPSE_KEY="gcm-prospects-radar-list-collapsed";
+  function setRadarListCollapsed(collapsed,{persist=true}={}){
+    const content=$("radar-list-content"),button=$("radar-collapse");
+    if(!content||!button)return;
+    content.hidden=Boolean(collapsed);
+    button.setAttribute("aria-expanded",String(!collapsed));
+    button.textContent=collapsed?"Expand":"Collapse";
+    if(persist){
+      try{localStorage.setItem(RADAR_COLLAPSE_KEY,collapsed?"1":"0")}catch{}
+    }
+  }
+  function restoreRadarListCollapsed(){
+    let collapsed=false;
+    try{collapsed=localStorage.getItem(RADAR_COLLAPSE_KEY)==="1"}catch{}
+    setRadarListCollapsed(collapsed,{persist:false});
+  }
   function showView(view){
     state.view=view;
     document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
@@ -426,6 +460,8 @@
     if(view==="research")$("research-website").focus();
   }
   document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>showView(b.dataset.view)));
+  $("radar-collapse").addEventListener("click",()=>setRadarListCollapsed(!$("radar-list-content").hidden));
+  restoreRadarListCollapsed();
 
   async function load(){
     $("system-state").textContent="Connecting to D1…";
