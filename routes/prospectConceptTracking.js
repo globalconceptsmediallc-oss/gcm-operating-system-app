@@ -1,10 +1,14 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/prospectConceptTracking.js
-   Version: 1.0.1
+   Version: 1.0.2
    Status: Production Road-Test Candidate
    Purpose: Record privacy-minimized engagement when a personalized
             GCM prospect concept page is viewed.
+
+   Change Notes — 1.0.2:
+   - Adds Agnor Aviation's final 90-day growth-plan page to the prospect engagement allowlist.
+   - Keeps tracking privacy-minimized and writes the view to the existing promoted Prospect relationship.
 
    Change Notes — 1.0.1:
    - Adds EverHealth Institute to the prospect concept tracking allowlist.
@@ -28,7 +32,7 @@ import {
 } from "../shared/http.js";
 
 export const PROSPECT_CONCEPT_VIEW_ACTION = "prospect-concept-view";
-export const PROSPECT_CONCEPT_TRACKING_VERSION = "1.0.1";
+export const PROSPECT_CONCEPT_TRACKING_VERSION = "1.0.2";
 
 const CONCEPTS = new Map([
   ["john-curri-v1", {
@@ -42,6 +46,12 @@ const CONCEPTS = new Map([
     sourceReference: "/prospect-previews/everhealth-institute/",
     subject: "Prospect concept page viewed",
     summary: "The personalized EverHealth Institute prospect concept page was viewed."
+  }],
+  ["agnor-aviation-90-day-v1", {
+    businessName: "Agnor Aviation",
+    sourceReference: "/prospect-previews/agnor-aviation/",
+    subject: "Agnor Aviation 90-day plan viewed",
+    summary: "The personalized Agnor Aviation first-90-days growth plan was viewed."
   }]
 ]);
 
