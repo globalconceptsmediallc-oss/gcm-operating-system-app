@@ -1,10 +1,14 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/prospectConceptTracking.js
-   Version: 1.0.3
+   Version: 1.0.4
    Status: Production Road-Test Candidate
    Purpose: Record privacy-minimized engagement when a personalized
             GCM prospect concept page is viewed.
+
+   Change Notes — 1.0.4:
+   - Adds Kitchen Saver's personalized Melbourne direct-mail growth concept to the prospect engagement allowlist.
+   - Preserves the same privacy-minimized tracking contract.
 
    Change Notes — 1.0.3:
    - Adds Honor Financial Group's personalized dinner-campaign measurement concept to the prospect engagement allowlist.
@@ -36,7 +40,7 @@ import {
 } from "../shared/http.js";
 
 export const PROSPECT_CONCEPT_VIEW_ACTION = "prospect-concept-view";
-export const PROSPECT_CONCEPT_TRACKING_VERSION = "1.0.3";
+export const PROSPECT_CONCEPT_TRACKING_VERSION = "1.0.4";
 
 const CONCEPTS = new Map([
   ["john-curri-v1", {
@@ -62,6 +66,12 @@ const CONCEPTS = new Map([
     sourceReference: "/prospect-previews/honor-financial-group/",
     subject: "Honor Financial Group campaign concept viewed",
     summary: "The personalized Honor Financial Group dinner-campaign measurement concept was viewed."
+  }],
+  ["kitchen-saver-melbourne-mailer-v1", {
+    businessName: "Kitchen Saver",
+    sourceReference: "/prospect-previews/kitchen-saver/",
+    subject: "Kitchen Saver Melbourne campaign concept viewed",
+    summary: "The personalized Kitchen Saver Melbourne direct-mail growth concept was viewed."
   }]
 ]);
 
