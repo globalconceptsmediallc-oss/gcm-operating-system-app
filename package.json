@@ -1,21 +1,21 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.84",
+  "version": "6.1.85",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.84",
+    "fileVersion": "6.1.85",
     "status": "Production Road-Test Candidate",
-    "purpose": "Publish and track a personalized Leonard Financial Group 321 Living print-attribution concept.",
+    "purpose": "Surface tracked prospect concept-page engagement on Today and preserve collapsible Radar workflow.",
     "changeNotes": [
-      "Adds a noindex Leonard Financial Group prospect presentation based on the October 2026 321 Living advertisement.",
-      "Adds privacy-minimized engagement tracking for the Leonard Financial Group concept page.",
-      "Focuses the proposal on magazine-to-meeting attribution while preserving financial-services compliance boundaries."
+      "Adds a Today-page prospect engagement notice showing which tracked prospect opened a proposal and when.",
+      "Reads the latest seven days of concept-page views from durable Prospect/Radar activity history without changing sales-stage or follow-up state.",
+      "Preserves the new collapsible Radar & Outreach operator workflow."
     ]
   },
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:work-due-date && npm run test:work-core-web-vitals && npm run test:media-deadline-attention && npm run test:universal-email-intake && npm run test:email-intake-queue && npm run test:gmail-intake-sync && npm run test:email-intake-finding && npm run test:google-review-quick-action && npm run test:proof-findings && npm run test:email-intake-disposition && npm run test:gmail-decisions && npm run test:gmail-monitoring-parity && npm run test:gmail-backlink-investigation && npm run test:gmail-intake && npm run test:gmail-backlog && npm run test:gmail-source-display && npm run test:gmail-handle-now && npm run test:gmail-thread-routing && npm run test:gmail-requested-work-content && npm run test:prospect-crm && npm run test:prospect-concept-tracking && npm run test:mediaforge-home && npm run test:mediaforge-variants && npm run test:mediaforge-naming && npm run test:business-workspace-health-v2 && npm run test:client-health-v2 && npm run test:asset-versions",
+    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:work-due-date && npm run test:work-core-web-vitals && npm run test:media-deadline-attention && npm run test:universal-email-intake && npm run test:email-intake-queue && npm run test:gmail-intake-sync && npm run test:email-intake-finding && npm run test:google-review-quick-action && npm run test:proof-findings && npm run test:email-intake-disposition && npm run test:gmail-decisions && npm run test:gmail-monitoring-parity && npm run test:gmail-backlink-investigation && npm run test:gmail-intake && npm run test:gmail-backlog && npm run test:gmail-source-display && npm run test:gmail-handle-now && npm run test:gmail-thread-routing && npm run test:gmail-requested-work-content && npm run test:prospect-crm && npm run test:prospect-concept-tracking && npm run test:prospect-engagement-today && npm run test:mediaforge-home && npm run test:mediaforge-variants && npm run test:mediaforge-naming && npm run test:business-workspace-health-v2 && npm run test:client-health-v2 && npm run test:asset-versions",
     "test:website-intelligence": "node tests/websiteIntelligence.test.js",
     "test:code-intelligence": "node tests/codeIntelligence.test.js",
     "test:operating-sessions": "node tests/operatingSessionTasks.test.js && node tests/osAuth.test.js && node tests/operatingSessionIntake.test.js",
@@ -46,7 +46,8 @@
     "test:proof-findings": "node tests/proofFindings.test.js",
     "test:google-review-quick-action": "node tests/googleReviewQuickAction.test.js",
     "test:gmail-intake-sync": "node tests/gmailIntakeSync.test.js",
-    "test:prospect-concept-tracking": "node tests/prospectConceptTracking.test.js"
+    "test:prospect-concept-tracking": "node tests/prospectConceptTracking.test.js",
+    "test:prospect-engagement-today": "node tests/prospectEngagementToday.test.js"
   },
   "dependencies": {
     "postal-mime": "^3.0.0"
