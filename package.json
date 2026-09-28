@@ -1,15 +1,15 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.80",
+  "version": "6.1.81",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.80",
+    "fileVersion": "6.1.81",
     "status": "Production Road-Test Candidate",
-    "purpose": "Publish and track a personalized Kitchen Saver Melbourne direct-mail growth concept.",
+    "purpose": "Publish and track a personalized McPherson Financial Group event and media attribution concept.",
     "changeNotes": [
-      "Adds a noindex Kitchen Saver prospect presentation based on the received Melbourne direct-mail piece.",
-      "Connects the proposal to privacy-minimized engagement tracking for the Kitchen Saver Radar relationship.",
-      "Focuses the concept on Brevard-local continuity, direct-mail attribution, and lead-to-sale measurement without changing financing claims."
+      "Adds a noindex McPherson Financial Group prospect presentation based on the received River Rocks retirement-lunch mailer.",
+      "Adds privacy-minimized engagement tracking for the McPherson Financial Group concept page.",
+      "Focuses the proposal on cross-channel attribution across direct mail, radio, web, events, and CRM while preserving financial-services compliance boundaries."
     ]
   },
   "private": true,
