@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/emailIntakeFinding.test.js
-   Version: 1.7.0
+   Version: 1.7.1
    Status: Production Regression Test
    Purpose:
    Verify human-reviewed Signal Findings preserve useful business details,
@@ -128,7 +128,7 @@ assert.match(ui,/function inferClientId\(record\)/);
 assert.match(ui,/function inferReportingPeriod\(record\)/);
 assert.match(ui,/normalizeHost\(client\?\.website\)/);
 assert.match(ui,/reporting\\s\*period/);
-assert.match(ui,/monthOnlyPattern/);
+assert.doesNotMatch(ui,/monthOnlyPattern/);
 assert.match(ui,/record\?\.sourceDate \|\| record\?\.receivedAt/);
 assert.match(ui,/Number\(client\?\.id\) > 0/);
 assert.doesNotMatch(ui,/\["active","prospect"\]\.includes/);
