@@ -1,13 +1,18 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.5.34
+   Version: 3.5.35
    Status: Production Candidate
-   Source: Production today.html 3.5.33
+   Source: Production today.html 3.5.34
    Sprint: Today / Morning Command — Universal Email Intake No-Action Routing
    Purpose: Preserve the locked Today layout, Gmail approvals, Mission Control,
             Media logic, and operating workflow while keeping Mission Control's
             durable D1 ranking authoritative across both decision and queue views.
+
+   Production changes in 3.5.35:
+   - Adds a Prospect Engagement notice when a tracked proposal/concept page is opened.
+   - Shows which prospect opened the page and the recorded Eastern Time timestamp.
+   - Reads recent engagement from Mission Control without changing prospect stage, outreach cadence, or Next Action.
 
    Production changes in 3.5.34:
    - Fixes Reporting Period false positives caused by ordinary words such as “may” in source email text.
@@ -384,6 +389,58 @@
 
     .media-nav-badge.is-visible {
       display: inline-flex;
+    }
+
+    .prospect-open-panel {
+      border-color: #b9d5ff;
+      background: var(--info-soft);
+    }
+
+    .prospect-open-body {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 18px 22px;
+    }
+
+    .prospect-open-copy {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .prospect-open-kicker {
+      margin: 0 0 4px;
+      color: var(--info);
+      font-size: 0.68rem;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .prospect-open-copy > strong {
+      display: block;
+      color: var(--gcm-navy-950);
+      font-size: 0.95rem;
+    }
+
+    .prospect-open-list {
+      display: grid;
+      gap: 5px;
+      margin-top: 8px;
+    }
+
+    .prospect-open-item {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      flex-wrap: wrap;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+    }
+
+    .prospect-open-item strong {
+      color: var(--gcm-navy-900);
     }
 
     .media-check-panel {
@@ -1833,10 +1890,21 @@
 <div class="brief-status">
 <div class="brief-status-item"><span>Client attention</span><strong id="brief-attention">Checking…</strong></div>
 <div class="brief-status-item"><span>Media deadlines</span><strong id="brief-media">Checking…</strong></div>
+<div class="brief-status-item"><span>Prospect opens</span><strong id="brief-prospect-opens">Checking…</strong></div>
 <div class="brief-status-item"><span>Intelligence layer</span><strong>Framework active</strong></div>
 </div>
 </div>
 </section>
+<article aria-live="polite" class="panel prospect-open-panel" hidden id="prospect-open-panel">
+<div class="prospect-open-body">
+<div class="prospect-open-copy">
+<p class="prospect-open-kicker">Prospect Engagement</p>
+<strong id="prospect-open-title">A tracked prospect proposal was opened.</strong>
+<div class="prospect-open-list" id="prospect-open-list"></div>
+</div>
+<a class="button button-primary" href="prospects.html">Open Prospects</a>
+</div>
+</article>
 <article aria-live="polite" class="panel media-check-panel" id="media-check-panel">
 <div class="media-check-body">
 <div class="media-check-copy">
@@ -2004,6 +2072,9 @@
       const openWorkNote = { textContent: "" };
       const proofCount = document.getElementById("proof-count");
       const proofNote = { textContent: "" };
+      const prospectOpenPanel = document.getElementById("prospect-open-panel");
+      const prospectOpenTitle = document.getElementById("prospect-open-title");
+      const prospectOpenList = document.getElementById("prospect-open-list");
       const mediaCheckPanel = document.getElementById("media-check-panel");
       const mediaCheckTitle = document.getElementById("media-check-title");
       const mediaCheckDetail = document.getElementById("media-check-detail");
@@ -2011,6 +2082,7 @@
       const commandBriefCopy = document.getElementById("command-brief-copy");
       const briefAttention = document.getElementById("brief-attention");
       const briefMedia = document.getElementById("brief-media");
+      const briefProspectOpens = document.getElementById("brief-prospect-opens");
       const mediaPulseCount = document.getElementById("media-pulse-count");
       const priorityBadge = document.getElementById("priority-badge");
       const priorityType = document.getElementById("priority-type");
@@ -2026,6 +2098,7 @@
       const prioritySecondaryAction = document.getElementById("priority-secondary-action");
       let attentionClientsState = [];
       let highestPriorityDecisionState = null;
+      let prospectEngagementState = [];
       let mediaAttentionState = 0;
       let mediaAttentionTopState = null;
       let missionControlLoaded = false;
@@ -2818,6 +2891,45 @@
         renderOperationalBriefing();
       }
 
+      function formatProspectViewTime(value) {
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return String(value || "Time unavailable");
+        const zone = "America/New_York";
+        const dayKey = new Intl.DateTimeFormat("en-CA", { timeZone: zone, year: "numeric", month: "2-digit", day: "2-digit" });
+        const isToday = dayKey.format(date) === dayKey.format(new Date());
+        const time = new Intl.DateTimeFormat("en-US", { timeZone: zone, hour: "numeric", minute: "2-digit" }).format(date);
+        if (isToday) return `Today at ${time}`;
+        const day = new Intl.DateTimeFormat("en-US", { timeZone: zone, month: "short", day: "numeric" }).format(date);
+        return `${day} at ${time}`;
+      }
+
+      function renderProspectEngagements(items) {
+        const engagements = Array.isArray(items) ? items : [];
+        prospectEngagementState = engagements;
+        briefProspectOpens.textContent = engagements.length
+          ? `${engagements.length} recent ${engagements.length === 1 ? "open" : "opens"}`
+          : "No recent opens";
+
+        if (!engagements.length) {
+          prospectOpenPanel.hidden = true;
+          prospectOpenList.innerHTML = "";
+          return;
+        }
+
+        const latest = engagements[0];
+        prospectOpenPanel.hidden = false;
+        prospectOpenTitle.textContent = engagements.length === 1
+          ? `${latest.businessName || "A prospect"} opened the tracked proposal`
+          : `${engagements.length} tracked prospect opens in the last 7 days`;
+
+        prospectOpenList.innerHTML = engagements.slice(0, 5).map((item) => `
+          <div class="prospect-open-item">
+            <strong>${escapeHtml(item.businessName || "Unknown Prospect")}</strong>
+            <span>opened the tracked proposal · ${escapeHtml(formatProspectViewTime(item.viewedAt))}</span>
+          </div>
+        `).join("");
+      }
+
       async function loadMissionControlAttention() {
         renderAttentionLoading();
 
@@ -2851,11 +2963,17 @@
           highestPriorityDecisionState =
             payload?.missionControl?.highestPriorityDecision || null;
 
+          renderProspectEngagements(
+            payload?.missionControl?.recentProspectEngagements || []
+          );
+
           missionControlUnavailable = false;
           renderAttentionClients(clients);
         } catch (error) {
           console.error("Could not load Mission Control attention records.", error);
           highestPriorityDecisionState = null;
+          renderProspectEngagements([]);
+          briefProspectOpens.textContent = "Unavailable";
           renderAttentionError(error?.message);
         }
       }
@@ -3185,7 +3303,7 @@
         renderDashboard(data);
       });
 
-      const TODAY_VERSION = "3.5.34";
+      const TODAY_VERSION = "3.5.35";
       if (!window.GCMOShell) {
         console.error(`Today ${TODAY_VERSION}: shared/gcm-shell.js did not load.`);
       } else {
