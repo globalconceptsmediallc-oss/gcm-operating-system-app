@@ -1,15 +1,15 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.78",
+  "version": "6.1.79",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.78",
+    "fileVersion": "6.1.79",
     "status": "Production Road-Test Candidate",
-    "purpose": "Publish and track the Agnor Aviation first-90-days prospect presentation.",
+    "purpose": "Publish and track a personalized Honor Financial Group direct-mail campaign concept.",
     "changeNotes": [
-      "Adds a public noindex Agnor Aviation 90-day prospect presentation.",
-      "Records a privacy-minimized page-view activity against the existing Agnor Prospect relationship.",
-      "Uses a preview bypass so internal testing does not create false engagement."
+      "Adds a noindex Honor Financial Group dinner-campaign measurement presentation based on the received October mailer.",
+      "Adds privacy-minimized engagement tracking for the personalized Honor Financial Group page.",
+      "Keeps compliance language explicit and avoids independently changing regulated product claims or disclosures."
     ]
   },
   "private": true,
