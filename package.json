@@ -1,15 +1,15 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.82",
+  "version": "6.1.83",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.82",
+    "fileVersion": "6.1.83",
     "status": "Production Road-Test Candidate",
-    "purpose": "Publish and track a personalized Wadadli Financial Group event and media attribution concept.",
+    "purpose": "Publish and track a personalized Corvex Roofing 321 Living magazine campaign concept.",
     "changeNotes": [
-      "Adds a noindex Wadadli Financial Group prospect presentation based on the received River Rocks retirement-dinner mailer.",
-      "Adds privacy-minimized engagement tracking for the Wadadli Financial Group concept page.",
-      "Focuses the proposal on connecting direct mail, Financial Straight Talk radio, web, event attendance, and CRM outcomes while preserving financial-services compliance boundaries."
+      "Adds a noindex Corvex Roofing prospect presentation based on the 321 Living business profile and hurricane-readiness placement.",
+      "Adds privacy-minimized engagement tracking for the Corvex Roofing concept page.",
+      "Focuses the proposal on magazine-to-assessment-to-estimate attribution, local brand-transition visibility, and roofing revenue measurement."
     ]
   },
   "private": true,
