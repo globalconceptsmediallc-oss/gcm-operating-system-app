@@ -1,10 +1,14 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/prospectConceptTracking.js
-   Version: 1.0.2
+   Version: 1.0.3
    Status: Production Road-Test Candidate
    Purpose: Record privacy-minimized engagement when a personalized
             GCM prospect concept page is viewed.
+
+   Change Notes — 1.0.3:
+   - Adds Honor Financial Group's personalized dinner-campaign measurement concept to the prospect engagement allowlist.
+   - Keeps the same privacy-minimized page-view tracking contract.
 
    Change Notes — 1.0.2:
    - Adds Agnor Aviation's final 90-day growth-plan page to the prospect engagement allowlist.
@@ -32,7 +36,7 @@ import {
 } from "../shared/http.js";
 
 export const PROSPECT_CONCEPT_VIEW_ACTION = "prospect-concept-view";
-export const PROSPECT_CONCEPT_TRACKING_VERSION = "1.0.2";
+export const PROSPECT_CONCEPT_TRACKING_VERSION = "1.0.3";
 
 const CONCEPTS = new Map([
   ["john-curri-v1", {
@@ -52,6 +56,12 @@ const CONCEPTS = new Map([
     sourceReference: "/prospect-previews/agnor-aviation/",
     subject: "Agnor Aviation 90-day plan viewed",
     summary: "The personalized Agnor Aviation first-90-days growth plan was viewed."
+  }],
+  ["honor-financial-group-october-dinner-v1", {
+    businessName: "Honor Financial Group",
+    sourceReference: "/prospect-previews/honor-financial-group/",
+    subject: "Honor Financial Group campaign concept viewed",
+    summary: "The personalized Honor Financial Group dinner-campaign measurement concept was viewed."
   }]
 ]);
 
