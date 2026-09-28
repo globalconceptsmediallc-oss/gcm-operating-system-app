@@ -1,15 +1,15 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.83",
+  "version": "6.1.84",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.83",
+    "fileVersion": "6.1.84",
     "status": "Production Road-Test Candidate",
-    "purpose": "Publish and track a personalized Corvex Roofing 321 Living magazine campaign concept.",
+    "purpose": "Publish and track a personalized Leonard Financial Group 321 Living print-attribution concept.",
     "changeNotes": [
-      "Adds a noindex Corvex Roofing prospect presentation based on the 321 Living business profile and hurricane-readiness placement.",
-      "Adds privacy-minimized engagement tracking for the Corvex Roofing concept page.",
-      "Focuses the proposal on magazine-to-assessment-to-estimate attribution, local brand-transition visibility, and roofing revenue measurement."
+      "Adds a noindex Leonard Financial Group prospect presentation based on the October 2026 321 Living advertisement.",
+      "Adds privacy-minimized engagement tracking for the Leonard Financial Group concept page.",
+      "Focuses the proposal on magazine-to-meeting attribution while preserving financial-services compliance boundaries."
     ]
   },
   "private": true,
