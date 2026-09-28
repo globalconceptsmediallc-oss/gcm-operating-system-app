@@ -1,10 +1,14 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/prospectConceptTracking.js
-   Version: 1.0.6
+   Version: 1.0.7
    Status: Production Road-Test Candidate
    Purpose: Record privacy-minimized engagement when a personalized
             GCM prospect concept page is viewed.
+
+   Change Notes — 1.0.7:
+   - Adds Corvex Roofing's personalized 321 Living magazine campaign concept to the prospect engagement allowlist.
+   - Preserves privacy-minimized page-view tracking.
 
    Change Notes — 1.0.6:
    - Adds Wadadli Financial Group's personalized retirement-dinner attribution concept to the prospect engagement allowlist.
@@ -48,7 +52,7 @@ import {
 } from "../shared/http.js";
 
 export const PROSPECT_CONCEPT_VIEW_ACTION = "prospect-concept-view";
-export const PROSPECT_CONCEPT_TRACKING_VERSION = "1.0.6";
+export const PROSPECT_CONCEPT_TRACKING_VERSION = "1.0.7";
 
 const CONCEPTS = new Map([
   ["john-curri-v1", {
@@ -92,6 +96,12 @@ const CONCEPTS = new Map([
     sourceReference: "/prospect-previews/wadadli-financial-group/",
     subject: "Wadadli Financial Group campaign concept viewed",
     summary: "The personalized Wadadli Financial Group retirement-dinner attribution concept was viewed."
+  }],
+  ["corvex-roofing-321-living-v1", {
+    businessName: "Corvex Roofing",
+    sourceReference: "/prospect-previews/corvex-roofing/",
+    subject: "Corvex Roofing 321 Living campaign concept viewed",
+    summary: "The personalized Corvex Roofing 321 Living magazine-to-estimate concept was viewed."
   }]
 ]);
 
