@@ -1,14 +1,14 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/businessWorkspaceClientHealthV2.test.js
-   Version: 1.0.1
+   Version: 1.0.2
    Status: Production Regression Test
    Purpose: Prevent Business Workspace from rejecting the live Client Health v2
             Business Record schema or hiding its score from the client workspace.
 
    Change Notes — 1.0.1
    - Updates the Business Workspace version lock from 1.3.1 to the current
-     production 1.4.0 after the verified Start Investigation enhancement.
+     production 1.5.0 after the verified Start Investigation enhancement.
    - Preserves all Client Health v2 schema and rendering assertions unchanged.
    ========================================================= */
 
@@ -33,10 +33,17 @@ assert.match(runtime, /clientHealthV2\.status/);
 assert.match(runtime, /clientHealthV2\.trend/);
 assert.match(runtime, /clientHealthV2\.confidence/);
 
-assert.match(page, /Version: 1\.4\.0/);
+assert.match(page, /Version: 1\.5\.0/);
 assert.match(page, /businessWorkspace\.js\?v=1\.0\.2/);
 assert.match(page, /workspace\.record\.clientHealthV2 \|\| null/);
 assert.match(page, /\$\{Math\.round\(Number\(clientHealthV2\.score\)\)\} \/ 100 —/);
 assert.match(page, /\$\{clientHealthV2\.trend \|\| "Unknown"\} · \$\{clientHealthV2\.confidence \|\| "Unknown"\} Confidence/);
 
 console.log("PASS Business Workspace accepts schema 1.2.0 and renders Client Health v2 score, trend, and confidence");
+
+assert.match(page, /id="current-recap-button"/);
+assert.match(page, /function openCurrentRecap\(\)/);
+assert.match(page, /What We Are Working On Now/);
+assert.match(page, /Open Investigations/);
+assert.match(page, /Waiting on Client/);
+assert.match(page, /Waiting on GCM/);

@@ -1,15 +1,15 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.88",
+  "version": "6.1.89",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.88",
+    "fileVersion": "6.1.89",
     "status": "Production Road-Test Candidate",
-    "purpose": "Add durable Prospect test-site URLs with direct OS access.",
+    "purpose": "Add live Current Client Recap to the Client Workspace.",
     "changeNotes": [
-      "Adds Prospect test-site URL regression coverage.",
-      "Keeps the URL durable in D1 instead of inferring a repository or Pages address.",
-      "Preserves the existing Prospect CRM and proposal workflows."
+      "Adds a Current Recap button to every loaded Client Workspace.",
+      "Builds the recap from live Business Record and D1 operational data.",
+      "Does not create a duplicate manually maintained status record."
     ]
   },
   "private": true,

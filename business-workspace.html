@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: business-workspace.html
-   Version: 1.4.0
+   Version: 1.5.0
    Status: Production Candidate
    Change: Start Investigation directly from the Client Workspace
    Source: Production business-workspace.html 1.2.0
@@ -10,6 +10,13 @@
             live get-client-workspace retrieval, Business Record intelligence,
             and executable next actions while adding a direct human-started
             Investigation entry point from the client record.
+
+   Changes in 1.5.0:
+   - Adds Current Client Recap to the Client Workspace header.
+   - Builds the recap from the live Business Record and operational payload.
+   - Summarizes health, current work, investigations, alerts, recent activity,
+     client/GCM dependencies, and the next recommended action without creating
+     a second manual status record.
 
    Changes in 1.4.0:
    - Adds Start Investigation to the Client Workspace header.
@@ -205,6 +212,101 @@
 
     .mobile-menu-button {
       display:none;
+    }
+
+    .recap-dialog {
+      width:min(900px,calc(100vw - 28px));
+      max-height:calc(100vh - 32px);
+      padding:0;
+      border:0;
+      border-radius:18px;
+      box-shadow:0 28px 90px rgba(7,20,38,.28);
+    }
+
+    .recap-dialog::backdrop {
+      background:rgba(7,20,38,.55);
+      backdrop-filter:blur(3px);
+    }
+
+    .recap-head {
+      display:flex;
+      justify-content:space-between;
+      gap:18px;
+      padding:22px 24px 18px;
+      border-bottom:1px solid var(--border-color);
+    }
+
+    .recap-head h2 {
+      margin:0;
+      color:var(--navy-950);
+      font-size:1.35rem;
+    }
+
+    .recap-head p {
+      margin:6px 0 0;
+      color:var(--text-secondary);
+    }
+
+    .recap-close {
+      width:38px;
+      height:38px;
+      border:1px solid var(--border-color);
+      border-radius:10px;
+      background:#fff;
+      cursor:pointer;
+      font-size:1.25rem;
+    }
+
+    .recap-body {
+      padding:22px 24px 26px;
+      overflow:auto;
+    }
+
+    .recap-summary-grid {
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:14px;
+      margin-bottom:18px;
+    }
+
+    .recap-card {
+      padding:16px;
+      border:1px solid var(--border-color);
+      border-radius:var(--radius-medium);
+      background:var(--panel-muted);
+    }
+
+    .recap-card strong {
+      display:block;
+      margin-bottom:6px;
+      color:var(--navy-950);
+    }
+
+    .recap-card p {
+      margin:0;
+      color:var(--text-secondary);
+      line-height:1.55;
+    }
+
+    .recap-section {
+      margin-top:20px;
+    }
+
+    .recap-section h3 {
+      margin:0 0 10px;
+      color:var(--navy-950);
+      font-size:1rem;
+    }
+
+    .recap-list {
+      margin:0;
+      padding-left:20px;
+      color:var(--text-secondary);
+    }
+
+    .recap-list li {
+      margin:7px 0;
+      line-height:1.5;
     }
 
     .runtime-chip {
@@ -836,6 +938,10 @@
       .detail-grid {
         grid-template-columns:1fr;
       }
+
+      .recap-summary-grid {
+        grid-template-columns:1fr;
+      }
     }
 
     @media(max-width:500px) {
@@ -890,8 +996,17 @@
             </button>
 
             <button
-              id="start-investigation-button"
+              id="current-recap-button"
               class="button button-primary"
+              type="button"
+              hidden
+            >
+              Current Recap
+            </button>
+
+            <button
+              id="start-investigation-button"
+              class="button button-secondary"
               type="button"
               hidden
             >
@@ -1239,6 +1354,17 @@
     </main>
   </div>
 
+  <dialog id="current-recap-dialog" class="recap-dialog">
+    <div class="recap-head">
+      <div>
+        <h2 id="current-recap-title">Current Client Recap</h2>
+        <p id="current-recap-subtitle">Live operating summary from the GCM OS record.</p>
+      </div>
+      <button id="current-recap-close" class="recap-close" type="button" aria-label="Close recap">×</button>
+    </div>
+    <div id="current-recap-body" class="recap-body"></div>
+  </dialog>
+
   <script src="shared/gcm-shell.js"></script>
   <script src="businessWorkspace.js?v=1.0.2"></script>
 
@@ -1260,6 +1386,12 @@
       );
 
       const statusText = document.getElementById("runtime-status-text");
+      const currentRecapButton = document.getElementById("current-recap-button");
+      const currentRecapDialog = document.getElementById("current-recap-dialog");
+      const currentRecapTitle = document.getElementById("current-recap-title");
+      const currentRecapSubtitle = document.getElementById("current-recap-subtitle");
+      const currentRecapBody = document.getElementById("current-recap-body");
+      const currentRecapClose = document.getElementById("current-recap-close");
       const startInvestigationButton = document.getElementById("start-investigation-button");
       const newInvestigationPanel = document.getElementById("new-investigation-panel");
       const newInvestigationForm = document.getElementById("new-investigation-form");
@@ -1271,6 +1403,13 @@
       const newInvestigationMessage = document.getElementById("new-investigation-message");
 
       let activeClientCode = "";
+      let activeWorkspacePayload = null;
+
+      currentRecapButton.addEventListener("click", openCurrentRecap);
+      currentRecapClose.addEventListener("click", () => currentRecapDialog.close());
+      currentRecapDialog.addEventListener("click", (event) => {
+        if (event.target === currentRecapDialog) currentRecapDialog.close();
+      });
 
       startInvestigationButton.addEventListener("click", () => {
         newInvestigationPanel.hidden = false;
@@ -1290,12 +1429,12 @@
 
       if (!window.GCMOShell) {
         console.error(
-"Business Workspace 1.4.0: shared/gcm-shell.js did not load."
+"Business Workspace 1.5.0: shared/gcm-shell.js did not load."
         );
       } else {
         window.GCMOShell.mount({
           currentPage:"clients",
-          statusText:"Client workspace connected · Business Workspace v1.4.0"
+          statusText:"Client workspace connected · Business Workspace v1.5.0"
         });
       }
 
@@ -1338,12 +1477,15 @@
             );
           }
 
+          activeWorkspacePayload = payload;
+
           activeClientCode = String(
             payload?.record?.metadata?.clientCode ||
             payload?.operational?.client?.client_code ||
             (businessId === "southeast-safes" ? "SES" : businessId)
           ).trim();
 
+          currentRecapButton.hidden = !activeClientCode;
           startInvestigationButton.hidden = !activeClientCode;
 
           BusinessWorkspace.loadFromObject(payload.record, {
@@ -1369,6 +1511,99 @@
 
           setRuntimeStatus("error", "Workspace Error");
         }
+      }
+
+      function openCurrentRecap() {
+        if (!activeWorkspacePayload?.record) return;
+
+        const record = activeWorkspacePayload.record;
+        const operational = activeWorkspacePayload.operational || {};
+        const business = record.business || {};
+        const relationship = record.relationship || {};
+        const workspaceRecord = record.workspace || {};
+        const health = record.clientHealthV2 || {};
+        const investigations = Array.isArray(operational.investigations) ? operational.investigations : [];
+        const workItems = Array.isArray(operational.workItems)
+          ? operational.workItems.filter(item => !["complete","completed","closed","done","cancelled","canceled"].includes(String(item?.status || "").toLowerCase()))
+          : [];
+        const alerts = Array.isArray(operational.alerts)
+          ? operational.alerts.filter(item => !["resolved","closed","dismissed","inactive"].includes(String(item?.status || "").toLowerCase()))
+          : [];
+        const communications = Array.isArray(operational.communications) ? operational.communications : [];
+        const recentActivity = BusinessWorkspace.getExecutive()?.recentActivity || [];
+        const waitingOnClient = collectDependencies(investigations, workItems, "client");
+        const waitingOnGcm = collectDependencies(investigations, workItems, "gcm");
+
+        currentRecapTitle.textContent = `${business.name || activeClientCode} — Current Recap`;
+        currentRecapSubtitle.textContent =
+          `Generated from the live OS record · ${new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit"}).format(new Date())}`;
+
+        const healthText = Number.isFinite(Number(health.score))
+          ? `${Math.round(Number(health.score))}/100 — ${health.status || "Unknown"}`
+          : relationship.accountHealth || "Unknown";
+
+        currentRecapBody.innerHTML = `
+          <div class="recap-summary-grid">
+            ${recapCard("Overall Status", healthText, health.trend ? `${health.trend} · ${health.confidence || "Unknown"} confidence` : relationship.accountHealthReason || "No health explanation recorded.")}
+            ${recapCard("Current Priority", workspaceRecord.currentPriority || "No open priority is recorded.", workspaceRecord.nextActionReason || "")}
+            ${recapCard("Next Recommended Action", workspaceRecord.nextAction || "Review the client record.", workspaceRecord.nextReviewDate ? `Next review: ${formatDate(workspaceRecord.nextReviewDate)}` : "")}
+            ${recapCard("Last Meaningful Contact", workspaceRecord.lastClientContact ? formatDate(workspaceRecord.lastClientContact) : "Unknown", communications[0]?.subject || communications[0]?.summary || "No recent communication detail recorded.")}
+          </div>
+
+          ${recapListSection("What We Are Working On Now", workItems.slice(0,6).map(item => formatRecapItem(item.title || `Work Item #${item.id}`, item.description || item.next_action || item.nextAction, item.status)))}
+          ${recapListSection("Open Investigations", investigations.slice(0,6).map(item => formatRecapItem(`Investigation #${item.id}: ${item.title || "Review required"}`, item.description || item.recommendation, item.status)))}
+          ${recapListSection("Active Alerts / Problems", alerts.slice(0,6).map(item => formatRecapItem(item.title || `Alert #${item.id}`, item.description || item.message, item.severity || item.status)))}
+          ${recapListSection("Waiting on Client", waitingOnClient)}
+          ${recapListSection("Waiting on GCM", waitingOnGcm)}
+          ${recapListSection("Recent Completed Work / Results", recentActivity.slice(0,6).map(item => formatRecapItem(item.title, item.description, item.date ? formatDate(item.date) : item.type)))}
+        `;
+
+        currentRecapDialog.showModal();
+      }
+
+      function recapCard(title, value, detail) {
+        return `<div class="recap-card"><strong>${escapeHtml(title)}</strong><p><b>${escapeHtml(value || "Unknown")}</b>${detail ? `<br>${escapeHtml(detail)}` : ""}</p></div>`;
+      }
+
+      function recapListSection(title, items) {
+        const cleanItems = (items || []).filter(Boolean);
+        const list = cleanItems.length
+          ? cleanItems.map(item => `<li>${escapeHtml(item)}</li>`).join("")
+          : "<li>Nothing currently recorded.</li>";
+        return `<section class="recap-section"><h3>${escapeHtml(title)}</h3><ul class="recap-list">${list}</ul></section>`;
+      }
+
+      function formatRecapItem(title, detail, status) {
+        const parts = [title, status ? `[${status}]` : "", detail].filter(Boolean);
+        return parts.join(" — ");
+      }
+
+      function collectDependencies(investigations, workItems, party) {
+        const source = [...investigations, ...workItems];
+        const patterns = party === "client"
+          ? ["client","customer","awaiting approval","awaiting response","waiting on client","needs client"]
+          : ["gcm","global concepts","internal","assigned to global concepts","waiting on gcm"];
+
+        return source
+          .filter(item => {
+            const haystack = [
+              item?.status,
+              item?.description,
+              item?.recommendation,
+              item?.next_action,
+              item?.nextAction,
+              item?.assigned_to,
+              item?.owner,
+              item?.notes
+            ].filter(Boolean).join(" ").toLowerCase();
+            return patterns.some(pattern => haystack.includes(pattern));
+          })
+          .slice(0,6)
+          .map(item => formatRecapItem(
+            item.title || `Record #${item.id}`,
+            item.next_action || item.nextAction || item.recommendation || item.description,
+            item.status
+          ));
       }
 
       async function createInvestigationFromWorkspace(event) {
