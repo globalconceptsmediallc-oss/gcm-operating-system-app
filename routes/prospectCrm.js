@@ -1,9 +1,14 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/prospectCrm.js
-   Version: 1.4.0
+   Version: 1.5.0
    Status: Production Road-Test Candidate
    Purpose: Durable Prospecting Radar + CRM operations for GCM.
+
+   Change Notes — 1.5.0:
+   - Adds a durable test_site_url to Radar / pre-appointment records.
+   - Allows Radar create/update operations to save or clear the verified test-site URL.
+   - Carries the Radar test-site URL into the formal Prospect automatically at promotion.
 
    Change Notes — 1.4.0:
    - Adds a durable test_site_url to formal Prospect records.
@@ -59,7 +64,7 @@ import {
 } from "../shared/http.js";
 
 export const PROSPECT_CRM_ACTION = "prospect-crm";
-export const PROSPECT_CRM_VERSION = "1.4.0";
+export const PROSPECT_CRM_VERSION = "1.5.0";
 
 const ACTIVE_MANAGED_STATUSES = new Set(["active", "nurture"]);
 const ALLOWED_STATUSES = new Set([
@@ -409,6 +414,7 @@ async function listRadar(db, requestId) {
       entry_type,
       business_name,
       website,
+      test_site_url,
       vertical,
       market,
       source_type,
@@ -498,6 +504,9 @@ async function updateRadar(body, db, requestId) {
     ? nullableText(body?.businessName ?? body?.business_name)
     : existing.businessName;
   const website = bodyHas(body, "website") ? nullableText(body.website) : existing.website;
+  const testSiteUrl = bodyHas(body, "testSiteUrl", "test_site_url")
+    ? normalizeOptionalHttpUrl(body?.testSiteUrl ?? body?.test_site_url)
+    : existing.testSiteUrl;
   const vertical = bodyHas(body, "vertical", "industry")
     ? nullableText(body?.vertical ?? body?.industry)
     : existing.vertical;
@@ -535,6 +544,7 @@ async function updateRadar(body, db, requestId) {
     UPDATE crm_prospect_radar
     SET business_name = ?,
         website = ?,
+        test_site_url = ?,
         vertical = ?,
         market = ?,
         source_type = ?,
@@ -549,6 +559,7 @@ async function updateRadar(body, db, requestId) {
   `).bind(
     businessName,
     website,
+    testSiteUrl,
     vertical,
     market,
     sourceType,
@@ -887,6 +898,7 @@ async function createRadar(body, db, requestId) {
   const entryType = normalizeKey(body?.entryType || body?.entry_type || "business") || "business";
   const businessName = nullableText(body?.businessName || body?.business_name);
   const website = nullableText(body?.website);
+  const testSiteUrl = normalizeOptionalHttpUrl(body?.testSiteUrl ?? body?.test_site_url);
   const vertical = nullableText(body?.vertical);
   const market = nullableText(body?.market || body?.location);
   const sourceType = cleanText(body?.sourceType || body?.source_type);
@@ -911,6 +923,7 @@ async function createRadar(body, db, requestId) {
       entry_type,
       business_name,
       website,
+      test_site_url,
       vertical,
       market,
       source_type,
@@ -923,11 +936,12 @@ async function createRadar(body, db, requestId) {
       status,
       created_at,
       updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
   `).bind(
     entryType,
     businessName,
     website,
+    testSiteUrl,
     vertical,
     market,
     sourceType,
@@ -1008,7 +1022,7 @@ async function promoteRadar(body, db, requestId) {
     businessName,
     legalName: nullableText(body?.legalName || body?.legal_name),
     website: nullableText(body?.website || radar.website),
-    testSiteUrl: normalizeOptionalHttpUrl(body?.testSiteUrl ?? body?.test_site_url),
+    testSiteUrl: normalizeOptionalHttpUrl(body?.testSiteUrl ?? body?.test_site_url ?? radar.testSiteUrl),
     industry: nullableText(body?.industry || radar.vertical),
     market: nullableText(body?.market || radar.market),
     sourceType: nullableText(body?.sourceType || radar.sourceType),
@@ -3247,6 +3261,7 @@ function mapRadarRow(row) {
     entryType: row.entry_type || null,
     businessName: row.business_name || null,
     website: row.website || null,
+    testSiteUrl: row.test_site_url || null,
     vertical: row.vertical || null,
     market: row.market || null,
     sourceType: row.source_type || null,

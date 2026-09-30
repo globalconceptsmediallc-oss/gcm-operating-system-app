@@ -1,15 +1,20 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: prospects.html
-   Version: 3.4.0
+   Version: 3.5.0
    Status: Production Road-Test Candidate
    Source: Production prospects.html 2.0.0 + client-pre-research.html 1.1.0
-   Backend: Prospect CRM 1.4.0
+   Backend: Prospect CRM 1.5.0
    Sprint: Prospecting Natural Workflow
    Purpose:
    One operating workspace for GCM prospecting from first evidence through
    Radar, outreach, appointment, CRM, services, signed scope, startup package,
    and the eventual Client handoff.
+
+   Change Notes — 3.5.0
+   - Puts Open Test Site at the top of each Radar / pre-appointment record beside the business name.
+   - Shows Add Test Site in that same top position when no URL has been saved yet.
+   - Adds Edit Test Site to Radar Actions and carries the URL forward on promotion.
 
    Change Notes — 3.4.0
    - Adds Call Talking Points for formal Prospects with a recorded proposal.
@@ -249,7 +254,7 @@
           </div>
         </article>
         <article class="panel" id="radar-detail" hidden>
-          <div class="panel-head"><div><p class="eyebrow">Pre-Appointment Record</p><h2 id="radar-title">Radar</h2><p id="radar-subtitle"></p></div><button class="btn btn-secondary btn-small" id="close-radar" type="button">Close</button></div>
+          <div class="panel-head"><div><p class="eyebrow">Pre-Appointment Record</p><h2 id="radar-title">Radar</h2><p id="radar-subtitle"></p></div><div class="panel-head-actions"><button class="btn btn-primary btn-small" id="radar-test-site-top" type="button" hidden>Add Test Site</button><button class="btn btn-secondary btn-small" id="close-radar" type="button">Close</button></div></div>
           <div class="panel-body" id="radar-body"></div>
         </article>
       </section>
@@ -414,7 +419,7 @@
 <script>
 (() => {
   "use strict";
-  const FILE_VERSION="3.4.0";
+  const FILE_VERSION="3.5.0";
   const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const state={prospects:[],radar:[],services:[],selectedProspect:null,selectedRadar:null,view:"pipeline",
     researchTarget:{type:"new",id:null},researchResult:null,researchContext:null,images:[]};
@@ -482,7 +487,7 @@
     try{
       const [p,r,s]=await Promise.all([api("list_prospects"),api("list_radar"),api("list_service_catalog")]);
       state.prospects=p.prospects||[];state.radar=r.radar||[];state.services=s.services||[];
-      if(p.prospectCrmVersion!=="1.4.0")throw new Error(`This page requires Prospect CRM 1.4.0; live version is ${p.prospectCrmVersion||"unknown"}.`);
+      if(p.prospectCrmVersion!=="1.5.0")throw new Error(`This page requires Prospect CRM 1.5.0; live version is ${p.prospectCrmVersion||"unknown"}.`);
       renderSummary(p.counts||{});renderPipeline();renderRadar();renderNurture();renderPriority();populateStages();
       $("system-state").textContent=`D1 connected · CRM ${p.prospectCrmVersion}`;
     }catch(e){$("system-state").textContent=`CRM unavailable · ${e.message}`;console.error(e)}
@@ -721,15 +726,34 @@
   }
   function renderRadarDetail(r){
     $("radar-title").textContent=r.businessName||r.vertical||"Radar Record";$("radar-subtitle").textContent=`${r.status==="outreach"?"Outreach":"Radar"} · ${r.contactName||"Contact not recorded"}`;
-    $("radar-body").innerHTML=`<div class="detail-grid">${detail("Source",r.sourceType||"Unknown")}${detail("Market",r.market||r.vertical||"Unknown")}${detail("Contact",r.contactName||"Not recorded")}${detail("Email",r.contactEmail||"Not recorded")}${detail("Phone",r.contactPhone||"Not recorded")}${detail("Website",r.website||"Not recorded")}${detail("Last Outreach",fmtDate(r.lastOutreachAt))}${detail("Next Action",r.isUnmanaged?"MISSING":r.nextAction?.title||"Not in active outreach")}</div>
+    $("radar-body").innerHTML=`<div class="detail-grid">${detail("Source",r.sourceType||"Unknown")}${detail("Market",r.market||r.vertical||"Unknown")}${detail("Contact",r.contactName||"Not recorded")}${detail("Email",r.contactEmail||"Not recorded")}${detail("Phone",r.contactPhone||"Not recorded")}${detail("Website",r.website||"Not recorded")}${detail("Test Site",r.testSiteUrl||"Not recorded")}${detail("Last Outreach",fmtDate(r.lastOutreachAt))}${detail("Next Action",r.isUnmanaged?"MISSING":r.nextAction?.title||"Not in active outreach")}</div>
     <div class="section-title"><div><h3>Radar Actions</h3><p>Move naturally from evidence to outreach to appointment.</p></div></div>
-    <div class="quick-actions"><button class="btn btn-secondary btn-small" id="radar-edit" type="button">Edit Radar Record</button><button class="btn btn-secondary btn-small" id="radar-research" type="button">Research / Update Intelligence</button><button class="btn btn-secondary btn-small" id="radar-outreach" type="button">Record Outreach</button><button class="btn btn-primary btn-small" id="radar-promote" type="button">Appointment Scheduled</button></div>
+    <div class="quick-actions"><button class="btn btn-secondary btn-small" id="radar-edit" type="button">Edit Radar Record</button><button class="btn btn-secondary btn-small" id="radar-test-site-edit" type="button">${r.testSiteUrl?"Edit Test Site":"Add Test Site"}</button><button class="btn btn-secondary btn-small" id="radar-research" type="button">Research / Update Intelligence</button><button class="btn btn-secondary btn-small" id="radar-outreach" type="button">Record Outreach</button><button class="btn btn-primary btn-small" id="radar-promote" type="button">Appointment Scheduled</button></div>
     <div class="section-title"><div><h3>Intelligence</h3><p>${(r.intelligence||[]).length} durable record(s).</p></div></div><div class="timeline">${(r.intelligence||[]).slice(0,5).map(i=>`<div class="timeline-item"><strong>${esc(i.title)}</strong><p>${esc(i.summary||"Prospect intelligence saved in Radar.")}</p><time>${esc(fmtDate(i.capturedAt))}</time></div>`).join("")||'<div class="timeline-item"><strong>No research saved yet.</strong><p>Run Research / Update Intelligence.</p></div>'}</div>
     <div class="section-title"><div><h3>Outreach History</h3></div></div><div class="timeline">${(r.activities||[]).slice(0,10).map(a=>`<div class="timeline-item"><strong>${esc(a.subject||a.activityType.replaceAll("_"," "))}</strong><p>${esc(a.summary)}</p><time>${esc(fmtDate(a.occurredAt))}${a.outcome?` · ${esc(a.outcome)}`:""}</time></div>`).join("")||'<div class="timeline-item"><strong>No outreach yet.</strong><p>Radar can remain passive until GCM decides to pursue it.</p></div>'}</div>`;
+    const topTestSite=$("radar-test-site-top");
+    topTestSite.hidden=false;
+    topTestSite.textContent=r.testSiteUrl?"Open Test Site":"Add Test Site";
+    topTestSite.onclick=()=>r.testSiteUrl
+      ? window.open(normalizeUrl(r.testSiteUrl),"_blank","noopener,noreferrer")
+      : editRadarTestSite(r);
     $("radar-edit").addEventListener("click",()=>openRadarEdit(r));
+    $("radar-test-site-edit").addEventListener("click",()=>editRadarTestSite(r));
     $("radar-research").addEventListener("click",()=>startResearch({type:"radar",id:r.id,record:r}));
     $("radar-outreach").addEventListener("click",()=>{const f=$("outreach-form");f.elements.radarId.value=r.id;setDefaults(f);openDialog($("outreach-dialog"))});
     $("radar-promote").addEventListener("click",()=>{const f=$("promote-form");f.elements.radarId.value=r.id;setDefaults(f);openDialog($("promote-dialog"))});
+  }
+
+  async function editRadarTestSite(r){
+    const entered=window.prompt("Enter the verified test-site URL. Leave blank to remove it.",r.testSiteUrl||"");
+    if(entered===null)return;
+    const value=clean(entered);
+    await busy(async()=>{
+      const d=await api("update_radar",{radarId:r.id,testSiteUrl:value?normalizeUrl(value):null});
+      state.selectedRadar=d.radar;
+      renderRadarDetail(d.radar);
+      await load();
+    });
   }
 
   function openRadarEdit(r){
@@ -747,7 +771,7 @@
     f.elements.notes.value=r.notes||"";
     openDialog($("radar-edit-dialog"));
   }
-  $("close-radar").addEventListener("click",()=>{$("radar-detail").hidden=true;state.selectedRadar=null});
+  $("close-radar").addEventListener("click",()=>{$("radar-detail").hidden=true;$("radar-test-site-top").hidden=true;state.selectedRadar=null});
 
   function openDialog(d){d.querySelectorAll(".error").forEach(x=>x.hidden=true);d.showModal?d.showModal():d.setAttribute("open","")}
   function closeDialog(d){d.close?d.close():d.removeAttribute("open")}
