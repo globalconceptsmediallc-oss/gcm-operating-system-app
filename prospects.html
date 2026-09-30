@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: prospects.html
-   Version: 3.3.0
+   Version: 3.4.0
    Status: Production Road-Test Candidate
    Source: Production prospects.html 2.0.0 + client-pre-research.html 1.1.0
    Backend: Prospect CRM 1.4.0
@@ -10,6 +10,14 @@
    One operating workspace for GCM prospecting from first evidence through
    Radar, outreach, appointment, CRM, services, signed scope, startup package,
    and the eventual Client handoff.
+
+   Change Notes — 3.4.0
+   - Adds Call Talking Points for formal Prospects with a recorded proposal.
+   - Builds the call brief from the proposal, opportunity summary, proposed services,
+     durable intelligence, relationship activity, tracked concept-page views,
+     current stage, and Next Action.
+   - Treats tracked views as engagement evidence only and does not claim the
+     intended recipient was necessarily the physical viewer.
 
    Change Notes — 3.3.0
    - Adds a direct Test Site button to formal Prospect rows when a verified URL exists.
@@ -146,6 +154,7 @@
     .research-results{display:grid;gap:12px}.result-summary{display:grid;grid-template-columns:minmax(0,1.4fr) repeat(2,minmax(150px,.3fr));gap:10px}.result-card{padding:17px;border:1px solid var(--border);border-radius:var(--r-md);background:#fff}.result-card h3{margin:0;font-size:.9rem}.result-card p{margin:9px 0 0;color:#34475c;font-size:.76rem;line-height:1.6}.result-card ul{margin:9px 0 0;padding-left:18px;color:#34475c;font-size:.75rem}.result-card li{margin:5px 0}
     .result-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.full{grid-column:1/-1}.email-block,.script-block{margin-top:9px;padding:12px;border-radius:9px;background:#f6f8fa;white-space:pre-wrap;font-size:.75rem;line-height:1.55}.script-block{border-left:3px solid var(--blue-500)}
     details.engine{margin-top:8px;border:1px solid var(--border);border-radius:9px;overflow:hidden}details.engine summary{padding:11px 12px;background:#f6f8fa;font-size:.73rem;font-weight:850;cursor:pointer}.json{max-height:420px;margin:0;padding:12px;overflow:auto;background:#0b1e32;color:#d7e7f7;font:11px/1.5 "SFMono-Regular",Consolas,monospace;white-space:pre-wrap;word-break:break-word}
+    .call-points-dialog{width:min(900px,calc(100vw - 28px));}
     dialog{width:min(760px,calc(100vw - 28px));max-height:calc(100vh - 32px);padding:0;border:0;border-radius:18px;box-shadow:0 28px 90px rgba(7,20,38,.28)}
     dialog::backdrop{background:rgba(7,20,38,.55);backdrop-filter:blur(3px)}.modal-head{display:flex;justify-content:space-between;gap:14px;padding:18px 20px 14px;border-bottom:1px solid var(--border)}.modal-head h2{margin:0;font-size:1rem}.modal-head p{margin:4px 0 0;color:var(--muted);font-size:.73rem}.modal-body{padding:18px 20px;overflow:auto}.modal-close{width:34px;height:34px;border:1px solid var(--border);border-radius:9px;background:#fff}.form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:15px;padding-top:14px;border-top:1px solid var(--border)}
     .note{padding:10px 12px;border-radius:9px;background:var(--gold-100);color:#654a0a;font-size:.72rem}.error{padding:10px 12px;border-radius:9px;background:var(--critical-soft);color:var(--critical);font-size:.74rem;font-weight:700;margin-bottom:10px}
@@ -405,7 +414,7 @@
 <script>
 (() => {
   "use strict";
-  const FILE_VERSION="3.3.0";
+  const FILE_VERSION="3.4.0";
   const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const state={prospects:[],radar:[],services:[],selectedProspect:null,selectedRadar:null,view:"pipeline",
     researchTarget:{type:"new",id:null},researchResult:null,researchContext:null,images:[]};
@@ -539,6 +548,7 @@
     <div class="quick-actions">
       ${p.testSiteUrl?`<a class="btn btn-primary btn-small" href="${esc(normalizeUrl(p.testSiteUrl))}" target="_blank" rel="noopener noreferrer">Open Test Site</a>`:""}
       <button class="btn btn-secondary btn-small" data-prospect-action="test-site">${p.testSiteUrl?"Edit Test Site":"Add Test Site"}</button>
+      ${(p.proposals||[]).length?'<button class="btn btn-gold btn-small" data-prospect-action="call-points">Call Talking Points</button>':""}
       <button class="btn btn-secondary btn-small" data-prospect-action="research">Research More</button>
       <button class="btn btn-secondary btn-small" data-prospect-action="activity">Record Contact</button>
       <button class="btn btn-secondary btn-small" data-prospect-action="proposal">Record Proposal</button>
@@ -567,12 +577,120 @@
   function bindProspectDetailActions(p){
     document.querySelectorAll("[data-prospect-action]").forEach(b=>b.addEventListener("click",()=>{
       if(b.dataset.prospectAction==="test-site"){editProspectTestSite(p);return}
+      if(b.dataset.prospectAction==="call-points"){openCallTalkingPoints(p);return}
       openProspectAction(b.dataset.prospectAction,p)
     }));
     $("services-form")?.addEventListener("submit",async e=>{e.preventDefault();const keys=[...e.currentTarget.querySelectorAll('input[name="service"]:checked')].map(x=>x.value);await busy(async()=>{const d=await api("set_proposed_services",{prospectId:p.id,serviceKeys:keys});state.selectedProspect=d.prospect;renderProspect(d.prospect);await load()})});
     $("confirm-services")?.addEventListener("click",async()=>{const keys=[...$("services-form").querySelectorAll('input[name="service"]:checked')].map(x=>x.value);if(!keys.length)return alert("Select at least one service from the signed scope.");await busy(async()=>{const d=await api("confirm_contracted_services",{prospectId:p.id,serviceKeys:keys});state.selectedProspect=d.prospect;renderProspect(d.prospect);await load()})});
     document.querySelectorAll(".startup-status").forEach(s=>s.addEventListener("change",async()=>{await busy(async()=>{const d=await api("update_startup_requirement",{requirementId:Number(s.dataset.requirement),status:s.value});state.selectedProspect=d.prospect;renderProspect(d.prospect);await load()})}));
     $("copy-startup")?.addEventListener("click",()=>copyStartup(p));
+  }
+  function openCallTalkingPoints(p){
+    const proposal=(p.proposals||[])[0]||null;
+    if(!proposal)return alert("No proposal is recorded for this Prospect yet.");
+    const proposedServices=(p.services||[]).filter(s=>s.status==="proposed"||s.status==="contracted");
+    const intelligence=(p.intelligence||[]).slice(0,4);
+    const activities=p.activities||[];
+    const engagement=activities.filter(a=>a.activityType==="concept_page_view");
+    const recentRelationship=activities.filter(a=>a.activityType!=="concept_page_view").slice(0,5);
+    const latestView=engagement[0]||null;
+    const questions=prospectCallQuestions(p,proposal);
+    const serviceNames=proposedServices.map(s=>s.serviceName).filter(Boolean);
+    const intelligencePoints=intelligence.map(i=>i.summary||i.title).filter(Boolean);
+    const callGoal=prospectCallGoal(p);
+    const lines=[
+      p.businessName+" — Call Talking Points",
+      "",
+      "WHERE WE ARE: "+stageLabel(p.stage)+". "+(proposal.title||"Proposal")+" was sent "+fmtDate(proposal.sentAt)+".",
+      "CONTACT: "+(p.primaryContact?.name||"Contact not recorded")+(p.primaryContact?.email?" · "+p.primaryContact.email:""),
+      "PROPOSAL: "+(proposal.scopeSummary||p.opportunitySummary||"Scope summary not recorded."),
+      "VALUE: "+proposalValueSummary(proposal),
+      serviceNames.length?"SERVICES DISCUSSED: "+serviceNames.join(", "):"",
+      "ENGAGEMENT: "+(engagement.length?(engagement.length+" tracked concept/proposal-page view"+(engagement.length===1?"":"s")+" recorded; latest "+fmtDate(latestView?.occurredAt)+". This shows page activity, not proof of who physically viewed it."):"No tracked concept/proposal-page view is recorded."),
+      "",
+      "WHY THIS MATTERS:",
+      ...(intelligencePoints.length?intelligencePoints.map(x=>"- "+x):["- "+(p.opportunitySummary||"Use the recorded proposal scope and discovery context.")]),
+      "",
+      "QUESTIONS TO ASK:",
+      ...questions.map(x=>"- "+x),
+      "",
+      "GOAL OF THIS CALL: "+callGoal,
+      p.nextAction?.title?"CURRENT OS NEXT ACTION: "+p.nextAction.title+" · "+dueText(p.nextAction,p.isUnmanaged):"",
+      "",
+      "RECENT RELATIONSHIP HISTORY:",
+      ...(recentRelationship.length?recentRelationship.map(a=>"- "+fmtDate(a.occurredAt)+" — "+(a.subject||clean(a.activityType).replaceAll("_"," "))+": "+(a.summary||"")):["- No recent relationship activity is recorded."])
+    ].filter(Boolean);
+    const dialog=document.createElement("dialog");
+    dialog.className="call-points-dialog";
+    dialog.innerHTML=`
+      <div class="modal-head">
+        <div><h2>${esc(p.businessName)} — Call Talking Points</h2><p>Evidence-based call prep from the current Prospect record.</p></div>
+        <button class="modal-close" type="button" aria-label="Close">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="detail-grid">
+          ${detail("Stage",stageLabel(p.stage))}
+          ${detail("Proposal Sent",fmtDate(proposal.sentAt))}
+          ${detail("Proposal Value",proposalValueSummary(proposal))}
+          ${detail("Tracked Page Views",String(engagement.length))}
+        </div>
+        <div class="section-title"><div><h3>What We Proposed</h3></div></div>
+        <div class="note">${esc(proposal.scopeSummary||p.opportunitySummary||"No proposal scope summary is recorded.")}</div>
+        <div class="section-title"><div><h3>Why It Matters</h3></div></div>
+        <div class="timeline">${(intelligencePoints.length?intelligencePoints:[p.opportunitySummary||"Use the proposal scope and discovery context."]).map(x=>`<div class="timeline-item"><p>${esc(x)}</p></div>`).join("")}</div>
+        <div class="section-title"><div><h3>Proposal Engagement</h3></div></div>
+        <div class="note">${engagement.length?(engagement.length+" tracked concept/proposal-page view"+(engagement.length===1?"":"s")+" recorded. Latest: "+esc(fmtDate(latestView?.occurredAt))+". This indicates page activity only; it does not prove who physically viewed the page."):"No tracked concept/proposal-page view is recorded."}</div>
+        <div class="section-title"><div><h3>Questions to Ask</h3></div></div>
+        <div class="timeline">${questions.map(q=>`<div class="timeline-item"><p>${esc(q)}</p></div>`).join("")}</div>
+        <div class="section-title"><div><h3>Goal of the Call</h3></div></div>
+        <div class="note"><strong>${esc(callGoal)}</strong>${p.nextAction?.title?`<br>Current OS Next Action: ${esc(p.nextAction.title)} · ${esc(dueText(p.nextAction,p.isUnmanaged))}`:""}</div>
+        <div class="form-actions">
+          <button class="btn btn-secondary" data-copy-call-points type="button">Copy Talking Points</button>
+          <button class="btn btn-primary" data-close-call-points type="button">Close</button>
+        </div>
+      </div>`;
+    document.body.appendChild(dialog);
+    dialog.querySelector(".modal-close").addEventListener("click",()=>dialog.close());
+    dialog.querySelector("[data-close-call-points]").addEventListener("click",()=>dialog.close());
+    dialog.querySelector("[data-copy-call-points]").addEventListener("click",()=>{
+      navigator.clipboard.writeText(lines.join("\n")).then(()=>alert("Call talking points copied.")).catch(()=>alert("The browser could not copy the call talking points."));
+    });
+    dialog.addEventListener("close",()=>dialog.remove(),{once:true});
+    dialog.showModal();
+  }
+
+  function proposalValueSummary(proposal){
+    const low=money(proposal?.valueLowCents),high=money(proposal?.valueHighCents),recurring=money(proposal?.recurringValueCents);
+    const parts=[];
+    if(low&&high&&low!==high)parts.push(low+"–"+high);
+    else if(low||high)parts.push(low||high);
+    if(recurring)parts.push(recurring+"/"+(proposal.recurringPeriod||"period"));
+    return parts.join(" + ")||"Not recorded";
+  }
+
+  function prospectCallGoal(p){
+    if(p.nextAction?.title)return p.nextAction.title;
+    const goals={
+      awaiting_decision:"Get a clear decision path: approval, requested revision, or a specific decision date.",
+      proposal_sent:"Confirm they received and reviewed the proposal, surface questions, and agree on the next decision step.",
+      verbal_commitment:"Confirm the agreed scope and move to signature.",
+      contract_pending:"Resolve the remaining contract item and establish the signature date.",
+      awaiting_signature:"Confirm signature timing and any final scope question.",
+      nurture:"Reconfirm timing and whether the opportunity should remain active."
+    };
+    return goals[p.stage]||"Clarify the prospect's current position and leave the call with one dated Next Action.";
+  }
+
+  function prospectCallQuestions(p,proposal){
+    const questions=[
+      "What stood out to you when you reviewed the proposal?",
+      "Is there anything in the scope or approach you want me to clarify?",
+      "Has anything changed on your side since we last talked?"
+    ];
+    if(proposal?.valueLowCents||proposal?.valueHighCents||proposal?.recurringValueCents)questions.push("Do you have any questions about the investment, timing, or how the scope is structured?");
+    if(p.testSiteUrl)questions.push("Have you had a chance to review the test site, and is there anything you want changed or emphasized?");
+    questions.push("What would you need from me to make the next decision?");
+    return questions;
   }
   async function editProspectTestSite(p){
     const entered=window.prompt("Enter the verified test-site URL. Leave blank to remove it.",p.testSiteUrl||"");

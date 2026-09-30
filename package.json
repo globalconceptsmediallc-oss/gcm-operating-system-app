@@ -1,21 +1,21 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.89",
+  "version": "6.1.90",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.89",
+    "fileVersion": "6.1.90",
     "status": "Production Road-Test Candidate",
-    "purpose": "Add live Current Client Recap to the Client Workspace.",
+    "purpose": "Add proposal-based Prospect Call Talking Points.",
     "changeNotes": [
-      "Adds a Current Recap button to every loaded Client Workspace.",
-      "Builds the recap from live Business Record and D1 operational data.",
-      "Does not create a duplicate manually maintained status record."
+      "Adds evidence-based call prep for Prospects with a recorded proposal.",
+      "Uses proposal, services, intelligence, relationship history, engagement and Next Action.",
+      "Tracked page views are presented as page activity, not identity proof."
     ]
   },
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:work-due-date && npm run test:work-core-web-vitals && npm run test:media-deadline-attention && npm run test:universal-email-intake && npm run test:email-intake-queue && npm run test:gmail-intake-sync && npm run test:email-intake-finding && npm run test:google-review-quick-action && npm run test:proof-findings && npm run test:email-intake-disposition && npm run test:gmail-decisions && npm run test:gmail-monitoring-parity && npm run test:gmail-backlink-investigation && npm run test:gmail-intake && npm run test:gmail-backlog && npm run test:gmail-source-display && npm run test:gmail-handle-now && npm run test:gmail-thread-routing && npm run test:gmail-requested-work-content && npm run test:prospect-crm && npm run test:prospect-test-site && npm run test:prospect-concept-tracking && npm run test:prospect-engagement-today && npm run test:mediaforge-home && npm run test:mediaforge-variants && npm run test:mediaforge-naming && npm run test:business-workspace-health-v2 && npm run test:client-health-v2 && npm run test:asset-versions",
+    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:work-due-date && npm run test:work-core-web-vitals && npm run test:media-deadline-attention && npm run test:universal-email-intake && npm run test:email-intake-queue && npm run test:gmail-intake-sync && npm run test:email-intake-finding && npm run test:google-review-quick-action && npm run test:proof-findings && npm run test:email-intake-disposition && npm run test:gmail-decisions && npm run test:gmail-monitoring-parity && npm run test:gmail-backlink-investigation && npm run test:gmail-intake && npm run test:gmail-backlog && npm run test:gmail-source-display && npm run test:gmail-handle-now && npm run test:gmail-thread-routing && npm run test:gmail-requested-work-content && npm run test:prospect-crm && npm run test:prospect-test-site && npm run test:prospect-call-points && npm run test:prospect-concept-tracking && npm run test:prospect-engagement-today && npm run test:mediaforge-home && npm run test:mediaforge-variants && npm run test:mediaforge-naming && npm run test:business-workspace-health-v2 && npm run test:client-health-v2 && npm run test:asset-versions",
     "test:website-intelligence": "node tests/websiteIntelligence.test.js",
     "test:code-intelligence": "node tests/codeIntelligence.test.js",
     "test:operating-sessions": "node tests/operatingSessionTasks.test.js && node tests/osAuth.test.js && node tests/operatingSessionIntake.test.js",
@@ -48,7 +48,8 @@
     "test:gmail-intake-sync": "node tests/gmailIntakeSync.test.js",
     "test:prospect-concept-tracking": "node tests/prospectConceptTracking.test.js",
     "test:prospect-engagement-today": "node tests/prospectEngagementToday.test.js",
-    "test:prospect-test-site": "node tests/prospectTestSiteUrl.test.js"
+    "test:prospect-test-site": "node tests/prospectTestSiteUrl.test.js",
+    "test:prospect-call-points": "node tests/prospectCallTalkingPoints.test.js"
   },
   "dependencies": {
     "postal-mime": "^3.0.0"
