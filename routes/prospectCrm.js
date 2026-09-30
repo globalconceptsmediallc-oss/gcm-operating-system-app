@@ -1,9 +1,14 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/prospectCrm.js
-   Version: 1.3.0
+   Version: 1.4.0
    Status: Production Road-Test Candidate
    Purpose: Durable Prospecting Radar + CRM operations for GCM.
+
+   Change Notes — 1.4.0:
+   - Adds a durable test_site_url to formal Prospect records.
+   - Allows create/update operations to save or clear the verified test-site URL.
+   - Returns testSiteUrl in Prospect summary/detail payloads for direct OS access.
 
    Change Notes — 1.3.0:
    - Adds update_radar so verified business/contact details can be edited directly.
@@ -54,7 +59,7 @@ import {
 } from "../shared/http.js";
 
 export const PROSPECT_CRM_ACTION = "prospect-crm";
-export const PROSPECT_CRM_VERSION = "1.3.0";
+export const PROSPECT_CRM_VERSION = "1.4.0";
 
 const ACTIVE_MANAGED_STATUSES = new Set(["active", "nurture"]);
 const ALLOWED_STATUSES = new Set([
@@ -1003,6 +1008,7 @@ async function promoteRadar(body, db, requestId) {
     businessName,
     legalName: nullableText(body?.legalName || body?.legal_name),
     website: nullableText(body?.website || radar.website),
+    testSiteUrl: normalizeOptionalHttpUrl(body?.testSiteUrl ?? body?.test_site_url),
     industry: nullableText(body?.industry || radar.vertical),
     market: nullableText(body?.market || radar.market),
     sourceType: nullableText(body?.sourceType || radar.sourceType),
@@ -1160,6 +1166,7 @@ async function createProspect(body, db, requestId) {
     businessName,
     legalName: nullableText(body?.legalName || body?.legal_name),
     website: nullableText(body?.website),
+    testSiteUrl: normalizeOptionalHttpUrl(body?.testSiteUrl ?? body?.test_site_url),
     industry: nullableText(body?.industry),
     market: nullableText(body?.market || body?.location),
     sourceType: nullableText(body?.sourceType || body?.source_type),
@@ -1214,6 +1221,7 @@ async function createProspectRecord(input) {
     businessName,
     legalName,
     website,
+    testSiteUrl = null,
     industry,
     market,
     sourceType,
@@ -1238,6 +1246,7 @@ async function createProspectRecord(input) {
       business_name,
       legal_name,
       website,
+      test_site_url,
       industry,
       market,
       source_type,
@@ -1256,12 +1265,13 @@ async function createProspectRecord(input) {
       notes,
       created_at,
       updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
   `).bind(
     radarId || null,
     businessName,
     legalName,
     website,
+    testSiteUrl,
     industry,
     market,
     sourceType,
@@ -1460,6 +1470,7 @@ async function updateProspect(body, db, requestId) {
     SET business_name = ?,
         legal_name = ?,
         website = ?,
+        test_site_url = ?,
         industry = ?,
         market = ?,
         stage = ?,
@@ -1478,6 +1489,9 @@ async function updateProspect(body, db, requestId) {
     cleanText(body?.businessName || body?.business_name || existing.businessName),
     bodyHas(body, "legalName", "legal_name") ? nullableText(body?.legalName ?? body?.legal_name) : existing.legalName,
     bodyHas(body, "website") ? nullableText(body.website) : existing.website,
+    bodyHas(body, "testSiteUrl", "test_site_url")
+      ? normalizeOptionalHttpUrl(body?.testSiteUrl ?? body?.test_site_url)
+      : existing.testSiteUrl,
     bodyHas(body, "industry") ? nullableText(body.industry) : existing.industry,
     bodyHas(body, "market") ? nullableText(body.market) : existing.market,
     stage,
@@ -3320,6 +3334,7 @@ function mapProspectSummaryRow(row) {
     businessName: row.business_name || "Unnamed Prospect",
     legalName: row.legal_name || null,
     website: row.website || null,
+    testSiteUrl: row.test_site_url || null,
     industry: row.industry || null,
     market: row.market || null,
     sourceType: row.source_type || null,
@@ -3726,6 +3741,21 @@ function positiveInteger(value) {
 
 function cleanText(value) {
   return String(value ?? "").trim();
+}
+
+function normalizeOptionalHttpUrl(value) {
+  const text = cleanText(value);
+  if (!text) return null;
+  const candidate = /^https?:\/\//i.test(text) ? text : `https://${text}`;
+  try {
+    const parsed = new URL(candidate);
+    if (!["http:", "https:"].includes(parsed.protocol)) {
+      throw new Error("Unsupported protocol");
+    }
+    return parsed.toString();
+  } catch {
+    throw new Error("testSiteUrl must be a valid http(s) URL.");
+  }
 }
 
 function nullableText(value) {

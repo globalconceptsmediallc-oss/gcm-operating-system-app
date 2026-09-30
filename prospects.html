@@ -1,15 +1,20 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: prospects.html
-   Version: 3.2.0
+   Version: 3.3.0
    Status: Production Road-Test Candidate
    Source: Production prospects.html 2.0.0 + client-pre-research.html 1.1.0
-   Backend: Prospect CRM 1.3.0
+   Backend: Prospect CRM 1.4.0
    Sprint: Prospecting Natural Workflow
    Purpose:
    One operating workspace for GCM prospecting from first evidence through
    Radar, outreach, appointment, CRM, services, signed scope, startup package,
    and the eventual Client handoff.
+
+   Change Notes — 3.3.0
+   - Adds a direct Test Site button to formal Prospect rows when a verified URL exists.
+   - Adds Add/Edit Test Site inside the Prospect relationship workspace.
+   - Saves the URL to the durable Prospect record instead of inferring a GitHub Pages address.
 
    Change Notes — 3.2.0
    - Makes the Radar & Outreach list panel collapsible without hiding an open Radar detail record.
@@ -400,7 +405,7 @@
 <script>
 (() => {
   "use strict";
-  const FILE_VERSION="3.2.0";
+  const FILE_VERSION="3.3.0";
   const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const state={prospects:[],radar:[],services:[],selectedProspect:null,selectedRadar:null,view:"pipeline",
     researchTarget:{type:"new",id:null},researchResult:null,researchContext:null,images:[]};
@@ -468,7 +473,7 @@
     try{
       const [p,r,s]=await Promise.all([api("list_prospects"),api("list_radar"),api("list_service_catalog")]);
       state.prospects=p.prospects||[];state.radar=r.radar||[];state.services=s.services||[];
-      if(p.prospectCrmVersion!=="1.3.0")throw new Error(`This page requires Prospect CRM 1.3.0; live version is ${p.prospectCrmVersion||"unknown"}.`);
+      if(p.prospectCrmVersion!=="1.4.0")throw new Error(`This page requires Prospect CRM 1.4.0; live version is ${p.prospectCrmVersion||"unknown"}.`);
       renderSummary(p.counts||{});renderPipeline();renderRadar();renderNurture();renderPriority();populateStages();
       $("system-state").textContent=`D1 connected · CRM ${p.prospectCrmVersion}`;
     }catch(e){$("system-state").textContent=`CRM unavailable · ${e.message}`;console.error(e)}
@@ -484,7 +489,10 @@
   function renderRecord(p){
     return `<article class="record"><div><h3>${esc(p.businessName)}</h3><p class="meta">${esc(p.primaryContact?.name||"Contact not recorded")} · ${esc(p.market||p.industry||"Market not recorded")}</p><p class="insight">${esc(p.opportunitySummary||"Opportunity summary not recorded.")}</p><div class="chips"><span class="badge ${statusClass(p)}">${esc(stageLabel(p.stage))}</span><span class="chip">${esc(valueSummary(p))}</span></div></div>
     <div><p class="next-label">Next Action</p><p class="next-title">${esc(p.isUnmanaged?"Active relationship has no dated Next Action":p.nextAction?.title||"No open action")}</p><p class="next-due">${esc(dueText(p.nextAction,p.isUnmanaged))}</p></div>
-    <div><button class="btn btn-secondary btn-small" data-open-prospect="${p.id}" type="button">Open</button></div></article>`;
+    <div class="quick-actions">
+      ${p.testSiteUrl?`<a class="btn btn-primary btn-small" href="${esc(normalizeUrl(p.testSiteUrl))}" target="_blank" rel="noopener noreferrer">Test Site</a>`:""}
+      <button class="btn btn-secondary btn-small" data-open-prospect="${p.id}" type="button">Open</button>
+    </div></article>`;
   }
   function bindProspectOpens(container){container.querySelectorAll("[data-open-prospect]").forEach(b=>b.addEventListener("click",()=>openProspect(Number(b.dataset.openProspect))))}
   function renderPipeline(){
@@ -525,9 +533,12 @@
     <div class="detail-grid">
       ${detail("Stage",stageLabel(p.stage))}${detail("Primary Contact",p.primaryContact?.name||"Not recorded")}${detail("Last Contact",fmtDate(p.lastMeaningfulContactAt))}${detail("Opportunity",valueSummary(p))}
       ${detail("Next Action",p.nextAction?.title||(p.isUnmanaged?"MISSING":"No open action"))}${detail("Due",dueText(p.nextAction,p.isUnmanaged))}${detail("Proposal",(p.proposals||[])[0]?.title||"No proposal recorded")}${detail("Agreement",agreement?`${agreement.status} · ${money(agreement.contractValueCents)||""}`:"No signed agreement")}
+      ${detail("Test Site",p.testSiteUrl||"Not recorded")}
     </div>
     <div class="section-title"><div><h3>Relationship Actions</h3><p>Do the work from the record instead of remembering it elsewhere.</p></div></div>
     <div class="quick-actions">
+      ${p.testSiteUrl?`<a class="btn btn-primary btn-small" href="${esc(normalizeUrl(p.testSiteUrl))}" target="_blank" rel="noopener noreferrer">Open Test Site</a>`:""}
+      <button class="btn btn-secondary btn-small" data-prospect-action="test-site">${p.testSiteUrl?"Edit Test Site":"Add Test Site"}</button>
       <button class="btn btn-secondary btn-small" data-prospect-action="research">Research More</button>
       <button class="btn btn-secondary btn-small" data-prospect-action="activity">Record Contact</button>
       <button class="btn btn-secondary btn-small" data-prospect-action="proposal">Record Proposal</button>
@@ -554,11 +565,25 @@
     <div>${(pkg.requirements||[]).filter(x=>x.status!=="not_required").map(x=>`<div class="requirement"><div><strong>${esc(x.title)}</strong><p>${esc(x.clientRequest||"")} · ${esc(x.responsibleParty||"")}</p></div><select class="select startup-status" data-requirement="${x.id}"><option value="needed" ${x.status==="needed"?"selected":""}>Needed</option><option value="requested" ${x.status==="requested"?"selected":""}>Requested</option><option value="received" ${x.status==="received"?"selected":""}>Received</option><option value="verified" ${x.status==="verified"?"selected":""}>Verified</option><option value="not_required" ${x.status==="not_required"?"selected":""}>Not Required</option></select></div>`).join("")}</div>`;
   }
   function bindProspectDetailActions(p){
-    document.querySelectorAll("[data-prospect-action]").forEach(b=>b.addEventListener("click",()=>openProspectAction(b.dataset.prospectAction,p)));
+    document.querySelectorAll("[data-prospect-action]").forEach(b=>b.addEventListener("click",()=>{
+      if(b.dataset.prospectAction==="test-site"){editProspectTestSite(p);return}
+      openProspectAction(b.dataset.prospectAction,p)
+    }));
     $("services-form")?.addEventListener("submit",async e=>{e.preventDefault();const keys=[...e.currentTarget.querySelectorAll('input[name="service"]:checked')].map(x=>x.value);await busy(async()=>{const d=await api("set_proposed_services",{prospectId:p.id,serviceKeys:keys});state.selectedProspect=d.prospect;renderProspect(d.prospect);await load()})});
     $("confirm-services")?.addEventListener("click",async()=>{const keys=[...$("services-form").querySelectorAll('input[name="service"]:checked')].map(x=>x.value);if(!keys.length)return alert("Select at least one service from the signed scope.");await busy(async()=>{const d=await api("confirm_contracted_services",{prospectId:p.id,serviceKeys:keys});state.selectedProspect=d.prospect;renderProspect(d.prospect);await load()})});
     document.querySelectorAll(".startup-status").forEach(s=>s.addEventListener("change",async()=>{await busy(async()=>{const d=await api("update_startup_requirement",{requirementId:Number(s.dataset.requirement),status:s.value});state.selectedProspect=d.prospect;renderProspect(d.prospect);await load()})}));
     $("copy-startup")?.addEventListener("click",()=>copyStartup(p));
+  }
+  async function editProspectTestSite(p){
+    const entered=window.prompt("Enter the verified test-site URL. Leave blank to remove it.",p.testSiteUrl||"");
+    if(entered===null)return;
+    const value=clean(entered);
+    await busy(async()=>{
+      const d=await api("update_prospect",{prospectId:p.id,testSiteUrl:value?normalizeUrl(value):null});
+      state.selectedProspect=d.prospect;
+      renderProspect(d.prospect);
+      await load();
+    });
   }
   function copyStartup(p){
     const items=(p.startupPackage?.clientRequestItems||[]).filter(x=>x.status!=="not_required");

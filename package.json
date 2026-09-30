@@ -1,21 +1,21 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.87",
+  "version": "6.1.88",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.87",
+    "fileVersion": "6.1.88",
     "status": "Production Road-Test Candidate",
-    "purpose": "Show tracked prospect proposal opens on Today with the intended recipient details.",
+    "purpose": "Add durable Prospect test-site URLs with direct OS access.",
     "changeNotes": [
-      "Adds the Radar/Prospect contact name and email to recent tracked proposal-open details.",
-      "Today labels the identity as Recipient on record so the UI does not overstate who physically clicked a forwarded URL.",
-      "Preserves the 60-second engagement refresh and existing prospect follow-up state."
+      "Adds Prospect test-site URL regression coverage.",
+      "Keeps the URL durable in D1 instead of inferring a repository or Pages address.",
+      "Preserves the existing Prospect CRM and proposal workflows."
     ]
   },
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:work-due-date && npm run test:work-core-web-vitals && npm run test:media-deadline-attention && npm run test:universal-email-intake && npm run test:email-intake-queue && npm run test:gmail-intake-sync && npm run test:email-intake-finding && npm run test:google-review-quick-action && npm run test:proof-findings && npm run test:email-intake-disposition && npm run test:gmail-decisions && npm run test:gmail-monitoring-parity && npm run test:gmail-backlink-investigation && npm run test:gmail-intake && npm run test:gmail-backlog && npm run test:gmail-source-display && npm run test:gmail-handle-now && npm run test:gmail-thread-routing && npm run test:gmail-requested-work-content && npm run test:prospect-crm && npm run test:prospect-concept-tracking && npm run test:prospect-engagement-today && npm run test:mediaforge-home && npm run test:mediaforge-variants && npm run test:mediaforge-naming && npm run test:business-workspace-health-v2 && npm run test:client-health-v2 && npm run test:asset-versions",
+    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:work-due-date && npm run test:work-core-web-vitals && npm run test:media-deadline-attention && npm run test:universal-email-intake && npm run test:email-intake-queue && npm run test:gmail-intake-sync && npm run test:email-intake-finding && npm run test:google-review-quick-action && npm run test:proof-findings && npm run test:email-intake-disposition && npm run test:gmail-decisions && npm run test:gmail-monitoring-parity && npm run test:gmail-backlink-investigation && npm run test:gmail-intake && npm run test:gmail-backlog && npm run test:gmail-source-display && npm run test:gmail-handle-now && npm run test:gmail-thread-routing && npm run test:gmail-requested-work-content && npm run test:prospect-crm && npm run test:prospect-test-site && npm run test:prospect-concept-tracking && npm run test:prospect-engagement-today && npm run test:mediaforge-home && npm run test:mediaforge-variants && npm run test:mediaforge-naming && npm run test:business-workspace-health-v2 && npm run test:client-health-v2 && npm run test:asset-versions",
     "test:website-intelligence": "node tests/websiteIntelligence.test.js",
     "test:code-intelligence": "node tests/codeIntelligence.test.js",
     "test:operating-sessions": "node tests/operatingSessionTasks.test.js && node tests/osAuth.test.js && node tests/operatingSessionIntake.test.js",
@@ -47,7 +47,8 @@
     "test:google-review-quick-action": "node tests/googleReviewQuickAction.test.js",
     "test:gmail-intake-sync": "node tests/gmailIntakeSync.test.js",
     "test:prospect-concept-tracking": "node tests/prospectConceptTracking.test.js",
-    "test:prospect-engagement-today": "node tests/prospectEngagementToday.test.js"
+    "test:prospect-engagement-today": "node tests/prospectEngagementToday.test.js",
+    "test:prospect-test-site": "node tests/prospectTestSiteUrl.test.js"
   },
   "dependencies": {
     "postal-mime": "^3.0.0"
