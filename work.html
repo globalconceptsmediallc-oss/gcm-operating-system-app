@@ -1,10 +1,13 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.32
+   Version: 1.9.33
    Status: FBDT Production Candidate
    Source: Stable production work.html 1.9.18
    Sprint: Work Queue Full Recovery
+   - v1.9.33 makes Evidence Actions source-aware for SEMrush, Search Console, GA4, and Merchant Center.
+   - Each supported investigation opens its matching evidence platform instead of falling through to a generic source.
+   - Existing saved direct SEMrush/Search Console links remain authoritative when available.
    Purpose: Preserve the complete audited SEMrush evidence and guided
             Investigation workflow while adding a direct D1 entrance for
             known client-requested work that needs no artificial Investigation.
@@ -673,9 +676,23 @@
     ].filter(Boolean).join(" ");
   }
 
+  function isGoogleAnalytics(item){
+    const combined=[item?.title,item?.description,item?.communication?.subject,item?.communication?.notification_type,item?.communication?.communication_family]
+      .map(value=>norm(value)).join(" ");
+    return combined.includes("google analytics") || combined.includes("ga4") || combined.includes("analytics notification");
+  }
+
+  function isGoogleMerchantCenter(item){
+    const combined=[item?.title,item?.description,item?.communication?.subject,item?.communication?.notification_type,item?.communication?.communication_family]
+      .map(value=>norm(value)).join(" ");
+    return combined.includes("merchant center") || combined.includes("merchant_center") || combined.includes("google merchant");
+  }
+
   function evidenceSourceName(item){
     if(isSemrushSiteAudit(item))return "SEMrush Site Audit";
     if(isGoogleSearchConsole(item))return "Google Search Console";
+    if(isGoogleAnalytics(item))return "Google Analytics 4";
+    if(isGoogleMerchantCenter(item))return "Google Merchant Center";
     return "client evidence source";
   }
 
@@ -932,6 +949,20 @@
         href:savedSearchConsoleUrl||"https://search.google.com/search-console/",
         primary:true,
         tool:"search-console"
+      });
+    }else if(isGoogleAnalytics(item)){
+      actions.push({
+        label:`Open ${item.clientName} GA4 Evidence`,
+        href:"https://analytics.google.com/",
+        primary:true,
+        tool:"ga4"
+      });
+    }else if(isGoogleMerchantCenter(item)){
+      actions.push({
+        label:`Open ${item.clientName} Merchant Center Evidence`,
+        href:"https://merchants.google.com/",
+        primary:true,
+        tool:"merchant-center"
       });
     }
 
