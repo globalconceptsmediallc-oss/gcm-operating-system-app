@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.34
+   Version: 1.9.35
    Status: FBDT Production Candidate
    Source: Stable production work.html 1.9.18
    Sprint: Work Queue Full Recovery
@@ -302,7 +302,7 @@
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.34"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.35"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),externalValidation:byId("external-validation-list"),target:byId("target-banner"),requestedForm:byId("requested-work-form"),requestedClient:byId("requested-client"),requestedMessage:byId("requested-work-message"),createRequested:byId("create-requested-work")};
   let activeClients=[],directoryClients=[],investigations=[],monitoringInvestigations=[],workItems=[],validationWorkItems=[],selectedKey="",processing=false,processingWorkItem=false,processingRequestedWork=false;
 
@@ -580,13 +580,13 @@
   function isSemrushBacklinkAudit(item){
     const combined=[item?.title,item?.description,item?.communication?.subject,item?.communication?.notification_type,item?.communication?.communication_family,item?.communication?.raw_content]
       .map(value=>norm(value)).join(" ");
-    return combined.includes("backlink audit") || combined.includes("toxic domain") || combined.includes("referring domain");
+    return combined.includes("backlink_audit") || combined.includes("toxic_domain") || combined.includes("referring_domain");
   }
 
   function isSemrushPositionTracking(item){
     const combined=[item?.title,item?.description,item?.communication?.subject,item?.communication?.notification_type,item?.communication?.communication_family,item?.communication?.raw_content]
       .map(value=>norm(value)).join(" ");
-    return combined.includes("position tracking") || combined.includes("notification of rank change") || combined.includes("pages dropped from top") || combined.includes("pages entered top");
+    return combined.includes("position_tracking") || combined.includes("notification_of_rank_change") || combined.includes("pages_dropped_from_top") || combined.includes("pages_entered_top");
   }
 
   function isSemrushEvidence(item){
