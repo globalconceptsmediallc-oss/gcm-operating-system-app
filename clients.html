@@ -1,9 +1,9 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: clients.html
-   Version: 1.2.1
+   Version: 1.3.0
    Status: Production Candidate
-   Change: Correct Open Client handoff to use authoritative D1 client_code
+   Change: Add ranked operational drill-down and direct Investigation/Work links
    Source: Production clients.html 1.1.0
    Shared Shell: shared/gcm-shell.js 1.0.0
    Worker: 7.5.0
@@ -359,6 +359,15 @@
       font-weight:850;
     }
 
+    .operational-drilldown {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+    .operational-drilldown details{border:1px solid var(--border);border-radius:12px;background:#fff;overflow:hidden}
+    .operational-drilldown summary{cursor:pointer;padding:11px 13px;font-size:.78rem;font-weight:850;color:var(--text)}
+    .operational-record-list{display:grid;gap:7px;padding:0 10px 10px}
+    .operational-record{display:block;padding:9px 10px;border-radius:9px;background:var(--soft);font-size:.76rem;line-height:1.35}
+    .operational-record:hover{background:var(--info-soft);color:var(--info)}
+    .operational-record strong{display:block;margin-bottom:2px}
+    .operational-empty{padding:0 12px 12px;color:var(--muted);font-size:.76rem}
+
     .client-actions {
       display:flex;
       gap:10px;
@@ -639,6 +648,7 @@
           return {
             directory: client,
             workspace: payload?.record || null,
+            operational: payload?.operational || {},
             counts: payload?.counts || {},
             loadError: null
           };
@@ -651,10 +661,34 @@
           return {
             directory: client,
             workspace: null,
+            operational: {},
             counts: {},
             loadError: error?.message || "Workspace unavailable."
           };
         }
+      }
+
+      function priorityRank(value) {
+        const priority = normalizeStatus(value);
+        if (["urgent","critical","highest"].includes(priority)) return 0;
+        if (priority === "high") return 1;
+        if (["normal","medium"].includes(priority)) return 2;
+        if (priority === "low") return 3;
+        return 4;
+      }
+
+      function renderOperationalRecords(items, type, clientCode) {
+        const ranked = [...items].sort((a,b) => priorityRank(a.priority || a.severity) - priorityRank(b.priority || b.severity));
+        if (!ranked.length) return '<div class="operational-empty">No actionable records.</div>';
+        return '<div class="operational-record-list">' + ranked.map(item => {
+          const id = item.id;
+          const title = item.title || (type === "investigation" ? "Investigation" : "Work Item");
+          const priority = item.priority || item.severity || "Normal";
+          const href = type === "investigation"
+            ? `work.html?investigation=${encodeURIComponent(id)}&client=${encodeURIComponent(clientCode || "")}`
+            : `work.html?workItem=${encodeURIComponent(id)}&client=${encodeURIComponent(clientCode || "")}`;
+          return `<a class="operational-record" href="${href}"><strong>${escapeHtml(title)}</strong>${escapeHtml(priority)} · #${escapeHtml(id)}</a>`;
+        }).join("") + "</div>";
       }
 
       function renderClient(row) {
@@ -664,6 +698,9 @@
         const relationship = workspace.relationship || {};
         const workspaceState = workspace.workspace || {};
         const counts = row.counts || {};
+        const operational = row.operational || {};
+        const investigationRecords = Array.isArray(operational.investigations) ? operational.investigations : [];
+        const workRecords = Array.isArray(operational.workItems) ? operational.workItems.filter(item => !["completed","complete","closed","cancelled","canceled","archived"].includes(normalizeStatus(item.status))) : [];
 
         const name =
           directory.name ||
@@ -781,6 +818,17 @@
                       ${escapeHtml(formatDate(lastActivity))}
                     </p>
                   </div>
+                </div>
+
+                <div class="operational-drilldown">
+                  <details>
+                    <summary>${openInvestigations} Open Investigation${openInvestigations === 1 ? "" : "s"}</summary>
+                    ${renderOperationalRecords(investigationRecords, "investigation", directory.clientCode)}
+                  </details>
+                  <details>
+                    <summary>${openWorkItems} Open Work Item${openWorkItems === 1 ? "" : "s"}</summary>
+                    ${renderOperationalRecords(workRecords, "work", directory.clientCode)}
+                  </details>
                 </div>
               </div>
 
