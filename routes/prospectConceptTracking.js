@@ -1,10 +1,15 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/prospectConceptTracking.js
-   Version: 1.0.8
+   Version: 1.0.9
    Status: Production Road-Test Candidate
    Purpose: Record privacy-minimized engagement when a personalized
             GCM prospect concept page is viewed.
+
+   Change Notes — 1.0.9:
+   - Routes a verified personalized-page view into the existing Radar Next Action.
+   - Sets "Follow up after prospect engagement" due today when no stronger pending action exists.
+   - Repeated views remain durable engagement evidence without creating duplicate follow-up records.
 
    Change Notes — 1.0.8:
    - Adds Leonard Financial Group's personalized 321 Living print-attribution concept to the prospect engagement allowlist.
@@ -245,7 +250,19 @@ export async function handleProspectConceptView(body, env, requestId) {
 
     await db.prepare(`
       UPDATE crm_prospect_radar
-      SET updated_at = CURRENT_TIMESTAMP
+      SET next_action_title = CASE
+            WHEN next_action_title IS NULL
+              OR TRIM(next_action_title) = ''
+              OR LOWER(TRIM(next_action_title)) = 'follow up with prospect'
+            THEN 'Follow up after prospect engagement'
+            ELSE next_action_title
+          END,
+          next_action_due_date = CASE
+            WHEN next_action_due_date IS NULL
+            THEN date('now')
+            ELSE next_action_due_date
+          END,
+          updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).bind(radarId).run();
 
