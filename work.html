@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.33
+   Version: 1.9.34
    Status: FBDT Production Candidate
    Source: Stable production work.html 1.9.18
    Sprint: Work Queue Full Recovery
@@ -577,6 +577,22 @@
       (combined.includes("site_audit") || combined.includes("site audit"));
   }
 
+  function isSemrushBacklinkAudit(item){
+    const combined=[item?.title,item?.description,item?.communication?.subject,item?.communication?.notification_type,item?.communication?.communication_family,item?.communication?.raw_content]
+      .map(value=>norm(value)).join(" ");
+    return combined.includes("backlink audit") || combined.includes("toxic domain") || combined.includes("referring domain");
+  }
+
+  function isSemrushPositionTracking(item){
+    const combined=[item?.title,item?.description,item?.communication?.subject,item?.communication?.notification_type,item?.communication?.communication_family,item?.communication?.raw_content]
+      .map(value=>norm(value)).join(" ");
+    return combined.includes("position tracking") || combined.includes("notification of rank change") || combined.includes("pages dropped from top") || combined.includes("pages entered top");
+  }
+
+  function isSemrushEvidence(item){
+    return isSemrushSiteAudit(item) || isSemrushBacklinkAudit(item) || isSemrushPositionTracking(item);
+  }
+
   function isSemrushCoreWebVitals(item){
     if(!isSemrushSiteAudit(item))return false;
     const combined=[
@@ -689,6 +705,8 @@
   }
 
   function evidenceSourceName(item){
+    if(isSemrushBacklinkAudit(item))return "SEMrush Backlink Audit";
+    if(isSemrushPositionTracking(item))return "SEMrush Position Tracking";
     if(isSemrushSiteAudit(item))return "SEMrush Site Audit";
     if(isGoogleSearchConsole(item))return "Google Search Console";
     if(isGoogleAnalytics(item))return "Google Analytics 4";
@@ -932,7 +950,21 @@
     const savedSemrushUrl=getSavedSemrushUrl(item.clientCode);
     const savedSearchConsoleUrl=getSavedSearchConsoleUrl(item.clientCode);
 
-    if(isSemrushSiteAudit(item)){
+    if(isSemrushBacklinkAudit(item)){
+      actions.push({
+        label:`Open ${item.clientName} SEMrush Backlink Audit`,
+        href:"https://www.semrush.com/backlink-audit/",
+        primary:true,
+        tool:"semrush-backlink-audit"
+      });
+    }else if(isSemrushPositionTracking(item)){
+      actions.push({
+        label:`Open ${item.clientName} SEMrush Position Tracking`,
+        href:"https://www.semrush.com/position-tracking/",
+        primary:true,
+        tool:"semrush-position-tracking"
+      });
+    }else if(isSemrushSiteAudit(item)){
       actions.push({
         label:savedSemrushUrl
           ? `Open ${item.clientName} Issues`
