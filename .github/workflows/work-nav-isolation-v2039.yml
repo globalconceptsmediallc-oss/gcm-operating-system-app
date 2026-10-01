@@ -19,7 +19,7 @@ jobs:
 
       - name: Disable Work-only enhancement scripts and bump shell version
         shell: python
-        run: |
+        run: |-
           from pathlib import Path
 
           path = Path('shared/gcm-shell.js')
@@ -91,7 +91,7 @@ jobs:
                   raise SystemExit(f'Work-only script is still being auto-loaded: {item}')
 
       - name: Commit Isolation Release
-        run: |
+        run: |-
           git config user.name "globalconceptsmediallc-oss"
           git config user.email "globalconceptsmediallc@gmail.com"
           git add shared/gcm-shell.js
