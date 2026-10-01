@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: prospects.html
-   Version: 3.5.0
+   Version: 3.5.1
    Status: Production Road-Test Candidate
    Source: Production prospects.html 2.0.0 + client-pre-research.html 1.1.0
    Backend: Prospect CRM 1.5.0
@@ -10,6 +10,10 @@
    One operating workspace for GCM prospecting from first evidence through
    Radar, outreach, appointment, CRM, services, signed scope, startup package,
    and the eventual Client handoff.
+
+   Change Notes — 3.5.1
+   - Adds Test Site / Custom Prospect Link directly to Edit Radar Record.
+   - Saves testSiteUrl through the existing update_radar handler so verified preview links can be corrected with the rest of the Radar record.
 
    Change Notes — 3.5.0
    - Puts Open Test Site at the top of each Radar / pre-appointment record beside the business name.
@@ -326,6 +330,7 @@
     <div class="field"><label>Contact Name</label><input class="input" name="contactName" /></div>
     <div class="field"><label>Contact Email</label><input class="input" type="email" name="contactEmail" /></div>
     <div class="field"><label>Contact Phone</label><input class="input" name="contactPhone" /></div>
+    <div class="field span-2"><label>Test Site / Custom Prospect Link</label><input class="input" type="url" name="testSiteUrl" placeholder="https://..." /></div>
     <div class="field span-2"><label>Why is this on GCM's radar?</label><textarea class="textarea" name="sourceDescription"></textarea></div>
     <div class="field span-2"><label>Notes</label><textarea class="textarea" name="notes"></textarea></div>
   </div><div class="form-actions"><button class="btn btn-secondary" type="button" data-close="radar-edit-dialog">Cancel</button><button class="btn btn-primary" type="submit">Save Record Changes</button></div></div>
@@ -767,6 +772,7 @@
     f.elements.contactName.value=r.contactName||"";
     f.elements.contactEmail.value=r.contactEmail||"";
     f.elements.contactPhone.value=r.contactPhone||"";
+    f.elements.testSiteUrl.value=r.testSiteUrl||"";
     f.elements.sourceDescription.value=r.sourceDescription||"";
     f.elements.notes.value=r.notes||"";
     openDialog($("radar-edit-dialog"));
@@ -781,7 +787,7 @@
 
   $("add-radar").addEventListener("click",()=>openDialog($("radar-dialog")));$("add-prospect").addEventListener("click",()=>openDialog($("prospect-dialog")));$("research-new").addEventListener("click",()=>startResearch({type:"new",id:null,record:null}));
   $("radar-form").addEventListener("submit",async e=>{e.preventDefault();const v=formObj(e.currentTarget);try{await api("create_radar",v);closeDialog($("radar-dialog"));e.currentTarget.reset();await load();showView("radar")}catch(err){$("radar-error").textContent=err.message;$("radar-error").hidden=false}});
-  $("radar-edit-form").addEventListener("submit",async e=>{e.preventDefault();const v=formObj(e.currentTarget);try{const d=await api("update_radar",{radarId:Number(v.radarId),businessName:v.businessName,website:v.website,vertical:v.vertical,market:v.market,sourceType:v.sourceType,sourceDescription:v.sourceDescription,contactName:v.contactName,contactEmail:v.contactEmail,contactPhone:v.contactPhone,notes:v.notes});closeDialog($("radar-edit-dialog"));await load();state.selectedRadar=d.radar;renderRadarDetail(d.radar)}catch(err){$("radar-edit-error").textContent=err.message;$("radar-edit-error").hidden=false}});
+  $("radar-edit-form").addEventListener("submit",async e=>{e.preventDefault();const v=formObj(e.currentTarget);try{const d=await api("update_radar",{radarId:Number(v.radarId),businessName:v.businessName,website:v.website,vertical:v.vertical,market:v.market,sourceType:v.sourceType,sourceDescription:v.sourceDescription,contactName:v.contactName,contactEmail:v.contactEmail,contactPhone:v.contactPhone,testSiteUrl:v.testSiteUrl?normalizeUrl(v.testSiteUrl):null,notes:v.notes});closeDialog($("radar-edit-dialog"));await load();state.selectedRadar=d.radar;renderRadarDetail(d.radar)}catch(err){$("radar-edit-error").textContent=err.message;$("radar-edit-error").hidden=false}});
   $("prospect-form").addEventListener("submit",async e=>{e.preventDefault();const v=formObj(e.currentTarget),appointmentAt=localDT(v.appointmentDate,v.appointmentTime);const last=v.lastContactDate?localDT(v.lastContactDate,v.lastContactTime||"12:00"):null;try{const d=await api("create_prospect",{businessName:v.businessName,stage:v.stage,appointmentAt,website:v.website||null,industry:v.industry||null,market:v.market||null,sourceType:v.sourceType||null,opportunitySummary:v.opportunitySummary||null,lastMeaningfulContactAt:last,estimatedValueLow:v.estimatedValueLow||null,estimatedValueHigh:v.estimatedValueHigh||null,recurringValue:v.recurringValue||null,recurringPeriod:v.recurringPeriod||null,notes:v.notes||null,primaryContact:v.contactName?{name:v.contactName,email:v.contactEmail||null,role:"decision_maker"}:null});closeDialog($("prospect-dialog"));e.currentTarget.reset();await load();openProspect(d.prospect.id)}catch(err){$("prospect-error").textContent=err.message;$("prospect-error").hidden=false}});
   $("outreach-form").addEventListener("submit",async e=>{e.preventDefault();const v=formObj(e.currentTarget);try{const d=await api("add_radar_activity",{radarId:Number(v.radarId),activityType:v.activityType,occurredAt:localDT(v.date,v.time),summary:v.summary,outcome:v.outcome||null,meaningfulContact:true,nextActionTitle:v.nextActionTitle,nextActionDueDate:v.nextActionDueDate});closeDialog($("outreach-dialog"));await load();renderRadarDetail(d.radar)}catch(err){$("outreach-error").textContent=err.message;$("outreach-error").hidden=false}});
   $("promote-form").addEventListener("submit",async e=>{e.preventDefault();const v=formObj(e.currentTarget);try{const d=await api("promote_radar",{radarId:Number(v.radarId),appointmentAt:localDT(v.date,v.time),opportunitySummary:v.opportunitySummary||null});closeDialog($("promote-dialog"));await load();openProspect(d.prospect.id)}catch(err){$("promote-error").textContent=err.message;$("promote-error").hidden=false}});
