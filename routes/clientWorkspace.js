@@ -1,13 +1,19 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/clientWorkspace.js
-   Version: 7.5.1
+   Version: 7.5.2
    Status: Production Candidate
    Source: Production routes/clientWorkspace.js 7.5.0
    Sprint: Client Workspace — Stability Restore
    Purpose: Preserve the complete live D1 client workspace and client tool
             router while keeping reporting-only Findings on their own lightweight
             read route.
+
+   Production changes — 7.5.2:
+   - Ranks open Investigations, Work Items, and Alerts together by actionable priority.
+   - Current Priority and Next Action now come from the highest-value actionable record instead of record-type precedence.
+   - Needs Attention now reflects actionable priority rather than raw open-record counts.
+   - Preserves direct Work/Investigation handoff links and monitoring exclusions.
 
    Production changes — 7.5.1:
    - Restores the verified Client Workspace query set after the Proof Findings
@@ -367,20 +373,18 @@ function buildClientWorkspaceRecord({
     ...proofOfWork.map(item => item.activity_date)
   ]);
 
-  const firstInvestigation = openInvestigations[0] || null;
-  const firstWork = openWork[0] || null;
-  const firstAlert = activeAlerts[0] || null;
+  const rankedOperationalRecords = [
+    ...openInvestigations.map(item => ({type:"Investigation", item, weight:operationalPriorityWeight(item.priority)})),
+    ...openWork.map(item => ({type:"Work", item, weight:operationalPriorityWeight(item.priority)})),
+    ...activeAlerts.map(item => ({type:"Alert", item, weight:alertPriorityWeight(item.severity)}))
+  ].sort((a,b) => a.weight - b.weight || operationalDateValue(b.item) - operationalDateValue(a.item));
 
-  const authoritativeRecord =
-    firstInvestigation || firstWork || firstAlert || null;
-
-  const authoritativeType = firstInvestigation
-    ? "Investigation"
-    : firstWork
-      ? "Work"
-      : firstAlert
-        ? "Alert"
-        : null;
+  const authoritative = rankedOperationalRecords[0] || null;
+  const authoritativeRecord = authoritative?.item || null;
+  const authoritativeType = authoritative?.type || null;
+  const firstInvestigation = authoritativeType === "Investigation" ? authoritativeRecord : null;
+  const firstWork = authoritativeType === "Work" ? authoritativeRecord : null;
+  const firstAlert = authoritativeType === "Alert" ? authoritativeRecord : null;
 
   const currentPriority = authoritativeRecord
     ? `${authoritativeType} #${authoritativeRecord.id}: ${
@@ -409,9 +413,9 @@ function buildClientWorkspaceRecord({
     firstAlert?.owner ||
     "Global Concepts Media";
 
-  const accountNeedsAttention =
-    openInvestigations.length > 0 ||
-    activeAlerts.length > 0;
+  const accountNeedsAttention = Boolean(
+    authoritative && authoritative.weight <= 1
+  );
 
   return {
     schemaVersion: "1.2.0",
@@ -629,6 +633,29 @@ function isMonitoringInvestigation(item) {
     "waiting_external",
     "waiting_on_external"
   ].includes(normalizeStatus(item?.status));
+}
+
+function operationalPriorityWeight(value) {
+  const priority = normalizeStatus(value);
+  if (["urgent","critical","highest"].includes(priority)) return 0;
+  if (priority === "high") return 1;
+  if (["normal","medium"].includes(priority)) return 2;
+  if (priority === "low") return 3;
+  return 4;
+}
+
+function alertPriorityWeight(value) {
+  const severity = normalizeStatus(value);
+  if (severity === "critical") return 0;
+  if (["warning","high"].includes(severity)) return 1;
+  if (["medium","normal"].includes(severity)) return 2;
+  return 3;
+}
+
+function operationalDateValue(item) {
+  const raw = item?.updated_at || item?.opened_at || item?.created_at || item?.due_at || "";
+  const value = Date.parse(raw);
+  return Number.isFinite(value) ? value : 0;
 }
 
 function isOpenInvestigation(item) {
