@@ -1,9 +1,15 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: communications.html
-   Version: 2.9.0
+   Version: 2.10.0
    Source: Production Frontend
    Purpose: Client Communications intake and operational routing.
+
+   Changes in 2.10.0:
+   - Preserves exact source-email metrics for routine SEMrush reports using deterministic metric-line extraction in addition to AI evidence.
+   - Routine SEMrush reporting defaults to Monitoring / Historical Reference when no Investigation, Work Item, or reply is justified.
+   - Escalation remains available when the evidence supports an actual issue, sustained loss, or meaningful opportunity.
+   - Keeps source evidence attached instead of replacing metrics with a generic summary.
 
    Changes in 2.9.0:
    - Preserves verified v2.8.3 screenshot/text intake and operational routing.
@@ -314,7 +320,7 @@ Backlink Audit update
 (() => {
   "use strict";
 
-  const VERSION = "2.9.0";
+  const VERSION = "2.10.0";
   const ENDPOINT = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const CONTRACT_VERSION = "communications-operational-decision-v3";
   const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -804,8 +810,11 @@ Backlink Audit update
       ? reviewEvidence.visibleMetrics
       : [];
 
+    const sourceMetricLines = extractSourceMetricLines(el.emailText?.value || "");
+
     const structuredEvidence = [
       ...visibleMetrics.map(item => normalizeEvidenceItem(item, "Metric")),
+      ...sourceMetricLines.map(item => normalizeEvidenceItem(item, "Source metric")),
       ...visibleFacts.map(item => normalizeEvidenceItem(item, "Fact"))
     ].filter(Boolean);
 
@@ -851,6 +860,19 @@ Backlink Audit update
         evidenceSummary
       ) || "The communication was received and requires human review.";
 
+    const routineSemrushMonitoring =
+      source.toLowerCase().includes("semrush") &&
+      !normalizedRoutes.createInvestigation &&
+      !normalizedRoutes.createWorkItem &&
+      !normalizedRoutes.replyRequired;
+
+    if (routineSemrushMonitoring) {
+      normalizedRoutes.saveCommunication = true;
+      normalizedRoutes.createInvestigation = false;
+      normalizedRoutes.createWorkItem = false;
+      normalizedRoutes.replyRequired = false;
+    }
+
     return {
       client:a.client || a.clientName || "",
       clientName:a.clientName || a.client || "",
@@ -874,7 +896,9 @@ Backlink Audit update
       evidenceSummary,
       structuredEvidence:dedupeEvidence(structuredEvidence),
       recommendedRoutes:normalizedRoutes,
-      operationalDecision:inferOperationalDecision(normalizedRoutes)
+      operationalDecision:routineSemrushMonitoring
+        ? "historical_reference"
+        : inferOperationalDecision(normalizedRoutes)
     };
   }
 
@@ -917,6 +941,16 @@ Backlink Audit update
         ${escapeHtml(item.value || item.text || "")}
       </div>
     `).join("");
+  }
+
+  function extractSourceMetricLines(value) {
+    const metricPattern = /\b(visibility|estimated traffic|traffic|average position|avg\.? position|keywords?|top\s*(?:3|10|20|100)|improved|declined|lost|gained|site health|errors?|warnings?|notices?|backlinks?|domains?)\b/i;
+    return String(value || "")
+      .split(/\r?\n/)
+      .map(line => line.trim())
+      .filter(line => line && line.length <= 220 && metricPattern.test(line) && /\d/.test(line))
+      .slice(0,24)
+      .map(line => ({label:"Source metric", value:line}));
   }
 
   function normalizeEvidenceItem(item, fallbackLabel) {
