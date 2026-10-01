@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: prospects.html
-   Version: 3.5.1
+   Version: 3.5.2
    Status: Production Road-Test Candidate
    Source: Production prospects.html 2.0.0 + client-pre-research.html 1.1.0
    Backend: Prospect CRM 1.5.0
@@ -10,6 +10,11 @@
    One operating workspace for GCM prospecting from first evidence through
    Radar, outreach, appointment, CRM, services, signed scope, startup package,
    and the eventual Client handoff.
+
+   Change Notes — 3.5.2
+   - Adds Prepare Follow-Up Email to Radar records when prospect engagement has created a follow-up Next Action.
+   - Builds a short appointment-focused draft from the verified Radar contact/business context.
+   - Opens the operator's email composer for review; it does not auto-send or claim the tracked viewer's identity.
 
    Change Notes — 3.5.1
    - Adds Test Site / Custom Prospect Link directly to Edit Radar Record.
@@ -733,7 +738,7 @@
     $("radar-title").textContent=r.businessName||r.vertical||"Radar Record";$("radar-subtitle").textContent=`${r.status==="outreach"?"Outreach":"Radar"} · ${r.contactName||"Contact not recorded"}`;
     $("radar-body").innerHTML=`<div class="detail-grid">${detail("Source",r.sourceType||"Unknown")}${detail("Market",r.market||r.vertical||"Unknown")}${detail("Contact",r.contactName||"Not recorded")}${detail("Email",r.contactEmail||"Not recorded")}${detail("Phone",r.contactPhone||"Not recorded")}${detail("Website",r.website||"Not recorded")}${detail("Test Site",r.testSiteUrl||"Not recorded")}${detail("Last Outreach",fmtDate(r.lastOutreachAt))}${detail("Next Action",r.isUnmanaged?"MISSING":r.nextAction?.title||"Not in active outreach")}</div>
     <div class="section-title"><div><h3>Radar Actions</h3><p>Move naturally from evidence to outreach to appointment.</p></div></div>
-    <div class="quick-actions"><button class="btn btn-secondary btn-small" id="radar-edit" type="button">Edit Radar Record</button><button class="btn btn-secondary btn-small" id="radar-test-site-edit" type="button">${r.testSiteUrl?"Edit Test Site":"Add Test Site"}</button><button class="btn btn-secondary btn-small" id="radar-research" type="button">Research / Update Intelligence</button><button class="btn btn-secondary btn-small" id="radar-outreach" type="button">Record Outreach</button><button class="btn btn-primary btn-small" id="radar-promote" type="button">Appointment Scheduled</button></div>
+    <div class="quick-actions"><button class="btn btn-secondary btn-small" id="radar-edit" type="button">Edit Radar Record</button><button class="btn btn-secondary btn-small" id="radar-test-site-edit" type="button">${r.testSiteUrl?"Edit Test Site":"Add Test Site"}</button><button class="btn btn-secondary btn-small" id="radar-research" type="button">Research / Update Intelligence</button><button class="btn btn-secondary btn-small" id="radar-outreach" type="button">Record Outreach</button>${norm(r.nextAction?.title)==="follow_up_after_prospect_engagement"?'<button class="btn btn-secondary btn-small" id="radar-followup-email" type="button">Prepare Follow-Up Email</button>':""}<button class="btn btn-primary btn-small" id="radar-promote" type="button">Appointment Scheduled</button></div>
     <div class="section-title"><div><h3>Intelligence</h3><p>${(r.intelligence||[]).length} durable record(s).</p></div></div><div class="timeline">${(r.intelligence||[]).slice(0,5).map(i=>`<div class="timeline-item"><strong>${esc(i.title)}</strong><p>${esc(i.summary||"Prospect intelligence saved in Radar.")}</p><time>${esc(fmtDate(i.capturedAt))}</time></div>`).join("")||'<div class="timeline-item"><strong>No research saved yet.</strong><p>Run Research / Update Intelligence.</p></div>'}</div>
     <div class="section-title"><div><h3>Outreach History</h3></div></div><div class="timeline">${(r.activities||[]).slice(0,10).map(a=>`<div class="timeline-item"><strong>${esc(a.subject||a.activityType.replaceAll("_"," "))}</strong><p>${esc(a.summary)}</p><time>${esc(fmtDate(a.occurredAt))}${a.outcome?` · ${esc(a.outcome)}`:""}</time></div>`).join("")||'<div class="timeline-item"><strong>No outreach yet.</strong><p>Radar can remain passive until GCM decides to pursue it.</p></div>'}</div>`;
     const topTestSite=$("radar-test-site-top");
@@ -746,6 +751,8 @@
     $("radar-test-site-edit").addEventListener("click",()=>editRadarTestSite(r));
     $("radar-research").addEventListener("click",()=>startResearch({type:"radar",id:r.id,record:r}));
     $("radar-outreach").addEventListener("click",()=>{const f=$("outreach-form");f.elements.radarId.value=r.id;setDefaults(f);openDialog($("outreach-dialog"))});
+    const followupEmail=$("radar-followup-email");
+    if(followupEmail)followupEmail.addEventListener("click",()=>prepareRadarFollowUpEmail(r));
     $("radar-promote").addEventListener("click",()=>{const f=$("promote-form");f.elements.radarId.value=r.id;setDefaults(f);openDialog($("promote-dialog"))});
   }
 
@@ -759,6 +766,14 @@
       renderRadarDetail(d.radar);
       await load();
     });
+  }
+
+  function prepareRadarFollowUpEmail(r){
+    if(!r.contactEmail){alert("Add a verified contact email before preparing follow-up.");return;}
+    const firstName=String(r.contactName||"").trim().split(/\s+/)[0]||"there";
+    const subject=`Quick follow-up — ${r.businessName||"your review"}`;
+    const body=`${firstName},\n\nI wanted to follow up on the information I sent over. If it would be helpful, I would be happy to walk through it with you and answer any questions.\n\nWe can keep it simple — about 20 minutes. Just reply with a day and time that works for you and I will get it scheduled.\n\nAndy\nGlobal Concepts Media`;
+    window.location.href=`mailto:${encodeURIComponent(r.contactEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   }
 
   function openRadarEdit(r){
