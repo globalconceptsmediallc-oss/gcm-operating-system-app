@@ -302,7 +302,7 @@
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.37"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.38"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),externalValidation:byId("external-validation-list"),target:byId("target-banner"),requestedForm:byId("requested-work-form"),requestedClient:byId("requested-client"),requestedMessage:byId("requested-work-message"),createRequested:byId("create-requested-work")};
   let activeClients=[],directoryClients=[],investigations=[],monitoringInvestigations=[],workItems=[],validationWorkItems=[],selectedKey="",processing=false,processingWorkItem=false,processingRequestedWork=false;
 
@@ -2281,6 +2281,45 @@
         item
       });
       if(specialist)return specialist;
+    }
+
+    if(isAhrefsSiteAudit(item)){
+      const hasOrphanEvidence=/orphan page|no incoming internal links|referring internal links:\s*0/.test(joined);
+      const hasTarget=/gun-safes-melbourne-fl/.test(joined);
+      const hasSource=/safe opening & safe locksmith services in melbourne|melbourne safe services page/.test(joined);
+      const noContextualLink=/no contextual internal link|no internal link to \/gun-safes-melbourne-fl/.test(joined);
+      const correctiveLink=/add a contextual internal link/.test(joined);
+
+      if(hasTarget&&hasSource&&noContextualLink&&correctiveLink){
+        return {
+          evidenceType:"internal_link_root_cause",
+          issueName:"Orphan page (has no incoming internal links)",
+          count:1,
+          severity:"error",
+          sampleUrl:"https://www.a1actionsafeandlock.com/gun-safes-melbourne-fl",
+          implementationSource:"Melbourne Safe Services page",
+          rootCauseProven:true,
+          reason:"Live-site evidence confirms the Melbourne Safe Services page is contextually relevant but does not link to /gun-safes-melbourne-fl. The existing Safe Service destination remains valid and should be preserved.",
+          expectedImpact:"Adding one contextual internal link will make the dedicated Melbourne gun-safe page discoverable through the site's internal link graph without replacing existing service navigation.",
+          nextQuestion:"What specific contextual link should be implemented on the Melbourne Safe Services page?",
+          nextEvidence:"Add a contextual link to /gun-safes-melbourne-fl using relevant anchor text such as \"gun safes in Melbourne\", verify the live link, then rerun Ahrefs to confirm the orphan-page issue clears."
+        };
+      }
+
+      if(hasOrphanEvidence&&hasTarget){
+        return {
+          evidenceType:"orphan_page",
+          issueName:"Orphan page (has no incoming internal links)",
+          count:1,
+          severity:"error",
+          sampleUrl:"https://www.a1actionsafeandlock.com/gun-safes-melbourne-fl",
+          rootCauseProven:false,
+          reason:"Ahrefs evidence identifies the Melbourne gun-safe URL as having no incoming internal links, but the appropriate source page still needs live-site verification.",
+          expectedImpact:"No corrective work should be created until an appropriate contextual source page is verified.",
+          nextQuestion:"Which live A1 page is the most relevant source for an internal link to the Melbourne gun-safe page?",
+          nextEvidence:"Review the Melbourne service and Safe Services pages and capture the most contextually relevant source page."
+        };
+      }
     }
 
     const sampleUrl=extractVisibleUrl(facts);
