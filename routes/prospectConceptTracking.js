@@ -1,10 +1,17 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/prospectConceptTracking.js
-   Version: 1.0.9
+   Version: 1.1.0
    Status: Production Road-Test Candidate
    Purpose: Record privacy-minimized engagement when a personalized
             GCM prospect concept page is viewed.
+
+   Change Notes — 1.1.0:
+   - Treats verified personalized-page engagement as newer evidence than an ordinary
+     future no-response follow-up and advances that follow-up to today.
+   - Preserves stronger human commitments such as appointments, promised callbacks,
+     proposal deadlines, and specifically requested follow-up dates.
+   - Uses the existing Radar Next Action; no parallel follow-up record is created.
 
    Change Notes — 1.0.9:
    - Routes a verified personalized-page view into the existing Radar Next Action.
@@ -61,7 +68,7 @@ import {
 } from "../shared/http.js";
 
 export const PROSPECT_CONCEPT_VIEW_ACTION = "prospect-concept-view";
-export const PROSPECT_CONCEPT_TRACKING_VERSION = "1.0.8";
+export const PROSPECT_CONCEPT_TRACKING_VERSION = "1.1.0";
 
 const CONCEPTS = new Map([
   ["john-curri-v1", {
@@ -254,12 +261,29 @@ export async function handleProspectConceptView(body, env, requestId) {
             WHEN next_action_title IS NULL
               OR TRIM(next_action_title) = ''
               OR LOWER(TRIM(next_action_title)) = 'follow up with prospect'
+              OR (
+                LOWER(TRIM(next_action_title)) LIKE 'follow up if no response%'
+                AND LOWER(TRIM(next_action_title)) NOT LIKE '%appointment%'
+                AND LOWER(TRIM(next_action_title)) NOT LIKE '%callback%'
+                AND LOWER(TRIM(next_action_title)) NOT LIKE '%requested%'
+                AND LOWER(TRIM(next_action_title)) NOT LIKE '%proposal deadline%'
+              )
             THEN 'Follow up after prospect engagement'
             ELSE next_action_title
           END,
           next_action_due_date = CASE
-            WHEN next_action_due_date IS NULL
+            WHEN next_action_title IS NULL
+              OR TRIM(next_action_title) = ''
+              OR LOWER(TRIM(next_action_title)) = 'follow up with prospect'
+              OR (
+                LOWER(TRIM(next_action_title)) LIKE 'follow up if no response%'
+                AND LOWER(TRIM(next_action_title)) NOT LIKE '%appointment%'
+                AND LOWER(TRIM(next_action_title)) NOT LIKE '%callback%'
+                AND LOWER(TRIM(next_action_title)) NOT LIKE '%requested%'
+                AND LOWER(TRIM(next_action_title)) NOT LIKE '%proposal deadline%'
+              )
             THEN date('now')
+            WHEN next_action_due_date IS NULL THEN date('now')
             ELSE next_action_due_date
           END,
           updated_at = CURRENT_TIMESTAMP
