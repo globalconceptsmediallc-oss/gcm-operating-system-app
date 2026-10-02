@@ -1,13 +1,17 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.5.39
+   Version: 3.5.40
    Status: Production Candidate
-   Source: Production today.html 3.5.38
+   Source: Production today.html 3.5.39
    Sprint: Today / Agency Quick Access — Sales Presentation
    Purpose: Preserve the locked Today layout, Gmail approvals, Mission Control,
             Media logic, and operating workflow while keeping Mission Control's
             durable D1 ranking authoritative across both decision and queue views.
+
+   Production changes in 3.5.40:
+   - Removes stale JavaScript writes to the Command Brief status-card elements removed in 3.5.39.
+   - Restores Mission Control / Needs Your Attention loading without changing its D1 ranking or decision logic.
 
    Production changes in 3.5.39:
    - Removes the four redundant Command Brief status cards: Client attention, Media deadlines, Prospect opens, and Intelligence layer.
@@ -2091,9 +2095,6 @@
       const mediaCheckDetail = document.getElementById("media-check-detail");
       const commandBriefTitle = document.getElementById("command-brief-title");
       const commandBriefCopy = document.getElementById("command-brief-copy");
-      const briefAttention = document.getElementById("brief-attention");
-      const briefMedia = document.getElementById("brief-media");
-      const briefProspectOpens = document.getElementById("brief-prospect-opens");
       const mediaPulseCount = document.getElementById("media-pulse-count");
       const priorityBadge = document.getElementById("priority-badge");
       const priorityType = document.getElementById("priority-type");
@@ -2335,10 +2336,6 @@
 
         attentionCount.textContent = String(items.length);
         attentionNote.textContent = "Agency Command fallback while Mission Control is unavailable.";
-        briefAttention.textContent =
-          items.length === 1
-            ? "1 agency decision waiting"
-            : `${items.length} agency decisions waiting`;
 
         return true;
       }
@@ -2669,7 +2666,7 @@
           </li>
         `;
         attentionCount.textContent = "—";
-        attentionNote.textContent = "Checking live operational records."; briefAttention.textContent = "Checking…";
+        attentionNote.textContent = "Checking live operational records.";
       }
 
       function normalizeAttentionPriority(client, index) {
@@ -2839,7 +2836,6 @@
           `;
           attentionCount.textContent = "0";
           attentionNote.textContent = "No clients currently require attention.";
-          briefAttention.textContent = "No client decisions waiting";
           attentionClientsState = [];
           missionControlLoaded = true;
           missionControlUnavailable = false;
@@ -2877,10 +2873,6 @@
         attentionClientsState = clients;
         missionControlLoaded = true;
         missionControlUnavailable = false;
-        briefAttention.textContent =
-          clients.length === 1
-            ? "1 client decision waiting"
-            : `${clients.length} client decisions waiting`;
         updatePriority();
         renderOperationalBriefing();
       }
@@ -2894,7 +2886,6 @@
         `;
         attentionCount.textContent = "—";
         attentionNote.textContent = "Live attention records are unavailable.";
-        briefAttention.textContent = "Live records unavailable";
         attentionClientsState = [];
         missionControlLoaded = true;
         missionControlUnavailable = true;
@@ -2917,9 +2908,6 @@
       function renderProspectEngagements(items) {
         const engagements = Array.isArray(items) ? items : [];
         prospectEngagementState = engagements;
-        briefProspectOpens.textContent = engagements.length
-          ? `${engagements.length} recent ${engagements.length === 1 ? "open" : "opens"}`
-          : "No recent opens";
 
         if (!engagements.length) {
           prospectOpenPanel.hidden = true;
@@ -3011,7 +2999,6 @@
           console.error("Could not load Mission Control attention records.", error);
           highestPriorityDecisionState = null;
           renderProspectEngagements([]);
-          briefProspectOpens.textContent = "Unavailable";
           renderAttentionError(error?.message);
         }
       }
@@ -3022,7 +3009,6 @@
         const hasAttention = total > 0;
         mediaAttentionState = total;
         mediaPulseCount.textContent = String(total);
-        briefMedia.textContent = hasAttention ? `${total} ${total === 1 ? "deadline requires" : "deadlines require"} review` : "No deadlines requiring review";
 
         mediaCheckPanel.classList.toggle("is-visible", hasAttention);
 
