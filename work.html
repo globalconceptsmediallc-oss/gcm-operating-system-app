@@ -613,6 +613,13 @@
     const orphanMatch=raw.match(/\[View\]\((https:\/\/app\.ahrefs\.com\/site-audit\/[^)]+issueId=[^)]+)\)/i);
     if(orphanMatch?.[1])return orphanMatch[1];
 
+    // Historical rehabilitation: Investigation #71 / Communication #147.
+    // The originating Gmail message 1a0c426965cc7d62 preserved this exact
+    // Ahrefs orphan-page issue URL even though the legacy D1 Communication did not.
+    if(Number(item?.id)===71 && Number(item?.communication_id)===147){
+      return "https://app.ahrefs.com/site-audit/8627900/data-explorer?current=21-09-2026T132727&columns=pageRating%2Curl%2Ctraffic%2ChttpCode%2CcontentType%2Cfound_in_sitemaps%2CincomingLinks%2CincomingRedirect%2CincomingCanonical%2CincomingHreflang%2CincomingPagination%2CincomingCss%2CincomingImage%2CincomingJs&filterId=342fd29001af244aeba4d481197e58ac&sorting=-pageRating&issueId=c64d7e96-d0f4-11e7-8ed1-001e67ed4656&filterCollapsed=true";
+    }
+
     const crawlMatch=raw.match(/\[View crawl results\]\((https:\/\/app\.ahrefs\.com\/site-audit\/[^)]+)\)/i);
     if(crawlMatch?.[1])return crawlMatch[1];
 
