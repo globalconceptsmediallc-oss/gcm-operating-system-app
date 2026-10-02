@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/financeOperations.js
-   Version: 1.0.1
+   Version: 1.0.2
    Status: Production Road-Test Candidate
    Purpose: Durable D1-backed Finance/Billing operations.
    Rules:
@@ -15,7 +15,7 @@ import { getDatabase, rowsOf } from "../shared/database.js";
 import { jsonResponse, logWorkerError, safeErrorMessage } from "../shared/http.js";
 
 export const FINANCE_OPERATIONS_ACTION = "finance-operations";
-export const FINANCE_OPERATIONS_VERSION = "1.0.1";
+export const FINANCE_OPERATIONS_VERSION = "1.0.2";
 const MAX_ACCOUNTS = 50;
 const MAX_TRANSACTIONS = 2000;
 
@@ -91,11 +91,19 @@ async function syncSnapshot(body,db,requestId){
       if(!reference) reference="Check";
       const invoiceId=invoiceMap.get(String(t?.invoiceId??""))||null;
       const externalKey=`finance-import:payment:${key}:${date(t?.date)}:${reference.toLowerCase()}`;
-      await db.prepare(`
-        INSERT INTO finance_payments(billing_account_id,invoice_id,payment_date,payment_method,reference,amount_cents,status,source_type,source_reference,external_key,notes)
-        VALUES(?,?,?,?,?,?,?,?,?,?,?)
-        ON CONFLICT(external_key) DO UPDATE SET invoice_id=excluded.invoice_id,payment_method=excluded.payment_method,reference=excluded.reference,amount_cents=excluded.amount_cents,status=excluded.status,notes=excluded.notes
-      `).bind(accountId,invoiceId,date(t?.date),method||"Check",reference,cents(t?.amount),clean(t?.status||"closed"),"finance_local_import",clean(t?.reference),externalKey,nul(t?.notes)).run();
+      const existingPayment=rowsOf(await db.prepare("SELECT id FROM finance_payments WHERE external_key=? LIMIT 1").bind(externalKey).all());
+      if(existingPayment[0]?.id){
+        await db.prepare(`
+          UPDATE finance_payments
+          SET invoice_id=?,payment_method=?,reference=?,amount_cents=?,status=?,source_type=?,source_reference=?,notes=?
+          WHERE id=?
+        `).bind(invoiceId,method||"Check",reference,cents(t?.amount),clean(t?.status||"closed"),"finance_local_import",clean(t?.reference),nul(t?.notes),Number(existingPayment[0].id)).run();
+      }else{
+        await db.prepare(`
+          INSERT INTO finance_payments(billing_account_id,invoice_id,payment_date,payment_method,reference,amount_cents,status,source_type,source_reference,external_key,notes)
+          VALUES(?,?,?,?,?,?,?,?,?,?,?)
+        `).bind(accountId,invoiceId,date(t?.date),method||"Check",reference,cents(t?.amount),clean(t?.status||"closed"),"finance_local_import",clean(t?.reference),externalKey,nul(t?.notes)).run();
+      }
       writes++;
     }
   }
