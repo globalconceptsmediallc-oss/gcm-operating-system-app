@@ -1,13 +1,17 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.5.45
+   Version: 3.5.46
    Status: Production Candidate
-   Source: Production today.html 3.5.44
+   Source: Production today.html 3.5.45
    Sprint: Today / Agency Quick Access — Sales Presentation
    Purpose: Preserve the locked Today layout, Gmail approvals, Mission Control,
             Media logic, and operating workflow while keeping Mission Control's
             durable D1 ranking authoritative across both decision and queue views.
+
+   Production changes in 3.5.46:
+   - Aligns Prospect Engagement visual treatment with the Morning Command panel: matching border, gradient, spacing, two-column body, and action alignment.
+   - Preserves Prospect Engagement content, grouping, counts, visibility logic, and Open Prospects action.
 
    Production changes in 3.5.45:
    - Prevents removed legacy DO / COMMUNICATE / PREPARE DOM targets from stopping Today initialization.
@@ -437,16 +441,17 @@
     }
 
     .prospect-open-panel {
-      border-color: #b9d5ff;
-      background: var(--info-soft);
+      margin-bottom: 18px;
+      border-color: #bdd0eb;
+      background: linear-gradient(135deg, #f7fbff, #edf5ff);
     }
 
     .prospect-open-body {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 18px;
-      padding: 18px 22px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 22px;
+      align-items: center;
+      padding: 20px 22px;
     }
 
     .prospect-open-copy {
@@ -1923,7 +1928,7 @@
 <a class="nav-link" href="finance.html"><span class="nav-icon">$</span><span>Billing</span></a>
 <a class="nav-link" href="proof.html"><span class="nav-icon">↗</span><span>Proof</span></a>
 </nav>
-<div class="sidebar-footer"><div class="sidebar-status"><span class="status-dot" aria-hidden="true"></span><span>Agency Command Center operational · Today v3.5.45</span></div></div>
+<div class="sidebar-footer"><div class="sidebar-status"><span class="status-dot" aria-hidden="true"></span><span>Agency Command Center operational · Today v3.5.46</span></div></div>
 </aside>
 <main class="main" id="main-content">
 <div class="main-inner">
@@ -3318,7 +3323,7 @@
         renderDashboard(data);
       });
 
-      const TODAY_VERSION = "3.5.45";
+      const TODAY_VERSION = "3.5.46";
       if (!window.GCMOShell) {
         console.error(`Today ${TODAY_VERSION}: shared/gcm-shell.js did not load.`);
       } else {
