@@ -1,13 +1,18 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.5.38
+   Version: 3.5.39
    Status: Production Candidate
-   Source: Production today.html 3.5.37
+   Source: Production today.html 3.5.38
    Sprint: Today / Agency Quick Access — Sales Presentation
    Purpose: Preserve the locked Today layout, Gmail approvals, Mission Control,
             Media logic, and operating workflow while keeping Mission Control's
             durable D1 ranking authoritative across both decision and queue views.
+
+   Production changes in 3.5.39:
+   - Removes the four redundant Command Brief status cards: Client attention, Media deadlines, Prospect opens, and Intelligence layer.
+   - Gives the Command Brief one job: state the highest-value operating priority without duplicating queues, navigation badges, or engagement evidence.
+   - Preserves Prospect Engagement, Media attention, Highest-Value Next Action, Needs Your Attention, Morning Command, and all underlying operating logic.
 
    Production changes in 3.5.38:
    - Adds a permanent Sales Presentation quick-access button to the Today top action bar.
@@ -1895,18 +1900,10 @@
 </header>
 <section aria-labelledby="morning-command-title" class="panel morning-command"><div class="morning-command-body"><div class="morning-command-copy"><p class="eyebrow">Morning Command</p><h2 id="morning-command-title">Review incoming operational email from the Universal Intake queue.</h2><p id="gmail-status-copy">Loading Universal Email Intake from D1…</p></div><div class="morning-command-actions"><button class="button button-primary" disabled id="gmail-preview-button" type="button">Refresh Intake</button></div></div><div class="gmail-preview" hidden id="gmail-preview"></div></section>
 <section aria-labelledby="command-brief-title" class="command-brief">
-<div class="brief-grid">
 <div>
 <p class="brief-kicker">Today's Command Brief</p>
 <h2 class="brief-title" id="command-brief-title">Mission Control is checking the agency's live operating state.</h2>
-<p class="brief-copy" id="command-brief-copy">Client attention, open work, proof, media deadlines, and opportunity signals are being assembled into one decision view.</p>
-</div>
-<div class="brief-status">
-<div class="brief-status-item"><span>Client attention</span><strong id="brief-attention">Checking…</strong></div>
-<div class="brief-status-item"><span>Media deadlines</span><strong id="brief-media">Checking…</strong></div>
-<div class="brief-status-item"><span>Prospect opens</span><strong id="brief-prospect-opens">Checking…</strong></div>
-<div class="brief-status-item"><span>Intelligence layer</span><strong>Framework active</strong></div>
-</div>
+<p class="brief-copy" id="command-brief-copy">The highest-value operating priority is being assembled from the agency's live records.</p>
 </div>
 </section>
 <article aria-live="polite" class="panel prospect-open-panel" hidden id="prospect-open-panel">
