@@ -116,6 +116,8 @@
 
     .main-inner {
       width:min(100%,var(--content-width));
+      max-width:100%;
+      min-width:0;
       margin:0 auto;
     }
 
@@ -540,7 +542,26 @@
     .primary-column,
     .secondary-column {
       display:grid;
+      min-width:0;
       gap:24px;
+    }
+
+    .dashboard-grid > *,
+    .panel,
+    .panel-body,
+    .list,
+    .priority-item,
+    .priority-item-header,
+    .item-title,
+    .item-copy {
+      min-width:0;
+      max-width:100%;
+    }
+
+    .item-title,
+    .item-copy {
+      overflow-wrap:anywhere;
+      word-break:break-word;
     }
 
     .panel {
