@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/today-email-intake.js
-   Version: 2.6.1
+   Version: 2.7.0
    Status: Production Road-Test Candidate
    Sprint: Google Review Quick Action
    Purpose:
@@ -9,6 +9,11 @@
    chooses Ready for Review. Client and reporting period are inferred from
    source metadata when the evidence supports them. The operator must explicitly
    choose the durable route before the reviewed finding can be saved to D1.
+
+   Changes — 2.7.0:
+   - Adds Reply in Gmail to standard Universal Email Intake review cards when the source is a live Gmail message.
+   - Creates a review-only draft in the exact Gmail thread using the preserved sender, thread ID, and Internet Message-ID.
+   - Does not route, close, or mutate the intake record when preparing a reply.
 
    Changes — 2.6.1:
    - Fixes Reporting Period false positives where ordinary prose such as “may negatively affect” was interpreted as the month May.
@@ -104,7 +109,7 @@
 (() => {
   "use strict";
 
-  const FILE_VERSION = "2.6.1";
+  const FILE_VERSION = "2.7.0";
   const WORKER_URL =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const QUEUE_ACTION = "get-email-intake-queue";
@@ -113,6 +118,7 @@
   const DISPOSITION_ACTION = "route-email-intake-disposition";
   const CLIENT_DIRECTORY_ACTION = "get-client-directory";
   const GOOGLE_REVIEW_ACTION = "google-review-quick-action";
+  const CREATE_GMAIL_DRAFT_ACTION = "create-gmail-draft";
   const MAX_VISIBLE_EMAILS = 25;
 
   let previewButton = null;
@@ -672,6 +678,7 @@
 
         <div class="gcm-review-actions">
           <button class="gcm-review-save" type="button" data-gcm-save-finding>Save &amp; Route</button>
+          ${String(record?.provider || "").toLowerCase()==="gmail_live_sync" && record?.providerThreadId ? '<button class="gcm-review-secondary" type="button" data-gcm-reply-gmail>Reply in Gmail</button>' : ""}
           <button class="gcm-review-secondary" type="button" data-gcm-close-review>Close Review</button>
           <button class="gcm-review-no-action" type="button" data-gcm-no-action>Delete — No Action Required</button>
           <span class="gcm-review-status" data-gcm-review-status>Nothing is saved until a route is chosen and the review is complete.</span>
@@ -684,6 +691,7 @@
     const close = article.querySelector("[data-gcm-close-review]");
     const save = article.querySelector("[data-gcm-save-finding]");
     const noAction = article.querySelector("[data-gcm-no-action]");
+    const replyGmail = article.querySelector("[data-gcm-reply-gmail]");
 
     ready?.addEventListener("click", () => {
       panel.hidden = false;
@@ -698,9 +706,57 @@
     });
 
     save?.addEventListener("click", () => saveFinding(article, save));
+    replyGmail?.addEventListener("click", () => prepareGmailReply(article, replyGmail, record));
     noAction?.addEventListener("click", () => handleNoAction(article, noAction));
 
     return article;
+  }
+
+
+  async function prepareGmailReply(card, button, record) {
+    if (busy || !card || !button) return;
+    const status = card.querySelector("[data-gcm-review-status]");
+    const to = String(record?.replyToAddress || record?.sender?.address || "").trim();
+    const originalSubject = String(record?.subject || "").trim();
+    const subject = /^re:/i.test(originalSubject) ? originalSubject : `Re: ${originalSubject}`;
+    const threadId = String(record?.providerThreadId || "").trim();
+    const inReplyTo = String(record?.sourceHeaders?.internet_message_id || "").trim();
+
+    if (!to || !threadId) {
+      if (status) status.textContent = "This intake record does not contain enough Gmail thread evidence to prepare a safe reply.";
+      return;
+    }
+
+    const replyBody = window.prompt("Draft your reply. Gmail will open it for review before anything is sent.", "");
+    if (replyBody === null) return;
+    if (!String(replyBody).trim()) {
+      if (status) status.textContent = "Enter a reply before creating the Gmail draft.";
+      return;
+    }
+
+    busy = true;
+    button.disabled = true;
+    button.textContent = "Preparing Reply…";
+    if (status) status.textContent = "Creating a review-only Gmail draft in the original thread.";
+
+    try {
+      const result = await post(CREATE_GMAIL_DRAFT_ACTION,{
+        to,
+        subject,
+        body:String(replyBody).trim(),
+        threadId,
+        inReplyTo
+      });
+      if (!result?.draftId) throw new Error("Gmail did not return a draft ID.");
+      if (status) status.textContent = "Reply draft created in the original Gmail thread. Review and send it in Gmail; this intake remains open until you route or close it.";
+      if (result?.gmailUrl) window.open(result.gmailUrl,"_blank","noopener,noreferrer");
+    } catch (error) {
+      if (status) status.textContent = `Reply draft failed: ${error.message}`;
+    } finally {
+      busy = false;
+      button.disabled = false;
+      button.textContent = "Reply in Gmail";
+    }
   }
 
   async function saveFinding(card, button) {
