@@ -51,7 +51,7 @@ async function syncSnapshot(body,db,requestId){
     const key=clean(raw?.accountKey||raw?.id||raw?.name).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
     const name=clean(raw?.name);
     if(!key||!name) return bad(requestId,"Each billing account requires a stable account key and name.");
-    const monthly=cents(raw?.monthlyAmount??raw?.monthly);
+    const monthly=cents(raw?.monthlyAmount??raw?.monthly??sumServices(raw?.services));
     await db.prepare(`
       INSERT INTO finance_billing_accounts(account_key,name,contact_name,billing_email,phone,address,website,logo_url,terms_days,invoice_note,monthly_amount_cents,covered_clients_json,default_services_json,status)
       VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,'active')
@@ -106,5 +106,6 @@ function clean(v){return String(v??"").trim()}
 function nul(v){const s=clean(v);return s||null}
 function int(v){const n=Number(v);return Number.isInteger(n)&&n>=0?n:0}
 function cents(v){const n=Number(v??0);return Number.isFinite(n)?Math.round(n*100):0}
+function sumServices(services){return (Array.isArray(services)?services:[]).reduce((total,service)=>total+(Array.isArray(service?.values)?service.values:[]).reduce((sum,value)=>sum+(Number(value)||0),0),0)}
 function date(v){const s=clean(v).slice(0,10);return /^\d{4}-\d{2}-\d{2}$/.test(s)?s:""}
 function dateOrNull(v){return date(v)||null}
