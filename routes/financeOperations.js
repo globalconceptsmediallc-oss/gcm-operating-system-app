@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/financeOperations.js
-   Version: 1.0.0
+   Version: 1.0.1
    Status: Production Road-Test Candidate
    Purpose: Durable D1-backed Finance/Billing operations.
    Rules:
@@ -15,7 +15,7 @@ import { getDatabase, rowsOf } from "../shared/database.js";
 import { jsonResponse, logWorkerError, safeErrorMessage } from "../shared/http.js";
 
 export const FINANCE_OPERATIONS_ACTION = "finance-operations";
-export const FINANCE_OPERATIONS_VERSION = "1.0.0";
+export const FINANCE_OPERATIONS_VERSION = "1.0.1";
 const MAX_ACCOUNTS = 50;
 const MAX_TRANSACTIONS = 2000;
 
@@ -52,11 +52,13 @@ async function syncSnapshot(body,db,requestId){
     const name=clean(raw?.name);
     if(!key||!name) return bad(requestId,"Each billing account requires a stable account key and name.");
     const monthly=cents(raw?.monthlyAmount??raw?.monthly??sumServices(raw?.services));
+    const locations=raw?.coveredClients||raw?.locations||[];
+    const services=raw?.defaultServices||raw?.services||[];
     await db.prepare(`
       INSERT INTO finance_billing_accounts(account_key,name,contact_name,billing_email,phone,address,website,logo_url,terms_days,invoice_note,monthly_amount_cents,covered_clients_json,default_services_json,status)
       VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,'active')
       ON CONFLICT(account_key) DO UPDATE SET name=excluded.name,contact_name=excluded.contact_name,billing_email=excluded.billing_email,phone=excluded.phone,address=excluded.address,website=excluded.website,logo_url=excluded.logo_url,terms_days=excluded.terms_days,invoice_note=excluded.invoice_note,monthly_amount_cents=excluded.monthly_amount_cents,covered_clients_json=excluded.covered_clients_json,default_services_json=excluded.default_services_json,status='active',updated_at=CURRENT_TIMESTAMP
-    `).bind(key,name,nul(raw?.contactName),nul(raw?.billingEmail||raw?.email),nul(raw?.phone),nul(raw?.address),nul(raw?.website),nul(raw?.logoUrl),int(raw?.termsDays),nul(raw?.invoiceNote),monthly,JSON.stringify(raw?.coveredClients||raw?.locations||[]),JSON.stringify(raw?.defaultServices||raw?.services||[])).run();
+    `).bind(key,name,nul(raw?.contactName),nul(raw?.billingEmail||raw?.email),nul(raw?.phone),nul(raw?.address),nul(raw?.website),nul(raw?.logoUrl),int(raw?.termsDays),nul(raw?.invoiceNote),monthly,JSON.stringify(locations),JSON.stringify(services)).run();
     writes++;
     const ar=rowsOf(await db.prepare("SELECT id FROM finance_billing_accounts WHERE account_key=? LIMIT 1").bind(key).all());
     const accountId=Number(ar[0]?.id);
@@ -68,12 +70,13 @@ async function syncSnapshot(body,db,requestId){
       const number=clean(t?.reference||t?.invoiceNumber);
       if(!number) continue;
       const amount=cents(t?.amount);
+      const snapshot=t?.accountSnapshot||{name,contact:raw?.contactName||raw?.contact||"",address:raw?.address||"",website:raw?.website||"",logoUrl:raw?.logoUrl||"",locations,services,note:raw?.invoiceNote||raw?.note||""};
       const externalKey=`finance-import:invoice:${key}:${number.toLowerCase()}`;
       await db.prepare(`
         INSERT INTO finance_invoices(billing_account_id,invoice_number,invoice_type,invoice_date,due_date,billing_period,description,amount_cents,paid_amount_cents,status,email_to,original_invoice_number,revision_number,correction_statement,account_snapshot_json,source_type,source_reference,external_key,closed_at)
         VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT(invoice_number) DO UPDATE SET billing_account_id=excluded.billing_account_id,invoice_date=excluded.invoice_date,due_date=excluded.due_date,billing_period=excluded.billing_period,description=excluded.description,amount_cents=excluded.amount_cents,paid_amount_cents=excluded.paid_amount_cents,status=excluded.status,email_to=excluded.email_to,original_invoice_number=excluded.original_invoice_number,revision_number=excluded.revision_number,correction_statement=excluded.correction_statement,account_snapshot_json=excluded.account_snapshot_json,updated_at=CURRENT_TIMESTAMP
-      `).bind(accountId,number,clean(t?.invoiceType||"monthly"),date(t?.date||t?.invoiceDate),dateOrNull(t?.dueDate),nul(t?.billingPeriod),nul(t?.description||t?.label),amount,cents(t?.paidAmount),clean(t?.status||"closed"),nul(t?.emailTo),nul(t?.originalReference),int(t?.revisionNumber),nul(t?.correctionStatement),JSON.stringify(t?.accountSnapshot||{}),"finance_local_import",number,externalKey,clean(t?.status).toLowerCase()==="closed"?date(t?.date||t?.invoiceDate):null).run();
+      `).bind(accountId,number,clean(t?.invoiceType||"monthly"),date(t?.date||t?.invoiceDate),dateOrNull(t?.dueDate),nul(t?.billingPeriod),nul(t?.description||t?.label),amount,cents(t?.paidAmount),clean(t?.status||"closed"),nul(t?.emailTo),nul(t?.originalReference),int(t?.revisionNumber),nul(t?.correctionStatement),JSON.stringify(snapshot),"finance_local_import",number,externalKey,clean(t?.status).toLowerCase()==="closed"?date(t?.date||t?.invoiceDate):null).run();
       writes++;
       const ir=rowsOf(await db.prepare("SELECT id FROM finance_invoices WHERE invoice_number=? LIMIT 1").bind(number).all());
       invoiceMap.set(String(t?.id??number),Number(ir[0]?.id));
