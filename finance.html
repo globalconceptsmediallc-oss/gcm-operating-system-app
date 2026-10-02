@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: finance.html
-   Version: 1.7.4
+   Version: 1.7.5
    Status: Production Candidate — Corrected Invoice Date and Location Assignment
    Source: finance.html 1.6.0
    Sprint: Finance / Invoice Correction Control
@@ -199,8 +199,8 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
   <main class="page">
     <button class="mobile btn" data-gcm-shell-menu-button type="button">Menu</button>
     <header class="top">
-      <div><p class="eyebrow">Agency Finance</p><h1>Billing Workspace</h1><p class="sub">Manage billing profiles, create invoices, email them, and record Check or ACH payments.</p></div>
-      <div class="version">Installed version 1.7.4</div>
+      <div><p class="eyebrow">Agency Finance</p><h1>Billing Workspace</h1><p class="sub">Manage billing profiles, create invoices, email them, and record Check payments.</p></div>
+      <div class="version">Installed version 1.7.5</div>
     </header>
 
     <section class="shell">
@@ -289,7 +289,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
                 </tbody></table>
               </div>
 
-              <div class="invoice-note" id="paperNote">Payment method: Check or ACH. Thank you for your business.</div>
+              <div class="invoice-note" id="paperNote">Payment method: Check. Thank you for your business.</div>
             </div>
           </article>
         </section>
@@ -373,7 +373,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
         <div class="field"><label>Company Website</label><input id="accountWebsite" type="url" placeholder="https://example.com"></div>
         <div class="field"><label>Direct Logo URL (optional)</label><input id="accountLogoUrl" type="url" placeholder="https://example.com/logo.png"></div>
         <div class="field"><label>Payment Terms</label><select id="accountTerms"><option value="0">Due on Receipt</option><option value="15">Net 15</option><option value="30">Net 30</option><option value="45">Net 45</option></select></div>
-        <div class="field"><label>Invoice Note</label><input id="accountNote" value="Payment method: Check or ACH. Thank you for your business."></div>
+        <div class="field"><label>Invoice Note</label><input id="accountNote" value="Payment method: Check. Thank you for your business."></div>
       </div>
 
       <div class="callout">
@@ -502,7 +502,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
 <script src="shared/gcm-shell.js?v=1.0.2"></script>
 <script>
 (()=>{"use strict";
-const VERSION="1.7.4",KEY="gcm_finance_workspace_v1_7",$=id=>document.getElementById(id);
+const VERSION="1.7.5",KEY="gcm_finance_workspace_v1_7",D1_MIGRATION_KEY="gcm_finance_d1_migrated_v1",$=id=>document.getElementById(id);
 const WORKER_ENDPOINT="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev";
 const seed={
   agency:{name:"Global Concepts Media Agency LLC",website:"https://globalconceptsmediallc.com",logoUrl:""},
@@ -511,7 +511,7 @@ const seed={
     {
       id:1,name:"Southeast Safes",contact:"Adrianne",email:"Adrianne@sesafes.com",phone:"",
       address:"",website:"https://sesafes.com",logoUrl:"",termsDays:30,
-      note:"Payment method: Check or ACH. Thank you for your business.",
+      note:"Payment method: Check. Thank you for your business.",
       locations:["Southeast Safes","A1 Action Safe & Lock"],
       services:[
         {name:"Liberty Safe Content — Website • SEO",values:[400,400]},
@@ -526,7 +526,7 @@ const seed={
     },
     {
       id:2,name:"Shade River Outfitters, INC",contact:"",email:"",phone:"",address:"",
-      website:"",logoUrl:"",termsDays:30,note:"Payment method: Check or ACH. Thank you for your business.",
+      website:"",logoUrl:"",termsDays:30,note:"Payment method: Check. Thank you for your business.",
       locations:["HB Guns","Pickett Weaponry"],
       services:[
         {name:"Website • SEO",values:[400,400]},
@@ -592,7 +592,7 @@ function migrate(v){
   v.nextAccountId=v.nextAccountId||Math.max(0,...v.accounts.map(a=>Number(a.id)||0))+1;
   v.accounts=v.accounts.map(a=>({
     contact:"",phone:"",address:"",website:"",logoUrl:"",termsDays:30,
-    note:"Payment method: Check or ACH. Thank you for your business.",...a,
+    note:"Payment method: Check. Thank you for your business.",...a,
     transactions:(a.transactions||[]).map(t=>({...t,revisionNumber:Number(t.revisionNumber||0)}))
   }));
   recoverSeptember2026History(v);
@@ -627,6 +627,24 @@ function load(){
   return clone(seed);
 }
 function save(){localStorage.setItem(KEY,JSON.stringify(state))}
+async function migrateFinanceToD1Once(){
+  if(localStorage.getItem(D1_MIGRATION_KEY)==="complete")return;
+  try{
+    const response=await fetch(WORKER_ENDPOINT,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({action:"finance-operations",operation:"sync_snapshot",accounts:state.accounts})
+    });
+    const payload=await response.json().catch(()=>({}));
+    if(!response.ok||payload?.ok!==true)throw new Error(payload?.error||`Finance D1 migration failed (${response.status}).`);
+    localStorage.setItem(D1_MIGRATION_KEY,"complete");
+    console.info(`Finance ${VERSION}: D1 migration verified by Worker.`,{syncedAccounts:payload.syncedAccounts,syncedTransactions:payload.syncedTransactions,writesPerformed:payload.writesPerformed});
+    toast("Finance history safely copied to permanent D1 storage.");
+  }catch(error){
+    console.error(`Finance ${VERSION}: D1 migration did not complete. Browser history remains unchanged.`,error);
+    toast("Finance D1 copy did not complete. Existing billing history is unchanged.");
+  }
+}
 function account(){return state.accounts.find(a=>a.id===state.selectedAccountId)||state.accounts[0]}
 function invoice(){const a=account();return a.transactions.find(t=>t.id===state.selectedInvoiceId&&t.type==="invoice")||latestInvoice(a)}
 function money(v){return new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(Number(v)||0)}
@@ -738,7 +756,7 @@ function openAccountDialog(a=null){
   $("accountId").value=a?.id||"";$("accountName").value=a?.name||"";$("accountContact").value=a?.contact||"";
   $("accountEmail").value=a?.email||"";$("accountPhone").value=a?.phone||"";$("accountAddress").value=a?.address||"";
   $("accountWebsite").value=a?.website||"";$("accountLogoUrl").value=a?.logoUrl||"";$("accountTerms").value=String(a?.termsDays??30);
-  $("accountNote").value=a?.note||"Payment method: Check or ACH. Thank you for your business.";
+  $("accountNote").value=a?.note||"Payment method: Check. Thank you for your business.";
   $("locationRows").innerHTML="";(a?.locations?.length?a.locations:["",""]).forEach(addLocationRow);
   $("serviceRows").innerHTML="";(a?.services?.length?a.services:[{name:"Website • SEO",values:[0,0]},{name:"Social Media • Content",values:[0,0]}]).forEach(s=>addServiceRow(s.name,s.values?.[0]||"",s.values?.[1]||""));
   $("deleteAccount").classList.toggle("hidden",!a);previewAccountLogo();$("accountDialog").showModal();
@@ -891,7 +909,7 @@ function showInvoice(){
   $("paperRows").innerHTML=paperRows(a,i);
   const extra=(i.extras||[]).reduce((s,x)=>s+Number(x.amount||0),0);
   $("paperBaseTotal").textContent=money(i.baseAmount||0);$("paperExtraTotal").textContent=money(extra);$("paperGrandTotal").textContent=money(i.amount);
-  $("paperNote").textContent=source.note||"Payment method: Check or ACH. Thank you for your business.";
+  $("paperNote").textContent=source.note||"Payment method: Check. Thank you for your business.";
   $("invoiceStatus").textContent=i.status;$("invoiceStatus").className=`pill ${i.status}`;$("reviewLabel").textContent=`Invoice #${i.reference} Review`;
   $("correctInvoice").disabled=i.status==="superseded"||Number(i.paidAmount||0)>0;
   $("correctInvoice").title=i.status==="superseded"?"This invoice has already been superseded.":Number(i.paidAmount||0)>0?"Paid invoices require payment reconciliation before correction.":"Create a corrected revision while preserving this invoice.";
@@ -1108,6 +1126,7 @@ $("closePaymentDialog").onclick=$("cancelPayment").onclick=()=>$("paymentDialog"
 if(window.GCMOShell)window.GCMOShell.mount({currentPage:"finance",statusText:`Agency Finance operational · Finance v${VERSION}`});
 else console.error(`Finance ${VERSION}: shared/gcm-shell.js failed to load.`);
 renderAll();
+migrateFinanceToD1Once();
 })();
 </script>
 </body>
