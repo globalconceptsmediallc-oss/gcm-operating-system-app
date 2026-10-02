@@ -184,6 +184,10 @@ import {
   handleCalendarOperations,
   CALENDAR_OPERATIONS_ACTION
 } from "./routes/calendarOperations.js";
+import {
+  handleFinanceOperations,
+  FINANCE_OPERATIONS_ACTION
+} from "./routes/financeOperations.js";
 import { handleCreateInvestigation, handleProcessInvestigation } from "./routes/investigationProcessing.js";
 import { handleGuidedInvestigation } from "./routes/guidedInvestigation.js";
 import { handleProcessWorkItem, handleCreateRequestedWork, CREATE_REQUESTED_WORK_ACTION } from "./routes/workItemProcessing.js";
@@ -264,7 +268,7 @@ import {
   GMAIL_INTAKE_SYNC_VERSION
 } from "./routes/gmailIntakeSync.js";
 
-const WORKER_FILE_VERSION = "7.36.0";
+const WORKER_FILE_VERSION = "7.37.0";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
@@ -277,6 +281,7 @@ const SUPPORTED_ACTIONS = [
   ACTIONS.COMMIT_OPERATIONAL_DECISION,
   ACTIONS.GET_MISSION_CONTROL,
   CALENDAR_OPERATIONS_ACTION,
+  FINANCE_OPERATIONS_ACTION,
   ACTIONS.GET_GUIDED_INVESTIGATION,
   ACTIONS.CREATE_INVESTIGATION,
   ACTIONS.PROCESS_INVESTIGATION,
@@ -530,6 +535,9 @@ export default {
 
         case CALENDAR_OPERATIONS_ACTION:
           return await handleCalendarOperations(body, env, requestId);
+
+        case FINANCE_OPERATIONS_ACTION:
+          return await handleFinanceOperations(body, env, requestId);
 
         case ACTIONS.GET_GUIDED_INVESTIGATION:
           return await handleGuidedInvestigation(body, env, requestId);
