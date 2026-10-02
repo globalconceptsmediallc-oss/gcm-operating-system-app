@@ -47,6 +47,12 @@
    - Cloudflare promotional mail is classified as non-operational archive noise rather than Manual Review work.
    - Archive candidates can now be cleared through the existing Gmail approval action with zero D1 writes.
    - Archive removes UNREAD and INBOX labels only after the message is re-verified as an archive candidate.
+   Change Notes — 1.7.3
+   - Extends the existing CREATE_GMAIL_DRAFT route to support plain-text drafts
+     without requiring a physical attachment.
+   - Preserves the existing multipart attachment-draft behavior unchanged when
+     an attachment is supplied.
+   - Draft creation remains review-only; this route does not send email.
    ========================================================= */
 import { VERSION, ACTIONS } from "../shared/config.js";
 import { clean, safeErrorMessage, logWorkerError, jsonResponse } from "../shared/http.js";
@@ -54,7 +60,7 @@ import { getDatabase } from "../shared/database.js";
 import { handleCommunicationAnalysis } from "./communicationAnalysis.js";
 import { handleCommitOperationalDecision } from "./operationalDecision.js";
 import { createOsSessionToken } from "../shared/osAuth.js";
-export const GMAIL_INTEGRATION_VERSION = "1.7.0";
+export const GMAIL_INTEGRATION_VERSION = "1.7.3";
 export const GMAIL_PATHS = Object.freeze({ CONNECT: "/auth/google", CALLBACK: "/auth/google/callback" });
 const AUTH_URL="https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL="https://oauth2.googleapis.com/token";
@@ -490,7 +496,7 @@ async function createGmailDraft(body,env,requestId){
   const mimeType=clean(attachment?.mimeType)||"application/octet-stream";
   const base64=String(attachment?.base64||"").replace(/\s+/g,"");
   if(!to||!subject||!messageBody)return jsonResponse({ok:false,requestId,error:"Draft recipient, subject, and body are required."},400);
-  if(!fileName||!base64)return jsonResponse({ok:false,requestId,error:"A physical attachment filename and base64 payload are required."},400);
+  if(attachment&&(!fileName||!base64))return jsonResponse({ok:false,requestId,error:"When an attachment is supplied, both its physical filename and base64 payload are required."},400);
   try{
     const db=requireDb(env);
     await ensureTable(db);
@@ -498,30 +504,44 @@ async function createGmailDraft(body,env,requestId){
     if(!connection)return jsonResponse({ok:false,requestId,error:"Gmail is not connected."},401);
     const refreshToken=await decrypt(connection.encrypted_refresh_token,env.GOOGLE_CLIENT_SECRET);
     const accessToken=await refreshAccessToken(refreshToken,env);
-    const boundary=`GCM_OS_${Date.now()}_${crypto.randomUUID().replace(/-/g,"")}`;
-    const safeName=fileName.replace(/[\r\n"]/g,"_");
-    const raw=[
-      `To: ${to}`,
-      `Subject: ${encodeMimeHeader(subject)}`,
-      "MIME-Version: 1.0",
-      `Content-Type: multipart/mixed; boundary="${boundary}"`,
-      "",
-      `--${boundary}`,
-      'Content-Type: text/plain; charset="UTF-8"',
-      "Content-Transfer-Encoding: base64",
-      "",
-      wrapMimeBase64(bytesToStandardBase64(new TextEncoder().encode(messageBody))),
-      "",
-      `--${boundary}`,
-      `Content-Type: ${mimeType}; name="${safeName}"`,
-      "Content-Transfer-Encoding: base64",
-      `Content-Disposition: attachment; filename="${safeName}"`,
-      "",
-      wrapMimeBase64(base64),
-      "",
-      `--${boundary}--`,
-      ""
-    ].join("\r\n");
+    let raw;
+    if(attachment){
+      const boundary=`GCM_OS_${Date.now()}_${crypto.randomUUID().replace(/-/g,"")}`;
+      const safeName=fileName.replace(/[\r\n"]/g,"_");
+      raw=[
+        `To: ${to}`,
+        `Subject: ${encodeMimeHeader(subject)}`,
+        "MIME-Version: 1.0",
+        `Content-Type: multipart/mixed; boundary="${boundary}"`,
+        "",
+        `--${boundary}`,
+        'Content-Type: text/plain; charset="UTF-8"',
+        "Content-Transfer-Encoding: base64",
+        "",
+        wrapMimeBase64(bytesToStandardBase64(new TextEncoder().encode(messageBody))),
+        "",
+        `--${boundary}`,
+        `Content-Type: ${mimeType}; name="${safeName}"`,
+        "Content-Transfer-Encoding: base64",
+        `Content-Disposition: attachment; filename="${safeName}"`,
+        "",
+        wrapMimeBase64(base64),
+        "",
+        `--${boundary}--`,
+        ""
+      ].join("\r\n");
+    }else{
+      raw=[
+        `To: ${to}`,
+        `Subject: ${encodeMimeHeader(subject)}`,
+        "MIME-Version: 1.0",
+        'Content-Type: text/plain; charset="UTF-8"',
+        "Content-Transfer-Encoding: base64",
+        "",
+        wrapMimeBase64(bytesToStandardBase64(new TextEncoder().encode(messageBody))),
+        ""
+      ].join("\r\n");
+    }
     const response=await fetch(`${API}/users/me/drafts`,{
       method:"POST",
       headers:{Authorization:`Bearer ${accessToken}`,"Content-Type":"application/json"},
@@ -530,7 +550,7 @@ async function createGmailDraft(body,env,requestId){
     const data=await response.json();
     if(!response.ok||!data?.id)throw new Error(data?.error?.message||`Gmail draft creation failed with HTTP ${response.status}.`);
     const threadId=clean(data?.message?.threadId);
-    return jsonResponse({ok:true,requestId,action:ACTIONS.CREATE_GMAIL_DRAFT,gmailIntegrationVersion:GMAIL_INTEGRATION_VERSION,draftId:data.id,messageId:data?.message?.id||null,threadId:threadId||null,gmailUrl:threadId?`https://mail.google.com/mail/u/0/#drafts/${encodeURIComponent(threadId)}`:"https://mail.google.com/mail/u/0/#drafts",to,subject,attachmentFileName:fileName,sent:false,writesPerformed:0});
+    return jsonResponse({ok:true,requestId,action:ACTIONS.CREATE_GMAIL_DRAFT,gmailIntegrationVersion:GMAIL_INTEGRATION_VERSION,draftId:data.id,messageId:data?.message?.id||null,threadId:threadId||null,gmailUrl:threadId?`https://mail.google.com/mail/u/0/#drafts/${encodeURIComponent(threadId)}`:"https://mail.google.com/mail/u/0/#drafts",to,subject,attachmentFileName:fileName||null,sent:false,writesPerformed:0});
   }catch(error){
     logWorkerError({requestId,route:ACTIONS.CREATE_GMAIL_DRAFT,stage:"gmail_draft_creation",error});
     return jsonResponse({ok:false,requestId,action:ACTIONS.CREATE_GMAIL_DRAFT,error:safeErrorMessage(error)},500);
