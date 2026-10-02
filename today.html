@@ -1,13 +1,18 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.5.44
+   Version: 3.5.45
    Status: Production Candidate
-   Source: Production today.html 3.5.43
+   Source: Production today.html 3.5.44
    Sprint: Today / Agency Quick Access — Sales Presentation
    Purpose: Preserve the locked Today layout, Gmail approvals, Mission Control,
             Media logic, and operating workflow while keeping Mission Control's
             durable D1 ranking authoritative across both decision and queue views.
+
+   Production changes in 3.5.45:
+   - Prevents removed legacy DO / COMMUNICATE / PREPARE DOM targets from stopping Today initialization.
+   - Guards obsolete task/proof rendering and task listener paths so live Morning Command, Prospect Engagement, Command Brief, Highest-Value, and Attention loaders can run.
+   - No decision logic, D1 data, routing, or current Today hierarchy changed.
 
    Production changes in 3.5.44:
    - Adds the standard GCM OS navigation as a fail-safe directly inside the existing sidebar mount point.
@@ -1918,7 +1923,7 @@
 <a class="nav-link" href="finance.html"><span class="nav-icon">$</span><span>Billing</span></a>
 <a class="nav-link" href="proof.html"><span class="nav-icon">↗</span><span>Proof</span></a>
 </nav>
-<div class="sidebar-footer"><div class="sidebar-status"><span class="status-dot" aria-hidden="true"></span><span>Agency Command Center operational · Today v3.5.44</span></div></div>
+<div class="sidebar-footer"><div class="sidebar-status"><span class="status-dot" aria-hidden="true"></span><span>Agency Command Center operational · Today v3.5.45</span></div></div>
 </aside>
 <main class="main" id="main-content">
 <div class="main-inner">
@@ -2620,6 +2625,7 @@
 
       function renderWorkQueue(data) {
         const items = data.workItems.filter((item) => item.status !== "archived").sort((a, b) => ({ highest: 0, high: 1, normal: 2 }[a.priority] ?? 3) - ({ highest: 0, high: 1, normal: 2 }[b.priority] ?? 3));
+        if (!taskList) return;
         taskList.innerHTML = items.map((item) => `
           <li class="task-item${item.status === "complete" ? " is-complete" : ""}" data-task-id="${escapeHtml(item.id)}">
             <input class="task-check" type="checkbox" ${item.status === "complete" ? "checked" : ""} aria-label="${escapeHtml(item.title)}" />
@@ -3105,6 +3111,7 @@
 
       function renderProof(data) {
         const waiting = data.proofItems.filter((item) => !["complete", "completed", "published", "archived"].includes(String(item.status || "").toLowerCase()));
+        if (!proofList) return waiting;
         proofList.innerHTML = waiting.length ? waiting.map((item) => {
           const label = item.status === "ready" ? "Ready" : "Pending";
           return `<li class="proof-item"><a href="${escapeHtml(item.href || "#")}"><div class="proof-top"><div><p class="proof-name">${escapeHtml(item.title)}</p><p class="proof-detail">${escapeHtml(item.detail || "")}</p></div><span class="status-label ${statusClass(label)}">${label}</span></div></a></li>`;
@@ -3124,7 +3131,7 @@
         const proofRowCount = document.getElementById("proof-row-count");
         if (proofRowCount) proofRowCount.textContent = String(proofWaiting.length);
         proofNote.textContent = proofWaiting.length ? `${proofWaiting.length} ${proofWaiting.length === 1 ? "item is" : "items are"} ready to document.` : "No completed work is waiting for proof.";
-        taskProgress.textContent = `${openWork.length} open`;
+        if (taskProgress) taskProgress.textContent = `${openWork.length} open`;
       }
 
       function updatePriority() {
@@ -3299,7 +3306,7 @@
         renderOperationalBriefing();
       }
 
-      taskList.addEventListener("change", (event) => {
+      taskList?.addEventListener("change", (event) => {
         const checkbox = event.target.closest(".task-check");
         if (!checkbox) return;
         const id = checkbox.closest(".task-item")?.dataset.taskId;
@@ -3311,7 +3318,7 @@
         renderDashboard(data);
       });
 
-      const TODAY_VERSION = "3.5.44";
+      const TODAY_VERSION = "3.5.45";
       if (!window.GCMOShell) {
         console.error(`Today ${TODAY_VERSION}: shared/gcm-shell.js did not load.`);
       } else {
