@@ -2024,6 +2024,27 @@
             }
           `;
 
+          const category = String(priority?.category || "").trim().toLowerCase();
+          const idFromTitle = String(priority?.title || "").match(/Investigation\\s*#(\\d+)/i);
+          const investigationId =
+            priority?.investigationId ||
+            priority?.recordId ||
+            priority?.sourceId ||
+            (idFromTitle ? idFromTitle[1] : "");
+
+          if (category === "investigation" && investigationId) {
+            const controls = document.createElement("div");
+            controls.className = "item-meta";
+
+            const link = document.createElement("a");
+            link.className = "next-action-button";
+            link.href = "work.html?investigation=" + encodeURIComponent(investigationId);
+            link.textContent = "Resume Investigation #" + investigationId;
+
+            controls.appendChild(link);
+            article.appendChild(controls);
+          }
+
           container.appendChild(article);
         });
       }
