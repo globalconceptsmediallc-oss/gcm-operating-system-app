@@ -1,13 +1,17 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/mediaOperations.js
-   Version: 7.10.0
+   Version: 7.10.1
    Status: Production Candidate
    Source: Production routes/mediaOperations.js 7.9.0
    Sprint: Media Production Recordkeeping
    Purpose: Preserve authoritative Media retrieval, campaign create/update,
             traffic confirmation state, and attention logic while adding
             production-state recordkeeping and append-only dated production notes.
+
+   Changes in 7.10.1:
+   - Expired end dates can no longer generate current end-of-run attention, even when a legacy record still says active.
+   - Preserves the historical placement record while preventing stale deadlines from contaminating Today.
 
    Changes in 7.10.0:
    - Restores the 17-day agency preparation window as the primary Media attention trigger.
@@ -348,6 +352,12 @@ export function mediaDeadlineState(record,now=new Date()){
   if(anchor&&agencyPreparation&&["active","pending","planned"].includes(status)){
     const start=new Date(agencyPreparation.getFullYear(),agencyPreparation.getMonth(),agencyPreparation.getDate(),0,0,0,0);
     if(status==="active"){
+      const endDate=parseDateOnly(record?.endDate);
+      const today=new Date(now.getFullYear(),now.getMonth(),now.getDate(),0,0,0,0);
+      const expired=endDate&&endDate<today;
+      if(expired){
+        return {trafficLeadDays,stationDeadline:stationDeadline?formatDateOnly(stationDeadline):null,agencyPreparationDate:agencyPreparation?formatDateOnly(agencyPreparation):null,needsAttention:false,reason:null};
+      }
       const disposition=placementDispositionFromNotes(record?.notes);
       const decided=disposition.endDate&&record?.endDate&&disposition.endDate===String(record.endDate).slice(0,10)&&["retire_at_end","replacement_in_progress"].includes(disposition.disposition);
       needsAttention=!decided&&now>=start;
