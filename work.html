@@ -593,6 +593,33 @@
     return isSemrushSiteAudit(item) || isSemrushBacklinkAudit(item) || isSemrushPositionTracking(item);
   }
 
+  function isAhrefsSiteAudit(item){
+    const combined=[
+      item?.title,
+      item?.description,
+      item?.communication?.subject,
+      item?.communication?.notification_type,
+      item?.communication?.communication_family,
+      item?.communication?.raw_content
+    ].map(value=>norm(value)).join(" ");
+
+    return combined.includes("ahrefs") ||
+      combined.includes("orphan page") ||
+      combined.includes("has no incoming internal links");
+  }
+
+  function getAhrefsEvidenceUrl(item){
+    const raw=String(item?.communication?.raw_content||"");
+    const orphanMatch=raw.match(/\[View\]\((https:\/\/app\.ahrefs\.com\/site-audit\/[^)]+issueId=[^)]+)\)/i);
+    if(orphanMatch?.[1])return orphanMatch[1];
+
+    const crawlMatch=raw.match(/\[View crawl results\]\((https:\/\/app\.ahrefs\.com\/site-audit\/[^)]+)\)/i);
+    if(crawlMatch?.[1])return crawlMatch[1];
+
+    const issuesMatch=raw.match(/\[View all issues\]\((https:\/\/app\.ahrefs\.com\/site-audit\/[^)]+)\)/i);
+    return issuesMatch?.[1]||"";
+  }
+
   function isSemrushCoreWebVitals(item){
     if(!isSemrushSiteAudit(item))return false;
     const combined=[
@@ -708,6 +735,7 @@
     if(isSemrushBacklinkAudit(item))return "SEMrush Backlink Audit";
     if(isSemrushPositionTracking(item))return "SEMrush Position Tracking";
     if(isSemrushSiteAudit(item))return "SEMrush Site Audit";
+    if(isAhrefsSiteAudit(item))return "Ahrefs Site Audit";
     if(isGoogleSearchConsole(item))return "Google Search Console";
     if(isGoogleAnalytics(item))return "Google Analytics 4";
     if(isGoogleMerchantCenter(item))return "Google Merchant Center";
@@ -972,6 +1000,16 @@
         href:savedSemrushUrl||"https://www.semrush.com/siteaudit/",
         primary:true,
         tool:"semrush"
+      });
+    }else if(isAhrefsSiteAudit(item)){
+      const ahrefsEvidenceUrl=getAhrefsEvidenceUrl(item);
+      actions.push({
+        label:ahrefsEvidenceUrl
+          ? `Open ${item.clientName} Ahrefs Issue`
+          : "Open Ahrefs Site Audit",
+        href:ahrefsEvidenceUrl||"https://app.ahrefs.com/site-audit",
+        primary:true,
+        tool:"ahrefs"
       });
     }else if(isGoogleSearchConsole(item)){
       actions.push({
