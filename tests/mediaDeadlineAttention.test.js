@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/mediaDeadlineAttention.test.js
-   Version: 1.0.0
+   Version: 1.1.0
    Status: Production Regression Test
    Purpose: Verify Media surfaces agency-owned preparation before a station
             representative has to chase GCM for expiring or upcoming traffic.
@@ -18,6 +18,11 @@ assert.equal(before.needsAttention,false);
 const due=mediaDeadlineState(currentFlight,new Date(2026,8,23,12));
 assert.equal(due.needsAttention,true);
 assert.match(due.reason,/EXTEND CURRENT CREATIVE OR PREPARE REPLACEMENT/);
+
+const staleExpired={status:"active",endDate:"2026-08-14",trafficStatus:"sent",confirmationStatus:"confirmed",notes:"Agency traffic preparation: 17 calendar days before first air"};
+const staleExpiredState=mediaDeadlineState(staleExpired,new Date(2026,9,2,12));
+assert.equal(staleExpiredState.needsAttention,false);
+assert.equal(staleExpiredState.reason,null);
 
 const decided=mediaDeadlineState({...currentFlight,notes:currentFlight.notes+"\nPlacement Disposition: replacement_in_progress\nDisposition End Date: 2026-09-30"},new Date(2026,8,23,12));
 assert.equal(decided.needsAttention,false);
