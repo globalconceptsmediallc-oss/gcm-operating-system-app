@@ -467,6 +467,7 @@ export default {
         case ACTIONS.APPROVE_GMAIL_MONITORING:
         case ACTIONS.APPROVE_GMAIL_INVESTIGATION:
         case ACTIONS.CREATE_GMAIL_DRAFT:
+        case ACTIONS.CONFIRM_PROSPECT_GMAIL_SEND:
           return await handleGmailAction(body, env, requestId);
 
         case AGENCY_COMMAND_ACTION:
