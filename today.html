@@ -1,13 +1,17 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.5.42
+   Version: 3.5.43
    Status: Production Candidate
-   Source: Production today.html 3.5.41
+   Source: Production today.html 3.5.42
    Sprint: Today / Agency Quick Access — Sales Presentation
    Purpose: Preserve the locked Today layout, Gmail approvals, Mission Control,
             Media logic, and operating workflow while keeping Mission Control's
             durable D1 ranking authoritative across both decision and queue views.
+
+   Production changes in 3.5.43:
+   - Restores the shared GCM OS left navigation by loading the current shared shell asset and aligning the runtime Today version.
+   - Preserves the v3.5.42 layout: Prospect Engagement below the greeting and the former DO / COMMUNICATE / PREPARE cards removed.
 
    Production changes in 3.5.42:
    - Moves Prospect Engagement directly below the Today greeting so fresh business-development engagement is visible first.
@@ -2000,7 +2004,7 @@
 <div aria-hidden="true" hidden="" id="mission-control-state-values"><span id="prospect-count">0</span><span id="attention-count">0</span><span id="open-task-count">0</span><span id="proof-count">0</span><span id="media-pulse-count">0</span></div></div>
 </main>
 </div>
-<script src="shared/gcm-shell.js?v=2.0.63"></script>
+<script src="shared/gcm-shell.js?v=2.0.64"></script>
 <script>
     (() => {
       "use strict";
@@ -3287,7 +3291,7 @@
         renderDashboard(data);
       });
 
-      const TODAY_VERSION = "3.5.38";
+      const TODAY_VERSION = "3.5.43";
       if (!window.GCMOShell) {
         console.error(`Today ${TODAY_VERSION}: shared/gcm-shell.js did not load.`);
       } else {
