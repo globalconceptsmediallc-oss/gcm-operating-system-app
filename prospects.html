@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: prospects.html
-   Version: 3.5.2
+   Version: 3.5.3
    Status: Production Road-Test Candidate
    Source: Production prospects.html 2.0.0 + client-pre-research.html 1.1.0
    Backend: Prospect CRM 1.5.0
@@ -11,7 +11,12 @@
    Radar, outreach, appointment, CRM, services, signed scope, startup package,
    and the eventual Client handoff.
 
-   Change Notes — 3.5.2
+   Change Notes — 3.5.3
+   - Connects Radar Prepare Follow-Up Email to the existing Gmail draft route.
+   - Creates a review-only Gmail draft and opens the returned Gmail draft URL.
+   - Does not send email or record outreach before human review/send.
+
+      Change Notes — 3.5.2
    - Adds Prepare Follow-Up Email to Radar records when prospect engagement has created a follow-up Next Action.
    - Builds a short appointment-focused draft from the verified Radar contact/business context.
    - Opens the operator's email composer for review; it does not auto-send or claim the tracked viewer's identity.
@@ -429,7 +434,7 @@
 <script>
 (() => {
   "use strict";
-  const FILE_VERSION="3.5.0";
+  const FILE_VERSION="3.5.3";
   const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const state={prospects:[],radar:[],services:[],selectedProspect:null,selectedRadar:null,view:"pipeline",
     researchTarget:{type:"new",id:null},researchResult:null,researchContext:null,images:[]};
@@ -768,12 +773,24 @@
     });
   }
 
-  function prepareRadarFollowUpEmail(r){
+  async function prepareRadarFollowUpEmail(r){
     if(!r.contactEmail){alert("Add a verified contact email before preparing follow-up.");return;}
     const firstName=String(r.contactName||"").trim().split(/\s+/)[0]||"there";
     const subject=`Quick follow-up — ${r.businessName||"your review"}`;
     const body=`${firstName},\n\nI wanted to follow up on the information I sent over. If it would be helpful, I would be happy to walk through it with you and answer any questions.\n\nWe can keep it simple — about 20 minutes. Just reply with a day and time that works for you and I will get it scheduled.\n\nAndy\nGlobal Concepts Media`;
-    window.location.href=`mailto:${encodeURIComponent(r.contactEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    const button=$("radar-followup-email");
+    if(button){button.disabled=true;button.textContent="Preparing…";}
+    try{
+      const response=await fetch(WORKER,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"create-gmail-draft",to:r.contactEmail,subject,body})});
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok||data?.ok!==true)throw new Error(data?.error||`Gmail draft HTTP ${response.status}`);
+      if(!data.gmailUrl)throw new Error("Gmail created the draft but returned no review URL.");
+      window.open(data.gmailUrl,"_blank","noopener,noreferrer");
+    }catch(error){
+      alert(`Could not prepare Gmail draft: ${error.message}`);
+    }finally{
+      if(button){button.disabled=false;button.textContent="Prepare Follow-Up Email";}
+    }
   }
 
   function openRadarEdit(r){
