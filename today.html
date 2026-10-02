@@ -1,13 +1,18 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.5.40
+   Version: 3.5.41
    Status: Production Candidate
-   Source: Production today.html 3.5.39
+   Source: Production today.html 3.5.40
    Sprint: Today / Agency Quick Access — Sales Presentation
    Purpose: Preserve the locked Today layout, Gmail approvals, Mission Control,
             Media logic, and operating workflow while keeping Mission Control's
             durable D1 ranking authoritative across both decision and queue views.
+
+   Production changes in 3.5.41:
+   - Consolidates Prospect Engagement on Today by prospect instead of repeating every tracked open.
+   - Shows one row per prospect with a compact ×N engagement count; detailed event timestamps remain for the prospect record workflow.
+   - Preserves the underlying engagement evidence and Mission Control retrieval.
 
    Production changes in 3.5.40:
    - Removes stale JavaScript writes to the Command Brief status-card elements removed in 3.5.39.
@@ -2915,27 +2920,39 @@
           return;
         }
 
-        const latest = engagements[0];
-        prospectOpenPanel.hidden = false;
-        const latestRecipient = latest.contactName || latest.contactEmail || "";
-        prospectOpenTitle.textContent = engagements.length === 1
-          ? latestRecipient
-            ? `Tracked link for ${latestRecipient} · ${latest.businessName || "Prospect"} was opened`
-            : `${latest.businessName || "A prospect"} tracked proposal was opened`
-          : `${engagements.length} tracked prospect opens in the last 7 days`;
+        const grouped = new Map();
+        engagements.forEach((item) => {
+          const key = String(item?.radarId || item?.prospectId || item?.businessName || item?.contactEmail || "unknown").trim().toLowerCase();
+          if (!grouped.has(key)) {
+            grouped.set(key, {
+              businessName: item?.businessName || "Unknown Prospect",
+              count: 0,
+              latestViewedAt: item?.viewedAt || null
+            });
+          }
+          const group = grouped.get(key);
+          group.count += 1;
+          if (item?.viewedAt && (!group.latestViewedAt || new Date(item.viewedAt) > new Date(group.latestViewedAt))) {
+            group.latestViewedAt = item.viewedAt;
+          }
+        });
 
-        prospectOpenList.innerHTML = engagements.slice(0, 5).map((item) => {
-          const recipient = item.contactName || item.contactEmail || "Contact not recorded";
-          const email = item.contactEmail && item.contactEmail !== recipient
-            ? ` · ${item.contactEmail}`
-            : "";
-          return `
-            <div class="prospect-open-item">
-              <strong>${escapeHtml(item.businessName || "Unknown Prospect")}</strong>
-              <span>Recipient on record: ${escapeHtml(recipient)}${escapeHtml(email)} · proposal opened ${escapeHtml(formatProspectViewTime(item.viewedAt))}</span>
-            </div>
-          `;
-        }).join("");
+        const prospects = Array.from(grouped.values()).sort((a, b) => {
+          const aTime = a.latestViewedAt ? new Date(a.latestViewedAt).getTime() : 0;
+          const bTime = b.latestViewedAt ? new Date(b.latestViewedAt).getTime() : 0;
+          return bTime - aTime;
+        });
+
+        prospectOpenPanel.hidden = false;
+        prospectOpenTitle.textContent = prospects.length === 1
+          ? "1 prospect has tracked engagement"
+          : `${prospects.length} prospects have tracked engagement`;
+
+        prospectOpenList.innerHTML = prospects.map((item) => `
+          <div class="prospect-open-item">
+            <strong>${escapeHtml(item.businessName)} <span aria-label="${item.count} tracked opens">×${item.count}</span></strong>
+          </div>
+        `).join("");
       }
 
       async function refreshProspectEngagements() {
