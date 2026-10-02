@@ -1,13 +1,18 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.5.41
+   Version: 3.5.42
    Status: Production Candidate
-   Source: Production today.html 3.5.40
+   Source: Production today.html 3.5.41
    Sprint: Today / Agency Quick Access — Sales Presentation
    Purpose: Preserve the locked Today layout, Gmail approvals, Mission Control,
             Media logic, and operating workflow while keeping Mission Control's
             durable D1 ranking authoritative across both decision and queue views.
+
+   Production changes in 3.5.42:
+   - Moves Prospect Engagement directly below the Today greeting so fresh business-development engagement is visible first.
+   - Removes the DO, COMMUNICATE, and PREPARE bottom cards from Today; their underlying records and destination pages remain unchanged.
+   - Reserves the PREPARE concept for a future authoritative Forward Look rather than keeping a generic navigation card.
 
    Production changes in 3.5.41:
    - Consolidates Prospect Engagement on Today by prospect instead of repeating every tracked open.
@@ -1907,14 +1912,6 @@
 <div class="date-chip">GCM OS online</div>
 </div>
 </header>
-<section aria-labelledby="morning-command-title" class="panel morning-command"><div class="morning-command-body"><div class="morning-command-copy"><p class="eyebrow">Morning Command</p><h2 id="morning-command-title">Review incoming operational email from the Universal Intake queue.</h2><p id="gmail-status-copy">Loading Universal Email Intake from D1…</p></div><div class="morning-command-actions"><button class="button button-primary" disabled id="gmail-preview-button" type="button">Refresh Intake</button></div></div><div class="gmail-preview" hidden id="gmail-preview"></div></section>
-<section aria-labelledby="command-brief-title" class="command-brief">
-<div>
-<p class="brief-kicker">Today's Command Brief</p>
-<h2 class="brief-title" id="command-brief-title">Mission Control is checking the agency's live operating state.</h2>
-<p class="brief-copy" id="command-brief-copy">The highest-value operating priority is being assembled from the agency's live records.</p>
-</div>
-</section>
 <article aria-live="polite" class="panel prospect-open-panel" hidden id="prospect-open-panel">
 <div class="prospect-open-body">
 <div class="prospect-open-copy">
@@ -1925,6 +1922,15 @@
 <a class="button button-primary" href="prospects.html">Open Prospects</a>
 </div>
 </article>
+<section aria-labelledby="morning-command-title" class="panel morning-command"><div class="morning-command-body"><div class="morning-command-copy"><p class="eyebrow">Morning Command</p><h2 id="morning-command-title">Review incoming operational email from the Universal Intake queue.</h2><p id="gmail-status-copy">Loading Universal Email Intake from D1…</p></div><div class="morning-command-actions"><button class="button button-primary" disabled id="gmail-preview-button" type="button">Refresh Intake</button></div></div><div class="gmail-preview" hidden id="gmail-preview"></div></section>
+<section aria-labelledby="command-brief-title" class="command-brief">
+<div>
+<p class="brief-kicker">Today's Command Brief</p>
+<h2 class="brief-title" id="command-brief-title">Mission Control is checking the agency's live operating state.</h2>
+<p class="brief-copy" id="command-brief-copy">The highest-value operating priority is being assembled from the agency's live records.</p>
+</div>
+</section>
+
 <article aria-live="polite" class="panel media-check-panel" id="media-check-panel">
 <div class="media-check-body">
 <div class="media-check-copy">
@@ -1990,70 +1996,7 @@
 </article><article class="panel">
 <div class="panel-header"><div><h2 class="panel-title">Needs Your Attention</h2><p class="panel-description">Live client decisions that require review.</p></div></div>
 <ul class="attention-list" id="attention-list"></ul>
-</article></div></section><section aria-label="Do, communicate, and prepare" class="operational-card-row"><details class="operational-card operational-card-do">
-<summary class="workflow-summary">
-<span class="workflow-summary-copy">
-<span class="workflow-kicker">DO</span>
-<strong>What work have I committed to?</strong>
-<small>Expand to view live committed work and continue the highest-priority item.</small>
-</span>
-<span class="workflow-summary-actions">
-<span class="priority-pill pill-info" id="task-progress">0 open</span>
-<span aria-hidden="true" class="workflow-expand-icon">+</span>
-</span>
-</summary>
-<div class="workflow-row-body">
-<ul class="task-list" id="task-list"></ul>
-<div class="panel-footer"><a class="text-link" href="work.html">Open full work queue →</a></div>
-</div>
-</details><details class="operational-card operational-card-communicate">
-<summary class="workflow-summary">
-<span class="workflow-summary-copy">
-<span class="workflow-kicker">COMMUNICATE</span>
-<strong>What completed value has the client not seen?</strong>
-<small>Expand to review completed work waiting to become client-facing proof.</small>
-</span>
-<span class="workflow-summary-actions">
-<span class="workflow-live-count"><span id="proof-row-count">0</span> waiting</span>
-<span aria-hidden="true" class="workflow-expand-icon">+</span>
-</span>
-</summary>
-<div class="workflow-row-body">
-<ul class="proof-list" id="proof-list"></ul>
-<div class="panel-footer"><a class="text-link" href="proof.html">Build Proof of Work →</a></div>
-</div>
-</details><details class="operational-card operational-card-prepare">
-<summary class="workflow-summary">
-<span class="workflow-summary-copy">
-<span class="workflow-kicker">PREPARE</span>
-<strong>What is coming that I need to get ahead of?</strong>
-<small>Expand to open Calendar, Media, or Finance obligations.</small>
-</span>
-<span class="workflow-summary-actions">
-<span class="workflow-live-count">3 operating areas</span>
-<span aria-hidden="true" class="workflow-expand-icon">+</span>
-</span>
-</summary>
-<div class="workflow-row-body prepare-row-body">
-<div class="prepare-row-grid">
-<a class="prepare-row-card" href="calendar.html">
-<strong>Calendar</strong>
-<span>Appointments, investigations, follow-ups, and deadlines</span>
-<b>Open Calendar →</b>
-</a>
-<a class="prepare-row-card" href="media.html">
-<strong>Media</strong>
-<span>Campaign flights, traffic instructions, and confirmations</span>
-<b>Open Media →</b>
-</a>
-<a class="prepare-row-card" href="finance.html">
-<strong>Finance</strong>
-<span>Retainers, invoices, payments, balances, and revenue</span>
-<b>Open Finance →</b>
-</a>
-</div>
-</div>
-</details></section></section>
+</article></div></section>
 <div aria-hidden="true" hidden="" id="mission-control-state-values"><span id="prospect-count">0</span><span id="attention-count">0</span><span id="open-task-count">0</span><span id="proof-count">0</span><span id="media-pulse-count">0</span></div></div>
 </main>
 </div>
