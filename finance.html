@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: finance.html
-   Version: 1.7.3
+   Version: 1.7.4
    Status: Production Candidate — Corrected Invoice Date and Location Assignment
    Source: finance.html 1.6.0
    Sprint: Finance / Invoice Correction Control
@@ -200,7 +200,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
     <button class="mobile btn" data-gcm-shell-menu-button type="button">Menu</button>
     <header class="top">
       <div><p class="eyebrow">Agency Finance</p><h1>Billing Workspace</h1><p class="sub">Manage billing profiles, create invoices, email them, and record Check or ACH payments.</p></div>
-      <div class="version">Installed version 1.7.2</div>
+      <div class="version">Installed version 1.7.4</div>
     </header>
 
     <section class="shell">
@@ -502,7 +502,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
 <script src="shared/gcm-shell.js?v=1.0.2"></script>
 <script>
 (()=>{"use strict";
-const VERSION="1.7.3",KEY="gcm_finance_workspace_v1_7",$=id=>document.getElementById(id);
+const VERSION="1.7.4",KEY="gcm_finance_workspace_v1_7",$=id=>document.getElementById(id);
 const WORKER_ENDPOINT="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev";
 const seed={
   agency:{name:"Global Concepts Media Agency LLC",website:"https://globalconceptsmediallc.com",logoUrl:""},
@@ -542,6 +542,50 @@ const seed={
 let state=load();
 
 function clone(v){return JSON.parse(JSON.stringify(v))}
+function recoverSeptember2026History(v){
+  const accounts=Array.isArray(v?.accounts)?v.accounts:[];
+  const byName=name=>accounts.find(a=>String(a?.name||"").trim().toLowerCase()===name.toLowerCase());
+  const ensure=(a,record)=>{
+    if(!a)return null;
+    a.transactions=Array.isArray(a.transactions)?a.transactions:[];
+    const existing=a.transactions.find(t=>t.type===record.type&&String(t.reference||"").toLowerCase()===String(record.reference||"").toLowerCase());
+    if(existing)return existing;
+    const copy={...record,id:Math.max(0,...accounts.flatMap(x=>(x.transactions||[]).map(t=>Number(t.id)||0)))+1};
+    a.transactions.push(copy);
+    return copy;
+  };
+
+  const ses=byName("Southeast Safes");
+  const sesInvoice=ensure(ses,{
+    date:"2026-08-31",dueDate:"",type:"invoice",reference:"2240-R1",
+    description:"Corrected Monthly Billing Package",invoiceType:"monthly",baseAmount:2100,extras:[],
+    amount:2100,paidAmount:2100,status:"closed",email:"Adrianne@sesafes.com",
+    billingPeriod:"Services performed during August 2026",revisionNumber:1,originalReference:"2240",
+    historicalRecovery:true
+  });
+  if(sesInvoice){sesInvoice.paidAmount=2100;sesInvoice.status="closed";}
+  const sesPayment=ensure(ses,{
+    date:"2026-09-08",type:"payment",reference:"4480",description:"Check",
+    amount:2100,status:"closed",invoiceId:sesInvoice?.id||null,historicalRecovery:true
+  });
+  if(sesPayment&&sesInvoice&&!sesPayment.invoiceId)sesPayment.invoiceId=sesInvoice.id;
+
+  const sro=byName("Shade River Outfitters, INC");
+  const sroInvoice=ensure(sro,{
+    date:"2026-09-02",dueDate:"",type:"invoice",reference:"2241",
+    description:"Monthly Billing Package",invoiceType:"monthly",baseAmount:1600,extras:[],
+    amount:1600,paidAmount:1600,status:"closed",email:"",
+    billingPeriod:"Services performed during September 2026",historicalRecovery:true
+  });
+  if(sroInvoice){sroInvoice.paidAmount=1600;sroInvoice.status="closed";}
+  const sroPayment=ensure(sro,{
+    date:"2026-09-08",type:"payment",reference:"1561",description:"Check",
+    amount:1600,status:"closed",invoiceId:sroInvoice?.id||null,historicalRecovery:true
+  });
+  if(sroPayment&&sroInvoice&&!sroPayment.invoiceId)sroPayment.invoiceId=sroInvoice.id;
+
+  v.nextInvoiceNumber=Math.max(Number(v.nextInvoiceNumber||0),2242);
+}
 function migrate(v){
   if(!v||!Array.isArray(v.accounts))return clone(seed);
   v.agency=v.agency||clone(seed.agency);
@@ -551,6 +595,7 @@ function migrate(v){
     note:"Payment method: Check or ACH. Thank you for your business.",...a,
     transactions:(a.transactions||[]).map(t=>({...t,revisionNumber:Number(t.revisionNumber||0)}))
   }));
+  recoverSeptember2026History(v);
   return v;
 }
 function load(){
