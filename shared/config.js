@@ -1,12 +1,15 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/config.js
-   Version: 7.16.0
+   Version: 7.16.1
    Status: Production Road-Test Candidate
    Source: shared/config.js 7.15.0 production
    Sprint: Universal Email Intake — Human Disposition
    Purpose: Preserve all existing production constants and add the
             durable Prospect CRM action contract.
+
+   Change Notes in 7.16.1:
+   - Adds CONFIRM_PROSPECT_GMAIL_SEND for Gmail-confirmed Radar outreach recording.
 
    Change Notes in 7.16.0:
    - Adds SYNC_GMAIL_INTAKE so Refresh Intake can reconcile the live Gmail Inbox against durable D1.
@@ -43,7 +46,7 @@
      Operating Session, and Calendar action unchanged.
    ========================================================= */
 
-export const VERSION = "7.16.0";
+export const VERSION = "7.16.1";
 export const API_CONTRACT_VERSION = "communications-operational-decision-v3";
 export const COMMUNICATION_ANALYSIS_ENGINE_VERSION = "3.4.1";
 
@@ -62,6 +65,7 @@ export const ACTIONS = Object.freeze({
   APPROVE_GMAIL_MONITORING: "approve-gmail-monitoring",
   APPROVE_GMAIL_INVESTIGATION: "approve-gmail-investigation",
   CREATE_GMAIL_DRAFT: "create-gmail-draft",
+  CONFIRM_PROSPECT_GMAIL_SEND: "confirm-prospect-gmail-send",
   SYNC_GMAIL_INTAKE: "sync-gmail-intake",
   GET_EMAIL_INTAKE_QUEUE: "get-email-intake-queue",
   SAVE_EMAIL_INTAKE_FINDING: "save-email-intake-finding",
