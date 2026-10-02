@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/emailIntakeDisposition.js
-   Version: 1.5.3
+   Version: 1.5.4
    Status: Production Road-Test Candidate
    Sprint: Universal Email Intake — Human Disposition
    Purpose:
@@ -64,7 +64,7 @@ import { ACTIONS } from "../shared/config.js";
 import { getDatabase } from "../shared/database.js";
 import { jsonResponse, logWorkerError, safeErrorMessage } from "../shared/http.js";
 
-export const EMAIL_INTAKE_DISPOSITION_VERSION = "1.5.3";
+export const EMAIL_INTAKE_DISPOSITION_VERSION = "1.5.4";
 const UNIVERSAL_INTAKE_SOURCE = "Universal Email Intake";
 
 export async function handleEmailIntakeDisposition(body, env, requestId) {
@@ -335,6 +335,13 @@ async function handleInformation({
           address:existing.from_address || null
         },
         evidenceRetained:true,
+        sourceEvidence:{
+          provider:clean(existing.provider)||null,
+          providerMessageId:clean(existing.provider_message_id)||null,
+          providerThreadId:clean(existing.provider_thread_id)||null,
+          rawStorageReference:clean(existing.raw_storage_reference)||null,
+          sourceHeaders:safeJsonObject(existing.source_headers_json)
+        },
         recommendedRoutes:{
           saveCommunication:true,
           createInvestigation:false,
@@ -1229,6 +1236,11 @@ async function loadIntake(db, intakeId, workspaceKey) {
       from_name,
       subject,
       body_text,
+      provider,
+      provider_message_id,
+      provider_thread_id,
+      raw_storage_reference,
+      source_headers_json,
       processing_status,
       disposition,
       client_id,
@@ -1241,6 +1253,15 @@ async function loadIntake(db, intakeId, workspaceKey) {
       AND workspace_key = ?
     LIMIT 1
   `).bind(intakeId, workspaceKey).first();
+}
+
+function safeJsonObject(value) {
+  try {
+    const parsed = JSON.parse(String(value || "{}"));
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch (error) {
+    return {};
+  }
 }
 
 function hasDownstreamLink(record) {
