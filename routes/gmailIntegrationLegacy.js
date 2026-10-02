@@ -47,6 +47,11 @@
    - Cloudflare promotional mail is classified as non-operational archive noise rather than Manual Review work.
    - Archive candidates can now be cleared through the existing Gmail approval action with zero D1 writes.
    - Archive removes UNREAD and INBOX labels only after the message is re-verified as an archive candidate.
+   Change Notes — 1.7.5
+   - CREATE_GMAIL_DRAFT now accepts an optional Gmail threadId for exact-thread replies from Universal Email Intake.
+   - Adds In-Reply-To and References headers when an original Internet Message-ID is supplied.
+   - Preserves existing prospect draft tracking and standalone draft behavior.
+
    Change Notes — 1.7.4
    - Persists an optional Radar relationship when GCM creates a prospect follow-up draft.
    - Adds sent-confirmation for tracked Radar drafts: only Gmail-confirmed SENT messages
@@ -66,7 +71,7 @@ import { getDatabase } from "../shared/database.js";
 import { handleCommunicationAnalysis } from "./communicationAnalysis.js";
 import { handleCommitOperationalDecision } from "./operationalDecision.js";
 import { createOsSessionToken } from "../shared/osAuth.js";
-export const GMAIL_INTEGRATION_VERSION = "1.7.4";
+export const GMAIL_INTEGRATION_VERSION = "1.7.5";
 export const GMAIL_PATHS = Object.freeze({ CONNECT: "/auth/google", CALLBACK: "/auth/google/callback" });
 const AUTH_URL="https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL="https://oauth2.googleapis.com/token";
@@ -519,6 +524,8 @@ async function createGmailDraft(body,env,requestId){
   const mimeType=clean(attachment?.mimeType)||"application/octet-stream";
   const base64=String(attachment?.base64||"").replace(/\s+/g,"");
   const radarId=Number(body?.radarId||body?.radar_id||0);
+  const replyThreadId=clean(body?.threadId||body?.thread_id);
+  const inReplyTo=clean(body?.inReplyTo||body?.in_reply_to).replace(/^<|>$/g,"");
   if(!to||!subject||!messageBody)return jsonResponse({ok:false,requestId,error:"Draft recipient, subject, and body are required."},400);
   if(attachment&&(!fileName||!base64))return jsonResponse({ok:false,requestId,error:"When an attachment is supplied, both its physical filename and base64 payload are required."},400);
   try{
@@ -535,6 +542,7 @@ async function createGmailDraft(body,env,requestId){
       raw=[
         `To: ${to}`,
         `Subject: ${encodeMimeHeader(subject)}`,
+        ...(inReplyTo?[`In-Reply-To: <${inReplyTo}>`,`References: <${inReplyTo}>`]:[]),
         "MIME-Version: 1.0",
         `Content-Type: multipart/mixed; boundary="${boundary}"`,
         "",
@@ -558,6 +566,7 @@ async function createGmailDraft(body,env,requestId){
       raw=[
         `To: ${to}`,
         `Subject: ${encodeMimeHeader(subject)}`,
+        ...(inReplyTo?[`In-Reply-To: <${inReplyTo}>`,`References: <${inReplyTo}>`]:[]),
         "MIME-Version: 1.0",
         'Content-Type: text/plain; charset="UTF-8"',
         "Content-Transfer-Encoding: base64",
@@ -569,7 +578,7 @@ async function createGmailDraft(body,env,requestId){
     const response=await fetch(`${API}/users/me/drafts`,{
       method:"POST",
       headers:{Authorization:`Bearer ${accessToken}`,"Content-Type":"application/json"},
-      body:JSON.stringify({message:{raw:encode(new TextEncoder().encode(raw))}})
+      body:JSON.stringify({message:{raw:encode(new TextEncoder().encode(raw)),...(replyThreadId?{threadId:replyThreadId}:{})}})
     });
     const data=await response.json();
     if(!response.ok||!data?.id)throw new Error(data?.error?.message||`Gmail draft creation failed with HTTP ${response.status}.`);
@@ -580,7 +589,7 @@ async function createGmailDraft(body,env,requestId){
         (radar_id,gmail_draft_id,gmail_message_id,gmail_thread_id,recipient_email,subject)
         VALUES(?,?,?,?,?,?)`).bind(radarId,data.id,clean(data?.message?.id)||null,threadId||null,to,subject).run();
     }
-    return jsonResponse({ok:true,requestId,action:ACTIONS.CREATE_GMAIL_DRAFT,gmailIntegrationVersion:GMAIL_INTEGRATION_VERSION,draftId:data.id,messageId:data?.message?.id||null,threadId:threadId||null,gmailUrl:threadId?`https://mail.google.com/mail/u/0/#drafts/${encodeURIComponent(threadId)}`:"https://mail.google.com/mail/u/0/#drafts",to,subject,attachmentFileName:fileName||null,sent:false,writesPerformed:0});
+    return jsonResponse({ok:true,requestId,action:ACTIONS.CREATE_GMAIL_DRAFT,gmailIntegrationVersion:GMAIL_INTEGRATION_VERSION,draftId:data.id,messageId:data?.message?.id||null,threadId:threadId||replyThreadId||null,gmailUrl:threadId?`https://mail.google.com/mail/u/0/#drafts/${encodeURIComponent(threadId)}`:"https://mail.google.com/mail/u/0/#drafts",to,subject,attachmentFileName:fileName||null,sent:false,writesPerformed:0});
   }catch(error){
     logWorkerError({requestId,route:ACTIONS.CREATE_GMAIL_DRAFT,stage:"gmail_draft_creation",error});
     return jsonResponse({ok:false,requestId,action:ACTIONS.CREATE_GMAIL_DRAFT,error:safeErrorMessage(error)},500);
