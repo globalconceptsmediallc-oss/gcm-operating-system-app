@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailIntegration.js
-   Version: 1.7.0
+   Version: 1.7.4
    Status: Production Candidate â€” Human Operational Intelligence
    Source: routes/gmailIntegration.js 1.5.4
    Sprint: Media â€” Gmail Attached Draft Creation
@@ -47,6 +47,12 @@
    - Cloudflare promotional mail is classified as non-operational archive noise rather than Manual Review work.
    - Archive candidates can now be cleared through the existing Gmail approval action with zero D1 writes.
    - Archive removes UNREAD and INBOX labels only after the message is re-verified as an archive candidate.
+   Change Notes — 1.7.4
+   - Persists an optional Radar relationship when GCM creates a prospect follow-up draft.
+   - Adds sent-confirmation for tracked Radar drafts: only Gmail-confirmed SENT messages
+     become durable Radar outreach, with Gmail message ID duplicate protection.
+   - Advances confirmed sends to a 3-business-day "Follow up if no response" action.
+
    Change Notes — 1.7.3
    - Extends the existing CREATE_GMAIL_DRAFT route to support plain-text drafts
      without requiring a physical attachment.
@@ -60,7 +66,7 @@ import { getDatabase } from "../shared/database.js";
 import { handleCommunicationAnalysis } from "./communicationAnalysis.js";
 import { handleCommitOperationalDecision } from "./operationalDecision.js";
 import { createOsSessionToken } from "../shared/osAuth.js";
-export const GMAIL_INTEGRATION_VERSION = "1.7.3";
+export const GMAIL_INTEGRATION_VERSION = "1.7.4";
 export const GMAIL_PATHS = Object.freeze({ CONNECT: "/auth/google", CALLBACK: "/auth/google/callback" });
 const AUTH_URL="https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL="https://oauth2.googleapis.com/token";
@@ -80,6 +86,7 @@ export async function handleGmailAction(body,env,requestId){
   if(body?.action===ACTIONS.APPROVE_GMAIL_MONITORING)return approveMonitoring(body,env,requestId);
   if(body?.action===ACTIONS.APPROVE_GMAIL_INVESTIGATION)return approveInvestigation(body,env,requestId);
   if(body?.action===ACTIONS.CREATE_GMAIL_DRAFT)return createGmailDraft(body,env,requestId);
+  if(body?.action===ACTIONS.CONFIRM_PROSPECT_GMAIL_SEND)return confirmProspectGmailSend(body,env,requestId);
   return null;
 }
 async function beginAuth(url,env){
@@ -487,6 +494,22 @@ async function approveInvestigation(body,env,requestId){
   }
 }
 
+async function ensureProspectDraftTable(db){
+  await db.prepare(`CREATE TABLE IF NOT EXISTS crm_prospect_gmail_drafts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    radar_id INTEGER NOT NULL,
+    gmail_draft_id TEXT NOT NULL UNIQUE,
+    gmail_message_id TEXT,
+    gmail_thread_id TEXT,
+    recipient_email TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    sent_message_id TEXT,
+    confirmed_sent_at TEXT,
+    recorded_activity_id INTEGER
+  )`).run();
+}
+
 async function createGmailDraft(body,env,requestId){
   const to=clean(body?.to);
   const subject=clean(body?.subject);
@@ -495,6 +518,7 @@ async function createGmailDraft(body,env,requestId){
   const fileName=clean(attachment?.fileName);
   const mimeType=clean(attachment?.mimeType)||"application/octet-stream";
   const base64=String(attachment?.base64||"").replace(/\s+/g,"");
+  const radarId=Number(body?.radarId||body?.radar_id||0);
   if(!to||!subject||!messageBody)return jsonResponse({ok:false,requestId,error:"Draft recipient, subject, and body are required."},400);
   if(attachment&&(!fileName||!base64))return jsonResponse({ok:false,requestId,error:"When an attachment is supplied, both its physical filename and base64 payload are required."},400);
   try{
@@ -550,11 +574,67 @@ async function createGmailDraft(body,env,requestId){
     const data=await response.json();
     if(!response.ok||!data?.id)throw new Error(data?.error?.message||`Gmail draft creation failed with HTTP ${response.status}.`);
     const threadId=clean(data?.message?.threadId);
+    if(Number.isInteger(radarId)&&radarId>0){
+      await ensureProspectDraftTable(db);
+      await db.prepare(`INSERT OR IGNORE INTO crm_prospect_gmail_drafts
+        (radar_id,gmail_draft_id,gmail_message_id,gmail_thread_id,recipient_email,subject)
+        VALUES(?,?,?,?,?,?)`).bind(radarId,data.id,clean(data?.message?.id)||null,threadId||null,to,subject).run();
+    }
     return jsonResponse({ok:true,requestId,action:ACTIONS.CREATE_GMAIL_DRAFT,gmailIntegrationVersion:GMAIL_INTEGRATION_VERSION,draftId:data.id,messageId:data?.message?.id||null,threadId:threadId||null,gmailUrl:threadId?`https://mail.google.com/mail/u/0/#drafts/${encodeURIComponent(threadId)}`:"https://mail.google.com/mail/u/0/#drafts",to,subject,attachmentFileName:fileName||null,sent:false,writesPerformed:0});
   }catch(error){
     logWorkerError({requestId,route:ACTIONS.CREATE_GMAIL_DRAFT,stage:"gmail_draft_creation",error});
     return jsonResponse({ok:false,requestId,action:ACTIONS.CREATE_GMAIL_DRAFT,error:safeErrorMessage(error)},500);
   }
+}
+async function confirmProspectGmailSend(body,env,requestId){
+  const radarId=Number(body?.radarId||body?.radar_id||0);
+  if(!Number.isInteger(radarId)||radarId<=0)return jsonResponse({ok:false,requestId,error:"radarId is required."},400);
+  try{
+    const db=requireDb(env); await ensureTable(db); await ensureProspectDraftTable(db);
+    const tracked=await db.prepare(`SELECT * FROM crm_prospect_gmail_drafts WHERE radar_id=? ORDER BY id DESC LIMIT 1`).bind(radarId).first();
+    if(!tracked)return jsonResponse({ok:true,requestId,action:ACTIONS.CONFIRM_PROSPECT_GMAIL_SEND,sent:false,reason:"No tracked Gmail draft exists for this Radar record."});
+    if(tracked.confirmed_sent_at)return jsonResponse({ok:true,requestId,action:ACTIONS.CONFIRM_PROSPECT_GMAIL_SEND,sent:true,duplicateProtected:true,messageId:tracked.sent_message_id,activityId:tracked.recorded_activity_id});
+    const connection=await db.prepare(`SELECT encrypted_refresh_token FROM gmail_connections ORDER BY updated_at DESC LIMIT 1`).first();
+    if(!connection)return jsonResponse({ok:false,requestId,error:"Gmail is not connected."},401);
+    const refreshToken=await decrypt(connection.encrypted_refresh_token,env.GOOGLE_CLIENT_SECRET);
+    const accessToken=await refreshAccessToken(refreshToken,env);
+    const q=new URL(`${API}/users/me/messages`);
+    q.searchParams.set("q",`in:sent to:${tracked.recipient_email}`);
+    q.searchParams.set("maxResults","20");
+    const list=await gmailFetch(q.toString(),accessToken);
+    let sent=null;
+    for(const item of (list.messages||[])){
+      const msg=await gmailFetch(`${API}/users/me/messages/${encodeURIComponent(item.id)}?format=metadata&metadataHeaders=Subject&metadataHeaders=To`,accessToken);
+      const headers=Object.fromEntries((msg?.payload?.headers||[]).map(h=>[String(h.name||"").toLowerCase(),String(h.value||"")]));
+      if(clean(headers.subject)===clean(tracked.subject) && (!tracked.gmail_thread_id || msg.threadId===tracked.gmail_thread_id)){sent=msg;break;}
+    }
+    if(!sent)return jsonResponse({ok:true,requestId,action:ACTIONS.CONFIRM_PROSPECT_GMAIL_SEND,sent:false,reason:"Tracked draft is not confirmed in Gmail Sent."});
+    const externalKey=`gmail:sent:${sent.id}`;
+    const duplicate=await db.prepare(`SELECT id FROM crm_prospect_radar_activities WHERE external_key=? LIMIT 1`).bind(externalKey).first();
+    let activityId=duplicate?.id||null;
+    if(!activityId){
+      const occurredAt=new Date(Number(sent.internalDate||Date.now())).toISOString();
+      const activity=await db.prepare(`INSERT INTO crm_prospect_radar_activities
+        (radar_id,activity_type,occurred_at,direction,subject,summary,outcome,meaningful_contact,source_type,source_reference,external_key,created_at)
+        VALUES(?,'follow_up',?,'outbound',?,'Follow-up email sent after verified prospect engagement.','awaiting_response',1,'Gmail',?,?,CURRENT_TIMESTAMP)`)
+        .bind(radarId,occurredAt,tracked.subject,`gmail:${sent.id}`,externalKey).run();
+      activityId=Number(activity?.meta?.last_row_id||0)||null;
+      const sentDate=occurredAt.slice(0,10);
+      const followUpDate=addBusinessDaysIso(sentDate,3);
+      await db.prepare(`UPDATE crm_prospect_radar SET status='outreach',last_outreach_at=?,next_action_title='Follow up if no response',next_action_due_date=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`)
+        .bind(occurredAt,followUpDate,radarId).run();
+    }
+    await db.prepare(`UPDATE crm_prospect_gmail_drafts SET sent_message_id=?,confirmed_sent_at=CURRENT_TIMESTAMP,recorded_activity_id=? WHERE id=?`).bind(sent.id,activityId,tracked.id).run();
+    return jsonResponse({ok:true,requestId,action:ACTIONS.CONFIRM_PROSPECT_GMAIL_SEND,sent:true,duplicateProtected:Boolean(duplicate),messageId:sent.id,activityId,nextActionTitle:"Follow up if no response"});
+  }catch(error){
+    logWorkerError({requestId,route:ACTIONS.CONFIRM_PROSPECT_GMAIL_SEND,stage:"prospect_gmail_sent_confirmation",error});
+    return jsonResponse({ok:false,requestId,action:ACTIONS.CONFIRM_PROSPECT_GMAIL_SEND,error:safeErrorMessage(error)},500);
+  }
+}
+function addBusinessDaysIso(value,count){
+  const [y,m,d]=String(value).split("-").map(Number); let cursor=new Date(Date.UTC(y,m-1,d)),remaining=count;
+  while(remaining>0){cursor=new Date(cursor.getTime()+86400000);const day=cursor.getUTCDay();if(day!==0&&day!==6)remaining--;}
+  return cursor.toISOString().slice(0,10);
 }
 function bytesToStandardBase64(bytes){let binary="";const chunk=0x8000;for(let i=0;i<bytes.length;i+=chunk)binary+=String.fromCharCode(...bytes.subarray(i,i+chunk));return btoa(binary);}
 function wrapMimeBase64(value){return String(value||"").match(/.{1,76}/g)?.join("\r\n")||"";}
