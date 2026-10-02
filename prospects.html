@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: prospects.html
-   Version: 3.5.5
+   Version: 3.5.6
    Status: Production Road-Test Candidate
    Source: Production prospects.html 2.0.0 + client-pre-research.html 1.1.0
    Backend: Prospect CRM 1.5.0
@@ -10,6 +10,10 @@
    One operating workspace for GCM prospecting from first evidence through
    Radar, outreach, appointment, CRM, services, signed scope, startup package,
    and the eventual Client handoff.
+
+   Change Notes — 3.5.6
+   - Expands Proposal Engagement inside the Prospect record to show the consolidated tracked-view count plus each individual recorded engagement date and time.
+   - Keeps tracked views as page-activity evidence only; it does not claim who physically viewed the page.
 
    Change Notes — 3.5.5
    - Links created Gmail follow-up drafts to the originating Radar record.
@@ -670,7 +674,8 @@
         <div class="section-title"><div><h3>Why It Matters</h3></div></div>
         <div class="timeline">${(intelligencePoints.length?intelligencePoints:[p.opportunitySummary||"Use the proposal scope and discovery context."]).map(x=>`<div class="timeline-item"><p>${esc(x)}</p></div>`).join("")}</div>
         <div class="section-title"><div><h3>Proposal Engagement</h3></div></div>
-        <div class="note">${engagement.length?(engagement.length+" tracked concept/proposal-page view"+(engagement.length===1?"":"s")+" recorded. Latest: "+esc(fmtDate(latestView?.occurredAt))+". This indicates page activity only; it does not prove who physically viewed the page."):"No tracked concept/proposal-page view is recorded."}</div>
+        <div class="note">${engagement.length?("<strong>×"+engagement.length+"</strong> tracked concept/proposal-page view"+(engagement.length===1?"":"s")+" recorded. This indicates page activity only; it does not prove who physically viewed the page."):"No tracked concept/proposal-page view is recorded."}</div>
+        ${engagement.length?`<div class="timeline">${engagement.map((item,index)=>`<div class="timeline-item"><p><strong>Engagement ${index+1}</strong> · ${esc(fmtDate(item.occurredAt))}</p></div>`).join("")}</div>`:""}
         <div class="section-title"><div><h3>Questions to Ask</h3></div></div>
         <div class="timeline">${questions.map(q=>`<div class="timeline-item"><p>${esc(q)}</p></div>`).join("")}</div>
         <div class="section-title"><div><h3>Goal of the Call</h3></div></div>
