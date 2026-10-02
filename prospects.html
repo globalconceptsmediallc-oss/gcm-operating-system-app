@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: prospects.html
-   Version: 3.5.4
+   Version: 3.5.5
    Status: Production Road-Test Candidate
    Source: Production prospects.html 2.0.0 + client-pre-research.html 1.1.0
    Backend: Prospect CRM 1.5.0
@@ -10,6 +10,11 @@
    One operating workspace for GCM prospecting from first evidence through
    Radar, outreach, appointment, CRM, services, signed scope, startup package,
    and the eventual Client handoff.
+
+   Change Notes — 3.5.5
+   - Links created Gmail follow-up drafts to the originating Radar record.
+   - Adds Check Sent Email after draft preparation; only Gmail-confirmed Sent mail
+     is recorded as outreach and advances the dated follow-up action.
 
    Change Notes — 3.5.4
    - Fixes Radar record Open failure caused by an undefined norm() call introduced
@@ -440,7 +445,7 @@
 <script>
 (() => {
   "use strict";
-  const FILE_VERSION="3.5.4";
+  const FILE_VERSION="3.5.5";
   const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const state={prospects:[],radar:[],services:[],selectedProspect:null,selectedRadar:null,view:"pipeline",
     researchTarget:{type:"new",id:null},researchResult:null,researchContext:null,images:[]};
@@ -749,7 +754,7 @@
     $("radar-title").textContent=r.businessName||r.vertical||"Radar Record";$("radar-subtitle").textContent=`${r.status==="outreach"?"Outreach":"Radar"} · ${r.contactName||"Contact not recorded"}`;
     $("radar-body").innerHTML=`<div class="detail-grid">${detail("Source",r.sourceType||"Unknown")}${detail("Market",r.market||r.vertical||"Unknown")}${detail("Contact",r.contactName||"Not recorded")}${detail("Email",r.contactEmail||"Not recorded")}${detail("Phone",r.contactPhone||"Not recorded")}${detail("Website",r.website||"Not recorded")}${detail("Test Site",r.testSiteUrl||"Not recorded")}${detail("Last Outreach",fmtDate(r.lastOutreachAt))}${detail("Next Action",r.isUnmanaged?"MISSING":r.nextAction?.title||"Not in active outreach")}</div>
     <div class="section-title"><div><h3>Radar Actions</h3><p>Move naturally from evidence to outreach to appointment.</p></div></div>
-    <div class="quick-actions"><button class="btn btn-secondary btn-small" id="radar-edit" type="button">Edit Radar Record</button><button class="btn btn-secondary btn-small" id="radar-test-site-edit" type="button">${r.testSiteUrl?"Edit Test Site":"Add Test Site"}</button><button class="btn btn-secondary btn-small" id="radar-research" type="button">Research / Update Intelligence</button><button class="btn btn-secondary btn-small" id="radar-outreach" type="button">Record Outreach</button>${clean(r.nextAction?.title).toLowerCase().replace(/\s+/g,"_")==="follow_up_after_prospect_engagement"?'<button class="btn btn-secondary btn-small" id="radar-followup-email" type="button">Prepare Follow-Up Email</button>':""}<button class="btn btn-primary btn-small" id="radar-promote" type="button">Appointment Scheduled</button></div>
+    <div class="quick-actions"><button class="btn btn-secondary btn-small" id="radar-edit" type="button">Edit Radar Record</button><button class="btn btn-secondary btn-small" id="radar-test-site-edit" type="button">${r.testSiteUrl?"Edit Test Site":"Add Test Site"}</button><button class="btn btn-secondary btn-small" id="radar-research" type="button">Research / Update Intelligence</button><button class="btn btn-secondary btn-small" id="radar-outreach" type="button">Record Outreach</button>${clean(r.nextAction?.title).toLowerCase().replace(/\s+/g,"_")==="follow_up_after_prospect_engagement"?'<button class="btn btn-secondary btn-small" id="radar-followup-email" type="button">Prepare Follow-Up Email</button><button class="btn btn-secondary btn-small" id="radar-confirm-email" type="button">Check Sent Email</button>':""}<button class="btn btn-primary btn-small" id="radar-promote" type="button">Appointment Scheduled</button></div>
     <div class="section-title"><div><h3>Intelligence</h3><p>${(r.intelligence||[]).length} durable record(s).</p></div></div><div class="timeline">${(r.intelligence||[]).slice(0,5).map(i=>`<div class="timeline-item"><strong>${esc(i.title)}</strong><p>${esc(i.summary||"Prospect intelligence saved in Radar.")}</p><time>${esc(fmtDate(i.capturedAt))}</time></div>`).join("")||'<div class="timeline-item"><strong>No research saved yet.</strong><p>Run Research / Update Intelligence.</p></div>'}</div>
     <div class="section-title"><div><h3>Outreach History</h3></div></div><div class="timeline">${(r.activities||[]).slice(0,10).map(a=>`<div class="timeline-item"><strong>${esc(a.subject||a.activityType.replaceAll("_"," "))}</strong><p>${esc(a.summary)}</p><time>${esc(fmtDate(a.occurredAt))}${a.outcome?` · ${esc(a.outcome)}`:""}</time></div>`).join("")||'<div class="timeline-item"><strong>No outreach yet.</strong><p>Radar can remain passive until GCM decides to pursue it.</p></div>'}</div>`;
     const topTestSite=$("radar-test-site-top");
@@ -764,6 +769,8 @@
     $("radar-outreach").addEventListener("click",()=>{const f=$("outreach-form");f.elements.radarId.value=r.id;setDefaults(f);openDialog($("outreach-dialog"))});
     const followupEmail=$("radar-followup-email");
     if(followupEmail)followupEmail.addEventListener("click",()=>prepareRadarFollowUpEmail(r));
+    const confirmEmail=$("radar-confirm-email");
+    if(confirmEmail)confirmEmail.addEventListener("click",()=>confirmRadarFollowUpSent(r));
     $("radar-promote").addEventListener("click",()=>{const f=$("promote-form");f.elements.radarId.value=r.id;setDefaults(f);openDialog($("promote-dialog"))});
   }
 
@@ -787,7 +794,7 @@
     const button=$("radar-followup-email");
     if(button){button.disabled=true;button.textContent="Preparing…";}
     try{
-      const response=await fetch(WORKER,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"create-gmail-draft",to:r.contactEmail,subject,body})});
+      const response=await fetch(WORKER,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"create-gmail-draft",radarId:r.id,to:r.contactEmail,subject,body})});
       const data=await response.json().catch(()=>({}));
       if(!response.ok||data?.ok!==true)throw new Error(data?.error||`Gmail draft HTTP ${response.status}`);
       if(!data.gmailUrl)throw new Error("Gmail created the draft but returned no review URL.");
@@ -797,6 +804,21 @@
     }finally{
       if(button){button.disabled=false;button.textContent="Prepare Follow-Up Email";}
     }
+  }
+
+  async function confirmRadarFollowUpSent(r){
+    const button=$("radar-confirm-email");
+    if(button){button.disabled=true;button.textContent="Checking…";}
+    try{
+      const response=await fetch(WORKER,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"confirm-prospect-gmail-send",radarId:r.id})});
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok||data?.ok!==true)throw new Error(data?.error||`Gmail confirmation HTTP ${response.status}`);
+      if(!data.sent){alert("Gmail has not confirmed this tracked draft as sent yet.");return;}
+      const d=await api("get_radar",{radarId:r.id});
+      state.selectedRadar=d.radar;renderRadarDetail(d.radar);await load();
+      alert(data.duplicateProtected?"This sent email was already recorded.":"Sent email confirmed and recorded in Outreach History.");
+    }catch(error){alert(`Could not confirm sent email: ${error.message}`);}
+    finally{if(button){button.disabled=false;button.textContent="Check Sent Email";}}
   }
 
   function openRadarEdit(r){
