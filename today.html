@@ -1,13 +1,17 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.5.47
+   Version: 3.5.48
    Status: Production Candidate
-   Source: Production today.html 3.5.46
+   Source: Production today.html 3.5.47
    Sprint: Today — Forward Look
    Purpose: Preserve the locked Today layout, Gmail approvals, Mission Control,
             Media logic, and operating workflow while adding a read-only future
             commitment view from authoritative dated OS records.
+
+   Production changes in 3.5.48:
+   - Keeps Forward Look in its loading state until the authoritative source reads finish.
+   - Prevents an early Mission Control response from briefly displaying a false all-clear.
 
    Production changes in 3.5.47:
    - Adds a read-only Forward Look panel for future dated commitments in the next 30 days.
@@ -1934,7 +1938,7 @@
 <a class="nav-link" href="finance.html"><span class="nav-icon">$</span><span>Billing</span></a>
 <a class="nav-link" href="proof.html"><span class="nav-icon">↗</span><span>Proof</span></a>
 </nav>
-<div class="sidebar-footer"><div class="sidebar-status"><span class="status-dot" aria-hidden="true"></span><span>Agency Command Center operational · Today v3.5.47</span></div></div>
+<div class="sidebar-footer"><div class="sidebar-status"><span class="status-dot" aria-hidden="true"></span><span>Agency Command Center operational · Today v3.5.48</span></div></div>
 </aside>
 <main class="main" id="main-content">
 <div class="main-inner">
@@ -2124,6 +2128,7 @@
       let navAttentionState = null;
       let forwardLookSourceItems = [];
       let forwardLookLoadFailures = 0;
+      let forwardLookLoaded = false;
       let mediaLoaded = false;
       let mediaUnavailable = false;
       let agencyCommandLoaded = false;
@@ -3024,7 +3029,7 @@
       }
 
       function renderForwardLook() {
-        if (!forwardLookList || !forwardLookSummary) return;
+        if (!forwardLookList || !forwardLookSummary || !forwardLookLoaded) return;
 
         const items = forwardLookSourceItems.slice();
         buildForwardLookFromNav(items);
@@ -3085,6 +3090,7 @@
 
       async function loadForwardLook() {
         forwardLookLoadFailures = 0;
+        forwardLookLoaded = false;
         const items = [];
 
         const results = await Promise.allSettled([
@@ -3200,6 +3206,7 @@
         }
 
         forwardLookSourceItems = items;
+        forwardLookLoaded = true;
         renderForwardLook();
       }
 
@@ -3654,7 +3661,7 @@
         renderDashboard(data);
       });
 
-      const TODAY_VERSION = "3.5.47";
+      const TODAY_VERSION = "3.5.48";
       if (!window.GCMOShell) {
         console.error(`Today ${TODAY_VERSION}: shared/gcm-shell.js did not load.`);
       } else {
