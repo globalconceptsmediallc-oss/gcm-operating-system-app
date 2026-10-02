@@ -302,7 +302,7 @@
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.36"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.37"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),externalValidation:byId("external-validation-list"),target:byId("target-banner"),requestedForm:byId("requested-work-form"),requestedClient:byId("requested-client"),requestedMessage:byId("requested-work-message"),createRequested:byId("create-requested-work")};
   let activeClients=[],directoryClients=[],investigations=[],monitoringInvestigations=[],workItems=[],validationWorkItems=[],selectedKey="",processing=false,processingWorkItem=false,processingRequestedWork=false;
 
@@ -616,7 +616,7 @@
     // Historical rehabilitation: Investigation #71 / Communication #147.
     // The originating Gmail message 1a0c426965cc7d62 preserved this exact
     // Ahrefs orphan-page issue URL even though the legacy D1 Communication did not.
-    if(Number(item?.id)===71 && Number(item?.communication_id)===147){
+    if(Number(item?.id)===71){
       return "https://app.ahrefs.com/site-audit/8627900/data-explorer?current=21-09-2026T132727&columns=pageRating%2Curl%2Ctraffic%2ChttpCode%2CcontentType%2Cfound_in_sitemaps%2CincomingLinks%2CincomingRedirect%2CincomingCanonical%2CincomingHreflang%2CincomingPagination%2CincomingCss%2CincomingImage%2CincomingJs&filterId=342fd29001af244aeba4d481197e58ac&sorting=-pageRating&issueId=c64d7e96-d0f4-11e7-8ed1-001e67ed4656&filterCollapsed=true";
     }
 
