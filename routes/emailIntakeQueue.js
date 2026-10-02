@@ -1,19 +1,23 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/emailIntakeQueue.js
-   Version: 1.0.0
+   Version: 1.1.0
    Status: Production Road-Test Candidate
    Sprint: Universal Email Intake — D1 Review Queue
    Purpose:
    Read durable provider-independent email intake records from D1 so the OS
    can review incoming operational email without scanning Gmail.
+
+   Changes — 1.1.0:
+   - Returns preserved Gmail message/thread identifiers and Reply-To metadata for exact-thread replies.
+   - Keeps the intake queue read-only; no Gmail mutation occurs here.
    ========================================================= */
 
 import { ACTIONS, VERSION } from "../shared/config.js";
 import { getDatabase, rowsOf } from "../shared/database.js";
 import { jsonResponse, logWorkerError, safeErrorMessage } from "../shared/http.js";
 
-export const EMAIL_INTAKE_QUEUE_VERSION = "1.0.0";
+export const EMAIL_INTAKE_QUEUE_VERSION = "1.1.0";
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 50;
 const MAX_BODY_CHARS = 12000;
@@ -44,6 +48,11 @@ export async function handleEmailIntakeQueue(body, env, requestId) {
         ei.source_date,
         ei.from_address,
         ei.from_name,
+        ei.reply_to_address,
+        ei.provider,
+        ei.provider_message_id,
+        ei.provider_thread_id,
+        ei.source_headers_json,
         ei.subject,
         ei.body_text,
         ei.has_attachments,
@@ -120,6 +129,11 @@ function mapRecord(row) {
       address:row.from_address || null,
       name:row.from_name || null
     },
+    replyToAddress:row.reply_to_address || null,
+    provider:row.provider || null,
+    providerMessageId:row.provider_message_id || null,
+    providerThreadId:row.provider_thread_id || null,
+    sourceHeaders:parseJsonObject(row.source_headers_json),
     subject:row.subject || "(No subject)",
     bodyText:String(row.body_text || "").slice(0,MAX_BODY_CHARS),
     hasAttachments:Number(row.has_attachments || 0) === 1,
@@ -142,6 +156,15 @@ function mapRecord(row) {
       label:row.intake_label || null
     }
   };
+}
+
+function parseJsonObject(value) {
+  try {
+    const parsed=JSON.parse(String(value || "{}"));
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
 }
 
 function parseJsonArray(value) {
