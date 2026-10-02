@@ -1,19 +1,13 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/navAttention.js
-   Version: 1.2.0
+   Version: 1.1.0
    Status: Production Road-Test Candidate
-   Source: Production routes/navAttention.js 1.1.0
+   Source: Production routes/navAttention.js 1.0.0
    Sprint: Media → Calendar Natural Workflow
    Purpose:
    Build the read-only navigation urgency summary used by Mission Control
    and the shared application shell.
-
-   Change Notes — 1.2.0
-   - Adds a read-only items array to each section summary so Today Forward Look
-     can surface all authoritative dated obligations instead of only the nearest.
-   - Preserves nearestDueDate, urgency state, counts, source detection, and every
-     existing navigation color contract without creating or changing records.
 
    Change Notes — 1.1.0
    - Preserves the locked red/yellow/green deadline contract.
@@ -30,7 +24,7 @@
 import { rowsOf } from "../shared/database.js";
 import { safeErrorMessage } from "../shared/http.js";
 
-export const NAV_ATTENTION_VERSION = "1.2.0";
+export const NAV_ATTENTION_VERSION = "1.1.0";
 
 const BUSINESS_TIME_ZONE = "America/New_York";
 
@@ -840,14 +834,7 @@ function buildSectionSummary(
     datedOpenCount:
       sorted.length,
     undatedOpenCount,
-    supportedSources,
-    items: sorted.slice(0, 50).map(item => ({
-      dueDate: item.dueDate,
-      daysUntil: item.daysUntil,
-      recordId: item.recordId || null,
-      label: item.label || null,
-      source: item.source || null
-    }))
+    supportedSources
   };
 }
 
@@ -1106,4 +1093,4 @@ function sqlStringLiteral(value) {
   )}'`;
 }
 
-/* END OF FILE — routes/navAttention.js v1.2.0 */
+/* END OF FILE — routes/navAttention.js v1.1.0 */
