@@ -1,21 +1,21 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.91",
+  "version": "6.1.92",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.91",
+    "fileVersion": "6.1.92",
     "status": "Production Road-Test Candidate",
-    "purpose": "Put test-site access at the top of Radar pre-appointment records.",
+    "purpose": "Lock Finance invoice numbering to permanent D1 records.",
     "changeNotes": [
-      "Adds durable test-site URLs to Radar.",
-      "Shows Open Test Site beside the pre-appointment business name for immediate outreach access.",
-      "Carries the same URL into the formal Prospect on promotion."
+      "Adds Finance Operations regression coverage for D1-authoritative invoice numbering.",
+      "Verifies latest invoice 2243 resolves to next invoice 2244 without browser-local numbering.",
+      "Preserves all existing production test suites."
     ]
   },
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:work-due-date && npm run test:work-core-web-vitals && npm run test:media-deadline-attention && npm run test:universal-email-intake && npm run test:email-intake-queue && npm run test:gmail-intake-sync && npm run test:email-intake-finding && npm run test:google-review-quick-action && npm run test:proof-findings && npm run test:email-intake-disposition && npm run test:gmail-decisions && npm run test:gmail-monitoring-parity && npm run test:gmail-backlink-investigation && npm run test:gmail-intake && npm run test:gmail-backlog && npm run test:gmail-source-display && npm run test:gmail-handle-now && npm run test:gmail-thread-routing && npm run test:gmail-requested-work-content && npm run test:prospect-crm && npm run test:prospect-test-site && npm run test:radar-test-site && npm run test:prospect-call-points && npm run test:prospect-concept-tracking && npm run test:prospect-engagement-today && npm run test:mediaforge-home && npm run test:mediaforge-variants && npm run test:mediaforge-naming && npm run test:business-workspace-health-v2 && npm run test:client-health-v2 && npm run test:asset-versions",
+    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:finance-operations && npm run test:work-due-date && npm run test:work-core-web-vitals && npm run test:media-deadline-attention && npm run test:universal-email-intake && npm run test:email-intake-queue && npm run test:gmail-intake-sync && npm run test:email-intake-finding && npm run test:google-review-quick-action && npm run test:proof-findings && npm run test:email-intake-disposition && npm run test:gmail-decisions && npm run test:gmail-monitoring-parity && npm run test:gmail-backlink-investigation && npm run test:gmail-intake && npm run test:gmail-backlog && npm run test:gmail-source-display && npm run test:gmail-handle-now && npm run test:gmail-thread-routing && npm run test:gmail-requested-work-content && npm run test:prospect-crm && npm run test:prospect-test-site && npm run test:radar-test-site && npm run test:prospect-call-points && npm run test:prospect-concept-tracking && npm run test:prospect-engagement-today && npm run test:mediaforge-home && npm run test:mediaforge-variants && npm run test:mediaforge-naming && npm run test:business-workspace-health-v2 && npm run test:client-health-v2 && npm run test:asset-versions",
     "test:website-intelligence": "node tests/websiteIntelligence.test.js",
     "test:code-intelligence": "node tests/codeIntelligence.test.js",
     "test:operating-sessions": "node tests/operatingSessionTasks.test.js && node tests/osAuth.test.js && node tests/operatingSessionIntake.test.js",
@@ -50,7 +50,8 @@
     "test:prospect-engagement-today": "node tests/prospectEngagementToday.test.js",
     "test:prospect-test-site": "node tests/prospectTestSiteUrl.test.js",
     "test:prospect-call-points": "node tests/prospectCallTalkingPoints.test.js",
-    "test:radar-test-site": "node tests/radarTestSiteUrl.test.js"
+    "test:radar-test-site": "node tests/radarTestSiteUrl.test.js",
+    "test:finance-operations": "node tests/financeOperations.test.js"
   },
   "dependencies": {
     "postal-mime": "^3.0.0"
