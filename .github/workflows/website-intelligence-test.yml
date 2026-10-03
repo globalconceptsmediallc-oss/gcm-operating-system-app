@@ -30,3 +30,6 @@ jobs:
 
       - name: Run Website Intelligence Tests
         run: npm run test:website-intelligence
+
+      - name: Run Calendar Source Sync Lock
+        run: node tests/calendarSourceSync.test.js
