@@ -27,7 +27,7 @@ assert.match(route,/contactEmail/);
 assert.match(today,/Version: 3\.5\.\d+/);
 assert.match(today,/id="prospect-open-panel"/);
 assert.match(today,/id="prospect-open-list"/);
-assert.match(today,/id="brief-prospect-opens"/);
+assert.match(today,/id="prospect-open-title"/);
 assert.match(today,/renderProspectEngagements/);
 assert.match(today,/America\/New_York/);
 assert.match(today,/Recipient on record:/);
