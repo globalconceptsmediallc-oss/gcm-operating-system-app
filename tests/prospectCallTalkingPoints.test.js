@@ -1,8 +1,10 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/prospectCallTalkingPoints.test.js
-   Version: 1.0.0
+   Version: 1.0.1
    Status: Production Regression Lock
+   Change notes — 1.0.1:
+   - Keeps the call-talking-points behavior lock while accepting the current Prospects 3.x release family.
    Purpose: Lock proposal-based, evidence-grounded Prospect call prep.
    ========================================================= */
 
@@ -10,7 +12,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 
 const page=fs.readFileSync("prospects.html","utf8");
-assert.match(page,/Version: 3\.4\.0/);
+assert.match(page,/Version: 3\.\d+\.\d+/);
 assert.match(page,/Call Talking Points/);
 assert.match(page,/data-prospect-action="call-points"/);
 assert.match(page,/function openCallTalkingPoints\(p\)/);
