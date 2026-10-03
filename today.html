@@ -1,13 +1,18 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.5.51
+   Version: 3.5.52
    Status: Production Candidate
-   Source: Production today.html 3.5.50
+   Source: Production today.html 3.5.51
    Sprint: Today — Forward Look
    Purpose: Preserve the locked Today layout, Gmail approvals, Mission Control,
             Media logic, and operating workflow while adding a read-only future
             commitment view from authoritative dated OS records.
+
+   Production changes in 3.5.52:
+   - Activates Orlando/WFLA gun-show traffic warnings alongside Melbourne/WMMB.
+   - Both markets use the same Wed–Sat flight and 14-day traffic-warning rule.
+   - Preserves Andy + Kristy as named alert recipients.
 
    Production changes in 3.5.51:
    - Restricts SES gun-show Forward Look alerts to Melbourne/WMMB for Phase 1 verification.
@@ -1953,7 +1958,7 @@
 <a class="nav-link" href="finance.html"><span class="nav-icon">$</span><span>Billing</span></a>
 <a class="nav-link" href="proof.html"><span class="nav-icon">↗</span><span>Proof</span></a>
 </nav>
-<div class="sidebar-footer"><div class="sidebar-status"><span class="status-dot" aria-hidden="true"></span><span>Agency Command Center operational · Today v3.5.51</span></div></div>
+<div class="sidebar-footer"><div class="sidebar-status"><span class="status-dot" aria-hidden="true"></span><span>Agency Command Center operational · Today v3.5.52</span></div></div>
 </aside>
 <main class="main" id="main-content">
 <div class="main-inner">
@@ -3180,7 +3185,7 @@
           forwardLookPost("prospect-crm", { operation: "list_prospects" }),
           forwardLookPost("calendar-operations", { operation: "list" }),
           forwardLookPost("get-media-operations"),
-          fetch("data/ses-gun-shows.json?v=1.0.1", { cache: "no-store" }).then(function(response) {
+          fetch("data/ses-gun-shows.json?v=1.0.2", { cache: "no-store" }).then(function(response) {
             if (!response.ok) throw new Error("SES gun-show schedule returned HTTP " + response.status);
             return response.json();
           })
@@ -3298,7 +3303,7 @@
           const schedule = gunShowResult.value || {};
           const enabledMarkets = Array.isArray(schedule.operationalAlertMarkets) && schedule.operationalAlertMarkets.length
             ? schedule.operationalAlertMarkets
-            : ["Melbourne"];
+            : ["Melbourne", "Orlando"];
           const shows = Array.isArray(schedule.shows) ? schedule.shows : [];
           shows.filter(function(show) { return enabledMarkets.includes(show.market); }).forEach(function(show) {
             addGunShowTrafficAlert(items, show, schedule, gunShowMediaRecords);
@@ -3763,7 +3768,7 @@
         renderDashboard(data);
       });
 
-      const TODAY_VERSION = "3.5.51";
+      const TODAY_VERSION = "3.5.52";
       if (!window.GCMOShell) {
         console.error(`Today ${TODAY_VERSION}: shared/gcm-shell.js did not load.`);
       } else {
