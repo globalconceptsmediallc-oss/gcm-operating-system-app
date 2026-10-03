@@ -1,13 +1,19 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: calendar.html
-   Version: 1.2.0
+   Version: 1.2.1
    Status: Production Candidate — SES Gun Show Operations
-   Source: calendar.html 1.1.0
+   Source: calendar.html 1.2.0
    Sprint: Calendar — Gun Show / Radio Traffic Visibility
    Purpose: Preserve appointment booking while adding the first agency-wide
             operational date layer: SES Melbourne/Orlando gun shows, their
             Wed–Sat radio flights, and two-week traffic warnings.
+
+   Production changes in 1.2.1:
+   - Phase 1 scope is Melbourne only.
+   - Melbourne/WMMB show, Wed–Sat flight, and 14-day traffic warning remain active.
+   - Orlando/WFLA dates remain planning data and do not render operational Calendar events yet.
+   - Preserves Andy + Kristy as the named traffic-alert recipients.
 
    Production changes in 1.2.0:
    - Reads data/ses-gun-shows.json as the dated SES show schedule.
@@ -317,9 +323,9 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
 <script>
 (()=>{"use strict";
 const VERSION="1.2.0",KEY="gcm_calendar_v1_1",$=id=>document.getElementById(id);
-const SHOW_SCHEDULE_URL="data/ses-gun-shows.json?v=1.0.0";
+const SHOW_SCHEDULE_URL="data/ses-gun-shows.json?v=1.0.1";
 const WORKER_ENDPOINT="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
-let gunShowSchedule=[],mediaRecords=[];
+let gunShowSchedule=[],mediaRecords=[],operationalAlertMarkets=["Melbourne"];
 const seed={
  currentMonth:new Date().toISOString().slice(0,7),
  nextAppointmentId:4,nextTypeId:5,
@@ -387,7 +393,7 @@ function matchingTrafficComplete(show){
 }
 function derivedShowEvents(){
  const out=[];
- gunShowSchedule.forEach(function(show,index){
+ gunShowSchedule.filter(function(show){return operationalAlertMarkets.includes(show.market)}).forEach(function(show,index){
   const rule=gunShowRule(show),candidate=show.participationStatus!=="confirmed",complete=matchingTrafficComplete(show);
   const showKey=[show.market,show.showStart,index].join("|");
   const recipients=(show.alertRecipients||["Andy","Kristy"]).join(" + ");
@@ -431,6 +437,7 @@ async function loadOperationalShowSchedule(){
   ]);
   const schedulePayload=await responses[0].json();
   if(responses[0].ok&&Array.isArray(schedulePayload&&schedulePayload.shows)){
+   operationalAlertMarkets=Array.isArray(schedulePayload.operationalAlertMarkets)&&schedulePayload.operationalAlertMarkets.length?schedulePayload.operationalAlertMarkets:["Melbourne"];
    gunShowSchedule=schedulePayload.shows.map(function(s){
     return Object.assign({},s,{
      alertRecipients:Array.isArray(s.alertRecipients)?s.alertRecipients:(schedulePayload.alertRecipients||["Andy","Kristy"]),
