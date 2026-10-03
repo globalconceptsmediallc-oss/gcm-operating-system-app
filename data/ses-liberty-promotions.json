@@ -1,0 +1,168 @@
+{
+  "file": "data/ses-liberty-promotions.json",
+  "version": "1.0.0",
+  "status": "Production Candidate — Q4 2026 Liberty Promotions",
+  "client": {
+    "code": "SES",
+    "name": "Southeast Safes"
+  },
+  "owner": "Andy",
+  "channels": [
+    "Facebook",
+    "Google Business Profile",
+    "Instagram"
+  ],
+  "source": {
+    "gmailMessageId": "1a1021fa34f00798",
+    "subject": "UPCOMING PROMOS",
+    "attachment": "Fall Savings, Veterans Day, Blk Friday-Cyber Mon..docx",
+    "forwardedDealerNewsMessageId": "1a1022169a8d3a11"
+  },
+  "promotions": [
+    {
+      "id": "fall-savings-2026",
+      "name": "Liberty Fall Savings — BOGO",
+      "consumerStart": "2026-10-15",
+      "consumerEnd": "2026-11-01",
+      "offer": "Buy a qualifying safe and receive a free handgun vault. Vault tier depends on safe model.",
+      "schedule": [
+        {
+          "date": "2026-10-15",
+          "title": "SOCIAL — FALL SAVINGS LAUNCH",
+          "theme": "Launch the BOGO offer and explain the free handgun-vault benefit."
+        },
+        {
+          "date": "2026-10-20",
+          "title": "SOCIAL — FALL SAVINGS PRODUCT FEATURE",
+          "theme": "Feature qualifying safe families and the included handgun-vault value."
+        },
+        {
+          "date": "2026-10-25",
+          "title": "SOCIAL — FALL SAVINGS REMINDER",
+          "theme": "Mid-promotion reminder focused on protection + added value."
+        },
+        {
+          "date": "2026-10-31",
+          "title": "SOCIAL — FALL SAVINGS FINAL WEEKEND",
+          "theme": "Final-weekend urgency; promotion ends tomorrow."
+        },
+        {
+          "date": "2026-11-01",
+          "title": "SOCIAL — FALL SAVINGS FINAL DAY",
+          "theme": "Final-day call to action."
+        }
+      ]
+    },
+    {
+      "id": "home-advantage-launch-2026",
+      "name": "Liberty Home Advantage Launch",
+      "consumerStart": "2026-10-28",
+      "consumerEnd": "2026-10-28",
+      "embargoUntil": "2026-10-28",
+      "offer": "Consumer launch. Do not publish any Home Advantage content before October 28.",
+      "schedule": [
+        {
+          "date": "2026-10-28",
+          "title": "SOCIAL — HOME ADVANTAGE LAUNCH",
+          "theme": "Launch-day post only; embargo lifts October 28."
+        }
+      ]
+    },
+    {
+      "id": "veterans-day-2026",
+      "name": "Liberty Veterans Day Sale",
+      "consumerStart": "2026-11-05",
+      "consumerEnd": "2026-11-11",
+      "offer": "250th Commemorative safes with special pricing; USA 30 OD Green with Gold Logo/Hardware is $175 off.",
+      "schedule": [
+        {
+          "date": "2026-11-05",
+          "title": "SOCIAL — VETERANS DAY SALE LAUNCH",
+          "theme": "Open the Veterans Day promotion and highlight commemorative safes."
+        },
+        {
+          "date": "2026-11-08",
+          "title": "SOCIAL — VETERANS DAY FEATURE",
+          "theme": "Feature USA 30 OD Green and/or 250th Commemorative models."
+        },
+        {
+          "date": "2026-11-10",
+          "title": "SOCIAL — VETERANS DAY ENDS TOMORROW",
+          "theme": "24-hour urgency reminder."
+        },
+        {
+          "date": "2026-11-11",
+          "title": "SOCIAL — VETERANS DAY FINAL DAY",
+          "theme": "Final-day Veterans Day promotion post."
+        }
+      ]
+    },
+    {
+      "id": "pre-black-friday-2026",
+      "name": "Liberty Pre-Black Friday Sale",
+      "consumerStart": "2026-11-12",
+      "consumerEnd": "2026-11-30",
+      "offer": "Select Home, Home SE and Colonial models discounted $100–$500.",
+      "schedule": [
+        {
+          "date": "2026-11-12",
+          "title": "SOCIAL — PRE-BLACK FRIDAY LAUNCH",
+          "theme": "Launch sale with select Home and Colonial savings."
+        },
+        {
+          "date": "2026-11-17",
+          "title": "SOCIAL — PRE-BLACK FRIDAY HOME SAFE FEATURE",
+          "theme": "Feature Home Safe 8/12 and Home SE savings."
+        },
+        {
+          "date": "2026-11-22",
+          "title": "SOCIAL — PRE-BLACK FRIDAY COLONIAL FEATURE",
+          "theme": "Feature Colonial 23/30/50 savings."
+        },
+        {
+          "date": "2026-11-25",
+          "title": "SOCIAL — PRE-BLACK FRIDAY REMINDER",
+          "theme": "Thanksgiving-week reminder before Black Friday weekend."
+        }
+      ]
+    },
+    {
+      "id": "black-friday-2026",
+      "name": "Liberty Black Friday Sale",
+      "consumerStart": "2026-11-27",
+      "consumerEnd": "2026-11-30",
+      "offer": "USA 50, USA 48 and Centurion 24 Black Friday specials; listed savings up to $491.",
+      "schedule": [
+        {
+          "date": "2026-11-27",
+          "title": "SOCIAL — BLACK FRIDAY",
+          "theme": "Black Friday launch; highlight featured USA and Centurion models."
+        },
+        {
+          "date": "2026-11-28",
+          "title": "SOCIAL — BLACK FRIDAY + GUN SHOW",
+          "theme": "Combine Black Friday offer with the scheduled gun-show post rather than duplicate messaging."
+        },
+        {
+          "date": "2026-11-29",
+          "title": "SOCIAL — BLACK FRIDAY FINAL WEEKEND",
+          "theme": "Final-weekend reminder."
+        }
+      ]
+    },
+    {
+      "id": "cyber-monday-2026",
+      "name": "Liberty Cyber Monday",
+      "consumerStart": "2026-11-30",
+      "consumerEnd": "2026-11-30",
+      "offer": "Centurion 24 Black Texture with black chrome Spartan electronic lock — $699 sale price, $130 savings.",
+      "schedule": [
+        {
+          "date": "2026-11-30",
+          "title": "SOCIAL — CYBER MONDAY / FINAL DAY",
+          "theme": "Cyber Monday feature plus final-day close for the Pre-Black Friday and Black Friday promotional period."
+        }
+      ]
+    }
+  ]
+}
