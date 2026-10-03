@@ -1,13 +1,20 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.5.49
+   Version: 3.5.50
    Status: Production Candidate
-   Source: Production today.html 3.5.48
+   Source: Production today.html 3.5.49
    Sprint: Today — Forward Look
    Purpose: Preserve the locked Today layout, Gmail approvals, Mission Control,
             Media logic, and operating workflow while adding a read-only future
             commitment view from authoritative dated OS records.
+
+   Production changes in 3.5.50:
+   - Adds SES gun-show traffic warnings from the versioned show schedule.
+   - Maps Melbourne shows to WMMB and Orlando shows to WFLA.
+   - Derives Wed–Sat radio flights and opens the traffic warning 14 days before Wednesday.
+   - Keeps an unconfirmed warning visible through show start until matching Media traffic is sent and confirmed.
+   - Names Andy + Kristy as alert recipients without changing existing Today decision sections.
 
    Production changes in 3.5.49:
    - Removes the retired Communications workspace from Today's fail-safe navigation.
@@ -1941,7 +1948,7 @@
 <a class="nav-link" href="finance.html"><span class="nav-icon">$</span><span>Billing</span></a>
 <a class="nav-link" href="proof.html"><span class="nav-icon">↗</span><span>Proof</span></a>
 </nav>
-<div class="sidebar-footer"><div class="sidebar-status"><span class="status-dot" aria-hidden="true"></span><span>Agency Command Center operational · Today v3.5.49</span></div></div>
+<div class="sidebar-footer"><div class="sidebar-status"><span class="status-dot" aria-hidden="true"></span><span>Agency Command Center operational · Today v3.5.50</span></div></div>
 </aside>
 <main class="main" id="main-content">
 <div class="main-inner">
@@ -2969,6 +2976,73 @@
         return "In " + daysUntil + " days";
       }
 
+      function forwardAddDays(dateOnly, amount) {
+        const value = forwardDateOnly(dateOnly);
+        if (!value) return null;
+        const parts = value.split("-").map(Number);
+        const date = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2], 12));
+        date.setUTCDate(date.getUTCDate() + amount);
+        return date.getUTCFullYear() + "-" + String(date.getUTCMonth() + 1).padStart(2, "0") + "-" + String(date.getUTCDate()).padStart(2, "0");
+      }
+
+      function gunShowForwardRule(show, schedule) {
+        const rule = schedule && schedule.rules && schedule.rules[show && show.market] ? schedule.rules[show.market] : {};
+        const station = cleanDisplay(show && show.station || rule.station);
+        const flightStart = forwardAddDays(show && show.showStart, -3);
+        const flightEnd = forwardDateOnly(show && show.showStart);
+        const trafficWarning = forwardAddDays(flightStart, -14);
+        return { station: station, flightStart: flightStart, flightEnd: flightEnd, trafficWarning: trafficWarning };
+      }
+
+      function gunShowTrafficComplete(show, schedule, mediaRecords) {
+        const rule = gunShowForwardRule(show, schedule);
+        const station = String(rule.station || "").toLowerCase();
+        return (Array.isArray(mediaRecords) ? mediaRecords : []).some(function(record) {
+          const outlet = String(record && record.outletName || "").toLowerCase();
+          const start = forwardDateOnly(record && record.startDate);
+          const end = forwardDateOnly(record && record.endDate);
+          const sent = String(record && record.trafficStatus || "").toLowerCase() === "sent";
+          const confirmed = String(record && record.confirmationStatus || "").toLowerCase() === "confirmed";
+          const overlaps = Boolean(start && end && rule.flightStart && rule.flightEnd && start <= rule.flightEnd && end >= rule.flightStart);
+          return station && outlet.includes(station) && overlaps && sent && confirmed;
+        });
+      }
+
+      function addGunShowTrafficAlert(target, show, schedule, mediaRecords) {
+        if (!show || gunShowTrafficComplete(show, schedule, mediaRecords)) return;
+        const rule = gunShowForwardRule(show, schedule);
+        if (!rule.station || !rule.trafficWarning || !rule.flightStart || !show.showStart) return;
+
+        const alertDays = forwardDaysUntil(rule.trafficWarning);
+        const flightDays = forwardDaysUntil(rule.flightStart);
+        const showDays = forwardDaysUntil(show.showStart);
+        if (!Number.isFinite(alertDays) || !Number.isFinite(showDays) || showDays < 0 || alertDays > FORWARD_LOOK_DAYS) return;
+
+        let dueLabel = forwardDueLabel(alertDays);
+        if (alertDays === 0) dueLabel = "TRAFFIC TODAY";
+        if (alertDays < 0 && Number.isFinite(flightDays) && flightDays > 0) dueLabel = "TRAFFIC NOW";
+        if (alertDays < 0 && Number.isFinite(flightDays) && flightDays <= 0) dueLabel = "TRAFFIC OVERDUE";
+
+        const recipients = Array.isArray(show.alertRecipients)
+          ? show.alertRecipients
+          : (Array.isArray(schedule && schedule.alertRecipients) ? schedule.alertRecipients : ["Andy", "Kristy"]);
+        const candidate = String(show.participationStatus || "").toLowerCase() !== "confirmed";
+        const showRange = forwardDateOnly(show.showStart) + (show.showEnd ? "–" + forwardDateOnly(show.showEnd) : "");
+
+        target.push({
+          date: rule.trafficWarning,
+          daysUntil: alertDays,
+          kind: "Gun Show Traffic",
+          title: "SES " + cleanDisplay(show.market, "Gun Show") + " — traffic " + rule.station,
+          meta: "Alert: " + recipients.join(" + ") + " · Radio Wed–Sat " + rule.flightStart + "–" + rule.flightEnd + " · Show " + showRange + (candidate ? " · Official promoter date — SES participation to confirm" : ""),
+          href: "media-calendar.html?clientId=1&month=" + String(rule.flightStart).slice(0, 7),
+          key: "ses-gun-show|" + cleanDisplay(show.market) + "|" + forwardDateOnly(show.showStart),
+          dueLabel: dueLabel,
+          forceCritical: alertDays <= 0
+        });
+      }
+
+
       function addForwardLookItem(target, item) {
         const date = forwardDateOnly(item && item.date);
         if (!date) return;
@@ -3062,13 +3136,13 @@
 
         forwardLookList.innerHTML = deduped.slice(0, FORWARD_LOOK_LIMIT).map(function(item) {
           const date = forwardDateParts(item.date);
-          const dueClass = item.daysUntil <= 2 ? "is-imminent" : item.daysUntil <= 6 ? "is-soon" : "";
+          const dueClass = item.forceCritical || item.daysUntil <= 2 ? "is-imminent" : item.daysUntil <= 6 ? "is-soon" : "";
           return '<a class="forward-look-item" href="' + escapeHtml(item.href) + '">' +
             '<span class="forward-look-date"><span>' + escapeHtml(date.month) + '</span><strong>' + escapeHtml(date.day) + '</strong></span>' +
             '<span class="forward-look-detail"><span class="forward-look-kind">' + escapeHtml(item.kind) + '</span>' +
             '<span class="forward-look-title">' + escapeHtml(item.title) + '</span>' +
             (item.meta ? '<span class="forward-look-meta">' + escapeHtml(item.meta) + '</span>' : '') +
-            '</span><span class="forward-look-due ' + dueClass + '">' + escapeHtml(forwardDueLabel(item.daysUntil)) + '</span></a>';
+            '</span><span class="forward-look-due ' + dueClass + '">' + escapeHtml(item.dueLabel || forwardDueLabel(item.daysUntil)) + '</span></a>';
         }).join("");
 
         const hiddenCount = Math.max(0, deduped.length - FORWARD_LOOK_LIMIT);
@@ -3100,7 +3174,11 @@
           forwardLookPost("prospect-crm", { operation: "list_radar" }),
           forwardLookPost("prospect-crm", { operation: "list_prospects" }),
           forwardLookPost("calendar-operations", { operation: "list" }),
-          forwardLookPost("get-media-operations")
+          forwardLookPost("get-media-operations"),
+          fetch("data/ses-gun-shows.json?v=1.0.0", { cache: "no-store" }).then(function(response) {
+            if (!response.ok) throw new Error("SES gun-show schedule returned HTTP " + response.status);
+            return response.json();
+          })
         ]);
 
         const radarResult = results[0];
@@ -3159,9 +3237,11 @@
         }
 
         const mediaResult = results[3];
+        let gunShowMediaRecords = [];
         if (mediaResult.status === "fulfilled") {
           const media = mediaResult.value && mediaResult.value.mediaOperations ? mediaResult.value.mediaOperations : {};
           const records = Array.isArray(media.records) ? media.records : [];
+          gunShowMediaRecords = records;
           records.forEach(function(record) {
             const status = String(record && record.status || "").toLowerCase();
             if (!["active", "pending", "planned"].includes(status)) return;
@@ -3203,6 +3283,17 @@
               href: "media-calendar.html",
               key: "media-end|" + record.id + "|" + (record.endDate || "")
             });
+          });
+        } else {
+          forwardLookLoadFailures += 1;
+        }
+
+        const gunShowResult = results[4];
+        if (gunShowResult && gunShowResult.status === "fulfilled") {
+          const schedule = gunShowResult.value || {};
+          const shows = Array.isArray(schedule.shows) ? schedule.shows : [];
+          shows.forEach(function(show) {
+            addGunShowTrafficAlert(items, show, schedule, gunShowMediaRecords);
           });
         } else {
           forwardLookLoadFailures += 1;
@@ -3664,7 +3755,7 @@
         renderDashboard(data);
       });
 
-      const TODAY_VERSION = "3.5.49";
+      const TODAY_VERSION = "3.5.50";
       if (!window.GCMOShell) {
         console.error(`Today ${TODAY_VERSION}: shared/gcm-shell.js did not load.`);
       } else {
