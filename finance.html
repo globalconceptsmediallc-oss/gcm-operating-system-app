@@ -1,10 +1,10 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: finance.html
-   Version: 1.7.8
-   Status: Production Candidate — D1 Invoice Creation
-   Source: finance.html 1.7.7
-   Sprint: Finance / D1 Invoice Authority
+   Version: 1.8.0
+   Status: Production Candidate — D1 Finance Authority
+   Source: finance.html 1.7.8
+   Sprint: Finance / D1 Authority Completion
    Purpose: Manage billing accounts, create fixed-package or additional-service invoices,
             generate invoice and statement PDFs, create connected Gmail drafts
             with the correct PDF physically attached,
@@ -13,7 +13,11 @@
             payments, close cycles, preserve superseded invoices, and create
             reviewable corrected invoice revisions with explicit service periods.
    Change Notes:
-            - Create Invoice now prepares and writes the permanent invoice through Finance Operations 1.1.0 in D1.
+            - Billing now loads permanent accounts, invoices, lines, payments, and next invoice number from D1 before rendering.
+            - Account edits, corrections, payments, close-cycle actions, and Gmail draft metadata now write to D1 before the browser mirror updates.
+            - localStorage is retained only as a non-authoritative fallback/mirror and is not cleared.
+            - Invoice payment wording normalizes legacy “Check or ACH” text to the current “Check” wording in generated invoice/PDF output.
+            - Create Invoice now prepares and writes the permanent invoice through Finance Operations in D1.
             - Invoice numbering is allocated by D1 at save time; the browser no longer manufactures a new invoice number.
             - If the D1 write fails, no browser-only invoice is created.
             - Monthly invoices now default the service period to the month immediately before the invoice date.
@@ -204,7 +208,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
     <button class="mobile btn" data-gcm-shell-menu-button type="button">Menu</button>
     <header class="top">
       <div><p class="eyebrow">Agency Finance</p><h1>Billing Workspace</h1><p class="sub">Manage billing profiles, create invoices, email them, and record Check payments.</p></div>
-      <div class="version">Installed version 1.7.8</div>
+      <div class="version">Installed version 1.8.0</div>
     </header>
 
     <section class="shell">
@@ -506,7 +510,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
 <script src="shared/gcm-shell.js?v=1.0.2"></script>
 <script>
 (()=>{"use strict";
-const VERSION="1.7.8",KEY="gcm_finance_workspace_v1_7",D1_MIGRATION_KEY="gcm_finance_d1_migrated_v2",$=id=>document.getElementById(id);
+const VERSION="1.8.0",KEY="gcm_finance_workspace_v1_7",D1_MIGRATION_KEY="gcm_finance_d1_migrated_v2",$=id=>document.getElementById(id);
 const WORKER_ENDPOINT="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev";
 const seed={
   agency:{name:"Global Concepts Media Agency LLC",website:"https://globalconceptsmediallc.com",logoUrl:""},
@@ -643,6 +647,155 @@ async function financeOperation(body){
   }
   return payload;
 }
+
+function parseJson(value,fallback){
+  if(value&&typeof value==="object")return value;
+  try{return JSON.parse(String(value??""))}catch{return fallback}
+}
+function normalizePaymentNote(value){
+  const note=String(value||"Payment method: Check. Thank you for your business.");
+  return note.replace(/Payment method:\s*Check\s+or\s+ACH/gi,"Payment method: Check");
+}
+function dollarsFromCents(value){return Number(value||0)/100}
+function serviceTotal(services){
+  return (Array.isArray(services)?services:[]).reduce((total,service)=>total+(Array.isArray(service?.values)?service.values:[]).reduce((sum,value)=>sum+Number(value||0),0),0);
+}
+function financeStateFromD1(payload,previous=state,preferred={}){
+  const rawAccounts=Array.isArray(payload?.accounts)?payload.accounts:[];
+  const rawInvoices=Array.isArray(payload?.invoices)?payload.invoices:[];
+  const rawLines=Array.isArray(payload?.invoiceLines)?payload.invoiceLines:[];
+  const rawPayments=Array.isArray(payload?.payments)?payload.payments:[];
+  const invoiceById=new Map(rawInvoices.map(row=>[Number(row.id),row]));
+  const previousAccount=previous?.accounts?.find(a=>Number(a.id)===Number(previous?.selectedAccountId));
+  const previousAccountName=previousAccount?.name||"";
+  const previousInvoice=previousAccount?.transactions?.find(t=>Number(t.id)===Number(previous?.selectedInvoiceId)&&t.type==="invoice");
+  const previousInvoiceNumber=previousInvoice?.reference||"";
+
+  const accounts=rawAccounts.map(raw=>{
+    const locations=parseJson(raw.covered_clients_json,[]);
+    const services=parseJson(raw.default_services_json,[]);
+    const baseAccount={
+      id:Number(raw.id),d1AccountId:Number(raw.id),accountKey:String(raw.account_key||""),
+      name:String(raw.name||""),contact:String(raw.contact_name||""),email:String(raw.billing_email||""),
+      phone:String(raw.phone||""),address:String(raw.address||""),website:String(raw.website||""),logoUrl:String(raw.logo_url||""),
+      termsDays:Number(raw.terms_days||0),note:normalizePaymentNote(raw.invoice_note),
+      locations:Array.isArray(locations)?locations:[],services:Array.isArray(services)?services:[],transactions:[]
+    };
+
+    const invoices=rawInvoices.filter(row=>Number(row.billing_account_id)===Number(raw.id)).map(row=>{
+      const snapshotRaw=parseJson(row.account_snapshot_json,null);
+      const snapshot=snapshotRaw&&typeof snapshotRaw==="object"?{
+        name:snapshotRaw.name||baseAccount.name,
+        contact:snapshotRaw.contact||baseAccount.contact,
+        address:snapshotRaw.address||baseAccount.address,
+        website:snapshotRaw.website||baseAccount.website,
+        logoUrl:snapshotRaw.logoUrl||baseAccount.logoUrl,
+        locations:Array.isArray(snapshotRaw.locations)?snapshotRaw.locations:clone(baseAccount.locations),
+        services:Array.isArray(snapshotRaw.services)?snapshotRaw.services:clone(baseAccount.services),
+        note:normalizePaymentNote(snapshotRaw.note||baseAccount.note)
+      }:{
+        name:baseAccount.name,contact:baseAccount.contact,address:baseAccount.address,website:baseAccount.website,
+        logoUrl:baseAccount.logoUrl,locations:clone(baseAccount.locations),services:clone(baseAccount.services),note:baseAccount.note
+      };
+      const lines=rawLines.filter(line=>Number(line.invoice_id)===Number(row.id));
+      const serviceLines=lines.filter(line=>String(line.line_type||"").toLowerCase()==="service");
+      const additionalLines=lines.filter(line=>String(line.line_type||"").toLowerCase()==="additional");
+      const amount=dollarsFromCents(row.amount_cents),paidAmount=dollarsFromCents(row.paid_amount_cents);
+      const snapshotServiceTotal=serviceTotal(snapshot.services);
+      let baseAmount=0,replaceStandardLines=false,replacementLines=[],extras=[];
+
+      if(String(row.invoice_type||"monthly").toLowerCase()==="monthly"){
+        if(serviceLines.length){
+          baseAmount=serviceLines.reduce((sum,line)=>sum+dollarsFromCents(line.amount_cents),0);
+          const standardNames=(snapshot.services||[]).map(service=>String(service.name||"").trim().toLowerCase());
+          const lineNames=serviceLines.map(line=>String(line.description||"").trim().toLowerCase());
+          const matchesStandard=serviceLines.length===standardNames.length
+            && lineNames.every(name=>standardNames.includes(name))
+            && Math.abs(baseAmount-snapshotServiceTotal)<0.001;
+          if(!matchesStandard){
+            replaceStandardLines=true;
+            replacementLines=serviceLines.map(line=>({
+              description:String(line.description||"Service"),
+              amount:dollarsFromCents(line.amount_cents),
+              locationIndex:Math.max(0,(snapshot.locations||[]).findIndex(name=>String(name)===String(line.location_label||"")))
+            }));
+          }
+        }else if(snapshotServiceTotal>0&&Math.abs(snapshotServiceTotal-amount)<0.001){
+          baseAmount=snapshotServiceTotal;
+        }else{
+          baseAmount=amount;
+          replaceStandardLines=true;
+          replacementLines=[{description:String(row.description||"Monthly Billing Package"),amount,locationIndex:0}];
+        }
+        extras=additionalLines.map(line=>({description:String(line.description||"Additional service"),amount:dollarsFromCents(line.amount_cents)}));
+      }else{
+        baseAmount=0;
+        extras=additionalLines.length
+          ? additionalLines.map(line=>({description:String(line.description||"Additional service"),amount:dollarsFromCents(line.amount_cents)}))
+          : [{description:String(row.description||"Additional Services"),amount}];
+      }
+
+      return{
+        id:Number(row.id),d1InvoiceId:Number(row.id),date:String(row.invoice_date||""),dueDate:String(row.due_date||""),
+        type:"invoice",reference:String(row.invoice_number||""),description:String(row.description||"Invoice"),
+        invoiceType:String(row.invoice_type||"monthly"),baseAmount,extras,replacementLines,replaceStandardLines,
+        amount,paidAmount,status:String(row.status||"draft"),email:String(row.email_to||baseAccount.email||""),
+        billingPeriod:String(row.billing_period||""),originalReference:String(row.original_invoice_number||""),
+        revisionNumber:Number(row.revision_number||0),correctionStatement:String(row.correction_statement||""),
+        replacedBy:row.replaced_by_invoice_id?String(invoiceById.get(Number(row.replaced_by_invoice_id))?.invoice_number||""):"",
+        supersededAt:String(row.superseded_at||""),gmailDraftUrl:String(row.gmail_draft_url||""),
+        gmailDraftCreatedAt:String(row.gmail_draft_created_at||""),sentAt:String(row.sent_at||""),
+        accountSnapshot:snapshot
+      };
+    });
+
+    const payments=rawPayments.filter(row=>Number(row.billing_account_id)===Number(raw.id)).map(row=>({
+      id:1000000+Number(row.id),d1PaymentId:Number(row.id),date:String(row.payment_date||""),type:"payment",
+      reference:String(row.reference||""),description:String(row.payment_method||"Check"),
+      amount:dollarsFromCents(row.amount_cents),status:String(row.status||"closed"),invoiceId:Number(row.invoice_id||0)
+    }));
+    baseAccount.transactions=[...invoices,...payments];
+    return baseAccount;
+  });
+
+  let selectedAccountId=Number(preferred.accountId||0);
+  if(!accounts.some(a=>a.id===selectedAccountId)){
+    selectedAccountId=accounts.find(a=>a.name===previousAccountName)?.id||accounts[0]?.id||null;
+  }
+  const selectedAccount=accounts.find(a=>a.id===selectedAccountId)||accounts[0];
+  let selectedInvoiceId=Number(preferred.invoiceId||0);
+  if(!selectedAccount?.transactions?.some(t=>t.type==="invoice"&&t.id===selectedInvoiceId)){
+    selectedInvoiceId=selectedAccount?.transactions?.find(t=>t.type==="invoice"&&t.reference===previousInvoiceNumber)?.id||null;
+  }
+  return{
+    agency:clone(previous?.agency||seed.agency),
+    selectedAccountId:selectedAccount?.id||null,
+    selectedInvoiceId,
+    nextInvoiceNumber:Number(payload?.nextInvoiceNumber||0),
+    nextAccountId:Math.max(0,...accounts.map(a=>Number(a.id)||0))+1,
+    accounts,
+    d1Authoritative:true,
+    financeOperationsVersion:String(payload?.financeOperationsVersion||"")
+  };
+}
+function applyFinancePayload(payload,preferred={}){
+  state=financeStateFromD1(payload,state,preferred);
+  save();
+  renderAll();
+}
+async function loadFinanceFromD1(){
+  const payload=await financeOperation({operation:"list"});
+  state=financeStateFromD1(payload,state);
+  save();
+  console.info(`Finance ${VERSION}: D1 is authoritative.`,{
+    financeOperationsVersion:payload.financeOperationsVersion,
+    accounts:payload.accounts?.length||0,
+    invoices:payload.invoices?.length||0,
+    payments:payload.payments?.length||0,
+    nextInvoiceNumber:payload.nextInvoiceNumber
+  });
+  return payload;
+}
 async function migrateFinanceToD1Once(){
   if(localStorage.getItem(D1_MIGRATION_KEY)==="complete")return;
   try{
@@ -777,25 +930,30 @@ function openAccountDialog(a=null){
   $("serviceRows").innerHTML="";(a?.services?.length?a.services:[{name:"Website • SEO",values:[0,0]},{name:"Social Media • Content",values:[0,0]}]).forEach(s=>addServiceRow(s.name,s.values?.[0]||"",s.values?.[1]||""));
   $("deleteAccount").classList.toggle("hidden",!a);previewAccountLogo();$("accountDialog").showModal();
 }
-function saveAccountForm(e){
+async function saveAccountForm(e){
   e.preventDefault();const values=accountFormValues();
   if(!values.name){toast("Enter a billing company name.");return}
   if(!values.locations.length){toast("Add at least one covered client or location.");return}
   if(!values.services.length){toast("Add at least one default billing row.");return}
-  const id=Number($("accountId").value||0);
-  if(id){
-    const a=state.accounts.find(x=>x.id===id);Object.assign(a,values);
-  }else{
-    const a={id:state.nextAccountId++,...values,transactions:[]};state.accounts.push(a);state.selectedAccountId=a.id;
-  }
-  save();$("accountDialog").close();renderAll();toast(id?"Billing account updated.":"Billing account created.");
+  const id=Number($("accountId").value||0),current=state.accounts.find(x=>x.id===id);
+  const submit=e.submitter||e.currentTarget.querySelector('button[type="submit"]');if(submit)submit.disabled=true;
+  try{
+    toast("Saving billing account permanently to D1…");
+    const payload=await financeOperation({operation:"save_account",account:{id:current?.d1AccountId||id||null,accountKey:current?.accountKey||"",...values}});
+    applyFinancePayload(payload,{accountId:Number(payload.savedAccountId||id||0)});
+    $("accountDialog").close();toast(id?"Billing account updated in D1.":"Billing account created in D1.");
+  }catch(error){console.error(error);toast(error.message||"Billing account was not saved.");}
+  finally{if(submit)submit.disabled=false;}
 }
-function deleteAccount(){
+async function deleteAccount(){
   const id=Number($("accountId").value||0),a=state.accounts.find(x=>x.id===id);
   if(!a)return;
   if((a.transactions||[]).length){toast("This billing account has financial history and cannot be deleted.");return}
   if(!confirm(`Delete billing account "${a.name}"?`))return;
-  state.accounts=state.accounts.filter(x=>x.id!==id);state.selectedAccountId=state.accounts[0]?.id||null;save();$("accountDialog").close();renderAll();toast("Billing account deleted.");
+  try{
+    const payload=await financeOperation({operation:"archive_account",billingAccountId:a.d1AccountId||a.id,accountName:a.name});
+    applyFinancePayload(payload);$("accountDialog").close();toast("Billing account archived in D1.");
+  }catch(error){console.error(error);toast(error.message||"Billing account was not deleted.");}
 }
 
 function addExtraRow(description="",amount=""){
@@ -877,15 +1035,8 @@ async function createInvoice(e){
     });
     const ref=String(payload.createdInvoiceNumber||"");
     if(!ref)throw new Error("D1 did not return the created invoice number.");
-    const total=base+extras.reduce((s,x)=>s+x.amount,0);
-    const record={id:Number(payload.createdInvoiceId)||nextId(),d1InvoiceId:Number(payload.createdInvoiceId)||null,date:$("invoiceDate").value,dueDate:$("invoiceDueDate").value,type:"invoice",reference:ref,
-      description:type==="monthly"?"Monthly Billing Package":"Additional Services",invoiceType:type,baseAmount:base,
-      extras,amount:total,paidAmount:0,status:"draft",email:$("invoiceEmail").value.trim(),billingPeriod,
-      accountSnapshot:{name:a.name,contact:a.contact,address:a.address,website:a.website,logoUrl:a.logoUrl,locations:clone(a.locations),services:clone(a.services),note:a.note}
-    };
-    a.transactions.push(record);if(record.email)a.email=record.email;state.selectedInvoiceId=record.id;
-    state.nextInvoiceNumber=Number(payload.nextInvoiceNumber||Number(ref)+1);
-    save();$("invoiceDialog").close();renderAll();showInvoice();toast(`Invoice #${ref} created permanently in D1.`);
+    applyFinancePayload(payload,{accountId:a.d1AccountId||a.id,invoiceId:Number(payload.createdInvoiceId||0)});
+    $("invoiceDialog").close();showInvoice();toast(`Invoice #${ref} created permanently in D1.`);
   }catch(error){
     console.error(error);
     toast(error.message||"The invoice was not created. D1 did not confirm the save.");
@@ -910,28 +1061,35 @@ function openCorrection(){
   if(!editableLines.length)addCorrectionRow();
   $("correctionDialog").showModal();
 }
-function createCorrection(e){
+async function createCorrection(e){
   e.preventDefault();const a=account(),i=invoice();
   if(!i||i.status==="superseded"){toast("The original invoice is no longer available for correction.");return}
   if(Number(i.paidAmount||0)>0){toast("A paid invoice must be reconciled before it can be corrected.");return}
   const correctedLines=collectCorrectionExtras(),replaceStandardLines=$("replaceStandardLines").checked,billingPeriod=$("correctionBillingPeriod").value.trim();
   if(!billingPeriod){toast("Enter the service period for the corrected invoice.");return}
   if(replaceStandardLines&&!correctedLines.length){toast("Add at least one corrected service line when replacing the standard package rows.");return}
-  const ref=$("correctionNumber").value,root=String(i.originalReference||i.reference).replace(/-R\d+$/i,""),revision=Number(String(ref).match(/-R(\d+)$/i)?.[1]||1);
-  const correctedTotal=correctedLines.reduce((s,x)=>s+Number(x.amount||0),0);
-  const replacementLines=replaceStandardLines?correctedLines:[],extras=replaceStandardLines?[]:correctedLines;
-  const extraTotal=extras.reduce((s,x)=>s+Number(x.amount||0),0),base=replaceStandardLines?correctedTotal:Number(i.baseAmount||0);
-  const record={
-    id:nextId(),date:$("correctionDate").value,dueDate:$("correctionDueDate").value,type:"invoice",reference:ref,description:"Corrected Monthly Billing Package",
-    invoiceType:i.invoiceType,baseAmount:base,extras,replacementLines,amount:base+extraTotal,replaceStandardLines,
-    paidAmount:0,status:"draft",email:i.email||a.email||"",billingPeriod,
-    originalReference:root,correctsReference:i.reference,revisionNumber:revision,
-    correctionStatement:`This corrected invoice replaces invoice #${i.reference}.`,
-    accountSnapshot:clone(i.accountSnapshot||{name:a.name,contact:a.contact,address:a.address,website:a.website,logoUrl:a.logoUrl,locations:a.locations,services:a.services,note:a.note})
-  };
-  i.status="superseded";i.replacedBy=ref;i.supersededAt=new Date().toISOString();
-  a.transactions.push(record);state.selectedInvoiceId=record.id;save();$("correctionDialog").close();renderAll();showInvoice();
-  toast(`Corrected invoice #${ref} created for review.`);
+  const locations=correctionLocations();
+  const submit=e.submitter||e.currentTarget.querySelector('button[type="submit"]');if(submit)submit.disabled=true;
+  try{
+    toast("Saving corrected invoice permanently to D1…");
+    const payload=await financeOperation({
+      operation:"create_correction",
+      originalInvoiceNumber:i.reference,
+      invoiceDate:$("correctionDate").value,
+      dueDate:$("correctionDueDate").value,
+      billingPeriod,
+      emailTo:i.email||a.email||"",
+      replaceStandardLines,
+      correctedLines:correctedLines.map(line=>({
+        description:line.description,amount:line.amount,
+        locationLabel:locations[line.locationIndex]||null
+      }))
+    });
+    const ref=String(payload.createdInvoiceNumber||"");
+    applyFinancePayload(payload,{accountId:a.d1AccountId||a.id,invoiceId:Number(payload.createdInvoiceId||0)});
+    $("correctionDialog").close();showInvoice();toast(`Corrected invoice #${ref} created permanently in D1.`);
+  }catch(error){console.error(error);toast(error.message||"The corrected invoice was not created.");}
+  finally{if(submit)submit.disabled=false;}
 }
 function paperRows(a,i){
   const source=i.accountSnapshot||a,rows=[];
@@ -968,7 +1126,7 @@ function showInvoice(){
   $("paperRows").innerHTML=paperRows(a,i);
   const extra=(i.extras||[]).reduce((s,x)=>s+Number(x.amount||0),0);
   $("paperBaseTotal").textContent=money(i.baseAmount||0);$("paperExtraTotal").textContent=money(extra);$("paperGrandTotal").textContent=money(i.amount);
-  $("paperNote").textContent=source.note||"Payment method: Check. Thank you for your business.";
+  $("paperNote").textContent=normalizePaymentNote(source.note);
   $("invoiceStatus").textContent=i.status;$("invoiceStatus").className=`pill ${i.status}`;$("reviewLabel").textContent=`Invoice #${i.reference} Review`;
   $("correctInvoice").disabled=i.status==="superseded"||Number(i.paidAmount||0)>0;
   $("correctInvoice").title=i.status==="superseded"?"This invoice has already been superseded.":Number(i.paidAmount||0)>0?"Paid invoices require payment reconciliation before correction.":"Create a corrected revision while preserving this invoice.";
@@ -1074,7 +1232,19 @@ ${i.billingPeriod?`Service period: ${i.billingPeriod}\n`:""}${i.correctionStatem
 Thank you,
 ${agency().name||"Global Concepts Media Agency LLC"}`;
     const payload=await createAttachedGmailDraft({to:recipient,subject,body,attachment:result});
-    i.gmailDraftCreatedAt=new Date().toISOString();i.gmailDraftUrl=payload.gmailUrl||"";save();renderAll();showInvoice();
+    const createdAt=new Date().toISOString();
+    try{
+      const finance=await financeOperation({
+        operation:"mark_gmail_draft",invoiceNumber:i.reference,emailTo:recipient,
+        gmailDraftUrl:payload.gmailUrl||"",gmailDraftCreatedAt:createdAt
+      });
+      applyFinancePayload(finance,{accountId:a.d1AccountId||a.id,invoiceId:i.d1InvoiceId||i.id});
+      showInvoice();
+    }catch(metadataError){
+      console.error(metadataError);
+      toast("Gmail draft was created, but its D1 metadata was not saved. Do not create a duplicate draft.");
+      return;
+    }
     toast(`Gmail draft created for ${recipient} with ${result.filename} attached. Nothing has been sent.`);
   }catch(err){console.error(err);toast(err.message||"Invoice PDF could not be generated.");}
 }
@@ -1149,16 +1319,28 @@ function openPayment(){
   $("paymentDate").value=today();$("paymentMethod").value="Check";$("paymentReference").value="";$("paymentAmount").value=invoiceBalance(i).toFixed(2);
   $("paymentDialog").showModal();
 }
-function recordPayment(e){
+async function recordPayment(e){
   e.preventDefault();const a=account(),i=openInvoice(a),amount=Number($("paymentAmount").value||0);
   if(!i||amount<=0){toast("Enter a valid payment amount.");return}
-  i.paidAmount=Math.min(i.amount,Number(i.paidAmount||0)+amount);i.status=invoiceBalance(i)<=0?"paid":"sent";
-  a.transactions.push({id:nextId(),date:$("paymentDate").value,type:"payment",reference:$("paymentReference").value.trim(),description:$("paymentMethod").value,amount,status:"closed",invoiceId:i.id});
-  save();$("paymentDialog").close();renderAll();showInvoice();toast(`${money(amount)} payment recorded.`);
+  const reference=$("paymentReference").value.trim();if(!reference){toast("Enter the Check / ACH reference.");return}
+  const submit=e.submitter||e.currentTarget.querySelector('button[type="submit"]');if(submit)submit.disabled=true;
+  try{
+    const payload=await financeOperation({
+      operation:"record_payment",invoiceNumber:i.reference,paymentDate:$("paymentDate").value,
+      paymentMethod:$("paymentMethod").value,reference,amount
+    });
+    applyFinancePayload(payload,{accountId:a.d1AccountId||a.id,invoiceId:i.d1InvoiceId||i.id});
+    $("paymentDialog").close();showInvoice();toast(`${money(amount)} payment recorded permanently in D1.`);
+  }catch(error){console.error(error);toast(error.message||"Payment was not recorded.");}
+  finally{if(submit)submit.disabled=false;}
 }
-function closeCycle(){
+async function closeCycle(){
   const a=account(),i=openInvoice(a)||invoice();if(!i||i.status!=="paid"){toast("The invoice must be paid before closing.");return}
-  i.status="closed";save();renderAll();showInvoice();toast(`Invoice #${i.reference} billing cycle closed.`);
+  try{
+    const payload=await financeOperation({operation:"close_invoice",invoiceNumber:i.reference});
+    applyFinancePayload(payload,{accountId:a.d1AccountId||a.id,invoiceId:i.d1InvoiceId||i.id});
+    showInvoice();toast(`Invoice #${i.reference} billing cycle closed permanently in D1.`);
+  }catch(error){console.error(error);toast(error.message||"Billing cycle was not closed.");}
 }
 
 $("accountSearch").oninput=renderAccounts;$("txSearch").oninput=renderHistory;$("typeFilter").onchange=renderHistory;
@@ -1184,8 +1366,16 @@ $("closePaymentDialog").onclick=$("cancelPayment").onclick=()=>$("paymentDialog"
 
 if(window.GCMOShell)window.GCMOShell.mount({currentPage:"finance",statusText:`Agency Finance operational · Finance v${VERSION}`});
 else console.error(`Finance ${VERSION}: shared/gcm-shell.js failed to load.`);
-renderAll();
-migrateFinanceToD1Once();
+(async()=>{
+  try{
+    await loadFinanceFromD1();
+    renderAll();
+  }catch(error){
+    console.error(`Finance ${VERSION}: D1 load failed; localStorage remains untouched as fallback.`,error);
+    renderAll();
+    toast("Permanent D1 Finance data could not be loaded. Local browser history is shown as a fallback; Finance writes still require D1.");
+  }
+})();
 })();
 </script>
 </body>
