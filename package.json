@@ -1,15 +1,15 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.92",
+  "version": "6.1.93",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.92",
+    "fileVersion": "6.1.93",
     "status": "Production Road-Test Candidate",
-    "purpose": "Lock Finance invoice numbering to permanent D1 records.",
+    "purpose": "Deploy Finance D1 invoice-number authority with current regression locks.",
     "changeNotes": [
-      "Adds Finance Operations regression coverage for D1-authoritative invoice numbering.",
-      "Verifies latest invoice 2243 resolves to next invoice 2244 without browser-local numbering.",
-      "Preserves all existing production test suites."
+      "Preserves the Finance D1 invoice-number regression test.",
+      "Aligns stale unrelated regression locks to current production versions.",
+      "Triggers the normal Worker test-and-deploy pipeline without changing Finance records."
     ]
   },
   "private": true,
