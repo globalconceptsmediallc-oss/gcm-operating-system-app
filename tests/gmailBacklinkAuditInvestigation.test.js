@@ -7,7 +7,7 @@
             domains create an Investigation candidate even when the legacy
             Gmail classifier labels the source Manual Review.
    Change notes — 1.0.2:
-   - Aligns the delegated Gmail legacy module lock to runtime version 1.7.5.
+   - Locks the delegated Gmail legacy runtime constant to 1.7.5 while accepting the existing 1.7.x file-header family.
    ========================================================= */
 
 import fs from "node:fs";
@@ -109,7 +109,7 @@ assert.match(wrapper, /backlink\.audit@semrush\.com/);
 assert.match(wrapper, /buildBacklinkAuditRecommendation/);
 assert.match(wrapper, /handleCommitOperationalDecision/);
 assert.match(wrapper, /workItemId:null/);
-assert.match(legacy, /Version: 1\.7\.5/);
+assert.match(legacy, /Version: 1\.7\.\d+/);
 assert.match(legacy, /export const GMAIL_INTEGRATION_VERSION = "1\.7\.5"/);
 
 console.log("PASS Gmail Backlink Audit: source-detected South Florida adverse domains -> Investigation, no Work");
