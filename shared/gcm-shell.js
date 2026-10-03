@@ -1,12 +1,14 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gcm-shell.js
-   Version: 2.0.65
+   Version: 2.0.66
    Status: Production Road-Test Candidate
    Purpose: Shared internal GCM OS application shell foundation.
    Source: gcm-shell.js 2.0.62 production navigation
    Sprint: Morning Command — Universal Email Intake No-Action Routing
    Change:
+   - Retires the obsolete Communications workspace from shared navigation.
+   - Incoming email/report intake remains owned by Today / Universal Email Intake.
    - Stops loading obsolete Media Dashboard Creative Queue and dashboard-cleanup shims on media.html.
    - Media creative staging and dashboard cleanup are now owned natively by media.html v2.4.9.
    - Loads Universal Email Intake v2.7.0 with exact-thread Reply in Gmail support.
@@ -37,7 +39,7 @@
 (() => {
   "use strict";
 
-  const SHELL_VERSION = "2.0.65";
+  const SHELL_VERSION = "2.0.66";
   const WORKER_ENDPOINT =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const MISSION_CONTROL_ACTION = "get-mission-control";
@@ -45,7 +47,6 @@
   const PAGE_MAP = {
     today: { label: "Today", href: "today.html", icon: "⌂" },
     clients: { label: "Clients", href: "clients.html", icon: "◫" },
-    communications: { label: "Communications", href: "communications.html", icon: "✉" },
     work: { label: "Work", href: "work.html", icon: "✓" },
     media: { label: "Media", href: "media.html", icon: "◉" },
     mediaforge: { label: "MediaForge", href: "mediaforge/", icon: "◆" },
