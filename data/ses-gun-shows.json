@@ -1,8 +1,8 @@
 {
   "file": "data/ses-gun-shows.json",
-  "version": "1.0.1",
-  "status": "Production Candidate — Melbourne Phase 1",
-  "purpose": "SES gun-show planning dates with Melbourne/WMMB active for Phase 1 verification; Orlando retained as future planning data.",
+  "version": "1.0.2",
+  "status": "Production Candidate — Melbourne + Orlando",
+  "purpose": "SES gun-show planning dates with Melbourne/WMMB and Orlando/WFLA active for Calendar and Forward Look operations.",
   "client": {
     "code": "SES",
     "name": "Southeast Safes"
@@ -208,6 +208,7 @@
     }
   ],
   "operationalAlertMarkets": [
-    "Melbourne"
+    "Melbourne",
+    "Orlando"
   ]
 }
