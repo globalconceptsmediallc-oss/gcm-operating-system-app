@@ -1,11 +1,18 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media-calendar.html
-   Version: 1.5.1
+   Version: 1.5.2
    Status: Production Candidate
    Sprint: Media Operations — Prototype Match
    Purpose: Read-only client campaign command board matching the approved
             visual prototype while using existing D1 Media records.
+
+   Changes in 1.5.2:
+   - Moves Liberty scheduled social posts into the Online Media lanes instead of Promotions / Events.
+   - Uses the promotion schedule channels: Google Business, Facebook, and Instagram (shown under Other Digital).
+   - Planned social items render gray until a matching recorded media placement exists.
+   - Keeps Promotions / Events focused on the full Liberty sale run and TAKEDOWN DUE markers.
+   - Removes duplicate start/end Key Date entries for one-day planned posts.
 
    Changes in 1.5.1:
    - Makes each Liberty promotion a continuous sale-run bar from consumer start through consumer end.
@@ -151,7 +158,7 @@
         <div class="top-actions">
           <a class="button" href="media.html">Operator Workspace</a>
           <a class="button" href="media-production.html">Production Records</a>
-          <span class="version">media-calendar.html · v1.5.1</span>
+          <span class="version">media-calendar.html · v1.5.2</span>
         </div>
       </div>
 
@@ -225,7 +232,7 @@
   var ENDPOINT="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   var PROMO_SCHEDULE_URL="data/ses-liberty-promotions.json?v=1.0.0";
   var MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
-  var state={viewDate:new Date(new Date().getFullYear(),new Date().getMonth(),1),records:[],promotions:[],workflow:{clients:[],creatives:[],assignments:[],trafficPackages:[],confirmations:[]},clients:[],initialClient:""};
+  var state={viewDate:new Date(new Date().getFullYear(),new Date().getMonth(),1),records:[],promotions:[],promotionChannels:[],workflow:{clients:[],creatives:[],assignments:[],trafficPackages:[],confirmations:[]},clients:[],initialClient:""};
 
   function $(id){return document.getElementById(id);}
   function lower(v){return String(v||"").trim().toLowerCase();}
@@ -258,9 +265,33 @@
 
   function recordRows(){return state.records.map(function(r){return{source:"record",id:r.id,clientId:r.clientId||r.client_id,clientName:r.clientName||r.clientCode||"Client",clientCode:r.clientCode||"",type:mediaType(r),market:r.market||"",outlet:r.outletName||r.station||"",campaign:r.campaignName||"",creative:r.creativeName||r.fileName||r.campaignName||"Media placement",startDate:r.startDate,endDate:r.endDate,creativeStartDate:r.creativeStartDate||r.creative_start_date||r.lastCreativeDate||r.last_creative_date||r.startDate,status:r.status||"",trafficId:r.trafficId||"",openUrl:r.id?"media-insertion.html?mediaRecordId="+encodeURIComponent(r.id):""};});}
   function workflowRows(){var cs=Array.isArray(state.workflow.creatives)?state.workflow.creatives:[],as=Array.isArray(state.workflow.assignments)?state.workflow.assignments:[];return as.map(function(a){var c=cs.find(function(x){return Number(x.id)===Number(a.creativeId);})||{};return{source:"workflow",id:c.id,clientId:c.clientId||c.client_id,clientName:c.clientName||c.clientCode||"Client",clientCode:c.clientCode||"",type:c.mediaType||"Radio",market:a.market||"",outlet:a.outletName||"",campaign:c.campaignName||"",creative:c.creativeName||"Commercial",startDate:a.rotationStartDate,endDate:a.rotationEndDate,creativeStartDate:a.rotationStartDate,status:c.status||c.currentStage||"",trafficId:a.trafficId||"",openUrl:c.id?"media-production.html?creativeId="+encodeURIComponent(c.id):""};});}
+  function normalizedPromoWords(name){
+    return lower(name).replace(/\bliberty\b/g,"").split(/[^a-z0-9]+/).filter(function(w){return w.length>=4;});
+  }
+  function plannedChannel(channel){
+    var c=lower(channel);
+    if(c.indexOf("google business")>=0)return{type:"Google Business",group:"Google Business",outlet:"Google Business"};
+    if(c.indexOf("facebook")>=0)return{type:"Facebook",group:"Facebook",outlet:"Facebook"};
+    if(c.indexOf("instagram")>=0)return{type:"Digital",group:"Other Digital",outlet:"Instagram"};
+    if(c.indexOf("youtube")>=0)return{type:"YouTube",group:"YouTube",outlet:"YouTube"};
+    return{type:"Digital",group:"Other Digital",outlet:channel||"Social"};
+  }
+  function hasRecordedSocial(channel,date,promoName){
+    var spec=plannedChannel(channel),words=normalizedPromoWords(promoName);
+    return recordRows().some(function(r){
+      var sameDate=String(r.startDate||"").slice(0,10)===date||String(r.endDate||"").slice(0,10)===date;
+      if(!sameDate)return false;
+      var sameChannel=typeGroup(r.type)===spec.group||lower(r.outlet).indexOf(lower(spec.outlet))>=0;
+      if(!sameChannel)return false;
+      var text=lower([r.campaign,r.creative,r.outlet].filter(Boolean).join(" "));
+      var promoMatch=!words.length||words.some(function(w){return text.indexOf(w)>=0;});
+      var status=lower(r.status);
+      return promoMatch||/(posted|published|complete|completed|sent|live)/.test(status);
+    });
+  }
   function promotionRows(){
     var ses=state.clients.find(function(c){return lower(c.clientCode)==="ses"||lower(c.clientName).indexOf("southeast safes")>=0;});
-    var clientId=ses?ses.clientId:"SES",out=[];
+    var clientId=ses?ses.clientId:"SES",out=[],channels=(Array.isArray(state.promotionChannels)&&state.promotionChannels.length)?state.promotionChannels:["Facebook","Google Business Profile","Instagram"];
     (Array.isArray(state.promotions)?state.promotions:[]).forEach(function(p){
       var id=String(p.id||p.name||"liberty"),name=p.name||"Liberty Promotion",start=p.consumerStart,end=p.consumerEnd||p.consumerStart;
       if(!start)return;
@@ -284,23 +315,27 @@
       });
       (Array.isArray(p.schedule)?p.schedule:[]).forEach(function(post,index){
         if(!post||!post.date)return;
-        out.push({
-          source:"promotion-post",
-          id:"promo-post-"+id+"-"+index,
-          clientId:clientId,
-          clientName:"Southeast Safes",
-          clientCode:"SES",
-          type:"Promotion",
-          market:"Social",
-          outlet:"SES Social",
-          campaign:name,
-          creative:post.title||("SOCIAL POST — "+name),
-          startDate:post.date,
-          endDate:post.date,
-          creativeStartDate:post.date,
-          status:"scheduled",
-          trafficId:"",
-          openUrl:"calendar.html?month="+String(post.date).slice(0,7)
+        channels.forEach(function(channel){
+          if(hasRecordedSocial(channel,post.date,name))return;
+          var spec=plannedChannel(channel);
+          out.push({
+            source:"promotion-post",
+            id:"promo-post-"+id+"-"+index+"-"+lower(spec.outlet).replace(/[^a-z0-9]+/g,"-"),
+            clientId:clientId,
+            clientName:"Southeast Safes",
+            clientCode:"SES",
+            type:spec.type,
+            market:"Social",
+            outlet:spec.outlet,
+            campaign:name,
+            creative:post.title||("SOCIAL POST — "+name),
+            startDate:post.date,
+            endDate:post.date,
+            creativeStartDate:post.date,
+            status:"planned",
+            trafficId:"",
+            openUrl:"calendar.html?month="+String(post.date).slice(0,7)
+          });
         });
       });
       if(end){
@@ -372,9 +407,13 @@
     var ds=s<monthStart()?monthStart():s,de=e>monthEnd()?monthEnd():e;if(ds>de)return;
     var d=daysInMonth(),left=(ds.getDate()-1)/d*100,width=(de.getDate()-ds.getDate()+1)/d*100,base=hueMap[productionKey(item)],shell=document.createElement("div");
     shell.className="production-shell";shell.style.left=left+"%";shell.style.width=Math.max(3.5,width)+"%";shell.style.top=(8+index*36)+"px";shell.style.setProperty("--base-color",baseColor(base));shell.setAttribute("tabindex","0");shell.setAttribute("role","link");
-    var total=Math.max(1,inclusiveDays(ds,de));
-    ageSegments(item,ds,de,base).forEach(function(seg){var segLeft=inclusiveDays(ds,seg.start)-1,segDays=inclusiveDays(seg.start,seg.end),el=document.createElement("span");el.className="age-segment";el.style.left=(segLeft/total*100)+"%";el.style.width=(segDays/total*100)+"%";el.style.background=seg.color;shell.appendChild(el);});
-    var endFresh=freshnessAt(item,de),label=document.createElement("div");label.className="bar-label";label.innerHTML="<strong>"+esc(item.creative)+"</strong><span>"+esc(endFresh.label)+"</span>";shell.appendChild(label);
+    var total=Math.max(1,inclusiveDays(ds,de)),planned=item.source==="promotion-post";
+    if(planned){
+      var pel=document.createElement("span");pel.className="age-segment";pel.style.left="0";pel.style.width="100%";pel.style.background="#aab3bf";shell.appendChild(pel);
+    }else{
+      ageSegments(item,ds,de,base).forEach(function(seg){var segLeft=inclusiveDays(ds,seg.start)-1,segDays=inclusiveDays(seg.start,seg.end),el=document.createElement("span");el.className="age-segment";el.style.left=(segLeft/total*100)+"%";el.style.width=(segDays/total*100)+"%";el.style.background=seg.color;shell.appendChild(el);});
+    }
+    var endFresh=planned?{label:"Planned"}:freshnessAt(item,de),label=document.createElement("div");label.className="bar-label";label.innerHTML="<strong>"+esc(item.creative)+"</strong><span>"+esc(endFresh.label)+"</span>";shell.appendChild(label);
     shell.title=[item.creative,item.market,item.outlet,dateText(item.startDate)+" – "+dateText(item.endDate),"Base color = production identity","Bar segments = creative age"].filter(Boolean).join("\n");
     function open(){if(item.openUrl)window.location.href=item.openUrl;}shell.addEventListener("click",open);shell.addEventListener("keydown",function(ev){if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();open();}});
     track.appendChild(shell);
@@ -388,14 +427,14 @@
 
   function radioLanes(rows){var map=new Map();rows.filter(function(r){return typeGroup(r.type)==="Radio";}).forEach(function(r){var k=[r.market||"Market",r.outlet||"Station"].join("|");if(!map.has(k))map.set(k,{market:r.market||"Market",outlet:r.outlet||"Station",items:[]});map.get(k).items.push(r);});return Array.from(map.values()).sort(function(a,b){return(a.market+" "+a.outlet).localeCompare(b.market+" "+b.outlet);});}
   function channelItems(rows,channel){return rows.filter(function(r){return typeGroup(r.type)===channel;}).sort(function(a,b){return String(a.startDate||"").localeCompare(String(b.startDate||""));});}
-  function eventItems(rows){var seen=new Set(),out=[];rows.forEach(function(r){var l=lower([r.campaign,r.creative].filter(Boolean).join(" "));if(!/(gun show|halloween|holiday|tax season|spring cleaning|liberty|sale|promotion|event|black friday|warehouse|pre-loved)/.test(l))return;var k=productionKey(r);if(seen.has(k))return;seen.add(k);out.push(r);});return out.sort(function(a,b){return String(a.startDate||"").localeCompare(String(b.startDate||""));});}
+  function eventItems(rows){var seen=new Set(),out=[];rows.forEach(function(r){if(r.source==="promotion-post")return;var l=lower([r.campaign,r.creative].filter(Boolean).join(" "));if(!/(gun show|halloween|holiday|tax season|spring cleaning|liberty|sale|promotion|event|black friday|warehouse|pre-loved)/.test(l))return;var k=productionKey(r);if(seen.has(k))return;seen.add(k);out.push(r);});return out.sort(function(a,b){return String(a.startDate||"").localeCompare(String(b.startDate||""));});}
 
   function uniqueProductions(rows){var map=new Map();rows.filter(function(r){return typeGroup(r.type)==="Radio";}).forEach(function(r){var k=productionKey(r),x=map.get(k);if(!x){x={item:r,markets:new Set()};map.set(k,x);}x.markets.add(r.market||r.outlet||"Market");});return Array.from(map.values());}
   function renderCreativeAge(rows,hueMap){var asof=asOfDate(),items=uniqueProductions(rows).map(function(x){x.fresh=freshnessAt(x.item,asof);return x;}).sort(function(a,b){return(b.fresh.days||0)-(a.fresh.days||0);});$("creative-age-list").innerHTML=items.length?items.map(function(x){var hue=hueMap[productionKey(x.item)],meta=(x.fresh.days?x.fresh.days+" days as of "+shortDate(asof):x.fresh.label)+" · "+Array.from(x.markets).join(", ");return'<div class="creative-card"><span class="production-swatch" style="background:'+esc(baseColor(hue))+'"></span><div><strong>'+esc(x.item.creative)+'</strong><small>'+esc(meta)+'</small></div><span class="age-badge '+badgeClass(x.fresh.level)+'">'+esc(x.fresh.label)+'</span></div>';}).join(""):'<div class="mini-empty">No radio productions recorded in this month.</div>';}
   function setSupport(id,count){var el=$(id);el.textContent=count?count+" recorded":"No record";el.className="status "+(count?"ok":"missing");}
-  function renderSupport(rows){setSupport("support-gbp",channelItems(rows,"Google Business").length);setSupport("support-facebook",channelItems(rows,"Facebook").length);setSupport("support-youtube",channelItems(rows,"YouTube").length);}
+  function renderSupport(rows){function recorded(channel){return channelItems(rows,channel).filter(function(x){return x.source!=="promotion-post";}).length;}setSupport("support-gbp",recorded("Google Business"));setSupport("support-facebook",recorded("Facebook"));setSupport("support-youtube",recorded("YouTube"));}
   function withinMonth(d){return d&&d>=monthStart()&&d<=monthEnd();}
-  function renderKeyDates(rows){var items=[],seen=new Set();rows.forEach(function(r){var key=productionKey(r),s=toDate(r.startDate),e=toDate(r.endDate);if(withinMonth(s))items.push({date:s,label:"Starts",text:r.creative,meta:r.market||r.outlet||r.type});if(withinMonth(e))items.push({date:e,label:"Ends",text:r.creative,meta:r.market||r.outlet||r.type});if(typeGroup(r.type)==="Radio"&&!seen.has(key)){seen.add(key);var refresh=thresholdDate(r,46),stale=thresholdDate(r,61);if(withinMonth(refresh))items.push({date:refresh,label:"Refresh Due",text:r.creative,meta:"Creative age day 46"});if(withinMonth(stale))items.push({date:stale,label:"Stale",text:r.creative,meta:"Creative age day 61"});}});items.sort(function(a,b){return a.date-b.date;});$("key-dates").innerHTML=items.length?items.slice(0,12).map(function(x){return'<div class="date-row"><span class="date-dot"></span><div><strong>'+esc(shortDate(x.date)+" · "+x.label)+'</strong><span>'+esc(x.text+" · "+x.meta)+'</span></div></div>';}).join(""):'<div class="mini-empty">No starts, endings, or age thresholds in this month.</div>';}
+  function renderKeyDates(rows){var items=[],seen=new Set();rows.forEach(function(r){var key=productionKey(r),s=toDate(r.startDate),e=toDate(r.endDate);if(r.source==="promotion-post"){if(withinMonth(s))items.push({date:s,label:"Social Due",text:r.creative,meta:r.outlet||"Social"});return;}if(r.source==="promotion-takedown"){if(withinMonth(s))items.push({date:s,label:"Takedown Due",text:r.campaign||r.creative,meta:"Liberty promotion"});return;}if(withinMonth(s))items.push({date:s,label:"Starts",text:r.creative,meta:r.market||r.outlet||r.type});if(withinMonth(e))items.push({date:e,label:"Ends",text:r.creative,meta:r.market||r.outlet||r.type});if(typeGroup(r.type)==="Radio"&&!seen.has(key)){seen.add(key);var refresh=thresholdDate(r,46),stale=thresholdDate(r,61);if(withinMonth(refresh))items.push({date:refresh,label:"Refresh Due",text:r.creative,meta:"Creative age day 46"});if(withinMonth(stale))items.push({date:stale,label:"Stale",text:r.creative,meta:"Creative age day 61"});}});items.sort(function(a,b){return a.date-b.date;});$("key-dates").innerHTML=items.length?items.slice(0,12).map(function(x){return'<div class="date-row"><span class="date-dot"></span><div><strong>'+esc(shortDate(x.date)+" · "+x.label)+'</strong><span>'+esc(x.text+" · "+x.meta)+'</span></div></div>';}).join(""):'<div class="mini-empty">No starts, endings, or age thresholds in this month.</div>';}
 
   function render(){
     syncControls();
@@ -407,7 +446,7 @@
     else grid.appendChild(createLane("Radio","No station / market record",[],hueMap,"Radio","No radio placement recorded for this month"));
 
     grid.appendChild(sectionTitle("Online Media"));
-    ["Google Business","Facebook","YouTube","Other Digital"].forEach(function(channel){var items=channelItems(rows,channel);grid.appendChild(createLane(channel,items.length?(items.length+" recorded placement"+(items.length===1?"":"s")):"Coordinated support",items,hueMap,"Online","No coordinated placement recorded"));});
+    ["Google Business","Facebook","YouTube","Other Digital"].forEach(function(channel){var items=channelItems(rows,channel),planned=items.filter(function(x){return x.source==="promotion-post";}).length,recorded=items.length-planned,sub=items.length?([planned?planned+" planned":"",recorded?recorded+" recorded":""].filter(Boolean).join(" · ")):"Coordinated support";grid.appendChild(createLane(channel,sub,items,hueMap,"Online","No coordinated placement recorded"));});
 
     grid.appendChild(sectionTitle("Promotions / Events"));
     var events=eventItems(rows);grid.appendChild(createLane("Campaign / Event Support",events.length?(events.length+" recorded seasonal / promotional item"+(events.length===1?"":"s")):"Gun shows, Liberty promotions, seasonal campaigns",events,hueMap,"Events","No promotion or event record visible this month"));
@@ -432,7 +471,7 @@
       state.records=Array.isArray(payloads[0].mediaOperations&&payloads[0].mediaOperations.records)?payloads[0].mediaOperations.records:[];
       state.clients=Array.isArray(payloads[0].mediaOperations&&payloads[0].mediaOperations.clients)?payloads[0].mediaOperations.clients:[];
       if(responses[1].ok&&payloads[1].ok===true)state.workflow=payloads[1].creativeWorkflow||state.workflow;
-      if(responses[2].ok&&Array.isArray(payloads[2]&&payloads[2].promotions))state.promotions=payloads[2].promotions;
+      if(responses[2].ok&&Array.isArray(payloads[2]&&payloads[2].promotions)){state.promotions=payloads[2].promotions;state.promotionChannels=Array.isArray(payloads[2].channels)?payloads[2].channels:[];}
 
       var prior=$("client").value;
       $("client").innerHTML='<option value="">All clients</option>'+state.clients.map(function(c){return'<option value="'+esc(c.clientId)+'">'+esc(c.clientName)+'</option>';}).join("");
@@ -443,8 +482,8 @@
 
   state.initialClient=readQuery();
   populateControls();
-  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"media",statusText:"D1 Media connected · Media Calendar v1.5.1"});
-  else console.error("Media Calendar 1.5.1: shared/gcm-shell.js did not load.");
+  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"media",statusText:"D1 Media connected · Media Calendar v1.5.2"});
+  else console.error("Media Calendar 1.5.2: shared/gcm-shell.js did not load.");
 
   $("prev-month").addEventListener("click",function(){shiftMonth(-1);});
   $("next-month").addEventListener("click",function(){shiftMonth(1);});
