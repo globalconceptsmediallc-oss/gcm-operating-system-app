@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/financeOperations.js
-   Version: 1.0.2
+   Version: 1.0.3
    Status: Production Road-Test Candidate
    Purpose: Durable D1-backed Finance/Billing operations.
    Rules:
@@ -15,7 +15,7 @@ import { getDatabase, rowsOf } from "../shared/database.js";
 import { jsonResponse, logWorkerError, safeErrorMessage } from "../shared/http.js";
 
 export const FINANCE_OPERATIONS_ACTION = "finance-operations";
-export const FINANCE_OPERATIONS_VERSION = "1.0.2";
+export const FINANCE_OPERATIONS_VERSION = "1.0.3";
 const MAX_ACCOUNTS = 50;
 const MAX_TRANSACTIONS = 2000;
 
@@ -40,7 +40,9 @@ async function listFinance(db,requestId){
   const invoices=rowsOf(await db.prepare("SELECT * FROM finance_invoices ORDER BY invoice_date DESC,id DESC").all());
   const lines=rowsOf(await db.prepare("SELECT * FROM finance_invoice_lines ORDER BY invoice_id,sort_order,id").all());
   const payments=rowsOf(await db.prepare("SELECT * FROM finance_payments ORDER BY payment_date DESC,id DESC").all());
-  return jsonResponse({ok:true,requestId,action:FINANCE_OPERATIONS_ACTION,operation:"list",financeOperationsVersion:FINANCE_OPERATIONS_VERSION,accounts,invoices,invoiceLines:lines,payments,writesPerformed:0});
+  const numbering=rowsOf(await db.prepare("SELECT COALESCE(MAX(CAST(invoice_number AS INTEGER)),0) AS latest_numeric_invoice FROM finance_invoices WHERE invoice_number <> '' AND invoice_number NOT GLOB '*[^0-9]*'").all());
+  const latestNumericInvoice=Number(numbering[0]?.latest_numeric_invoice||0);
+  return jsonResponse({ok:true,requestId,action:FINANCE_OPERATIONS_ACTION,operation:"list",financeOperationsVersion:FINANCE_OPERATIONS_VERSION,accounts,invoices,invoiceLines:lines,payments,latestNumericInvoice,nextInvoiceNumber:latestNumericInvoice+1,writesPerformed:0});
 }
 
 async function syncSnapshot(body,db,requestId){
