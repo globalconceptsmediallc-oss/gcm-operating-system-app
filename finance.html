@@ -1,10 +1,10 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: finance.html
-   Version: 1.7.7
-   Status: Production Candidate — Prior-Month Billing Default
-   Source: finance.html 1.7.6
-   Sprint: Finance / Monthly Billing Rule
+   Version: 1.7.8
+   Status: Production Candidate — D1 Invoice Creation
+   Source: finance.html 1.7.7
+   Sprint: Finance / D1 Invoice Authority
    Purpose: Manage billing accounts, create fixed-package or additional-service invoices,
             generate invoice and statement PDFs, create connected Gmail drafts
             with the correct PDF physically attached,
@@ -13,6 +13,9 @@
             payments, close cycles, preserve superseded invoices, and create
             reviewable corrected invoice revisions with explicit service periods.
    Change Notes:
+            - Create Invoice now prepares and writes the permanent invoice through Finance Operations 1.1.0 in D1.
+            - Invoice numbering is allocated by D1 at save time; the browser no longer manufactures a new invoice number.
+            - If the D1 write fails, no browser-only invoice is created.
             - Monthly invoices now default the service period to the month immediately before the invoice date.
             - Adds a durable Correct Invoice action for existing invoices.
             - Preserves the original invoice as Superseded and creates #R revisions.
@@ -201,7 +204,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
     <button class="mobile btn" data-gcm-shell-menu-button type="button">Menu</button>
     <header class="top">
       <div><p class="eyebrow">Agency Finance</p><h1>Billing Workspace</h1><p class="sub">Manage billing profiles, create invoices, email them, and record Check payments.</p></div>
-      <div class="version">Installed version 1.7.7</div>
+      <div class="version">Installed version 1.7.8</div>
     </header>
 
     <section class="shell">
@@ -503,7 +506,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
 <script src="shared/gcm-shell.js?v=1.0.2"></script>
 <script>
 (()=>{"use strict";
-const VERSION="1.7.7",KEY="gcm_finance_workspace_v1_7",D1_MIGRATION_KEY="gcm_finance_d1_migrated_v2",$=id=>document.getElementById(id);
+const VERSION="1.7.8",KEY="gcm_finance_workspace_v1_7",D1_MIGRATION_KEY="gcm_finance_d1_migrated_v2",$=id=>document.getElementById(id);
 const WORKER_ENDPOINT="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev";
 const seed={
   agency:{name:"Global Concepts Media Agency LLC",website:"https://globalconceptsmediallc.com",logoUrl:""},
@@ -628,6 +631,18 @@ function load(){
   return clone(seed);
 }
 function save(){localStorage.setItem(KEY,JSON.stringify(state))}
+async function financeOperation(body){
+  const response=await fetch(WORKER_ENDPOINT,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({action:"finance-operations",...body})
+  });
+  const payload=await response.json().catch(()=>({}));
+  if(!response.ok||payload?.ok!==true){
+    throw new Error(typeof payload?.error==="string"?payload.error:payload?.error?.message||`Finance Operations failed (${response.status}).`);
+  }
+  return payload;
+}
 async function migrateFinanceToD1Once(){
   if(localStorage.getItem(D1_MIGRATION_KEY)==="complete")return;
   try{
@@ -818,22 +833,65 @@ function collectCorrectionExtras(){
     locationIndex:Number(r.querySelector(".correction-location").value||0)
   })).filter(x=>x.description&&x.amount>0);
 }
-function openCreate(){
-  const a=account();$("invoiceAccount").textContent=`Create an invoice for ${a.name}.`;$("invoiceNumber").value=state.nextInvoiceNumber;
-  $("invoiceType").value="monthly";$("invoiceDate").value=today();$("invoiceDueDate").value="";
-  $("invoiceBillingPeriod").value=servicePeriod(today());$("invoiceEmail").value=a.email||"";$("extraRows").innerHTML="";addExtraRow();$("invoiceDialog").showModal();
+async function openCreate(){
+  const a=account(),invoiceDate=today(),billingPeriod=servicePeriod(today());
+  try{
+    toast("Checking permanent D1 invoice numbering…");
+    const preview=await financeOperation({
+      operation:"create_invoice",
+      dryRun:true,
+      accountName:a.name,
+      invoiceType:"monthly",
+      invoiceDate,
+      billingPeriod,
+      emailTo:a.email||"",
+      extras:[]
+    });
+    state.nextInvoiceNumber=Number(preview.preparedInvoiceNumber||state.nextInvoiceNumber);
+    $("invoiceAccount").textContent=`Create an invoice for ${a.name}.`;$("invoiceNumber").value=preview.preparedInvoiceNumber;
+    $("invoiceType").value="monthly";$("invoiceDate").value=invoiceDate;$("invoiceDueDate").value="";
+    $("invoiceBillingPeriod").value=billingPeriod;$("invoiceEmail").value=a.email||"";$("extraRows").innerHTML="";addExtraRow();$("invoiceDialog").showModal();
+  }catch(error){
+    console.error(error);
+    toast(error.message||"D1 invoice numbering could not be loaded. No invoice was created.");
+  }
 }
-function createInvoice(e){
+async function createInvoice(e){
   e.preventDefault();const a=account(),type=$("invoiceType").value,extras=collectExtras(),base=type==="monthly"?baseAmount(a):0;
   if(type==="additional"&&!extras.length){toast("Add at least one additional service.");return}
-  const total=base+extras.reduce((s,x)=>s+x.amount,0),ref=String(state.nextInvoiceNumber);
-  const record={id:nextId(),date:$("invoiceDate").value,dueDate:$("invoiceDueDate").value,type:"invoice",reference:ref,
-    description:type==="monthly"?"Monthly Billing Package":"Additional Services",invoiceType:type,baseAmount:base,
-    extras,amount:total,paidAmount:0,status:"draft",email:$("invoiceEmail").value.trim(),billingPeriod:$("invoiceBillingPeriod").value.trim(),
-    accountSnapshot:{name:a.name,contact:a.contact,address:a.address,website:a.website,logoUrl:a.logoUrl,locations:clone(a.locations),services:clone(a.services),note:a.note}
-  };
-  a.transactions.push(record);if(record.email)a.email=record.email;state.selectedInvoiceId=record.id;state.nextInvoiceNumber+=1;
-  save();$("invoiceDialog").close();renderAll();showInvoice();toast(`Invoice #${ref} created.`);
+  const billingPeriod=$("invoiceBillingPeriod").value.trim();
+  if(type==="monthly"&&!billingPeriod){toast("Enter the service period for this invoice.");return}
+  const submit=e.submitter||e.currentTarget.querySelector('button[type="submit"]');
+  if(submit)submit.disabled=true;
+  try{
+    toast("Saving invoice permanently to D1…");
+    const payload=await financeOperation({
+      operation:"create_invoice",
+      accountName:a.name,
+      invoiceType:type,
+      invoiceDate:$("invoiceDate").value,
+      dueDate:$("invoiceDueDate").value,
+      billingPeriod,
+      emailTo:$("invoiceEmail").value.trim(),
+      extras
+    });
+    const ref=String(payload.createdInvoiceNumber||"");
+    if(!ref)throw new Error("D1 did not return the created invoice number.");
+    const total=base+extras.reduce((s,x)=>s+x.amount,0);
+    const record={id:Number(payload.createdInvoiceId)||nextId(),d1InvoiceId:Number(payload.createdInvoiceId)||null,date:$("invoiceDate").value,dueDate:$("invoiceDueDate").value,type:"invoice",reference:ref,
+      description:type==="monthly"?"Monthly Billing Package":"Additional Services",invoiceType:type,baseAmount:base,
+      extras,amount:total,paidAmount:0,status:"draft",email:$("invoiceEmail").value.trim(),billingPeriod,
+      accountSnapshot:{name:a.name,contact:a.contact,address:a.address,website:a.website,logoUrl:a.logoUrl,locations:clone(a.locations),services:clone(a.services),note:a.note}
+    };
+    a.transactions.push(record);if(record.email)a.email=record.email;state.selectedInvoiceId=record.id;
+    state.nextInvoiceNumber=Number(payload.nextInvoiceNumber||Number(ref)+1);
+    save();$("invoiceDialog").close();renderAll();showInvoice();toast(`Invoice #${ref} created permanently in D1.`);
+  }catch(error){
+    console.error(error);
+    toast(error.message||"The invoice was not created. D1 did not confirm the save.");
+  }finally{
+    if(submit)submit.disabled=false;
+  }
 }
 function openCorrection(){
   const a=account(),i=invoice();if(!i){toast("Select an invoice to correct.");return}
