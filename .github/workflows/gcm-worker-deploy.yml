@@ -1,10 +1,12 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gcm-worker-deploy.yml
-# Version: 1.5.48
+# Version: 1.5.49
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Worker with human-led Signal Finding capture.
 # Change Notes:
+# - Deploy and verify Worker 7.38.0 with durable Schedule Operations authority.
+# - Verify migration 0027 and schedule-operations list contract before declaring deployment healthy.
 # - Deploy and verify Worker 7.37.0 with Gmail ↔ Universal Intake reconciliation.
 # - Verify Finance Operations 1.2.0 is authoritative for permanent Billing operations.
 # - Regression suite accepts the current delegated Gmail 1.7.x header while locking runtime 1.7.5.
@@ -110,8 +112,8 @@ jobs:
           const healthResponse = await fetch(url);
           if (!healthResponse.ok) throw new Error(`Worker health returned HTTP ${healthResponse.status}`);
           const health = await healthResponse.json();
-          if (health.workerFileVersion !== "7.37.0") {
-            throw new Error(`Expected Worker 7.37.0, received ${health.workerFileVersion || "unknown"}`);
+          if (health.workerFileVersion !== "7.38.0") {
+            throw new Error(`Expected Worker 7.38.0, received ${health.workerFileVersion || "unknown"}`);
           }
           if (health.emailIntakeVersion !== "1.0.0") {
             throw new Error(`Expected Email Intake 1.0.0, received ${health.emailIntakeVersion || "unknown"}`);
@@ -133,6 +135,9 @@ jobs:
           }
           if (health.clientFindingsVersion !== "1.0.0") {
             throw new Error(`Expected Client Findings 1.0.0, received ${health.clientFindingsVersion || "unknown"}`);
+          }
+          if (health.scheduleOperationsVersion !== "1.0.0") {
+            throw new Error(`Expected Schedule Operations 1.0.0, received ${health.scheduleOperationsVersion || "unknown"}`);
           }
           const financeResponse = await fetch(url, {
             method:"POST",
@@ -193,6 +198,7 @@ jobs:
             "prospect-crm",
             "prospect-concept-view",
             "calendar-operations",
+            "schedule-operations",
             "evaluate-gmail-work-request",
             "approve-gmail-work-request",
             "delete-gmail-no-action",
@@ -318,6 +324,32 @@ jobs:
           if (calendar?.ok !== true || !Array.isArray(calendar?.calendarAppointments)) {
             throw new Error("Calendar Operations live read contract is invalid.");
           }
+
+          const scheduleResponse = await fetch(url, {
+            method:"POST",
+            headers:{ "Content-Type":"application/json" },
+            body:JSON.stringify({ action:"schedule-operations", operation:"list" })
+          });
+          if (!scheduleResponse.ok) {
+            throw new Error(`Schedule Operations returned HTTP ${scheduleResponse.status}`);
+          }
+          const schedule = await scheduleResponse.json();
+          if (
+            schedule?.ok !== true ||
+            schedule?.scheduleOperationsVersion !== "1.0.0" ||
+            !Array.isArray(schedule?.scheduleItems) ||
+            !Array.isArray(schedule?.scheduleEvents) ||
+            !Array.isArray(schedule?.pendingChanges)
+          ) {
+            throw new Error("Schedule Operations live read contract is invalid or migration 0027 is unavailable.");
+          }
+          if (!schedule.scheduleItems.some(item => item?.sourceKey === "ses:liberty:fall-savings-2026")) {
+            throw new Error("Schedule Operations did not seed the Liberty Fall Savings authoritative record.");
+          }
+          if (!schedule.scheduleItems.some(item => item?.sourceKey === "ses:gun-show:orlando:2026-10-10")) {
+            throw new Error("Schedule Operations did not seed the Orlando October gun-show authoritative record.");
+          }
+          console.log(`PASS Schedule Operations: ${schedule.scheduleItems.length} durable items, ${schedule.scheduleEvents.length} derived events`);
 
           const mediaWorkflowResponse = await fetch(url, {
             method:"POST",
