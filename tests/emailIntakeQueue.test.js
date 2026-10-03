@@ -1,16 +1,18 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/emailIntakeQueue.test.js
-   Version: 1.0.0
+   Version: 1.0.1
    Status: Production Regression Test
    Purpose: Verify the OS can read ready-for-review Universal Email Intake
             records from D1 without touching Gmail or modifying intake data.
+   Change notes — 1.0.1:
+   - Aligns the regression lock to Email Intake Queue 1.1.0, which preserves Gmail identifiers and Reply-To metadata while remaining read-only.
    ========================================================= */
 
 import assert from "node:assert/strict";
 import { handleEmailIntakeQueue, EMAIL_INTAKE_QUEUE_VERSION } from "../routes/emailIntakeQueue.js";
 
-assert.equal(EMAIL_INTAKE_QUEUE_VERSION,"1.0.0");
+assert.equal(EMAIL_INTAKE_QUEUE_VERSION,"1.1.0");
 
 function mockDb() {
   const calls=[];
