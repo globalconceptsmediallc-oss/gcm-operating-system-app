@@ -2,7 +2,7 @@
    Global Concepts Media Operating System
    File: routes/financeOperations.js
    Version: 1.0.3
-   Status: Production Road-Test Candidate
+   Status: Production Road-Test Candidate — D1 Invoice Numbering
    Purpose: Durable D1-backed Finance/Billing operations.
    Rules:
    - D1 is the authoritative Finance source.
