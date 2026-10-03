@@ -1,13 +1,18 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: calendar.html
-   Version: 1.2.5
+   Version: 1.2.6
    Status: Production Candidate — SES Gun Show Operations
-   Source: calendar.html 1.2.4
+   Source: calendar.html 1.2.5
    Sprint: Calendar — Gun Show / Radio Traffic Visibility
    Purpose: Preserve appointment booking while adding the first agency-wide
             operational date layer: SES Melbourne/Orlando gun shows, their
-            Wed–Sat radio flights, and two-week traffic warnings.
+            Wed–Sat radio flights, and advance traffic warnings.
+
+   Production changes in 1.2.6:
+   - Changes the SES gun-show early Traffic Due warning from 14 days to 7 days before Wednesday flight start.
+   - Reads warning lead time from data/ses-gun-shows.json so Calendar and Today share one rule.
+   - Keeps the hard Monday 10:00 AM email-to-Stephanie deadline unchanged.
 
    Production changes in 1.2.5:
    - Adds SES Liberty Q4 2026 promotion windows and social-post schedule from Kristy's "UPCOMING PROMOS" email.
@@ -191,7 +196,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
         <h1>Calendar & Booking</h1>
         <p class="sub">Manage appointments, define booking rules, and see the month or quarter ahead. Google Calendar can become the conflict-checking source once Worker/OAuth integration is connected.</p>
       </div>
-      <div class="version">Installed version 1.2.5</div>
+      <div class="version">Installed version 1.2.6</div>
     </header>
 
     <div class="toolbar">
@@ -352,8 +357,8 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
 <script src="shared/gcm-shell.js?v=1.0.2"></script>
 <script>
 (()=>{"use strict";
-const VERSION="1.2.5",KEY="gcm_calendar_v1_1",$=id=>document.getElementById(id);
-const SHOW_SCHEDULE_URL="data/ses-gun-shows.json?v=1.0.2";
+const VERSION="1.2.6",KEY="gcm_calendar_v1_1",$=id=>document.getElementById(id);
+const SHOW_SCHEDULE_URL="data/ses-gun-shows.json?v=1.0.3";
 const PROMO_SCHEDULE_URL="data/ses-liberty-promotions.json?v=1.0.0";
 const WORKER_ENDPOINT="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
 let gunShowSchedule=[],libertyPromotions=[],mediaRecords=[],operationalAlertMarkets=["Melbourne","Orlando"];
@@ -419,7 +424,8 @@ function gunShowRule(show){
  const station=show&&show.station?show.station:({Melbourne:"WMMB",Orlando:"WFLA"}[show&&show.market]||"");
  const flightStart=addCalendarDays(show&&show.showStart,-3);
  const flightEnd=show&&show.showStart||null;
- const trafficWarning=flightStart?addCalendarDays(flightStart,-14):null;
+ const warningDays=Number(show&&show.trafficWarningDaysBeforeFlightStart)||7;
+ const trafficWarning=flightStart?addCalendarDays(flightStart,-warningDays):null;
  const stationDeadline=flightStart?addCalendarDays(flightStart,-2):null;
  return{station,flightStart,flightEnd,trafficWarning,stationDeadline};
 }
@@ -537,7 +543,8 @@ async function loadOperationalShowSchedule(){
    gunShowSchedule=schedulePayload.shows.map(function(s){
     return Object.assign({},s,{
      alertRecipients:Array.isArray(s.alertRecipients)?s.alertRecipients:(schedulePayload.alertRecipients||["Andy","Kristy"]),
-     station:schedulePayload&&schedulePayload.rules&&schedulePayload.rules[s.market]?schedulePayload.rules[s.market].station:(s.station||null)
+     station:schedulePayload&&schedulePayload.rules&&schedulePayload.rules[s.market]?schedulePayload.rules[s.market].station:(s.station||null),
+     trafficWarningDaysBeforeFlightStart:schedulePayload&&schedulePayload.rules&&schedulePayload.rules[s.market]?schedulePayload.rules[s.market].trafficWarningDaysBeforeFlightStart:7
     });
    });
   }
