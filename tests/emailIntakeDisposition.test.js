@@ -1,11 +1,13 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/emailIntakeDisposition.test.js
-   Version: 1.5.3
+   Version: 1.5.4
    Status: Production Regression Test
    Purpose:
    Verify no-action confirmation, Information routing, Monitoring Proof/history,
    Investigation routing, and direct Work Item routing for durable intake.
+   Change notes — 1.5.4:
+   - Aligns the regression lock to Email Intake Disposition 1.5.4 without changing disposition behavior assertions.
    ========================================================= */
 
 import assert from "node:assert/strict";
@@ -14,7 +16,7 @@ import {
   EMAIL_INTAKE_DISPOSITION_VERSION
 } from "../routes/emailIntakeDisposition.js";
 
-assert.equal(EMAIL_INTAKE_DISPOSITION_VERSION,"1.5.3");
+assert.equal(EMAIL_INTAKE_DISPOSITION_VERSION,"1.5.4");
 
 function makeDeleteDb(record) {
   const state={ updateSql:"", updateCount:0, selects:0 };
