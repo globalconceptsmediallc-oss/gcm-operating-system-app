@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.37.0
+   Version: 7.38.0
    Status: OS 2.0 Production Road-Test Candidate
    Source: Production worker.js 7.35.0
    Sprint: Universal Email Intake — Human Disposition
@@ -9,6 +9,11 @@
             durable Prospecting Radar + CRM operations required to connect
             scheduled prospects, discovery, proposals, follow-up, agreements,
             payments, and eventual Client handoff.
+
+   Changes in 7.38.0:
+   - Adds durable Schedule Operations with human-reviewed add/change/cancel candidates.
+   - Exposes one D1-backed campaign/event schedule authority for Agency Calendar, Media Calendar, and Today.
+   - Preserves schedule version history and prevents unapproved changes from altering live dates.
 
    Changes in 7.36.0:
    - Adds exact-intake Gmail cleanup immediately after a D1-finalized Save & Route or review close.
@@ -188,6 +193,11 @@ import {
   handleFinanceOperations,
   FINANCE_OPERATIONS_ACTION
 } from "./routes/financeOperations.js";
+import {
+  handleScheduleOperations,
+  SCHEDULE_OPERATIONS_ACTION,
+  SCHEDULE_OPERATIONS_VERSION
+} from "./routes/scheduleOperations.js";
 import { handleCreateInvestigation, handleProcessInvestigation } from "./routes/investigationProcessing.js";
 import { handleGuidedInvestigation } from "./routes/guidedInvestigation.js";
 import { handleProcessWorkItem, handleCreateRequestedWork, CREATE_REQUESTED_WORK_ACTION } from "./routes/workItemProcessing.js";
@@ -268,7 +278,7 @@ import {
   GMAIL_INTAKE_SYNC_VERSION
 } from "./routes/gmailIntakeSync.js";
 
-const WORKER_FILE_VERSION = "7.37.0";
+const WORKER_FILE_VERSION = "7.38.0";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
@@ -281,6 +291,7 @@ const SUPPORTED_ACTIONS = [
   ACTIONS.COMMIT_OPERATIONAL_DECISION,
   ACTIONS.GET_MISSION_CONTROL,
   CALENDAR_OPERATIONS_ACTION,
+  SCHEDULE_OPERATIONS_ACTION,
   FINANCE_OPERATIONS_ACTION,
   ACTIONS.GET_GUIDED_INVESTIGATION,
   ACTIONS.CREATE_INVESTIGATION,
@@ -339,6 +350,7 @@ export default {
         googleReviewQuickActionVersion: GOOGLE_REVIEW_QUICK_ACTION_VERSION,
         gmailIntakeSyncVersion: GMAIL_INTAKE_SYNC_VERSION,
         clientFindingsVersion: CLIENT_FINDINGS_VERSION,
+        scheduleOperationsVersion: SCHEDULE_OPERATIONS_VERSION,
         contractVersion: API_CONTRACT_VERSION,
         sprint: "Universal Email Intake — Cloudflare Email Routing",
         architecture:
@@ -350,6 +362,7 @@ export default {
           "prospect-concept-tracking",
           "agency-command",
           "calendar-operations",
+          "schedule-operations",
           "gmail-work-requests",
           "gmail-dispositions",
           "historical-rehabilitation",
@@ -535,6 +548,9 @@ export default {
 
         case CALENDAR_OPERATIONS_ACTION:
           return await handleCalendarOperations(body, env, requestId);
+
+        case SCHEDULE_OPERATIONS_ACTION:
+          return await handleScheduleOperations(body, env, requestId);
 
         case FINANCE_OPERATIONS_ACTION:
           return await handleFinanceOperations(body, env, requestId);
