@@ -1,10 +1,10 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: finance.html
-   Version: 1.7.6
-   Status: Production Candidate — Corrected Invoice Date and Location Assignment
-   Source: finance.html 1.6.0
-   Sprint: Finance / Invoice Correction Control
+   Version: 1.7.7
+   Status: Production Candidate — Prior-Month Billing Default
+   Source: finance.html 1.7.6
+   Sprint: Finance / Monthly Billing Rule
    Purpose: Manage billing accounts, create fixed-package or additional-service invoices,
             generate invoice and statement PDFs, create connected Gmail drafts
             with the correct PDF physically attached,
@@ -13,6 +13,7 @@
             payments, close cycles, preserve superseded invoices, and create
             reviewable corrected invoice revisions with explicit service periods.
    Change Notes:
+            - Monthly invoices now default the service period to the month immediately before the invoice date.
             - Adds a durable Correct Invoice action for existing invoices.
             - Preserves the original invoice as Superseded and creates #R revisions.
             - Prevents superseded invoices from inflating balances and statements.
@@ -502,7 +503,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
 <script src="shared/gcm-shell.js?v=1.0.2"></script>
 <script>
 (()=>{"use strict";
-const VERSION="1.7.6",KEY="gcm_finance_workspace_v1_7",D1_MIGRATION_KEY="gcm_finance_d1_migrated_v2",$=id=>document.getElementById(id);
+const VERSION="1.7.7",KEY="gcm_finance_workspace_v1_7",D1_MIGRATION_KEY="gcm_finance_d1_migrated_v2",$=id=>document.getElementById(id);
 const WORKER_ENDPOINT="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev";
 const seed={
   agency:{name:"Global Concepts Media Agency LLC",website:"https://globalconceptsmediallc.com",logoUrl:""},
@@ -651,7 +652,7 @@ function money(v){return new Intl.NumberFormat("en-US",{style:"currency",currenc
 function today(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
 function addDays(v,n){const[y,m,d]=v.split("-").map(Number),x=new Date(y,m-1,d);x.setDate(x.getDate()+n);return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,"0")}-${String(x.getDate()).padStart(2,"0")}`}
 function date(v){if(!v)return"—";const[y,m,d]=String(v).split("-").map(Number);return new Date(y,m-1,d).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})}
-function servicePeriod(v){if(!v)return"";const[y,m]=String(v).split("-").map(Number);return `Services performed during ${new Date(y,m-1,1).toLocaleDateString("en-US",{month:"long",year:"numeric"})}`}
+function servicePeriod(v){if(!v)return"";const[y,m]=String(v).split("-").map(Number);return `Services performed during ${new Date(y,m-2,1).toLocaleDateString("en-US",{month:"long",year:"numeric"})}`}
 function esc(v){return String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]))}
 function initials(name){return String(name||"BA").split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join("").toUpperCase()||"BA"}
 function faviconUrl(website){
