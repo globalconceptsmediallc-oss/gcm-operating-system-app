@@ -1,12 +1,12 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gcm-worker-deploy.yml
-# Version: 1.5.46
+# Version: 1.5.47
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Worker with human-led Signal Finding capture.
 # Change Notes:
-# - Deploy and verify Worker 7.36.0 with Gmail ↔ Universal Intake reconciliation.
-# - Verify Finance Operations 1.0.3 reads authoritative invoice numbering from D1.
+# - Deploy and verify Worker 7.37.0 with Gmail ↔ Universal Intake reconciliation.
+# - Verify Finance Operations 1.1.0 reads authoritative invoice numbering and prepares invoices from D1 with a no-write dry run.
 # - Regression suite accepts the current delegated Gmail 1.7.x header while locking runtime 1.7.5.
 # - Prospect regression locks now follow current CRM 1.5.0 and Today/Prospects release families.
 # - Prospect Engagement regression now targets the current dedicated Today panel.
@@ -143,8 +143,8 @@ jobs:
             throw new Error(`Finance Operations returned HTTP ${financeResponse.status}`);
           }
           const finance = await financeResponse.json();
-          if (finance?.financeOperationsVersion !== "1.0.3") {
-            throw new Error(`Expected Finance Operations 1.0.3, received ${finance?.financeOperationsVersion || "unknown"}`);
+          if (finance?.financeOperationsVersion !== "1.1.0") {
+            throw new Error(`Expected Finance Operations 1.1.0, received ${finance?.financeOperationsVersion || "unknown"}`);
           }
           if (!Number.isInteger(finance?.latestNumericInvoice) || !Number.isInteger(finance?.nextInvoiceNumber)) {
             throw new Error("Finance Operations did not return numeric invoice authority from D1.");
@@ -153,6 +153,36 @@ jobs:
             throw new Error(`Finance invoice numbering is inconsistent: latest ${finance.latestNumericInvoice}, next ${finance.nextInvoiceNumber}`);
           }
           console.log(`PASS Finance D1 invoice numbering: latest ${finance.latestNumericInvoice}, next ${finance.nextInvoiceNumber}`);
+          const financePreviewResponse = await fetch(url, {
+            method:"POST",
+            headers:{ "Content-Type":"application/json" },
+            body:JSON.stringify({
+              action:"finance-operations",
+              operation:"create_invoice",
+              dryRun:true,
+              accountName:"Southeast Safes",
+              invoiceType:"monthly",
+              invoiceDate:"2026-10-03",
+              billingPeriod:"Services performed during September 2026",
+              emailTo:"Adrianne@sesafes.com",
+              extras:[]
+            })
+          });
+          if (!financePreviewResponse.ok) {
+            throw new Error(`Finance Create Invoice dry run returned HTTP ${financePreviewResponse.status}`);
+          }
+          const financePreview = await financePreviewResponse.json();
+          if (financePreview?.dryRun !== true || financePreview?.writesPerformed !== 0) {
+            throw new Error("Finance Create Invoice dry run attempted or reported a production write.");
+          }
+          if (financePreview?.preparedInvoiceNumber !== String(finance.nextInvoiceNumber)) {
+            throw new Error(`Finance Create Invoice prepared ${financePreview?.preparedInvoiceNumber || "unknown"} instead of D1 next ${finance.nextInvoiceNumber}`);
+          }
+          if (financePreview?.amountCents !== 160000 || !Array.isArray(financePreview?.lines) || financePreview.lines.length !== 2) {
+            throw new Error("Finance Create Invoice dry run did not reproduce the permanent Southeast Safes $1,600 monthly package.");
+          }
+          console.log(`PASS Finance Create Invoice dry run: #${financePreview.preparedInvoiceNumber}, $1,600, 2 service lines, 0 writes`);
+
 
           const requiredActions = [
             "route-email-intake-disposition",
