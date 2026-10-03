@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/prospectConceptTracking.test.js
-   Version: 1.6.0
+   Version: 1.6.1
    Status: Regression Test
    Purpose: Lock privacy-minimized Agnor Aviation 90-day plan engagement tracking.
    ========================================================= */
@@ -18,7 +18,7 @@ const wadadliPage = fs.readFileSync(new URL("../prospect-previews/wadadli-financ
 const corvexPage = fs.readFileSync(new URL("../prospect-previews/corvex-roofing/index.html", import.meta.url),"utf8");
 const leonardPage = fs.readFileSync(new URL("../prospect-previews/leonard-financial-group/index.html", import.meta.url),"utf8");
 
-assert.match(route,/Version: 1\.0\.8/);
+assert.match(route,/Version: 1\.1\.0/);
 assert.match(route,/agnor-aviation-90-day-v1/);
 assert.match(route,/businessName: "Agnor Aviation"/);
 assert.match(route,/sourceReference: "\/prospect-previews\/agnor-aviation\/"/);
