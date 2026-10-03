@@ -1,10 +1,12 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/googleReviewQuickAction.test.js
-   Version: 1.0.9
+   Version: 1.0.10
    Status: Regression Test
    Purpose:
    Lock routine Google Business Profile reviews to the compact reply/count flow.
+   Change notes — 1.0.10:
+   - Aligns the Today Email Intake version lock to 2.7.0 while preserving every Google Review Quick Action assertion.
    Routine reviews, including notifications with no parseable rating, must not create
    Findings, Communications, Investigations, Work Items, or Proof rows. Explicitly low-rated reviews retain the full-review path.
    ========================================================= */
@@ -40,7 +42,7 @@ assert.doesNotMatch(route,/INSERT INTO investigations/i);
 assert.doesNotMatch(route,/INSERT INTO work_items/i);
 assert.doesNotMatch(route,/INSERT INTO activity_records/i);
 
-assert.match(ui,/Version: 2\.6\.1/);
+assert.match(ui,/Version: 2\.7\.0/);
 assert.match(ui,/left a review for/);
 assert.match(ui,/Quick Action/);
 assert.match(ui,/Open Review/);
