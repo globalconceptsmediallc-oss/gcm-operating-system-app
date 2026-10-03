@@ -1,13 +1,18 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.5.52
+   Version: 3.5.53
    Status: Production Candidate
-   Source: Production today.html 3.5.51
+   Source: Production today.html 3.5.52
    Sprint: Today — Forward Look
    Purpose: Preserve the locked Today layout, Gmail approvals, Mission Control,
             Media logic, and operating workflow while adding a read-only future
             commitment view from authoritative dated OS records.
+
+   Production changes in 3.5.53:
+   - Changes SES gun-show Forward Look Traffic Due warnings from 14 days to 7 days before Wednesday flight start.
+   - Reads the lead time from the authoritative SES gun-show schedule.
+   - Keeps the hard Monday 10:00 AM station-email deadline unchanged on Calendar.
 
    Production changes in 3.5.52:
    - Activates Orlando/WFLA gun-show traffic warnings alongside Melbourne/WMMB.
@@ -1958,7 +1963,7 @@
 <a class="nav-link" href="finance.html"><span class="nav-icon">$</span><span>Billing</span></a>
 <a class="nav-link" href="proof.html"><span class="nav-icon">↗</span><span>Proof</span></a>
 </nav>
-<div class="sidebar-footer"><div class="sidebar-status"><span class="status-dot" aria-hidden="true"></span><span>Agency Command Center operational · Today v3.5.52</span></div></div>
+<div class="sidebar-footer"><div class="sidebar-status"><span class="status-dot" aria-hidden="true"></span><span>Agency Command Center operational · Today v3.5.53</span></div></div>
 </aside>
 <main class="main" id="main-content">
 <div class="main-inner">
@@ -3000,7 +3005,8 @@
         const station = cleanDisplay(show && show.station || rule.station);
         const flightStart = forwardAddDays(show && show.showStart, -3);
         const flightEnd = forwardDateOnly(show && show.showStart);
-        const trafficWarning = forwardAddDays(flightStart, -14);
+        const warningDays = Number(rule.trafficWarningDaysBeforeFlightStart) || 7;
+        const trafficWarning = forwardAddDays(flightStart, -warningDays);
         return { station: station, flightStart: flightStart, flightEnd: flightEnd, trafficWarning: trafficWarning };
       }
 
@@ -3185,7 +3191,7 @@
           forwardLookPost("prospect-crm", { operation: "list_prospects" }),
           forwardLookPost("calendar-operations", { operation: "list" }),
           forwardLookPost("get-media-operations"),
-          fetch("data/ses-gun-shows.json?v=1.0.2", { cache: "no-store" }).then(function(response) {
+          fetch("data/ses-gun-shows.json?v=1.0.3", { cache: "no-store" }).then(function(response) {
             if (!response.ok) throw new Error("SES gun-show schedule returned HTTP " + response.status);
             return response.json();
           })
@@ -3768,7 +3774,7 @@
         renderDashboard(data);
       });
 
-      const TODAY_VERSION = "3.5.52";
+      const TODAY_VERSION = "3.5.53";
       if (!window.GCMOShell) {
         console.error(`Today ${TODAY_VERSION}: shared/gcm-shell.js did not load.`);
       } else {
