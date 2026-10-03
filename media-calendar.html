@@ -1,11 +1,17 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media-calendar.html
-   Version: 1.4.0
+   Version: 1.5.0
    Status: Production Candidate
    Sprint: Media Operations — Prototype Match
    Purpose: Read-only client campaign command board matching the approved
             visual prototype while using existing D1 Media records.
+
+   Changes in 1.5.0:
+   - Adds SES Liberty promotion windows from data/ses-liberty-promotions.json to Promotions / Events.
+   - Shows Fall Savings, Home Advantage launch, Veterans Day, Pre-Black Friday, Black Friday, and Cyber Monday.
+   - Promotion bars are read-only review overlays and do not create or alter D1 Media records.
+   - Promotion start/end dates also appear in Key Dates.
 
    Changes in 1.4.0:
    - Rebuilds the page to closely match the approved prototype composition.
@@ -139,7 +145,7 @@
         <div class="top-actions">
           <a class="button" href="media.html">Operator Workspace</a>
           <a class="button" href="media-production.html">Production Records</a>
-          <span class="version">media-calendar.html · v1.4.0</span>
+          <span class="version">media-calendar.html · v1.5.0</span>
         </div>
       </div>
 
@@ -211,8 +217,9 @@
 (function(){
   "use strict";
   var ENDPOINT="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+  var PROMO_SCHEDULE_URL="data/ses-liberty-promotions.json?v=1.0.0";
   var MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
-  var state={viewDate:new Date(new Date().getFullYear(),new Date().getMonth(),1),records:[],workflow:{clients:[],creatives:[],assignments:[],trafficPackages:[],confirmations:[]},clients:[],initialClient:""};
+  var state={viewDate:new Date(new Date().getFullYear(),new Date().getMonth(),1),records:[],promotions:[],workflow:{clients:[],creatives:[],assignments:[],trafficPackages:[],confirmations:[]},clients:[],initialClient:""};
 
   function $(id){return document.getElementById(id);}
   function lower(v){return String(v||"").trim().toLowerCase();}
@@ -245,8 +252,32 @@
 
   function recordRows(){return state.records.map(function(r){return{source:"record",id:r.id,clientId:r.clientId||r.client_id,clientName:r.clientName||r.clientCode||"Client",clientCode:r.clientCode||"",type:mediaType(r),market:r.market||"",outlet:r.outletName||r.station||"",campaign:r.campaignName||"",creative:r.creativeName||r.fileName||r.campaignName||"Media placement",startDate:r.startDate,endDate:r.endDate,creativeStartDate:r.creativeStartDate||r.creative_start_date||r.lastCreativeDate||r.last_creative_date||r.startDate,status:r.status||"",trafficId:r.trafficId||"",openUrl:r.id?"media-insertion.html?mediaRecordId="+encodeURIComponent(r.id):""};});}
   function workflowRows(){var cs=Array.isArray(state.workflow.creatives)?state.workflow.creatives:[],as=Array.isArray(state.workflow.assignments)?state.workflow.assignments:[];return as.map(function(a){var c=cs.find(function(x){return Number(x.id)===Number(a.creativeId);})||{};return{source:"workflow",id:c.id,clientId:c.clientId||c.client_id,clientName:c.clientName||c.clientCode||"Client",clientCode:c.clientCode||"",type:c.mediaType||"Radio",market:a.market||"",outlet:a.outletName||"",campaign:c.campaignName||"",creative:c.creativeName||"Commercial",startDate:a.rotationStartDate,endDate:a.rotationEndDate,creativeStartDate:a.rotationStartDate,status:c.status||c.currentStage||"",trafficId:a.trafficId||"",openUrl:c.id?"media-production.html?creativeId="+encodeURIComponent(c.id):""};});}
+  function promotionRows(){
+    var ses=state.clients.find(function(c){return lower(c.clientCode)==="ses"||lower(c.clientName).indexOf("southeast safes")>=0;});
+    var clientId=ses?ses.clientId:"SES";
+    return (Array.isArray(state.promotions)?state.promotions:[]).map(function(p){
+      return{
+        source:"promotion",
+        id:"promo-"+String(p.id||p.name||"liberty"),
+        clientId:clientId,
+        clientName:"Southeast Safes",
+        clientCode:"SES",
+        type:"Promotion",
+        market:"All SES",
+        outlet:"Liberty Safe",
+        campaign:p.name||"Liberty Promotion",
+        creative:p.name||"Liberty Promotion",
+        startDate:p.consumerStart,
+        endDate:p.consumerEnd||p.consumerStart,
+        creativeStartDate:p.consumerStart,
+        status:"scheduled",
+        trafficId:"",
+        openUrl:"calendar.html?month="+String(p.consumerStart||"").slice(0,7)
+      };
+    });
+  }
   function dedupe(rows){var seen=new Set();return rows.filter(function(r){var k=[lower(r.clientName||r.clientCode),lower(r.creative||r.campaign),lower(r.market),lower(r.outlet),String(r.startDate||"").slice(0,10),String(r.endDate||"").slice(0,10)].join("|");if(seen.has(k))return false;seen.add(k);return true;});}
-  function visibleRows(){var selected=$("client").value;return dedupe(recordRows().concat(workflowRows())).filter(function(r){return(!selected||String(clientKey(r))===selected)&&intersectsMonth(r);});}
+  function visibleRows(){var selected=$("client").value;return dedupe(recordRows().concat(workflowRows(),promotionRows())).filter(function(r){return(!selected||String(clientKey(r))===selected)&&intersectsMonth(r);});}
   function productionKey(i){return lower(i.creative||i.campaign||i.id||"production");}
 
   function hashText(text){var h=2166136261;for(var i=0;i<text.length;i++){h^=text.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
@@ -343,13 +374,15 @@
       var body={action:"get-media-operations"},selected=$("client").value;if(selected)body.clientId=Number(selected);
       var responses=await Promise.all([
         fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}),
-        fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"get-media-operations",operation:"get_creative_workflow"})})
+        fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"get-media-operations",operation:"get_creative_workflow"})}),
+        fetch(PROMO_SCHEDULE_URL,{cache:"no-store"})
       ]);
       var payloads=await Promise.all(responses.map(function(r){return r.json().catch(function(){return{};});}));
       if(!responses[0].ok||payloads[0].ok!==true)throw new Error(payloads[0].error||payloads[0].details||"Media Operations could not load.");
       state.records=Array.isArray(payloads[0].mediaOperations&&payloads[0].mediaOperations.records)?payloads[0].mediaOperations.records:[];
       state.clients=Array.isArray(payloads[0].mediaOperations&&payloads[0].mediaOperations.clients)?payloads[0].mediaOperations.clients:[];
       if(responses[1].ok&&payloads[1].ok===true)state.workflow=payloads[1].creativeWorkflow||state.workflow;
+      if(responses[2].ok&&Array.isArray(payloads[2]&&payloads[2].promotions))state.promotions=payloads[2].promotions;
 
       var prior=$("client").value;
       $("client").innerHTML='<option value="">All clients</option>'+state.clients.map(function(c){return'<option value="'+esc(c.clientId)+'">'+esc(c.clientName)+'</option>';}).join("");
@@ -360,8 +393,8 @@
 
   state.initialClient=readQuery();
   populateControls();
-  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"media",statusText:"D1 Media connected · Media Calendar v1.4.0"});
-  else console.error("Media Calendar 1.4.0: shared/gcm-shell.js did not load.");
+  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"media",statusText:"D1 Media connected · Media Calendar v1.5.0"});
+  else console.error("Media Calendar 1.5.0: shared/gcm-shell.js did not load.");
 
   $("prev-month").addEventListener("click",function(){shiftMonth(-1);});
   $("next-month").addEventListener("click",function(){shiftMonth(1);});
