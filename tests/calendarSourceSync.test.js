@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System (GCM OS)
    File: tests/calendarSourceSync.test.js
-   Test Version: 1.0.0
+   Test Version: 1.1.0
    Status: Production Regression Lock
    Purpose: Prevent Agency Calendar, Today Forward Look, and Media Calendar
             from drifting away from the authoritative SES gun-show and
@@ -15,7 +15,10 @@ const files = {
   promotions: "data/ses-liberty-promotions.json",
   calendar: "calendar.html",
   today: "today.html",
-  mediaCalendar: "media-calendar.html"
+  mediaCalendar: "media-calendar.html",
+  scheduleControl: "schedule.html",
+  scheduleRoute: "routes/scheduleOperations.js",
+  worker: "worker.js"
 };
 
 function read(path) {
@@ -40,6 +43,9 @@ const promotions = JSON.parse(read(files.promotions));
 const calendar = read(files.calendar);
 const today = read(files.today);
 const mediaCalendar = read(files.mediaCalendar);
+const scheduleControl = read(files.scheduleControl);
+const scheduleRoute = read(files.scheduleRoute);
+const worker = read(files.worker);
 
 const showVersion = String(shows.version || "");
 const promoVersion = String(promotions.version || "");
@@ -90,6 +96,26 @@ assert(mediaCalendar.includes("function promotionRows()"),
   "Media Calendar must derive Liberty promotion rows from the shared promotion source.");
 assert(Array.isArray(promotions.promotions) && promotions.promotions.length > 0,
   "Liberty promotion source must contain promotions.");
+
+for (const [name, html] of [
+  ["Agency Calendar", calendar],
+  ["Media Calendar", mediaCalendar],
+  ["Today", today]
+]) {
+  assert(html.includes("schedule-operations"),
+    name + " must read the durable D1 Schedule Operations authority.");
+}
+
+assert(scheduleControl.includes('operation:"create_candidate"'),
+  "Schedule Control must create review candidates instead of changing live dates directly.");
+assert(scheduleControl.includes('operation,"approve_candidate"') || scheduleControl.includes('"approve_candidate"'),
+  "Schedule Control must expose explicit human approval.");
+assert(scheduleRoute.includes('SCHEDULE_OPERATIONS_ACTION = "schedule-operations"'),
+  "Schedule Operations route contract is missing.");
+assert(scheduleRoute.includes('schedule_item_history'),
+  "Schedule Operations must preserve version history.");
+assert(worker.includes("SCHEDULE_OPERATIONS_ACTION"),
+  "Worker must route Schedule Operations.");
 
 console.log("PASS: Calendar source sync lock");
 console.log(`Gun-show source version: ${showVersion}`);
