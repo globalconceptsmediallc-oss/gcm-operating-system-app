@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/financeOperations.test.js
-   Version: 1.1.0
+   Version: 1.2.0
    Status: Production Regression Test
    Purpose: Verify Finance reads invoice numbering from permanent D1 and
             prepares D1-authoritative invoice creation without browser-local
@@ -14,7 +14,7 @@ import {
   FINANCE_OPERATIONS_VERSION
 } from "../routes/financeOperations.js";
 
-assert.equal(FINANCE_OPERATIONS_VERSION,"1.1.0");
+assert.equal(FINANCE_OPERATIONS_VERSION,"1.2.0");
 
 function mockDb(){
   const state={writes:0};
@@ -88,7 +88,7 @@ function mockDb(){
 
   assert.equal(payload.ok,true);
   assert.equal(payload.operation,"list");
-  assert.equal(payload.financeOperationsVersion,"1.1.0");
+  assert.equal(payload.financeOperationsVersion,"1.2.0");
   assert.equal(payload.latestNumericInvoice,2243);
   assert.equal(payload.nextInvoiceNumber,2244);
   assert.equal(payload.writesPerformed,0);
@@ -118,7 +118,7 @@ function mockDb(){
 
   assert.equal(payload.ok,true);
   assert.equal(payload.operation,"create_invoice");
-  assert.equal(payload.financeOperationsVersion,"1.1.0");
+  assert.equal(payload.financeOperationsVersion,"1.2.0");
   assert.equal(payload.dryRun,true);
   assert.equal(payload.preparedInvoiceNumber,"2244");
   assert.equal(payload.amountCents,160000);
