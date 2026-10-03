@@ -1,13 +1,19 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.5.53
+   Version: 3.6.0
    Status: Production Candidate
-   Source: Production today.html 3.5.52
+   Source: Production today.html 3.5.53
    Sprint: Today — Forward Look
    Purpose: Preserve the locked Today layout, Gmail approvals, Mission Control,
             Media logic, and operating workflow while adding a read-only future
             commitment view from authoritative dated OS records.
+
+   Production changes in 3.6.0:
+   - Reads approved campaign/event commitments from D1 Schedule Operations.
+   - Uses the static SES gun-show file only as a fallback if durable Schedule Operations is unavailable.
+   - Surfaces scheduled social posts, promotion starts/takedowns, gun shows, and schedule deadlines in Forward Look.
+   - Adds Schedule Control access while preserving the locked Today operating hierarchy.
 
    Production changes in 3.5.53:
    - Changes SES gun-show Forward Look Traffic Due warnings from 14 days to 7 days before Wednesday flight start.
@@ -1963,7 +1969,7 @@
 <a class="nav-link" href="finance.html"><span class="nav-icon">$</span><span>Billing</span></a>
 <a class="nav-link" href="proof.html"><span class="nav-icon">↗</span><span>Proof</span></a>
 </nav>
-<div class="sidebar-footer"><div class="sidebar-status"><span class="status-dot" aria-hidden="true"></span><span>Agency Command Center operational · Today v3.5.53</span></div></div>
+<div class="sidebar-footer"><div class="sidebar-status"><span class="status-dot" aria-hidden="true"></span><span>Agency Command Center operational · Today v3.6.0</span></div></div>
 </aside>
 <main class="main" id="main-content">
 <div class="main-inner">
@@ -2001,6 +2007,7 @@
 <div class="forward-look-actions">
 <span class="forward-look-window">Next 30 Days</span>
 <a class="button button-secondary" href="calendar.html">Open Calendar</a>
+<a class="button button-secondary" href="schedule.html">Schedule Control</a>
 </div>
 </div>
 <div class="forward-look-list" id="forward-look-list"><div class="forward-look-empty">Checking Prospect CRM, Calendar, Media, and dated operating records…</div></div>
@@ -3057,6 +3064,55 @@
           forceCritical: alertDays <= 0
         });
       }
+      function scheduleTrafficComplete(event, scheduleEvents, mediaRecords) {
+        const station = String(event && event.metadata && event.metadata.station || "").toLowerCase();
+        if (!station) return false;
+        const flight = (Array.isArray(scheduleEvents) ? scheduleEvents : []).find(function(item) {
+          return item && item.sourceKey === event.sourceKey && item.kind === "radio_flight";
+        });
+        if (!flight) return false;
+        return (Array.isArray(mediaRecords) ? mediaRecords : []).some(function(record) {
+          const outlet = String(record && record.outletName || "").toLowerCase();
+          const start = forwardDateOnly(record && record.startDate);
+          const end = forwardDateOnly(record && record.endDate);
+          const sent = String(record && record.trafficStatus || "").toLowerCase() === "sent";
+          const confirmed = String(record && record.confirmationStatus || "").toLowerCase() === "confirmed";
+          const overlaps = Boolean(start && end && start <= flight.endDate && end >= flight.startDate);
+          return outlet.includes(station) && overlaps && sent && confirmed;
+        });
+      }
+
+      function addScheduleForwardItem(target, event, scheduleEvents, mediaRecords) {
+        if (!event || !event.startDate) return;
+        const status = String(event.status || "").toLowerCase();
+        if (["cancelled", "canceled", "complete", "completed"].includes(status)) return;
+        if ((event.kind === "traffic_due" || event.kind === "station_deadline") && scheduleTrafficComplete(event, scheduleEvents, mediaRecords)) return;
+
+        const channels = event.metadata && Array.isArray(event.metadata.channels) ? event.metadata.channels.join(" + ") : "";
+        const theme = cleanDisplay(event.metadata && (event.metadata.theme || event.metadata.offer || event.metadata.venue));
+        let kind = "Schedule";
+        let href = "schedule.html";
+        let meta = [cleanDisplay(event.market), channels, theme].filter(Boolean).join(" · ");
+
+        if (event.kind === "traffic_due") kind = "Gun Show Traffic";
+        else if (event.kind === "station_deadline") { kind = "Station Deadline"; meta = [event.startTime ? event.startTime + " AM" : "", cleanDisplay(event.metadata && event.metadata.station), "Final station traffic deadline"].filter(Boolean).join(" · "); }
+        else if (event.kind === "social_post") { kind = "Social Post"; href = "media-calendar.html"; }
+        else if (event.kind === "promotion") { kind = "Promotion Start"; href = "media-calendar.html"; }
+        else if (event.kind === "takedown_due") { kind = "Promotion Takedown"; href = "media-calendar.html"; }
+        else if (event.kind === "gun_show") { kind = "Gun Show"; href = "media-calendar.html"; }
+        else if (event.kind === "radio_flight") { kind = "Radio Flight"; href = "media-calendar.html"; }
+        else if (event.kind === "campaign" || event.kind === "event") { kind = "Campaign / Event"; href = "media-calendar.html"; }
+        else if (event.kind === "deadline") kind = "Deadline";
+
+        addForwardLookItem(target, {
+          date: event.startDate,
+          kind: kind,
+          title: cleanDisplay(event.title, "Scheduled commitment"),
+          meta: meta || cleanDisplay(event.clientName || event.clientCode, "Schedule Operations"),
+          href: href,
+          key: "schedule|" + cleanDisplay(event.key || event.sourceKey) + "|" + event.startDate
+        });
+      }
 
 
       function addForwardLookItem(target, item) {
@@ -3194,7 +3250,8 @@
           fetch("data/ses-gun-shows.json?v=1.0.3", { cache: "no-store" }).then(function(response) {
             if (!response.ok) throw new Error("SES gun-show schedule returned HTTP " + response.status);
             return response.json();
-          })
+          }),
+          forwardLookPost("schedule-operations", { operation: "list" })
         ]);
 
         const radarResult = results[0];
@@ -3304,18 +3361,28 @@
           forwardLookLoadFailures += 1;
         }
 
-        const gunShowResult = results[4];
-        if (gunShowResult && gunShowResult.status === "fulfilled") {
-          const schedule = gunShowResult.value || {};
-          const enabledMarkets = Array.isArray(schedule.operationalAlertMarkets) && schedule.operationalAlertMarkets.length
-            ? schedule.operationalAlertMarkets
-            : ["Melbourne", "Orlando"];
-          const shows = Array.isArray(schedule.shows) ? schedule.shows : [];
-          shows.filter(function(show) { return enabledMarkets.includes(show.market); }).forEach(function(show) {
-            addGunShowTrafficAlert(items, show, schedule, gunShowMediaRecords);
+        const scheduleAuthorityResult = results[5];
+        if (scheduleAuthorityResult && scheduleAuthorityResult.status === "fulfilled") {
+          const scheduleEvents = Array.isArray(scheduleAuthorityResult.value && scheduleAuthorityResult.value.scheduleEvents)
+            ? scheduleAuthorityResult.value.scheduleEvents
+            : [];
+          scheduleEvents.forEach(function(event) {
+            addScheduleForwardItem(items, event, scheduleEvents, gunShowMediaRecords);
           });
         } else {
-          forwardLookLoadFailures += 1;
+          const gunShowResult = results[4];
+          if (gunShowResult && gunShowResult.status === "fulfilled") {
+            const schedule = gunShowResult.value || {};
+            const enabledMarkets = Array.isArray(schedule.operationalAlertMarkets) && schedule.operationalAlertMarkets.length
+              ? schedule.operationalAlertMarkets
+              : ["Melbourne", "Orlando"];
+            const shows = Array.isArray(schedule.shows) ? schedule.shows : [];
+            shows.filter(function(show) { return enabledMarkets.includes(show.market); }).forEach(function(show) {
+              addGunShowTrafficAlert(items, show, schedule, gunShowMediaRecords);
+            });
+          } else {
+            forwardLookLoadFailures += 1;
+          }
         }
 
         forwardLookSourceItems = items;
@@ -3774,7 +3841,7 @@
         renderDashboard(data);
       });
 
-      const TODAY_VERSION = "3.5.53";
+      const TODAY_VERSION = "3.6.0";
       if (!window.GCMOShell) {
         console.error(`Today ${TODAY_VERSION}: shared/gcm-shell.js did not load.`);
       } else {
