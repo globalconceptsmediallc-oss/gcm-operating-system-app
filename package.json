@@ -1,15 +1,15 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.93",
+  "version": "6.1.94",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.93",
+    "fileVersion": "6.1.94",
     "status": "Production Road-Test Candidate",
-    "purpose": "Deploy Finance D1 invoice-number authority with current regression locks.",
+    "purpose": "Deploy Finance D1 invoice-number authority with current production regression locks.",
     "changeNotes": [
       "Preserves the Finance D1 invoice-number regression test.",
-      "Aligns stale unrelated regression locks to current production versions.",
-      "Triggers the normal Worker test-and-deploy pipeline without changing Finance records."
+      "Aligns stale unrelated regression tests to current production file versions.",
+      "Runs the normal Worker test-and-deploy pipeline without changing Finance records."
     ]
   },
   "private": true,
