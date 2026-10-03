@@ -1,13 +1,18 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: calendar.html
-   Version: 1.2.1
+   Version: 1.2.2
    Status: Production Candidate — SES Gun Show Operations
-   Source: calendar.html 1.2.0
+   Source: calendar.html 1.2.1
    Sprint: Calendar — Gun Show / Radio Traffic Visibility
    Purpose: Preserve appointment booking while adding the first agency-wide
             operational date layer: SES Melbourne/Orlando gun shows, their
             Wed–Sat radio flights, and two-week traffic warnings.
+
+   Production changes in 1.2.2:
+   - Activates Orlando/WFLA alongside the already verified Melbourne/WMMB flow.
+   - Both markets now display gun show, Wed–Sat radio flight, and 14-day traffic-warning dates.
+   - Preserves Andy + Kristy as the traffic-alert recipients.
 
    Production changes in 1.2.1:
    - Phase 1 scope is Melbourne only.
@@ -323,9 +328,9 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
 <script>
 (()=>{"use strict";
 const VERSION="1.2.0",KEY="gcm_calendar_v1_1",$=id=>document.getElementById(id);
-const SHOW_SCHEDULE_URL="data/ses-gun-shows.json?v=1.0.1";
+const SHOW_SCHEDULE_URL="data/ses-gun-shows.json?v=1.0.2";
 const WORKER_ENDPOINT="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
-let gunShowSchedule=[],mediaRecords=[],operationalAlertMarkets=["Melbourne"];
+let gunShowSchedule=[],mediaRecords=[],operationalAlertMarkets=["Melbourne","Orlando"];
 const seed={
  currentMonth:new Date().toISOString().slice(0,7),
  nextAppointmentId:4,nextTypeId:5,
@@ -437,7 +442,7 @@ async function loadOperationalShowSchedule(){
   ]);
   const schedulePayload=await responses[0].json();
   if(responses[0].ok&&Array.isArray(schedulePayload&&schedulePayload.shows)){
-   operationalAlertMarkets=Array.isArray(schedulePayload.operationalAlertMarkets)&&schedulePayload.operationalAlertMarkets.length?schedulePayload.operationalAlertMarkets:["Melbourne"];
+   operationalAlertMarkets=Array.isArray(schedulePayload.operationalAlertMarkets)&&schedulePayload.operationalAlertMarkets.length?schedulePayload.operationalAlertMarkets:["Melbourne","Orlando"];
    gunShowSchedule=schedulePayload.shows.map(function(s){
     return Object.assign({},s,{
      alertRecipients:Array.isArray(s.alertRecipients)?s.alertRecipients:(schedulePayload.alertRecipients||["Andy","Kristy"]),
