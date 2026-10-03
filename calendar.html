@@ -1,13 +1,19 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: calendar.html
-   Version: 1.2.4
+   Version: 1.2.5
    Status: Production Candidate — SES Gun Show Operations
-   Source: calendar.html 1.2.3
+   Source: calendar.html 1.2.4
    Sprint: Calendar — Gun Show / Radio Traffic Visibility
    Purpose: Preserve appointment booking while adding the first agency-wide
             operational date layer: SES Melbourne/Orlando gun shows, their
             Wed–Sat radio flights, and two-week traffic warnings.
+
+   Production changes in 1.2.5:
+   - Adds SES Liberty Q4 2026 promotion windows and social-post schedule from Kristy's "UPCOMING PROMOS" email.
+   - Adds Fall Savings, Home Advantage launch, Veterans Day, Pre-Black Friday, Black Friday, and Cyber Monday.
+   - Shows sale start/end markers plus 18 scheduled social posts.
+   - Preserves all verified gun-show, station-traffic, radio-flight, and show-week social dates unchanged.
 
    Production changes in 1.2.4:
    - Adds six SES gun-show social-support Calendar items, Monday through Saturday of show week.
@@ -106,6 +112,9 @@ h1{margin:4px 0;font-size:38px;letter-spacing:-.04em}
 .event.traffic-complete{background:var(--green-soft);color:var(--green);border:1px solid #bde6d0}
 .event.station-deadline{background:#fff1f0;color:#a42828;border:2px solid #e3a3a3;font-weight:900}
 .event.social-post{background:#eef8f1;color:#24663a;border:1px solid #b9dec5;font-weight:800}
+.event.liberty-sale{background:#fff7df;color:#835400;border:1px solid #e6c76e;font-weight:900}
+.event.liberty-post{background:#eef8f1;color:#24663a;border:1px solid #b9dec5;font-weight:800}
+.event.liberty-launch{background:#edf3ff;color:#244f92;border:1px solid #b9cef3;font-weight:900}
 .event.candidate{border-style:dashed}
 .event[href]{text-decoration:none}
 .quarter-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;padding:18px}
@@ -182,7 +191,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
         <h1>Calendar & Booking</h1>
         <p class="sub">Manage appointments, define booking rules, and see the month or quarter ahead. Google Calendar can become the conflict-checking source once Worker/OAuth integration is connected.</p>
       </div>
-      <div class="version">Installed version 1.2.4</div>
+      <div class="version">Installed version 1.2.5</div>
     </header>
 
     <div class="toolbar">
@@ -343,10 +352,11 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
 <script src="shared/gcm-shell.js?v=1.0.2"></script>
 <script>
 (()=>{"use strict";
-const VERSION="1.2.4",KEY="gcm_calendar_v1_1",$=id=>document.getElementById(id);
+const VERSION="1.2.5",KEY="gcm_calendar_v1_1",$=id=>document.getElementById(id);
 const SHOW_SCHEDULE_URL="data/ses-gun-shows.json?v=1.0.2";
+const PROMO_SCHEDULE_URL="data/ses-liberty-promotions.json?v=1.0.0";
 const WORKER_ENDPOINT="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
-let gunShowSchedule=[],mediaRecords=[],operationalAlertMarkets=["Melbourne","Orlando"];
+let gunShowSchedule=[],libertyPromotions=[],mediaRecords=[],operationalAlertMarkets=["Melbourne","Orlando"];
 const seed={
  currentMonth:new Date().toISOString().slice(0,7),
  nextAppointmentId:4,nextTypeId:5,
@@ -466,13 +476,50 @@ function derivedShowEvents(){
  });
  return out;
 }
+function derivedPromotionEvents(){
+ const out=[];
+ libertyPromotions.forEach(function(promo){
+  if(!promo||!promo.consumerStart)return;
+  const isLaunch=String(promo.id||"").includes("home-advantage");
+  const cleanName=String(promo.name||"Liberty Promotion").replace(/^Liberty\s+/,"");
+  out.push({
+   date:promo.consumerStart,time:"",source:"promotion",className:isLaunch?"liberty-launch":"liberty-sale",
+   title:(isLaunch?"LIBERTY PRODUCT LAUNCH — ":"LIBERTY SALE START — ")+cleanName,
+   meta:promo.offer||"Liberty promotion",
+   href:"media-calendar.html?clientId=1&month="+String(promo.consumerStart).slice(0,7),
+   key:"promo-start|"+promo.id
+  });
+  if(promo.consumerEnd&&promo.consumerEnd!==promo.consumerStart){
+   out.push({
+    date:promo.consumerEnd,time:"",source:"promotion",className:"liberty-sale",
+    title:"LIBERTY SALE ENDS — "+cleanName,
+    meta:promo.offer||"Liberty promotion",
+    href:"media-calendar.html?clientId=1&month="+String(promo.consumerEnd).slice(0,7),
+    key:"promo-end|"+promo.id
+   });
+  }
+  (Array.isArray(promo.schedule)?promo.schedule:[]).forEach(function(post,index){
+   if(!post||!post.date)return;
+   out.push({
+    date:post.date,time:"",source:"promotion",className:"liberty-post",
+    title:post.title,
+    meta:(promo.name+" · "+(post.theme||promo.offer||"Scheduled Liberty social post")),
+    href:"media-calendar.html?clientId=1&month="+String(post.date).slice(0,7),
+    key:"promo-post|"+promo.id+"|"+index
+   });
+  });
+ });
+ return out;
+}
+
 function calendarItemsForDate(iso){
  const appointments=state.appointments.filter(function(a){return a.date===iso}).map(function(a){return Object.assign({},a,{source:"appointment"})});
  const shows=derivedShowEvents().filter(function(a){return a.date===iso});
- return appointments.concat(shows).sort(function(a,b){return String(a.time||"").localeCompare(String(b.time||""))||String(a.title||"").localeCompare(String(b.title||""))});
+ const promotions=derivedPromotionEvents().filter(function(a){return a.date===iso});
+ return appointments.concat(shows,promotions).sort(function(a,b){return String(a.time||"").localeCompare(String(b.time||""))||String(a.title||"").localeCompare(String(b.title||""))});
 }
 function renderCalendarItem(item){
- if(item.source==="show"){
+ if(item.source==="show"||item.source==="promotion"){
   return '<a class="event '+esc(item.className||"")+'" href="'+esc(item.href||"media-calendar.html")+'" title="'+esc(item.meta||"")+'">'+esc(item.title)+'</a>';
  }
  return '<button class="event '+(item.typeId===4?"media":item.typeId===3?"client":"")+'" data-event="'+item.id+'" type="button">'+esc(item.time)+' '+esc(item.title)+'</button>';
@@ -481,7 +528,8 @@ async function loadOperationalShowSchedule(){
  try{
   const responses=await Promise.all([
    fetch(SHOW_SCHEDULE_URL,{cache:"no-store"}),
-   fetch(WORKER_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"get-media-operations"})})
+   fetch(WORKER_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"get-media-operations"})}),
+   fetch(PROMO_SCHEDULE_URL,{cache:"no-store"})
   ]);
   const schedulePayload=await responses[0].json();
   if(responses[0].ok&&Array.isArray(schedulePayload&&schedulePayload.shows)){
@@ -496,6 +544,10 @@ async function loadOperationalShowSchedule(){
   const mediaPayload=await responses[1].json().catch(function(){return{}});
   if(responses[1].ok&&mediaPayload&&mediaPayload.ok===true){
    mediaRecords=Array.isArray(mediaPayload.mediaOperations&&mediaPayload.mediaOperations.records)?mediaPayload.mediaOperations.records:[];
+  }
+  const promoPayload=await responses[2].json().catch(function(){return{}});
+  if(responses[2].ok&&Array.isArray(promoPayload&&promoPayload.promotions)){
+   libertyPromotions=promoPayload.promotions;
   }
  }catch(error){
   console.warn("Calendar operational show schedule unavailable.",error);
@@ -583,9 +635,10 @@ function renderQuarter(){
  $("quarterGrid").innerHTML=months.map(function(m){
   const appointmentItems=state.appointments.filter(function(a){return a.date.startsWith(m.key)}).map(function(a){return Object.assign({},a,{source:"appointment"})});
   const showItems=derivedShowEvents().filter(function(a){return a.date.startsWith(m.key)});
-  const items=appointmentItems.concat(showItems).sort(function(a,b){return a.date.localeCompare(b.date)||String(a.time||"").localeCompare(String(b.time||""))});
+  const promoItems=derivedPromotionEvents().filter(function(a){return a.date.startsWith(m.key)});
+  const items=appointmentItems.concat(showItems,promoItems).sort(function(a,b){return a.date.localeCompare(b.date)||String(a.time||"").localeCompare(String(b.time||""))});
   const body=items.length?items.map(function(a){
-   const detail=a.source==="show"?(a.meta||"SES Gun Show Operations"):((typeById(a.typeId)&&typeById(a.typeId).name||"Appointment")+" · "+(a.location||""));
+   const detail=(a.source==="show"||a.source==="promotion")?(a.meta||"SES Operational Date"):((typeById(a.typeId)&&typeById(a.typeId).name||"Appointment")+" · "+(a.location||""));
    return '<div class="mini-item"><div class="mini-date">'+fmtShort(a.date)+'<br>'+esc(a.time||"")+'</div><div class="mini-copy"><strong>'+esc(a.title)+'</strong><span>'+esc(detail)+'</span></div></div>';
   }).join(""):'<div class="empty">No appointments or operational dates</div>';
   return '<div class="mini-month"><h3>'+fmtMonth(m.d)+'</h3><div class="mini-list">'+body+'</div></div>';
