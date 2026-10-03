@@ -1,11 +1,17 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media-calendar.html
-   Version: 1.5.3
+   Version: 1.6.0
    Status: Production Candidate
    Sprint: Media Operations — Prototype Match
    Purpose: Read-only client campaign command board matching the approved
             visual prototype while using existing D1 Media records.
+
+   Changes in 1.6.0:
+   - Reads approved campaign/event dates from D1 Schedule Operations as the primary schedule authority.
+   - Uses the JSON Liberty/gun-show files only as fallback while Schedule Operations is unavailable.
+   - Keeps planned social items gray until matching recorded placements exist.
+   - Adds Schedule Control access so changes/add-ons are proposed once and approved before calendars change.
 
    Changes in 1.5.3:
    - Reads SES gun-show dates from the same authoritative data/ses-gun-shows.json source used by Agency Calendar.
@@ -164,7 +170,8 @@
         <div class="top-actions">
           <a class="button" href="media.html">Operator Workspace</a>
           <a class="button" href="media-production.html">Production Records</a>
-          <span class="version">media-calendar.html · v1.5.3</span>
+          <a class="button" href="schedule.html">Schedule Control</a>
+          <span class="version">media-calendar.html · v1.6.0</span>
         </div>
       </div>
 
@@ -239,7 +246,7 @@
   var PROMO_SCHEDULE_URL="data/ses-liberty-promotions.json?v=1.0.0";
   var SHOW_SCHEDULE_URL="data/ses-gun-shows.json?v=1.0.3";
   var MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
-  var state={viewDate:new Date(new Date().getFullYear(),new Date().getMonth(),1),records:[],promotions:[],promotionChannels:[],gunShows:[],operationalAlertMarkets:["Melbourne","Orlando"],workflow:{clients:[],creatives:[],assignments:[],trafficPackages:[],confirmations:[]},clients:[],initialClient:""};
+  var state={viewDate:new Date(new Date().getFullYear(),new Date().getMonth(),1),records:[],promotions:[],promotionChannels:[],gunShows:[],scheduleEvents:[],scheduleAuthorityLoaded:false,operationalAlertMarkets:["Melbourne","Orlando"],workflow:{clients:[],creatives:[],assignments:[],trafficPackages:[],confirmations:[]},clients:[],initialClient:""};
 
   function $(id){return document.getElementById(id);}
   function lower(v){return String(v||"").trim().toLowerCase();}
@@ -395,8 +402,73 @@
     });
     return out;
   }
+  function scheduleAuthorityRows(){
+    if(!state.scheduleAuthorityLoaded)return[];
+    var out=[];
+    (Array.isArray(state.scheduleEvents)?state.scheduleEvents:[]).forEach(function(ev,index){
+      if(!ev||!ev.startDate)return;
+      var base={
+        clientId:ev.clientId||"SES",
+        clientName:ev.clientName||ev.clientCode||"Client",
+        clientCode:ev.clientCode||"",
+        market:ev.market||"",
+        campaign:ev.title||"Schedule Item",
+        startDate:ev.startDate,
+        endDate:ev.endDate||ev.startDate,
+        creativeStartDate:ev.startDate,
+        status:ev.status||"planned",
+        trafficId:"",
+        openUrl:"schedule.html"
+      };
+      if(ev.kind==="social_post"){
+        var channels=ev.metadata&&Array.isArray(ev.metadata.channels)&&ev.metadata.channels.length?ev.metadata.channels:["Facebook","Google Business Profile","Instagram"];
+        channels.forEach(function(channel){
+          if(hasRecordedSocial(channel,ev.startDate,ev.title||""))return;
+          var spec=plannedChannel(channel);
+          out.push(Object.assign({},base,{
+            source:"promotion-post",
+            id:"schedule-social-"+index+"-"+lower(spec.outlet).replace(/[^a-z0-9]+/g,"-"),
+            type:spec.type,
+            outlet:spec.outlet,
+            creative:ev.title||"Scheduled Social Post"
+          }));
+        });
+        return;
+      }
+      if(ev.kind==="promotion"){
+        out.push(Object.assign({},base,{source:"promotion-run",id:"schedule-promo-"+index,type:"Promotion",outlet:"Liberty Safe",creative:"SALE RUN — "+(ev.title||"Liberty Promotion")}));
+        return;
+      }
+      if(ev.kind==="takedown_due"){
+        out.push(Object.assign({},base,{source:"promotion-takedown",id:"schedule-takedown-"+index,type:"Promotion",outlet:"Liberty Safe",creative:ev.title||"TAKEDOWN DUE"}));
+        return;
+      }
+      if(ev.kind==="gun_show"){
+        out.push(Object.assign({},base,{source:"gun-show-source",id:"schedule-show-"+index,type:"Promotion",outlet:(ev.metadata&&ev.metadata.venue)||"Gun Show",creative:(lower(ev.status)==="candidate"?"GUN SHOW CANDIDATE — ":"GUN SHOW — ")+(ev.market||ev.title||"SES")}));
+        return;
+      }
+      if(ev.kind==="radio_flight"){
+        var station=ev.metadata&&ev.metadata.station||"Radio";
+        var hasRecorded=recordRows().some(function(r){
+          if(typeGroup(r.type)!=="Radio")return false;
+          var outlet=lower(r.outlet),s=String(r.startDate||"").slice(0,10),e=String(r.endDate||"").slice(0,10);
+          return outlet.indexOf(lower(station))>=0&&s<=base.endDate&&e>=base.startDate;
+        });
+        if(!hasRecorded)out.push(Object.assign({},base,{source:"schedule-radio",id:"schedule-radio-"+index,type:"Radio",outlet:station,creative:"PLANNED — "+(ev.title||station+" Radio Flight")}));
+        return;
+      }
+      if(ev.kind==="traffic_due"||ev.kind==="station_deadline"||ev.kind==="deadline"){
+        out.push(Object.assign({},base,{source:"schedule-deadline",id:"schedule-deadline-"+index,type:"Promotion",outlet:(ev.metadata&&ev.metadata.station)||"Deadline",creative:ev.title||"Schedule Deadline"}));
+        return;
+      }
+      if(["campaign","event","other"].includes(ev.kind)){
+        out.push(Object.assign({},base,{source:"schedule-event",id:"schedule-event-"+index,type:"Promotion",outlet:ev.channel||"Campaign",creative:ev.title||"Campaign / Event"}));
+      }
+    });
+    return out;
+  }
   function dedupe(rows){var seen=new Set();return rows.filter(function(r){var k=[lower(r.clientName||r.clientCode),lower(r.creative||r.campaign),lower(r.market),lower(r.outlet),String(r.startDate||"").slice(0,10),String(r.endDate||"").slice(0,10)].join("|");if(seen.has(k))return false;seen.add(k);return true;});}
-  function visibleRows(){var selected=$("client").value;return dedupe(recordRows().concat(workflowRows(),promotionRows(),gunShowRows())).filter(function(r){return(!selected||String(clientKey(r))===selected)&&intersectsMonth(r);});}
+  function visibleRows(){var selected=$("client").value,scheduled=state.scheduleAuthorityLoaded?scheduleAuthorityRows():promotionRows().concat(gunShowRows());return dedupe(recordRows().concat(workflowRows(),scheduled)).filter(function(r){return(!selected||String(clientKey(r))===selected)&&intersectsMonth(r);});}
   function productionKey(i){return lower(i.creative||i.campaign||i.id||"production");}
 
   function hashText(text){var h=2166136261;for(var i=0;i<text.length;i++){h^=text.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
@@ -461,7 +533,7 @@
 
   function radioLanes(rows){var map=new Map();rows.filter(function(r){return typeGroup(r.type)==="Radio";}).forEach(function(r){var k=[r.market||"Market",r.outlet||"Station"].join("|");if(!map.has(k))map.set(k,{market:r.market||"Market",outlet:r.outlet||"Station",items:[]});map.get(k).items.push(r);});return Array.from(map.values()).sort(function(a,b){return(a.market+" "+a.outlet).localeCompare(b.market+" "+b.outlet);});}
   function channelItems(rows,channel){return rows.filter(function(r){return typeGroup(r.type)===channel;}).sort(function(a,b){return String(a.startDate||"").localeCompare(String(b.startDate||""));});}
-  function eventItems(rows){var seen=new Set(),out=[];rows.forEach(function(r){if(r.source==="promotion-post")return;var l=lower([r.campaign,r.creative].filter(Boolean).join(" "));if(state.gunShows.length&&/gun show/.test(l)&&r.source!=="gun-show-source")return;if(!/(gun show|halloween|holiday|tax season|spring cleaning|liberty|sale|promotion|event|black friday|warehouse|pre-loved)/.test(l))return;var k=productionKey(r);if(seen.has(k))return;seen.add(k);out.push(r);});return out.sort(function(a,b){return String(a.startDate||"").localeCompare(String(b.startDate||""));});}
+  function eventItems(rows){var seen=new Set(),out=[];rows.forEach(function(r){if(r.source==="promotion-post")return;var l=lower([r.campaign,r.creative].filter(Boolean).join(" "));if((state.scheduleAuthorityLoaded||state.gunShows.length)&&/gun show/.test(l)&&r.source!=="gun-show-source")return;if(r.source==="schedule-deadline"||r.source==="schedule-event"){out.push(r);return;}if(!/(gun show|halloween|holiday|tax season|spring cleaning|liberty|sale|promotion|event|black friday|warehouse|pre-loved|takedown)/.test(l))return;var k=productionKey(r);if(seen.has(k))return;seen.add(k);out.push(r);});return out.sort(function(a,b){return String(a.startDate||"").localeCompare(String(b.startDate||""));});}
 
   function uniqueProductions(rows){var map=new Map();rows.filter(function(r){return typeGroup(r.type)==="Radio";}).forEach(function(r){var k=productionKey(r),x=map.get(k);if(!x){x={item:r,markets:new Set()};map.set(k,x);}x.markets.add(r.market||r.outlet||"Market");});return Array.from(map.values());}
   function renderCreativeAge(rows,hueMap){var asof=asOfDate(),items=uniqueProductions(rows).map(function(x){x.fresh=freshnessAt(x.item,asof);return x;}).sort(function(a,b){return(b.fresh.days||0)-(a.fresh.days||0);});$("creative-age-list").innerHTML=items.length?items.map(function(x){var hue=hueMap[productionKey(x.item)],meta=(x.fresh.days?x.fresh.days+" days as of "+shortDate(asof):x.fresh.label)+" · "+Array.from(x.markets).join(", ");return'<div class="creative-card"><span class="production-swatch" style="background:'+esc(baseColor(hue))+'"></span><div><strong>'+esc(x.item.creative)+'</strong><small>'+esc(meta)+'</small></div><span class="age-badge '+badgeClass(x.fresh.level)+'">'+esc(x.fresh.label)+'</span></div>';}).join(""):'<div class="mini-empty">No radio productions recorded in this month.</div>';}
@@ -499,7 +571,8 @@
         fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}),
         fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"get-media-operations",operation:"get_creative_workflow"})}),
         fetch(PROMO_SCHEDULE_URL,{cache:"no-store"}),
-        fetch(SHOW_SCHEDULE_URL,{cache:"no-store"})
+        fetch(SHOW_SCHEDULE_URL,{cache:"no-store"}),
+        fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"schedule-operations",operation:"list"})})
       ]);
       var payloads=await Promise.all(responses.map(function(r){return r.json().catch(function(){return{};});}));
       if(!responses[0].ok||payloads[0].ok!==true)throw new Error(payloads[0].error||payloads[0].details||"Media Operations could not load.");
@@ -508,6 +581,7 @@
       if(responses[1].ok&&payloads[1].ok===true)state.workflow=payloads[1].creativeWorkflow||state.workflow;
       if(responses[2].ok&&Array.isArray(payloads[2]&&payloads[2].promotions)){state.promotions=payloads[2].promotions;state.promotionChannels=Array.isArray(payloads[2].channels)?payloads[2].channels:[];}
       if(responses[3].ok&&Array.isArray(payloads[3]&&payloads[3].shows)){state.gunShows=payloads[3].shows;state.operationalAlertMarkets=Array.isArray(payloads[3].operationalAlertMarkets)&&payloads[3].operationalAlertMarkets.length?payloads[3].operationalAlertMarkets:["Melbourne","Orlando"];}
+      if(responses[4].ok&&payloads[4]&&payloads[4].ok===true&&Array.isArray(payloads[4].scheduleEvents)){state.scheduleEvents=payloads[4].scheduleEvents;state.scheduleAuthorityLoaded=true;}
 
       var prior=$("client").value;
       $("client").innerHTML='<option value="">All clients</option>'+state.clients.map(function(c){return'<option value="'+esc(c.clientId)+'">'+esc(c.clientName)+'</option>';}).join("");
@@ -518,8 +592,8 @@
 
   state.initialClient=readQuery();
   populateControls();
-  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"media",statusText:"D1 Media connected · Media Calendar v1.5.3"});
-  else console.error("Media Calendar 1.5.3: shared/gcm-shell.js did not load.");
+  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"media",statusText:"D1 Media connected · Media Calendar v1.6.0"});
+  else console.error("Media Calendar 1.6.0: shared/gcm-shell.js did not load.");
 
   $("prev-month").addEventListener("click",function(){shiftMonth(-1);});
   $("next-month").addEventListener("click",function(){shiftMonth(1);});
