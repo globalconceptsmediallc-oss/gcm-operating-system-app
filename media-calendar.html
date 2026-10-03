@@ -1,11 +1,17 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media-calendar.html
-   Version: 1.5.0
+   Version: 1.5.1
    Status: Production Candidate
    Sprint: Media Operations — Prototype Match
    Purpose: Read-only client campaign command board matching the approved
             visual prototype while using existing D1 Media records.
+
+   Changes in 1.5.1:
+   - Makes each Liberty promotion a continuous sale-run bar from consumer start through consumer end.
+   - Adds each scheduled Liberty social post as its own one-day item inside Promotions / Events.
+   - Adds an explicit TAKEDOWN DUE item on the final consumer day so expired sale messaging can be removed.
+   - Preserves the SES gun-show, radio, and existing media records unchanged.
 
    Changes in 1.5.0:
    - Adds SES Liberty promotion windows from data/ses-liberty-promotions.json to Promotions / Events.
@@ -145,7 +151,7 @@
         <div class="top-actions">
           <a class="button" href="media.html">Operator Workspace</a>
           <a class="button" href="media-production.html">Production Records</a>
-          <span class="version">media-calendar.html · v1.5.0</span>
+          <span class="version">media-calendar.html · v1.5.1</span>
         </div>
       </div>
 
@@ -254,27 +260,71 @@
   function workflowRows(){var cs=Array.isArray(state.workflow.creatives)?state.workflow.creatives:[],as=Array.isArray(state.workflow.assignments)?state.workflow.assignments:[];return as.map(function(a){var c=cs.find(function(x){return Number(x.id)===Number(a.creativeId);})||{};return{source:"workflow",id:c.id,clientId:c.clientId||c.client_id,clientName:c.clientName||c.clientCode||"Client",clientCode:c.clientCode||"",type:c.mediaType||"Radio",market:a.market||"",outlet:a.outletName||"",campaign:c.campaignName||"",creative:c.creativeName||"Commercial",startDate:a.rotationStartDate,endDate:a.rotationEndDate,creativeStartDate:a.rotationStartDate,status:c.status||c.currentStage||"",trafficId:a.trafficId||"",openUrl:c.id?"media-production.html?creativeId="+encodeURIComponent(c.id):""};});}
   function promotionRows(){
     var ses=state.clients.find(function(c){return lower(c.clientCode)==="ses"||lower(c.clientName).indexOf("southeast safes")>=0;});
-    var clientId=ses?ses.clientId:"SES";
-    return (Array.isArray(state.promotions)?state.promotions:[]).map(function(p){
-      return{
-        source:"promotion",
-        id:"promo-"+String(p.id||p.name||"liberty"),
+    var clientId=ses?ses.clientId:"SES",out=[];
+    (Array.isArray(state.promotions)?state.promotions:[]).forEach(function(p){
+      var id=String(p.id||p.name||"liberty"),name=p.name||"Liberty Promotion",start=p.consumerStart,end=p.consumerEnd||p.consumerStart;
+      if(!start)return;
+      out.push({
+        source:"promotion-run",
+        id:"promo-run-"+id,
         clientId:clientId,
         clientName:"Southeast Safes",
         clientCode:"SES",
         type:"Promotion",
         market:"All SES",
         outlet:"Liberty Safe",
-        campaign:p.name||"Liberty Promotion",
-        creative:p.name||"Liberty Promotion",
-        startDate:p.consumerStart,
-        endDate:p.consumerEnd||p.consumerStart,
-        creativeStartDate:p.consumerStart,
+        campaign:name,
+        creative:"SALE RUN — "+name,
+        startDate:start,
+        endDate:end,
+        creativeStartDate:start,
         status:"scheduled",
         trafficId:"",
-        openUrl:"calendar.html?month="+String(p.consumerStart||"").slice(0,7)
-      };
+        openUrl:"calendar.html?month="+String(start).slice(0,7)
+      });
+      (Array.isArray(p.schedule)?p.schedule:[]).forEach(function(post,index){
+        if(!post||!post.date)return;
+        out.push({
+          source:"promotion-post",
+          id:"promo-post-"+id+"-"+index,
+          clientId:clientId,
+          clientName:"Southeast Safes",
+          clientCode:"SES",
+          type:"Promotion",
+          market:"Social",
+          outlet:"SES Social",
+          campaign:name,
+          creative:post.title||("SOCIAL POST — "+name),
+          startDate:post.date,
+          endDate:post.date,
+          creativeStartDate:post.date,
+          status:"scheduled",
+          trafficId:"",
+          openUrl:"calendar.html?month="+String(post.date).slice(0,7)
+        });
+      });
+      if(end){
+        out.push({
+          source:"promotion-takedown",
+          id:"promo-takedown-"+id,
+          clientId:clientId,
+          clientName:"Southeast Safes",
+          clientCode:"SES",
+          type:"Promotion",
+          market:"All SES",
+          outlet:"Liberty Safe",
+          campaign:name,
+          creative:"TAKEDOWN DUE — "+name,
+          startDate:end,
+          endDate:end,
+          creativeStartDate:end,
+          status:"scheduled",
+          trafficId:"",
+          openUrl:"calendar.html?month="+String(end).slice(0,7)
+        });
+      }
     });
+    return out;
   }
   function dedupe(rows){var seen=new Set();return rows.filter(function(r){var k=[lower(r.clientName||r.clientCode),lower(r.creative||r.campaign),lower(r.market),lower(r.outlet),String(r.startDate||"").slice(0,10),String(r.endDate||"").slice(0,10)].join("|");if(seen.has(k))return false;seen.add(k);return true;});}
   function visibleRows(){var selected=$("client").value;return dedupe(recordRows().concat(workflowRows(),promotionRows())).filter(function(r){return(!selected||String(clientKey(r))===selected)&&intersectsMonth(r);});}
@@ -393,8 +443,8 @@
 
   state.initialClient=readQuery();
   populateControls();
-  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"media",statusText:"D1 Media connected · Media Calendar v1.5.0"});
-  else console.error("Media Calendar 1.5.0: shared/gcm-shell.js did not load.");
+  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"media",statusText:"D1 Media connected · Media Calendar v1.5.1"});
+  else console.error("Media Calendar 1.5.1: shared/gcm-shell.js did not load.");
 
   $("prev-month").addEventListener("click",function(){shiftMonth(-1);});
   $("next-month").addEventListener("click",function(){shiftMonth(1);});
