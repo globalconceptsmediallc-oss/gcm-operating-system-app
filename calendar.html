@@ -1,13 +1,19 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: calendar.html
-   Version: 1.2.2
+   Version: 1.2.3
    Status: Production Candidate — SES Gun Show Operations
-   Source: calendar.html 1.2.1
+   Source: calendar.html 1.2.2
    Sprint: Calendar — Gun Show / Radio Traffic Visibility
    Purpose: Preserve appointment booking while adding the first agency-wide
             operational date layer: SES Melbourne/Orlando gun shows, their
             Wed–Sat radio flights, and two-week traffic warnings.
+
+   Production changes in 1.2.3:
+   - Adds the hard station trafficking deadline to each SES gun-show radio cycle.
+   - Deadline is Monday at 10:00 AM, two days before the Wednesday radio flight begins.
+   - Calendar event reads "EMAIL STEPHANIE — FINAL STATION TRAFFIC" and identifies station + market.
+   - Keeps the existing 14-day advance warning, Wed–Sat radio flight, and gun-show weekend unchanged.
 
    Production changes in 1.2.2:
    - Activates Orlando/WFLA alongside the already verified Melbourne/WMMB flow.
@@ -90,6 +96,7 @@ h1{margin:4px 0;font-size:38px;letter-spacing:-.04em}
 .event.radio-flight{background:#f1ecff;color:#6945a8;border:1px solid #d7c9f0}
 .event.traffic-alert{background:var(--red-soft);color:var(--red);border:1px solid #efc4c4}
 .event.traffic-complete{background:var(--green-soft);color:var(--green);border:1px solid #bde6d0}
+.event.station-deadline{background:#fff1f0;color:#a42828;border:2px solid #e3a3a3;font-weight:900}
 .event.candidate{border-style:dashed}
 .event[href]{text-decoration:none}
 .quarter-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;padding:18px}
@@ -382,7 +389,8 @@ function gunShowRule(show){
  const flightStart=addCalendarDays(show&&show.showStart,-3);
  const flightEnd=show&&show.showStart||null;
  const trafficWarning=flightStart?addCalendarDays(flightStart,-14):null;
- return{station,flightStart,flightEnd,trafficWarning};
+ const stationDeadline=flightStart?addCalendarDays(flightStart,-2):null;
+ return{station,flightStart,flightEnd,trafficWarning,stationDeadline};
 }
 function matchingTrafficComplete(show){
  const rule=gunShowRule(show),station=String(rule.station||"").toLowerCase();
@@ -419,6 +427,12 @@ function derivedShowEvents(){
    title:(complete?"✓ Traffic confirmed":"TRAFFIC DUE")+" · "+rule.station+" · "+show.market,
    meta:"Alert: "+recipients+" · Flight "+showDateRange(rule.flightStart,rule.flightEnd),
    href:"media-calendar.html?clientId=1&month="+String(rule.flightStart).slice(0,7),key:"traffic|"+showKey
+  });
+  if(rule.stationDeadline)out.push({
+   date:rule.stationDeadline,time:"10:00",source:"show",className:(complete?"traffic-complete":"station-deadline")+(candidate?" candidate":""),
+   title:(complete?"✓ TRAFFIC CONFIRMED":"EMAIL STEPHANIE — FINAL STATION TRAFFIC")+" · "+rule.station+" · "+show.market,
+   meta:"Hard deadline · 10:00 AM Monday · Station needs two days to traffic spot changes · Flight "+showDateRange(rule.flightStart,rule.flightEnd),
+   href:"media-calendar.html?clientId=1&month="+String(rule.flightStart).slice(0,7),key:"station-deadline|"+showKey
   });
  });
  return out;
