@@ -1,8 +1,8 @@
 {
   "file": "data/ses-gun-shows.json",
-  "version": "1.0.2",
-  "status": "Production Candidate — Melbourne + Orlando",
-  "purpose": "SES gun-show planning dates with Melbourne/WMMB and Orlando/WFLA active for Calendar and Forward Look operations.",
+  "version": "1.0.3",
+  "status": "Production Candidate — Melbourne + Orlando / 7-Day Traffic Warning",
+  "purpose": "SES gun-show planning dates with Melbourne/WMMB and Orlando/WFLA active for Calendar, Media Calendar, and Forward Look operations.",
   "client": {
     "code": "SES",
     "name": "Southeast Safes"
@@ -16,13 +16,13 @@
       "station": "WMMB",
       "flightStartDay": "Wednesday",
       "flightEndDay": "Saturday",
-      "trafficWarningDaysBeforeFlightStart": 14
+      "trafficWarningDaysBeforeFlightStart": 7
     },
     "Orlando": {
       "station": "WFLA",
       "flightStartDay": "Wednesday",
       "flightEndDay": "Saturday",
-      "trafficWarningDaysBeforeFlightStart": 14
+      "trafficWarningDaysBeforeFlightStart": 7
     }
   },
   "shows": [
