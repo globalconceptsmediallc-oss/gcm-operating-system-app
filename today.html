@@ -1,13 +1,17 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.5.48
+   Version: 3.5.49
    Status: Production Candidate
-   Source: Production today.html 3.5.47
+   Source: Production today.html 3.5.48
    Sprint: Today — Forward Look
    Purpose: Preserve the locked Today layout, Gmail approvals, Mission Control,
             Media logic, and operating workflow while adding a read-only future
             commitment view from authoritative dated OS records.
+
+   Production changes in 3.5.49:
+   - Removes the retired Communications workspace from Today's fail-safe navigation.
+   - Today / Universal Email Intake remains the authoritative communication intake path.
 
    Production changes in 3.5.48:
    - Keeps Forward Look in its loading state until the authoritative source reads finish.
@@ -1929,7 +1933,6 @@
 <nav class="primary-nav" aria-label="GCM OS workspace">
 <a class="nav-link" href="today.html" aria-current="page"><span class="nav-icon">⌂</span><span>Today</span></a>
 <a class="nav-link" href="clients.html"><span class="nav-icon">◫</span><span>Clients</span></a>
-<a class="nav-link" href="communications.html"><span class="nav-icon">✉</span><span>Communications</span></a>
 <a class="nav-link" href="work.html"><span class="nav-icon">✓</span><span>Work</span></a>
 <a class="nav-link" href="media.html"><span class="nav-icon">◉</span><span>Media</span></a>
 <a class="nav-link" href="mediaforge/"><span class="nav-icon">◆</span><span>MediaForge</span></a>
@@ -1938,7 +1941,7 @@
 <a class="nav-link" href="finance.html"><span class="nav-icon">$</span><span>Billing</span></a>
 <a class="nav-link" href="proof.html"><span class="nav-icon">↗</span><span>Proof</span></a>
 </nav>
-<div class="sidebar-footer"><div class="sidebar-status"><span class="status-dot" aria-hidden="true"></span><span>Agency Command Center operational · Today v3.5.48</span></div></div>
+<div class="sidebar-footer"><div class="sidebar-status"><span class="status-dot" aria-hidden="true"></span><span>Agency Command Center operational · Today v3.5.49</span></div></div>
 </aside>
 <main class="main" id="main-content">
 <div class="main-inner">
