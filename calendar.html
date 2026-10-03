@@ -1,13 +1,19 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: calendar.html
-   Version: 1.2.6
+   Version: 1.3.0
    Status: Production Candidate — SES Gun Show Operations
-   Source: calendar.html 1.2.5
+   Source: calendar.html 1.2.6
    Sprint: Calendar — Gun Show / Radio Traffic Visibility
    Purpose: Preserve appointment booking while adding the first agency-wide
             operational date layer: SES Melbourne/Orlando gun shows, their
             Wed–Sat radio flights, and advance traffic warnings.
+
+   Production changes in 1.3.0:
+   - Reads approved operational campaign/event dates from D1 Schedule Operations.
+   - Uses the existing JSON show/promotion files only as a fallback while the D1 schedule is unavailable.
+   - Adds Schedule Control access so changes/add-ons are proposed once and approved before either calendar changes.
+   - Preserves the verified gun-show traffic completion and appointment behavior.
 
    Production changes in 1.2.6:
    - Changes the SES gun-show early Traffic Due warning from 14 days to 7 days before Wednesday flight start.
@@ -196,13 +202,14 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
         <h1>Calendar & Booking</h1>
         <p class="sub">Manage appointments, define booking rules, and see the month or quarter ahead. Google Calendar can become the conflict-checking source once Worker/OAuth integration is connected.</p>
       </div>
-      <div class="version">Installed version 1.2.6</div>
+      <div class="version">Installed version 1.3.0</div>
     </header>
 
     <div class="toolbar">
       <div class="actions">
         <button class="btn primary" id="newAppointment" type="button">New Appointment</button>
         <button class="btn" id="todayButton" type="button">Today</button>
+        <a class="btn" href="schedule.html">Schedule Control</a>
       </div>
       <div class="actions">
         <span class="status" id="integrationStatus">Google Calendar not connected to website</span>
@@ -357,11 +364,11 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
 <script src="shared/gcm-shell.js?v=1.0.2"></script>
 <script>
 (()=>{"use strict";
-const VERSION="1.2.6",KEY="gcm_calendar_v1_1",$=id=>document.getElementById(id);
+const VERSION="1.3.0",KEY="gcm_calendar_v1_1",$=id=>document.getElementById(id);
 const SHOW_SCHEDULE_URL="data/ses-gun-shows.json?v=1.0.3";
 const PROMO_SCHEDULE_URL="data/ses-liberty-promotions.json?v=1.0.0";
 const WORKER_ENDPOINT="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
-let gunShowSchedule=[],libertyPromotions=[],mediaRecords=[],operationalAlertMarkets=["Melbourne","Orlando"];
+let gunShowSchedule=[],libertyPromotions=[],mediaRecords=[],authoritativeScheduleEvents=[],scheduleAuthorityLoaded=false,operationalAlertMarkets=["Melbourne","Orlando"];
 const seed={
  currentMonth:new Date().toISOString().slice(0,7),
  nextAppointmentId:4,nextTypeId:5,
@@ -517,15 +524,62 @@ function derivedPromotionEvents(){
  });
  return out;
 }
+function scheduleTrafficComplete(event){
+ const station=String(event&&event.metadata&&event.metadata.station||"").toLowerCase();
+ if(!station)return false;
+ const flight=authoritativeScheduleEvents.find(function(x){return x&&x.sourceKey===event.sourceKey&&x.kind==="radio_flight"});
+ if(!flight)return false;
+ return mediaRecords.some(function(r){
+  const outlet=String(r&&r.outletName||"").toLowerCase();
+  const start=String(r&&r.startDate||"").slice(0,10);
+  const end=String(r&&r.endDate||"").slice(0,10);
+  const sent=String(r&&r.trafficStatus||"").toLowerCase()==="sent";
+  const confirmed=String(r&&r.confirmationStatus||"").toLowerCase()==="confirmed";
+  const overlaps=Boolean(start&&end&&start<=flight.endDate&&end>=flight.startDate);
+  return outlet.includes(station)&&overlaps&&sent&&confirmed;
+ });
+}
+function scheduleEventToCalendar(event){
+ if(!event||!event.startDate)return null;
+ const candidate=String(event.status||"").toLowerCase()==="candidate";
+ const complete=(event.kind==="traffic_due"||event.kind==="station_deadline")&&scheduleTrafficComplete(event);
+ let className="deadline",title=event.title||"Schedule Item";
+ if(event.kind==="gun_show")className="gunshow";
+ else if(event.kind==="radio_flight")className="radio-flight";
+ else if(event.kind==="traffic_due"){className=complete?"traffic-complete":"traffic-alert";if(complete)title="✓ Traffic confirmed · "+String(event.metadata&&event.metadata.station||"")+" · "+String(event.market||"");}
+ else if(event.kind==="station_deadline"){className=complete?"traffic-complete":"station-deadline";if(complete)title="✓ TRAFFIC CONFIRMED · "+String(event.metadata&&event.metadata.station||"")+" · "+String(event.market||"");}
+ else if(event.kind==="social_post")className="social-post";
+ else if(event.kind==="promotion")className=String(event.sourceKey||"").includes("home-advantage")?"liberty-launch":"liberty-sale";
+ else if(event.kind==="takedown_due")className="liberty-sale";
+ const metaParts=[];
+ if(event.metadata&&event.metadata.venue)metaParts.push(event.metadata.venue);
+ if(event.metadata&&event.metadata.offer)metaParts.push(event.metadata.offer);
+ if(event.metadata&&event.metadata.theme)metaParts.push(event.metadata.theme);
+ if(event.metadata&&Array.isArray(event.metadata.channels)&&event.metadata.channels.length)metaParts.push(event.metadata.channels.join(" + "));
+ if(event.startDate&&event.endDate&&event.endDate!==event.startDate)metaParts.push(showDateRange(event.startDate,event.endDate));
+ return{
+  date:event.startDate,
+  time:event.startTime||"",
+  source:"schedule",
+  className:className+(candidate?" candidate":""),
+  title,
+  meta:metaParts.join(" · ")||"Approved Schedule Operations record",
+  href:"schedule.html",
+  key:event.key||[event.sourceKey,event.kind,event.startDate].join("|")
+ };
+}
+function authoritativeOperationalEvents(){
+ if(!scheduleAuthorityLoaded)return derivedShowEvents().concat(derivedPromotionEvents());
+ return authoritativeScheduleEvents.map(scheduleEventToCalendar).filter(Boolean);
+}
 
 function calendarItemsForDate(iso){
  const appointments=state.appointments.filter(function(a){return a.date===iso}).map(function(a){return Object.assign({},a,{source:"appointment"})});
- const shows=derivedShowEvents().filter(function(a){return a.date===iso});
- const promotions=derivedPromotionEvents().filter(function(a){return a.date===iso});
- return appointments.concat(shows,promotions).sort(function(a,b){return String(a.time||"").localeCompare(String(b.time||""))||String(a.title||"").localeCompare(String(b.title||""))});
+ const operations=authoritativeOperationalEvents().filter(function(a){return a.date===iso});
+ return appointments.concat(operations).sort(function(a,b){return String(a.time||"").localeCompare(String(b.time||""))||String(a.title||"").localeCompare(String(b.title||""))});
 }
 function renderCalendarItem(item){
- if(item.source==="show"||item.source==="promotion"){
+ if(item.source==="show"||item.source==="promotion"||item.source==="schedule"){
   return '<a class="event '+esc(item.className||"")+'" href="'+esc(item.href||"media-calendar.html")+'" title="'+esc(item.meta||"")+'">'+esc(item.title)+'</a>';
  }
  return '<button class="event '+(item.typeId===4?"media":item.typeId===3?"client":"")+'" data-event="'+item.id+'" type="button">'+esc(item.time)+' '+esc(item.title)+'</button>';
@@ -535,7 +589,8 @@ async function loadOperationalShowSchedule(){
   const responses=await Promise.all([
    fetch(SHOW_SCHEDULE_URL,{cache:"no-store"}),
    fetch(WORKER_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"get-media-operations"})}),
-   fetch(PROMO_SCHEDULE_URL,{cache:"no-store"})
+   fetch(PROMO_SCHEDULE_URL,{cache:"no-store"}),
+   fetch(WORKER_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"schedule-operations",operation:"list"})})
   ]);
   const schedulePayload=await responses[0].json();
   if(responses[0].ok&&Array.isArray(schedulePayload&&schedulePayload.shows)){
@@ -555,6 +610,11 @@ async function loadOperationalShowSchedule(){
   const promoPayload=await responses[2].json().catch(function(){return{}});
   if(responses[2].ok&&Array.isArray(promoPayload&&promoPayload.promotions)){
    libertyPromotions=promoPayload.promotions;
+  }
+  const scheduleAuthorityPayload=await responses[3].json().catch(function(){return{}});
+  if(responses[3].ok&&scheduleAuthorityPayload&&scheduleAuthorityPayload.ok===true&&Array.isArray(scheduleAuthorityPayload.scheduleEvents)){
+   authoritativeScheduleEvents=scheduleAuthorityPayload.scheduleEvents;
+   scheduleAuthorityLoaded=true;
   }
  }catch(error){
   console.warn("Calendar operational show schedule unavailable.",error);
@@ -641,11 +701,10 @@ function renderQuarter(){
  const months=[];for(let i=0;i<3;i++){const d=new Date(cursor.getFullYear(),cursor.getMonth()+i,1),key=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");months.push({d,key})}
  $("quarterGrid").innerHTML=months.map(function(m){
   const appointmentItems=state.appointments.filter(function(a){return a.date.startsWith(m.key)}).map(function(a){return Object.assign({},a,{source:"appointment"})});
-  const showItems=derivedShowEvents().filter(function(a){return a.date.startsWith(m.key)});
-  const promoItems=derivedPromotionEvents().filter(function(a){return a.date.startsWith(m.key)});
-  const items=appointmentItems.concat(showItems,promoItems).sort(function(a,b){return a.date.localeCompare(b.date)||String(a.time||"").localeCompare(String(b.time||""))});
+  const operationalItems=authoritativeOperationalEvents().filter(function(a){return a.date.startsWith(m.key)});
+  const items=appointmentItems.concat(operationalItems).sort(function(a,b){return a.date.localeCompare(b.date)||String(a.time||"").localeCompare(String(b.time||""))});
   const body=items.length?items.map(function(a){
-   const detail=(a.source==="show"||a.source==="promotion")?(a.meta||"SES Operational Date"):((typeById(a.typeId)&&typeById(a.typeId).name||"Appointment")+" · "+(a.location||""));
+   const detail=(a.source==="show"||a.source==="promotion"||a.source==="schedule")?(a.meta||"Operational Schedule"):((typeById(a.typeId)&&typeById(a.typeId).name||"Appointment")+" · "+(a.location||""));
    return '<div class="mini-item"><div class="mini-date">'+fmtShort(a.date)+'<br>'+esc(a.time||"")+'</div><div class="mini-copy"><strong>'+esc(a.title)+'</strong><span>'+esc(detail)+'</span></div></div>';
   }).join(""):'<div class="empty">No appointments or operational dates</div>';
   return '<div class="mini-month"><h3>'+fmtMonth(m.d)+'</h3><div class="mini-list">'+body+'</div></div>';
