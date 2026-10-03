@@ -1,13 +1,21 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: calendar.html
-   Version: 1.2.3
+   Version: 1.2.4
    Status: Production Candidate — SES Gun Show Operations
-   Source: calendar.html 1.2.2
+   Source: calendar.html 1.2.3
    Sprint: Calendar — Gun Show / Radio Traffic Visibility
    Purpose: Preserve appointment booking while adding the first agency-wide
             operational date layer: SES Melbourne/Orlando gun shows, their
             Wed–Sat radio flights, and two-week traffic warnings.
+
+   Production changes in 1.2.4:
+   - Adds six SES gun-show social-support Calendar items, Monday through Saturday of show week.
+   - Applies the same six-day sequence to Melbourne and Orlando.
+   - Social sequence: Monday announcement, Tuesday buying-at-show value, Wednesday show savings,
+     Thursday protect-what-matters message, Friday starts-tomorrow urgency, Saturday we're-here-today.
+   - Preserves all verified station traffic, radio-flight, and gun-show dates unchanged.
+   - Syncs the visible installed-version label and runtime VERSION constant.
 
    Production changes in 1.2.3:
    - Adds the hard station trafficking deadline to each SES gun-show radio cycle.
@@ -97,6 +105,7 @@ h1{margin:4px 0;font-size:38px;letter-spacing:-.04em}
 .event.traffic-alert{background:var(--red-soft);color:var(--red);border:1px solid #efc4c4}
 .event.traffic-complete{background:var(--green-soft);color:var(--green);border:1px solid #bde6d0}
 .event.station-deadline{background:#fff1f0;color:#a42828;border:2px solid #e3a3a3;font-weight:900}
+.event.social-post{background:#eef8f1;color:#24663a;border:1px solid #b9dec5;font-weight:800}
 .event.candidate{border-style:dashed}
 .event[href]{text-decoration:none}
 .quarter-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;padding:18px}
@@ -173,7 +182,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
         <h1>Calendar & Booking</h1>
         <p class="sub">Manage appointments, define booking rules, and see the month or quarter ahead. Google Calendar can become the conflict-checking source once Worker/OAuth integration is connected.</p>
       </div>
-      <div class="version">Installed version 1.1.0</div>
+      <div class="version">Installed version 1.2.4</div>
     </header>
 
     <div class="toolbar">
@@ -334,7 +343,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
 <script src="shared/gcm-shell.js?v=1.0.2"></script>
 <script>
 (()=>{"use strict";
-const VERSION="1.2.0",KEY="gcm_calendar_v1_1",$=id=>document.getElementById(id);
+const VERSION="1.2.4",KEY="gcm_calendar_v1_1",$=id=>document.getElementById(id);
 const SHOW_SCHEDULE_URL="data/ses-gun-shows.json?v=1.0.2";
 const WORKER_ENDPOINT="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
 let gunShowSchedule=[],mediaRecords=[],operationalAlertMarkets=["Melbourne","Orlando"];
@@ -384,6 +393,18 @@ function parseDateOnly(v){
 }
 function addCalendarDays(v,n){const d=parseDateOnly(v);if(!d)return null;d.setDate(d.getDate()+n);return isoDate(d)}
 function showDateRange(a,b){return a===b?fmtShort(a):fmtShort(a)+"–"+fmtShort(b)}
+function gunShowSocialSequence(show){
+ const start=show&&show.showStart;
+ if(!start)return [];
+ return [
+  {offset:-5,day:"MON",title:"SOCIAL #1 — SHOW WEEK ANNOUNCEMENT",theme:"See you at the gun show this weekend"},
+  {offset:-4,day:"TUE",title:"SOCIAL #2 — WHY BUY AT THE SHOW",theme:"Compare sizes, lock options, ask questions, find the right fit"},
+  {offset:-3,day:"WED",title:"SOCIAL #3 — SHOW SAVINGS",theme:"Special inventory, closeouts, and cash & carry opportunities"},
+  {offset:-2,day:"THU",title:"SOCIAL #4 — PROTECT WHAT MATTERS",theme:"Protection for firearms, valuables, documents, and peace of mind"},
+  {offset:-1,day:"FRI",title:"SOCIAL #5 — STARTS TOMORROW",theme:"Come early for the best selection"},
+  {offset:0,day:"SAT",title:"SOCIAL #6 — WE'RE HERE TODAY",theme:"Stop by the Southeast Safes display"}
+ ].map(function(item){return Object.assign({},item,{date:addCalendarDays(start,item.offset)})});
+}
 function gunShowRule(show){
  const station=show&&show.station?show.station:({Melbourne:"WMMB",Orlando:"WFLA"}[show&&show.market]||"");
  const flightStart=addCalendarDays(show&&show.showStart,-3);
@@ -433,6 +454,14 @@ function derivedShowEvents(){
    title:(complete?"✓ TRAFFIC CONFIRMED":"EMAIL STEPHANIE — FINAL STATION TRAFFIC")+" · "+rule.station+" · "+show.market,
    meta:"Hard deadline · 10:00 AM Monday · Station needs two days to traffic spot changes · Flight "+showDateRange(rule.flightStart,rule.flightEnd),
    href:"media-calendar.html?clientId=1&month="+String(rule.flightStart).slice(0,7),key:"station-deadline|"+showKey
+  });
+  gunShowSocialSequence(show).forEach(function(post,index){
+   out.push({
+    date:post.date,time:"",source:"show",className:"social-post"+(candidate?" candidate":""),
+    title:post.title+" · "+show.market,
+    meta:"SES "+show.market+" Gun Show · "+post.theme+" · Social support day "+(index+1)+" of 6",
+    href:"media-calendar.html?clientId=1&month="+String(post.date).slice(0,7),key:"social-"+(index+1)+"|"+showKey
+   });
   });
  });
  return out;
