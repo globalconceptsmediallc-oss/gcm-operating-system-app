@@ -1,9 +1,11 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/prospectEngagementToday.test.js
-   Version: 1.2.0
+   Version: 1.2.1
    Status: Regression Test
    Purpose: Lock Today visibility for privacy-minimized tracked prospect opens.
+   Change notes — 1.2.1:
+   - Replaces the stale exact Today page lock with the 3.5.x release-family contract.
    ========================================================= */
 
 import fs from "node:fs";
@@ -22,7 +24,7 @@ assert.match(route,/viewedAt/);
 assert.match(route,/contactName/);
 assert.match(route,/contactEmail/);
 
-assert.match(today,/Version: 3\.5\.37/);
+assert.match(today,/Version: 3\.5\.\d+/);
 assert.match(today,/id="prospect-open-panel"/);
 assert.match(today,/id="prospect-open-list"/);
 assert.match(today,/id="brief-prospect-opens"/);
