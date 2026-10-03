@@ -4,6 +4,9 @@
    Version: 1.0.3
    Status: Production Road-Test Candidate — D1 Invoice Numbering
    Purpose: Durable D1-backed Finance/Billing operations.
+   Changes — 1.0.3:
+   - Returns latestNumericInvoice and nextInvoiceNumber from permanent D1 invoice records.
+   - Keeps invoice-number authority out of browser-local state.
    Rules:
    - D1 is the authoritative Finance source.
    - Browser state may be imported only through duplicate-safe snapshot sync.
