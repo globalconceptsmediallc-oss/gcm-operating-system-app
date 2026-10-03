@@ -1,0 +1,210 @@
+{
+  "file": "data/ses-gun-shows.json",
+  "version": "1.0.0",
+  "status": "Production Candidate",
+  "purpose": "Authoritative SES Melbourne/Orlando gun-show planning dates and derived radio traffic rules.",
+  "client": {
+    "code": "SES",
+    "name": "Southeast Safes"
+  },
+  "alertRecipients": [
+    "Andy",
+    "Kristy"
+  ],
+  "rules": {
+    "Melbourne": {
+      "station": "WMMB",
+      "flightStartDay": "Wednesday",
+      "flightEndDay": "Saturday",
+      "trafficWarningDaysBeforeFlightStart": 14
+    },
+    "Orlando": {
+      "station": "WFLA",
+      "flightStartDay": "Wednesday",
+      "flightEndDay": "Saturday",
+      "trafficWarningDaysBeforeFlightStart": 14
+    }
+  },
+  "shows": [
+    {
+      "market": "Melbourne",
+      "showStart": "2026-10-03",
+      "showEnd": "2026-10-04",
+      "venue": "Melbourne Auditorium",
+      "participationStatus": "confirmed",
+      "sourceType": "SES show schedule",
+      "sourceUrl": "https://sesafes.com/pages/shows"
+    },
+    {
+      "market": "Orlando",
+      "showStart": "2026-10-10",
+      "showEnd": "2026-10-11",
+      "venue": "Central Florida Fairgrounds",
+      "participationStatus": "confirmed",
+      "sourceType": "SES show schedule",
+      "sourceUrl": "https://sesafes.com/pages/shows"
+    },
+    {
+      "market": "Melbourne",
+      "showStart": "2026-11-28",
+      "showEnd": "2026-11-29",
+      "venue": "Melbourne Auditorium",
+      "participationStatus": "confirmed",
+      "sourceType": "SES show schedule",
+      "sourceUrl": "https://sesafes.com/pages/shows"
+    },
+    {
+      "market": "Orlando",
+      "showStart": "2026-11-28",
+      "showEnd": "2026-11-29",
+      "venue": "Central Florida Fairgrounds",
+      "participationStatus": "confirmed",
+      "sourceType": "SES show schedule",
+      "sourceUrl": "https://sesafes.com/pages/shows"
+    },
+    {
+      "market": "Melbourne",
+      "showStart": "2027-01-02",
+      "showEnd": "2027-01-03",
+      "venue": "Melbourne Auditorium",
+      "participationStatus": "official_schedule_candidate",
+      "sourceType": "Sport Show Specialists official schedule",
+      "sourceUrl": "https://flgunshows.com/shows/"
+    },
+    {
+      "market": "Orlando",
+      "showStart": "2027-01-16",
+      "showEnd": "2027-01-17",
+      "venue": "Central Florida Fairgrounds",
+      "participationStatus": "official_schedule_candidate",
+      "sourceType": "Florida Gun Shows official schedule",
+      "sourceUrl": "https://www.floridagunshows.com/florida-gun-show-schedule/"
+    },
+    {
+      "market": "Melbourne",
+      "showStart": "2027-02-06",
+      "showEnd": "2027-02-07",
+      "venue": "Melbourne Auditorium",
+      "participationStatus": "official_schedule_candidate",
+      "sourceType": "Sport Show Specialists official schedule",
+      "sourceUrl": "https://flgunshows.com/shows/"
+    },
+    {
+      "market": "Melbourne",
+      "showStart": "2027-03-06",
+      "showEnd": "2027-03-07",
+      "venue": "Melbourne Auditorium",
+      "participationStatus": "official_schedule_candidate",
+      "sourceType": "Sport Show Specialists official schedule",
+      "sourceUrl": "https://flgunshows.com/shows/"
+    },
+    {
+      "market": "Orlando",
+      "showStart": "2027-03-13",
+      "showEnd": "2027-03-14",
+      "venue": "Central Florida Fairgrounds",
+      "participationStatus": "official_schedule_candidate",
+      "sourceType": "Florida Gun Shows official schedule",
+      "sourceUrl": "https://www.floridagunshows.com/florida-gun-show-schedule/"
+    },
+    {
+      "market": "Melbourne",
+      "showStart": "2027-04-17",
+      "showEnd": "2027-04-18",
+      "venue": "Melbourne Auditorium",
+      "participationStatus": "official_schedule_candidate",
+      "sourceType": "Sport Show Specialists official schedule",
+      "sourceUrl": "https://flgunshows.com/shows/"
+    },
+    {
+      "market": "Orlando",
+      "showStart": "2027-05-15",
+      "showEnd": "2027-05-16",
+      "venue": "Central Florida Fairgrounds",
+      "participationStatus": "official_schedule_candidate",
+      "sourceType": "Florida Gun Shows official schedule",
+      "sourceUrl": "https://www.floridagunshows.com/florida-gun-show-schedule/"
+    },
+    {
+      "market": "Melbourne",
+      "showStart": "2027-05-22",
+      "showEnd": "2027-05-23",
+      "venue": "Melbourne Auditorium",
+      "participationStatus": "official_schedule_candidate",
+      "sourceType": "Sport Show Specialists official schedule",
+      "sourceUrl": "https://flgunshows.com/shows/"
+    },
+    {
+      "market": "Melbourne",
+      "showStart": "2027-07-10",
+      "showEnd": "2027-07-11",
+      "venue": "Melbourne Auditorium",
+      "participationStatus": "official_schedule_candidate",
+      "sourceType": "Sport Show Specialists official schedule",
+      "sourceUrl": "https://flgunshows.com/shows/"
+    },
+    {
+      "market": "Orlando",
+      "showStart": "2027-07-10",
+      "showEnd": "2027-07-11",
+      "venue": "Central Florida Fairgrounds",
+      "participationStatus": "official_schedule_candidate",
+      "sourceType": "Florida Gun Shows official schedule",
+      "sourceUrl": "https://www.floridagunshows.com/florida-gun-show-schedule/"
+    },
+    {
+      "market": "Melbourne",
+      "showStart": "2027-08-21",
+      "showEnd": "2027-08-22",
+      "venue": "Melbourne Auditorium",
+      "participationStatus": "official_schedule_candidate",
+      "sourceType": "Sport Show Specialists official schedule",
+      "sourceUrl": "https://flgunshows.com/shows/"
+    },
+    {
+      "market": "Orlando",
+      "showStart": "2027-08-21",
+      "showEnd": "2027-08-22",
+      "venue": "Central Florida Fairgrounds",
+      "participationStatus": "official_schedule_candidate",
+      "sourceType": "Florida Gun Shows official schedule",
+      "sourceUrl": "https://www.floridagunshows.com/florida-gun-show-schedule/"
+    },
+    {
+      "market": "Melbourne",
+      "showStart": "2027-10-02",
+      "showEnd": "2027-10-03",
+      "venue": "Melbourne Auditorium",
+      "participationStatus": "official_schedule_candidate",
+      "sourceType": "Sport Show Specialists official schedule",
+      "sourceUrl": "https://flgunshows.com/shows/"
+    },
+    {
+      "market": "Orlando",
+      "showStart": "2027-10-09",
+      "showEnd": "2027-10-10",
+      "venue": "Central Florida Fairgrounds",
+      "participationStatus": "official_schedule_candidate",
+      "sourceType": "Florida Gun Shows official schedule",
+      "sourceUrl": "https://www.floridagunshows.com/florida-gun-show-schedule/"
+    },
+    {
+      "market": "Melbourne",
+      "showStart": "2027-11-27",
+      "showEnd": "2027-11-28",
+      "venue": "Melbourne Auditorium",
+      "participationStatus": "official_schedule_candidate",
+      "sourceType": "Sport Show Specialists official schedule",
+      "sourceUrl": "https://flgunshows.com/shows/"
+    },
+    {
+      "market": "Orlando",
+      "showStart": "2027-11-27",
+      "showEnd": "2027-11-28",
+      "venue": "Central Florida Fairgrounds",
+      "participationStatus": "official_schedule_candidate",
+      "sourceType": "Florida Gun Shows official schedule",
+      "sourceUrl": "https://www.floridagunshows.com/florida-gun-show-schedule/"
+    }
+  ]
+}
