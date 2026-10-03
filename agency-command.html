@@ -1,14 +1,15 @@
 <!-- =========================================================
 Global Concepts Media Operating System
 File: agency-command.html
-Version: 1.1.0
+Version: 1.1.1
 Status: Production Road-Test Candidate
-Source: Production agency-command.html 1.0.0
+Source: Production agency-command.html 1.1.0
 Sprint: Navigation — Shared Shell Consolidation
 Purpose: Accept a natural-language agency question, identify the
 correct GCM OS workspace, and create a structured next-step brief.
 Read-only: creates no D1 or production records.
 Change Notes:
+- Routes communication-classified requests to Today / Universal Email Intake after retiring the old Communications workspace.
 - Replaces the legacy hard-coded sidebar with shared/gcm-shell.js 2.0.28.
 - Preserves the existing Agency Command classification behavior.
 - Routes investigation-classified requests into Work, where investigations
@@ -98,7 +99,7 @@ brief=document.getElementById("brief"),notice=document.getElementById("notice"),
 
 const spaces={
 research:["Agency Research","media.html","Frame and verify current public research before making an agency recommendation."],
-communications:["Communications","communications.html","Process an incoming email, screenshot, report, message, or notification."],
+communications:["Today / Intake","today.html","Process incoming email, reports, messages, and notifications through Today / Universal Email Intake."],
 media:["Media","media.html","Review CTV, stations, placements, confirmations, schedules, and delivery."],
 prospects:["Prospects","prospects.html","Research, qualify, contact, and follow up with potential new business."],
 clients:["Clients","clients.html","Review a client's complete condition and next best effort."],
@@ -139,7 +140,7 @@ return (m.find(x=>x[1].test(text))||["Agency-wide / client not selected"])[0];
 function makeBrief(text,c){
 const isResearch=c.intent==="research",media=c.s.media>=5,who=client(text);
 if(isResearch)return [
-"GCM AGENCY RESEARCH BRIEF","Agency Command version: 1.1.0","",`Question: ${text}`,`Client/Scope: ${who}`,
+"GCM AGENCY RESEARCH BRIEF","Agency Command version: 1.1.1","",`Question: ${text}`,`Client/Scope: ${who}`,
 `Recognized request: ${media?"Current Media/CTV Research":"Current Agency Research"}`,"",
 "Decision required:","Determine the best agency recommendation using current, verifiable information—not model memory alone.","",
 "Research requirements:",
@@ -151,7 +152,7 @@ if(isResearch)return [
 "Operational rule:","Do not create a Communication, Investigation, or Work Item until research produces a specific operational decision."
 ].join("\n");
 const sp=spaces[c.intent]||spaces.today;
-return ["GCM AGENCY COMMAND BRIEF","Agency Command version: 1.1.0","",`Request: ${text}`,`Recognized intent: ${sp[0]}`,
+return ["GCM AGENCY COMMAND BRIEF","Agency Command version: 1.1.1","",`Request: ${text}`,`Recognized intent: ${sp[0]}`,
 `Confidence: ${c.confidence}%`,"","Next step:",sp[2],"","Evidence rule:","Preserve facts and unknowns before creating downstream records."].join("\n");
 }
 
