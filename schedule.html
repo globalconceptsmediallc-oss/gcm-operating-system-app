@@ -1,0 +1,147 @@
+<!-- =========================================================
+   Global Concepts Media Operating System
+   File: schedule.html
+   Version: 1.0.0
+   Status: Production Candidate — Schedule Change Control
+   Sprint: Calendar / Media Calendar — One Record, Multiple Views
+   Purpose: Create human-reviewed schedule additions/changes/cancellations
+            against the durable D1 schedule authority without editing either
+            calendar directly.
+   Production Contract: window.GCMOShell
+   ========================================================= -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Schedule Control | GCM OS</title>
+<style>
+:root{--navy:#0b1d33;--blue:#1f68d8;--blue2:#1756b8;--soft:#f4f7fb;--border:#d8e0eb;--text:#132238;--muted:#667489;--green:#16714a;--green-soft:#e8f7ef;--warn:#97620f;--warn-soft:#fff4dd;--red:#b33a3a;--red-soft:#fff0f0}
+*{box-sizing:border-box}body{margin:0;background:var(--soft);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}button,input,select,textarea{font:inherit}button{cursor:pointer}.app{min-height:100vh;display:grid;grid-template-columns:250px minmax(0,1fr)}.page{padding:26px;max-width:1500px;width:100%;margin:auto}.mobile{display:none}.top{display:flex;justify-content:space-between;gap:18px;margin-bottom:18px}.eyebrow{margin:0;color:var(--blue);font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.12em}h1{margin:4px 0;font-size:38px;letter-spacing:-.04em}.sub{margin:0;color:var(--muted);max-width:900px}.version{align-self:flex-start;border:1px solid var(--border);background:#fff;border-radius:999px;padding:9px 12px;font-size:12px;font-weight:800;color:var(--muted)}.actions{display:flex;gap:8px;flex-wrap:wrap}.btn{padding:9px 13px;border:1px solid var(--border);border-radius:9px;background:#fff;color:var(--text);font-weight:800}.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn.success{background:var(--green);border-color:var(--green);color:#fff}.btn.warn{color:var(--warn)}.btn.danger{color:var(--red)}.panel{background:#fff;border:1px solid var(--border);border-radius:16px;margin-bottom:16px;overflow:hidden}.panel-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;padding:17px 19px;border-bottom:1px solid var(--border)}.panel-head h2{margin:0;font-size:19px}.panel-head p{margin:4px 0 0;color:var(--muted);font-size:13px}.table-wrap{overflow:auto}table{width:100%;min-width:900px;border-collapse:collapse}th,td{padding:12px 14px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}th{background:#fbfcfe;color:var(--muted);font-size:11px;text-transform:uppercase}tbody tr:last-child td{border-bottom:0}.pill{display:inline-flex;padding:4px 8px;border-radius:999px;background:var(--warn-soft);color:var(--warn);font-size:11px;font-weight:900;text-transform:capitalize}.pill.approved,.pill.confirmed,.pill.verified,.pill.complete{background:var(--green-soft);color:var(--green)}.pill.candidate,.pill.held{background:#eef0f3;color:#596475}.empty{padding:28px;text-align:center;color:var(--muted)}dialog{width:min(860px,calc(100vw - 30px));border:0;border-radius:16px;padding:0;box-shadow:0 24px 70px rgba(7,20,38,.35)}dialog::backdrop{background:rgba(7,20,38,.55)}.dhead,.dactions{display:flex;justify-content:space-between;gap:12px;padding:18px 20px;border-bottom:1px solid var(--border)}.dhead h2{margin:0}.dhead p{margin:4px 0 0;color:var(--muted)}.close{width:34px;height:34px;border:1px solid var(--border);border-radius:8px;background:#fff}.dbody{padding:20px;max-height:72vh;overflow:auto}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.field{display:grid;gap:6px}.full{grid-column:1/-1}.field label{font-size:11px;font-weight:900;color:var(--muted);text-transform:uppercase}.field input,.field select,.field textarea{padding:10px;border:1px solid var(--border);border-radius:9px;width:100%}.field textarea{min-height:80px;resize:vertical}.dactions{justify-content:flex-end;border-top:1px solid var(--border);border-bottom:0;background:#fbfcfe}.hint{color:var(--muted);font-size:12px}.toast{position:fixed;right:22px;bottom:22px;background:var(--navy);color:#fff;padding:13px 15px;border-radius:10px;opacity:0;transform:translateY(10px);transition:.2s}.toast.show{opacity:1;transform:none}@media(max-width:900px){.app{display:block}.mobile{display:inline-block;margin-bottom:12px}.page{padding:18px}.top{flex-direction:column}.grid{grid-template-columns:1fr}.full{grid-column:auto}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside data-gcm-shell-sidebar></aside>
+<main class="page">
+<button class="mobile btn" data-gcm-shell-menu-button type="button">Menu</button>
+<header class="top">
+  <div><p class="eyebrow">Schedule Authority</p><h1>Schedule Control</h1><p class="sub">Add or change a campaign once. Nothing reaches the live calendars until you approve the candidate. Approved changes are versioned in D1 and read by both calendar views.</p></div>
+  <div class="version">schedule.html · v1.0.0</div>
+</header>
+
+<section class="panel">
+  <div class="panel-head">
+    <div><h2>Pending Review</h2><p>Approve, hold, or ignore schedule changes before they affect live dates.</p></div>
+    <div class="actions"><button class="btn primary" id="addItem" type="button">Add Campaign / Schedule Item</button><a class="btn" href="calendar.html">Agency Calendar</a><a class="btn" href="media-calendar.html">Media Calendar</a></div>
+  </div>
+  <div class="table-wrap"><table><thead><tr><th>Request</th><th>Client</th><th>Proposed</th><th>Reason / Source</th><th>Status</th><th>Review</th></tr></thead><tbody id="pendingBody"></tbody></table></div>
+</section>
+
+<section class="panel">
+  <div class="panel-head"><div><h2>Current Authoritative Schedule</h2><p>Change or cancel from here. Do not edit either calendar directly.</p></div><div class="actions"><button class="btn" id="refresh" type="button">Refresh</button></div></div>
+  <div class="table-wrap"><table><thead><tr><th>Client</th><th>Type</th><th>Schedule Item</th><th>Dates</th><th>Market / Channel</th><th>Version</th><th>Action</th></tr></thead><tbody id="itemsBody"></tbody></table></div>
+</section>
+</main>
+</div>
+
+<dialog id="editDialog">
+<form id="editForm">
+<div class="dhead"><div><h2 id="dialogTitle">Add Schedule Item</h2><p id="dialogCopy">Create a review candidate. Approval is required before calendars change.</p></div><button class="close" id="closeDialog" type="button">×</button></div>
+<div class="dbody">
+<input type="hidden" id="requestType" value="add"><input type="hidden" id="targetItemId">
+<div class="grid">
+<div class="field"><label>Client</label><select id="clientId" required></select></div>
+<div class="field"><label>Type</label><select id="itemType"><option value="campaign">Campaign / Event</option><option value="gun_show">Gun Show</option><option value="promotion">Liberty Promotion / Sale</option><option value="social_post">Social Post Add-on</option><option value="event">Event</option><option value="deadline">Deadline</option><option value="radio_flight">Radio Flight</option><option value="other">Other</option></select></div>
+<div class="field full"><label>Title</label><input id="title" required></div>
+<div class="field"><label>Start Date</label><input id="startDate" type="date" required></div>
+<div class="field"><label>End Date</label><input id="endDate" type="date" required></div>
+<div class="field"><label>Market</label><input id="market" placeholder="Melbourne, Orlando, All SES…"></div>
+<div class="field"><label>Channel</label><select id="channel"><option value="">Not channel-specific</option><option>Facebook</option><option>Google Business Profile</option><option>Instagram</option><option>YouTube</option><option>Radio</option><option>Liberty Safe</option><option>Event</option></select></div>
+<div class="field"><label>Status</label><select id="status"><option value="planned">Planned</option><option value="confirmed">Confirmed</option><option value="candidate">Candidate</option><option value="ready">Ready</option><option value="posted">Posted</option><option value="verified">Verified</option><option value="complete">Complete</option></select></div>
+<div class="field"><label>Time (optional)</label><input id="startTime" type="time"></div>
+<div class="field"><label>Station (gun show)</label><input id="station" placeholder="WMMB / WFLA"></div>
+<div class="field"><label>Venue (gun show)</label><input id="venue"></div>
+<div class="field full"><label>Offer / Message</label><textarea id="offer" placeholder="Promotion offer or campaign message"></textarea></div>
+<div class="field full"><label>Social Post Dates (optional)</label><input id="socialDates" placeholder="2026-10-15, 2026-10-20, 2026-10-25"><span class="hint">For a promotion, comma-separated dates create planned social support on Facebook, Google Business, and Instagram.</span></div>
+<div class="field full"><label>Source / Evidence</label><input id="sourceReference" placeholder="Email subject, promoter URL, client request…"></div>
+<div class="field full"><label>Why is this changing / being added?</label><textarea id="reason" required></textarea></div>
+<div class="field full"><label>Notes</label><textarea id="notes"></textarea></div>
+</div>
+</div>
+<div class="dactions"><button class="btn" id="cancelDialog" type="button">Cancel</button><button class="btn primary" type="submit">Save for Review</button></div>
+</form>
+</dialog>
+
+<div class="toast" id="toast"></div>
+<script src="shared/gcm-shell.js?v=2.0.34"></script>
+<script>
+(()=>{"use strict";
+const ENDPOINT="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+const $=id=>document.getElementById(id);
+let items=[],pending=[],clients=[];
+
+function esc(v){return String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]))}
+function toast(m){$("toast").textContent=m;$("toast").classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>$("toast").classList.remove("show"),2600)}
+async function post(body){const r=await fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});const p=await r.json().catch(()=>({}));if(!r.ok||p.ok!==true)throw new Error(p.error||p.details||"Request failed.");return p}
+function fmt(v){if(!v)return"—";const[y,m,d]=v.split("-").map(Number);return new Date(y,m-1,d).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}
+function prettyType(v){return String(v||"").replaceAll("_"," ").replace(/\b\w/g,m=>m.toUpperCase())}
+
+async function load(){
+ const [s,m]=await Promise.all([post({action:"schedule-operations",operation:"list"}),post({action:"get-media-operations"})]);
+ items=s.scheduleItems||[];pending=s.pendingChanges||[];
+ clients=(m.mediaOperations&&Array.isArray(m.mediaOperations.clients))?m.mediaOperations.clients:[];
+ if(!clients.length){clients=[...new Map(items.filter(x=>x.clientId).map(x=>[x.clientId,{clientId:x.clientId,clientName:x.clientName||x.clientCode}])).values()]}
+ render();
+}
+function render(){
+ $("clientId").innerHTML=clients.map(c=>'<option value="'+esc(c.clientId)+'">'+esc(c.clientName||c.clientCode||("Client "+c.clientId))+'</option>').join("");
+ $("pendingBody").innerHTML=pending.length?pending.map(c=>{
+  const p=c.proposed||{},dates=[p.startDate,p.endDate].filter(Boolean).join(" → ");
+  return '<tr><td><strong>'+esc(prettyType(c.requestType))+'</strong><br><span class="hint">'+esc(c.title)+'</span></td><td>'+esc(c.clientName||c.clientCode||c.clientId)+'</td><td><strong>'+esc(p.title||c.targetTitle||"Schedule item")+'</strong><br><span class="hint">'+esc(dates||"Cancel current item")+'</span></td><td>'+esc(c.reason||"—")+'<br><span class="hint">'+esc(c.sourceReference||"")+'</span></td><td><span class="pill '+esc(c.status)+'">'+esc(c.status)+'</span></td><td><div class="actions"><button class="btn success" data-approve="'+c.id+'">Approve</button><button class="btn warn" data-hold="'+c.id+'">Hold</button><button class="btn danger" data-ignore="'+c.id+'">Ignore</button></div></td></tr>';
+ }).join(""):'<tr><td colspan="6" class="empty">No schedule changes waiting for review.</td></tr>';
+ $("itemsBody").innerHTML=items.length?items.map(i=>'<tr><td>'+esc(i.clientName||i.clientCode||i.clientId)+'</td><td>'+esc(prettyType(i.itemType))+'</td><td><strong>'+esc(i.title)+'</strong><br><span class="pill '+esc(i.status)+'">'+esc(i.status)+'</span></td><td>'+esc(fmt(i.startDate))+(i.endDate&&i.endDate!==i.startDate?' → '+esc(fmt(i.endDate)):'')+'</td><td>'+esc([i.market,i.channel].filter(Boolean).join(" · ")||"—")+'</td><td>v'+esc(i.versionNumber)+'</td><td><div class="actions"><button class="btn" data-change="'+i.id+'">Change</button><button class="btn danger" data-cancel="'+i.id+'">Cancel</button></div></td></tr>').join(""):'<tr><td colspan="7" class="empty">No durable schedule records found.</td></tr>';
+ bind();
+}
+function bind(){
+ document.querySelectorAll("[data-approve]").forEach(b=>b.onclick=()=>review("approve_candidate",b.dataset.approve));
+ document.querySelectorAll("[data-hold]").forEach(b=>b.onclick=()=>review("hold_candidate",b.dataset.hold));
+ document.querySelectorAll("[data-ignore]").forEach(b=>b.onclick=()=>review("ignore_candidate",b.dataset.ignore));
+ document.querySelectorAll("[data-change]").forEach(b=>openChange(Number(b.dataset.change)));
+ document.querySelectorAll("[data-cancel]").forEach(b=>proposeCancel(Number(b.dataset.cancel)));
+}
+async function review(operation,id){try{await post({action:"schedule-operations",operation,changeRequestId:Number(id),reviewedBy:"Andy"});toast(operation==="approve_candidate"?"Approved — calendars will read the new version.":operation==="hold_candidate"?"Held for later review.":"Ignored — live schedule unchanged.");await load()}catch(e){toast(e.message)}}
+
+function resetForm(){
+ $("editForm").reset();$("requestType").value="add";$("targetItemId").value="";$("status").value="planned";$("dialogTitle").textContent="Add Schedule Item";$("dialogCopy").textContent="Create a review candidate. Approval is required before calendars change.";
+}
+function openAdd(){resetForm();const ses=clients.find(c=>String(c.clientCode||"").toLowerCase()==="ses"||String(c.clientName||"").toLowerCase().includes("southeast safes"));if(ses)$("clientId").value=String(ses.clientId);$("editDialog").showModal()}
+function openChange(id){const i=items.find(x=>x.id===id);if(!i)return;resetForm();$("requestType").value="change";$("targetItemId").value=String(id);$("dialogTitle").textContent="Propose Schedule Change";$("dialogCopy").textContent="Current live dates stay in place until you approve this candidate.";$("clientId").value=String(i.clientId||"");$("itemType").value=i.itemType||"campaign";$("title").value=i.title||"";$("startDate").value=i.startDate||"";$("endDate").value=i.endDate||i.startDate||"";$("market").value=i.market||"";$("channel").value=i.channel||"";$("status").value=i.status||"planned";$("startTime").value=i.startTime||"";$("station").value=i.metadata&&i.metadata.station||"";$("venue").value=i.metadata&&i.metadata.venue||"";$("offer").value=i.metadata&&i.metadata.offer||"";$("socialDates").value=i.metadata&&Array.isArray(i.metadata.schedule)?i.metadata.schedule.map(x=>x.date).filter(Boolean).join(", "):"";$("sourceReference").value=i.sourceReference||"";$("notes").value=i.notes||"";$("editDialog").showModal()}
+async function proposeCancel(id){const i=items.find(x=>x.id===id);if(!i)return;const reason=prompt("Why should this schedule item be cancelled?");if(reason===null)return;try{await post({action:"schedule-operations",operation:"create_candidate",requestType:"cancel",targetItemId:id,clientId:i.clientId,title:"Cancel — "+i.title,reason,sourceReference:i.sourceReference,requestedBy:"Andy"});toast("Cancellation saved for review.");await load()}catch(e){toast(e.message)}}
+
+function metadataFromForm(){
+ const type=$("itemType").value,dates=$("socialDates").value.split(",").map(x=>x.trim()).filter(x=>/^\d{4}-\d{2}-\d{2}$/.test(x));
+ if(type==="gun_show"){
+  return{venue:$("venue").value.trim()||null,station:$("station").value.trim()||null,trafficWarningDaysBeforeFlightStart:7,stationDeadlineDaysBeforeFlightStart:2,stationDeadlineTime:"10:00",flightStartOffsetDays:-3,flightEndOffsetDays:0,alertRecipients:["Andy","Kristy"],socialChannels:["Facebook","Google Business Profile","Instagram"],socialSequence:[
+   {offset:-5,title:"SOCIAL #1 — SHOW WEEK ANNOUNCEMENT",theme:"See you at the gun show this weekend"},
+   {offset:-4,title:"SOCIAL #2 — WHY BUY AT THE SHOW",theme:"Compare sizes, lock options, ask questions, find the right fit"},
+   {offset:-3,title:"SOCIAL #3 — SHOW SAVINGS",theme:"Special inventory, closeouts, and cash & carry opportunities"},
+   {offset:-2,title:"SOCIAL #4 — PROTECT WHAT MATTERS",theme:"Protection for firearms, valuables, documents, and peace of mind"},
+   {offset:-1,title:"SOCIAL #5 — STARTS TOMORROW",theme:"Come early for the best selection"},
+   {offset:0,title:"SOCIAL #6 — WE'RE HERE TODAY",theme:"Stop by the Southeast Safes display"}
+  ]};
+ }
+ if(type==="promotion"){
+  return{offer:$("offer").value.trim()||null,channels:["Facebook","Google Business Profile","Instagram"],schedule:dates.map((date,index)=>({date,title:"SOCIAL — "+$("title").value.trim().toUpperCase()+" #"+(index+1),theme:$("offer").value.trim()||"Promotion support post"}))};
+ }
+ return{};
+}
+
+$("editForm").onsubmit=async e=>{e.preventDefault();const body={action:"schedule-operations",operation:"create_candidate",requestType:$("requestType").value,targetItemId:Number($("targetItemId").value)||null,clientId:Number($("clientId").value),title:$("requestType").value==="change"?"Change — "+$("title").value.trim():$("title").value.trim(),reason:$("reason").value.trim(),sourceReference:$("sourceReference").value.trim(),requestedBy:"Andy",proposed:{clientId:Number($("clientId").value),itemType:$("itemType").value,title:$("title").value.trim(),startDate:$("startDate").value,endDate:$("endDate").value,market:$("market").value.trim(),channel:$("channel").value,startTime:$("startTime").value,status:$("status").value,sourceReference:$("sourceReference").value.trim(),notes:$("notes").value.trim(),metadata:metadataFromForm()}};try{await post(body);$("editDialog").close();toast("Saved for review — live calendars unchanged until approval.");await load()}catch(err){toast(err.message)}};
+$("addItem").onclick=openAdd;$("refresh").onclick=()=>load().catch(e=>toast(e.message));$("closeDialog").onclick=()=>$("editDialog").close();$("cancelDialog").onclick=()=>$("editDialog").close();
+if(window.GCMOShell)window.GCMOShell.mount({currentPage:"calendar",statusText:"Schedule authority · D1 review workflow"});
+load().catch(e=>toast(e.message));
+})();
+</script>
+</body>
+</html>
