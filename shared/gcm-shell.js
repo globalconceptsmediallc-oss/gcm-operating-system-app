@@ -1,12 +1,14 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/gcm-shell.js
-   Version: 2.0.64
+   Version: 2.0.65
    Status: Production Road-Test Candidate
    Purpose: Shared internal GCM OS application shell foundation.
    Source: gcm-shell.js 2.0.62 production navigation
    Sprint: Morning Command — Universal Email Intake No-Action Routing
    Change:
+   - Stops loading obsolete Media Dashboard Creative Queue and dashboard-cleanup shims on media.html.
+   - Media creative staging and dashboard cleanup are now owned natively by media.html v2.4.9.
    - Loads Universal Email Intake v2.7.0 with exact-thread Reply in Gmail support.
    - Loads Universal Email Intake v2.6.1 with corrected reporting-period inference.
    - Loads Universal Email Intake v2.1.2 with decision-last route placement.
@@ -28,14 +30,14 @@
    - Replaces the Today Gmail loader with Universal Email Intake v1.0.0.
    - Morning Command now reads the durable D1 intake queue instead of scanning Gmail.
    - Preserves Work Investigation Completion/Intake v1.4.0, MediaForge routing,
-     Media Dashboard Creative Queue v1.1.2, Calendar Durable Sync,
-     Media Production Sessions, Prospect Next Action, and existing enhancements.
+     Calendar Durable Sync, Media Production Sessions, Prospect Next Action,
+     and active Media operating enhancements.
    ========================================================= */
 
 (() => {
   "use strict";
 
-  const SHELL_VERSION = "2.0.64";
+  const SHELL_VERSION = "2.0.65";
   const WORKER_ENDPOINT =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const MISSION_CONTROL_ACTION = "get-mission-control";
@@ -356,11 +358,6 @@
 
     if (/\/media\.html$/i.test(path)) {
       appendScript(
-        "shared/media-dashboard-creatives.js?v=1.1.2",
-        "data-gcm-media-dashboard-creatives"
-      );
-
-      appendScript(
         "shared/media-existing-entry.js?v=1.0.0",
         "data-gcm-media-existing-entry"
       );
@@ -388,11 +385,6 @@
       appendScript(
         "shared/media-summary-navigation.js?v=1.0.0",
         "data-gcm-media-summary-navigation"
-      );
-
-      appendScript(
-        "shared/media-dashboard-cleanup.js?v=1.0.0",
-        "data-gcm-media-dashboard-cleanup"
       );
     }
   }
