@@ -1,8 +1,8 @@
 {
   "file": "data/ses-gun-shows.json",
-  "version": "1.0.0",
-  "status": "Production Candidate",
-  "purpose": "Authoritative SES Melbourne/Orlando gun-show planning dates and derived radio traffic rules.",
+  "version": "1.0.1",
+  "status": "Production Candidate — Melbourne Phase 1",
+  "purpose": "SES gun-show planning dates with Melbourne/WMMB active for Phase 1 verification; Orlando retained as future planning data.",
   "client": {
     "code": "SES",
     "name": "Southeast Safes"
@@ -206,5 +206,8 @@
       "sourceType": "Florida Gun Shows official schedule",
       "sourceUrl": "https://www.floridagunshows.com/florida-gun-show-schedule/"
     }
+  ],
+  "operationalAlertMarkets": [
+    "Melbourne"
   ]
 }
