@@ -1,13 +1,19 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: calendar.html
-   Version: 1.3.1
+   Version: 1.3.2
    Status: Production Candidate — SES Gun Show Operations
    Source: calendar.html 1.2.6
    Sprint: Calendar — Gun Show / Radio Traffic Visibility
    Purpose: Preserve appointment booking while adding the first agency-wide
             operational date layer: SES Melbourne/Orlando gun shows, their
             Wed–Sat radio flights, and advance traffic warnings.
+
+   Production changes in 1.3.2:
+   - Makes D1 Schedule Operations the only production schedule authority.
+   - Removes runtime fallback reads from the static SES gun-show and Liberty promotion JSON seed files.
+   - Shows a visible fail-safe warning when Schedule Operations is unavailable instead of displaying potentially stale dates.
+   - Keeps appointments and Media Operations records available while schedule authority is unavailable.
 
    Production changes in 1.3.1:
    - Renders approved multi-day campaign schedule items across every active day in Month view.
@@ -94,6 +100,7 @@ h1{margin:4px 0;font-size:38px;letter-spacing:-.04em}
 .version{align-self:flex-start;border:1px solid var(--border);background:#fff;border-radius:999px;padding:9px 12px;font-size:12px;font-weight:800;color:var(--muted)}
 .toolbar,.panel{background:#fff;border:1px solid var(--border);border-radius:16px}
 .toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;margin-bottom:16px;flex-wrap:wrap}
+.authority-alert{margin:-4px 0 16px;padding:12px 14px;border:1px solid #e3a3a3;border-radius:10px;background:var(--red-soft);color:var(--red);font-size:12px;font-weight:800}
 .actions{display:flex;gap:8px;flex-wrap:wrap}
 .btn{padding:9px 13px;border:1px solid var(--border);border-radius:9px;background:#fff;color:var(--text);font-weight:800}
 .btn:hover{background:#f7f9fc}
@@ -214,7 +221,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
         <h1>Calendar & Booking</h1>
         <p class="sub">Manage appointments, define booking rules, and see the month or quarter ahead. Google Calendar can become the conflict-checking source once Worker/OAuth integration is connected.</p>
       </div>
-      <div class="version">Installed version 1.3.1</div>
+      <div class="version">Installed version 1.3.2</div>
     </header>
 
     <div class="toolbar">
@@ -227,6 +234,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
         <span class="status" id="integrationStatus">Google Calendar not connected to website</span>
       </div>
     </div>
+    <div class="authority-alert" id="scheduleAuthorityAlert" hidden>Schedule data unavailable — D1 Schedule Authority did not respond. Static seed files are not used as production fallback.</div>
 
     <div class="tabs">
       <button class="tab" data-view="today" type="button">Today</button>
@@ -376,9 +384,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
 <script src="shared/gcm-shell.js?v=1.0.2"></script>
 <script>
 (()=>{"use strict";
-const VERSION="1.3.1",KEY="gcm_calendar_v1_1",$=id=>document.getElementById(id);
-const SHOW_SCHEDULE_URL="data/ses-gun-shows.json?v=1.0.3";
-const PROMO_SCHEDULE_URL="data/ses-liberty-promotions.json?v=1.0.0";
+const VERSION="1.3.2",KEY="gcm_calendar_v1_1",$=id=>document.getElementById(id);
 const WORKER_ENDPOINT="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
 let gunShowSchedule=[],libertyPromotions=[],mediaRecords=[],authoritativeScheduleEvents=[],scheduleAuthorityLoaded=false,operationalAlertMarkets=["Melbourne","Orlando"];
 const seed={
@@ -583,10 +589,9 @@ function scheduleEventToCalendar(event){
  };
 }
 function authoritativeOperationalEvents(){
- if(!scheduleAuthorityLoaded)return derivedShowEvents().concat(derivedPromotionEvents());
+ if(!scheduleAuthorityLoaded)return[];
  return authoritativeScheduleEvents.map(scheduleEventToCalendar).filter(Boolean);
 }
-
 function calendarItemsForDate(iso){
  const appointments=state.appointments.filter(function(a){return a.date===iso}).map(function(a){return Object.assign({},a,{source:"appointment"})});
  const operations=authoritativeOperationalEvents().filter(function(a){
@@ -613,43 +618,33 @@ function renderCalendarItem(item){
  return '<button class="event '+(item.typeId===4?"media":item.typeId===3?"client":"")+'" data-event="'+item.id+'" type="button">'+esc(item.time)+' '+esc(item.title)+'</button>';
 }
 async function loadOperationalShowSchedule(){
- try{
-  const responses=await Promise.all([
-   fetch(SHOW_SCHEDULE_URL,{cache:"no-store"}),
-   fetch(WORKER_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"get-media-operations"})}),
-   fetch(PROMO_SCHEDULE_URL,{cache:"no-store"}),
-   fetch(WORKER_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"schedule-operations",operation:"list"})})
-  ]);
-  const schedulePayload=await responses[0].json();
-  if(responses[0].ok&&Array.isArray(schedulePayload&&schedulePayload.shows)){
-   operationalAlertMarkets=Array.isArray(schedulePayload.operationalAlertMarkets)&&schedulePayload.operationalAlertMarkets.length?schedulePayload.operationalAlertMarkets:["Melbourne","Orlando"];
-   gunShowSchedule=schedulePayload.shows.map(function(s){
-    return Object.assign({},s,{
-     alertRecipients:Array.isArray(s.alertRecipients)?s.alertRecipients:(schedulePayload.alertRecipients||["Andy","Kristy"]),
-     station:schedulePayload&&schedulePayload.rules&&schedulePayload.rules[s.market]?schedulePayload.rules[s.market].station:(s.station||null),
-     trafficWarningDaysBeforeFlightStart:schedulePayload&&schedulePayload.rules&&schedulePayload.rules[s.market]?schedulePayload.rules[s.market].trafficWarningDaysBeforeFlightStart:7
-    });
-   });
-  }
-  const mediaPayload=await responses[1].json().catch(function(){return{}});
-  if(responses[1].ok&&mediaPayload&&mediaPayload.ok===true){
-   mediaRecords=Array.isArray(mediaPayload.mediaOperations&&mediaPayload.mediaOperations.records)?mediaPayload.mediaOperations.records:[];
-  }
-  const promoPayload=await responses[2].json().catch(function(){return{}});
-  if(responses[2].ok&&Array.isArray(promoPayload&&promoPayload.promotions)){
-   libertyPromotions=promoPayload.promotions;
-  }
-  const scheduleAuthorityPayload=await responses[3].json().catch(function(){return{}});
-  if(responses[3].ok&&scheduleAuthorityPayload&&scheduleAuthorityPayload.ok===true&&Array.isArray(scheduleAuthorityPayload.scheduleEvents)){
-   authoritativeScheduleEvents=scheduleAuthorityPayload.scheduleEvents;
-   scheduleAuthorityLoaded=true;
-  }
- }catch(error){
-  console.warn("Calendar operational show schedule unavailable.",error);
+ scheduleAuthorityLoaded=false;
+ authoritativeScheduleEvents=[];
+ const authorityAlert=$("scheduleAuthorityAlert");
+ if(authorityAlert)authorityAlert.hidden=true;
+
+ const results=await Promise.allSettled([
+  fetch(WORKER_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"get-media-operations"})})
+   .then(async function(response){return{response,payload:await response.json().catch(function(){return{}})};}),
+  fetch(WORKER_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"schedule-operations",operation:"list"})})
+   .then(async function(response){return{response,payload:await response.json().catch(function(){return{}})};})
+ ]);
+
+ const mediaResult=results[0];
+ if(mediaResult.status==="fulfilled"&&mediaResult.value.response.ok&&mediaResult.value.payload&&mediaResult.value.payload.ok===true){
+  mediaRecords=Array.isArray(mediaResult.value.payload.mediaOperations&&mediaResult.value.payload.mediaOperations.records)?mediaResult.value.payload.mediaOperations.records:[];
+ }
+
+ const scheduleResult=results[1];
+ if(scheduleResult.status==="fulfilled"&&scheduleResult.value.response.ok&&scheduleResult.value.payload&&scheduleResult.value.payload.ok===true&&Array.isArray(scheduleResult.value.payload.scheduleEvents)){
+  authoritativeScheduleEvents=scheduleResult.value.payload.scheduleEvents;
+  scheduleAuthorityLoaded=true;
+ }else{
+  if(authorityAlert)authorityAlert.hidden=false;
+  console.warn("Calendar D1 Schedule Authority unavailable. Static schedule seeds are intentionally not used.");
  }
  renderAll();
 }
-
 
 function setActiveView(name){
  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.view===name));
