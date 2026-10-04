@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System (GCM OS)
    File: tests/calendarSourceSync.test.js
-   Test Version: 1.2.1
+   Test Version: 1.2.2
    Status: Production Regression Lock
    Purpose: Lock D1 Schedule Operations as the only production schedule
             authority for Agency Calendar, Media Calendar, and Today.
@@ -84,6 +84,8 @@ assert(mediaCalendar.includes('id="schedule-authority-state"'),
 assert(mediaCalendar.includes("Static schedule seeds are intentionally not used."),
   "Media Calendar must explicitly prevent stale static fallback behavior.");
 
+assert(today.includes("let forwardLookScheduleAuthorityUnavailable = false;"),
+  "Today Forward Look must declare the Schedule Authority availability state before strict-mode assignment.");
 assert(today.includes("forwardLookScheduleAuthorityUnavailable = true"),
   "Today Forward Look must record D1 Schedule Authority failure.");
 assert(today.includes("Schedule Authority unavailable — no static fallback"),
