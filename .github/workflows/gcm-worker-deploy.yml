@@ -1,10 +1,11 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gcm-worker-deploy.yml
-# Version: 1.5.57
+# Version: 1.5.58
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Worker with human-led Signal Finding capture.
 # Change Notes:
+# - Verify the eighth SES Q4 Social Impact baseline observation seeded by migration 0036: 129 Large Gun Safes page views.
 # - Verify the seventh SES Q4 Social Impact baseline observation seeded by migration 0035: 195 Centurion 24 page views.
 # - Verify the sixth SES Q4 Social Impact baseline observation seeded by migration 0034: 223 Lincoln Series page views.
 # - Verify the fifth SES Q4 Social Impact baseline observation seeded by migration 0033: 187 page views for the Protect page/screen.
@@ -487,6 +488,21 @@ jobs:
             throw new Error("SES Q4 Social Impact Centurion 24 page-views baseline observation from migration 0035 was not verified.");
           }
           console.log("PASS SES Q4 Social Impact baseline: 195 Google Analytics Page Views for Liberty Centurion 24 Premium Colors, Jul 31-Aug 27, 2026");
+
+          const sesLargeGunSafesPageViewsBaseline = measurement.observations.find(item =>
+            item?.observationKey === "ses:q4-social-2026:ga4:page_views:large-gun-safes-florida:2026-07-31:2026-08-27"
+          );
+          if (
+            !sesLargeGunSafesPageViewsBaseline ||
+            sesLargeGunSafesPageViewsBaseline?.measurementPhase !== "baseline" ||
+            sesLargeGunSafesPageViewsBaseline?.sourceSystem !== "Google Analytics" ||
+            sesLargeGunSafesPageViewsBaseline?.metricKey !== "page_views" ||
+            Number(sesLargeGunSafesPageViewsBaseline?.metricValue) !== 129 ||
+            sesLargeGunSafesPageViewsBaseline?.metricUnit !== "count"
+          ) {
+            throw new Error("SES Q4 Social Impact Large Gun Safes page-views baseline observation from migration 0036 was not verified.");
+          }
+          console.log("PASS SES Q4 Social Impact baseline: 129 Google Analytics Page Views for Large Gun Safes for Sale in Florida, Jul 31-Aug 27, 2026");
 
           const mediaWorkflowResponse = await fetch(url, {
             method:"POST",
