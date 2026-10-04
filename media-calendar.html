@@ -1,11 +1,17 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media-calendar.html
-   Version: 1.6.0
+   Version: 1.6.1
    Status: Production Candidate
    Sprint: Media Operations — Prototype Match
    Purpose: Read-only client campaign command board matching the approved
             visual prototype while using existing D1 Media records.
+
+   Changes in 1.6.1:
+   - Makes D1 Schedule Operations the only production schedule authority.
+   - Removes runtime fallback reads from the static Liberty and gun-show JSON seed files.
+   - Keeps recorded Media Operations/workflow rows visible if schedule authority is unavailable.
+   - Shows a visible fail-safe warning instead of rendering potentially stale schedule dates.
 
    Changes in 1.6.0:
    - Reads approved campaign/event dates from D1 Schedule Operations as the primary schedule authority.
@@ -171,7 +177,7 @@
           <a class="button" href="media.html">Operator Workspace</a>
           <a class="button" href="media-production.html">Production Records</a>
           <a class="button" href="schedule.html?v=1.0.5">Schedule Control</a>
-          <span class="version">media-calendar.html · v1.6.0</span>
+          <span class="version">media-calendar.html · v1.6.1</span>
         </div>
       </div>
 
@@ -206,6 +212,7 @@
             </div>
           </div>
           <div id="calendar-state" class="loading">Loading campaign timeline…</div>
+          <div id="schedule-authority-state" class="error" hidden>Schedule data unavailable — D1 Schedule Authority did not respond. Static seed files are not used as production fallback.</div>
           <div id="calendar-wrap" class="timeline-scroll" hidden><div id="calendar-grid" class="timeline"></div></div>
           <div class="footnote">Each production keeps its own base-color identity. Its bar changes color exactly where it crosses the creative-age thresholds.</div>
         </section>
@@ -243,8 +250,6 @@
 (function(){
   "use strict";
   var ENDPOINT="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
-  var PROMO_SCHEDULE_URL="data/ses-liberty-promotions.json?v=1.0.0";
-  var SHOW_SCHEDULE_URL="data/ses-gun-shows.json?v=1.0.3";
   var MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
   var state={viewDate:new Date(new Date().getFullYear(),new Date().getMonth(),1),records:[],promotions:[],promotionChannels:[],gunShows:[],scheduleEvents:[],scheduleAuthorityLoaded:false,operationalAlertMarkets:["Melbourne","Orlando"],workflow:{clients:[],creatives:[],assignments:[],trafficPackages:[],confirmations:[]},clients:[],initialClient:""};
 
@@ -468,7 +473,7 @@
     return out;
   }
   function dedupe(rows){var seen=new Set();return rows.filter(function(r){var k=[lower(r.clientName||r.clientCode),lower(r.creative||r.campaign),lower(r.market),lower(r.outlet),String(r.startDate||"").slice(0,10),String(r.endDate||"").slice(0,10)].join("|");if(seen.has(k))return false;seen.add(k);return true;});}
-  function visibleRows(){var selected=$("client").value,scheduled=state.scheduleAuthorityLoaded?scheduleAuthorityRows():promotionRows().concat(gunShowRows());return dedupe(recordRows().concat(workflowRows(),scheduled)).filter(function(r){return(!selected||String(clientKey(r))===selected)&&intersectsMonth(r);});}
+  function visibleRows(){var selected=$("client").value,scheduled=scheduleAuthorityRows();return dedupe(recordRows().concat(workflowRows(),scheduled)).filter(function(r){return(!selected||String(clientKey(r))===selected)&&intersectsMonth(r);});}
   function productionKey(i){return lower(i.creative||i.campaign||i.id||"production");}
 
   function hashText(text){var h=2166136261;for(var i=0;i<text.length;i++){h^=text.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
@@ -565,23 +570,35 @@
 
   async function load(){
     $("calendar-state").className="loading";$("calendar-state").textContent="Loading campaign timeline…";$("calendar-state").hidden=false;
+    $("schedule-authority-state").hidden=true;
+    state.scheduleAuthorityLoaded=false;
+    state.scheduleEvents=[];
     try{
       var body={action:"get-media-operations"},selected=$("client").value;if(selected)body.clientId=Number(selected);
-      var responses=await Promise.all([
-        fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}),
-        fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"get-media-operations",operation:"get_creative_workflow"})}),
-        fetch(PROMO_SCHEDULE_URL,{cache:"no-store"}),
-        fetch(SHOW_SCHEDULE_URL,{cache:"no-store"}),
-        fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"schedule-operations",operation:"list"})})
+      var responses=await Promise.allSettled([
+        fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}).then(async function(response){return{response:response,payload:await response.json().catch(function(){return{};})};}),
+        fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"get-media-operations",operation:"get_creative_workflow"})}).then(async function(response){return{response:response,payload:await response.json().catch(function(){return{};})};}),
+        fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"schedule-operations",operation:"list"})}).then(async function(response){return{response:response,payload:await response.json().catch(function(){return{};})};})
       ]);
-      var payloads=await Promise.all(responses.map(function(r){return r.json().catch(function(){return{};});}));
-      if(!responses[0].ok||payloads[0].ok!==true)throw new Error(payloads[0].error||payloads[0].details||"Media Operations could not load.");
-      state.records=Array.isArray(payloads[0].mediaOperations&&payloads[0].mediaOperations.records)?payloads[0].mediaOperations.records:[];
-      state.clients=Array.isArray(payloads[0].mediaOperations&&payloads[0].mediaOperations.clients)?payloads[0].mediaOperations.clients:[];
-      if(responses[1].ok&&payloads[1].ok===true)state.workflow=payloads[1].creativeWorkflow||state.workflow;
-      if(responses[2].ok&&Array.isArray(payloads[2]&&payloads[2].promotions)){state.promotions=payloads[2].promotions;state.promotionChannels=Array.isArray(payloads[2].channels)?payloads[2].channels:[];}
-      if(responses[3].ok&&Array.isArray(payloads[3]&&payloads[3].shows)){state.gunShows=payloads[3].shows;state.operationalAlertMarkets=Array.isArray(payloads[3].operationalAlertMarkets)&&payloads[3].operationalAlertMarkets.length?payloads[3].operationalAlertMarkets:["Melbourne","Orlando"];}
-      if(responses[4].ok&&payloads[4]&&payloads[4].ok===true&&Array.isArray(payloads[4].scheduleEvents)){state.scheduleEvents=payloads[4].scheduleEvents;state.scheduleAuthorityLoaded=true;}
+
+      if(responses[0].status!=="fulfilled"||!responses[0].value.response.ok||responses[0].value.payload.ok!==true){
+        var mediaError=responses[0].status==="fulfilled"?(responses[0].value.payload.error||responses[0].value.payload.details):responses[0].reason;
+        throw new Error(mediaError||"Media Operations could not load.");
+      }
+      state.records=Array.isArray(responses[0].value.payload.mediaOperations&&responses[0].value.payload.mediaOperations.records)?responses[0].value.payload.mediaOperations.records:[];
+      state.clients=Array.isArray(responses[0].value.payload.mediaOperations&&responses[0].value.payload.mediaOperations.clients)?responses[0].value.payload.mediaOperations.clients:[];
+
+      if(responses[1].status==="fulfilled"&&responses[1].value.response.ok&&responses[1].value.payload.ok===true){
+        state.workflow=responses[1].value.payload.creativeWorkflow||state.workflow;
+      }
+
+      if(responses[2].status==="fulfilled"&&responses[2].value.response.ok&&responses[2].value.payload&&responses[2].value.payload.ok===true&&Array.isArray(responses[2].value.payload.scheduleEvents)){
+        state.scheduleEvents=responses[2].value.payload.scheduleEvents;
+        state.scheduleAuthorityLoaded=true;
+      }else{
+        $("schedule-authority-state").hidden=false;
+        console.warn("Media Calendar D1 Schedule Authority unavailable. Static schedule seeds are intentionally not used.");
+      }
 
       var prior=$("client").value;
       $("client").innerHTML='<option value="">All clients</option>'+state.clients.map(function(c){return'<option value="'+esc(c.clientId)+'">'+esc(c.clientName)+'</option>';}).join("");
@@ -592,8 +609,8 @@
 
   state.initialClient=readQuery();
   populateControls();
-  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"media",statusText:"D1 Media connected · Media Calendar v1.6.0"});
-  else console.error("Media Calendar 1.6.0: shared/gcm-shell.js did not load.");
+  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"media",statusText:"D1 Media connected · Media Calendar v1.6.1"});
+  else console.error("Media Calendar 1.6.1: shared/gcm-shell.js did not load.");
 
   $("prev-month").addEventListener("click",function(){shiftMonth(-1);});
   $("next-month").addEventListener("click",function(){shiftMonth(1);});
