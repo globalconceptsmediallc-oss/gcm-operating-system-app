@@ -1,13 +1,19 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: calendar.html
-   Version: 1.3.0
+   Version: 1.3.1
    Status: Production Candidate — SES Gun Show Operations
    Source: calendar.html 1.2.6
    Sprint: Calendar — Gun Show / Radio Traffic Visibility
    Purpose: Preserve appointment booking while adding the first agency-wide
             operational date layer: SES Melbourne/Orlando gun shows, their
             Wed–Sat radio flights, and advance traffic warnings.
+
+   Production changes in 1.3.1:
+   - Renders approved multi-day campaign schedule items across every active day in Month view.
+   - Uses a joined weekly campaign band so long-running campaigns read as duration, not a one-day start marker.
+   - Keeps gun-show, radio-flight, traffic, promotion, social, and appointment rendering unchanged.
+   - Preserves D1 Schedule Operations as the authoritative source.
 
    Production changes in 1.3.0:
    - Reads approved operational campaign/event dates from D1 Schedule Operations.
@@ -126,6 +132,12 @@ h1{margin:4px 0;font-size:38px;letter-spacing:-.04em}
 .event.liberty-sale{background:#fff7df;color:#835400;border:1px solid #e6c76e;font-weight:900}
 .event.liberty-post{background:#eef8f1;color:#24663a;border:1px solid #b9dec5;font-weight:800}
 .event.liberty-launch{background:#edf3ff;color:#244f92;border:1px solid #b9cef3;font-weight:900}
+.event.campaign-span{background:#fff4dd;color:#835400;border:1px solid #e6c76e;border-radius:0;margin-left:-8px;margin-right:-8px;width:calc(100% + 16px);position:relative;z-index:2}
+.event.campaign-span.range-start,.event.campaign-span.week-start{border-radius:7px 0 0 7px;margin-left:0;width:calc(100% + 8px)}
+.event.campaign-span.range-end,.event.campaign-span.week-end{border-radius:0 7px 7px 0;margin-right:0;width:calc(100% + 8px)}
+.event.campaign-span.range-start.range-end{border-radius:7px;margin-left:0;margin-right:0;width:100%}
+.event.campaign-span.range-start.week-end,.event.campaign-span.week-start.range-end{border-radius:7px;margin-left:0;margin-right:0;width:100%}
+.event.campaign-span.continuation{color:transparent}
 .event.candidate{border-style:dashed}
 .event[href]{text-decoration:none}
 .quarter-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;padding:18px}
@@ -202,7 +214,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
         <h1>Calendar & Booking</h1>
         <p class="sub">Manage appointments, define booking rules, and see the month or quarter ahead. Google Calendar can become the conflict-checking source once Worker/OAuth integration is connected.</p>
       </div>
-      <div class="version">Installed version 1.3.0</div>
+      <div class="version">Installed version 1.3.1</div>
     </header>
 
     <div class="toolbar">
@@ -364,7 +376,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
 <script src="shared/gcm-shell.js?v=1.0.2"></script>
 <script>
 (()=>{"use strict";
-const VERSION="1.3.0",KEY="gcm_calendar_v1_1",$=id=>document.getElementById(id);
+const VERSION="1.3.1",KEY="gcm_calendar_v1_1",$=id=>document.getElementById(id);
 const SHOW_SCHEDULE_URL="data/ses-gun-shows.json?v=1.0.3";
 const PROMO_SCHEDULE_URL="data/ses-liberty-promotions.json?v=1.0.0";
 const WORKER_ENDPOINT="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
@@ -559,12 +571,14 @@ function scheduleEventToCalendar(event){
  if(event.startDate&&event.endDate&&event.endDate!==event.startDate)metaParts.push(showDateRange(event.startDate,event.endDate));
  return{
   date:event.startDate,
+  endDate:event.endDate||event.startDate,
+  kind:event.kind||"",
   time:event.startTime||"",
   source:"schedule",
   className:className+(candidate?" candidate":""),
   title,
   meta:metaParts.join(" · ")||"Approved Schedule Operations record",
-  href:"schedule.html",
+  href:"schedule.html?v=1.0.4",
   key:event.key||[event.sourceKey,event.kind,event.startDate].join("|")
  };
 }
@@ -575,8 +589,22 @@ function authoritativeOperationalEvents(){
 
 function calendarItemsForDate(iso){
  const appointments=state.appointments.filter(function(a){return a.date===iso}).map(function(a){return Object.assign({},a,{source:"appointment"})});
- const operations=authoritativeOperationalEvents().filter(function(a){return a.date===iso});
- return appointments.concat(operations).sort(function(a,b){return String(a.time||"").localeCompare(String(b.time||""))||String(a.title||"").localeCompare(String(b.title||""))});
+ const operations=authoritativeOperationalEvents().filter(function(a){
+  if(a.kind==="campaign"&&a.date&&a.endDate&&a.endDate!==a.date)return iso>=a.date&&iso<=a.endDate;
+  return a.date===iso;
+ }).map(function(a){
+  if(a.kind!=="campaign"||!a.endDate||a.endDate===a.date)return a;
+  const d=parseDateOnly(iso),day=d?d.getDay():0;
+  const rangeStart=iso===a.date,rangeEnd=iso===a.endDate,weekStart=day===0,weekEnd=day===6;
+  const showTitle=rangeStart||weekStart;
+  return Object.assign({},a,{
+   rangeDate:iso,
+   className:(a.className||"")+" campaign-span"+(rangeStart?" range-start":"")+(rangeEnd?" range-end":"")+(weekStart?" week-start":"")+(weekEnd?" week-end":"")+(showTitle?"":" continuation"),
+   title:showTitle?a.title:"—",
+   sortPriority:-100
+  });
+ });
+ return appointments.concat(operations).sort(function(a,b){return Number(a.sortPriority||0)-Number(b.sortPriority||0)||String(a.time||"").localeCompare(String(b.time||""))||String(a.title||"").localeCompare(String(b.title||""))});
 }
 function renderCalendarItem(item){
  if(item.source==="show"||item.source==="promotion"||item.source==="schedule"){
