@@ -1,10 +1,12 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gcm-worker-deploy.yml
-# Version: 1.5.49
+# Version: 1.5.50
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Worker with human-led Signal Finding capture.
 # Change Notes:
+# - Deploy and verify Worker 7.39.0 with D1-backed Measurement Observations.
+# - Verify measurement-observations health/action/list contract and migration 0028 before declaring deployment healthy.
 # - Deploy and verify Worker 7.38.0 with durable Schedule Operations authority.
 # - Verify migration 0027 and schedule-operations list contract before declaring deployment healthy.
 # - Deploy and verify Worker 7.37.0 with Gmail ↔ Universal Intake reconciliation.
@@ -112,8 +114,8 @@ jobs:
           const healthResponse = await fetch(url);
           if (!healthResponse.ok) throw new Error(`Worker health returned HTTP ${healthResponse.status}`);
           const health = await healthResponse.json();
-          if (health.workerFileVersion !== "7.38.0") {
-            throw new Error(`Expected Worker 7.38.0, received ${health.workerFileVersion || "unknown"}`);
+          if (health.workerFileVersion !== "7.39.0") {
+            throw new Error(`Expected Worker 7.39.0, received ${health.workerFileVersion || "unknown"}`);
           }
           if (health.emailIntakeVersion !== "1.0.0") {
             throw new Error(`Expected Email Intake 1.0.0, received ${health.emailIntakeVersion || "unknown"}`);
@@ -138,6 +140,9 @@ jobs:
           }
           if (health.scheduleOperationsVersion !== "1.0.0") {
             throw new Error(`Expected Schedule Operations 1.0.0, received ${health.scheduleOperationsVersion || "unknown"}`);
+          }
+          if (health.measurementObservationsVersion !== "1.0.0") {
+            throw new Error(`Expected Measurement Observations 1.0.0, received ${health.measurementObservationsVersion || "unknown"}`);
           }
           const financeResponse = await fetch(url, {
             method:"POST",
@@ -199,6 +204,7 @@ jobs:
             "prospect-concept-view",
             "calendar-operations",
             "schedule-operations",
+            "measurement-observations",
             "evaluate-gmail-work-request",
             "approve-gmail-work-request",
             "delete-gmail-no-action",
@@ -351,6 +357,25 @@ jobs:
           }
           console.log(`PASS Schedule Operations: ${schedule.scheduleItems.length} durable items, ${schedule.scheduleEvents.length} derived events`);
 
+          const measurementResponse = await fetch(url, {
+            method:"POST",
+            headers:{ "Content-Type":"application/json" },
+            body:JSON.stringify({ action:"measurement-observations", operation:"list", limit:1 })
+          });
+          if (!measurementResponse.ok) {
+            throw new Error(`Measurement Observations returned HTTP ${measurementResponse.status}`);
+          }
+          const measurement = await measurementResponse.json();
+          if (
+            measurement?.ok !== true ||
+            measurement?.measurementObservationsVersion !== "1.0.0" ||
+            !Array.isArray(measurement?.observations) ||
+            measurement?.writesPerformed !== 0
+          ) {
+            throw new Error("Measurement Observations live read contract is invalid or migration 0028 is unavailable.");
+          }
+          console.log(`PASS Measurement Observations: ${measurement.observations.length} rows returned, 0 writes`);
+
           const mediaWorkflowResponse = await fetch(url, {
             method:"POST",
             headers:{ "Content-Type":"application/json" },
@@ -450,5 +475,5 @@ jobs:
           if (protectedResponse.status !== 401) {
             throw new Error(`Expected authentication boundary HTTP 401, received ${protectedResponse.status}`);
           }
-          console.log("PASS live Worker 7.37.0, Gmail Intake Sync 1.2.0, Universal Email Intake 1.0.0, Email Intake Finding 1.1.0, Google Review Quick Action 1.0.2, Email Intake Queue 1.0.0, Email Intake Disposition 1.5.3, Prospect Concept Tracking 1.0.8, Prospect CRM 1.5.0, durable Radar intelligence/outreach continuity, service startup catalog, appointment boundary, Gmail decision routes, Calendar, Work due-date source, Operating Sessions, and authentication boundary");
+          console.log("PASS live Worker 7.39.0 with Schedule Operations 1.0.0 and Measurement Observations 1.0.0, plus existing production route boundaries");
           NODE
