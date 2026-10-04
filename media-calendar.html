@@ -1,11 +1,16 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media-calendar.html
-   Version: 1.7.0
+   Version: 1.7.1
    Status: Production Candidate
    Sprint: Media Operations — Prototype Match
    Purpose: Read-only client campaign command board matching the approved
             visual prototype while using existing D1 Media records.
+
+   Changes in 1.7.1:
+   - Removes planned social-support bars from the monthly timeline so planned posts are not misread as continuous placements.
+   - Keeps coordinated online support summarized in the lower support card and campaign status.
+   - No D1 authority, schedule, or media data logic changed.
 
    Changes in 1.7.0:
    - Restores the approved compact campaign-board visual direction.
@@ -190,7 +195,7 @@
           <a class="button" href="media.html">Operator Workspace</a>
           <a class="button" href="media-production.html">Production Records</a>
           <a class="button" href="schedule.html?v=1.0.6">Schedule Control</a>
-          <span class="version">media-calendar.html · v1.7.0</span>
+          <span class="version">media-calendar.html · v1.7.1</span>
         </div>
       </div>
 
@@ -633,13 +638,6 @@
     if(radio.length){radio.forEach(function(l){grid.appendChild(createLane(l.market+" / "+l.outlet,l.items.length+" production"+(l.items.length===1?"":"s")+" in rotation",l.items,hueMap,"Radio"));});}
     else grid.appendChild(createLane("Radio","No station / market record",[],hueMap,"Radio","No radio placement recorded for this month"));
 
-    grid.appendChild(sectionTitle("Online Media"));
-    ["Google Business","Facebook","YouTube","Other Digital"].forEach(function(channel){
-      var raw=channelItems(rows,channel),items=onlineLaneItems(rows,channel),planned=raw.filter(function(x){return x.source==="promotion-post";}).length,recorded=raw.length-planned;
-      var sub=raw.length?([planned?planned+" planned":"",recorded?recorded+" recorded":""].filter(Boolean).join(" · ")):"Coordinated support";
-      grid.appendChild(createLane(channel,sub,items,hueMap,"Online","No coordinated placement recorded"));
-    });
-
     grid.appendChild(sectionTitle("Promotions / Events"));
     var events=eventItems(rows),promos=events.filter(function(x){return x.source==="promotion-run";}),shows=events.filter(function(x){return x.source!=="promotion-run";});
     grid.appendChild(createLane("Liberty / Co-op",promos.length?promos.length+" promotion"+(promos.length===1?"":"s")+" in market":"Manufacturer promotions",promos,hueMap,"Promo","No Liberty / co-op promotion visible this month"));
@@ -692,8 +690,8 @@
 
   state.initialClient=readQuery();
   populateControls();
-  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"media",statusText:"D1 Media connected · Media Calendar v1.7.0"});
-  else console.error("Media Calendar 1.7.0: shared/gcm-shell.js did not load.");
+  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"media",statusText:"D1 Media connected · Media Calendar v1.7.1"});
+  else console.error("Media Calendar 1.7.1: shared/gcm-shell.js did not load.");
 
   $("prev-month").addEventListener("click",function(){shiftMonth(-1);});
   $("next-month").addEventListener("click",function(){shiftMonth(1);});
