@@ -1,12 +1,17 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: schedule.html
-   Version: 1.0.1
+   Version: 1.0.2
    Status: Production Candidate — Schedule Change Control
    Sprint: Calendar / Media Calendar — One Record, Multiple Views
    Purpose: Create human-reviewed schedule additions/changes/cancellations
             against the durable D1 schedule authority without editing either
             calendar directly.
+   Changes in 1.0.2:
+   - Prevents Schedule Control dialogs from stacking.
+   - Opening Add, Change, or Cancel now closes any other open Schedule Control dialog first.
+   - Keeps every schedule mutation behind Pending Review and explicit approval.
+
    Changes in 1.0.1:
    - Replaces the native browser prompt used for cancellation with a controlled in-page dialog.
    - Prevents Safari from trapping the operator in a repeated cancel prompt loop.
@@ -32,7 +37,7 @@
 <button class="mobile btn" data-gcm-shell-menu-button type="button">Menu</button>
 <header class="top">
   <div><p class="eyebrow">Schedule Authority</p><h1>Schedule Control</h1><p class="sub">Add or change a campaign once. Nothing reaches the live calendars until you approve the candidate. Approved changes are versioned in D1 and read by both calendar views.</p></div>
-  <div class="version">schedule.html · v1.0.1</div>
+  <div class="version">schedule.html · v1.0.2</div>
 </header>
 
 <section class="panel">
@@ -103,6 +108,12 @@ function toast(m){$("toast").textContent=m;$("toast").classList.add("show");clea
 async function post(body){const r=await fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});const p=await r.json().catch(()=>({}));if(!r.ok||p.ok!==true)throw new Error(p.error||p.details||"Request failed.");return p}
 function fmt(v){if(!v)return"—";const[y,m,d]=v.split("-").map(Number);return new Date(y,m-1,d).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}
 function prettyType(v){return String(v||"").replaceAll("_"," ").replace(/\b\w/g,m=>m.toUpperCase())}
+function closeScheduleDialogs(except){
+ ["editDialog","cancelScheduleDialog"].forEach(id=>{
+  const d=$(id);
+  if(d&&id!==except&&d.open)d.close();
+ });
+}
 
 async function load(){
  const [s,m]=await Promise.all([post({action:"schedule-operations",operation:"list"}),post({action:"get-media-operations"})]);
@@ -132,10 +143,11 @@ async function review(operation,id){try{await post({action:"schedule-operations"
 function resetForm(){
  $("editForm").reset();$("requestType").value="add";$("targetItemId").value="";$("status").value="planned";$("dialogTitle").textContent="Add Schedule Item";$("dialogCopy").textContent="Create a review candidate. Approval is required before calendars change.";
 }
-function openAdd(){resetForm();const ses=clients.find(c=>String(c.clientCode||"").toLowerCase()==="ses"||String(c.clientName||"").toLowerCase().includes("southeast safes"));if(ses)$("clientId").value=String(ses.clientId);$("editDialog").showModal()}
-function openChange(id){const i=items.find(x=>x.id===id);if(!i)return;resetForm();$("requestType").value="change";$("targetItemId").value=String(id);$("dialogTitle").textContent="Propose Schedule Change";$("dialogCopy").textContent="Current live dates stay in place until you approve this candidate.";$("clientId").value=String(i.clientId||"");$("itemType").value=i.itemType||"campaign";$("title").value=i.title||"";$("startDate").value=i.startDate||"";$("endDate").value=i.endDate||i.startDate||"";$("market").value=i.market||"";$("channel").value=i.channel||"";$("status").value=i.status||"planned";$("startTime").value=i.startTime||"";$("station").value=i.metadata&&i.metadata.station||"";$("venue").value=i.metadata&&i.metadata.venue||"";$("offer").value=i.metadata&&i.metadata.offer||"";$("socialDates").value=i.metadata&&Array.isArray(i.metadata.schedule)?i.metadata.schedule.map(x=>x.date).filter(Boolean).join(", "):"";$("sourceReference").value=i.sourceReference||"";$("notes").value=i.notes||"";$("editDialog").showModal()}
+function openAdd(){closeScheduleDialogs("editDialog");resetForm();const ses=clients.find(c=>String(c.clientCode||"").toLowerCase()==="ses"||String(c.clientName||"").toLowerCase().includes("southeast safes"));if(ses)$("clientId").value=String(ses.clientId);$("editDialog").showModal()}
+function openChange(id){const i=items.find(x=>x.id===id);if(!i)return;closeScheduleDialogs("editDialog");resetForm();$("requestType").value="change";$("targetItemId").value=String(id);$("dialogTitle").textContent="Propose Schedule Change";$("dialogCopy").textContent="Current live dates stay in place until you approve this candidate.";$("clientId").value=String(i.clientId||"");$("itemType").value=i.itemType||"campaign";$("title").value=i.title||"";$("startDate").value=i.startDate||"";$("endDate").value=i.endDate||i.startDate||"";$("market").value=i.market||"";$("channel").value=i.channel||"";$("status").value=i.status||"planned";$("startTime").value=i.startTime||"";$("station").value=i.metadata&&i.metadata.station||"";$("venue").value=i.metadata&&i.metadata.venue||"";$("offer").value=i.metadata&&i.metadata.offer||"";$("socialDates").value=i.metadata&&Array.isArray(i.metadata.schedule)?i.metadata.schedule.map(x=>x.date).filter(Boolean).join(", "):"";$("sourceReference").value=i.sourceReference||"";$("notes").value=i.notes||"";$("editDialog").showModal()}
 function proposeCancel(id){
  const i=items.find(x=>x.id===id);if(!i)return;
+ closeScheduleDialogs("cancelScheduleDialog");
  $("cancelScheduleItemId").value=String(id);
  $("cancelScheduleTitle").value=i.title||"Schedule item";
  $("cancelScheduleReason").value="";
