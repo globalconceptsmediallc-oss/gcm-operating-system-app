@@ -1,12 +1,17 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: schedule.html
-   Version: 1.0.0
+   Version: 1.0.1
    Status: Production Candidate — Schedule Change Control
    Sprint: Calendar / Media Calendar — One Record, Multiple Views
    Purpose: Create human-reviewed schedule additions/changes/cancellations
             against the durable D1 schedule authority without editing either
             calendar directly.
+   Changes in 1.0.1:
+   - Replaces the native browser prompt used for cancellation with a controlled in-page dialog.
+   - Prevents Safari from trapping the operator in a repeated cancel prompt loop.
+   - Cancellation still creates a pending review candidate; it never changes the live schedule immediately.
+
    Production Contract: window.GCMOShell
    ========================================================= -->
 <!DOCTYPE html>
@@ -27,7 +32,7 @@
 <button class="mobile btn" data-gcm-shell-menu-button type="button">Menu</button>
 <header class="top">
   <div><p class="eyebrow">Schedule Authority</p><h1>Schedule Control</h1><p class="sub">Add or change a campaign once. Nothing reaches the live calendars until you approve the candidate. Approved changes are versioned in D1 and read by both calendar views.</p></div>
-  <div class="version">schedule.html · v1.0.0</div>
+  <div class="version">schedule.html · v1.0.1</div>
 </header>
 
 <section class="panel">
@@ -70,6 +75,18 @@
 </div>
 </div>
 <div class="dactions"><button class="btn" id="cancelDialog" type="button">Cancel</button><button class="btn primary" type="submit">Save for Review</button></div>
+</form>
+</dialog>
+
+<dialog id="cancelScheduleDialog">
+<form id="cancelScheduleForm">
+<div class="dhead"><div><h2>Propose Schedule Cancellation</h2><p>The live schedule will stay unchanged until this cancellation is approved.</p></div><button class="close" id="closeCancelSchedule" type="button">×</button></div>
+<div class="dbody">
+<input type="hidden" id="cancelScheduleItemId">
+<div class="field full"><label>Schedule Item</label><input id="cancelScheduleTitle" disabled></div>
+<div class="field full" style="margin-top:14px"><label>Why should this item be cancelled?</label><textarea id="cancelScheduleReason" required></textarea></div>
+</div>
+<div class="dactions"><button class="btn" id="dismissCancelSchedule" type="button">Back</button><button class="btn danger" type="submit">Save Cancellation for Review</button></div>
 </form>
 </dialog>
 
@@ -117,7 +134,25 @@ function resetForm(){
 }
 function openAdd(){resetForm();const ses=clients.find(c=>String(c.clientCode||"").toLowerCase()==="ses"||String(c.clientName||"").toLowerCase().includes("southeast safes"));if(ses)$("clientId").value=String(ses.clientId);$("editDialog").showModal()}
 function openChange(id){const i=items.find(x=>x.id===id);if(!i)return;resetForm();$("requestType").value="change";$("targetItemId").value=String(id);$("dialogTitle").textContent="Propose Schedule Change";$("dialogCopy").textContent="Current live dates stay in place until you approve this candidate.";$("clientId").value=String(i.clientId||"");$("itemType").value=i.itemType||"campaign";$("title").value=i.title||"";$("startDate").value=i.startDate||"";$("endDate").value=i.endDate||i.startDate||"";$("market").value=i.market||"";$("channel").value=i.channel||"";$("status").value=i.status||"planned";$("startTime").value=i.startTime||"";$("station").value=i.metadata&&i.metadata.station||"";$("venue").value=i.metadata&&i.metadata.venue||"";$("offer").value=i.metadata&&i.metadata.offer||"";$("socialDates").value=i.metadata&&Array.isArray(i.metadata.schedule)?i.metadata.schedule.map(x=>x.date).filter(Boolean).join(", "):"";$("sourceReference").value=i.sourceReference||"";$("notes").value=i.notes||"";$("editDialog").showModal()}
-async function proposeCancel(id){const i=items.find(x=>x.id===id);if(!i)return;const reason=prompt("Why should this schedule item be cancelled?");if(reason===null)return;try{await post({action:"schedule-operations",operation:"create_candidate",requestType:"cancel",targetItemId:id,clientId:i.clientId,title:"Cancel — "+i.title,reason,sourceReference:i.sourceReference,requestedBy:"Andy"});toast("Cancellation saved for review.");await load()}catch(e){toast(e.message)}}
+function proposeCancel(id){
+ const i=items.find(x=>x.id===id);if(!i)return;
+ $("cancelScheduleItemId").value=String(id);
+ $("cancelScheduleTitle").value=i.title||"Schedule item";
+ $("cancelScheduleReason").value="";
+ $("cancelScheduleDialog").showModal();
+}
+async function saveCancelCandidate(){
+ const id=Number($("cancelScheduleItemId").value),i=items.find(x=>x.id===id);
+ if(!i)return;
+ const reason=$("cancelScheduleReason").value.trim();
+ if(!reason){toast("Please enter the reason for the proposed cancellation.");return;}
+ try{
+  await post({action:"schedule-operations",operation:"create_candidate",requestType:"cancel",targetItemId:id,clientId:i.clientId,title:"Cancel — "+i.title,reason,sourceReference:i.sourceReference,requestedBy:"Andy"});
+  $("cancelScheduleDialog").close();
+  toast("Cancellation saved for review. Live schedule unchanged.");
+  await load();
+ }catch(e){toast(e.message)}
+}
 
 function metadataFromForm(){
  const type=$("itemType").value,dates=$("socialDates").value.split(",").map(x=>x.trim()).filter(x=>/^\d{4}-\d{2}-\d{2}$/.test(x));
@@ -139,6 +174,9 @@ function metadataFromForm(){
 
 $("editForm").onsubmit=async e=>{e.preventDefault();const body={action:"schedule-operations",operation:"create_candidate",requestType:$("requestType").value,targetItemId:Number($("targetItemId").value)||null,clientId:Number($("clientId").value),title:$("requestType").value==="change"?"Change — "+$("title").value.trim():$("title").value.trim(),reason:$("reason").value.trim(),sourceReference:$("sourceReference").value.trim(),requestedBy:"Andy",proposed:{clientId:Number($("clientId").value),itemType:$("itemType").value,title:$("title").value.trim(),startDate:$("startDate").value,endDate:$("endDate").value,market:$("market").value.trim(),channel:$("channel").value,startTime:$("startTime").value,status:$("status").value,sourceReference:$("sourceReference").value.trim(),notes:$("notes").value.trim(),metadata:metadataFromForm()}};try{await post(body);$("editDialog").close();toast("Saved for review — live calendars unchanged until approval.");await load()}catch(err){toast(err.message)}};
 $("addItem").onclick=openAdd;$("refresh").onclick=()=>load().catch(e=>toast(e.message));$("closeDialog").onclick=()=>$("editDialog").close();$("cancelDialog").onclick=()=>$("editDialog").close();
+$("closeCancelSchedule").onclick=()=>$("cancelScheduleDialog").close();
+$("dismissCancelSchedule").onclick=()=>$("cancelScheduleDialog").close();
+$("cancelScheduleForm").onsubmit=e=>{e.preventDefault();saveCancelCandidate();};
 if(window.GCMOShell)window.GCMOShell.mount({currentPage:"calendar",statusText:"Schedule authority · D1 review workflow"});
 load().catch(e=>toast(e.message));
 })();
