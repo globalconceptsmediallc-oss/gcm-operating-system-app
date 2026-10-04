@@ -1,11 +1,17 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media-calendar.html
-   Version: 1.7.1
+   Version: 1.7.2
    Status: Production Candidate
    Sprint: Media Operations — Prototype Match
    Purpose: Read-only client campaign command board matching the approved
             visual prototype while using existing D1 Media records.
+
+   Changes in 1.7.2:
+   - Restores continuous Online Media support bars by channel.
+   - Adds exact planned/recorded placement-date markers to each support bar.
+   - Marker tooltips identify the post date, status, and creative/title.
+   - Keeps lower support counts and D1 Schedule Authority unchanged.
 
    Changes in 1.7.1:
    - Removes planned social-support bars from the monthly timeline so planned posts are not misread as continuous placements.
@@ -147,6 +153,10 @@
     .bar-label strong{font-size:.65rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .bar-label span{font-size:.53rem;font-weight:900;white-space:nowrap;opacity:.93}
     .production-shell:hover{filter:brightness(1.04);box-shadow:0 5px 11px rgba(8,23,42,.2)}
+    .support-marker{position:absolute;top:4px;bottom:4px;width:2px;background:rgba(255,255,255,.95);z-index:5;pointer-events:auto}
+    .support-marker::after{content:"";position:absolute;width:7px;height:7px;border-radius:999px;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;border:2px solid #6e7d90;box-shadow:0 1px 2px rgba(8,23,42,.18)}
+    .support-marker.recorded::after{background:#2aa876;border-color:#fff}
+    .support-marker.planned::after{background:#fff;border-color:#6e7d90}
     .today-line{position:absolute;top:0;bottom:0;width:2px;background:#e04d4d;z-index:8;pointer-events:none}
     .today-line::before{content:"TODAY";position:absolute;top:2px;left:4px;padding:2px 4px;border-radius:4px;background:#e04d4d;color:#fff;font-size:.47rem;font-weight:950;letter-spacing:.05em}
     .empty-track-note{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#9a6515;font-size:.62rem;font-weight:850}
@@ -195,7 +205,7 @@
           <a class="button" href="media.html">Operator Workspace</a>
           <a class="button" href="media-production.html">Production Records</a>
           <a class="button" href="schedule.html?v=1.0.6">Schedule Control</a>
-          <span class="version">media-calendar.html · v1.7.1</span>
+          <span class="version">media-calendar.html · v1.7.2</span>
         </div>
       </div>
 
@@ -560,8 +570,19 @@
     }else{
       ageSegments(item,ds,de,base).forEach(function(seg){var segLeft=inclusiveDays(ds,seg.start)-1,segDays=inclusiveDays(seg.start,seg.end),el=document.createElement("span");el.className="age-segment";el.style.left=(segLeft/total*100)+"%";el.style.width=(segDays/total*100)+"%";el.style.background=seg.color;shell.appendChild(el);});
     }
-    var endFresh=planned?{label:"Planned"}:freshnessAt(item,de),label=document.createElement("div");label.className="bar-label";label.innerHTML="<strong>"+esc(item.creative)+"</strong><span>"+esc(endFresh.label)+"</span>";shell.appendChild(label);
-    shell.title=[item.creative,item.market,item.outlet,dateText(item.startDate)+" – "+dateText(item.endDate),"Base color = production identity","Bar segments = creative age"].filter(Boolean).join("\n");
+    if(item.source==="planned-support"&&Array.isArray(item.supportPoints)){
+      item.supportPoints.forEach(function(point){
+        var pd=toDate(point.date);if(!pd||pd<ds||pd>de)return;
+        var offset=(pd.getTime()-ds.getTime())/86400000,totalSpan=Math.max(1,(de.getTime()-ds.getTime())/86400000);
+        var marker=document.createElement("span");
+        marker.className="support-marker "+(point.status==="recorded"?"recorded":"planned");
+        marker.style.left=Math.max(0,Math.min(100,(offset/totalSpan)*100))+"%";
+        marker.title=[shortDate(pd),point.status==="recorded"?"Recorded":"Planned",point.title,point.outlet].filter(Boolean).join(" · ");
+        shell.appendChild(marker);
+      });
+    }
+    var endFresh=planned?{label:(item.source==="planned-support"?"Support":"Planned")}:freshnessAt(item,de),label=document.createElement("div");label.className="bar-label";label.innerHTML="<strong>"+esc(item.creative)+"</strong><span>"+esc(endFresh.label)+"</span>";shell.appendChild(label);
+    shell.title=[item.creative,item.market,item.outlet,dateText(item.startDate)+" – "+dateText(item.endDate),item.source==="planned-support"?"Markers = planned/recorded post dates":"Base color = production identity",item.source==="planned-support"?"Green markers = recorded · white markers = planned":"Bar segments = creative age"].filter(Boolean).join("\n");
     function open(){if(item.openUrl)window.location.href=item.openUrl;}shell.addEventListener("click",open);shell.addEventListener("keydown",function(ev){if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();open();}});
     track.appendChild(shell);
   }
@@ -575,23 +596,27 @@
   function radioLanes(rows){var map=new Map();rows.filter(function(r){return typeGroup(r.type)==="Radio";}).forEach(function(r){var k=[r.market||"Market",r.outlet||"Station"].join("|");if(!map.has(k))map.set(k,{market:r.market||"Market",outlet:r.outlet||"Station",items:[]});map.get(k).items.push(r);});return Array.from(map.values()).sort(function(a,b){return(a.market+" "+a.outlet).localeCompare(b.market+" "+b.outlet);});}
   function channelItems(rows,channel){return rows.filter(function(r){return typeGroup(r.type)===channel;}).sort(function(a,b){return String(a.startDate||"").localeCompare(String(b.startDate||""));});}
   function onlineLaneItems(rows,channel){
-    var all=channelItems(rows,channel),planned=all.filter(function(x){return x.source==="promotion-post";}),recorded=all.filter(function(x){return x.source!=="promotion-post";});
-    if(planned.length){
-      var first=planned[0],last=planned[planned.length-1];
-      recorded.push({
-        source:"planned-support",
-        id:"planned-support-"+lower(channel).replace(/[^a-z0-9]+/g,"-"),
-        clientId:first.clientId,clientName:first.clientName,clientCode:first.clientCode,
-        type:first.type,market:"Social",outlet:first.outlet||channel,
-        campaign:"Coordinated social support",
-        creative:planned.length+" planned social post"+(planned.length===1?"":"s"),
-        startDate:first.startDate,endDate:last.endDate||last.startDate,
-        creativeStartDate:first.startDate,status:"planned",trafficId:"",
-        openUrl:"calendar.html?month="+String(first.startDate||"").slice(0,7),
-        plannedCount:planned.length
-      });
-    }
-    return recorded.sort(function(a,b){return String(a.startDate||"").localeCompare(String(b.startDate||""));});
+    var all=channelItems(rows,channel);
+    if(!all.length)return[];
+    var first=all[0],last=all[all.length-1],planned=all.filter(function(x){return x.source==="promotion-post";}).length,recorded=all.length-planned;
+    return [{
+      source:"planned-support",
+      id:"planned-support-"+lower(channel).replace(/[^a-z0-9]+/g,"-"),
+      clientId:first.clientId,clientName:first.clientName,clientCode:first.clientCode,
+      type:first.type,market:"Social",outlet:first.outlet||channel,
+      campaign:"Coordinated social support",
+      creative:(recorded?recorded+" recorded":"")+(recorded&&planned?" · ":"")+(planned?planned+" planned":""),
+      startDate:first.startDate,endDate:last.endDate||last.startDate,
+      creativeStartDate:first.startDate,status:"planned",trafficId:"",
+      openUrl:"calendar.html?month="+String(first.startDate||"").slice(0,7),
+      plannedCount:planned,recordedCount:recorded,
+      supportPoints:all.map(function(x){return{
+        date:x.startDate,
+        title:x.creative||x.campaign||"Social support",
+        status:x.source==="promotion-post"?"planned":"recorded",
+        outlet:x.outlet||channel
+      };})
+    }];
   }
   function eventItems(rows){var seen=new Set(),out=[];rows.forEach(function(r){
     if(r.source==="promotion-post"||r.source==="schedule-deadline"||r.source==="promotion-takedown")return;
@@ -637,6 +662,13 @@
     var radio=radioLanes(rows);
     if(radio.length){radio.forEach(function(l){grid.appendChild(createLane(l.market+" / "+l.outlet,l.items.length+" production"+(l.items.length===1?"":"s")+" in rotation",l.items,hueMap,"Radio"));});}
     else grid.appendChild(createLane("Radio","No station / market record",[],hueMap,"Radio","No radio placement recorded for this month"));
+
+    grid.appendChild(sectionTitle("Online Media"));
+    ["Google Business","Facebook","YouTube","Other Digital"].forEach(function(channel){
+      var raw=channelItems(rows,channel),items=onlineLaneItems(rows,channel),planned=raw.filter(function(x){return x.source==="promotion-post";}).length,recorded=raw.length-planned;
+      var sub=raw.length?([recorded?recorded+" recorded":"",planned?planned+" planned":""].filter(Boolean).join(" · ")+" · markers show dates"):"Coordinated support";
+      grid.appendChild(createLane(channel,sub,items,hueMap,"Online","No coordinated placement recorded"));
+    });
 
     grid.appendChild(sectionTitle("Promotions / Events"));
     var events=eventItems(rows),promos=events.filter(function(x){return x.source==="promotion-run";}),shows=events.filter(function(x){return x.source!=="promotion-run";});
@@ -690,8 +722,8 @@
 
   state.initialClient=readQuery();
   populateControls();
-  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"media",statusText:"D1 Media connected · Media Calendar v1.7.1"});
-  else console.error("Media Calendar 1.7.1: shared/gcm-shell.js did not load.");
+  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"media",statusText:"D1 Media connected · Media Calendar v1.7.2"});
+  else console.error("Media Calendar 1.7.2: shared/gcm-shell.js did not load.");
 
   $("prev-month").addEventListener("click",function(){shiftMonth(-1);});
   $("next-month").addEventListener("click",function(){shiftMonth(1);});
