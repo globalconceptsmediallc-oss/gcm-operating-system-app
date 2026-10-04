@@ -1,10 +1,11 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gcm-worker-deploy.yml
-# Version: 1.5.55
+# Version: 1.5.56
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Worker with human-led Signal Finding capture.
 # Change Notes:
+# - Verify the sixth SES Q4 Social Impact baseline observation seeded by migration 0034: 223 Lincoln Series page views.
 # - Verify the fifth SES Q4 Social Impact baseline observation seeded by migration 0033: 187 page views for the Protect page/screen.
 # - Verify the fourth SES Q4 Social Impact baseline observation seeded by migration 0032: Events = 8000.
 # - Verify the third SES Q4 Social Impact baseline observation seeded by migration 0031: Avg engagement time = 76 seconds.
@@ -455,6 +456,21 @@ jobs:
             throw new Error("SES Q4 Social Impact page-views baseline observation from migration 0033 was not verified.");
           }
           console.log("PASS SES Q4 Social Impact baseline: 187 Google Analytics Page Views for Protect page/screen, Jul 31-Aug 27, 2026");
+
+          const sesLincolnPageViewsBaseline = measurement.observations.find(item =>
+            item?.observationKey === "ses:q4-social-2026:ga4:page_views:lincoln-series:2026-07-31:2026-08-27"
+          );
+          if (
+            !sesLincolnPageViewsBaseline ||
+            sesLincolnPageViewsBaseline?.measurementPhase !== "baseline" ||
+            sesLincolnPageViewsBaseline?.sourceSystem !== "Google Analytics" ||
+            sesLincolnPageViewsBaseline?.metricKey !== "page_views" ||
+            Number(sesLincolnPageViewsBaseline?.metricValue) !== 223 ||
+            sesLincolnPageViewsBaseline?.metricUnit !== "count"
+          ) {
+            throw new Error("SES Q4 Social Impact Lincoln page-views baseline observation from migration 0034 was not verified.");
+          }
+          console.log("PASS SES Q4 Social Impact baseline: 223 Google Analytics Page Views for Liberty Safe Lincoln Series, Jul 31-Aug 27, 2026");
 
           const mediaWorkflowResponse = await fetch(url, {
             method:"POST",
