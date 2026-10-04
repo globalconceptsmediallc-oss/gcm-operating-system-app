@@ -1,13 +1,19 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.6.0
+   Version: 3.6.1
    Status: Production Candidate
    Source: Production today.html 3.5.53
    Sprint: Today — Forward Look
    Purpose: Preserve the locked Today layout, Gmail approvals, Mission Control,
             Media logic, and operating workflow while adding a read-only future
             commitment view from authoritative dated OS records.
+
+   Production changes in 3.6.1:
+   - Makes D1 Schedule Operations the only production schedule authority for Forward Look schedule commitments.
+   - Removes the static SES gun-show runtime fallback.
+   - Shows a visible Forward Look fail-safe when Schedule Operations is unavailable instead of substituting stale seed dates.
+   - Preserves all other Forward Look sources and the locked Today operating hierarchy.
 
    Production changes in 3.6.0:
    - Reads approved campaign/event commitments from D1 Schedule Operations.
@@ -1969,7 +1975,7 @@
 <a class="nav-link" href="finance.html"><span class="nav-icon">$</span><span>Billing</span></a>
 <a class="nav-link" href="proof.html"><span class="nav-icon">↗</span><span>Proof</span></a>
 </nav>
-<div class="sidebar-footer"><div class="sidebar-status"><span class="status-dot" aria-hidden="true"></span><span>Agency Command Center operational · Today v3.6.0</span></div></div>
+<div class="sidebar-footer"><div class="sidebar-status"><span class="status-dot" aria-hidden="true"></span><span>Agency Command Center operational · Today v3.6.1</span></div></div>
 </aside>
 <main class="main" id="main-content">
 <div class="main-inner">
@@ -3192,9 +3198,11 @@
 
         const nextSeven = deduped.filter(function(item) { return item.daysUntil <= 7; }).length;
         if (!deduped.length) {
-          forwardLookSummary.textContent = forwardLookLoadFailures
-            ? "No future dated commitments are visible from the sources that responded."
-            : "No dated commitments are recorded in the next 30 days.";
+          forwardLookSummary.textContent = forwardLookScheduleAuthorityUnavailable
+            ? "Schedule Authority unavailable — static seed files are not used as fallback. No future dated commitments are visible from the sources that responded."
+            : forwardLookLoadFailures
+              ? "No future dated commitments are visible from the sources that responded."
+              : "No dated commitments are recorded in the next 30 days.";
           forwardLookList.innerHTML = '<div class="forward-look-empty">Forward Look is clear for the next 30 days.</div>';
           forwardLookMore.hidden = true;
           return;
@@ -3204,7 +3212,8 @@
           deduped.length + " dated " + (deduped.length === 1 ? "commitment" : "commitments") +
           " in the next 30 days" +
           (nextSeven ? " · " + nextSeven + " in the next 7 days" : "") +
-          (forwardLookLoadFailures ? " · " + forwardLookLoadFailures + " source check" + (forwardLookLoadFailures === 1 ? "" : "s") + " unavailable" : "");
+          (forwardLookLoadFailures ? " · " + forwardLookLoadFailures + " source check" + (forwardLookLoadFailures === 1 ? "" : "s") + " unavailable" : "") +
+          (forwardLookScheduleAuthorityUnavailable ? " · Schedule Authority unavailable — no static fallback" : "");
 
         forwardLookList.innerHTML = deduped.slice(0, FORWARD_LOOK_LIMIT).map(function(item) {
           const date = forwardDateParts(item.date);
@@ -3240,6 +3249,7 @@
       async function loadForwardLook() {
         forwardLookLoadFailures = 0;
         forwardLookLoaded = false;
+        forwardLookScheduleAuthorityUnavailable = false;
         const items = [];
 
         const results = await Promise.allSettled([
@@ -3247,10 +3257,6 @@
           forwardLookPost("prospect-crm", { operation: "list_prospects" }),
           forwardLookPost("calendar-operations", { operation: "list" }),
           forwardLookPost("get-media-operations"),
-          fetch("data/ses-gun-shows.json?v=1.0.3", { cache: "no-store" }).then(function(response) {
-            if (!response.ok) throw new Error("SES gun-show schedule returned HTTP " + response.status);
-            return response.json();
-          }),
           forwardLookPost("schedule-operations", { operation: "list" })
         ]);
 
@@ -3361,7 +3367,7 @@
           forwardLookLoadFailures += 1;
         }
 
-        const scheduleAuthorityResult = results[5];
+        const scheduleAuthorityResult = results[4];
         if (scheduleAuthorityResult && scheduleAuthorityResult.status === "fulfilled") {
           const scheduleEvents = Array.isArray(scheduleAuthorityResult.value && scheduleAuthorityResult.value.scheduleEvents)
             ? scheduleAuthorityResult.value.scheduleEvents
@@ -3370,19 +3376,9 @@
             addScheduleForwardItem(items, event, scheduleEvents, gunShowMediaRecords);
           });
         } else {
-          const gunShowResult = results[4];
-          if (gunShowResult && gunShowResult.status === "fulfilled") {
-            const schedule = gunShowResult.value || {};
-            const enabledMarkets = Array.isArray(schedule.operationalAlertMarkets) && schedule.operationalAlertMarkets.length
-              ? schedule.operationalAlertMarkets
-              : ["Melbourne", "Orlando"];
-            const shows = Array.isArray(schedule.shows) ? schedule.shows : [];
-            shows.filter(function(show) { return enabledMarkets.includes(show.market); }).forEach(function(show) {
-              addGunShowTrafficAlert(items, show, schedule, gunShowMediaRecords);
-            });
-          } else {
-            forwardLookLoadFailures += 1;
-          }
+          forwardLookLoadFailures += 1;
+          forwardLookScheduleAuthorityUnavailable = true;
+          console.warn("Today Forward Look D1 Schedule Authority unavailable. Static schedule seeds are intentionally not used.");
         }
 
         forwardLookSourceItems = items;
@@ -3841,7 +3837,7 @@
         renderDashboard(data);
       });
 
-      const TODAY_VERSION = "3.6.0";
+      const TODAY_VERSION = "3.6.1";
       if (!window.GCMOShell) {
         console.error(`Today ${TODAY_VERSION}: shared/gcm-shell.js did not load.`);
       } else {
