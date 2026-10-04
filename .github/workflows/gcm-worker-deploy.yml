@@ -1,10 +1,11 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gcm-worker-deploy.yml
-# Version: 1.5.56
+# Version: 1.5.57
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Worker with human-led Signal Finding capture.
 # Change Notes:
+# - Verify the seventh SES Q4 Social Impact baseline observation seeded by migration 0035: 195 Centurion 24 page views.
 # - Verify the sixth SES Q4 Social Impact baseline observation seeded by migration 0034: 223 Lincoln Series page views.
 # - Verify the fifth SES Q4 Social Impact baseline observation seeded by migration 0033: 187 page views for the Protect page/screen.
 # - Verify the fourth SES Q4 Social Impact baseline observation seeded by migration 0032: Events = 8000.
@@ -471,6 +472,21 @@ jobs:
             throw new Error("SES Q4 Social Impact Lincoln page-views baseline observation from migration 0034 was not verified.");
           }
           console.log("PASS SES Q4 Social Impact baseline: 223 Google Analytics Page Views for Liberty Safe Lincoln Series, Jul 31-Aug 27, 2026");
+
+          const sesCenturion24PageViewsBaseline = measurement.observations.find(item =>
+            item?.observationKey === "ses:q4-social-2026:ga4:page_views:centurion-24-premium-colors:2026-07-31:2026-08-27"
+          );
+          if (
+            !sesCenturion24PageViewsBaseline ||
+            sesCenturion24PageViewsBaseline?.measurementPhase !== "baseline" ||
+            sesCenturion24PageViewsBaseline?.sourceSystem !== "Google Analytics" ||
+            sesCenturion24PageViewsBaseline?.metricKey !== "page_views" ||
+            Number(sesCenturion24PageViewsBaseline?.metricValue) !== 195 ||
+            sesCenturion24PageViewsBaseline?.metricUnit !== "count"
+          ) {
+            throw new Error("SES Q4 Social Impact Centurion 24 page-views baseline observation from migration 0035 was not verified.");
+          }
+          console.log("PASS SES Q4 Social Impact baseline: 195 Google Analytics Page Views for Liberty Centurion 24 Premium Colors, Jul 31-Aug 27, 2026");
 
           const mediaWorkflowResponse = await fetch(url, {
             method:"POST",
