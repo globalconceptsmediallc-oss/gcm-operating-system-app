@@ -228,7 +228,7 @@ dialog::backdrop{background:rgba(7,20,38,.55)}
       <div class="actions">
         <button class="btn primary" id="newAppointment" type="button">New Appointment</button>
         <button class="btn" id="todayButton" type="button">Today</button>
-        <a class="btn" href="schedule.html?v=1.0.5">Schedule Control</a>
+        <a class="btn" href="schedule.html?v=1.0.6">Schedule Control</a>
       </div>
       <div class="actions">
         <span class="status" id="integrationStatus">Google Calendar not connected to website</span>
@@ -584,7 +584,7 @@ function scheduleEventToCalendar(event){
   className:className+(candidate?" candidate":""),
   title,
   meta:metaParts.join(" · ")||"Approved Schedule Operations record",
-  href:"schedule.html?v=1.0.5",
+  href:"schedule.html?v=1.0.6",
   key:event.key||[event.sourceKey,event.kind,event.startDate].join("|")
  };
 }
