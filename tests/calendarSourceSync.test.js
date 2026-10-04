@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System (GCM OS)
    File: tests/calendarSourceSync.test.js
-   Test Version: 1.2.0
+   Test Version: 1.2.1
    Status: Production Regression Lock
    Purpose: Lock D1 Schedule Operations as the only production schedule
             authority for Agency Calendar, Media Calendar, and Today.
@@ -93,6 +93,15 @@ assert(today.includes("Static schedule seeds are intentionally not used."),
 
 assert(scheduleControl.includes('operation:"create_candidate"'),
   "Schedule Control must create review candidates instead of changing live dates directly.");
+
+assert(scheduleControl.includes("const existingSchedule=Array.isArray(existingMeta.schedule)?existingMeta.schedule:[];"),
+  "Promotion edit metadata must read the existing promotion schedule.");
+assert(scheduleControl.includes("const exact=existingSchedule.find"),
+  "Promotion edits must preserve existing social post metadata by original date.");
+assert(scheduleControl.includes("const preserved=exact||existingSchedule[index]||null;"),
+  "Promotion edits must preserve post title/theme by position when a social date moves.");
+assert(scheduleControl.includes("return{offer:$(\"offer\").value.trim()||null,channels,schedule};"),
+  "Promotion edits must preserve channels and the reconstructed schedule metadata.");
 assert(scheduleControl.includes('operation,"approve_candidate"') || scheduleControl.includes('"approve_candidate"'),
   "Schedule Control must expose explicit human approval.");
 assert(scheduleRoute.includes('SCHEDULE_OPERATIONS_ACTION = "schedule-operations"'),
@@ -108,3 +117,4 @@ console.log("PASS: D1-only calendar schedule authority lock");
 console.log(`Gun-show seed/history version: ${shows.version}`);
 console.log(`Promotion seed/history version: ${promotions.version}`);
 console.log("Runtime static schedule fallback: disabled");
+console.log("Promotion edit metadata preservation: locked");
