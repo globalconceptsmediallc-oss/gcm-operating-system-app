@@ -1,11 +1,12 @@
 /* =========================================================
    Global Concepts Media Operating System (GCM OS)
    File: tests/calendarSourceSync.test.js
-   Test Version: 1.1.0
+   Test Version: 1.2.0
    Status: Production Regression Lock
-   Purpose: Prevent Agency Calendar, Today Forward Look, and Media Calendar
-            from drifting away from the authoritative SES gun-show and
-            Liberty promotion schedule sources.
+   Purpose: Lock D1 Schedule Operations as the only production schedule
+            authority for Agency Calendar, Media Calendar, and Today.
+            Static SES JSON files remain seed/history inputs only and must
+            never be used as runtime production fallbacks.
    ========================================================= */
 
 import fs from "node:fs";
@@ -29,15 +30,6 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
-function sourceVersion(html, fileName) {
-  const marker = fileName + "?v=";
-  const start = html.indexOf(marker);
-  if (start < 0) return null;
-  const rest = html.slice(start + marker.length);
-  const match = rest.match(/^([0-9.]+)/);
-  return match ? match[1] : null;
-}
-
 const shows = JSON.parse(read(files.shows));
 const promotions = JSON.parse(read(files.promotions));
 const calendar = read(files.calendar);
@@ -47,55 +39,19 @@ const scheduleControl = read(files.scheduleControl);
 const scheduleRoute = read(files.scheduleRoute);
 const worker = read(files.worker);
 
-const showVersion = String(shows.version || "");
-const promoVersion = String(promotions.version || "");
-
-assert(showVersion, "SES gun-show schedule must have a version.");
-assert(promoVersion, "SES Liberty promotion schedule must have a version.");
-
-const calendarShowVersion = sourceVersion(calendar, "data/ses-gun-shows.json");
-const todayShowVersion = sourceVersion(today, "data/ses-gun-shows.json");
-const mediaShowVersion = sourceVersion(mediaCalendar, "data/ses-gun-shows.json");
-
-assert(calendarShowVersion === showVersion,
-  `Agency Calendar gun-show source drift: expected ${showVersion}, found ${calendarShowVersion || "missing"}.`);
-assert(todayShowVersion === showVersion,
-  `Today gun-show source drift: expected ${showVersion}, found ${todayShowVersion || "missing"}.`);
-assert(mediaShowVersion === showVersion,
-  `Media Calendar gun-show source drift: expected ${showVersion}, found ${mediaShowVersion || "missing"}.`);
-
-const calendarPromoVersion = sourceVersion(calendar, "data/ses-liberty-promotions.json");
-const mediaPromoVersion = sourceVersion(mediaCalendar, "data/ses-liberty-promotions.json");
-
-assert(calendarPromoVersion === promoVersion,
-  `Agency Calendar promotion source drift: expected ${promoVersion}, found ${calendarPromoVersion || "missing"}.`);
-assert(mediaPromoVersion === promoVersion,
-  `Media Calendar promotion source drift: expected ${promoVersion}, found ${mediaPromoVersion || "missing"}.`);
+assert(String(shows.version || ""), "SES gun-show seed/history file must remain versioned.");
+assert(String(promotions.version || ""), "SES Liberty promotion seed/history file must remain versioned.");
+assert(Array.isArray(shows.shows) && shows.shows.length > 0,
+  "SES gun-show seed/history file must retain seeded show records.");
+assert(Array.isArray(promotions.promotions) && promotions.promotions.length > 0,
+  "SES Liberty promotion seed/history file must retain seeded promotion records.");
 
 for (const market of ["Melbourne", "Orlando"]) {
   assert(shows.rules && shows.rules[market],
-    `Missing authoritative gun-show rule for ${market}.`);
+    `Missing seeded gun-show rule for ${market}.`);
   assert(Number(shows.rules[market].trafficWarningDaysBeforeFlightStart) === 7,
-    `${market} traffic warning must remain 7 days before flight start.`);
+    `${market} seeded traffic-warning rule must remain 7 days before flight start.`);
 }
-
-assert(calendar.includes("trafficWarningDaysBeforeFlightStart"),
-  "Agency Calendar must derive Traffic Due from the authoritative gun-show rule.");
-assert(today.includes("trafficWarningDaysBeforeFlightStart"),
-  "Today Forward Look must derive Traffic Due from the authoritative gun-show rule.");
-assert(mediaCalendar.includes("function gunShowRows()"),
-  "Media Calendar must derive gun-show events from the authoritative schedule.");
-assert(mediaCalendar.includes('source:"gun-show-source"'),
-  "Media Calendar authoritative gun-show rows are missing.");
-assert(calendar.includes("addCalendarDays(flightStart,-2)"),
-  "Hard Monday station deadline derivation must remain two calendar days before Wednesday flight.");
-
-assert(calendar.includes("derivedPromotionEvents()"),
-  "Agency Calendar must derive Liberty promotion events from the shared promotion source.");
-assert(mediaCalendar.includes("function promotionRows()"),
-  "Media Calendar must derive Liberty promotion rows from the shared promotion source.");
-assert(Array.isArray(promotions.promotions) && promotions.promotions.length > 0,
-  "Liberty promotion source must contain promotions.");
 
 for (const [name, html] of [
   ["Agency Calendar", calendar],
@@ -103,8 +59,37 @@ for (const [name, html] of [
   ["Today", today]
 ]) {
   assert(html.includes("schedule-operations"),
-    name + " must read the durable D1 Schedule Operations authority.");
+    name + " must read D1 Schedule Operations.");
+  assert(!html.includes('fetch("data/ses-gun-shows.json'),
+    name + " must not fetch the static gun-show seed file at runtime.");
+  assert(!html.includes('fetch("data/ses-liberty-promotions.json'),
+    name + " must not fetch the static Liberty promotion seed file at runtime.");
+  assert(!html.includes("SHOW_SCHEDULE_URL"),
+    name + " must not expose a runtime gun-show JSON fallback constant.");
+  assert(!html.includes("PROMO_SCHEDULE_URL"),
+    name + " must not expose a runtime promotion JSON fallback constant.");
 }
+
+assert(calendar.includes("if(!scheduleAuthorityLoaded)return[]"),
+  "Agency Calendar must show no schedule dates when D1 Schedule Authority is unavailable.");
+assert(calendar.includes("Schedule data unavailable — D1 Schedule Authority did not respond."),
+  "Agency Calendar must expose a visible D1 schedule fail-safe.");
+assert(!calendar.includes("derivedShowEvents().concat(derivedPromotionEvents())"),
+  "Agency Calendar must not substitute static-derived schedule events.");
+
+assert(mediaCalendar.includes("scheduled=scheduleAuthorityRows()"),
+  "Media Calendar must use D1 schedule rows without a static schedule fallback.");
+assert(mediaCalendar.includes('id="schedule-authority-state"'),
+  "Media Calendar must expose a visible D1 schedule fail-safe.");
+assert(mediaCalendar.includes("Static schedule seeds are intentionally not used."),
+  "Media Calendar must explicitly prevent stale static fallback behavior.");
+
+assert(today.includes("forwardLookScheduleAuthorityUnavailable = true"),
+  "Today Forward Look must record D1 Schedule Authority failure.");
+assert(today.includes("Schedule Authority unavailable — no static fallback"),
+  "Today Forward Look must expose a visible no-fallback state.");
+assert(today.includes("Static schedule seeds are intentionally not used."),
+  "Today must explicitly prevent stale static schedule fallback behavior.");
 
 assert(scheduleControl.includes('operation:"create_candidate"'),
   "Schedule Control must create review candidates instead of changing live dates directly.");
@@ -112,12 +97,14 @@ assert(scheduleControl.includes('operation,"approve_candidate"') || scheduleCont
   "Schedule Control must expose explicit human approval.");
 assert(scheduleRoute.includes('SCHEDULE_OPERATIONS_ACTION = "schedule-operations"'),
   "Schedule Operations route contract is missing.");
-assert(scheduleRoute.includes('schedule_item_history'),
+assert(scheduleRoute.includes("schedule_item_history"),
   "Schedule Operations must preserve version history.");
+assert(scheduleRoute.includes("trafficWarningDaysBeforeFlightStart"),
+  "Schedule Operations must preserve the gun-show traffic-warning rule in durable metadata/events.");
 assert(worker.includes("SCHEDULE_OPERATIONS_ACTION"),
   "Worker must route Schedule Operations.");
 
-console.log("PASS: Calendar source sync lock");
-console.log(`Gun-show source version: ${showVersion}`);
-console.log(`Promotion source version: ${promoVersion}`);
-console.log("Traffic warning lead: 7 days");
+console.log("PASS: D1-only calendar schedule authority lock");
+console.log(`Gun-show seed/history version: ${shows.version}`);
+console.log(`Promotion seed/history version: ${promotions.version}`);
+console.log("Runtime static schedule fallback: disabled");
