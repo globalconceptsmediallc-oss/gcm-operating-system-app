@@ -1,10 +1,11 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gcm-worker-deploy.yml
-# Version: 1.5.50
+# Version: 1.5.51
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Worker with human-led Signal Finding capture.
 # Change Notes:
+# - Verify the first SES Q4 Social Impact baseline observation seeded by migration 0029.
 # - Deploy and verify Worker 7.39.0 with D1-backed Measurement Observations.
 # - Verify measurement-observations health/action/list contract and migration 0028 before declaring deployment healthy.
 # - Deploy and verify Worker 7.38.0 with durable Schedule Operations authority.
@@ -360,7 +361,12 @@ jobs:
           const measurementResponse = await fetch(url, {
             method:"POST",
             headers:{ "Content-Type":"application/json" },
-            body:JSON.stringify({ action:"measurement-observations", operation:"list", limit:1 })
+            body:JSON.stringify({
+              action:"measurement-observations",
+              operation:"list",
+              metricKey:"active_users",
+              limit:20
+            })
           });
           if (!measurementResponse.ok) {
             throw new Error(`Measurement Observations returned HTTP ${measurementResponse.status}`);
@@ -374,7 +380,19 @@ jobs:
           ) {
             throw new Error("Measurement Observations live read contract is invalid or migration 0028 is unavailable.");
           }
-          console.log(`PASS Measurement Observations: ${measurement.observations.length} rows returned, 0 writes`);
+          const sesBaseline = measurement.observations.find(item =>
+            item?.observationKey === "ses:q4-social-2026:ga4:active_users:2026-07-31:2026-08-27"
+          );
+          if (
+            !sesBaseline ||
+            sesBaseline?.measurementPhase !== "baseline" ||
+            sesBaseline?.sourceSystem !== "Google Analytics" ||
+            sesBaseline?.metricKey !== "active_users" ||
+            Number(sesBaseline?.metricValue) !== 840
+          ) {
+            throw new Error("SES Q4 Social Impact baseline observation from migration 0029 was not verified.");
+          }
+          console.log("PASS SES Q4 Social Impact baseline: 840 Google Analytics Active Users, Jul 31-Aug 27, 2026");
 
           const mediaWorkflowResponse = await fetch(url, {
             method:"POST",
