@@ -1,12 +1,16 @@
 -- =========================================================
 -- Global Concepts Media Operating System
 -- File: migrations/0028_measurement_observations.sql
--- Version: 1.0.0
+-- Version: 1.0.1
 -- Status: Production Migration Candidate
 -- Purpose: Durable factual measurement observations tied to an approved
 --          Schedule Authority item so campaign outcomes can flow into
 --          Evidence, Reviewed Findings, and Proof without duplicating
 --          campaign records or storing unsupported conclusions.
+--
+-- Deployment note:
+-- - v1.0.1 is schema-identical to v1.0.0; this comment-only bump retriggers
+--   the Worker pipeline after correcting a stale Today-version regression test.
 --
 -- Rules:
 -- - Store observations, not causal conclusions.
