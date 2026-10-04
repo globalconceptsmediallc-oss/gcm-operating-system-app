@@ -1,12 +1,18 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: schedule.html
-   Version: 1.0.3
+   Version: 1.0.4
    Status: Production Candidate — Schedule Change Control
    Sprint: Calendar / Media Calendar — One Record, Multiple Views
    Purpose: Create human-reviewed schedule additions/changes/cancellations
             against the durable D1 schedule authority without editing either
             calendar directly.
+   Changes in 1.0.4:
+   - Fixes all Schedule Control row-action bindings so actions execute only on an actual click.
+   - Corrects Change, Approve, Hold, Ignore, and Cancel event handling with preventDefault + stopPropagation.
+   - Prevents page render/refresh from opening or executing any schedule action automatically.
+   - Preserves the non-stacking dialog and pending-review safety controls.
+
    Changes in 1.0.3:
    - Fixes the Schedule Control Cancel binding so cancellation opens only when the operator clicks Cancel.
    - Prevents every page rerender (including Approve/Hold/Ignore) from automatically opening a cancellation dialog.
@@ -42,7 +48,7 @@
 <button class="mobile btn" data-gcm-shell-menu-button type="button">Menu</button>
 <header class="top">
   <div><p class="eyebrow">Schedule Authority</p><h1>Schedule Control</h1><p class="sub">Add or change a campaign once. Nothing reaches the live calendars until you approve the candidate. Approved changes are versioned in D1 and read by both calendar views.</p></div>
-  <div class="version">schedule.html · v1.0.3</div>
+  <div class="version">schedule.html · v1.0.4</div>
 </header>
 
 <section class="panel">
@@ -137,10 +143,10 @@ function render(){
  bind();
 }
 function bind(){
- document.querySelectorAll("[data-approve]").forEach(b=>b.onclick=()=>review("approve_candidate",b.dataset.approve));
- document.querySelectorAll("[data-hold]").forEach(b=>b.onclick=()=>review("hold_candidate",b.dataset.hold));
- document.querySelectorAll("[data-ignore]").forEach(b=>b.onclick=()=>review("ignore_candidate",b.dataset.ignore));
- document.querySelectorAll("[data-change]").forEach(b=>openChange(Number(b.dataset.change)));
+ document.querySelectorAll("[data-approve]").forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();review("approve_candidate",b.dataset.approve);});
+ document.querySelectorAll("[data-hold]").forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();review("hold_candidate",b.dataset.hold);});
+ document.querySelectorAll("[data-ignore]").forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();review("ignore_candidate",b.dataset.ignore);});
+ document.querySelectorAll("[data-change]").forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();openChange(Number(b.dataset.change));});
  document.querySelectorAll("[data-cancel]").forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();proposeCancel(Number(b.dataset.cancel));});
 }
 async function review(operation,id){try{await post({action:"schedule-operations",operation,changeRequestId:Number(id),reviewedBy:"Andy"});toast(operation==="approve_candidate"?"Approved — calendars will read the new version.":operation==="hold_candidate"?"Held for later review.":"Ignored — live schedule unchanged.");await load()}catch(e){toast(e.message)}}
