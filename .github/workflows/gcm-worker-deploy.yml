@@ -1,10 +1,11 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gcm-worker-deploy.yml
-# Version: 1.5.53
+# Version: 1.5.54
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Worker with human-led Signal Finding capture.
 # Change Notes:
+# - Verify the fourth SES Q4 Social Impact baseline observation seeded by migration 0032: Events = 8000.
 # - Verify the third SES Q4 Social Impact baseline observation seeded by migration 0031: Avg engagement time = 76 seconds.
 # - Verify the second SES Q4 Social Impact baseline observation seeded by migration 0030: New Users = 836.
 # - Verify the first SES Q4 Social Impact baseline observation seeded by migration 0029.
@@ -423,6 +424,21 @@ jobs:
             throw new Error("SES Q4 Social Impact engagement-time baseline observation from migration 0031 was not verified.");
           }
           console.log("PASS SES Q4 Social Impact baseline: 76 seconds Google Analytics Avg Engagement Time, Jul 31-Aug 27, 2026");
+
+          const sesEventsBaseline = measurement.observations.find(item =>
+            item?.observationKey === "ses:q4-social-2026:ga4:events:2026-07-31:2026-08-27"
+          );
+          if (
+            !sesEventsBaseline ||
+            sesEventsBaseline?.measurementPhase !== "baseline" ||
+            sesEventsBaseline?.sourceSystem !== "Google Analytics" ||
+            sesEventsBaseline?.metricKey !== "events" ||
+            Number(sesEventsBaseline?.metricValue) !== 8000 ||
+            sesEventsBaseline?.metricUnit !== "count"
+          ) {
+            throw new Error("SES Q4 Social Impact Events baseline observation from migration 0032 was not verified.");
+          }
+          console.log("PASS SES Q4 Social Impact baseline: 8000 Google Analytics Events, Jul 31-Aug 27, 2026");
 
           const mediaWorkflowResponse = await fetch(url, {
             method:"POST",
