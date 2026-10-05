@@ -1,14 +1,28 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/gmailIntakeSync.js
-   Version: 1.2.0
+   Version: 1.3.0
    Status: Production Road-Test Candidate
    Sprint: Gmail ↔ Universal Intake Reconciliation
    Purpose:
-   Reconcile the live Global Concepts Media Gmail Inbox against durable D1
-   email_intake records without exceeding the Cloudflare Worker subrequest
-   limit. Browser orchestration scans Gmail in small pages, stages new mail,
-   then trashes only D1-confirmed processed messages in separate safe batches.
+   Reconcile the live Global Concepts Media Gmail operational sources against
+   durable D1 email_intake records without exceeding the Cloudflare Worker
+   subrequest limit. Browser orchestration scans Gmail in small pages, stages
+   new mail, then clears only D1-confirmed processed messages that are still
+   physically in Inbox.
+
+   Monitored Gmail sources:
+   - Inbox
+   - Kristy
+   - Frank & Adrianne Stuff
+   - REPORTS-SEO
+   - Vendor/Semrush
+
+   Changes — 1.3.0:
+   - Expands intake scanning from Inbox-only to the critical monitored Gmail sources.
+   - Preserves labeled operational mail that is already outside Inbox.
+   - Adds a live INBOX-label check before trash_batch mutates Gmail.
+   - Keeps existing D1 deduplication and processing boundaries intact.
 
    Changes — 1.2.0:
    - Adds trash_intake for immediate post-save Gmail cleanup using the exact D1 intake row.
@@ -35,12 +49,24 @@ import {
   loadLiveGmailMessageWithAccessToken
 } from "./gmailDispositions.js";
 
-export const GMAIL_INTAKE_SYNC_VERSION = "1.2.0";
+export const GMAIL_INTAKE_SYNC_VERSION = "1.3.0";
 const GMAIL_API = "https://gmail.googleapis.com/gmail/v1";
 const DEFAULT_SCAN_LIMIT = 20;
 const MAX_SCAN_LIMIT = 20;
 const MAX_TRASH_BATCH = 20;
 const MAX_BODY_CHARS = 120000;
+
+const MONITORED_GMAIL_QUERY = [
+  "{",
+  "in:inbox",
+  'label:"Kristy"',
+  'label:"Frank & Adrianne Stuff"',
+  'label:"REPORTS-SEO"',
+  'label:"Vendor/Semrush"',
+  "}",
+  "-in:spam",
+  "-in:trash"
+].join(" ");
 
 export async function handleGmailIntakeSync(body, env, requestId) {
   const db = getDatabase(env);
@@ -109,7 +135,7 @@ async function scanPage(body, env, db, requestId) {
   `).first();
 
   const listUrl = new URL(`${GMAIL_API}/users/me/messages`);
-  listUrl.searchParams.set("q","in:inbox -in:spam -in:trash");
+  listUrl.searchParams.set("q",MONITORED_GMAIL_QUERY);
   listUrl.searchParams.set("maxResults",String(scanLimit));
   if (pageToken) listUrl.searchParams.set("pageToken",pageToken);
 
@@ -206,6 +232,14 @@ async function scanPage(body, env, db, requestId) {
     gmailIntakeSyncVersion:GMAIL_INTAKE_SYNC_VERSION,
     accountEmail:clean(account?.account_email) || null,
     scannedInboxMessages:refs.length,
+    scannedTrackedMessages:refs.length,
+    monitoredSources:[
+      "Inbox",
+      "Kristy",
+      "Frank & Adrianne Stuff",
+      "REPORTS-SEO",
+      "Vendor/Semrush"
+    ],
     newlyStaged:inserted,
     readyMatched,
     processedMatched:processedItems.length,
@@ -260,8 +294,24 @@ async function trashBatch(body, env, db, requestId) {
   const verified = items.filter(item => processedIds.has(item.intakeId));
   const accessToken = await liveGmailAccessToken(env);
   const movedMessageIds = [];
+  const skippedMessageIds = [];
+  let checkedLiveGmail = 0;
+  let inboxEligible = 0;
 
   for (const item of verified) {
+    const metadata = await gmailFetch(
+      `${GMAIL_API}/users/me/messages/${encodeURIComponent(item.gmailMessageId)}?format=minimal`,
+      accessToken
+    );
+    checkedLiveGmail += 1;
+
+    const labels = Array.isArray(metadata?.labelIds) ? metadata.labelIds : [];
+    if (!labels.includes("INBOX")) {
+      skippedMessageIds.push(item.gmailMessageId);
+      continue;
+    }
+
+    inboxEligible += 1;
     await trashGmailMessage(item.gmailMessageId, accessToken);
     movedMessageIds.push(item.gmailMessageId);
   }
@@ -273,6 +323,10 @@ async function trashBatch(body, env, db, requestId) {
     operation:"trash_batch",
     gmailIntakeSyncVersion:GMAIL_INTAKE_SYNC_VERSION,
     verifiedProcessed:verified.length,
+    checkedLiveGmail,
+    inboxEligible,
+    skippedNonInbox:skippedMessageIds.length,
+    skippedMessageIds,
     movedToTrash:movedMessageIds.length,
     movedMessageIds
   });
