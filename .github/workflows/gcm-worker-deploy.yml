@@ -1,10 +1,11 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gcm-worker-deploy.yml
-# Version: 1.5.59
+# Version: 1.5.60
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Worker with human-led Signal Finding capture.
 # Change Notes:
+# - Re-run production deployment after aligning the Gmail Intake Sync regression lock to the live 1.3.0 route.
 # - Lock Prospect Concept Tracking 1.1.1 with Rolling Suds commercial-growth engagement tracking.
 # - Verify the eighth SES Q4 Social Impact baseline observation seeded by migration 0036: 129 Large Gun Safes page views.
 # - Verify the seventh SES Q4 Social Impact baseline observation seeded by migration 0035: 195 Centurion 24 page views.
