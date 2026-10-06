@@ -1,10 +1,14 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/prospectConceptTracking.js
-   Version: 1.1.1
+   Version: 1.1.2
    Status: Production Road-Test Candidate
    Purpose: Record privacy-minimized engagement when a personalized
             GCM prospect concept page is viewed.
+
+   Change Notes — 1.1.2:
+   - Adds Window World of Space Coast's personalized direct-mail attribution concept to the prospect engagement allowlist.
+   - Uses a Window World business-name prefix so the tracked page can attach to common local-name variants while retaining ambiguity protection.
 
    Change Notes — 1.1.1:
    - Adds Rolling Suds of Melbourne–Palm Bay's personalized commercial-growth concept to the prospect engagement allowlist.
@@ -73,7 +77,7 @@ import {
 } from "../shared/http.js";
 
 export const PROSPECT_CONCEPT_VIEW_ACTION = "prospect-concept-view";
-export const PROSPECT_CONCEPT_TRACKING_VERSION = "1.1.1";
+export const PROSPECT_CONCEPT_TRACKING_VERSION = "1.1.2";
 
 const CONCEPTS = new Map([
   ["john-curri-v1", {
@@ -136,6 +140,13 @@ const CONCEPTS = new Map([
     sourceReference: "/prospect-previews/rolling-suds-melbourne-palm-bay/",
     subject: "Rolling Suds commercial growth concept viewed",
     summary: "The personalized Rolling Suds of Melbourne–Palm Bay commercial-growth concept was viewed."
+  }],
+  ["window-world-space-coast-direct-mail-v1", {
+    businessName: "Window World of Space Coast",
+    businessNamePrefix: "Window World",
+    sourceReference: "/prospect-previews/window-world-space-coast/",
+    subject: "Window World Space Coast direct-mail growth concept viewed",
+    summary: "The personalized Window World of Space Coast direct-mail attribution and growth concept was viewed."
   }]
 ]);
 

@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/prospectConceptTracking.test.js
-   Version: 1.7.0
+   Version: 1.8.0
    Status: Regression Test
    Purpose: Lock privacy-minimized Agnor Aviation 90-day plan engagement tracking.
    ========================================================= */
@@ -18,8 +18,9 @@ const wadadliPage = fs.readFileSync(new URL("../prospect-previews/wadadli-financ
 const corvexPage = fs.readFileSync(new URL("../prospect-previews/corvex-roofing/index.html", import.meta.url),"utf8");
 const leonardPage = fs.readFileSync(new URL("../prospect-previews/leonard-financial-group/index.html", import.meta.url),"utf8");
 const rollingSudsPage = fs.readFileSync(new URL("../prospect-previews/rolling-suds-melbourne-palm-bay/index.html", import.meta.url),"utf8");
+const windowWorldPage = fs.readFileSync(new URL("../prospect-previews/window-world-space-coast/index.html", import.meta.url),"utf8");
 
-assert.match(route,/Version: 1\.1\.1/);
+assert.match(route,/Version: 1\.1\.2/);
 assert.match(route,/agnor-aviation-90-day-v1/);
 assert.match(route,/businessName: "Agnor Aviation"/);
 assert.match(route,/sourceReference: "\/prospect-previews\/agnor-aviation\/"/);
@@ -103,7 +104,18 @@ assert.match(rollingSudsPage,/gcm_preview/);
 assert.match(rollingSudsPage,/property managers/);
 assert.match(rollingSudsPage,/90-day test/);
 
+assert.match(route,/window-world-space-coast-direct-mail-v1/);
+assert.match(route,/businessNamePrefix: "Window World"/);
+assert.match(route,/Window World Space Coast direct-mail growth concept viewed/);
+assert.match(windowWorldPage,/Version: 1\.0\.0/);
+assert.match(windowWorldPage,/window-world-space-coast-direct-mail-v1/);
+assert.match(windowWorldPage,/prospect-concept-view/);
+assert.match(windowWorldPage,/gcm_preview/);
+assert.match(windowWorldPage,/\$947/);
+assert.match(windowWorldPage,/15 months/);
+assert.match(windowWorldPage,/My Safe Florida Home/);
+
 assert.doesNotMatch(route,/user[_-]?agent/i);
 assert.doesNotMatch(route,/visitor[_-]?ip/i);
 
-console.log("PASS tracked prospect concepts preserve privacy-minimized engagement for Agnor, Honor Financial Group, Kitchen Saver, McPherson Financial Group, Wadadli Financial Group, Corvex Roofing, Leonard Financial Group, and Rolling Suds");
+console.log("PASS tracked prospect concepts preserve privacy-minimized engagement for Agnor, Honor Financial Group, Kitchen Saver, McPherson Financial Group, Wadadli Financial Group, Corvex Roofing, Leonard Financial Group, Rolling Suds, and Window World Space Coast");
