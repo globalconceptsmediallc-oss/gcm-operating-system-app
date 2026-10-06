@@ -1,10 +1,14 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/gmailIntakeSync.test.js
-   Version: 1.2.2
+   Version: 1.3.0
    Status: Regression Test
    Purpose:
    Lock live Gmail Inbox ↔ Universal Intake reconciliation.
+   Change notes — 1.3.0:
+   - Aligns the Gmail Intake Sync route lock to 1.3.0.
+   - Verifies the expanded monitored-source query while preserving Trash and reconciliation assertions.
+
    Change notes — 1.2.2:
    - Aligns the Today Email Intake version lock to 2.7.0 while preserving every Gmail reconciliation assertion.
    ========================================================= */
@@ -22,8 +26,14 @@ assert.match(worker,/handleGmailIntakeSync/);
 assert.match(worker,/gmailIntakeSyncVersion:\s*GMAIL_INTAKE_SYNC_VERSION/);
 assert.match(worker,/case ACTIONS\.SYNC_GMAIL_INTAKE:/);
 
-assert.match(route,/Version: 1\.2\.0/);
-assert.match(route,/in:inbox -in:spam -in:trash/);
+assert.match(route,/Version: 1\.3\.0/);
+assert.match(route,/in:inbox/);
+assert.match(route,/label:"Kristy"/);
+assert.match(route,/label:"Frank & Adrianne Stuff"/);
+assert.match(route,/label:"REPORTS-SEO"/);
+assert.match(route,/label:"Vendor\/Semrush"/);
+assert.match(route,/-in:spam/);
+assert.match(route,/-in:trash/);
 assert.match(route,/INSERT OR IGNORE INTO email_intake/);
 assert.match(route,/gmail_live_sync/);
 assert.match(route,/processing_status='ready_for_review'/);
