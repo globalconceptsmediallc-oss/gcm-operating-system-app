@@ -1,13 +1,19 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.6.4
+   Version: 3.6.5
    Status: Production Candidate
-   Source: Production today.html 3.5.53
-   Sprint: Today — Forward Look
+   Source: Production today.html 3.6.4
+   Sprint: Today — Dated Commitment Carry-Forward
    Purpose: Preserve the locked Today layout, Gmail approvals, Mission Control,
-            Media logic, and operating workflow while adding a read-only future
-            commitment view from authoritative dated OS records.
+            Media logic, and operating workflow while keeping every open dated
+            commitment visible until its authoritative source marks it complete.
+
+   Production changes in 3.6.5:
+   - Carries due-today and overdue open commitments forward on Today instead of dropping them when the date passes.
+   - Adds explicit Due today / N days overdue labels and red overdue treatment.
+   - Keeps future commitments limited to the next 30 days while allowing unresolved overdue commitments to remain visible until completed/cancelled at the source.
+   - Preserves authoritative source status filtering and performs no D1 writes.
 
    Production changes in 3.6.4:
    - Fixes the actual Forward Look initialization failure by restoring the missing forwardLookScheduleAuthorityUnavailable state declaration.
@@ -1971,7 +1977,7 @@
       }
     }
 
-.forward-look-panel{margin-bottom:18px;overflow:hidden;border-color:#e4d5aa;background:linear-gradient(135deg,#fffdf7,#fff8e7)}.forward-look-header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding:20px 22px}.forward-look-copy{min-width:0}.forward-look-copy h2{margin:0;color:var(--gcm-navy-950);font-size:1.05rem}.forward-look-copy p:last-child{margin:6px 0 0;color:var(--text-muted);font-size:.84rem}.forward-look-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.forward-look-window{display:inline-flex;align-items:center;min-height:34px;padding:0 11px;border:1px solid #ead9aa;border-radius:999px;background:#fff;color:var(--warning);font-size:.7rem;font-weight:900;letter-spacing:.04em;text-transform:uppercase}.forward-look-list{display:grid;border-top:1px solid #eadfbe;background:#fff}.forward-look-item{display:grid;grid-template-columns:58px minmax(0,1fr) auto;gap:14px;align-items:center;min-height:72px;padding:11px 22px;border-bottom:1px solid var(--border);transition:background 150ms ease}.forward-look-item:last-child{border-bottom:0}.forward-look-item:hover,.forward-look-item:focus-visible{background:var(--surface-soft);outline:none}.forward-look-date{display:grid;place-items:center;align-content:center;min-height:48px;border:1px solid #eadfbe;border-radius:11px;background:#fffaf0;color:var(--gcm-navy-900);line-height:1}.forward-look-date span{font-size:.6rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--warning)}.forward-look-date strong{margin-top:4px;font-size:1.05rem}.forward-look-detail{min-width:0}.forward-look-kind{display:block;margin-bottom:2px;color:var(--warning);font-size:.62rem;font-weight:900;letter-spacing:.09em;text-transform:uppercase}.forward-look-title{display:block;color:var(--text);font-size:.82rem;font-weight:850;line-height:1.35}.forward-look-meta{display:block;margin-top:3px;color:var(--text-muted);font-size:.72rem;line-height:1.35}.forward-look-due{display:inline-flex;align-items:center;justify-content:center;min-width:82px;min-height:28px;padding:0 9px;border-radius:999px;background:var(--surface-muted);color:var(--text-muted);font-size:.66rem;font-weight:900;white-space:nowrap}.forward-look-due.is-soon{background:var(--warning-soft);color:var(--warning)}.forward-look-due.is-imminent{background:var(--critical-soft);color:var(--critical)}.forward-look-empty{padding:18px 22px;color:var(--text-muted);font-size:.8rem}.forward-look-more{padding:10px 22px;border-top:1px solid var(--border);background:var(--surface-soft);color:var(--text-muted);font-size:.7rem;font-weight:800}.forward-look-more[hidden]{display:none}@media(max-width:760px){.forward-look-header{display:block}.forward-look-actions{margin-top:12px}.forward-look-item{grid-template-columns:52px minmax(0,1fr);padding:11px 16px}.forward-look-due{grid-column:2;justify-self:start}.forward-look-header{padding:18px 16px}}.morning-command{margin-bottom:18px;border-color:#bdd0eb;background:linear-gradient(135deg,#f7fbff,#edf5ff)}.morning-command-body{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:22px;align-items:center;padding:20px 22px}.morning-command-copy h2{margin:0;color:var(--gcm-navy-950);font-size:1.05rem}.morning-command-copy p{margin:6px 0 0;color:var(--text-muted);font-size:.84rem}.morning-command-actions{display:flex;gap:10px;flex-wrap:wrap}.gmail-preview{display:grid;gap:12px;padding:0 22px 22px}.gmail-preview[hidden]{display:none}.gmail-message{padding:16px;border:1px solid var(--border);border-radius:14px;background:#fff}.gmail-message-header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}.gmail-message-title{margin:0;color:var(--gcm-navy-950);font-size:.92rem}.gmail-message-meta{display:block;margin-top:4px;color:var(--text-muted);font-size:.75rem}.gmail-route{display:inline-flex;align-items:center;min-height:26px;padding:0 9px;border-radius:999px;background:var(--info-soft);color:var(--info);font-size:.68rem;font-weight:900;white-space:nowrap}.gmail-intelligence-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:13px}.gmail-intelligence-field{padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--surface-soft)}.gmail-intelligence-field.wide{grid-column:1/-1}.gmail-intelligence-label{display:block;color:var(--text-soft);font-size:.62rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em}.gmail-intelligence-value{display:block;margin-top:4px;color:var(--text);font-size:.76rem;font-weight:750;line-height:1.4}.gmail-decision-row{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}.gmail-decision{display:inline-flex;align-items:center;min-height:25px;padding:0 8px;border-radius:999px;background:var(--surface-muted);color:var(--text-muted);font-size:.65rem;font-weight:850}.gmail-decision.yes{background:var(--warning-soft);color:var(--warning)}.gmail-decision.archive{background:var(--success-soft);color:var(--success)}.gmail-source-preview{margin:11px 0 0;color:var(--text-muted);font-size:.76rem;line-height:1.45}.gmail-approval{display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}.gmail-approval input{width:18px;height:18px;accent-color:var(--gcm-blue-600)}.gmail-approval label{font-size:.76rem;font-weight:800;color:var(--text)}.gmail-approval-status{margin-left:auto;font-size:.72rem;font-weight:800;color:var(--text-muted)}.gmail-batch-actions{position:sticky;bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid #bdd0eb;border-radius:12px;background:#f7fbff;box-shadow:var(--shadow-sm);z-index:5}.gmail-batch-copy{font-size:.76rem;font-weight:800;color:var(--text-muted)}@media(max-width:900px){.gmail-intelligence-grid{grid-template-columns:1fr 1fr}}@media(max-width:760px){.morning-command-body{grid-template-columns:1fr}.gmail-message-header{display:block}.gmail-route{margin-top:9px}.gmail-intelligence-grid{grid-template-columns:1fr}}
+.forward-look-panel{margin-bottom:18px;overflow:hidden;border-color:#e4d5aa;background:linear-gradient(135deg,#fffdf7,#fff8e7)}.forward-look-header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding:20px 22px}.forward-look-copy{min-width:0}.forward-look-copy h2{margin:0;color:var(--gcm-navy-950);font-size:1.05rem}.forward-look-copy p:last-child{margin:6px 0 0;color:var(--text-muted);font-size:.84rem}.forward-look-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.forward-look-window{display:inline-flex;align-items:center;min-height:34px;padding:0 11px;border:1px solid #ead9aa;border-radius:999px;background:#fff;color:var(--warning);font-size:.7rem;font-weight:900;letter-spacing:.04em;text-transform:uppercase}.forward-look-list{display:grid;border-top:1px solid #eadfbe;background:#fff}.forward-look-item{display:grid;grid-template-columns:58px minmax(0,1fr) auto;gap:14px;align-items:center;min-height:72px;padding:11px 22px;border-bottom:1px solid var(--border);transition:background 150ms ease}.forward-look-item:last-child{border-bottom:0}.forward-look-item:hover,.forward-look-item:focus-visible{background:var(--surface-soft);outline:none}.forward-look-item.is-overdue{background:linear-gradient(90deg,#fff5f5,#fff)}.forward-look-item.is-overdue .forward-look-kind{color:var(--critical)}.forward-look-date{display:grid;place-items:center;align-content:center;min-height:48px;border:1px solid #eadfbe;border-radius:11px;background:#fffaf0;color:var(--gcm-navy-900);line-height:1}.forward-look-date span{font-size:.6rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--warning)}.forward-look-date strong{margin-top:4px;font-size:1.05rem}.forward-look-detail{min-width:0}.forward-look-kind{display:block;margin-bottom:2px;color:var(--warning);font-size:.62rem;font-weight:900;letter-spacing:.09em;text-transform:uppercase}.forward-look-title{display:block;color:var(--text);font-size:.82rem;font-weight:850;line-height:1.35}.forward-look-meta{display:block;margin-top:3px;color:var(--text-muted);font-size:.72rem;line-height:1.35}.forward-look-due{display:inline-flex;align-items:center;justify-content:center;min-width:82px;min-height:28px;padding:0 9px;border-radius:999px;background:var(--surface-muted);color:var(--text-muted);font-size:.66rem;font-weight:900;white-space:nowrap}.forward-look-due.is-soon{background:var(--warning-soft);color:var(--warning)}.forward-look-due.is-imminent{background:var(--critical-soft);color:var(--critical)}.forward-look-due.is-overdue{background:var(--critical-soft);color:var(--critical)}.forward-look-empty{padding:18px 22px;color:var(--text-muted);font-size:.8rem}.forward-look-more{padding:10px 22px;border-top:1px solid var(--border);background:var(--surface-soft);color:var(--text-muted);font-size:.7rem;font-weight:800}.forward-look-more[hidden]{display:none}@media(max-width:760px){.forward-look-header{display:block}.forward-look-actions{margin-top:12px}.forward-look-item{grid-template-columns:52px minmax(0,1fr);padding:11px 16px}.forward-look-due{grid-column:2;justify-self:start}.forward-look-header{padding:18px 16px}}.morning-command{margin-bottom:18px;border-color:#bdd0eb;background:linear-gradient(135deg,#f7fbff,#edf5ff)}.morning-command-body{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:22px;align-items:center;padding:20px 22px}.morning-command-copy h2{margin:0;color:var(--gcm-navy-950);font-size:1.05rem}.morning-command-copy p{margin:6px 0 0;color:var(--text-muted);font-size:.84rem}.morning-command-actions{display:flex;gap:10px;flex-wrap:wrap}.gmail-preview{display:grid;gap:12px;padding:0 22px 22px}.gmail-preview[hidden]{display:none}.gmail-message{padding:16px;border:1px solid var(--border);border-radius:14px;background:#fff}.gmail-message-header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}.gmail-message-title{margin:0;color:var(--gcm-navy-950);font-size:.92rem}.gmail-message-meta{display:block;margin-top:4px;color:var(--text-muted);font-size:.75rem}.gmail-route{display:inline-flex;align-items:center;min-height:26px;padding:0 9px;border-radius:999px;background:var(--info-soft);color:var(--info);font-size:.68rem;font-weight:900;white-space:nowrap}.gmail-intelligence-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:13px}.gmail-intelligence-field{padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--surface-soft)}.gmail-intelligence-field.wide{grid-column:1/-1}.gmail-intelligence-label{display:block;color:var(--text-soft);font-size:.62rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em}.gmail-intelligence-value{display:block;margin-top:4px;color:var(--text);font-size:.76rem;font-weight:750;line-height:1.4}.gmail-decision-row{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}.gmail-decision{display:inline-flex;align-items:center;min-height:25px;padding:0 8px;border-radius:999px;background:var(--surface-muted);color:var(--text-muted);font-size:.65rem;font-weight:850}.gmail-decision.yes{background:var(--warning-soft);color:var(--warning)}.gmail-decision.archive{background:var(--success-soft);color:var(--success)}.gmail-source-preview{margin:11px 0 0;color:var(--text-muted);font-size:.76rem;line-height:1.45}.gmail-approval{display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}.gmail-approval input{width:18px;height:18px;accent-color:var(--gcm-blue-600)}.gmail-approval label{font-size:.76rem;font-weight:800;color:var(--text)}.gmail-approval-status{margin-left:auto;font-size:.72rem;font-weight:800;color:var(--text-muted)}.gmail-batch-actions{position:sticky;bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid #bdd0eb;border-radius:12px;background:#f7fbff;box-shadow:var(--shadow-sm);z-index:5}.gmail-batch-copy{font-size:.76rem;font-weight:800;color:var(--text-muted)}@media(max-width:900px){.gmail-intelligence-grid{grid-template-columns:1fr 1fr}}@media(max-width:760px){.morning-command-body{grid-template-columns:1fr}.gmail-message-header{display:block}.gmail-route{margin-top:9px}.gmail-intelligence-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -2023,16 +2029,16 @@
 <div class="forward-look-header">
 <div class="forward-look-copy">
 <p class="eyebrow">Forward Look</p>
-<h2 id="forward-look-title">Upcoming dated commitments</h2>
-<p id="forward-look-summary">Loading authoritative dated OS records…</p>
+<h2 id="forward-look-title">Open dated commitments</h2>
+<p id="forward-look-summary">Loading authoritative open dated OS records…</p>
 </div>
 <div class="forward-look-actions">
-<span class="forward-look-window">Next 30 Days</span>
+<span class="forward-look-window">Overdue + Next 30 Days</span>
 <a class="button button-secondary" href="calendar.html">Open Calendar</a>
 <a class="button button-secondary" href="schedule.html?v=1.0.6">Schedule Control</a>
 </div>
 </div>
-<div class="forward-look-list" id="forward-look-list"><div class="forward-look-empty">Checking Prospect CRM, Calendar, Media, and dated operating records…</div></div>
+<div class="forward-look-list" id="forward-look-list"><div class="forward-look-empty">Checking Prospect CRM, Calendar, Media, and open dated operating records…</div></div>
 <div class="forward-look-more" hidden id="forward-look-more"></div>
 </section>
 <section aria-labelledby="morning-command-title" class="panel morning-command"><div class="morning-command-body"><div class="morning-command-copy"><p class="eyebrow">Morning Command</p><h2 id="morning-command-title">Review incoming operational email from the Universal Intake queue.</h2><p id="gmail-status-copy">Loading Universal Email Intake from D1…</p></div><div class="morning-command-actions"><button class="button button-primary" disabled id="gmail-preview-button" type="button">Refresh Intake</button></div></div><div class="gmail-preview" hidden id="gmail-preview"></div></section>
@@ -3017,6 +3023,11 @@
       }
 
       function forwardDueLabel(daysUntil) {
+        if (daysUntil < 0) {
+          const overdueDays = Math.abs(daysUntil);
+          return overdueDays + " " + (overdueDays === 1 ? "day" : "days") + " overdue";
+        }
+        if (daysUntil === 0) return "Due today";
         if (daysUntil === 1) return "Tomorrow";
         return "In " + daysUntil + " days";
       }
@@ -3142,7 +3153,7 @@
         const date = forwardDateOnly(item && item.date);
         if (!date) return;
         const daysUntil = forwardDaysUntil(date);
-        if (!Number.isFinite(daysUntil) || daysUntil < 1 || daysUntil > FORWARD_LOOK_DAYS) return;
+        if (!Number.isFinite(daysUntil) || daysUntil > FORWARD_LOOK_DAYS) return;
         target.push({
           date: date,
           daysUntil: daysUntil,
@@ -3213,29 +3224,33 @@
           return a.kind.localeCompare(b.kind) || a.title.localeCompare(b.title);
         });
 
-        const nextSeven = deduped.filter(function(item) { return item.daysUntil <= 7; }).length;
+        const overdueCount = deduped.filter(function(item) { return item.daysUntil < 0; }).length;
+        const dueTodayCount = deduped.filter(function(item) { return item.daysUntil === 0; }).length;
+        const nextSeven = deduped.filter(function(item) { return item.daysUntil >= 1 && item.daysUntil <= 7; }).length;
         if (!deduped.length) {
           forwardLookSummary.textContent = forwardLookScheduleAuthorityUnavailable
-            ? "Schedule Authority unavailable — static seed files are not used as fallback. No future dated commitments are visible from the sources that responded."
+            ? "Schedule Authority unavailable — static seed files are not used as fallback. No open dated commitments are visible from the sources that responded."
             : forwardLookLoadFailures
-              ? "No future dated commitments are visible from the sources that responded."
-              : "No dated commitments are recorded in the next 30 days.";
-          forwardLookList.innerHTML = '<div class="forward-look-empty">Forward Look is clear for the next 30 days.</div>';
+              ? "No open dated commitments are visible from the sources that responded."
+              : "No overdue, due-today, or upcoming dated commitments are open.";
+          forwardLookList.innerHTML = '<div class="forward-look-empty">No open dated commitments require attention.</div>';
           forwardLookMore.hidden = true;
           return;
         }
 
         forwardLookSummary.textContent =
-          deduped.length + " dated " + (deduped.length === 1 ? "commitment" : "commitments") +
-          " in the next 30 days" +
+          deduped.length + " open dated " + (deduped.length === 1 ? "commitment" : "commitments") +
+          (overdueCount ? " · " + overdueCount + " overdue" : "") +
+          (dueTodayCount ? " · " + dueTodayCount + " due today" : "") +
           (nextSeven ? " · " + nextSeven + " in the next 7 days" : "") +
           (forwardLookLoadFailures ? " · " + forwardLookLoadFailures + " source check" + (forwardLookLoadFailures === 1 ? "" : "s") + " unavailable" : "") +
           (forwardLookScheduleAuthorityUnavailable ? " · Schedule Authority unavailable — no static fallback" : "");
 
         forwardLookList.innerHTML = deduped.slice(0, FORWARD_LOOK_LIMIT).map(function(item) {
           const date = forwardDateParts(item.date);
-          const dueClass = item.forceCritical || item.daysUntil <= 2 ? "is-imminent" : item.daysUntil <= 6 ? "is-soon" : "";
-          return '<a class="forward-look-item" href="' + escapeHtml(item.href) + '">' +
+          const dueClass = item.daysUntil < 0 ? "is-overdue" : item.forceCritical || item.daysUntil <= 2 ? "is-imminent" : item.daysUntil <= 6 ? "is-soon" : "";
+          const itemClass = item.daysUntil < 0 ? "forward-look-item is-overdue" : "forward-look-item";
+          return '<a class="' + itemClass + '" href="' + escapeHtml(item.href) + '">' +
             '<span class="forward-look-date"><span>' + escapeHtml(date.month) + '</span><strong>' + escapeHtml(date.day) + '</strong></span>' +
             '<span class="forward-look-detail"><span class="forward-look-kind">' + escapeHtml(item.kind) + '</span>' +
             '<span class="forward-look-title">' + escapeHtml(item.title) + '</span>' +
@@ -3246,7 +3261,7 @@
         const hiddenCount = Math.max(0, deduped.length - FORWARD_LOOK_LIMIT);
         forwardLookMore.hidden = hiddenCount === 0;
         forwardLookMore.textContent = hiddenCount
-          ? hiddenCount + " additional dated " + (hiddenCount === 1 ? "commitment is" : "commitments are") + " recorded in the 30-day window."
+          ? hiddenCount + " additional open dated " + (hiddenCount === 1 ? "commitment is" : "commitments are") + " recorded."
           : "";
       }
 
