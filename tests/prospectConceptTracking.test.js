@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/prospectConceptTracking.test.js
-   Version: 1.6.1
+   Version: 1.7.0
    Status: Regression Test
    Purpose: Lock privacy-minimized Agnor Aviation 90-day plan engagement tracking.
    ========================================================= */
@@ -17,8 +17,9 @@ const mcphersonPage = fs.readFileSync(new URL("../prospect-previews/mcpherson-fi
 const wadadliPage = fs.readFileSync(new URL("../prospect-previews/wadadli-financial-group/index.html", import.meta.url),"utf8");
 const corvexPage = fs.readFileSync(new URL("../prospect-previews/corvex-roofing/index.html", import.meta.url),"utf8");
 const leonardPage = fs.readFileSync(new URL("../prospect-previews/leonard-financial-group/index.html", import.meta.url),"utf8");
+const rollingSudsPage = fs.readFileSync(new URL("../prospect-previews/rolling-suds-melbourne-palm-bay/index.html", import.meta.url),"utf8");
 
-assert.match(route,/Version: 1\.1\.0/);
+assert.match(route,/Version: 1\.1\.1/);
 assert.match(route,/agnor-aviation-90-day-v1/);
 assert.match(route,/businessName: "Agnor Aviation"/);
 assert.match(route,/sourceReference: "\/prospect-previews\/agnor-aviation\/"/);
@@ -92,7 +93,17 @@ assert.match(leonardPage,/gcm_preview/);
 assert.match(leonardPage,/321 Living/);
 assert.match(leonardPage,/Financial-services compliance stays in control/);
 
+assert.match(route,/rolling-suds-melbourne-palm-bay-commercial-v1/);
+assert.match(route,/businessNamePrefix: "Rolling Suds of Melbourne"/);
+assert.match(route,/Rolling Suds commercial growth concept viewed/);
+assert.match(rollingSudsPage,/Version: 1\.0\.0/);
+assert.match(rollingSudsPage,/rolling-suds-melbourne-palm-bay-commercial-v1/);
+assert.match(rollingSudsPage,/prospect-concept-view/);
+assert.match(rollingSudsPage,/gcm_preview/);
+assert.match(rollingSudsPage,/property managers/);
+assert.match(rollingSudsPage,/90-day test/);
+
 assert.doesNotMatch(route,/user[_-]?agent/i);
 assert.doesNotMatch(route,/visitor[_-]?ip/i);
 
-console.log("PASS tracked prospect concepts preserve privacy-minimized engagement for Agnor, Honor Financial Group, Kitchen Saver, McPherson Financial Group, Wadadli Financial Group, Corvex Roofing, and Leonard Financial Group");
+console.log("PASS tracked prospect concepts preserve privacy-minimized engagement for Agnor, Honor Financial Group, Kitchen Saver, McPherson Financial Group, Wadadli Financial Group, Corvex Roofing, Leonard Financial Group, and Rolling Suds");

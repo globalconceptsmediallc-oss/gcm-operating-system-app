@@ -1,10 +1,15 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/prospectConceptTracking.js
-   Version: 1.1.0
+   Version: 1.1.1
    Status: Production Road-Test Candidate
    Purpose: Record privacy-minimized engagement when a personalized
             GCM prospect concept page is viewed.
+
+   Change Notes — 1.1.1:
+   - Adds Rolling Suds of Melbourne–Palm Bay's personalized commercial-growth concept to the prospect engagement allowlist.
+   - Supports an optional business-name prefix for shortened Radar business names while preserving ambiguity protection.
+   - Preserves privacy-minimized tracking.
 
    Change Notes — 1.1.0:
    - Treats verified personalized-page engagement as newer evidence than an ordinary
@@ -68,7 +73,7 @@ import {
 } from "../shared/http.js";
 
 export const PROSPECT_CONCEPT_VIEW_ACTION = "prospect-concept-view";
-export const PROSPECT_CONCEPT_TRACKING_VERSION = "1.1.0";
+export const PROSPECT_CONCEPT_TRACKING_VERSION = "1.1.1";
 
 const CONCEPTS = new Map([
   ["john-curri-v1", {
@@ -124,6 +129,13 @@ const CONCEPTS = new Map([
     sourceReference: "/prospect-previews/leonard-financial-group/",
     subject: "Leonard Financial Group 321 Living campaign concept viewed",
     summary: "The personalized Leonard Financial Group 321 Living print-attribution concept was viewed."
+  }],
+  ["rolling-suds-melbourne-palm-bay-commercial-v1", {
+    businessName: "Rolling Suds of Melbourne - Palm Bay",
+    businessNamePrefix: "Rolling Suds of Melbourne",
+    sourceReference: "/prospect-previews/rolling-suds-melbourne-palm-bay/",
+    subject: "Rolling Suds commercial growth concept viewed",
+    summary: "The personalized Rolling Suds of Melbourne–Palm Bay commercial-growth concept was viewed."
   }]
 ]);
 
@@ -156,14 +168,24 @@ export async function handleProspectConceptView(body, env, requestId) {
   const viewedAt = normalizeViewTime(body?.viewedAt || body?.viewed_at);
 
   try {
-    const matchResult = await db.prepare(`
-      SELECT id, business_name, promoted_prospect_id
-      FROM crm_prospect_radar
-      WHERE archived_at IS NULL
-        AND LOWER(TRIM(COALESCE(business_name, ''))) = LOWER(TRIM(?))
-      ORDER BY id DESC
-      LIMIT 2
-    `).bind(concept.businessName).all();
+    const businessNamePrefix = String(concept.businessNamePrefix || "").trim();
+    const matchResult = businessNamePrefix
+      ? await db.prepare(`
+          SELECT id, business_name, promoted_prospect_id
+          FROM crm_prospect_radar
+          WHERE archived_at IS NULL
+            AND LOWER(TRIM(COALESCE(business_name, ''))) LIKE LOWER(TRIM(?)) || '%'
+          ORDER BY id DESC
+          LIMIT 2
+        `).bind(businessNamePrefix).all()
+      : await db.prepare(`
+          SELECT id, business_name, promoted_prospect_id
+          FROM crm_prospect_radar
+          WHERE archived_at IS NULL
+            AND LOWER(TRIM(COALESCE(business_name, ''))) = LOWER(TRIM(?))
+          ORDER BY id DESC
+          LIMIT 2
+        `).bind(concept.businessName).all();
 
     const matches = rowsOf(matchResult);
 
