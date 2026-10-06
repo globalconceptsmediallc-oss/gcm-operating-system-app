@@ -1,12 +1,17 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/engines/businessIntelligenceRecord.js
-   Version: 1.1.5
+   Version: 1.1.6
    Status: Production Road-Test Candidate
-   Source: shared/engines/businessIntelligenceRecord.js 1.1.4
+   Source: shared/engines/businessIntelligenceRecord.js 1.1.5
    Sprint: Prospect Intelligence Audience Classification Guardrail
    Purpose: Normalize advertisement and website evidence into one
             reusable, evidence-first Business Intelligence Record.
+
+   Changes — 1.1.6:
+   - Adds first-class Pressure Washing & Exterior Cleaning classification.
+   - Prevents unrelated footer/navigation labels such as Irrigation, Medical Services, Real Estate, and Restaurant from contaminating a verified pressure-washing service set.
+   - Improves target-customer language when public evidence explicitly names property managers, HOAs, apartments, and commercial customers.
 
    PRODUCTION RULES
    - Read-only.
@@ -23,9 +28,10 @@
 
 import { clean } from "../http.js";
 
-export const BUSINESS_INTELLIGENCE_RECORD_VERSION = "1.1.5";
+export const BUSINESS_INTELLIGENCE_RECORD_VERSION = "1.1.6";
 
 const SERVICE_RULES = Object.freeze([
+  ["Pressure Washing & Exterior Cleaning", /\b(?:pressure washing|power washing|soft wash(?:ing)?|house washing|roof washing|exterior cleaning|building washing|commercial pressure washing|residential pressure washing|concrete cleaning)\b/i],
   ["Lawn Care", /\b(?:lawn care|lawn service|fertili[sz]ation|weed control|turf)\b/i],
   ["Pest Control", /\b(?:pest control|pest management|insect control|bug control)\b/i],
   ["Termite Protection", /\b(?:termite|termite protection|termite treatment)\b/i],
@@ -616,7 +622,7 @@ function extractUsefulHeadings(value) {
   }
 
   const serviceHeadingPattern =
-    /\b(?:lawn care|pest control|termite|irrigation|wildlife|insulation|hvac|roof|plumb|electric|locksmith|safe|firearm|legal|real estate|gold|silver|coin|bullion|jewelry|watch|currency|collectible|memorabilia|road show|roadshow|longevity|stem cell|regenerative medicine|hormone|peptide|hyperbaric|diagnostic|hair restoration|facial rejuvenation|body composition|metabolic health|weight management|sexual health|cancer screening|infusion|clinical care|second opinion|dental care|dentist|orthodont|vehicle service|vehicle sales|financing)\b/i;
+    /\b(?:pressure washing|power washing|soft wash|house washing|roof washing|exterior cleaning|building washing|concrete cleaning|lawn care|pest control|termite|irrigation|wildlife|insulation|hvac|roof|plumb|electric|locksmith|safe|firearm|legal|real estate|gold|silver|coin|bullion|jewelry|watch|currency|collectible|memorabilia|road show|roadshow|longevity|stem cell|regenerative medicine|hormone|peptide|hyperbaric|diagnostic|hair restoration|facial rejuvenation|body composition|metabolic health|weight management|sexual health|cancer screening|infusion|clinical care|second opinion|dental care|dentist|orthodont|vehicle service|vehicle sales|financing)\b/i;
 
   return value
     .map(clean)
@@ -642,6 +648,20 @@ function normalizeServicesForIndustry(
 
   const normalizedIndustry =
     clean(industry).toLowerCase();
+
+  if (
+    /pressure washing|power washing|exterior cleaning/.test(
+      normalizedIndustry
+    )
+  ) {
+    const filtered = items.filter(item =>
+      /\b(?:pressure washing|power washing|soft wash(?:ing)?|house washing|roof washing|exterior cleaning|building washing|commercial pressure washing|residential pressure washing|concrete cleaning|driveway|sidewalk|paver|gutter|window cleaning)\b/i.test(item)
+    );
+
+    return filtered.length
+      ? filtered
+      : ["Pressure Washing & Exterior Cleaning"];
+  }
 
   if (
     /precious metals|coins and collectibles|coin and collectible/.test(
@@ -751,6 +771,13 @@ function inferIndustry(
     )
   ) {
     return "Precious Metals, Coins and Collectibles Buying";
+  }
+
+  if (
+    /\bpressure washing & exterior cleaning\b/i.test(joined) ||
+    /\b(?:pressure washing|power washing|soft washing|exterior cleaning)\b/i.test(text)
+  ) {
+    return "Exterior Cleaning / Pressure Washing";
   }
 
   if (
@@ -1055,6 +1082,19 @@ function inferTargetCustomer(
     )
   ) {
     return "Patients seeking dental or orthodontic care.";
+  }
+
+  if (
+    /pressure washing|power washing|exterior cleaning/.test(
+      industryText.toLowerCase()
+    )
+  ) {
+    if (
+      /\b(?:property managers?|property management|hoa|homeowners association|apartments?|apartment communities|commercial properties?|commercial facilities|builders?)\b/i.test(text)
+    ) {
+      return "Homeowners, property managers, HOAs, apartment communities, builders, and commercial property decision-makers seeking exterior cleaning services.";
+    }
+    return "Homeowners and property owners seeking exterior cleaning services.";
   }
 
   if (

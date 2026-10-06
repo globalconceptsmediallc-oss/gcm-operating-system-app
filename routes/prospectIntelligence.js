@@ -1,13 +1,20 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/prospectIntelligence.js
-   Version: 1.4.2
+   Version: 1.5.0
    Status: Production Road-Test Candidate
-   Source: routes/prospectIntelligence.js 1.4.1
+   Source: routes/prospectIntelligence.js 1.4.2
    Sprint: Prospect Intelligence Evidence Reliability
    Purpose: Preserve the Business Intelligence Record foundation and
             add consultant-grade reasoning that connects evidence to
             business meaning, action, expected result, and proof.
+
+   Changes — 1.5.0:
+   - Makes prospect origin authoritative: relationship/referral, research, and advertisement leads no longer share one advertisement-first script.
+   - Existing Relationship without ad evidence cannot generate "I received your advertisement" language.
+   - Relationship context now survives into outreach, discovery opening, evidence classification, and durable fullBusinessRecord metadata.
+   - Final products/services are constrained to the normalized Business Intelligence Record instead of accepting unrelated AI/navigation labels.
+   - Adds explicit prompt guardrails against footer/navigation/cross-site category contamination.
 
    PRODUCTION RULES
    - Read-only route.
@@ -45,7 +52,7 @@ import {
   applyConsultantIntelligenceToBrief
 } from "../shared/engines/consultantIntelligence.js";
 
-export const PROSPECT_INTELLIGENCE_VERSION = "1.4.2";
+export const PROSPECT_INTELLIGENCE_VERSION = "1.5.0";
 
 const MAX_WEBSITE_TEXT = 18000;
 const MAX_IMAGES = 2;
@@ -56,6 +63,10 @@ export async function handleProspectIntelligence(body, env, requestId) {
   const prospectContext = normalizeProspectContext(body);
   const advertisementImages = normalizeImages(
     body?.advertisementImages || body?.images || []
+  );
+  const prospectSourceMode = classifyProspectSource(
+    prospectContext,
+    advertisementImages.length
   );
 
   if (!websiteUrl) {
@@ -134,7 +145,8 @@ export async function handleProspectIntelligence(body, env, requestId) {
             businessName,
             prospectContext,
             websiteEvidence: enrichedWebsiteEvidence,
-            advertisementEvidence
+            advertisementEvidence,
+            prospectSourceMode
           }),
           businessIntelligenceRecord
         ),
@@ -171,8 +183,12 @@ export async function handleProspectIntelligence(body, env, requestId) {
               "Before making recommendations, establish what the business is, how it likely makes money, who it serves, and which visible brand or operating assets matter most.",
               "Do not confuse navigation labels such as Home with the business name.",
               "Do not use Requires consultant verification when the public evidence clearly establishes the business category or market.",
-              "Use the advertisement evidence as part of the reasoning, not as decoration.",
-              "Compare the advertisement promise with the website customer journey.",
+              "Treat prospect origin as controlling evidence. Relationship/referral, research, and advertisement leads require different outreach language.",
+              "When prospectSourceMode is relationship and no advertisement image was supplied, never claim GCM received an advertisement, mailer, campaign, QR code, or promotional offer.",
+              "When prospectSourceMode is advertisement, use the advertisement evidence as part of the reasoning, not as decoration.",
+              "Compare an advertisement promise with the website customer journey only when advertisement evidence actually exists.",
+              "Do not treat footer links, navigation labels, directory categories, franchise cross-links, or unrelated page labels as products or services.",
+              "Products and services must remain consistent with the identified business model and normalized Business Intelligence Record.",
               "Use the supplied Consultant Intelligence as the reasoning authority for the executive brief, strongest asset, largest opportunity, and first action.",
               "The strongest asset, largest opportunity, and first action must be distinct and specific to this business model.",
               "The largest opportunity must diagnose the weakness, risk, friction, or lost-value condition.",
@@ -193,6 +209,7 @@ export async function handleProspectIntelligence(body, env, requestId) {
             content: JSON.stringify({
               task: "Create the GCM prospect intelligence and pre-call brief.",
               prospectContext,
+              prospectSourceMode,
               businessName,
               websiteUrl,
               advertisementEvidence,
@@ -279,7 +296,7 @@ export async function handleProspectIntelligence(body, env, requestId) {
       maxRetries: 1
     });
 
-    const brief = applyConsultantIntelligenceToBrief(
+    const generatedBrief = applyConsultantIntelligenceToBrief(
       applyConsultantReasoningToBrief(
         applyBusinessIntelligenceRecordToBrief(
           aiResult.ok
@@ -290,6 +307,16 @@ export async function handleProspectIntelligence(body, env, requestId) {
       ),
       consultantIntelligence
     );
+
+    const brief = enforceProspectSourceSemantics({
+      brief: generatedBrief,
+      prospectSourceMode,
+      prospectContext,
+      businessName,
+      websiteUrl,
+      advertisementEvidence,
+      businessIntelligenceRecord
+    });
 
     return jsonResponse({
       ok: true,
@@ -316,7 +343,8 @@ export async function handleProspectIntelligence(body, env, requestId) {
         advertisementEvidence,
         websiteEvidence,
         evidenceClassification: {
-          mode: advertisementImages.length ? "advertisement-plus-website" : "website-only",
+          mode: evidenceModeFor(prospectSourceMode, advertisementImages.length),
+          prospectSourceMode,
           advertisementImageCount: advertisementImages.length
         },
         evidencePackages: [
@@ -524,6 +552,8 @@ async function identifyBusinessProfile({
             "Do not use navigation labels such as Home as the business name.",
             "Recognize major brands, franchises, dealerships, professional practices, retailers, and multi-location companies when clearly visible.",
             "Infer the business model and revenue streams only when supported by visible services or offers.",
+            "Do not treat footer links, navigation menus, nearby-business categories, franchise-directory cross-links, or unrelated labels as services.",
+            "Prioritize the supplied business name, title, meta description, repeated H1/H2 service language, and service phrases clearly tied to the business.",
             "Return one valid JSON object only."
           ].join(" ")
         },
@@ -787,7 +817,8 @@ function buildFallbackBrief({
   businessName,
   prospectContext,
   websiteEvidence,
-  advertisementEvidence
+  advertisementEvidence,
+  prospectSourceMode
 }) {
   const name =
     businessName ||
@@ -795,9 +826,13 @@ function buildFallbackBrief({
     websiteEvidence.title ||
     new URL(websiteUrl).hostname;
 
-  const offer = advertisementEvidence.offer !== "Unknown"
+  const hasAdvertisement = clean(advertisementEvidence.status) === "complete" ||
+    Number(advertisementEvidence.imageCount) > 0;
+  const offer = hasAdvertisement && advertisementEvidence.offer !== "Unknown"
     ? advertisementEvidence.offer
-    : "No verified advertisement offer was extracted.";
+    : "No advertisement evidence was supplied.";
+  const relationshipMode = prospectSourceMode === "relationship";
+  const sourceLabel = clean(prospectContext.source) || "research";
 
   return {
     businessName: name,
@@ -807,51 +842,91 @@ function buildFallbackBrief({
       advertisementEvidence.geographicSignals?.[0] ||
       "Requires consultant verification",
     businessSummary:
-      `${name} is a prospect identified through ${prospectContext.source || "observable marketing evidence"}. ` +
-      `The advertisement and public website should be reviewed together before outreach.`,
-    productsAndServices:
-      advertisementEvidence.visibleServices?.length
-        ? advertisementEvidence.visibleServices
-        : websiteEvidence.headings?.slice(0, 8) || [],
+      relationshipMode
+        ? `${name} is a prospect connected to GCM through ${sourceLabel}. The existing relationship context and public website should be reviewed together before the next outreach.`
+        : hasAdvertisement
+          ? `${name} is a prospect identified through ${sourceLabel}. The advertisement and public website should be reviewed together before outreach.`
+          : `${name} is a prospect identified through ${sourceLabel}. The public website and supplied context should be reviewed together before outreach.`,
+    productsAndServices: [],
     targetCustomer:
-      advertisementEvidence.audienceSignals?.join("; ") ||
-      "Target customer requires verification.",
+      hasAdvertisement && advertisementEvidence.audienceSignals?.length
+        ? advertisementEvidence.audienceSignals.join("; ")
+        : "Target customer requires verification.",
     trustSignals: [],
-    websiteObservations: [
-      `Website status: ${websiteEvidence.status}.`,
-      `Advertisement offer: ${offer}`,
-      "Verify whether the advertisement promise continues clearly on the landing page.",
-      "Verify campaign-specific call, form, QR-code, and analytics tracking."
-    ],
-    growthOpportunities: [
-      "Compare the advertisement promise with the landing-page experience.",
-      "Verify direct-response tracking before recommending additional media.",
-      "Research local competitors before the first sales conversation."
-    ],
+    websiteObservations: hasAdvertisement
+      ? [
+          `Website status: ${websiteEvidence.status}.`,
+          `Advertisement offer: ${offer}`,
+          "Verify whether the advertisement promise continues clearly on the landing page.",
+          "Verify campaign-specific call, form, QR-code, and analytics tracking."
+        ]
+      : [
+          `Website status: ${websiteEvidence.status}.`,
+          `Prospect source: ${sourceLabel}.`,
+          relationshipMode
+            ? "Use the existing relationship context as the outreach starting point."
+            : "Verify the primary customer journey and conversion path."
+        ],
+    growthOpportunities: hasAdvertisement
+      ? [
+          "Compare the advertisement promise with the landing-page experience.",
+          "Verify direct-response tracking before recommending additional media.",
+          "Research local competitors before the first sales conversation."
+        ]
+      : [
+          "Verify the highest-value customer and service path before recommending additional marketing.",
+          "Verify call, form, lead-source, and booked-work attribution.",
+          "Research local competitors before the next sales conversation."
+        ],
     missingInformation: [
       "Campaign performance and attribution",
       "Current marketing budget",
       "Decision maker and sales process",
       "Competitive rankings and review position"
     ],
-    personalizedOutreachInsights: [
-      "Lead with the advertisement you actually received.",
-      "Compliment the visible investment before raising opportunities.",
-      "Offer a small number of specific observations rather than a generic agency pitch."
-    ],
-    qualificationScore: advertisementEvidence.status === "complete" ? 7 : 5,
+    personalizedOutreachInsights: hasAdvertisement
+      ? [
+          "Lead with the advertisement you actually received.",
+          "Compliment the visible investment before raising opportunities.",
+          "Offer a small number of specific observations rather than a generic agency pitch."
+        ]
+      : relationshipMode
+        ? [
+            "Lead with the existing relationship and the reason the contact is already connected to GCM.",
+            "Use the public-site review to add value, not to invent a cold-prospect story.",
+            "Offer a small number of specific observations rather than a generic agency pitch."
+          ]
+        : [
+            "Lead with the actual research source.",
+            "Offer a small number of specific observations rather than a generic agency pitch."
+          ],
+    qualificationScore: hasAdvertisement ? 7 : 5,
     outreachReadiness: "Needs Verification",
-    firstContactEmail: {
-      subject: `A few observations about your ${clean(advertisementEvidence.format) || "advertising"} campaign`,
-      body:
-        `I received your recent advertisement and it caught my attention. ` +
-        `I reviewed the customer journey from the advertisement to ${websiteUrl} and noted a few opportunities that may help you get more value from the marketing you are already running. ` +
-        `Would you be open to a short conversation so I can share the observations?`
-    },
+    firstContactEmail: relationshipMode
+      ? {
+          subject: `A few observations after our recent contact`,
+          body:
+            `Thanks for the recent contact. I took a look at ${name} and noted a few opportunities that may be worth comparing with what you are seeing inside the business. Would you be open to a short conversation so I can share the observations?`
+        }
+      : hasAdvertisement
+        ? {
+            subject: `A few observations about your ${clean(advertisementEvidence.format) || "advertising"} campaign`,
+            body:
+              `I received your recent advertisement and it caught my attention. ` +
+              `I reviewed the customer journey from the advertisement to ${websiteUrl} and noted a few opportunities that may help you get more value from the marketing you are already running. ` +
+              `Would you be open to a short conversation so I can share the observations?`
+          }
+        : {
+            subject: `A few observations about ${name}`,
+            body:
+              `I reviewed ${name}'s public website and noted a few opportunities that may be worth discussing. Would you be open to a short conversation so I can share the observations?`
+          },
     discoveryCallScript: {
-      opening:
-        `I received your advertisement and liked that it gives people a clear reason to respond. ` +
-        `I reviewed the path from the advertisement to your website and found a few items worth discussing.`,
+      opening: relationshipMode
+        ? `After our recent contact, I took a closer look at ${name} and found a few items worth comparing with what you are seeing inside the business.`
+        : hasAdvertisement
+          ? `I received your advertisement and liked that it gives people a clear reason to respond. I reviewed the path from the advertisement to your website and found a few items worth discussing.`
+          : `I reviewed ${name}'s public website and found a few items worth discussing.`,
       questions: [
         "How are responses from this campaign currently tracked?",
         "Which service and geographic area are most important to grow?",
@@ -863,12 +938,19 @@ function buildFallbackBrief({
       nextStep:
         "Verify the landing-page experience and campaign tracking, then prepare three evidence-based recommendations."
     },
-    humanVerificationChecklist: [
-      "Open and test the advertisement URL and QR code.",
-      "Confirm the advertised offer and restrictions.",
-      "Check calls, forms, and analytics tracking.",
-      "Review Google Business Profile, reviews, paid ads, organic visibility, and key competitors."
-    ],
+    humanVerificationChecklist: hasAdvertisement
+      ? [
+          "Open and test the advertisement URL and QR code.",
+          "Confirm the advertised offer and restrictions.",
+          "Check calls, forms, and analytics tracking.",
+          "Review Google Business Profile, reviews, paid ads, organic visibility, and key competitors."
+        ]
+      : [
+          "Verify the source and relationship context.",
+          "Check calls, forms, and analytics tracking.",
+          "Verify service-area and service-page clarity.",
+          "Review Google Business Profile, reviews, paid ads, organic visibility, and key competitors."
+        ],
     consultantReasoning: {
       evidence: [
         advertisementEvidence.status === "complete"
@@ -919,12 +1001,14 @@ function buildFallbackBrief({
         `Before suggesting more marketing, I would first verify whether the path from your current advertising and website to a qualified inquiry is working as efficiently as it should.`
     },
     prospectIntelligence: {
-      advertisementAssessment:
-        `The advertisement is usable prospect evidence. Extracted offer: ${offer}`,
-      messageMatch:
-        "Requires comparison between the advertisement promise and the landing page.",
+      advertisementAssessment: hasAdvertisement
+        ? `The advertisement is usable prospect evidence. Extracted offer: ${offer}`
+        : `No advertisement evidence was supplied. Prospect source is ${sourceLabel}.`,
+      messageMatch: hasAdvertisement
+        ? "Requires comparison between the advertisement promise and the landing page."
+        : "Not applicable without advertisement evidence.",
       marketingMaturity:
-        advertisementEvidence.status === "complete" ? "Established" : "Unknown",
+        hasAdvertisement ? "Established" : "Unknown",
       likelyOpportunityAreas: [
         "Campaign-to-landing-page alignment",
         "Lead attribution and conversion tracking",
@@ -935,13 +1019,137 @@ function buildFallbackBrief({
       estimatedFirstInvoice: "Unknown",
       estimatedAnnualClientValue: "Unknown",
       closingProbability: "Medium",
-      recommendedFirstContact:
-        "Reference the advertisement, offer useful observations, and ask permission to share them.",
-      recommendedNextAction:
-        "Complete the advertisement-to-website comparison and local competitor review.",
+      recommendedFirstContact: relationshipMode
+        ? "Reference the existing relationship, offer useful observations, and ask permission to compare notes."
+        : hasAdvertisement
+          ? "Reference the advertisement, offer useful observations, and ask permission to share them."
+          : "Reference the actual research source, offer useful observations, and ask permission to share them.",
+      recommendedNextAction: hasAdvertisement
+        ? "Complete the advertisement-to-website comparison and local competitor review."
+        : "Complete the website, customer-path, attribution, and local competitor review.",
       campaignConcepts: []
     }
   };
+}
+
+export function classifyProspectSource(prospectContext, advertisementImageCount = 0) {
+  const source = clean(prospectContext?.source).toLowerCase();
+
+  if (
+    Number(advertisementImageCount) > 0 ||
+    /advertisement|direct mail|postcard|mailer|magazine|flyer|billboard|vehicle graphic|social ad|print ad/.test(source)
+  ) {
+    return "advertisement";
+  }
+
+  if (/relationship|referral|networking|inbound/.test(source)) {
+    return "relationship";
+  }
+
+  if (/google search|google maps|research|target vertical/.test(source)) {
+    return "research";
+  }
+
+  return "general";
+}
+
+function evidenceModeFor(prospectSourceMode, advertisementImageCount) {
+  if (Number(advertisementImageCount) > 0 || prospectSourceMode === "advertisement") {
+    return "advertisement-plus-website";
+  }
+  if (prospectSourceMode === "relationship") {
+    return "relationship-plus-website";
+  }
+  if (prospectSourceMode === "research") {
+    return "research-plus-website";
+  }
+  return "website-only";
+}
+
+export function enforceProspectSourceSemantics({
+  brief,
+  prospectSourceMode,
+  prospectContext,
+  businessName,
+  websiteUrl,
+  advertisementEvidence,
+  businessIntelligenceRecord
+}) {
+  const source = brief && typeof brief === "object" ? { ...brief } : {};
+  const verifiedServices = Array.isArray(businessIntelligenceRecord?.services?.primaryServices)
+    ? businessIntelligenceRecord.services.primaryServices.filter(Boolean)
+    : [];
+  const verifiedName =
+    clean(businessIntelligenceRecord?.identity?.businessName) ||
+    clean(businessName) ||
+    "the business";
+  const sourceLabel = clean(prospectContext?.source) || "Unknown";
+  const hasAdvertisement =
+    clean(advertisementEvidence?.status) === "complete" ||
+    Number(advertisementEvidence?.imageCount) > 0 ||
+    prospectSourceMode === "advertisement";
+
+  if (verifiedServices.length) {
+    source.productsAndServices = [...verifiedServices];
+  }
+
+  if (!hasAdvertisement) {
+    source.websiteObservations = (Array.isArray(source.websiteObservations) ? source.websiteObservations : [])
+      .filter(item => !/advertisement offer|advertisement promise|campaign-specific|qr[- ]?code/i.test(clean(item)));
+
+    source.growthOpportunities = (Array.isArray(source.growthOpportunities) ? source.growthOpportunities : [])
+      .filter(item => !/advertisement promise|direct-response tracking|campaign-to-landing/i.test(clean(item)));
+
+    source.humanVerificationChecklist = (Array.isArray(source.humanVerificationChecklist) ? source.humanVerificationChecklist : [])
+      .filter(item => !/advertisement|advertised offer|qr code/i.test(clean(item)));
+
+    source.prospectIntelligence = {
+      ...(source.prospectIntelligence || {}),
+      advertisementAssessment: `No advertisement evidence was supplied. Prospect source is ${sourceLabel}.`,
+      messageMatch: "Not applicable without advertisement evidence."
+    };
+  }
+
+  if (prospectSourceMode === "relationship" && !hasAdvertisement) {
+    const contextText =
+      clean(prospectContext?.evidenceDescription) ||
+      clean(prospectContext?.notes) ||
+      `Existing relationship with ${clean(prospectContext?.contactName) || "the contact"}.`;
+
+    source.businessSummary =
+      clean(source.businessSummary) ||
+      `${verifiedName} is connected to GCM through an existing relationship. ${contextText}`;
+
+    source.personalizedOutreachInsights = unique([
+      "Lead with the existing relationship and the reason the contact is already connected to GCM.",
+      "Use the website review to add value; do not invent an advertisement or cold-prospect origin.",
+      ...(Array.isArray(source.personalizedOutreachInsights)
+        ? source.personalizedOutreachInsights.filter(item => !/advertisement|mailer|postcard|campaign/i.test(clean(item)))
+        : [])
+    ]);
+
+    source.firstContactEmail = {
+      subject: `A few observations after our recent contact`,
+      body:
+        `Thanks for the recent contact. I took a look at ${verifiedName} and noted a few opportunities that may be worth comparing with what you are seeing inside the business. Would you be open to a short conversation so I can share the observations?`
+    };
+
+    source.discoveryCallScript = {
+      ...(source.discoveryCallScript || {}),
+      opening:
+        `After our recent contact, I took a closer look at ${verifiedName} and found a few items worth comparing with what you are seeing inside the business.`
+    };
+
+    source.prospectIntelligence = {
+      ...(source.prospectIntelligence || {}),
+      recommendedFirstContact:
+        "Reference the existing relationship and the reason for the recent contact, then offer the specific observations.",
+      recommendedNextAction:
+        "Compare the public website and supplied relationship context, verify the highest-value customer path, and prepare the next evidence-based conversation."
+    };
+  }
+
+  return source;
 }
 
 function applyConsultantReasoningToBrief(brief) {
