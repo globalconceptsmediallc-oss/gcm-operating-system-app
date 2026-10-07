@@ -1574,9 +1574,9 @@ export function buildNurtureReviewAction(holdReasonValue, reactivationTriggerVal
     reactivationTrigger,
     reviewDate,
     actionType: "nurture_review",
-    title: \`Review hold — \${reactivationTrigger}\`,
+    title: `Review hold — ${reactivationTrigger}`,
     priority: "Normal",
-    reason: \`Hold reason: \${holdReason} Reactivation trigger: \${reactivationTrigger}\`
+    reason: `Hold reason: ${holdReason} Reactivation trigger: ${reactivationTrigger}`
   };
 }
 
@@ -1593,30 +1593,30 @@ async function placeProspectOnHold(body, db, requestId) {
   }
 
   const existing = await readProspectSummary(db, prospectId);
-  if (!existing) return validationError(requestId, "place_prospect_on_hold", \`CRM Prospect \${prospectId} was not found.\`, 404);
+  if (!existing) return validationError(requestId, "place_prospect_on_hold", `CRM Prospect ${prospectId} was not found.`, 404);
   if (["lost", "converted"].includes(existing.status)) {
     return validationError(requestId, "place_prospect_on_hold", "Lost or converted Prospects cannot be placed on nurture hold.");
   }
 
-  await db.prepare(\`
+  await db.prepare(`
     UPDATE crm_prospects
     SET status = 'nurture',
         nurture_reason = ?,
         nurture_trigger = ?,
         updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
-  \`).bind(hold.holdReason, hold.reactivationTrigger, prospectId).run();
+  `).bind(hold.holdReason, hold.reactivationTrigger, prospectId).run();
 
   await insertActivity(db, prospectId, {
     activityType: "nurture_hold",
     occurredAt: new Date().toISOString(),
     direction: "internal",
     subject: "Prospect placed on Nurture / Hold",
-    summary: \`Hold reason: \${hold.holdReason}\`,
+    summary: `Hold reason: ${hold.holdReason}`,
     outcome: "on_hold",
     meaningfulContact: false,
     sourceType: "crm",
-    notes: \`Reactivation trigger: \${hold.reactivationTrigger}. Review date: \${hold.reviewDate}.\`
+    notes: `Reactivation trigger: ${hold.reactivationTrigger}. Review date: ${hold.reviewDate}.`
   });
 
   await replaceOpenNextAction(db, prospectId, {
@@ -1645,19 +1645,19 @@ async function reactivateProspect(body, db, requestId) {
   if (!prospectId) return validationError(requestId, "reactivate_prospect", "reactivate_prospect requires a positive prospectId.");
 
   const existing = await readProspectSummary(db, prospectId);
-  if (!existing) return validationError(requestId, "reactivate_prospect", \`CRM Prospect \${prospectId} was not found.\`, 404);
+  if (!existing) return validationError(requestId, "reactivate_prospect", `CRM Prospect ${prospectId} was not found.`, 404);
   if (existing.status !== "nurture") {
     return validationError(requestId, "reactivate_prospect", "Only a nurture/hold Prospect can be reactivated.");
   }
 
-  await db.prepare(\`
+  await db.prepare(`
     UPDATE crm_prospects
     SET status = 'active',
         nurture_reason = NULL,
         nurture_trigger = NULL,
         updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
-  \`).bind(prospectId).run();
+  `).bind(prospectId).run();
 
   await insertActivity(db, prospectId, {
     activityType: "nurture_reactivated",
@@ -1707,10 +1707,10 @@ async function placeRadarOnHold(body, db, requestId) {
   }
 
   const existing = await readRadarById(db, radarId);
-  if (!existing) return validationError(requestId, "place_radar_on_hold", \`Radar record \${radarId} was not found.\`, 404);
+  if (!existing) return validationError(requestId, "place_radar_on_hold", `Radar record ${radarId} was not found.`, 404);
   if (existing.promotedProspectId) return validationError(requestId, "place_radar_on_hold", "This Radar record has already been promoted.");
 
-  await db.prepare(\`
+  await db.prepare(`
     UPDATE crm_prospect_radar
     SET status = 'nurture',
         nurture_reason = ?,
@@ -1719,19 +1719,19 @@ async function placeRadarOnHold(body, db, requestId) {
         next_action_due_date = ?,
         updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
-  \`).bind(hold.holdReason, hold.reactivationTrigger, hold.title, hold.reviewDate, radarId).run();
+  `).bind(hold.holdReason, hold.reactivationTrigger, hold.title, hold.reviewDate, radarId).run();
 
-  await db.prepare(\`
+  await db.prepare(`
     INSERT INTO crm_prospect_radar_activities (
       radar_id, activity_type, occurred_at, direction, subject, summary, outcome,
       meaningful_contact, source_type, source_reference, external_key, notes, created_at
     ) VALUES (?, 'nurture_hold', CURRENT_TIMESTAMP, 'internal',
               'Radar prospect placed on Nurture / Hold', ?, 'on_hold', 0,
               'crm', 'nurture_hold', NULL, ?, CURRENT_TIMESTAMP)
-  \`).bind(
+  `).bind(
     radarId,
-    \`Hold reason: \${hold.holdReason}\`,
-    \`Reactivation trigger: \${hold.reactivationTrigger}. Review date: \${hold.reviewDate}.\`
+    `Hold reason: ${hold.holdReason}`,
+    `Reactivation trigger: ${hold.reactivationTrigger}. Review date: ${hold.reviewDate}.`
   ).run();
 
   return jsonResponse({
@@ -1750,12 +1750,12 @@ async function reactivateRadar(body, db, requestId) {
   if (!radarId) return validationError(requestId, "reactivate_radar", "reactivate_radar requires a positive radarId.");
 
   const existing = await readRadarById(db, radarId);
-  if (!existing) return validationError(requestId, "reactivate_radar", \`Radar record \${radarId} was not found.\`, 404);
+  if (!existing) return validationError(requestId, "reactivate_radar", `Radar record ${radarId} was not found.`, 404);
   if (existing.status !== "nurture") return validationError(requestId, "reactivate_radar", "Only a nurture/hold Radar record can be reactivated.");
 
   const nextStatus = existing.lastOutreachAt ? "outreach" : "radar";
 
-  await db.prepare(\`
+  await db.prepare(`
     UPDATE crm_prospect_radar
     SET status = ?,
         nurture_reason = NULL,
@@ -1772,9 +1772,9 @@ async function reactivateRadar(body, db, requestId) {
         END,
         updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
-  \`).bind(nextStatus, nextStatus, nextStatus, radarId).run();
+  `).bind(nextStatus, nextStatus, nextStatus, radarId).run();
 
-  await db.prepare(\`
+  await db.prepare(`
     INSERT INTO crm_prospect_radar_activities (
       radar_id, activity_type, occurred_at, direction, subject, summary, outcome,
       meaningful_contact, source_type, source_reference, external_key, notes, created_at
@@ -1782,7 +1782,7 @@ async function reactivateRadar(body, db, requestId) {
               'Radar prospect reactivated from Nurture / Hold',
               'The relationship returned to active prospecting; prior history was preserved.',
               'reactivated', 0, 'crm', 'nurture_reactivated', NULL, NULL, CURRENT_TIMESTAMP)
-  \`).bind(radarId).run();
+  `).bind(radarId).run();
 
   return jsonResponse({
     ok: true,
