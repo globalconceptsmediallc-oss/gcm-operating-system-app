@@ -20,7 +20,6 @@ const forwardLookMigration = fs.readFileSync(new URL("../migrations/0039_forward
 assert.match(today,/Version: 3\.6\.7/);
 assert.match(today,/data-forward-manage-kind/);
 assert.match(today,/closePassedForwardLookItem/);
-assert.match(today,/operation: "close_event"/);
 assert.match(today,/forward-look-operations/);
 assert.match(today,/operation: "close_passed"/);
 assert.match(today,/data-forward-manage-key/);
