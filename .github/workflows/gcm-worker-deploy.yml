@@ -1,10 +1,11 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gcm-worker-deploy.yml
-# Version: 1.5.69
+# Version: 1.5.70
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Worker with human-led Signal Finding capture.
 # Change Notes:
+# - Re-run Worker 7.40.0 deployment after aligning the Forward Look durable-disposition regression.
 # - Deploy Worker 7.40.0 with D1-backed Forward Look row dispositions so closed passed items stay closed after refresh.
 # - Deploy interactive Forward Look passed radio/traffic closure with Schedule Operations 1.1.0 and migration 0038.
 # - Deploy Mission Control 7.8.4 so Nurture / Hold engagement is suppressed from Today without deleting history.
