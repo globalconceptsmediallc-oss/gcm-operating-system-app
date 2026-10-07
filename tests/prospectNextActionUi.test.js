@@ -72,4 +72,18 @@ assert.doesNotMatch(
   "Setting a Next Action must not change Prospect stage or general Prospect state"
 );
 
-console.log(`PASS Prospect Next Action UI ${fileVersion}: explicit dated action without duplicate activity or stage write`);
+const prospectsPage = fs.readFileSync(
+  new URL("../prospects.html", import.meta.url),
+  "utf8"
+);
+assert.match(prospectsPage,/Version: 3\.6\.0/);
+assert.match(prospectsPage,/Nurture \/ Hold/);
+assert.match(prospectsPage,/holdReason/);
+assert.match(prospectsPage,/reactivationTrigger/);
+assert.match(prospectsPage,/reviewDate/);
+assert.match(prospectsPage,/place_prospect_on_hold/);
+assert.match(prospectsPage,/place_radar_on_hold/);
+assert.match(prospectsPage,/reactivate_prospect/);
+assert.match(prospectsPage,/reactivate_radar/);
+
+console.log(`PASS Prospect Next Action UI ${fileVersion}: explicit dated action plus Nurture / Hold controls`);
