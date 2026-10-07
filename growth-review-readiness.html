@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Growth Review Readiness | GCM OS</title>
+<style>
+:root{--navy:#07192e;--blue:#1f6fd6;--blueSoft:#edf5ff;--bg:#f2f5fa;--card:#fff;--border:#d9e1eb;--text:#102039;--muted:#66758a;--green:#1f7a4d;--greenSoft:#eaf7f0;--yellow:#986414;--yellowSoft:#fff5df;--red:#b23b3b;--redSoft:#fff0f0;--shadow:0 12px 32px rgba(8,23,48,.08)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}a{color:inherit;text-decoration:none}button{font:inherit}.shell{min-height:100vh;display:grid;grid-template-columns:240px minmax(0,1fr)}.sidebar{min-width:0}main{padding:24px 28px 44px}.page{max-width:1320px;margin:0 auto}.top{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;margin-bottom:16px}.eyebrow{margin:0 0 7px;color:var(--blue);font-size:.72rem;font-weight:900;letter-spacing:.13em;text-transform:uppercase}h1{margin:0;color:var(--navy);font-size:clamp(1.75rem,3.2vw,2.5rem);line-height:1}.subtitle{max-width:900px;margin:8px 0 0;color:var(--muted);line-height:1.5}.actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.btn{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 12px;border:1px solid var(--border);border-radius:9px;background:#fff;color:var(--navy);font-size:.75rem;font-weight:850;cursor:pointer}.btn.primary{border-color:var(--blue);background:var(--blue);color:#fff}.banner{margin-bottom:12px;padding:14px 16px;border:1px solid var(--border);border-radius:12px;background:#fff;box-shadow:var(--shadow);font-size:.82rem;line-height:1.5}.banner.loading{border-color:#cbdcf4;background:var(--blueSoft);color:#225e9e}.banner.ready{border-color:#cbe5d6;background:var(--greenSoft);color:var(--green)}.banner.blocked{border-color:#efd39f;background:var(--yellowSoft);color:var(--yellow)}.banner.error{border-color:#efcccc;background:var(--redSoft);color:var(--red)}.summary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:12px}.card,.panel{border:1px solid var(--border);background:var(--card);box-shadow:var(--shadow)}.card{padding:14px 16px;border-radius:12px}.label{color:var(--muted);font-size:.65rem;font-weight:850;letter-spacing:.07em;text-transform:uppercase}.value{display:block;margin-top:5px;color:var(--navy);font-size:1.35rem;font-weight:900}.panel{border-radius:13px;overflow:hidden}.panel+.panel{margin-top:12px}.panel-head{padding:14px 16px 12px;border-bottom:1px solid var(--border)}.panel-head h2{margin:0;color:var(--navy);font-size:1rem}.panel-head p{margin:5px 0 0;color:var(--muted);font-size:.8rem;line-height:1.45}.panel-body{padding:14px 16px 18px}.checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.check{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:12px 13px;border:1px solid var(--border);border-radius:10px;background:#fff}.check strong{display:block;font-size:.82rem;color:var(--navy)}.check span{display:block;margin-top:4px;color:var(--muted);font-size:.72rem;line-height:1.4}.badge{display:inline-flex;align-items:center;justify-content:center;min-width:66px;min-height:24px;padding:0 8px;border-radius:999px;font-size:.61rem;font-weight:900;text-transform:uppercase;white-space:nowrap}.badge.pass{background:var(--greenSoft);color:var(--green)}.badge.gap{background:var(--yellowSoft);color:var(--yellow)}.badge.fail{background:var(--redSoft);color:var(--red)}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.records{display:grid;gap:9px}.record{padding:12px 13px;border:1px solid var(--border);border-radius:9px;background:#fff}.record strong{display:block;color:var(--navy);font-size:.84rem;line-height:1.35}.meta{margin-top:5px;color:var(--muted);font-size:.69rem;line-height:1.4}.record p{margin:8px 0 0;font-size:.77rem;line-height:1.45}.empty{padding:24px 16px;border:1px dashed var(--border);border-radius:9px;color:var(--muted);text-align:center;font-size:.78rem}.note{margin-top:12px;padding:12px;border-radius:10px;background:#f8fafc;color:var(--muted);font-size:.75rem;line-height:1.5}.source-list{display:grid;gap:7px}.source-row{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #edf1f5;font-size:.76rem}.source-row:last-child{border-bottom:0}.source-row strong{color:var(--navy)}@media(max-width:1100px){.summary{grid-template-columns:repeat(3,1fr)}}@media(max-width:850px){.shell{display:block}.summary,.grid,.checks{grid-template-columns:1fr 1fr}main{padding:18px}.top{flex-direction:column}.actions{justify-content:flex-start}}@media(max-width:620px){.summary,.grid,.checks{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<!-- =========================================================
+ Global Concepts Media Operating System
+ File: growth-review-readiness.html
+ Version: 1.0.0
+ Status: Production Road-Test Candidate
+ Sprint: Growth Review — Live Client Input Assembly
+ Purpose: Read-only assembly of authoritative SES evidence required before
+          generating a 90-Day Growth Review. This page performs no D1 writes.
+ ========================================================= -->
+<div class="shell">
+<aside class="sidebar" data-gcm-shell-sidebar></aside>
+<main><div class="page">
+<header class="top">
+  <div>
+    <p class="eyebrow">Client Growth Review</p>
+    <h1>Southeast Safes — Review Readiness</h1>
+    <p class="subtitle">Verify the authoritative evidence available in GCM OS before generating a 90-Day Growth Review. Missing evidence remains visible; this page does not manufacture conclusions or alter source records.</p>
+  </div>
+  <div class="actions">
+    <a class="btn" href="business-workspace.html?business=southeast-safes">Open SES Workspace</a>
+    <a class="btn" href="proof.html">Open Proof</a>
+    <button class="btn primary" id="refresh" type="button">Refresh Evidence</button>
+  </div>
+</header>
+
+<div class="banner loading" id="status">Loading authoritative Southeast Safes evidence from production D1…</div>
+
+<section class="summary">
+  <article class="card"><span class="label">Proof Records</span><strong class="value" id="proofCount">—</strong></article>
+  <article class="card"><span class="label">Reviewed Findings</span><strong class="value" id="findingCount">—</strong></article>
+  <article class="card"><span class="label">Measurements</span><strong class="value" id="measurementCount">—</strong></article>
+  <article class="card"><span class="label">Media Records</span><strong class="value" id="mediaCount">—</strong></article>
+  <article class="card"><span class="label">Investigations</span><strong class="value" id="investigationCount">—</strong></article>
+  <article class="card"><span class="label">Work Items</span><strong class="value" id="workCount">—</strong></article>
+</section>
+
+<section class="panel">
+  <div class="panel-head"><h2>Growth Review Input Gate</h2><p>The review generator stays locked until the live evidence sources can support an evidence-based client review.</p></div>
+  <div class="panel-body">
+    <div class="checks" id="checks"><div class="empty">Checking source readiness…</div></div>
+    <div class="note" id="decisionNote">No Growth Review has been generated.</div>
+  </div>
+</section>
+
+<section class="grid">
+  <article class="panel">
+    <div class="panel-head"><h2>Authoritative Sources</h2><p>Live records being assembled for this review.</p></div>
+    <div class="panel-body"><div class="source-list" id="sources"></div></div>
+  </article>
+  <article class="panel">
+    <div class="panel-head"><h2>Evidence Preview</h2><p>Recent high-value evidence only. This is an input audit, not the Growth Review itself.</p></div>
+    <div class="panel-body"><div class="records" id="preview"><div class="empty">Loading evidence…</div></div></div>
+  </article>
+</section>
+</div></main></div>
+
+<script src="shared/gcm-shell.js"></script>
+<script>
+window.addEventListener("DOMContentLoaded",()=>{if(window.GCMOShell)window.GCMOShell.mount({currentPage:"proof",statusText:"Growth Review readiness · v1.0.0"});});
+</script>
+<script>
+(()=>{"use strict";
+const VERSION="1.0.0";
+const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+const $=id=>document.getElementById(id);
+const els={status:$("status"),refresh:$("refresh"),proof:$("proofCount"),findings:$("findingCount"),measurements:$("measurementCount"),media:$("mediaCount"),investigations:$("investigationCount"),work:$("workCount"),checks:$("checks"),sources:$("sources"),preview:$("preview"),decision:$("decisionNote")};
+
+function esc(v){return String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]))}
+function clean(v){return String(v??"").trim()}
+function arr(v){return Array.isArray(v)?v:[]}
+function setStatus(kind,text){els.status.className="banner "+kind;els.status.textContent=text}
+async function api(action,extra={}){
+  const r=await fetch(WORKER,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify({action,...extra})});
+  const p=await r.json().catch(()=>({}));
+  if(!r.ok||p?.ok!==true)throw new Error(typeof p?.error==="string"?p.error:(p?.error?.message||("HTTP "+r.status)));
+  return p;
+}
+function check(label,detail,state){
+  return '<article class="check"><div><strong>'+esc(label)+'</strong><span>'+esc(detail)+'</span></div><b class="badge '+esc(state)+'">'+(state==="pass"?"Ready":state==="gap"?"Gap":"Failed")+'</b></article>';
+}
+function record(title,meta,body){
+  return '<article class="record"><strong>'+esc(title)+'</strong><div class="meta">'+esc(meta)+'</div>'+(body?'<p>'+esc(body)+'</p>':'')+'</article>';
+}
+function dateValue(v){const s=clean(v);return /^\d{4}-\d{2}-\d{2}/.test(s)?s.slice(0,10):""}
+
+async function load(){
+  els.refresh.disabled=true;
+  setStatus("loading","Loading authoritative Southeast Safes evidence from production D1…");
+  try{
+    const workspace=await api("get-client-workspace",{clientCode:"SES"});
+    const clientId=Number(workspace?.record?.metadata?.clientId||workspace?.operational?.client?.id||0);
+    if(!clientId)throw new Error("SES client id was not returned by Client Workspace.");
+
+    const results=await Promise.allSettled([
+      api("get-client-findings",{clientCode:"SES"}),
+      api("measurement-observations",{operation:"list",clientId,limit:250}),
+      api("get-media-operations",{clientId})
+    ]);
+
+    const findingsPayload=results[0].status==="fulfilled"?results[0].value:null;
+    const measurementsPayload=results[1].status==="fulfilled"?results[1].value:null;
+    const mediaPayload=results[2].status==="fulfilled"?results[2].value:null;
+
+    const op=workspace.operational||{};
+    const proof=arr(op.proofOfWork);
+    const findings=arr(findingsPayload?.findings);
+    const measurements=arr(measurementsPayload?.observations);
+    const media=arr(mediaPayload?.mediaOperations?.records);
+    const investigations=arr(op.investigationHistory||op.investigations);
+    const work=arr(op.workItems);
+    const evidence=arr(op.evidence);
+    const communications=arr(op.communications);
+    const intelligence=arr(op.intelligence);
+
+    els.proof.textContent=proof.length;
+    els.findings.textContent=findings.length;
+    els.measurements.textContent=measurements.length;
+    els.media.textContent=media.length;
+    els.investigations.textContent=investigations.length;
+    els.work.textContent=work.length;
+
+    const sourceChecks=[
+      ["Client Workspace","Live SES identity, communications, investigations, work, evidence, proof and intelligence",true],
+      ["Reviewed Findings",findings.length+" human-reviewed finding"+(findings.length===1?"":"s")+" available",findingsPayload!==null && findings.length>0],
+      ["Measurement Observations",measurements.length+" factual measurement observation"+(measurements.length===1?"":"s")+" available",measurementsPayload!==null && measurements.length>0],
+      ["Media Operations",media.length+" SES media record"+(media.length===1?"":"s")+" available",mediaPayload!==null && media.length>0],
+      ["Proof of Work",proof.length+" durable proof/activity record"+(proof.length===1?"":"s")+" available",proof.length>0],
+      ["Evidence / Operational History",(evidence.length+communications.length+intelligence.length)+" supporting evidence, communication and intelligence record"+((evidence.length+communications.length+intelligence.length)===1?"":"s")+" available",(evidence.length+communications.length+intelligence.length)>0]
+    ];
+
+    els.checks.innerHTML=sourceChecks.map(x=>check(x[0],x[1],x[2]?"pass":"gap")).join("");
+
+    const failedSources=results.filter(x=>x.status==="rejected").length;
+    const coreReady=proof.length>0 && findings.length>0;
+    const measurementReady=measurements.length>0;
+    const mediaReady=media.length>0;
+
+    if(failedSources){
+      setStatus("error","Readiness check incomplete — "+failedSources+" authoritative source request"+(failedSources===1?"":"s")+" failed.");
+      els.decision.textContent="Do not generate the Growth Review until all source reads succeed.";
+    }else if(coreReady && measurementReady && mediaReady){
+      setStatus("ready","SES evidence assembly is ready for Growth Review generation.");
+      els.decision.textContent="READY: the OS has live operational history, reviewed interpretation, factual measurement evidence, Media records, and Proof. Next step is to map this assembly into the existing Growth Review engine without adding new conclusions.";
+    }else{
+      setStatus("blocked","SES evidence assembly loaded, but the Growth Review input gate found missing evidence.");
+      const gaps=[];
+      if(!proof.length)gaps.push("durable Proof of Work");
+      if(!findings.length)gaps.push("Reviewed Findings");
+      if(!measurements.length)gaps.push("Measurement Observations");
+      if(!media.length)gaps.push("Media Operations records");
+      els.decision.textContent="NOT READY TO GENERATE: missing "+gaps.join(", ")+". Preserve the Aug. 5 Calendar commitment until the evidence gap is understood.";
+    }
+
+    els.sources.innerHTML=[
+      ["Client Workspace","D1 · get-client-workspace · SES"],
+      ["Reviewed Findings",findingsPayload?"D1 · get-client-findings · SES":"Unavailable"],
+      ["Measurement Observations",measurementsPayload?"D1 · measurement-observations · client "+clientId:"Unavailable"],
+      ["Media Operations",mediaPayload?"D1 · get-media-operations · client "+clientId:"Unavailable"]
+    ].map(x=>'<div class="source-row"><strong>'+esc(x[0])+'</strong><span>'+esc(x[1])+'</span></div>').join("");
+
+    const preview=[];
+    findings.slice(0,4).forEach(f=>preview.push(record(clean(f.source_title)||clean(f.category)||"Reviewed Finding","Reviewed Finding · "+(dateValue(f.source_date||f.created_at)||"Date not recorded"),clean(f.analysis)||clean(f.details)||clean(f.decision))));
+    measurements.slice(0,4).forEach(m=>preview.push(record(clean(m.metricKey)||"Measurement",["Measurement",clean(m.sourceSystem),dateValue(m.periodEnd||m.periodStart)].filter(Boolean).join(" · "),String(m.metricValue)+" "+clean(m.metricUnit))));
+    proof.slice(0,4).forEach(p=>preview.push(record(clean(p.title||p.task)||"Proof of Work",["Proof",dateValue(p.activity_date||p.date||p.created_at),clean(p.category)].filter(Boolean).join(" · "),clean(p.result||p.description||p.summary))));
+    media.slice(0,3).forEach(m=>preview.push(record(clean(m.campaignName)||clean(m.creativeName)||"Media Record",["Media",clean(m.market),clean(m.outletName),dateValue(m.startDate)+"–"+dateValue(m.endDate)].filter(Boolean).join(" · "),clean(m.status))));
+    els.preview.innerHTML=preview.length?preview.slice(0,12).join(""):'<div class="empty">No high-value evidence records were returned.</div>';
+  }catch(error){
+    console.error("Growth Review Readiness "+VERSION,error);
+    setStatus("error",error?.message||"Growth Review readiness could not load.");
+    els.checks.innerHTML='<div class="empty">Authoritative evidence could not be assembled.</div>';
+    els.preview.innerHTML='<div class="empty">No evidence preview available.</div>';
+    els.decision.textContent="Do not generate or close the Growth Review commitment.";
+  }finally{
+    els.refresh.disabled=false;
+  }
+}
+els.refresh.addEventListener("click",load);
+load();
+})();
+</script>
+</body>
+</html>
