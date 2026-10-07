@@ -1,13 +1,19 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.6.7
+   Version: 3.6.8
    Status: Production Candidate
-   Source: Production today.html 3.6.6
+   Source: Production today.html 3.6.7
    Sprint: Today — Dated Commitment Carry-Forward
    Purpose: Preserve the locked Today layout, Gmail approvals, Mission Control,
             Media logic, and operating workflow while keeping every open dated
             commitment visible until its authoritative source marks it complete.
+
+   Production changes in 3.6.8:
+   - Adds Manage to overdue Calendar rows in Forward Look.
+   - Reuses the existing row-level Forward Look disposition so Done / No Further Action hides only the exact overdue Calendar commitment.
+   - Preserves the authoritative calendar_appointments source row and its history.
+   - Keeps Reschedule/Open Source Record in Calendar; this change does not rewrite Calendar authority.
 
    Production changes in 3.6.7:
    - Makes Forward Look close decisions durable at the exact row level in D1.
@@ -2008,7 +2014,7 @@
 <a class="nav-link" href="finance.html"><span class="nav-icon">$</span><span>Billing</span></a>
 <a class="nav-link" href="proof.html"><span class="nav-icon">↗</span><span>Proof</span></a>
 </nav>
-<div class="sidebar-footer"><div class="sidebar-status"><span class="status-dot" aria-hidden="true"></span><span>Agency Command Center operational · Today v3.6.7</span></div></div>
+<div class="sidebar-footer"><div class="sidebar-status"><span class="status-dot" aria-hidden="true"></span><span>Agency Command Center operational · Today v3.6.8</span></div></div>
 </aside>
 <main class="main" id="main-content">
 <div class="main-inner">
@@ -3310,9 +3316,10 @@
         const id = cleanDisplay(button?.dataset?.forwardManageId);
         const title = cleanDisplay(button?.dataset?.forwardManageTitle, "this passed commitment");
         if (!forwardKey || !kind || !id) return;
+        const isCalendar = kind === "calendar_passed";
 
         const confirmed = window.confirm(
-          "Close " + title + " as Passed — No Further Action?\n\n" +
+          "Close " + title + " as " + (isCalendar ? "Done — No Further Action" : "Passed — No Further Action") + "?\n\n" +
           "This removes only this exact Forward Look commitment from active Today. Its source record and history remain preserved."
         );
         if (!confirmed) return;
@@ -3326,7 +3333,9 @@
             forwardKey: forwardKey,
             kind: kind,
             title: title,
-            reason: "Passed radio/media commitment; no further action is possible.",
+            reason: isCalendar
+              ? "Passed Calendar commitment closed as Done — No Further Action; source Calendar history preserved."
+              : "Passed radio/media commitment; no further action is possible.",
             reviewedBy: "Andy"
           });
           await loadForwardLook();
@@ -3427,13 +3436,19 @@
           appointments.forEach(function(record) {
             if (!record || ["completed", "cancelled", "canceled", "deleted"].includes(String(record.status || "").toLowerCase())) return;
             const time = cleanDisplay(record.time);
+            const calendarDate = record.date || record.scheduledAt;
+            const calendarDaysUntil = forwardDaysUntil(calendarDate);
+            const calendarPassed = Number.isFinite(calendarDaysUntil) && calendarDaysUntil < 0;
             addForwardLookItem(items, {
-              date: record.date || record.scheduledAt,
+              date: calendarDate,
               kind: "Calendar",
               title: record.title || "Scheduled appointment",
               meta: [record.client, time].filter(Boolean).join(" · "),
               href: "calendar.html",
-              key: "calendar|" + record.id + "|" + (record.date || record.scheduledAt || "")
+              key: "calendar|" + record.id + "|" + (record.date || record.scheduledAt || ""),
+              manageKind: calendarPassed ? "calendar_passed" : "",
+              manageId: calendarPassed ? String(record.id || "") : "",
+              manageLabel: calendarPassed ? "Manage" : ""
             });
           });
         } else {
@@ -3988,7 +4003,7 @@
         renderDashboard(data);
       });
 
-      const TODAY_VERSION = "3.6.7";
+      const TODAY_VERSION = "3.6.8";
       if (!window.GCMOShell) {
         console.error(`Today ${TODAY_VERSION}: shared/gcm-shell.js did not load.`);
       } else {
