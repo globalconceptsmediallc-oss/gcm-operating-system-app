@@ -1,10 +1,11 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gcm-worker-deploy.yml
-# Version: 1.5.67
+# Version: 1.5.68
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Worker with human-led Signal Finding capture.
 # Change Notes:
+# - Deploy interactive Forward Look passed radio/traffic closure with Schedule Operations 1.1.0 and migration 0038.
 # - Deploy Mission Control 7.8.4 so Nurture / Hold engagement is suppressed from Today without deleting history.
 # - Re-run Prospect CRM 1.6.0 deployment after aligning remaining test-site regression locks.
 # - Deploy Prospect CRM 1.6.0 and migration 0037 for shared Prospect/Radar Nurture-Hold lifecycle.
@@ -155,8 +156,8 @@ jobs:
           if (health.clientFindingsVersion !== "1.0.0") {
             throw new Error(`Expected Client Findings 1.0.0, received ${health.clientFindingsVersion || "unknown"}`);
           }
-          if (health.scheduleOperationsVersion !== "1.0.0") {
-            throw new Error(`Expected Schedule Operations 1.0.0, received ${health.scheduleOperationsVersion || "unknown"}`);
+          if (health.scheduleOperationsVersion !== "1.1.0") {
+            throw new Error(`Expected Schedule Operations 1.1.0, received ${health.scheduleOperationsVersion || "unknown"}`);
           }
           if (health.measurementObservationsVersion !== "1.0.0") {
             throw new Error(`Expected Measurement Observations 1.0.0, received ${health.measurementObservationsVersion || "unknown"}`);
