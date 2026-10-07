@@ -1,13 +1,18 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/missionControl.js
-   Version: 7.8.3
+   Version: 7.8.4
    Status: Production Road-Test Candidate
    Source: Production routes/missionControl.js 7.8.0
    Sprint: Mission Control — Actionable Attention Deep Links
    Purpose: Preserve the live Mission Control contract while ranking
             only records that require current human action and expose
             one read-only deadline-urgency contract for the shared shell.
+
+   Production changes — v7.8.4:
+   - Hides prospect concept-page engagement from Today while the related Radar or formal Prospect is intentionally in Nurture / Hold.
+   - Preserves the engagement activity as durable history; reactivation does not delete evidence.
+   - Active prospect engagement continues to surface normally.
 
    Production changes — v7.8.3:
    - Adds the intended contact name/email to recent prospect engagement details.
@@ -315,6 +320,7 @@ async function loadRecentProspectEngagements(db) {
       INNER JOIN crm_prospect_radar r ON r.id = ra.radar_id
       WHERE ra.activity_type = 'concept_page_view'
         AND ra.promoted_prospect_activity_id IS NULL
+        AND LOWER(COALESCE(r.status, 'radar')) <> 'nurture'
         AND datetime(ra.occurred_at) >= datetime('now', '-7 days')
 
       UNION ALL
@@ -362,6 +368,7 @@ async function loadRecentProspectEngagements(db) {
       FROM crm_prospect_activities pa
       INNER JOIN crm_prospects p ON p.id = pa.prospect_id
       WHERE pa.activity_type = 'concept_page_view'
+        AND LOWER(COALESCE(p.status, 'active')) <> 'nurture'
         AND datetime(pa.occurred_at) >= datetime('now', '-7 days')
     )
     ORDER BY datetime(occurred_at) DESC, activity_id DESC
