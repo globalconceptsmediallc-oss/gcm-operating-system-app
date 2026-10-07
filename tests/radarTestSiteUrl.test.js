@@ -14,7 +14,7 @@ const page=fs.readFileSync("prospects.html","utf8");
 const migration=fs.readFileSync("migrations/0025_radar_test_site_url.sql","utf8");
 
 assert.match(migration,/ALTER TABLE crm_prospect_radar ADD COLUMN test_site_url TEXT;/);
-assert.match(crm,/PROSPECT_CRM_VERSION = "1\.5\.0"/);
+assert.match(crm,/PROSPECT_CRM_VERSION = "1\.6\.0"/);
 assert.match(crm,/testSiteUrl: row\.test_site_url \|\| null/);
 assert.match(crm,/radar\.testSiteUrl/);
 assert.match(page,/id="radar-test-site-top"/);
