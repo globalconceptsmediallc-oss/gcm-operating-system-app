@@ -5,7 +5,7 @@
    Status: Production Regression Lock
    Purpose: Lock durable Prospect test-site URL storage and direct UI access.
    Change notes — 1.0.1:
-   - Aligns the Prospect CRM lock to current production 1.5.0.
+   - Aligns the Prospect CRM lock to current production 1.6.0.
    ========================================================= */
 
 import assert from "node:assert/strict";
@@ -16,7 +16,7 @@ const ui = fs.readFileSync("prospects.html", "utf8");
 const migration = fs.readFileSync("migrations/0024_prospect_test_site_url.sql", "utf8");
 
 assert.match(migration, /ALTER TABLE crm_prospects ADD COLUMN test_site_url TEXT;/);
-assert.match(crm, /PROSPECT_CRM_VERSION = "1\.5\.0"/);
+assert.match(crm, /PROSPECT_CRM_VERSION = "1\.6\.0"/);
 assert.match(crm, /testSiteUrl: row\.test_site_url \|\| null/);
 assert.match(crm, /test_site_url = \?/);
 assert.match(crm, /testSiteUrl: normalizeOptionalHttpUrl/);
