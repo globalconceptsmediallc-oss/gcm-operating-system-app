@@ -1,9 +1,13 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/prospectEngagementToday.test.js
-   Version: 1.2.2
+   Version: 1.3.0
    Status: Regression Test
    Purpose: Lock Today visibility for privacy-minimized tracked prospect opens.
+   Change notes — 1.3.0:
+   - Held Radar and formal Prospect relationships must not create current Today engagement attention.
+   - Engagement evidence remains durable in CRM history.
+
    Change notes — 1.2.2:
    - Removes the stale 3.5.x Today minor-version dependency.
    - Keeps this regression test focused on Prospect Engagement behavior across current Today 3.x releases.
@@ -18,10 +22,12 @@ import assert from "node:assert/strict";
 const route = fs.readFileSync(new URL("../routes/missionControl.js", import.meta.url),"utf8");
 const today = fs.readFileSync(new URL("../today.html", import.meta.url),"utf8");
 
-assert.match(route,/Version: 7\.8\.3/);
+assert.match(route,/Version: 7\.8\.4/);
 assert.match(route,/loadRecentProspectEngagements/);
 assert.match(route,/activity_type = 'concept_page_view'/);
 assert.match(route,/datetime\('now', '-7 days'\)/);
+assert.match(route,/LOWER\(COALESCE\(r\.status, 'radar'\)\) <> 'nurture'/);
+assert.match(route,/LOWER\(COALESCE\(p\.status, 'active'\)\) <> 'nurture'/);
 assert.match(route,/recentProspectEngagements/);
 assert.match(route,/businessName/);
 assert.match(route,/viewedAt/);
