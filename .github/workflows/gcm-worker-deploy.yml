@@ -1,10 +1,11 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gcm-worker-deploy.yml
-# Version: 1.5.65
+# Version: 1.5.66
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Worker with human-led Signal Finding capture.
 # Change Notes:
+# - Re-run Prospect CRM 1.6.0 deployment after aligning remaining test-site regression locks.
 # - Deploy Prospect CRM 1.6.0 and migration 0037 for shared Prospect/Radar Nurture-Hold lifecycle.
 # - Deploy Prospect Intelligence 1.5.1 and Business Intelligence Record 1.1.7 after Rolling Suds relationship-source road test.
 # - Deploy source-aware Prospect Intelligence 1.5.0 and Business Intelligence Record 1.1.6.
