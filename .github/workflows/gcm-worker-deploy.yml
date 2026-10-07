@@ -1,10 +1,11 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gcm-worker-deploy.yml
-# Version: 1.5.68
+# Version: 1.5.69
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Worker with human-led Signal Finding capture.
 # Change Notes:
+# - Deploy Worker 7.40.0 with D1-backed Forward Look row dispositions so closed passed items stay closed after refresh.
 # - Deploy interactive Forward Look passed radio/traffic closure with Schedule Operations 1.1.0 and migration 0038.
 # - Deploy Mission Control 7.8.4 so Nurture / Hold engagement is suppressed from Today without deleting history.
 # - Re-run Prospect CRM 1.6.0 deployment after aligning remaining test-site regression locks.
@@ -132,8 +133,8 @@ jobs:
           const healthResponse = await fetch(url);
           if (!healthResponse.ok) throw new Error(`Worker health returned HTTP ${healthResponse.status}`);
           const health = await healthResponse.json();
-          if (health.workerFileVersion !== "7.39.0") {
-            throw new Error(`Expected Worker 7.39.0, received ${health.workerFileVersion || "unknown"}`);
+          if (health.workerFileVersion !== "7.40.0") {
+            throw new Error(`Expected Worker 7.40.0, received ${health.workerFileVersion || "unknown"}`);
           }
           if (health.emailIntakeVersion !== "1.0.0") {
             throw new Error(`Expected Email Intake 1.0.0, received ${health.emailIntakeVersion || "unknown"}`);
@@ -158,6 +159,9 @@ jobs:
           }
           if (health.scheduleOperationsVersion !== "1.1.0") {
             throw new Error(`Expected Schedule Operations 1.1.0, received ${health.scheduleOperationsVersion || "unknown"}`);
+          }
+          if (health.forwardLookOperationsVersion !== "1.0.0") {
+            throw new Error(`Expected Forward Look Operations 1.0.0, received ${health.forwardLookOperationsVersion || "unknown"}`);
           }
           if (health.measurementObservationsVersion !== "1.0.0") {
             throw new Error(`Expected Measurement Observations 1.0.0, received ${health.measurementObservationsVersion || "unknown"}`);
@@ -222,6 +226,7 @@ jobs:
             "prospect-concept-view",
             "calendar-operations",
             "schedule-operations",
+            "forward-look-operations",
             "measurement-observations",
             "evaluate-gmail-work-request",
             "approve-gmail-work-request",
