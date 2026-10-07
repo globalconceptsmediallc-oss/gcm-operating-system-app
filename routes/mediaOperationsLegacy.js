@@ -1,13 +1,18 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/mediaOperations.js
-   Version: 7.10.1
+   Version: 7.10.2
    Status: Production Candidate
    Source: Production routes/mediaOperations.js 7.9.0
    Sprint: Media Production Recordkeeping
    Purpose: Preserve authoritative Media retrieval, campaign create/update,
             traffic confirmation state, and attention logic while adding
             production-state recordkeeping and append-only dated production notes.
+
+   Changes in 7.10.2:
+   - Adds close_passed_commitment for Media records whose scheduled run has already ended.
+   - Marks only the stale placement record expired, clears current attention, and appends an audit note.
+   - Preserves campaign dates, creative history, traffic history, and all other Media evidence.
 
    Changes in 7.10.1:
    - Expired end dates can no longer generate current end-of-run attention, even when a legacy record still says active.
@@ -45,10 +50,107 @@ export async function handleMediaOperations(body, env, requestId) {
   if (operation === "update_production_record") return handleUpdateProductionRecord(body, db, requestId);
   if (operation === "append_production_note") return handleAppendProductionNote(body, db, requestId);
   if (operation === "mark_sent_awaiting_confirmation") return handleMarkSentAwaitingConfirmation(body, db, requestId);
+  if (operation === "close_passed_commitment") return handleClosePassedCommitment(body, db, requestId);
   if (operation !== "get") {
     return jsonResponse({ok:false,requestId,action:ACTIONS.GET_MEDIA_OPERATIONS,version:VERSION,error:`Unsupported Media Operations operation: ${operation}`},400);
   }
   return handleMediaRetrieval(body, db, requestId);
+}
+
+
+async function handleClosePassedCommitment(body, db, requestId) {
+  const mediaRecordId = normalizePositiveInteger(body?.mediaRecordId ?? body?.recordId ?? body?.id);
+  const author = cleanOptional(body?.author) || "Andy";
+  const reason = cleanOptional(body?.reason) || "Scheduled radio/media run has passed and no further action can be taken.";
+
+  if (!mediaRecordId) {
+    return jsonResponse({ok:false,requestId,action:ACTIONS.GET_MEDIA_OPERATIONS,version:VERSION,error:"mediaRecordId must be a positive integer."},400);
+  }
+
+  try {
+    const result = await db.prepare(\`
+      SELECT id, campaign_name, outlet_name, start_date, end_date, status, notes
+      FROM media_records
+      WHERE id = ?
+      LIMIT 1
+    \`).bind(mediaRecordId).all();
+
+    const record = rowsOf(result)[0];
+    if (!record) {
+      return jsonResponse({ok:false,requestId,action:ACTIONS.GET_MEDIA_OPERATIONS,version:VERSION,error:\`Media record \${mediaRecordId} was not found.\`},404);
+    }
+
+    const endDate = normalizeDateOnly(record.end_date);
+    if (!endDate || endDate >= currentNewYorkDate()) {
+      return jsonResponse({
+        ok:false,
+        requestId,
+        action:ACTIONS.GET_MEDIA_OPERATIONS,
+        version:VERSION,
+        error:"This Media run has not passed yet and cannot be closed as historical."
+      },400);
+    }
+
+    const currentStatus = String(record.status || "").toLowerCase();
+    if (["expired","completed"].includes(currentStatus)) {
+      return jsonResponse({
+        ok:true,
+        requestId,
+        action:ACTIONS.GET_MEDIA_OPERATIONS,
+        version:VERSION,
+        operation:"close_passed_commitment",
+        mediaRecordId,
+        alreadySaved:true,
+        writesPerformed:0
+      });
+    }
+
+    const recordedAt = new Date().toISOString();
+    const historyLine = \`Passed Commitment Closed | \${recordedAt} | \${author} | \${reason}\`;
+    const notes = [String(record.notes || "").trim(), historyLine].filter(Boolean).join("\\n");
+
+    await db.prepare(\`
+      UPDATE media_records
+      SET status = 'expired',
+          attention_status = 'clear',
+          attention_reason = NULL,
+          notes = ?,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    \`).bind(notes, mediaRecordId).run();
+
+    return jsonResponse({
+      ok:true,
+      requestId,
+      action:ACTIONS.GET_MEDIA_OPERATIONS,
+      version:VERSION,
+      operation:"close_passed_commitment",
+      mediaRecordId,
+      status:"expired",
+      writesPerformed:1
+    });
+  } catch (error) {
+    logWorkerError({requestId,route:ACTIONS.GET_MEDIA_OPERATIONS,stage:"media_close_passed_commitment",error});
+    return jsonResponse({
+      ok:false,
+      requestId,
+      action:ACTIONS.GET_MEDIA_OPERATIONS,
+      version:VERSION,
+      error:"The passed Media commitment could not be closed.",
+      details:safeErrorMessage(error)
+    },500);
+  }
+}
+
+function currentNewYorkDate() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return values.year + "-" + values.month + "-" + values.day;
 }
 
 async function handleCreateCampaign(body, db, requestId) {
