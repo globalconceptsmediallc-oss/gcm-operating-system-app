@@ -1,15 +1,22 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: prospects.html
-   Version: 3.5.6
+   Version: 3.6.0
    Status: Production Road-Test Candidate
    Source: Production prospects.html 2.0.0 + client-pre-research.html 1.1.0
-   Backend: Prospect CRM 1.5.0
+   Backend: Prospect CRM 1.6.0
    Sprint: Prospecting Natural Workflow
    Purpose:
    One operating workspace for GCM prospecting from first evidence through
    Radar, outreach, appointment, CRM, services, signed scope, startup package,
    and the eventual Client handoff.
+
+   Change Notes — 3.6.0
+   - Renames Nurture to Nurture / Hold and makes it a deliberate parking state rather than a dead-end list.
+   - Supports both formal Prospects and pre-appointment Radar records in the same hold queue.
+   - Hold requires Hold Reason, Reactivation Trigger, and Review Date; Last Meaningful Contact/Last Outreach remains visible.
+   - Replaces the active follow-up with a dated nurture review so intentional holds leave active overdue pressure until the review date arrives.
+   - Adds one-click reactivation while preserving relationship history and the formal Prospect sales stage.
 
    Change Notes — 3.5.6
    - Expands Proposal Engagement inside the Prospect record to show the consolidated tracked-view count plus each individual recorded engagement date and time.
@@ -240,7 +247,7 @@
       <div class="tabs">
         <button class="tab active" data-view="pipeline" type="button">Active Opportunities</button>
         <button class="tab" data-view="radar" type="button">Radar & Outreach</button>
-        <button class="tab" data-view="nurture" type="button">Nurture</button>
+        <button class="tab" data-view="nurture" type="button">Nurture / Hold</button>
         <button class="tab" data-view="research" type="button">Research</button>
       </div>
 
@@ -290,9 +297,9 @@
 
       <section id="view-nurture" hidden>
         <article class="panel">
-          <div class="panel-head"><div><h2>Nurture</h2><p>Good opportunities that are not being actively chased. Re-enter active outreach only when there is a useful reason.</p></div><span class="count" id="nurture-count">0</span></div>
+          <div class="panel-head"><div><h2>Nurture / Hold</h2><p>Real opportunities intentionally parked until a dated review or clear reactivation trigger. They leave active pursuit without being lost.</p></div><span class="count" id="nurture-count">0</span></div>
           <div class="list" id="nurture-list"></div>
-          <div class="empty" id="nurture-empty" hidden><strong>No nurture records.</strong>Opportunities moved out of active chase will stay visible here.</div>
+          <div class="empty" id="nurture-empty" hidden><strong>No held prospects.</strong>Use Nurture / Hold when timing—not fit—is the reason to stop active pursuit.</div>
         </article>
       </section>
 
@@ -436,6 +443,20 @@
   </div><div class="form-actions"><button class="btn btn-secondary" type="button" data-close="agreement-dialog">Cancel</button><button class="btn btn-primary" type="submit">Record Signed Agreement</button></div></div>
 </form></dialog>
 
+<!-- Nurture / Hold -->
+<dialog id="hold-dialog"><form id="hold-form">
+  <div class="modal-head"><div><h2>Place on Nurture / Hold</h2><p>Park a real opportunity without losing it. A review date and reactivation trigger are required.</p></div><button class="modal-close" type="button" data-close="hold-dialog">×</button></div>
+  <div class="modal-body"><div class="error" id="hold-error" hidden></div>
+    <input type="hidden" name="recordKind" /><input type="hidden" name="recordId" />
+    <div class="form-grid">
+      <div class="field span-2"><label>Hold Reason *</label><textarea class="textarea" name="holdReason" required placeholder="Why active pursuit should stop for now."></textarea></div>
+      <div class="field span-2"><label>Reactivation Trigger *</label><textarea class="textarea" name="reactivationTrigger" required placeholder="What change would make this worth pursuing again?"></textarea></div>
+      <div class="field"><label>Review Date *</label><input class="input" type="date" name="reviewDate" required /></div>
+    </div>
+    <div class="form-actions"><button class="btn btn-secondary" type="button" data-close="hold-dialog">Cancel</button><button class="btn btn-primary" type="submit">Place on Hold</button></div>
+  </div>
+</form></dialog>
+
 <!-- Payment -->
 <dialog id="payment-dialog"><form id="payment-form">
   <div class="modal-head"><div><h2>Record Initial Payment</h2><p>GCM requires at least the agreed initial payment before project work begins.</p></div><button class="modal-close" type="button" data-close="payment-dialog">×</button></div>
@@ -449,7 +470,7 @@
 <script>
 (() => {
   "use strict";
-  const FILE_VERSION="3.5.5";
+  const FILE_VERSION="3.6.0";
   const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const state={prospects:[],radar:[],services:[],selectedProspect:null,selectedRadar:null,view:"pipeline",
     researchTarget:{type:"new",id:null},researchResult:null,researchContext:null,images:[]};
@@ -517,7 +538,7 @@
     try{
       const [p,r,s]=await Promise.all([api("list_prospects"),api("list_radar"),api("list_service_catalog")]);
       state.prospects=p.prospects||[];state.radar=r.radar||[];state.services=s.services||[];
-      if(p.prospectCrmVersion!=="1.5.0")throw new Error(`This page requires Prospect CRM 1.5.0; live version is ${p.prospectCrmVersion||"unknown"}.`);
+      if(p.prospectCrmVersion!=="1.6.0")throw new Error(`This page requires Prospect CRM 1.6.0; live version is ${p.prospectCrmVersion||"unknown"}.`);
       renderSummary(p.counts||{});renderPipeline();renderRadar();renderNurture();renderPriority();populateStages();
       $("system-state").textContent=`D1 connected · CRM ${p.prospectCrmVersion}`;
     }catch(e){$("system-state").textContent=`CRM unavailable · ${e.message}`;console.error(e)}
@@ -526,7 +547,7 @@
     $("active-count").textContent=Number(c.active||0);
     $("due-count").textContent=Number(c.overdue||0)+Number(c.dueToday||0)+state.radar.filter(x=>x.nextAction?.dueState==="overdue"||x.nextAction?.dueState==="due_today").length;
     $("unmanaged-count").textContent=Number(c.unmanaged||0)+state.radar.filter(x=>x.isUnmanaged).length;
-    $("radar-count").textContent=state.radar.filter(x=>x.status!=="promoted").length;
+    $("radar-count").textContent=state.radar.filter(x=>!["promoted","nurture"].includes(x.status)).length;
   }
   function populateStages(){const cur=$("stage-filter").value||"all";const vals=[...new Set(state.prospects.filter(p=>p.status==="active").map(p=>p.stage))];$("stage-filter").innerHTML='<option value="all">All stages</option>'+vals.map(x=>`<option value="${esc(x)}">${esc(stageLabel(x))}</option>`).join("");$("stage-filter").value=vals.includes(cur)?cur:"all"}
   function prospectSearch(p){return[p.businessName,p.website,p.industry,p.market,p.opportunitySummary,p.primaryContact?.name,p.primaryContact?.email,p.nextAction?.title,stageLabel(p.stage)].filter(Boolean).join(" ").toLowerCase()}
@@ -547,13 +568,26 @@
   $("search").addEventListener("input",renderPipeline);$("stage-filter").addEventListener("change",renderPipeline);$("refresh").addEventListener("click",load);
 
   function renderRadar(){
-    const list=state.radar.filter(r=>r.status!=="promoted");$("radar-list-count").textContent=list.length;
+    const list=state.radar.filter(r=>!["promoted","nurture"].includes(r.status));$("radar-list-count").textContent=list.length;
     $("radar-list").innerHTML=list.map(r=>`<article class="record"><div><h3>${esc(r.businessName||r.vertical||"Radar Record")}</h3><p class="meta">${esc(r.contactName||"Contact not recorded")} · ${esc(r.market||r.vertical||"Market not recorded")}</p><p class="insight">${esc(r.sourceDescription||"Lead source preserved in Radar.")}</p><div class="chips"><span class="badge ${r.isUnmanaged?"red":r.status==="outreach"?"blue":"gray"}">${esc(r.isUnmanaged?"Unmanaged Outreach":r.status==="outreach"?"Outreach":"Radar")}</span><span class="chip">${esc(r.sourceType||"source unknown")}</span></div></div>
     <div><p class="next-label">Next Action</p><p class="next-title">${esc(r.isUnmanaged?"Outreach has no dated follow-up":r.nextAction?.title||"Not in active outreach")}</p><p class="next-due">${esc(dueText(r.nextAction,r.isUnmanaged))}</p></div>
     <div><button class="btn btn-secondary btn-small" data-open-radar="${r.id}" type="button">Open</button></div></article>`).join("");
     $("radar-empty").hidden=list.length>0;$("radar-list").querySelectorAll("[data-open-radar]").forEach(b=>b.addEventListener("click",()=>openRadar(Number(b.dataset.openRadar))))
   }
-  function renderNurture(){const list=state.prospects.filter(p=>p.status==="nurture");$("nurture-count").textContent=list.length;$("nurture-list").innerHTML=list.map(renderRecord).join("");$("nurture-empty").hidden=list.length>0;bindProspectOpens($("nurture-list"))}
+  function renderNurture(){
+    const formal=state.prospects.filter(p=>p.status==="nurture").map(p=>({kind:"prospect",record:p}));
+    const radar=state.radar.filter(r=>r.status==="nurture").map(r=>({kind:"radar",record:r}));
+    const list=[...formal,...radar].sort((a,b)=>String(a.record.nextAction?.dueDate||"9999-12-31").localeCompare(String(b.record.nextAction?.dueDate||"9999-12-31")));
+    $("nurture-count").textContent=list.length;
+    $("nurture-list").innerHTML=list.map(({kind,record:r})=>{
+      const contact=kind==="prospect"?(r.primaryContact?.name||"Contact not recorded"):(r.contactName||"Contact not recorded");
+      const last=kind==="prospect"?r.lastMeaningfulContactAt:r.lastOutreachAt;
+      return '<article class="record"><div><h3>'+esc(r.businessName||r.vertical||"Held Opportunity")+'</h3><p class="meta">'+esc(contact)+' · '+esc(r.market||r.industry||r.vertical||"Market not recorded")+'</p><p class="insight"><strong>Hold reason:</strong> '+esc(r.nurtureReason||"Not recorded")+'</p><div class="chips"><span class="badge yellow">Nurture / Hold</span><span class="chip">'+esc(kind==="prospect"?"Formal Prospect":"Pre-Appointment Radar")+'</span></div></div><div><p class="next-label">Reactivation Trigger</p><p class="next-title">'+esc(r.nurtureTrigger||r.nextAction?.title||"Not recorded")+'</p><p class="next-due">'+esc(r.nextAction?.dueDate?("Review "+fmtDate(r.nextAction.dueDate,false)):"Review date missing")+'</p><p class="meta">Last meaningful contact: '+esc(fmtDate(last))+'</p></div><div class="quick-actions"><button class="btn btn-secondary btn-small" data-open-hold="'+kind+':'+r.id+'" type="button">Open</button><button class="btn btn-primary btn-small" data-reactivate-hold="'+kind+':'+r.id+'" type="button">Reactivate</button></div></article>';
+    }).join("");
+    $("nurture-empty").hidden=list.length>0;
+    $("nurture-list").querySelectorAll("[data-open-hold]").forEach(b=>b.addEventListener("click",()=>{const [kind,id]=b.dataset.openHold.split(":");kind==="prospect"?openProspect(Number(id)):openRadar(Number(id))}));
+    $("nurture-list").querySelectorAll("[data-reactivate-hold]").forEach(b=>b.addEventListener("click",()=>{const [kind,id]=b.dataset.reactivateHold.split(":");reactivateHold(kind,Number(id))}));
+  }
   function renderPriority(){
     const formal=state.prospects.filter(p=>p.status==="active").map(p=>({kind:"prospect",record:p}));
     const radar=state.radar.filter(r=>r.status==="outreach").map(r=>({kind:"radar",record:r}));
@@ -577,7 +611,7 @@
     <div class="detail-grid">
       ${detail("Stage",stageLabel(p.stage))}${detail("Primary Contact",p.primaryContact?.name||"Not recorded")}${detail("Last Contact",fmtDate(p.lastMeaningfulContactAt))}${detail("Opportunity",valueSummary(p))}
       ${detail("Next Action",p.nextAction?.title||(p.isUnmanaged?"MISSING":"No open action"))}${detail("Due",dueText(p.nextAction,p.isUnmanaged))}${detail("Proposal",(p.proposals||[])[0]?.title||"No proposal recorded")}${detail("Agreement",agreement?`${agreement.status} · ${money(agreement.contractValueCents)||""}`:"No signed agreement")}
-      ${detail("Test Site",p.testSiteUrl||"Not recorded")}
+      ${detail("Test Site",p.testSiteUrl||"Not recorded")}${p.status==="nurture"?detail("Hold Reason",p.nurtureReason||"Not recorded")+detail("Reactivation Trigger",p.nurtureTrigger||"Not recorded"):""}
     </div>
     <div class="section-title"><div><h3>Relationship Actions</h3><p>Do the work from the record instead of remembering it elsewhere.</p></div></div>
     <div class="quick-actions">
@@ -586,6 +620,7 @@
       ${(p.proposals||[]).length?'<button class="btn btn-gold btn-small" data-prospect-action="call-points">Call Talking Points</button>':""}
       <button class="btn btn-secondary btn-small" data-prospect-action="research">Research More</button>
       <button class="btn btn-secondary btn-small" data-prospect-action="activity">Record Contact</button>
+      ${p.status==="nurture"?'<button class="btn btn-primary btn-small" data-prospect-action="reactivate">Reactivate</button>':'<button class="btn btn-secondary btn-small" data-prospect-action="hold">Nurture / Hold</button>'}
       <button class="btn btn-secondary btn-small" data-prospect-action="proposal">Record Proposal</button>
       <button class="btn btn-secondary btn-small" data-prospect-action="agreement">Signed Agreement</button>
       <button class="btn btn-secondary btn-small" data-prospect-action="payment">Record Payment</button>
@@ -613,6 +648,8 @@
     document.querySelectorAll("[data-prospect-action]").forEach(b=>b.addEventListener("click",()=>{
       if(b.dataset.prospectAction==="test-site"){editProspectTestSite(p);return}
       if(b.dataset.prospectAction==="call-points"){openCallTalkingPoints(p);return}
+      if(b.dataset.prospectAction==="hold"){openHoldDialog("prospect",p);return}
+      if(b.dataset.prospectAction==="reactivate"){reactivateHold("prospect",p.id);return}
       openProspectAction(b.dataset.prospectAction,p)
     }));
     $("services-form")?.addEventListener("submit",async e=>{e.preventDefault();const keys=[...e.currentTarget.querySelectorAll('input[name="service"]:checked')].map(x=>x.value);await busy(async()=>{const d=await api("set_proposed_services",{prospectId:p.id,serviceKeys:keys});state.selectedProspect=d.prospect;renderProspect(d.prospect);await load()})});
@@ -756,10 +793,10 @@
     try{const d=await api("get_radar",{radarId:id});state.selectedRadar=d.radar;renderRadarDetail(d.radar);$("radar-detail").scrollIntoView({behavior:"smooth",block:"start"})}catch(e){$("radar-body").innerHTML=`<div class="error">${esc(e.message)}</div>`}
   }
   function renderRadarDetail(r){
-    $("radar-title").textContent=r.businessName||r.vertical||"Radar Record";$("radar-subtitle").textContent=`${r.status==="outreach"?"Outreach":"Radar"} · ${r.contactName||"Contact not recorded"}`;
-    $("radar-body").innerHTML=`<div class="detail-grid">${detail("Source",r.sourceType||"Unknown")}${detail("Market",r.market||r.vertical||"Unknown")}${detail("Contact",r.contactName||"Not recorded")}${detail("Email",r.contactEmail||"Not recorded")}${detail("Phone",r.contactPhone||"Not recorded")}${detail("Website",r.website||"Not recorded")}${detail("Test Site",r.testSiteUrl||"Not recorded")}${detail("Last Outreach",fmtDate(r.lastOutreachAt))}${detail("Next Action",r.isUnmanaged?"MISSING":r.nextAction?.title||"Not in active outreach")}</div>
+    $("radar-title").textContent=r.businessName||r.vertical||"Radar Record";$("radar-subtitle").textContent=`${r.status==="nurture"?"Nurture / Hold":r.status==="outreach"?"Outreach":"Radar"} · ${r.contactName||"Contact not recorded"}`;
+    $("radar-body").innerHTML=`<div class="detail-grid">${detail("Source",r.sourceType||"Unknown")}${detail("Market",r.market||r.vertical||"Unknown")}${detail("Contact",r.contactName||"Not recorded")}${detail("Email",r.contactEmail||"Not recorded")}${detail("Phone",r.contactPhone||"Not recorded")}${detail("Website",r.website||"Not recorded")}${detail("Test Site",r.testSiteUrl||"Not recorded")}${detail("Last Outreach",fmtDate(r.lastOutreachAt))}${detail("Next Action",r.isUnmanaged?"MISSING":r.nextAction?.title||"Not in active outreach")}${r.status==="nurture"?detail("Hold Reason",r.nurtureReason||"Not recorded")+detail("Reactivation Trigger",r.nurtureTrigger||"Not recorded"):""}</div>
     <div class="section-title"><div><h3>Radar Actions</h3><p>Move naturally from evidence to outreach to appointment.</p></div></div>
-    <div class="quick-actions"><button class="btn btn-secondary btn-small" id="radar-edit" type="button">Edit Radar Record</button><button class="btn btn-secondary btn-small" id="radar-test-site-edit" type="button">${r.testSiteUrl?"Edit Test Site":"Add Test Site"}</button><button class="btn btn-secondary btn-small" id="radar-research" type="button">Research / Update Intelligence</button><button class="btn btn-secondary btn-small" id="radar-outreach" type="button">Record Outreach</button>${clean(r.nextAction?.title).toLowerCase().replace(/\s+/g,"_")==="follow_up_after_prospect_engagement"?'<button class="btn btn-secondary btn-small" id="radar-followup-email" type="button">Prepare Follow-Up Email</button><button class="btn btn-secondary btn-small" id="radar-confirm-email" type="button">Check Sent Email</button>':""}<button class="btn btn-primary btn-small" id="radar-promote" type="button">Appointment Scheduled</button></div>
+    <div class="quick-actions"><button class="btn btn-secondary btn-small" id="radar-edit" type="button">Edit Radar Record</button><button class="btn btn-secondary btn-small" id="radar-test-site-edit" type="button">${r.testSiteUrl?"Edit Test Site":"Add Test Site"}</button><button class="btn btn-secondary btn-small" id="radar-research" type="button">Research / Update Intelligence</button><button class="btn btn-secondary btn-small" id="radar-outreach" type="button">Record Outreach</button>${r.status==="nurture"?'<button class="btn btn-primary btn-small" id="radar-reactivate" type="button">Reactivate</button>':'<button class="btn btn-secondary btn-small" id="radar-hold" type="button">Nurture / Hold</button>'}${clean(r.nextAction?.title).toLowerCase().replace(/\s+/g,"_")==="follow_up_after_prospect_engagement"?'<button class="btn btn-secondary btn-small" id="radar-followup-email" type="button">Prepare Follow-Up Email</button><button class="btn btn-secondary btn-small" id="radar-confirm-email" type="button">Check Sent Email</button>':""}<button class="btn btn-primary btn-small" id="radar-promote" type="button">Appointment Scheduled</button></div>
     <div class="section-title"><div><h3>Intelligence</h3><p>${(r.intelligence||[]).length} durable record(s).</p></div></div><div class="timeline">${(r.intelligence||[]).slice(0,5).map(i=>`<div class="timeline-item"><strong>${esc(i.title)}</strong><p>${esc(i.summary||"Prospect intelligence saved in Radar.")}</p><time>${esc(fmtDate(i.capturedAt))}</time></div>`).join("")||'<div class="timeline-item"><strong>No research saved yet.</strong><p>Run Research / Update Intelligence.</p></div>'}</div>
     <div class="section-title"><div><h3>Outreach History</h3></div></div><div class="timeline">${(r.activities||[]).slice(0,10).map(a=>`<div class="timeline-item"><strong>${esc(a.subject||a.activityType.replaceAll("_"," "))}</strong><p>${esc(a.summary)}</p><time>${esc(fmtDate(a.occurredAt))}${a.outcome?` · ${esc(a.outcome)}`:""}</time></div>`).join("")||'<div class="timeline-item"><strong>No outreach yet.</strong><p>Radar can remain passive until GCM decides to pursue it.</p></div>'}</div>`;
     const topTestSite=$("radar-test-site-top");
@@ -772,6 +809,8 @@
     $("radar-test-site-edit").addEventListener("click",()=>editRadarTestSite(r));
     $("radar-research").addEventListener("click",()=>startResearch({type:"radar",id:r.id,record:r}));
     $("radar-outreach").addEventListener("click",()=>{const f=$("outreach-form");f.elements.radarId.value=r.id;setDefaults(f);openDialog($("outreach-dialog"))});
+    $("radar-hold")?.addEventListener("click",()=>openHoldDialog("radar",r));
+    $("radar-reactivate")?.addEventListener("click",()=>reactivateHold("radar",r.id));
     const followupEmail=$("radar-followup-email");
     if(followupEmail)followupEmail.addEventListener("click",()=>prepareRadarFollowUpEmail(r));
     const confirmEmail=$("radar-confirm-email");
@@ -844,6 +883,27 @@
   }
   $("close-radar").addEventListener("click",()=>{$("radar-detail").hidden=true;$("radar-test-site-top").hidden=true;state.selectedRadar=null});
 
+  function openHoldDialog(kind,record){
+    const f=$("hold-form");
+    f.reset();
+    f.elements.recordKind.value=kind;
+    f.elements.recordId.value=record.id;
+    f.elements.holdReason.value=record.nurtureReason||"";
+    f.elements.reactivationTrigger.value=record.nurtureTrigger||"";
+    openDialog($("hold-dialog"));
+  }
+
+  async function reactivateHold(kind,id){
+    const label=kind==="prospect"?"formal Prospect":"Radar prospect";
+    if(!window.confirm("Reactivate this "+label+" and return it to active pursuit?"))return;
+    await busy(async()=>{
+      await api(kind==="prospect"?"reactivate_prospect":"reactivate_radar",kind==="prospect"?{prospectId:id}:{radarId:id});
+      await load();
+      showView(kind==="prospect"?"pipeline":"radar");
+      kind==="prospect"?openProspect(id):openRadar(id);
+    });
+  }
+
   function openDialog(d){d.querySelectorAll(".error").forEach(x=>x.hidden=true);d.showModal?d.showModal():d.setAttribute("open","")}
   function closeDialog(d){d.close?d.close():d.removeAttribute("open")}
   document.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",()=>closeDialog($(b.dataset.close))));
@@ -851,6 +911,27 @@
   async function busy(fn){$("system-state").textContent="Saving…";try{await fn();$("system-state").textContent="Saved"}catch(e){alert(e.message);$("system-state").textContent="Save failed";throw e}}
 
   $("add-radar").addEventListener("click",()=>openDialog($("radar-dialog")));$("add-prospect").addEventListener("click",()=>openDialog($("prospect-dialog")));$("research-new").addEventListener("click",()=>startResearch({type:"new",id:null,record:null}));
+  $("hold-form").addEventListener("submit",async e=>{
+    e.preventDefault();
+    const v=formObj(e.currentTarget);
+    const kind=v.recordKind;
+    try{
+      await api(
+        kind==="prospect"?"place_prospect_on_hold":"place_radar_on_hold",
+        kind==="prospect"
+          ? {prospectId:Number(v.recordId),holdReason:v.holdReason,reactivationTrigger:v.reactivationTrigger,reviewDate:v.reviewDate}
+          : {radarId:Number(v.recordId),holdReason:v.holdReason,reactivationTrigger:v.reactivationTrigger,reviewDate:v.reviewDate}
+      );
+      closeDialog($("hold-dialog"));
+      await load();
+      $("prospect-detail").hidden=true;
+      $("radar-detail").hidden=true;
+      $("radar-test-site-top").hidden=true;
+      state.selectedProspect=null;state.selectedRadar=null;
+      showView("nurture");
+    }catch(err){$("hold-error").textContent=err.message;$("hold-error").hidden=false}
+  });
+
   $("radar-form").addEventListener("submit",async e=>{e.preventDefault();const v=formObj(e.currentTarget);try{await api("create_radar",v);closeDialog($("radar-dialog"));e.currentTarget.reset();await load();showView("radar")}catch(err){$("radar-error").textContent=err.message;$("radar-error").hidden=false}});
   $("radar-edit-form").addEventListener("submit",async e=>{e.preventDefault();const v=formObj(e.currentTarget);try{const d=await api("update_radar",{radarId:Number(v.radarId),businessName:v.businessName,website:v.website,vertical:v.vertical,market:v.market,sourceType:v.sourceType,sourceDescription:v.sourceDescription,contactName:v.contactName,contactEmail:v.contactEmail,contactPhone:v.contactPhone,testSiteUrl:v.testSiteUrl?normalizeUrl(v.testSiteUrl):null,notes:v.notes});closeDialog($("radar-edit-dialog"));await load();state.selectedRadar=d.radar;renderRadarDetail(d.radar)}catch(err){$("radar-edit-error").textContent=err.message;$("radar-edit-error").hidden=false}});
   $("prospect-form").addEventListener("submit",async e=>{e.preventDefault();const v=formObj(e.currentTarget),appointmentAt=localDT(v.appointmentDate,v.appointmentTime);const last=v.lastContactDate?localDT(v.lastContactDate,v.lastContactTime||"12:00"):null;try{const d=await api("create_prospect",{businessName:v.businessName,stage:v.stage,appointmentAt,website:v.website||null,industry:v.industry||null,market:v.market||null,sourceType:v.sourceType||null,opportunitySummary:v.opportunitySummary||null,lastMeaningfulContactAt:last,estimatedValueLow:v.estimatedValueLow||null,estimatedValueHigh:v.estimatedValueHigh||null,recurringValue:v.recurringValue||null,recurringPeriod:v.recurringPeriod||null,notes:v.notes||null,primaryContact:v.contactName?{name:v.contactName,email:v.contactEmail||null,role:"decision_maker"}:null});closeDialog($("prospect-dialog"));e.currentTarget.reset();await load();openProspect(d.prospect.id)}catch(err){$("prospect-error").textContent=err.message;$("prospect-error").hidden=false}});
