@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/prospectCrm.js
-   Version: 1.5.0
+   Version: 1.6.0
    Status: Production Road-Test Candidate
    Purpose: Durable Prospecting Radar + CRM operations for GCM.
 
@@ -43,6 +43,14 @@
    - Preserves every verified CRM 1.0.0 Radar, appointment, follow-up, proposal,
      agreement, payment, and management rule.
 
+   Change Notes — 1.6.0:
+   - Adds one durable Nurture / Hold workflow for both formal Prospects and pre-appointment Radar records.
+   - Hold requires a reason, a reactivation trigger, and a dated review.
+   - Formal Prospect holds preserve the current sales stage while changing only relationship status to nurture.
+   - Radar holds move out of the active Radar list without manufacturing a formal Prospect.
+   - Existing active Next Actions are superseded by the dated nurture review so intentional holds stop appearing overdue until review day.
+   - Reactivation preserves the relationship history and formal Prospect sales stage.
+
    Change Notes — 1.0.0:
    - Adds a durable Radar record for pre-appointment prospecting intelligence.
    - Creates a formal CRM Prospect only when a real appointment is scheduled.
@@ -64,7 +72,7 @@ import {
 } from "../shared/http.js";
 
 export const PROSPECT_CRM_ACTION = "prospect-crm";
-export const PROSPECT_CRM_VERSION = "1.5.0";
+export const PROSPECT_CRM_VERSION = "1.6.0";
 
 const ACTIVE_MANAGED_STATUSES = new Set(["active", "nurture"]);
 const ALLOWED_STATUSES = new Set([
@@ -320,6 +328,14 @@ export async function handleProspectCrm(body, env, requestId) {
         return await getProspect(body, db, requestId);
       case "update_prospect":
         return await updateProspect(body, db, requestId);
+      case "place_prospect_on_hold":
+        return await placeProspectOnHold(body, db, requestId);
+      case "reactivate_prospect":
+        return await reactivateProspect(body, db, requestId);
+      case "place_radar_on_hold":
+        return await placeRadarOnHold(body, db, requestId);
+      case "reactivate_radar":
+        return await reactivateRadar(body, db, requestId);
       case "add_contact":
         return await addContact(body, db, requestId);
       case "add_activity":
@@ -391,6 +407,10 @@ function supportedOperations() {
     "list_prospects",
     "get_prospect",
     "update_prospect",
+    "place_prospect_on_hold",
+    "reactivate_prospect",
+    "place_radar_on_hold",
+    "reactivate_radar",
     "add_contact",
     "add_activity",
     "add_intelligence",
@@ -425,6 +445,8 @@ async function listRadar(db, requestId) {
       evidence_reference,
       notes,
       status,
+      nurture_reason,
+      nurture_trigger,
       last_outreach_at,
       next_action_title,
       next_action_due_date,
@@ -1536,6 +1558,240 @@ async function updateProspect(body, db, requestId) {
     prospectCrmVersion: PROSPECT_CRM_VERSION,
     prospect,
     writesPerformed: 1
+  });
+}
+
+
+export function buildNurtureReviewAction(holdReasonValue, reactivationTriggerValue, reviewDateValue) {
+  const holdReason = cleanText(holdReasonValue);
+  const reactivationTrigger = cleanText(reactivationTriggerValue);
+  const reviewDate = normalizeDateOnly(reviewDateValue);
+
+  if (!holdReason || !reactivationTrigger || !reviewDate) return null;
+
+  return {
+    holdReason,
+    reactivationTrigger,
+    reviewDate,
+    actionType: "nurture_review",
+    title: \`Review hold — \${reactivationTrigger}\`,
+    priority: "Normal",
+    reason: \`Hold reason: \${holdReason} Reactivation trigger: \${reactivationTrigger}\`
+  };
+}
+
+async function placeProspectOnHold(body, db, requestId) {
+  const prospectId = positiveInteger(body?.prospectId || body?.prospect_id);
+  const hold = buildNurtureReviewAction(
+    body?.holdReason || body?.hold_reason,
+    body?.reactivationTrigger || body?.reactivation_trigger,
+    body?.reviewDate || body?.review_date
+  );
+
+  if (!prospectId || !hold) {
+    return validationError(requestId, "place_prospect_on_hold", "place_prospect_on_hold requires prospectId, holdReason, reactivationTrigger, and reviewDate (YYYY-MM-DD).");
+  }
+
+  const existing = await readProspectSummary(db, prospectId);
+  if (!existing) return validationError(requestId, "place_prospect_on_hold", \`CRM Prospect \${prospectId} was not found.\`, 404);
+  if (["lost", "converted"].includes(existing.status)) {
+    return validationError(requestId, "place_prospect_on_hold", "Lost or converted Prospects cannot be placed on nurture hold.");
+  }
+
+  await db.prepare(\`
+    UPDATE crm_prospects
+    SET status = 'nurture',
+        nurture_reason = ?,
+        nurture_trigger = ?,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  \`).bind(hold.holdReason, hold.reactivationTrigger, prospectId).run();
+
+  await insertActivity(db, prospectId, {
+    activityType: "nurture_hold",
+    occurredAt: new Date().toISOString(),
+    direction: "internal",
+    subject: "Prospect placed on Nurture / Hold",
+    summary: \`Hold reason: \${hold.holdReason}\`,
+    outcome: "on_hold",
+    meaningfulContact: false,
+    sourceType: "crm",
+    notes: \`Reactivation trigger: \${hold.reactivationTrigger}. Review date: \${hold.reviewDate}.\`
+  });
+
+  await replaceOpenNextAction(db, prospectId, {
+    actionType: hold.actionType,
+    title: hold.title,
+    dueDate: hold.reviewDate,
+    priority: hold.priority,
+    reason: hold.reason,
+    sourceType: "crm",
+    sourceReference: "nurture_hold"
+  });
+
+  return jsonResponse({
+    ok: true,
+    requestId,
+    action: PROSPECT_CRM_ACTION,
+    operation: "place_prospect_on_hold",
+    prospectCrmVersion: PROSPECT_CRM_VERSION,
+    prospect: await readProspectDetail(db, prospectId),
+    writesPerformed: 4
+  });
+}
+
+async function reactivateProspect(body, db, requestId) {
+  const prospectId = positiveInteger(body?.prospectId || body?.prospect_id);
+  if (!prospectId) return validationError(requestId, "reactivate_prospect", "reactivate_prospect requires a positive prospectId.");
+
+  const existing = await readProspectSummary(db, prospectId);
+  if (!existing) return validationError(requestId, "reactivate_prospect", \`CRM Prospect \${prospectId} was not found.\`, 404);
+  if (existing.status !== "nurture") {
+    return validationError(requestId, "reactivate_prospect", "Only a nurture/hold Prospect can be reactivated.");
+  }
+
+  await db.prepare(\`
+    UPDATE crm_prospects
+    SET status = 'active',
+        nurture_reason = NULL,
+        nurture_trigger = NULL,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  \`).bind(prospectId).run();
+
+  await insertActivity(db, prospectId, {
+    activityType: "nurture_reactivated",
+    occurredAt: new Date().toISOString(),
+    direction: "internal",
+    subject: "Prospect reactivated from Nurture / Hold",
+    summary: "The prospect returned to active pursuit; relationship history and sales stage were preserved.",
+    outcome: "reactivated",
+    meaningfulContact: false,
+    sourceType: "crm"
+  });
+
+  const after = await readProspectSummary(db, prospectId);
+  if (!after?.nextAction) {
+    await replaceOpenNextAction(db, prospectId, {
+      actionType: "follow_up",
+      title: "Set next active prospect action",
+      dueDate: currentNewYorkDate(),
+      priority: "Normal",
+      reason: "Reactivated Prospect requires a dated active next action.",
+      sourceType: "crm",
+      sourceReference: "nurture_reactivated"
+    });
+  }
+
+  return jsonResponse({
+    ok: true,
+    requestId,
+    action: PROSPECT_CRM_ACTION,
+    operation: "reactivate_prospect",
+    prospectCrmVersion: PROSPECT_CRM_VERSION,
+    prospect: await readProspectDetail(db, prospectId),
+    writesPerformed: after?.nextAction ? 2 : 4
+  });
+}
+
+async function placeRadarOnHold(body, db, requestId) {
+  const radarId = positiveInteger(body?.radarId || body?.radar_id);
+  const hold = buildNurtureReviewAction(
+    body?.holdReason || body?.hold_reason,
+    body?.reactivationTrigger || body?.reactivation_trigger,
+    body?.reviewDate || body?.review_date
+  );
+
+  if (!radarId || !hold) {
+    return validationError(requestId, "place_radar_on_hold", "place_radar_on_hold requires radarId, holdReason, reactivationTrigger, and reviewDate (YYYY-MM-DD).");
+  }
+
+  const existing = await readRadarById(db, radarId);
+  if (!existing) return validationError(requestId, "place_radar_on_hold", \`Radar record \${radarId} was not found.\`, 404);
+  if (existing.promotedProspectId) return validationError(requestId, "place_radar_on_hold", "This Radar record has already been promoted.");
+
+  await db.prepare(\`
+    UPDATE crm_prospect_radar
+    SET status = 'nurture',
+        nurture_reason = ?,
+        nurture_trigger = ?,
+        next_action_title = ?,
+        next_action_due_date = ?,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  \`).bind(hold.holdReason, hold.reactivationTrigger, hold.title, hold.reviewDate, radarId).run();
+
+  await db.prepare(\`
+    INSERT INTO crm_prospect_radar_activities (
+      radar_id, activity_type, occurred_at, direction, subject, summary, outcome,
+      meaningful_contact, source_type, source_reference, external_key, notes, created_at
+    ) VALUES (?, 'nurture_hold', CURRENT_TIMESTAMP, 'internal',
+              'Radar prospect placed on Nurture / Hold', ?, 'on_hold', 0,
+              'crm', 'nurture_hold', NULL, ?, CURRENT_TIMESTAMP)
+  \`).bind(
+    radarId,
+    \`Hold reason: \${hold.holdReason}\`,
+    \`Reactivation trigger: \${hold.reactivationTrigger}. Review date: \${hold.reviewDate}.\`
+  ).run();
+
+  return jsonResponse({
+    ok: true,
+    requestId,
+    action: PROSPECT_CRM_ACTION,
+    operation: "place_radar_on_hold",
+    prospectCrmVersion: PROSPECT_CRM_VERSION,
+    radar: await readRadarDetail(db, radarId),
+    writesPerformed: 2
+  });
+}
+
+async function reactivateRadar(body, db, requestId) {
+  const radarId = positiveInteger(body?.radarId || body?.radar_id);
+  if (!radarId) return validationError(requestId, "reactivate_radar", "reactivate_radar requires a positive radarId.");
+
+  const existing = await readRadarById(db, radarId);
+  if (!existing) return validationError(requestId, "reactivate_radar", \`Radar record \${radarId} was not found.\`, 404);
+  if (existing.status !== "nurture") return validationError(requestId, "reactivate_radar", "Only a nurture/hold Radar record can be reactivated.");
+
+  const nextStatus = existing.lastOutreachAt ? "outreach" : "radar";
+
+  await db.prepare(\`
+    UPDATE crm_prospect_radar
+    SET status = ?,
+        nurture_reason = NULL,
+        nurture_trigger = NULL,
+        next_action_title = CASE
+          WHEN ? = 'outreach' AND (next_action_title IS NULL OR TRIM(next_action_title) = '')
+          THEN 'Review reactivated prospect'
+          ELSE next_action_title
+        END,
+        next_action_due_date = CASE
+          WHEN ? = 'outreach' AND next_action_due_date IS NULL
+          THEN date('now')
+          ELSE next_action_due_date
+        END,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  \`).bind(nextStatus, nextStatus, nextStatus, radarId).run();
+
+  await db.prepare(\`
+    INSERT INTO crm_prospect_radar_activities (
+      radar_id, activity_type, occurred_at, direction, subject, summary, outcome,
+      meaningful_contact, source_type, source_reference, external_key, notes, created_at
+    ) VALUES (?, 'nurture_reactivated', CURRENT_TIMESTAMP, 'internal',
+              'Radar prospect reactivated from Nurture / Hold',
+              'The relationship returned to active prospecting; prior history was preserved.',
+              'reactivated', 0, 'crm', 'nurture_reactivated', NULL, NULL, CURRENT_TIMESTAMP)
+  \`).bind(radarId).run();
+
+  return jsonResponse({
+    ok: true,
+    requestId,
+    action: PROSPECT_CRM_ACTION,
+    operation: "reactivate_radar",
+    prospectCrmVersion: PROSPECT_CRM_VERSION,
+    radar: await readRadarDetail(db, radarId),
+    writesPerformed: 2
   });
 }
 
@@ -3272,6 +3528,8 @@ function mapRadarRow(row) {
     evidenceReference: row.evidence_reference || null,
     notes: row.notes || null,
     status,
+    nurtureReason: row.nurture_reason || null,
+    nurtureTrigger: row.nurture_trigger || null,
     lastOutreachAt: row.last_outreach_at || null,
     nextAction: nextActionDueDate || row.next_action_title
       ? {
@@ -3377,6 +3635,7 @@ function mapProspectSummaryRow(row) {
     convertedAt: row.converted_at || null,
     lostReason: row.lost_reason || null,
     nurtureReason: row.nurture_reason || null,
+    nurtureTrigger: row.nurture_trigger || null,
     notes: row.notes || null,
     createdAt: row.created_at || null,
     updatedAt: row.updated_at || null
@@ -3607,6 +3866,9 @@ function stageToStatus(stage) {
 export function radarManagementState(statusValue, nextActionDueDate) {
   const status = normalizeKey(statusValue || "radar") || "radar";
   if (status === "promoted") return "closed";
+  if (status === "nurture") {
+    return normalizeDateOnly(nextActionDueDate) ? "managed" : "unmanaged";
+  }
   if (status !== "outreach") return "radar";
   return normalizeDateOnly(nextActionDueDate) ? "managed" : "unmanaged";
 }
@@ -3799,4 +4061,4 @@ function parseJson(value) {
   }
 }
 
-/* END OF FILE — routes/prospectCrm.js v1.3.0 — 3548-line full install */
+/* END OF FILE — routes/prospectCrm.js v1.6.0 — full install */
