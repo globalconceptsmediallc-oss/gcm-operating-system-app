@@ -68,16 +68,16 @@ async function handleClosePassedCommitment(body, db, requestId) {
   }
 
   try {
-    const result = await db.prepare(\`
+    const result = await db.prepare(`
       SELECT id, campaign_name, outlet_name, start_date, end_date, status, notes
       FROM media_records
       WHERE id = ?
       LIMIT 1
-    \`).bind(mediaRecordId).all();
+    `).bind(mediaRecordId).all();
 
     const record = rowsOf(result)[0];
     if (!record) {
-      return jsonResponse({ok:false,requestId,action:ACTIONS.GET_MEDIA_OPERATIONS,version:VERSION,error:\`Media record \${mediaRecordId} was not found.\`},404);
+      return jsonResponse({ok:false,requestId,action:ACTIONS.GET_MEDIA_OPERATIONS,version:VERSION,error:`Media record ${mediaRecordId} was not found.`},404);
     }
 
     const endDate = normalizeDateOnly(record.end_date);
@@ -106,10 +106,10 @@ async function handleClosePassedCommitment(body, db, requestId) {
     }
 
     const recordedAt = new Date().toISOString();
-    const historyLine = \`Passed Commitment Closed | \${recordedAt} | \${author} | \${reason}\`;
+    const historyLine = `Passed Commitment Closed | ${recordedAt} | ${author} | ${reason}`;
     const notes = [String(record.notes || "").trim(), historyLine].filter(Boolean).join("\\n");
 
-    await db.prepare(\`
+    await db.prepare(`
       UPDATE media_records
       SET status = 'expired',
           attention_status = 'clear',
@@ -117,7 +117,7 @@ async function handleClosePassedCommitment(body, db, requestId) {
           notes = ?,
           updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    \`).bind(notes, mediaRecordId).run();
+    `).bind(notes, mediaRecordId).run();
 
     return jsonResponse({
       ok:true,
