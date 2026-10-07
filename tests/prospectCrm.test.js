@@ -21,6 +21,7 @@
 import assert from "node:assert/strict";
 import {
   addBusinessDays,
+  buildNurtureReviewAction,
   buildStartupRequirements,
   minimumInitialPaymentCents,
   normalizeProspectStage,
@@ -64,6 +65,26 @@ assert.equal(normalizeProspectStage("Awaiting Decision"), "awaiting_decision");
 assert.equal(normalizeProspectStatus("Active"), "active");
 assert.equal(normalizeProspectStatus("NURTURE"), "nurture");
 
+const hold = buildNurtureReviewAction(
+  "Merger / internal transition makes active pursuit premature.",
+  "New entity website and marketing direction are ready for review.",
+  "2027-02-01"
+);
+assert.ok(hold, "A valid Nurture / Hold must build a dated review action.");
+assert.equal(hold.actionType, "nurture_review");
+assert.equal(hold.reviewDate, "2027-02-01");
+assert.match(hold.title, /New entity website/i);
+assert.equal(
+  buildNurtureReviewAction("Reason only", "", "2027-02-01"),
+  null,
+  "Hold must require a reactivation trigger."
+);
+assert.equal(
+  buildNurtureReviewAction("Reason", "Trigger", ""),
+  null,
+  "Hold must require a dated review."
+);
+
 assert.equal(
   radarManagementState("Outreach", null),
   "unmanaged",
@@ -80,6 +101,18 @@ assert.equal(
   radarManagementState("Radar", null),
   "radar",
   "A lead that has not entered outreach remains Radar rather than an unmanaged active chase."
+);
+
+assert.equal(
+  radarManagementState("Nurture", "2027-02-01"),
+  "managed",
+  "A Radar prospect on hold with a dated review must remain managed without active outreach."
+);
+
+assert.equal(
+  radarManagementState("Nurture", null),
+  "unmanaged",
+  "A held Radar prospect without a review date must be surfaced as unmanaged."
 );
 
 const catalog = serviceCatalogForResponse();
