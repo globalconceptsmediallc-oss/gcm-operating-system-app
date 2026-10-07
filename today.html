@@ -1,13 +1,18 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.6.6
+   Version: 3.6.7
    Status: Production Candidate
-   Source: Production today.html 3.6.5
+   Source: Production today.html 3.6.6
    Sprint: Today — Dated Commitment Carry-Forward
    Purpose: Preserve the locked Today layout, Gmail approvals, Mission Control,
             Media logic, and operating workflow while keeping every open dated
             commitment visible until its authoritative source marks it complete.
+
+   Production changes in 3.6.7:
+   - Makes Forward Look close decisions durable at the exact row level in D1.
+   - Prevents a passed radio/media row from reappearing after refresh when source data still reproduces the same commitment.
+   - Keeps authoritative source history unchanged; Today filters only exact Forward Look keys explicitly closed by the operator.
 
    Production changes in 3.6.6:
    - Adds a Manage control to passed radio/traffic Forward Look items.
@@ -2003,7 +2008,7 @@
 <a class="nav-link" href="finance.html"><span class="nav-icon">$</span><span>Billing</span></a>
 <a class="nav-link" href="proof.html"><span class="nav-icon">↗</span><span>Proof</span></a>
 </nav>
-<div class="sidebar-footer"><div class="sidebar-status"><span class="status-dot" aria-hidden="true"></span><span>Agency Command Center operational · Today v3.6.6</span></div></div>
+<div class="sidebar-footer"><div class="sidebar-status"><span class="status-dot" aria-hidden="true"></span><span>Agency Command Center operational · Today v3.6.7</span></div></div>
 </aside>
 <main class="main" id="main-content">
 <div class="main-inner">
@@ -2196,6 +2201,7 @@
       let forwardLookLoadFailures = 0;
       let forwardLookLoaded = false;
       let forwardLookScheduleAuthorityUnavailable = false;
+      let forwardLookClosedKeys = new Set();
       let mediaLoaded = false;
       let mediaUnavailable = false;
       let agencyCommandLoaded = false;
@@ -3241,7 +3247,9 @@
 
         const deduped = Array.from(new Map(items.map(function(item) {
           return [String(item.key || "").toLowerCase(), item];
-        })).values()).sort(function(a, b) {
+        })).values()).filter(function(item) {
+          return !forwardLookClosedKeys.has(String(item.key || "").toLowerCase());
+        }).sort(function(a, b) {
           if (a.daysUntil !== b.daysUntil) return a.daysUntil - b.daysUntil;
           return a.kind.localeCompare(b.kind) || a.title.localeCompare(b.title);
         });
@@ -3279,7 +3287,7 @@
             '<span class="forward-look-title">' + escapeHtml(item.title) + '</span>' +
             (item.meta ? '<span class="forward-look-meta">' + escapeHtml(item.meta) + '</span>' : '') +
             '</span></a><span class="forward-look-side"><span class="forward-look-due ' + dueClass + '">' + escapeHtml(item.dueLabel || forwardDueLabel(item.daysUntil)) + '</span>' +
-            (item.manageKind && item.manageId ? '<button class="forward-look-manage" type="button" data-forward-manage-kind="' + escapeHtml(item.manageKind) + '" data-forward-manage-id="' + escapeHtml(item.manageId) + '" data-forward-manage-title="' + escapeHtml(item.title) + '">' + escapeHtml(item.manageLabel || "Manage") + '</button>' : '') +
+            (item.manageKind && item.manageId ? '<button class="forward-look-manage" type="button" data-forward-manage-key="' + escapeHtml(item.key) + '" data-forward-manage-kind="' + escapeHtml(item.manageKind) + '" data-forward-manage-id="' + escapeHtml(item.manageId) + '" data-forward-manage-title="' + escapeHtml(item.title) + '">' + escapeHtml(item.manageLabel || "Manage") + '</button>' : '') +
             '</span></div>';
         }).join("");
 
@@ -3297,14 +3305,15 @@
       }
 
       async function closePassedForwardLookItem(button) {
+        const forwardKey = cleanDisplay(button?.dataset?.forwardManageKey);
         const kind = cleanDisplay(button?.dataset?.forwardManageKind);
         const id = cleanDisplay(button?.dataset?.forwardManageId);
         const title = cleanDisplay(button?.dataset?.forwardManageTitle, "this passed commitment");
-        if (!kind || !id) return;
+        if (!forwardKey || !kind || !id) return;
 
         const confirmed = window.confirm(
           "Close " + title + " as Passed — No Further Action?\n\n" +
-          "This removes it from active Forward Look but preserves the historical record."
+          "This removes only this exact Forward Look commitment from active Today. Its source record and history remain preserved."
         );
         if (!confirmed) return;
 
@@ -3312,23 +3321,14 @@
         button.disabled = true;
         button.textContent = "Closing…";
         try {
-          if (kind === "schedule_passed") {
-            await forwardLookPost("schedule-operations", {
-              operation: "close_event",
-              eventKey: id,
-              reason: "Passed radio/traffic window; no further action is possible.",
-              reviewedBy: "Andy"
-            });
-          } else if (kind === "media_passed") {
-            await forwardLookPost("get-media-operations", {
-              operation: "close_passed_commitment",
-              mediaRecordId: Number(id),
-              reason: "Scheduled radio/media run has passed; no further action is possible.",
-              author: "Andy"
-            });
-          } else {
-            throw new Error("This Forward Look item is not yet manageable from Today.");
-          }
+          await forwardLookPost("forward-look-operations", {
+            operation: "close_passed",
+            forwardKey: forwardKey,
+            kind: kind,
+            title: title,
+            reason: "Passed radio/media commitment; no further action is possible.",
+            reviewedBy: "Andy"
+          });
           await loadForwardLook();
           await loadMissionControlAttention();
           await loadMediaAttention();
@@ -3381,7 +3381,8 @@
           forwardLookPost("prospect-crm", { operation: "list_prospects" }),
           forwardLookPost("calendar-operations", { operation: "list" }),
           forwardLookPost("get-media-operations"),
-          forwardLookPost("schedule-operations", { operation: "list" })
+          forwardLookPost("schedule-operations", { operation: "list" }),
+          forwardLookPost("forward-look-operations", { operation: "list" })
         ]);
 
         const radarResult = results[0];
@@ -3518,6 +3519,17 @@
           forwardLookLoadFailures += 1;
           forwardLookScheduleAuthorityUnavailable = true;
           console.warn("Today Forward Look D1 Schedule Authority unavailable. Static schedule seeds are intentionally not used.");
+        }
+
+        const dispositionResult = results[5];
+        if (dispositionResult && dispositionResult.status === "fulfilled") {
+          const keys = Array.isArray(dispositionResult.value && dispositionResult.value.closedKeys)
+            ? dispositionResult.value.closedKeys
+            : [];
+          forwardLookClosedKeys = new Set(keys.map(function(value) { return String(value || "").toLowerCase(); }).filter(Boolean));
+        } else {
+          forwardLookLoadFailures += 1;
+          forwardLookClosedKeys = new Set();
         }
 
         forwardLookSourceItems = items;
@@ -3976,7 +3988,7 @@
         renderDashboard(data);
       });
 
-      const TODAY_VERSION = "3.6.6";
+      const TODAY_VERSION = "3.6.7";
       if (!window.GCMOShell) {
         console.error(`Today ${TODAY_VERSION}: shared/gcm-shell.js did not load.`);
       } else {
