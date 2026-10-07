@@ -208,6 +208,11 @@ import {
   MEASUREMENT_OBSERVATIONS_ACTION,
   MEASUREMENT_OBSERVATIONS_VERSION
 } from "./routes/measurementObservations.js";
+import {
+  handleForwardLookOperations,
+  FORWARD_LOOK_OPERATIONS_ACTION,
+  FORWARD_LOOK_OPERATIONS_VERSION
+} from "./routes/forwardLookOperations.js";
 import { handleCreateInvestigation, handleProcessInvestigation } from "./routes/investigationProcessing.js";
 import { handleGuidedInvestigation } from "./routes/guidedInvestigation.js";
 import { handleProcessWorkItem, handleCreateRequestedWork, CREATE_REQUESTED_WORK_ACTION } from "./routes/workItemProcessing.js";
@@ -288,7 +293,7 @@ import {
   GMAIL_INTAKE_SYNC_VERSION
 } from "./routes/gmailIntakeSync.js";
 
-const WORKER_FILE_VERSION = "7.39.0";
+const WORKER_FILE_VERSION = "7.40.0";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
@@ -302,6 +307,7 @@ const SUPPORTED_ACTIONS = [
   ACTIONS.GET_MISSION_CONTROL,
   CALENDAR_OPERATIONS_ACTION,
   SCHEDULE_OPERATIONS_ACTION,
+  FORWARD_LOOK_OPERATIONS_ACTION,
   MEASUREMENT_OBSERVATIONS_ACTION,
   FINANCE_OPERATIONS_ACTION,
   ACTIONS.GET_GUIDED_INVESTIGATION,
@@ -362,6 +368,7 @@ export default {
         gmailIntakeSyncVersion: GMAIL_INTAKE_SYNC_VERSION,
         clientFindingsVersion: CLIENT_FINDINGS_VERSION,
         scheduleOperationsVersion: SCHEDULE_OPERATIONS_VERSION,
+        forwardLookOperationsVersion: FORWARD_LOOK_OPERATIONS_VERSION,
         measurementObservationsVersion: MEASUREMENT_OBSERVATIONS_VERSION,
         contractVersion: API_CONTRACT_VERSION,
         sprint: "Universal Email Intake — Cloudflare Email Routing",
@@ -375,6 +382,7 @@ export default {
           "agency-command",
           "calendar-operations",
           "schedule-operations",
+          "forward-look-operations",
           "measurement-observations",
           "gmail-work-requests",
           "gmail-dispositions",
@@ -566,6 +574,9 @@ export default {
 
         case SCHEDULE_OPERATIONS_ACTION:
           return await handleScheduleOperations(body, env, requestId);
+
+        case FORWARD_LOOK_OPERATIONS_ACTION:
+          return await handleForwardLookOperations(body, env, requestId);
 
         case MEASUREMENT_OBSERVATIONS_ACTION:
           return await handleMeasurementObservations(body, env, requestId);
