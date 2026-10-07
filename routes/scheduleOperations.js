@@ -1,20 +1,25 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/scheduleOperations.js
-   Version: 1.0.0
+   Version: 1.1.0
    Status: Production Candidate — Durable Schedule Authority
    Sprint: Calendar / Media Calendar — One Record, Multiple Views
    Purpose:
    Store campaign/event schedule records in D1, stage human-reviewed changes,
    preserve version history, and return one derived event feed for Agency
    Calendar, Media Calendar, and Today.
+
+   Change Notes — 1.1.0:
+   - Adds a durable close_event operation for radio/traffic commitments whose run has already passed.
+   - Closing a passed derived event preserves the parent schedule item and all history.
+   - Closed derived events are filtered from active scheduleEvents so Today clears without deleting history.
    ========================================================= */
 
 import { getDatabase, rowsOf } from "../shared/database.js";
 import { jsonResponse, logWorkerError, safeErrorMessage } from "../shared/http.js";
 
 export const SCHEDULE_OPERATIONS_ACTION = "schedule-operations";
-export const SCHEDULE_OPERATIONS_VERSION = "1.0.0";
+export const SCHEDULE_OPERATIONS_VERSION = "1.1.0";
 
 const ITEM_TYPES = new Set(["gun_show","promotion","social_post","campaign","event","deadline","radio_flight","other"]);
 const STATUSES = new Set(["planned","confirmed","candidate","ready","posted","placed","verified","complete","completed","cancelled","canceled"]);
@@ -30,6 +35,7 @@ export async function handleScheduleOperations(body, env, requestId) {
 
   try {
     if (operation === "list") return await listSchedule(db, requestId);
+    if (operation === "close_event") return await closePassedEvent(body, db, requestId);
     if (operation === "create_candidate") return await createCandidate(body, db, requestId);
     if (operation === "approve_candidate") return await approveCandidate(body, db, requestId);
     if (operation === "hold_candidate") return await dispositionCandidate(body, db, requestId, "held");
@@ -78,6 +84,16 @@ async function listSchedule(db, requestId) {
     changedAt:text(row.changed_at)
   }));
 
+  const closedRows = rowsOf(await db.prepare(`
+    SELECT event_key, schedule_item_id, disposition, reason, reviewed_by, closed_at
+    FROM schedule_event_dispositions
+    WHERE disposition = 'closed_passed'
+    ORDER BY datetime(closed_at) DESC, id DESC
+  `).all());
+
+  const closedKeys = new Set(closedRows.map(row => text(row.event_key)));
+  const scheduleEvents = deriveEvents(items).filter(event => !closedKeys.has(text(event.key)));
+
   return jsonResponse({
     ok:true,
     requestId,
@@ -85,10 +101,89 @@ async function listSchedule(db, requestId) {
     operation:"list",
     scheduleOperationsVersion:SCHEDULE_OPERATIONS_VERSION,
     scheduleItems:items,
-    scheduleEvents:deriveEvents(items),
+    scheduleEvents,
+    closedEventDispositions:closedRows.map(row => ({
+      eventKey:text(row.event_key),
+      scheduleItemId:positive(row.schedule_item_id),
+      disposition:text(row.disposition),
+      reason:nullable(row.reason),
+      reviewedBy:nullable(row.reviewed_by),
+      closedAt:text(row.closed_at)
+    })),
     pendingChanges,
     history,
     writesPerformed:0
+  });
+}
+
+
+async function closePassedEvent(body, db, requestId) {
+  const eventKey = clean(body?.eventKey || body?.event_key);
+  const reason = nullable(body?.reason) || "Passed radio/traffic window can no longer be acted on.";
+  const reviewedBy = clean(body?.reviewedBy || body?.reviewed_by || "Andy") || "Andy";
+
+  if (!eventKey) return bad(requestId, "eventKey is required.");
+
+  const items = rowsOf(await db.prepare(\`
+    SELECT si.*, c.client_code, c.name AS client_name
+    FROM schedule_items si
+    LEFT JOIN clients c ON c.id = si.client_id
+    WHERE si.archived_at IS NULL
+    ORDER BY si.start_date, si.id
+  \`).all()).map(normalizeItemRow);
+
+  const events = deriveEvents(items);
+  const eventToClose = events.find(event => text(event.key) === eventKey);
+  if (!eventToClose) {
+    return jsonResponse({
+      ok:false,
+      requestId,
+      action:SCHEDULE_OPERATIONS_ACTION,
+      operation:"close_event",
+      scheduleOperationsVersion:SCHEDULE_OPERATIONS_VERSION,
+      error:"The schedule event was not found."
+    },404);
+  }
+
+  if (!["traffic_due","station_deadline","radio_flight"].includes(clean(eventToClose.kind).toLowerCase())) {
+    return bad(requestId, "Only passed radio, traffic, or station-deadline events can be closed from Forward Look.");
+  }
+
+  const relatedFlight = clean(eventToClose.kind).toLowerCase() === "radio_flight"
+    ? eventToClose
+    : events.find(event => event.sourceKey === eventToClose.sourceKey && event.kind === "radio_flight");
+
+  const runEndDate = dateOnly(relatedFlight?.endDate || eventToClose.endDate || eventToClose.startDate);
+  if (!runEndDate || runEndDate >= currentNewYorkDate()) {
+    return bad(requestId, "This radio/traffic run has not passed yet and cannot be closed as historical.");
+  }
+
+  await db.prepare(\`
+    INSERT INTO schedule_event_dispositions (
+      event_key, schedule_item_id, disposition, reason, reviewed_by, closed_at
+    ) VALUES (?, ?, 'closed_passed', ?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(event_key) DO UPDATE SET
+      disposition='closed_passed',
+      reason=excluded.reason,
+      reviewed_by=excluded.reviewed_by,
+      closed_at=CURRENT_TIMESTAMP
+  \`).bind(
+    eventKey,
+    positive(eventToClose.scheduleItemId),
+    reason,
+    reviewedBy
+  ).run();
+
+  return jsonResponse({
+    ok:true,
+    requestId,
+    action:SCHEDULE_OPERATIONS_ACTION,
+    operation:"close_event",
+    scheduleOperationsVersion:SCHEDULE_OPERATIONS_VERSION,
+    eventKey,
+    scheduleItemId:positive(eventToClose.scheduleItemId),
+    disposition:"closed_passed",
+    writesPerformed:1
   });
 }
 
@@ -456,6 +551,18 @@ function dateOnly(value) {
   const d = new Date(Date.UTC(Number(m[1]),Number(m[2])-1,Number(m[3]),12));
   if (d.getUTCFullYear() !== Number(m[1]) || d.getUTCMonth() !== Number(m[2])-1 || d.getUTCDate() !== Number(m[3])) return null;
   return `${m[1]}-${m[2]}-${m[3]}`;
+}
+
+
+function currentNewYorkDate() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return values.year + "-" + values.month + "-" + values.day;
 }
 
 function normalizeTime(value) {
