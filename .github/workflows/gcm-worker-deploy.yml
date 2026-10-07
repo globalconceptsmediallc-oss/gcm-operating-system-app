@@ -1,10 +1,11 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gcm-worker-deploy.yml
-# Version: 1.5.70
+# Version: 1.5.71
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Worker with human-led Signal Finding capture.
 # Change Notes:
+# - Restore Schedule Operations 1.0.0 and keep Forward Look row closure in the dedicated D1 disposition layer.
 # - Re-run Worker 7.40.0 deployment after aligning the Forward Look durable-disposition regression.
 # - Deploy Worker 7.40.0 with D1-backed Forward Look row dispositions so closed passed items stay closed after refresh.
 # - Deploy interactive Forward Look passed radio/traffic closure with Schedule Operations 1.1.0 and migration 0038.
@@ -158,8 +159,8 @@ jobs:
           if (health.clientFindingsVersion !== "1.0.0") {
             throw new Error(`Expected Client Findings 1.0.0, received ${health.clientFindingsVersion || "unknown"}`);
           }
-          if (health.scheduleOperationsVersion !== "1.1.0") {
-            throw new Error(`Expected Schedule Operations 1.1.0, received ${health.scheduleOperationsVersion || "unknown"}`);
+          if (health.scheduleOperationsVersion !== "1.0.0") {
+            throw new Error(`Expected Schedule Operations 1.0.0, received ${health.scheduleOperationsVersion || "unknown"}`);
           }
           if (health.forwardLookOperationsVersion !== "1.0.0") {
             throw new Error(`Expected Forward Look Operations 1.0.0, received ${health.forwardLookOperationsVersion || "unknown"}`);
