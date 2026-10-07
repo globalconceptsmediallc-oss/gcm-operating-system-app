@@ -1,15 +1,15 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.97",
+  "version": "6.1.98",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.97",
+    "fileVersion": "6.1.98",
     "status": "Production Candidate",
-    "purpose": "Add interactive Forward Look management for passed radio and traffic commitments.",
+    "purpose": "Make Forward Look row dispositions durable across refresh.",
     "changeNotes": [
-      "Adds a production regression for closing passed radio/traffic commitments directly from Today.",
-      "Preserves historical Media and Schedule records while clearing stale active attention.",
-      "Keeps all prior production test coverage."
+      "Adds a D1-backed Forward Look disposition layer keyed to the exact Today row.",
+      "Closed passed commitments stay hidden after refresh while authoritative source history remains intact.",
+      "Preserves existing interactive Forward Look and production test coverage."
     ]
   },
   "private": true,
