@@ -124,13 +124,13 @@ async function closePassedEvent(body, db, requestId) {
 
   if (!eventKey) return bad(requestId, "eventKey is required.");
 
-  const items = rowsOf(await db.prepare(\`
+  const items = rowsOf(await db.prepare(`
     SELECT si.*, c.client_code, c.name AS client_name
     FROM schedule_items si
     LEFT JOIN clients c ON c.id = si.client_id
     WHERE si.archived_at IS NULL
     ORDER BY si.start_date, si.id
-  \`).all()).map(normalizeItemRow);
+  `).all()).map(normalizeItemRow);
 
   const events = deriveEvents(items);
   const eventToClose = events.find(event => text(event.key) === eventKey);
@@ -158,7 +158,7 @@ async function closePassedEvent(body, db, requestId) {
     return bad(requestId, "This radio/traffic run has not passed yet and cannot be closed as historical.");
   }
 
-  await db.prepare(\`
+  await db.prepare(`
     INSERT INTO schedule_event_dispositions (
       event_key, schedule_item_id, disposition, reason, reviewed_by, closed_at
     ) VALUES (?, ?, 'closed_passed', ?, ?, CURRENT_TIMESTAMP)
@@ -167,7 +167,7 @@ async function closePassedEvent(body, db, requestId) {
       reason=excluded.reason,
       reviewed_by=excluded.reviewed_by,
       closed_at=CURRENT_TIMESTAMP
-  \`).bind(
+  `).bind(
     eventKey,
     positive(eventToClose.scheduleItemId),
     reason,
