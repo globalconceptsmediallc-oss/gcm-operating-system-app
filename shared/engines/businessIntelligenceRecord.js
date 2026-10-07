@@ -1,12 +1,16 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/engines/businessIntelligenceRecord.js
-   Version: 1.1.6
+   Version: 1.1.7
    Status: Production Road-Test Candidate
-   Source: shared/engines/businessIntelligenceRecord.js 1.1.5
+   Source: shared/engines/businessIntelligenceRecord.js 1.1.6
    Sprint: Prospect Intelligence Audience Classification Guardrail
    Purpose: Normalize advertisement and website evidence into one
             reusable, evidence-first Business Intelligence Record.
+
+   Changes — 1.1.7:
+   - Removes quote/CTA and generic company headings from verified pressure-washing service lists.
+   - De-duplicates location-stuffed pressure-washing headings when clearer service labels are present.
 
    Changes — 1.1.6:
    - Adds first-class Pressure Washing & Exterior Cleaning classification.
@@ -28,7 +32,7 @@
 
 import { clean } from "../http.js";
 
-export const BUSINESS_INTELLIGENCE_RECORD_VERSION = "1.1.6";
+export const BUSINESS_INTELLIGENCE_RECORD_VERSION = "1.1.7";
 
 const SERVICE_RULES = Object.freeze([
   ["Pressure Washing & Exterior Cleaning", /\b(?:pressure washing|power washing|soft wash(?:ing)?|house washing|roof washing|exterior cleaning|building washing|commercial pressure washing|residential pressure washing|concrete cleaning)\b/i],
@@ -654,9 +658,19 @@ function normalizeServicesForIndustry(
       normalizedIndustry
     )
   ) {
-    const filtered = items.filter(item =>
-      /\b(?:pressure washing|power washing|soft wash(?:ing)?|house washing|roof washing|exterior cleaning|building washing|commercial pressure washing|residential pressure washing|concrete cleaning|driveway|sidewalk|paver|gutter|window cleaning)\b/i.test(item)
-    );
+    const filtered = items.filter(item => {
+      const value = clean(item);
+      if (!/\b(?:pressure washing|power washing|soft wash(?:ing)?|house washing|roof washing|exterior cleaning|building washing|commercial pressure washing|residential pressure washing|concrete cleaning|driveway|sidewalk|paver|gutter|window cleaning)\b/i.test(value)) {
+        return false;
+      }
+      if (/\b(?:free|quote|get a quote|company)\b/i.test(value)) {
+        return false;
+      }
+      if (/^(?:melbourne|palm bay|brevard).{0,45}\b(?:pressure|power) washing services?$/i.test(value)) {
+        return false;
+      }
+      return true;
+    });
 
     return filtered.length
       ? filtered

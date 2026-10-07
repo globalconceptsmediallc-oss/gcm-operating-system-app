@@ -1,13 +1,18 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/prospectIntelligence.js
-   Version: 1.5.0
+   Version: 1.5.1
    Status: Production Road-Test Candidate
-   Source: routes/prospectIntelligence.js 1.4.2
+   Source: routes/prospectIntelligence.js 1.5.0
    Sprint: Prospect Intelligence Evidence Reliability
    Purpose: Preserve the Business Intelligence Record foundation and
             add consultant-grade reasoning that connects evidence to
             business meaning, action, expected result, and proof.
+
+   Changes — 1.5.1:
+   - Removes remaining campaign/QR/landing-page language from relationship-sourced discovery questions and next-step positioning.
+   - Rewrites the relationship summary around the actual contact source, verified business identity, target customer, and source-to-booked-work measurement.
+   - Replaces campaign-specific missing-information prompts with lead-source and commercial-account questions when no advertisement exists.
 
    Changes — 1.5.0:
    - Makes prospect origin authoritative: relationship/referral, research, and advertisement leads no longer share one advertisement-first script.
@@ -52,7 +57,7 @@ import {
   applyConsultantIntelligenceToBrief
 } from "../shared/engines/consultantIntelligence.js";
 
-export const PROSPECT_INTELLIGENCE_VERSION = "1.5.0";
+export const PROSPECT_INTELLIGENCE_VERSION = "1.5.1";
 
 const MAX_WEBSITE_TEXT = 18000;
 const MAX_IMAGES = 2;
@@ -1116,9 +1121,18 @@ export function enforceProspectSourceSemantics({
       clean(prospectContext?.notes) ||
       `Existing relationship with ${clean(prospectContext?.contactName) || "the contact"}.`;
 
+    const verifiedIndustry =
+      clean(businessIntelligenceRecord?.identity?.industry) ||
+      "a local service business";
+    const verifiedMarket =
+      clean(businessIntelligenceRecord?.identity?.geographicMarket) ||
+      clean(prospectContext?.location) ||
+      "its local market";
+    const verifiedTargetCustomer =
+      clean(businessIntelligenceRecord?.identity?.targetCustomer);
+
     source.businessSummary =
-      clean(source.businessSummary) ||
-      `${verifiedName} is connected to GCM through an existing relationship. ${contextText}`;
+      `${verifiedName} is connected to GCM through an existing relationship. ${contextText} Public evidence identifies the business as ${verifiedIndustry} serving ${verifiedMarket}${verifiedTargetCustomer ? `, with target customers including ${verifiedTargetCustomer}` : ""}. The first consulting priority is to verify which customer and service path creates the most valuable booked work and whether lead sources can be followed through estimate, booked job, recurring service, and account value.`;
 
     source.personalizedOutreachInsights = unique([
       "Lead with the existing relationship and the reason the contact is already connected to GCM.",
@@ -1137,15 +1151,57 @@ export function enforceProspectSourceSemantics({
     source.discoveryCallScript = {
       ...(source.discoveryCallScript || {}),
       opening:
-        `After our recent contact, I took a closer look at ${verifiedName} and found a few items worth comparing with what you are seeing inside the business.`
+        `After our recent contact, I took a closer look at ${verifiedName} and found a few items worth comparing with what you are seeing inside the business.`,
+      questions: [
+        "Which services and customer types create the most valuable booked work?",
+        "Which commercial account types are the highest priority to grow: property managers, HOAs, apartment communities, builders, or other facilities?",
+        "Where do commercial opportunities currently come from: outreach, referrals, associations, search, or repeat relationships?",
+        "Can you follow a lead from its source through estimate, booked job, recurring service, and account value?"
+      ],
+      positioningStatement:
+        "GCM helps established local service businesses connect relationship-based sales, local search, website conversion, and source-to-booked-work measurement so growth activity becomes more measurable.",
+      nextStep:
+        "Compare the existing commercial sales process with the public website and lead tracking, then identify one measurable commercial account path to improve first."
     };
+
+    source.missingInformation = unique([
+      "Current lead-source performance and attribution",
+      "Highest-value services and commercial account types",
+      "Current business priority and decision-maker goals",
+      "Estimate-to-booked-job and recurring-account conversion",
+      "Current marketing budget",
+      "Competitive rankings and review position",
+      ...(Array.isArray(source.missingInformation)
+        ? source.missingInformation.filter(item => !/campaign|advertisement|qr[- ]?code|landing page/i.test(clean(item)))
+        : [])
+    ]);
+
+    source.humanVerificationChecklist = unique([
+      "Verify the source and relationship context.",
+      "Verify which services and commercial account types create the most valuable booked work.",
+      "Check calls, forms, lead-source capture, estimates, and booked-job attribution.",
+      "Verify service-area and service-page clarity.",
+      "Review Google Business Profile, reviews, paid ads, organic visibility, and key competitors.",
+      ...(Array.isArray(source.humanVerificationChecklist)
+        ? source.humanVerificationChecklist.filter(item => !/campaign|advertisement|qr[- ]?code|landing page/i.test(clean(item)))
+        : [])
+    ]);
 
     source.prospectIntelligence = {
       ...(source.prospectIntelligence || {}),
       recommendedFirstContact:
         "Reference the existing relationship and the reason for the recent contact, then offer the specific observations.",
+      likelyOpportunityAreas: unique([
+        "Commercial customer-path clarity",
+        "Lead-source and booked-work attribution",
+        "Local search and Google Business Profile visibility",
+        "Commercial proof and case-study development",
+        ...((Array.isArray(source.prospectIntelligence?.likelyOpportunityAreas)
+          ? source.prospectIntelligence.likelyOpportunityAreas
+          : []).filter(item => !/campaign|advertisement|qr[- ]?code|landing page/i.test(clean(item))))
+      ]),
       recommendedNextAction:
-        "Compare the public website and supplied relationship context, verify the highest-value customer path, and prepare the next evidence-based conversation."
+        "Compare the public website and supplied relationship context, verify the highest-value commercial customer path, and prepare the next evidence-based conversation."
     };
   }
 

@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/prospectIntelligenceSourceSemantics.test.js
-   Version: 1.0.0
+   Version: 1.1.0
    Status: Regression Test
    Purpose: Lock source-aware Prospect Intelligence and prevent
             unrelated service-label contamination.
@@ -46,6 +46,7 @@ assert.equal(record.identity.industry,"Exterior Cleaning / Pressure Washing");
 assert.ok(record.services.primaryServices.some(x=>/pressure washing/i.test(x)));
 assert.ok(record.services.primaryServices.some(x=>/house washing/i.test(x)));
 assert.ok(!record.services.primaryServices.some(x=>/irrigation|medical|real estate|restaurant/i.test(x)));
+assert.ok(!record.services.primaryServices.some(x=>/free.*quote|power washing company/i.test(x)));
 assert.match(record.identity.targetCustomer,/property managers/i);
 assert.match(record.identity.targetCustomer,/HOAs/i);
 
@@ -71,6 +72,10 @@ const enforced=enforceProspectSourceSemantics({
 assert.deepEqual(enforced.productsAndServices,record.services.primaryServices);
 assert.doesNotMatch(enforced.firstContactEmail.body,/advertisement/i);
 assert.doesNotMatch(enforced.discoveryCallScript.opening,/advertisement/i);
+assert.ok(enforced.discoveryCallScript.questions.every(x=>!/campaign|qr code|advertisement/i.test(x)));
+assert.doesNotMatch(enforced.discoveryCallScript.nextStep,/campaign|landing page|qr code/i);
+assert.doesNotMatch(enforced.discoveryCallScript.positioningStatement,/advertiser/i);
+assert.ok(enforced.missingInformation.every(x=>!/campaign|advertisement|qr code/i.test(x)));
 assert.ok(!enforced.websiteObservations.some(x=>/advertisement/i.test(x)));
 assert.match(enforced.prospectIntelligence.advertisementAssessment,/No advertisement evidence was supplied/i);
 assert.match(enforced.prospectIntelligence.recommendedFirstContact,/existing relationship/i);
