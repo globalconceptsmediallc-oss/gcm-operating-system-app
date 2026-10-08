@@ -1,8 +1,13 @@
 -- =========================================================
 -- Global Concepts Media Operating System
 -- File: migrations/0040_seed_ses_shopify_outcomes_sep8_oct7.sql
--- Version: 1.0.0
+-- Version: 1.0.1
 -- Status: Production Migration Candidate
+-- Deployment note:
+-- - v1.0.1 is data-identical to v1.0.0; this comment-only bump retriggers
+--   the Worker pipeline after aligning the stale Today v3.6.7 regression lock
+--   to the verified Today v3.6.8 production page.
+--
 -- Purpose: Add verified Shopify outcome observations for the
 --          Southeast Safes 90-Day Growth Review evidence gate.
 --
