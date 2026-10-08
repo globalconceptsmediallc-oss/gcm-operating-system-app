@@ -13,12 +13,18 @@
 <!-- =========================================================
  Global Concepts Media Operating System
  File: growth-review-readiness.html
- Version: 1.3.0
+ Version: 1.4.0
  Status: Production Road-Test Candidate
- Source: growth-review-readiness.html 1.2.0
+ Source: growth-review-readiness.html 1.3.0
  Sprint: Growth Review — Evidence Quality + 90-Day Coverage
  Purpose: Read-only evidence-quality gate for the SES 90-Day Growth Review.
           This page performs no D1 writes and generates no client conclusions.
+
+ Change Notes — 1.4.0
+ - Reuses the verified Proof-page work classification instead of keyword inference.
+ - Counts completed Work Items plus completed non-gmail_monitoring activity records as substantive work.
+ - Excludes gmail_monitoring activity from substantive work and preserves it as supporting monitoring.
+ - Avoids double-counting activity linked to a completed Work Item.
 
  Change Notes — 1.3.0
  - Excludes monitoring/alert activity from substantive Proof when its category, task, or narrative identifies it as monitoring-only evidence.
@@ -91,11 +97,11 @@
 
 <script src="shared/gcm-shell.js"></script>
 <script>
-window.addEventListener("DOMContentLoaded",function(){if(window.GCMOShell)window.GCMOShell.mount({currentPage:"proof",statusText:"Growth Review readiness · v1.3.0"});});
+window.addEventListener("DOMContentLoaded",function(){if(window.GCMOShell)window.GCMOShell.mount({currentPage:"proof",statusText:"Growth Review readiness · v1.4.0"});});
 </script>
 <script>
 (function(){"use strict";
-const VERSION="1.3.0";
+const VERSION="1.4.0";
 const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
 const ZONE="America/New_York";
 const REVIEW_DAYS=90;
@@ -125,26 +131,16 @@ function proofDate(p){return isoParts((p&&p.date)||(p&&p.activity_date)||(p&&p.c
 function mediaStart(m){return isoParts((m&&m.startDate)||(m&&m.start_date))}
 function mediaEnd(m){return isoParts((m&&m.endDate)||(m&&m.end_date))}
 function metricKey(m){return clean((m&&m.metricKey)||(m&&m.metric_key)).toLowerCase()}
-function substantiveProof(p){
-  const task=clean((p&&p.task)||(p&&p.title)||(p&&p.activity));
-  const category=clean(p&&p.category);
-  const detail=clean((p&&p.result)||(p&&p.businessValue)||(p&&p.notes)||(p&&p.description));
-  const evidenceCount=arr(p&&p.evidence).length;
-  if(!task)return false;
-
-  const taskIsGeneric=GENERIC_PROOF_PATTERN.test(task);
-  const monitoringText=[task,category,detail].join(" ").toLowerCase();
-  const monitoringOnly=
-    /\bmonitoring\b/.test(monitoringText) ||
-    /\branking alert\b/.test(monitoringText) ||
-    /\bposition tracking alert\b/.test(monitoringText) ||
-    /preserve.{0,80}monitoring evidence/.test(monitoringText) ||
-    /no investigation or work item created/.test(monitoringText);
-
-  if(taskIsGeneric)return false;
-  if(monitoringOnly)return false;
-
-  return Boolean(detail||evidenceCount||task);
+function completeStatus(v){
+  return ["completed","complete","closed","done"].includes(clean(v).toLowerCase());
+}
+function substantiveActivity(a){
+  const sourceType=clean(a&&a.source_type).toLowerCase();
+  const activity=clean((a&&a.activity)||(a&&a.task)||(a&&a.title));
+  if(sourceType==="gmail_monitoring")return false;
+  if(!completeStatus(a&&a.status))return false;
+  if(!activity)return false;
+  return true;
 }
 function check(label,detail,state){
   return '<article class="check"><div><strong>'+esc(label)+'</strong><span>'+esc(detail)+'</span></div><b class="badge '+esc(state)+'">'+(state==="pass"?"Ready":state==="gap"?"Gap":"Failed")+'</b></article>';
@@ -203,9 +199,26 @@ async function load(){
     const distinctMetrics=Array.from(new Set(recentMeasurements.map(function(x){return metricKey(x.item)}).filter(Boolean)));
     const outcomeMetrics=distinctMetrics.filter(function(k){return OUTCOME_METRIC_PATTERN.test(k)});
 
+    const completedWorkItems=work.map(function(item){
+      const d=isoParts((item&&item.completed_at)||(item&&item.updated_at)||(item&&item.created_at));
+      return {item:item,date:d};
+    }).filter(function(x){return inWindow(x.date,start,end)&&completeStatus(x.item&&x.item.status)});
+
+    const completedWorkIds=new Set(completedWorkItems.map(function(x){return Number(x.item&&x.item.id)}).filter(Boolean));
+
     const recentProof=proof.map(function(p){return {item:p,date:proofDate(p)}}).filter(function(x){return inWindow(x.date,start,end)});
-    const substantiveRecentProof=recentProof.filter(function(x){return substantiveProof(x.item)});
-    const genericRecentProof=recentProof.filter(function(x){return !substantiveProof(x.item)});
+    const substantiveRecentProof=recentProof.filter(function(x){
+      const linkedId=Number(x.item&&x.item.work_item_id);
+      if(linkedId&&completedWorkIds.has(linkedId))return false;
+      return substantiveActivity(x.item);
+    });
+    const monitoringRecentProof=recentProof.filter(function(x){return clean(x.item&&x.item.source_type).toLowerCase()==="gmail_monitoring"});
+    const nonSubstantiveRecentProof=recentProof.filter(function(x){
+      const linkedId=Number(x.item&&x.item.work_item_id);
+      if(linkedId&&completedWorkIds.has(linkedId))return false;
+      return !substantiveActivity(x.item);
+    });
+    const substantiveWorkCount=completedWorkItems.length+substantiveRecentProof.length;
 
     const mediaInWindow=media.filter(function(m){return rangesOverlap(mediaStart(m),mediaEnd(m),start,end)});
     const undatedMedia=media.filter(function(m){return !mediaStart(m)&&!mediaEnd(m)});
@@ -214,7 +227,7 @@ async function load(){
     const findingsPass=recentDatedFindings.length>0;
     const measurementBreadthPass=recentMeasurements.length>0&&distinctMetrics.length>=2;
     const outcomeMeasurementPass=outcomeMetrics.length>0;
-    const proofPass=substantiveRecentProof.length>0;
+    const proofPass=substantiveWorkCount>0;
     const mediaPass=mediaInWindow.length>0;
 
     const gates=[
@@ -222,7 +235,7 @@ async function load(){
       {label:"Recent source-dated Reviewed Findings",detail:recentDatedFindings.length+" finding"+(recentDatedFindings.length===1?"":"s")+" can be anchored to "+start+" through "+end+".",pass:findingsPass},
       {label:"Measurement breadth",detail:recentMeasurements.length+" recent observation"+(recentMeasurements.length===1?"":"s")+" across "+distinctMetrics.length+" distinct metric"+(distinctMetrics.length===1?"":"s")+".",pass:measurementBreadthPass},
       {label:"Outcome measurement coverage",detail:outcomeMetrics.length?("Outcome-oriented metrics found: "+outcomeMetrics.join(", ")+"."):"No recent lead, call, conversion, revenue, sale, order, form, contact, showroom, transaction, or key-event metric was found.",pass:outcomeMeasurementPass},
-      {label:"Substantive recent Proof",detail:substantiveRecentProof.length+" recent Proof record"+(substantiveRecentProof.length===1?"":"s")+" contain enough task/evidence detail to support review history.",pass:proofPass},
+      {label:"Substantive completed work",detail:substantiveWorkCount+" completed work record"+(substantiveWorkCount===1?"":"s")+" qualify under the existing Proof-page completion rules ("+completedWorkItems.length+" Work Item"+(completedWorkItems.length===1?"":"s")+" + "+substantiveRecentProof.length+" non-monitoring activity record"+(substantiveRecentProof.length===1?"":"s")+").",pass:proofPass},
       {label:"Media coverage in review window",detail:mediaInWindow.length+" Media record"+(mediaInWindow.length===1?"":"s")+" overlap the current 90-day period.",pass:mediaPass}
     ];
     const blockerList=gates.filter(function(g){return !g.pass});
@@ -232,8 +245,8 @@ async function load(){
     els.findingQuality.textContent=findings.length+" total · "+undatedFindings.length+" undated";
     els.recentMeasurements.textContent=recentMeasurements.length;
     els.metricQuality.textContent=distinctMetrics.length+" distinct · "+outcomeMetrics.length+" outcome";
-    els.recentProof.textContent=substantiveRecentProof.length;
-    els.proofQuality.textContent=genericRecentProof.length+" recent generic excluded";
+    els.recentProof.textContent=substantiveWorkCount;
+    els.proofQuality.textContent=monitoringRecentProof.length+" monitoring · "+nonSubstantiveRecentProof.length+" other excluded";
     els.recentMedia.textContent=mediaInWindow.length;
     els.blockers.textContent=blockers;
 
@@ -256,7 +269,8 @@ async function load(){
 
     const warnings=[];
     if(recentUndatedFindings.length)warnings.push(recentUndatedFindings.length+" Reviewed Finding"+(recentUndatedFindings.length===1?" was":"s were")+" created during the 90-day window but lack a usable evidence date/reporting period. They are excluded from dated trend conclusions.");
-    if(genericRecentProof.length)warnings.push(genericRecentProof.length+" recent Proof record"+(genericRecentProof.length===1?" is":"s are")+" too generic to support a client conclusion and are excluded from substantive Proof.");
+    if(monitoringRecentProof.length)warnings.push(monitoringRecentProof.length+" recent gmail_monitoring activity record"+(monitoringRecentProof.length===1?" is":"s are")+" preserved as supporting monitoring and excluded from completed work.");
+    if(nonSubstantiveRecentProof.length)warnings.push(nonSubstantiveRecentProof.length+" additional recent activity record"+(nonSubstantiveRecentProof.length===1?" does":"s do")+" not meet the existing Proof-page completed-work rule.");
     if(undatedMedia.length)warnings.push(undatedMedia.length+" Media record"+(undatedMedia.length===1?" lacks":"s lack")+" both start and end dates and cannot establish 90-day campaign timing.");
     if(!outcomeMetrics.length)warnings.push("Measurement currently lacks an outcome-oriented metric. Page views alone can describe traffic, but cannot prove leads, calls, conversions, showroom activity, sales, or revenue.");
     els.warnings.innerHTML=warnings.length?'<div class="note"><strong>Excluded / quality warnings</strong><ul class="gap-list">'+warnings.map(function(w){return "<li>"+esc(w)+"</li>"}).join("")+"</ul></div>":'<div class="note"><strong>No material exclusions detected.</strong> Current records can be anchored to the review period.</div>';
@@ -270,9 +284,13 @@ async function load(){
       const m=x.item;
       preview.push(record(clean(m.metricKey)||"Measurement",["Measurement",clean(m.sourceSystem),x.date].filter(Boolean).join(" · "),String(m.metricValue)+" "+clean(m.metricUnit)));
     });
-    substantiveRecentProof.slice(0,4).forEach(function(x){
+    completedWorkItems.slice(0,3).forEach(function(x){
+      const w=x.item;
+      preview.push(record(clean(w.title)||"Completed Work Item",["Completed Work",x.date,clean(w.category)].filter(Boolean).join(" · "),clean(w.actual_impact)||clean(w.description)||clean(w.expected_impact)));
+    });
+    substantiveRecentProof.slice(0,3).forEach(function(x){
       const p=x.item;
-      preview.push(record(clean(p.task)||clean(p.title)||"Proof of Work",["Proof",x.date,clean(p.category)].filter(Boolean).join(" · "),clean(p.result)||clean(p.businessValue)||clean(p.notes)));
+      preview.push(record(clean(p.activity)||clean(p.task)||clean(p.title)||"Completed Activity",["Completed Activity",x.date,clean(p.category)].filter(Boolean).join(" · "),clean(p.actual_impact)||clean(p.notes)||clean(p.expected_impact)));
     });
     mediaInWindow.slice(0,3).forEach(function(m){
       preview.push(record(clean(m.campaignName)||clean(m.creativeName)||"Media Record",["Media",clean(m.market),clean(m.outletName),[mediaStart(m),mediaEnd(m)].filter(Boolean).join("–")].filter(Boolean).join(" · "),clean(m.status)));
