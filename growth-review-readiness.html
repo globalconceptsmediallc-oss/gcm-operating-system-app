@@ -13,12 +13,17 @@
 <!-- =========================================================
  Global Concepts Media Operating System
  File: growth-review-readiness.html
- Version: 1.1.0
+ Version: 1.2.0
  Status: Production Road-Test Candidate
- Source: growth-review-readiness.html 1.0.0
+ Source: growth-review-readiness.html 1.1.0
  Sprint: Growth Review — Evidence Quality + 90-Day Coverage
  Purpose: Read-only evidence-quality gate for the SES 90-Day Growth Review.
           This page performs no D1 writes and generates no client conclusions.
+
+ Change Notes — 1.2.0
+ - Treats Monitoring Evidence and generic Proof labels as supporting monitoring, not substantive completed work, even when the record contains detailed source evidence.
+ - Prevents automated monitoring emails from satisfying the substantive Proof gate.
+ - Preserves those records as supporting evidence and leaves D1 unchanged.
 
  Change Notes — 1.1.0
  - Replaces record-count readiness with a 90-day evidence-quality gate.
@@ -81,11 +86,11 @@
 
 <script src="shared/gcm-shell.js"></script>
 <script>
-window.addEventListener("DOMContentLoaded",function(){if(window.GCMOShell)window.GCMOShell.mount({currentPage:"proof",statusText:"Growth Review readiness · v1.1.0"});});
+window.addEventListener("DOMContentLoaded",function(){if(window.GCMOShell)window.GCMOShell.mount({currentPage:"proof",statusText:"Growth Review readiness · v1.2.0"});});
 </script>
 <script>
 (function(){"use strict";
-const VERSION="1.1.0";
+const VERSION="1.2.0";
 const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
 const ZONE="America/New_York";
 const REVIEW_DAYS=90;
@@ -121,9 +126,14 @@ function substantiveProof(p){
   const detail=clean((p&&p.result)||(p&&p.businessValue)||(p&&p.notes)||(p&&p.description));
   const evidenceCount=arr(p&&p.evidence).length;
   if(!task)return false;
-  if(GENERIC_PROOF_PATTERN.test(task)&&!detail&&!evidenceCount)return false;
-  if(GENERIC_PROOF_PATTERN.test(category)&&!detail&&!evidenceCount)return false;
-  return true;
+
+  const taskIsGeneric=GENERIC_PROOF_PATTERN.test(task);
+  const categoryIsMonitoring=/^monitoring evidence$/i.test(category)||/^monitoring$/i.test(category);
+
+  if(categoryIsMonitoring)return false;
+  if(taskIsGeneric)return false;
+
+  return Boolean(detail||evidenceCount||task);
 }
 function check(label,detail,state){
   return '<article class="check"><div><strong>'+esc(label)+'</strong><span>'+esc(detail)+'</span></div><b class="badge '+esc(state)+'">'+(state==="pass"?"Ready":state==="gap"?"Gap":"Failed")+'</b></article>';
