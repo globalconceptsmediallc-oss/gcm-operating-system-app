@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/forwardLookInteraction.test.js
-   Version: 1.1.0
+   Version: 1.1.1
    Status: Regression Test
    Purpose: Lock the first interactive Forward Look workflow for
             passed radio / traffic commitments.
@@ -15,7 +15,7 @@ const media = fs.readFileSync(new URL("../routes/mediaOperationsLegacy.js", impo
 const forwardLookRoute = fs.readFileSync(new URL("../routes/forwardLookOperations.js", import.meta.url), "utf8");
 const forwardLookMigration = fs.readFileSync(new URL("../migrations/0039_forward_look_dispositions.sql", import.meta.url), "utf8");
 
-assert.match(today,/Version: 3\.6\.7/);
+assert.match(today,/Version: 3\.6\.8/);
 assert.match(today,/data-forward-manage-kind/);
 assert.match(today,/closePassedForwardLookItem/);
 assert.match(today,/forward-look-operations/);
