@@ -13,12 +13,17 @@
 <!-- =========================================================
  Global Concepts Media Operating System
  File: growth-review-readiness.html
- Version: 1.2.0
+ Version: 1.3.0
  Status: Production Road-Test Candidate
- Source: growth-review-readiness.html 1.1.0
+ Source: growth-review-readiness.html 1.2.0
  Sprint: Growth Review — Evidence Quality + 90-Day Coverage
  Purpose: Read-only evidence-quality gate for the SES 90-Day Growth Review.
           This page performs no D1 writes and generates no client conclusions.
+
+ Change Notes — 1.3.0
+ - Excludes monitoring/alert activity from substantive Proof when its category, task, or narrative identifies it as monitoring-only evidence.
+ - Specifically prevents SEO Monitoring, SEO Ranking Alert, Position Tracking Alert, and "preserve as monitoring evidence" records from satisfying the completed-work gate.
+ - Keeps those records visible as supporting evidence without deleting or rewriting D1 history.
 
  Change Notes — 1.2.0
  - Treats Monitoring Evidence and generic Proof labels as supporting monitoring, not substantive completed work, even when the record contains detailed source evidence.
@@ -86,11 +91,11 @@
 
 <script src="shared/gcm-shell.js"></script>
 <script>
-window.addEventListener("DOMContentLoaded",function(){if(window.GCMOShell)window.GCMOShell.mount({currentPage:"proof",statusText:"Growth Review readiness · v1.2.0"});});
+window.addEventListener("DOMContentLoaded",function(){if(window.GCMOShell)window.GCMOShell.mount({currentPage:"proof",statusText:"Growth Review readiness · v1.3.0"});});
 </script>
 <script>
 (function(){"use strict";
-const VERSION="1.2.0";
+const VERSION="1.3.0";
 const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
 const ZONE="America/New_York";
 const REVIEW_DAYS=90;
@@ -128,10 +133,16 @@ function substantiveProof(p){
   if(!task)return false;
 
   const taskIsGeneric=GENERIC_PROOF_PATTERN.test(task);
-  const categoryIsMonitoring=/^monitoring evidence$/i.test(category)||/^monitoring$/i.test(category);
+  const monitoringText=[task,category,detail].join(" ").toLowerCase();
+  const monitoringOnly=
+    /\bmonitoring\b/.test(monitoringText) ||
+    /\branking alert\b/.test(monitoringText) ||
+    /\bposition tracking alert\b/.test(monitoringText) ||
+    /preserve.{0,80}monitoring evidence/.test(monitoringText) ||
+    /no investigation or work item created/.test(monitoringText);
 
-  if(categoryIsMonitoring)return false;
   if(taskIsGeneric)return false;
+  if(monitoringOnly)return false;
 
   return Boolean(detail||evidenceCount||task);
 }
