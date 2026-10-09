@@ -15,7 +15,7 @@
 <!-- =========================================================
  Global Concepts Media Operating System
  File: growth-review-candidate-issues.html
- Version: 1.1.0
+ Version: 1.1.1
  Status: Production Road-Test Candidate
  Sprint: Growth Review — Human-Routed Candidate Issues
  Purpose: Read-only view of candidate Growth Review issues derived only from
@@ -34,7 +34,7 @@
  - No Consulting Knowledge generation.
  - No Growth Review generation.
  - No client conclusions.
- - v1.1.0 uses the shared Monthly / Quarterly / Yearly / Custom review-period contract and carries the exact selected dates through adjacent Growth Review links.
+ - v1.1.1 prevents an indefinite loading state by timing out a stalled read-only Client Findings request and retrying it once before showing an explicit error.\n - v1.1.0 uses the shared Monthly / Quarterly / Yearly / Custom review-period contract and carries the exact selected dates through adjacent Growth Review links.
  ========================================================= -->
 <div class="shell">
 <aside class="sidebar" data-gcm-shell-sidebar></aside>
@@ -116,12 +116,12 @@
 <script src="shared/gcm-shell.js"></script>
 <script>
 window.addEventListener("DOMContentLoaded",function(){
-  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"proof",statusText:"Growth Review candidate issues · v1.1.0"});
+  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"proof",statusText:"Growth Review candidate issues · v1.1.1"});
 });
 </script>
 <script>
 (function(){"use strict";
-const VERSION="1.1.0";
+const VERSION="1.1.1";
 const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
 const ZONE="America/New_York";
 const ACTION_ROUTES=new Set(["investigation","requested_work"]);
@@ -198,7 +198,34 @@ function findingCard(x){
   const source=[routeLabel(route),linkedRecord(f,route),x.date,clean(f.category)].filter(Boolean).join(" · ");
   return '<article class="record '+routeClass(route)+'"><strong>'+esc(clean(f.source_title)||"Reviewed Finding")+'</strong><div class="meta">'+esc(source)+'</div>'+(body?'<p>'+esc(body)+'</p>':'')+(decision?'<div class="decision"><b>Recorded decision:</b> '+esc(decision)+'</div>':'')+'</article>';
 }
-async function api(action,extra){const body=Object.assign({action:action},extra||{});const r=await fetch(WORKER,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify(body)});const p=await r.json().catch(function(){return{}});if(!r.ok||p&&p.ok!==true)throw new Error(typeof p.error==="string"?p.error:(p&&p.error&&p.error.message)||("HTTP "+r.status));return p}
+async function apiOnce(action,extra,timeoutMs){
+  const body=Object.assign({action:action},extra||{});
+  const controller=new AbortController();
+  const timer=setTimeout(function(){controller.abort()},timeoutMs||15000);
+  try{
+    const r=await fetch(WORKER,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify(body),signal:controller.signal});
+    const p=await r.json().catch(function(){return{}});
+    if(!r.ok||p&&p.ok!==true)throw new Error(typeof p.error==="string"?p.error:(p&&p.error&&p.error.message)||("HTTP "+r.status));
+    return p;
+  }catch(error){
+    if(error&&error.name==="AbortError")throw new Error("Client Findings request timed out.");
+    throw error;
+  }finally{
+    clearTimeout(timer);
+  }
+}
+async function api(action,extra){
+  try{
+    return await apiOnce(action,extra,15000);
+  }catch(firstError){
+    setStatus("loading","The Client Findings read stalled once. Retrying…");
+    try{
+      return await apiOnce(action,extra,15000);
+    }catch(secondError){
+      throw new Error(secondError&&secondError.message?secondError.message:(firstError&&firstError.message?firstError.message:"Client Findings request failed."));
+    }
+  }
+}
 
 async function load(){
   els.refresh.disabled=true;
