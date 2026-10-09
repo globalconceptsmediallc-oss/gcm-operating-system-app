@@ -1,10 +1,12 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gcm-worker-deploy.yml
-# Version: 1.5.71
+# Version: 1.5.72
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Worker with human-led Signal Finding capture.
 # Change Notes:
+# - Deploy Worker 7.41.0 with read-only client Commerce Performance evidence and migration 0041.
+# - Verify the SES Jul 12-Oct 9, 2026 Shopify commerce snapshot without creating causal conclusions.
 # - Restore Schedule Operations 1.0.0 and keep Forward Look row closure in the dedicated D1 disposition layer.
 # - Re-run Worker 7.40.0 deployment after aligning the Forward Look durable-disposition regression.
 # - Deploy Worker 7.40.0 with D1-backed Forward Look row dispositions so closed passed items stay closed after refresh.
@@ -135,8 +137,8 @@ jobs:
           const healthResponse = await fetch(url);
           if (!healthResponse.ok) throw new Error(`Worker health returned HTTP ${healthResponse.status}`);
           const health = await healthResponse.json();
-          if (health.workerFileVersion !== "7.40.0") {
-            throw new Error(`Expected Worker 7.40.0, received ${health.workerFileVersion || "unknown"}`);
+          if (health.workerFileVersion !== "7.41.0") {
+            throw new Error(`Expected Worker 7.41.0, received ${health.workerFileVersion || "unknown"}`);
           }
           if (health.emailIntakeVersion !== "1.0.0") {
             throw new Error(`Expected Email Intake 1.0.0, received ${health.emailIntakeVersion || "unknown"}`);
@@ -168,6 +170,33 @@ jobs:
           if (health.measurementObservationsVersion !== "1.0.0") {
             throw new Error(`Expected Measurement Observations 1.0.0, received ${health.measurementObservationsVersion || "unknown"}`);
           }
+          if (health.commercePerformanceVersion !== "1.0.0") {
+            throw new Error(`Expected Commerce Performance 1.0.0, received ${health.commercePerformanceVersion || "unknown"}`);
+          }
+
+          const commerceResponse = await fetch(url, {
+            method:"POST",
+            headers:{ "Content-Type":"application/json" },
+            body:JSON.stringify({ action:"commerce-performance", operation:"list", clientCode:"SES", limit:5 })
+          });
+          if (!commerceResponse.ok) {
+            throw new Error(`Commerce Performance returned HTTP ${commerceResponse.status}`);
+          }
+          const commerce = await commerceResponse.json();
+          const sesCommerce = Array.isArray(commerce?.snapshots) ? commerce.snapshots.find(item =>
+            item?.periodStart === "2026-07-12" &&
+            item?.periodEnd === "2026-10-09" &&
+            Number(item?.totalSales) === 11524.73 &&
+            Number(item?.orders) === 5
+          ) : null;
+          if (!sesCommerce) {
+            throw new Error("SES Jul 12-Oct 9 Shopify commerce snapshot was not returned from production D1.");
+          }
+          if (!String(sesCommerce?.dataCaveat || "").includes("Sep 21, 2026")) {
+            throw new Error("SES commerce snapshot did not preserve the Shopify session-definition caveat.");
+          }
+          console.log("PASS SES Commerce Performance: $11,524.73 total sales, 5 orders, source caveat preserved");
+
           const financeResponse = await fetch(url, {
             method:"POST",
             headers:{ "Content-Type":"application/json" },
@@ -230,6 +259,7 @@ jobs:
             "schedule-operations",
             "forward-look-operations",
             "measurement-observations",
+            "commerce-performance",
             "evaluate-gmail-work-request",
             "approve-gmail-work-request",
             "delete-gmail-no-action",
