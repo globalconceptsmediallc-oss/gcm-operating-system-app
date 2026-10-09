@@ -15,7 +15,7 @@
 <!-- =========================================================
  Global Concepts Media Operating System
  File: growth-review-candidate-groups.html
- Version: 1.1.0
+ Version: 1.1.1
  Status: Production Road-Test Candidate
  Sprint: Growth Review — Candidate Operational Status
  Purpose: Group human-routed candidate findings by their exact linked
@@ -31,6 +31,7 @@
  - No Growth Intelligence generation.
  - No Consulting Knowledge generation.
  - No Growth Review generation.
+ - v1.1.1 corrects the Review Period helper declaration before road testing.
  - v1.1.0 replaces the hard-coded rolling 90-day window with operator-selectable Monthly, Quarterly, Yearly, or Custom review periods.
  - Monthly defaults to the previous completed calendar month; Quarterly and Yearly use the previous completed calendar period.
  - The selected period is persisted in the URL and carried into adjacent Growth Review stage links.
@@ -119,12 +120,12 @@
 <script src="shared/gcm-shell.js"></script>
 <script>
 window.addEventListener("DOMContentLoaded",function(){
-  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"proof",statusText:"Growth Review candidate groups · v1.1.0"});
+  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"proof",statusText:"Growth Review candidate groups · v1.1.1"});
 });
 </script>
 <script>
 (function(){"use strict";
-const VERSION="1.1.0";
+const VERSION="1.1.1";
 const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
 const ZONE="America/New_York";
 const ACTION_ROUTES=new Set(["investigation","requested_work"]);
