@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Southeast Safes — Stale-Open Reconciliation</title>
+<style>
+:root{--navy:#0d2744;--blue:#2f6fd6;--bg:#f2f6fb;--card:#fff;--border:#d7e0eb;--text:#16263a;--muted:#65758a;--green:#1f8b4c;--greenSoft:#edf9f1;--yellow:#9a6a00;--yellowSoft:#fff7dc;--red:#b33939;--redSoft:#fff0f0;--shadow:0 5px 16px rgba(21,43,72,.07)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.shell{display:grid;grid-template-columns:124px minmax(0,1fr);min-height:100vh}.sidebar{min-height:100vh}.page{max-width:1160px;margin:0 auto;padding:24px 22px 56px}.top{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:14px}.eyebrow{margin:0 0 4px;color:var(--blue);font-size:.68rem;font-weight:900;letter-spacing:.13em;text-transform:uppercase}h1{margin:0;color:var(--navy);font-size:1.72rem;line-height:1.12}.subtitle{max-width:780px;margin:7px 0 0;color:var(--muted);font-size:.82rem;line-height:1.5}.actions{display:flex;flex-wrap:wrap;gap:7px;justify-content:flex-end}.btn{display:inline-flex;align-items:center;justify-content:center;min-height:32px;padding:0 11px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--navy);font-size:.72rem;font-weight:800;text-decoration:none;cursor:pointer}.btn.primary{border-color:var(--blue);background:var(--blue);color:#fff}.banner{padding:10px 13px;margin-bottom:12px;border:1px solid var(--border);border-radius:9px;font-size:.76rem;font-weight:700}.banner.loading{background:#fff}.banner.pass{border-color:#b8dfc5;background:var(--greenSoft);color:var(--green)}.banner.fail{border-color:#efcccc;background:var(--redSoft);color:var(--red)}
+.summary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;margin-bottom:12px}.card,.panel{border:1px solid var(--border);background:var(--card);box-shadow:var(--shadow)}.card{padding:13px 14px;border-radius:10px}.label{color:var(--muted);font-size:.62rem;font-weight:900;letter-spacing:.07em;text-transform:uppercase}.value{display:block;margin-top:5px;color:var(--navy);font-size:1.18rem;font-weight:900}.subvalue{display:block;margin-top:4px;color:var(--muted);font-size:.63rem;line-height:1.35}.panel{border-radius:11px;overflow:hidden}.panel+.panel{margin-top:12px}.panel-head{padding:13px 15px 11px;border-bottom:1px solid var(--border)}.panel-head h2{margin:0;color:var(--navy);font-size:.96rem}.panel-head p{margin:4px 0 0;color:var(--muted);font-size:.73rem;line-height:1.45}.panel-body{padding:13px 15px 16px}.checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.check{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:10px 11px;border:1px solid var(--border);border-radius:9px}.check strong{display:block;color:var(--navy);font-size:.78rem}.check span{display:block;margin-top:3px;color:var(--muted);font-size:.68rem;line-height:1.42}.badge{display:inline-flex;min-width:68px;min-height:22px;align-items:center;justify-content:center;padding:0 7px;border-radius:999px;font-size:.57rem;font-weight:900;text-transform:uppercase}.badge.review{background:var(--yellowSoft);color:var(--yellow)}.badge.open{background:var(--redSoft);color:var(--red)}.badge.pass{background:var(--greenSoft);color:var(--green)}.badge.lock{background:var(--yellowSoft);color:var(--yellow)}.records{display:grid;gap:10px}.issue{padding:12px;border:1px solid var(--border);border-radius:9px;background:#fff}.issue-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.issue h3{margin:0;color:var(--navy);font-size:.84rem;line-height:1.35}.meta{margin-top:4px;color:var(--muted);font-size:.65rem;line-height:1.4}.issue p{margin:7px 0 0;font-size:.71rem;line-height:1.45}.evidence-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.evidence-box{padding:9px;border:1px solid #e4e9ef;border-radius:7px;background:#fafbfd}.evidence-box strong{display:block;color:var(--navy);font-size:.7rem}.evidence-box ul{margin:5px 0 0;padding-left:17px}.evidence-box li{margin:3px 0;color:var(--muted);font-size:.66rem;line-height:1.4}.empty{padding:18px 12px;border:1px dashed var(--border);border-radius:8px;color:var(--muted);text-align:center;font-size:.72rem}.note{margin-top:10px;padding:11px;border-radius:8px;background:#f8fafc;color:var(--muted);font-size:.71rem;line-height:1.5}.note strong{color:var(--navy)}.lockbox{border:1px solid #ead79a;background:var(--yellowSoft);color:#6f5000;padding:11px;border-radius:8px;font-size:.71rem;line-height:1.5}
+@media(max-width:1000px){.summary{grid-template-columns:repeat(3,1fr)}}@media(max-width:780px){.shell{display:block}.summary,.checks,.evidence-grid{grid-template-columns:1fr}.page{padding:16px}.top{flex-direction:column}.actions{justify-content:flex-start}}
+</style>
+</head>
+<body>
+<!-- =========================================================
+ Global Concepts Media Operating System
+ File: growth-review-stale-open-reconciliation.html
+ Version: 1.0.0
+ Status: Production Road-Test Candidate
+ Sprint: Growth Review — Stale-Open Reconciliation
+ Purpose: Read-only reconciliation of still-open candidate Investigations
+          against exact linked Work Items and Proof/activity records.
+
+ Rules:
+ - Candidate source remains explicit human Investigation / Work Item route.
+ - Reconciliation uses exact investigation_id / work_item_id links only.
+ - "Review for closure" requires linked completed/closed work or qualifying
+   completed activity/proof on the same Investigation/work chain.
+ - Text similarity alone never triggers a stale-open flag.
+ - Nothing is auto-closed.
+ - No D1 writes.
+ - No Growth Intelligence generation.
+ - No Consulting Knowledge generation.
+ - No Growth Review generation.
+ ========================================================= -->
+<div class="shell">
+<aside class="sidebar" data-gcm-shell-sidebar></aside>
+<main><div class="page">
+<header class="top">
+  <div>
+    <p class="eyebrow">Client Growth Review</p>
+    <h1>Southeast Safes — Stale-Open Reconciliation</h1>
+    <p class="subtitle">Check the six still-open candidate Investigations against exact linked completed Work and Proof before any of them can become a future-facing Growth Review issue.</p>
+  </div>
+  <div class="actions">
+    <a class="btn" href="growth-review-candidate-groups.html">Back to Candidate Groups</a>
+    <a class="btn" href="growth-review-input-mapping.html">Input Mapping</a>
+    <button class="btn primary" id="refresh" type="button">Refresh Reconciliation</button>
+  </div>
+</header>
+
+<div class="banner loading" id="status">Loading open candidate Investigations and exact linked completion evidence…</div>
+
+<section class="summary">
+  <article class="card"><span class="label">Review Window</span><strong class="value" id="window">—</strong><span class="subvalue">inclusive 90-day period</span></article>
+  <article class="card"><span class="label">Open Candidates</span><strong class="value" id="openCandidates">—</strong><span class="subvalue">linked open Investigations</span></article>
+  <article class="card"><span class="label">Review for Closure</span><strong class="value" id="reviewClosure">—</strong><span class="subvalue">exact completion evidence exists</span></article>
+  <article class="card"><span class="label">No Completion Link</span><strong class="value" id="noCompletion">—</strong><span class="subvalue">still open with no exact completion link</span></article>
+  <article class="card"><span class="label">Auto-Closed</span><strong class="value">0</strong><span class="subvalue">human decision required</span></article>
+  <article class="card"><span class="label">Generator</span><strong class="value">LOCKED</strong><span class="subvalue">reconciliation only</span></article>
+</section>
+
+<section class="panel">
+  <div class="panel-head"><h2>Stale-Open Gate</h2><p>This page flags an open candidate only when the OS already contains exact linked completion evidence. Similar wording is not enough.</p></div>
+  <div class="panel-body">
+    <div class="checks" id="checks"><div class="empty">Checking exact operational links…</div></div>
+    <div class="note" id="decision">No Investigation status changes are permitted on this page.</div>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-head"><h2>Open Candidate Reconciliation</h2><p>Each candidate shows its exact linked Work Items and completion/proof evidence. A yellow flag means “human closure review,” not “closed.”</p></div>
+  <div class="panel-body"><div class="records" id="issues"><div class="empty">Loading reconciliation…</div></div></div>
+</section>
+
+<section class="panel">
+  <div class="panel-head"><h2>Next Boundary</h2><p>Only after this page is road-tested should any open candidate be closed or selected as a true future Growth Review issue.</p></div>
+  <div class="panel-body">
+    <div class="checks">
+      <article class="check"><div><strong>Allowed next</strong><span>Review yellow-flagged Investigations one at a time and decide whether the existing completion evidence justifies closing the Investigation.</span></div><b class="badge pass">Allowed</b></article>
+      <article class="check"><div><strong>Still prohibited</strong><span>No automatic closure, no inferred growth impact, no priority score, and no client-facing Growth Review conclusion.</span></div><b class="badge lock">Locked</b></article>
+    </div>
+    <div class="lockbox"><strong>Generator lock:</strong> this is operational hygiene only. Growth Intelligence, Consulting Knowledge, and Growth Review generators remain unused.</div>
+  </div>
+</section>
+</div></main></div>
+
+<script src="shared/gcm-shell.js"></script>
+<script>
+window.addEventListener("DOMContentLoaded",function(){
+  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"proof",statusText:"Growth Review stale-open reconciliation · v1.0.0"});
+});
+</script>
+<script>
+(function(){"use strict";
+const VERSION="1.0.0";
+const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+const ZONE="America/New_York";
+const REVIEW_DAYS=90;
+const CLOSED_INVESTIGATION=new Set(["resolved","closed","complete","completed","cancelled","canceled","archived","ignored","no_action"]);
+const CLOSED_WORK=new Set(["completed","complete","closed","resolved","cancelled","canceled"]);
+const $=function(id){return document.getElementById(id)};
+const els={status:$("status"),refresh:$("refresh"),window:$("window"),openCandidates:$("openCandidates"),reviewClosure:$("reviewClosure"),noCompletion:$("noCompletion"),checks:$("checks"),decision:$("decision"),issues:$("issues")};
+
+function esc(v){return String(v==null?"":v).replace(/[&<>'"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]})}
+function clean(v){return String(v==null?"":v).trim()}
+function arr(v){return Array.isArray(v)?v:[]}
+function norm(v){return clean(v).toLowerCase().replace(/[-\s]+/g,"_")}
+function isoParts(value){const m=clean(value).match(/(\d{4})-(\d{2})-(\d{2})/);if(!m)return"";const y=Number(m[1]),mo=Number(m[2]),d=Number(m[3]);const dt=new Date(Date.UTC(y,mo-1,d));if(dt.getUTCFullYear()!==y||dt.getUTCMonth()!==mo-1||dt.getUTCDate()!==d)return"";return m[1]+"-"+m[2]+"-"+m[3]}
+function allIsoDates(value){const matches=clean(value).match(/\d{4}-\d{2}-\d{2}/g)||[];return matches.map(isoParts).filter(Boolean).sort()}
+function findingDate(f){const direct=isoParts(f&&f.source_date);if(direct)return direct;const dates=allIsoDates(f&&f.reporting_period);return dates.length?dates[dates.length-1]:""}
+function activityDate(a){return isoParts((a&&a.activity_date)||(a&&a.date)||(a&&a.created_at))}
+function todayNY(){const parts=new Intl.DateTimeFormat("en-US",{timeZone:ZONE,year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());const v={};parts.forEach(function(p){v[p.type]=p.value});return v.year+"-"+v.month+"-"+v.day}
+function shiftDays(dateOnly,delta){const p=dateOnly.split("-").map(Number);const d=new Date(Date.UTC(p[0],p[1]-1,p[2]));d.setUTCDate(d.getUTCDate()+delta);return d.toISOString().slice(0,10)}
+function inWindow(d,start,end){return Boolean(d&&d>=start&&d<=end)}
+function routeOf(f){return clean(f&&f.intake_disposition).toLowerCase()}
+function completedWork(w){return CLOSED_WORK.has(norm(w&&w.status))}
+function completedActivity(a){return ["complete","completed","closed","done"].includes(norm(a&&a.status||"completed"))}
+function setStatus(kind,text){els.status.className="banner "+kind;els.status.textContent=text}
+function check(label,detail,state){return '<article class="check"><div><strong>'+esc(label)+'</strong><span>'+esc(detail)+'</span></div><b class="badge '+esc(state)+'">'+(state==="review"?"Review":state==="open"?"Open":"Ready")+'</b></article>'}
+function empty(text){return '<div class="empty">'+esc(text)+'</div>'}
+function list(items,render){if(!items.length)return"<li>None linked</li>";return items.map(render).join("")}
+async function api(action,extra){const body=Object.assign({action:action},extra||{});const r=await fetch(WORKER,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify(body)});const p=await r.json().catch(function(){return{}});if(!r.ok||p&&p.ok!==true)throw new Error(typeof p.error==="string"?p.error:(p&&p.error&&p.error.message)||("HTTP "+r.status));return p}
+
+async function load(){
+  els.refresh.disabled=true;
+  setStatus("loading","Loading open candidate Investigations and exact linked completion evidence…");
+  try{
+    const end=todayNY(),start=shiftDays(end,-(REVIEW_DAYS-1));
+    els.window.textContent=start.slice(5).replace("-","/")+"–"+end.slice(5).replace("-","/");
+
+    const loaded=await Promise.all([
+      api("get-client-findings",{clientCode:"SES"}),
+      api("get-client-workspace",{clientCode:"SES"})
+    ]);
+    const findings=arr(loaded[0]&&loaded[0].findings);
+    const op=loaded[1]&&loaded[1].operational||{};
+    const investigations=arr(op.investigationHistory);
+    const workItems=arr(op.workItems);
+    const activities=arr(op.proofOfWork);
+    const invMap=new Map(investigations.map(function(i){return[Number(i.id),i]}));
+
+    const candidateByInv=new Map();
+    findings.map(function(f){return{item:f,date:findingDate(f),route:routeOf(f)}}).filter(function(x){
+      return inWindow(x.date,start,end)&&x.route==="investigation"&&Number(x.item&&x.item.linked_investigation_id)>0;
+    }).forEach(function(x){
+      const id=Number(x.item.linked_investigation_id);
+      if(!candidateByInv.has(id))candidateByInv.set(id,[]);
+      candidateByInv.get(id).push(x);
+    });
+
+    const openCandidates=[];
+    candidateByInv.forEach(function(sourceFindings,id){
+      const inv=invMap.get(id);
+      if(!inv||CLOSED_INVESTIGATION.has(norm(inv.status)))return;
+
+      const linkedWork=workItems.filter(function(w){return Number(w&&w.investigation_id)===id});
+      const linkedWorkIds=new Set(linkedWork.map(function(w){return Number(w.id)}));
+      const linkedActivities=activities.filter(function(a){
+        return Number(a&&a.investigation_id)===id || (Number(a&&a.work_item_id)>0&&linkedWorkIds.has(Number(a.work_item_id)));
+      });
+      const completedWorks=linkedWork.filter(completedWork);
+      const completedActivities=linkedActivities.filter(completedActivity);
+      const closureEvidence=completedWorks.length>0||completedActivities.length>0||Boolean(inv.resolved_at)||Boolean(inv.closed_at);
+
+      openCandidates.push({
+        id:id,
+        inv:inv,
+        findings:sourceFindings,
+        linkedWork:linkedWork,
+        linkedActivities:linkedActivities,
+        completedWorks:completedWorks,
+        completedActivities:completedActivities,
+        closureEvidence:closureEvidence
+      });
+    });
+
+    const review=openCandidates.filter(function(x){return x.closureEvidence});
+    const noCompletion=openCandidates.filter(function(x){return !x.closureEvidence});
+    els.openCandidates.textContent=openCandidates.length;
+    els.reviewClosure.textContent=review.length;
+    els.noCompletion.textContent=noCompletion.length;
+
+    els.checks.innerHTML=[
+      check("Exact-link only","Reconciliation uses investigation_id and work_item_id relationships. Text similarity is ignored.","pass"),
+      check("Open candidate scope",openCandidates.length+" human-routed candidate Investigation"+(openCandidates.length===1?" is":"s are")+" currently open in D1.","open"),
+      check("Possible stale-open records",review.length+" open Investigation"+(review.length===1?" has":"s have")+" exact linked completion evidence and require human closure review.",review.length?"review":"pass"),
+      check("No completion evidence",noCompletion.length+" open Investigation"+(noCompletion.length===1?" has":"s have")+" no exact linked completion record and remain open candidates.","open"),
+      check("Automatic closure","0 Investigations were changed. This page is read-only.","pass"),
+      check("Generator state","No growth impact, priority, roadmap, or client-facing conclusion was generated.","pass")
+    ].join("");
+
+    openCandidates.sort(function(a,b){
+      if(a.closureEvidence!==b.closureEvidence)return a.closureEvidence?-1:1;
+      return b.id-a.id;
+    });
+
+    els.issues.innerHTML=openCandidates.map(function(x){
+      const inv=x.inv||{};
+      const flag=x.closureEvidence?"review":"open";
+      const badge=x.closureEvidence?"REVIEW FOR CLOSURE":"OPEN — NO COMPLETION LINK";
+      const findingDateMin=x.findings.map(function(f){return f.date}).sort()[0]||"";
+      let html='<article class="issue"><div class="issue-head"><div><h3>'+esc("Investigation #"+x.id+": "+(clean(inv.title)||"Review required"))+'</h3><div class="meta">'+esc([clean(inv.status)||"Open",clean(inv.priority),findingDateMin?("candidate since "+findingDateMin):""].filter(Boolean).join(" · "))+'</div></div><b class="badge '+flag+'">'+esc(badge)+'</b></div>';
+      const reason=clean(inv.current_next_step)||clean(inv.next_step)||clean(inv.description)||clean(inv.finding_summary);
+      if(reason)html+='<p>'+esc(reason)+'</p>';
+      html+='<div class="evidence-grid">';
+      html+='<div class="evidence-box"><strong>Exact linked Work Items</strong><ul>'+list(x.linkedWork,function(w){return"<li>"+esc("#"+w.id+" · "+clean(w.status)+" · "+clean(w.title)+(w.completed_at?(" · completed "+isoParts(w.completed_at)):""))+"</li>"})+'</ul></div>';
+      html+='<div class="evidence-box"><strong>Exact linked Proof / Activity</strong><ul>'+list(x.linkedActivities,function(a){return"<li>"+esc("#"+a.id+" · "+(activityDate(a)||"undated")+" · "+clean(a.status||"completed")+" · "+clean(a.activity||a.title||a.task))+"</li>"})+'</ul></div>';
+      html+='</div>';
+      if(x.closureEvidence){
+        html+='<div class="note"><strong>Why flagged:</strong> the Investigation is still open, but the same exact Investigation/work chain contains completed/closed work, completed activity/proof, or a resolution/closure timestamp. Human review is required before changing status.</div>';
+      }else{
+        html+='<div class="note"><strong>Why still open:</strong> no exact linked completion evidence was found. This does not prove the issue is important; it only means the OS has not yet recorded a linked completion.</div>';
+      }
+      html+='</article>';
+      return html;
+    }).join("")||empty("No open candidate Investigations were returned.");
+
+    els.decision.innerHTML="<strong>RECONCILIATION READY FOR ROAD TEST:</strong> "+review.length+" possible stale-open Investigation"+(review.length===1?"":"s")+" separated from "+noCompletion.length+" open candidate"+(noCompletion.length===1?"":"s")+" with no exact completion link. No statuses were changed.";
+    setStatus("pass","SES open candidates reconciled against exact linked Work and Proof. No status changes, inferred closures, or D1 writes were performed.");
+  }catch(err){
+    console.error(err);
+    setStatus("fail","Stale-open reconciliation failed: "+(err&&err.message?err.message:String(err)));
+    els.checks.innerHTML=empty("Reconciliation could not complete.");
+    els.issues.innerHTML=empty("No reconciliation result available.");
+    els.decision.textContent="No status changes are permitted.";
+  }finally{els.refresh.disabled=false}
+}
+els.refresh.addEventListener("click",load);
+load();
+})();
+</script>
+</body>
+</html>
