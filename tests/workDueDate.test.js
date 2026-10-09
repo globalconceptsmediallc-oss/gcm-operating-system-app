@@ -1,11 +1,14 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/workDueDate.test.js
-   Version: 1.1.4
+   Version: 1.1.5
    Status: Production Regression Test
    Source: tests/workDueDate.test.js 1.1.1
    Purpose: Verify the durable Work due-date contract and the Work Queue
             visibility contract stay wired in production.
+   Change notes — 1.1.5:
+   - Aligns the superseded-disposition assertion with the production array-membership implementation.
+
    Change notes — 1.1.4:
    - Updates the Work Item processing route version lock to 7.7.0 after adding the
      superseded / duplicate reconciliation disposition.
@@ -93,7 +96,7 @@ assert.match(
 
 assert.match(
   route,
-  /disposition===["']superseded["']/
+  /const isSuperseded=\["superseded","duplicate","superseded_duplicate"\]\.includes\(disposition\)/
 );
 
 assert.match(
