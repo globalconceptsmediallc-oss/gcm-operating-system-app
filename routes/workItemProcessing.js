@@ -14,7 +14,7 @@
    - Superseded closure records a work_disposition Evidence entry and preserves the Work Item as closed history.
    - Superseded closure never sets completed_at, never creates completion proof, and never claims work was performed.
    - A linked Investigation is left unchanged; only the Work Item is reconciled.
-   - Regression locks aligned in tests/workDueDate.test.js 1.1.5 and tests/workCoreWebVitalsDecision.test.js 1.1.2.
+   - Regression locks aligned in tests/workDueDate.test.js 1.1.5, tests/workCoreWebVitalsDecision.test.js 1.1.2, and tests/forwardLookInteraction.test.js 1.1.2.
 
    Changes in 7.6.0:
    - Accepts optional dueDate / due_date on create-requested-work.
