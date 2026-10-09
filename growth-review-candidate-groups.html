@@ -15,7 +15,7 @@
 <!-- =========================================================
  Global Concepts Media Operating System
  File: growth-review-candidate-groups.html
- Version: 1.1.1
+ Version: 1.1.2
  Status: Production Road-Test Candidate
  Sprint: Growth Review — Candidate Operational Status
  Purpose: Group human-routed candidate findings by their exact linked
@@ -31,6 +31,7 @@
  - No Growth Intelligence generation.
  - No Consulting Knowledge generation.
  - No Growth Review generation.
+ - v1.1.2 preserves the exact start/end dates carried in the URL for every named preset so a saved Monthly, Quarterly, or Yearly review cannot drift later.
  - v1.1.1 corrects the Review Period helper declaration before road testing.
  - v1.1.0 replaces the hard-coded rolling 90-day window with operator-selectable Monthly, Quarterly, Yearly, or Custom review periods.
  - Monthly defaults to the previous completed calendar month; Quarterly and Yearly use the previous completed calendar period.
@@ -120,12 +121,12 @@
 <script src="shared/gcm-shell.js"></script>
 <script>
 window.addEventListener("DOMContentLoaded",function(){
-  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"proof",statusText:"Growth Review candidate groups · v1.1.1"});
+  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"proof",statusText:"Growth Review candidate groups · v1.1.2"});
 });
 </script>
 <script>
 (function(){"use strict";
-const VERSION="1.1.1";
+const VERSION="1.1.2";
 const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
 const ZONE="America/New_York";
 const ACTION_ROUTES=new Set(["investigation","requested_work"]);
@@ -167,7 +168,10 @@ function resolvePeriod(){
   const requested=norm(params.get("period"));
   const start=isoParts(params.get("start"));
   const end=isoParts(params.get("end"));
-  if(requested==="custom"&&start&&end&&start<=end)return{type:"custom",start:start,end:end,label:"Custom date range"};
+  if(start&&end&&start<=end&&["monthly","quarterly","yearly","custom"].includes(requested)){
+    const labels={monthly:"Previous completed calendar month",quarterly:"Previous completed quarter",yearly:"Previous completed calendar year",custom:"Custom date range"};
+    return{type:requested,start:start,end:end,label:labels[requested]};
+  }
   if(["monthly","quarterly","yearly"].includes(requested))return periodFromPreset(requested);
   return periodFromPreset("monthly");
 }
