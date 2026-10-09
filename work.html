@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.39
+   Version: 1.9.40
    Status: FBDT Production Candidate
    Source: Stable production work.html 1.9.18
    Sprint: Work Queue Full Recovery
@@ -22,6 +22,9 @@
    - communications-operational-decision-v3
 
    Audited changes:
+   - v1.9.40 fixes redirect evidence gating: three matching redirect samples prove a repeated behavior pattern, not a shared root cause.
+   - Create Work remains locked until SEMrush evidence identifies a current source page linking to an initial redirect URL and its final destination.
+   - Once that source-link relationship is proven, Work can be created to replace affected internal links with final destination URLs and verify by recrawl.
    - v1.9.39 makes Investigation evidence text-first and removes screenshot analysis from the operator workflow.
    - Operators now paste verified source facts directly into Add Evidence; screenshots are no longer required.
    - Existing evidence decision, relevance, duplicate, root-cause, history, and Work-gating rules remain unchanged.
@@ -221,7 +224,7 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Use Investigation when the correct action is unknown. Use Create Requested Work when the client need and deliverable are already clear.</p></div>
-        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.39</span>
+        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.40</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -306,7 +309,7 @@
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.39"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.40"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),externalValidation:byId("external-validation-list"),target:byId("target-banner"),requestedForm:byId("requested-work-form"),requestedClient:byId("requested-client"),requestedMessage:byId("requested-work-message"),createRequested:byId("create-requested-work")};
   let activeClients=[],directoryClients=[],investigations=[],monitoringInvestigations=[],workItems=[],validationWorkItems=[],selectedKey="",processing=false,processingWorkItem=false,processingRequestedWork=false;
 
@@ -2100,6 +2103,37 @@
       }
     }
 
+    const factText=(facts||[]).join("\n");
+    const labeledUrl=(pattern)=>{
+      const match=factText.match(pattern);
+      return match?String(match[1]||"").trim().replace(/[),.;]+$/,""):"";
+    };
+    const redirectSourcePage=labeledUrl(/(?:Source page|Page URL With Redirect Link)\s*(?:\||:|-)\s*(https?:\/\/[^\s|]+)/i);
+    const redirectInitialUrl=labeledUrl(/(?:Initial Redirect URL|Affected URL)\s*(?:\||:|-)\s*(https?:\/\/[^\s|]+)/i);
+    const redirectFinalUrl=labeledUrl(/(?:Final Destination URL|Redirects to)\s*(?:\||:|-)\s*(https?:\/\/[^\s|]+)/i);
+    const redirectStatus301=/(?:HTTP status|status)\s*(?:\||:|-)\s*301\b/i.test(factText);
+
+    if(
+      redirectSourcePage &&
+      redirectInitialUrl &&
+      redirectFinalUrl &&
+      redirectStatus301
+    ){
+      return {
+        evidenceType:"internal_redirect_link_source",
+        issueName:"Internal links point to permanent redirects",
+        count:mostRecentIssueCount(history)||1,
+        severity:"notice",
+        sampleUrl:redirectInitialUrl,
+        implementationSource:redirectSourcePage,
+        rootCauseProven:true,
+        reason:`SEMrush identifies ${redirectSourcePage} as a current source page linking to ${redirectInitialUrl}, which returns 301 and resolves to ${redirectFinalUrl}. This proves the actionable cause for a current redirect-link instance: an internal link still points to an obsolete URL instead of the final destination.`,
+        expectedImpact:"Updating affected internal links to their final destination URLs removes unnecessary redirect hops while preserving intentional 301 redirects for external and historical URLs.",
+        nextQuestion:"Which affected SES internal links should be changed to their final destination URLs?",
+        nextEvidence:"Create corrective Work to inventory the SEMrush permanent-redirect rows, update each internal source link to the final destination where appropriate, then rerun the Site Audit and verify the redirect-link count is materially reduced without breaking intentional redirects."
+      };
+    }
+
     const sampleUrl=extractVisibleUrl(facts);
     const is404=/\b404\b|page not found|page can.t be found|nothing was found at this location/.test(joined);
     const isSuccess=/\b200\b|loads successfully|page loaded successfully/.test(joined);
@@ -2111,23 +2145,25 @@
         entry.evidenceType==="live_url_sample" &&
         String(entry.finding||"").toLowerCase().includes(is404?"404":isRedirect?"redirect":"loads successfully")
       ).length;
-      const rootCauseProven=matchingSamples+1>=3;
+      const repeatedBehavior=matchingSamples+1>=3;
       return {
         evidenceType:"live_url_sample",
         sampleUrl,
         issueName:mostRecentIssueName(history)||"the selected SEMrush issue",
         count:mostRecentIssueCount(history),
         severity:"error",
-        rootCauseProven,
-        reason:`The sampled URL ${behavior}. One URL proves the behavior exists, but not yet whether the same root cause explains the full issue group.`,
-        expectedImpact:rootCauseProven
-          ?"Repeated samples support one corrective work item followed by a new crawl."
+        rootCauseProven:false,
+        reason:repeatedBehavior
+          ? `Three sampled URLs confirm repeated ${isRedirect?"redirect":is404?"404":"live-page"} behavior across the issue group, but repeated behavior alone does not prove which current source links or shared implementation are causing the issue.`
+          : `The sampled URL ${behavior}. One URL proves the behavior exists, but not yet whether the same root cause explains the full issue group.`,
+        expectedImpact:repeatedBehavior
+          ?"The issue pattern is verified, but corrective Work remains locked until the current source-link or implementation relationship is proven."
           :"Test additional URLs from the same SEMrush issue.",
-        nextQuestion:rootCauseProven
-          ?"What shared source, template, redirect rule, or deleted-content pattern is generating these invalid URLs?"
+        nextQuestion:repeatedBehavior
+          ?"Which current SES page is linking to one of these redirected URLs, and what final destination should replace that internal link?"
           :`Do at least two more affected URLs from the same issue show the same ${is404?"404":"behavior"}?`,
-        nextEvidence:rootCauseProven
-          ?"Capture the page, template, redirect configuration, sitemap entry, or CMS source that proves the shared root cause."
+        nextEvidence:repeatedBehavior
+          ?"From the SEMrush detailed issue, enter one row with Page URL With Redirect Link (source page), Initial Redirect URL, Final Destination URL, and HTTP status 301."
           :"Open another affected URL from the same SEMrush issue and capture the live result."
       };
     }
@@ -2635,9 +2671,7 @@
       return [
         `Live sample: ${decision.sampleUrl}.`,
         decision.reason,
-        decision.rootCauseProven
-          ? "Decision state: repeated evidence supports advancing to root-cause proof."
-          : "Decision state: continue sampling before defining corrective work."
+        "Decision state: behavior is verified, but corrective Work remains locked until the source-page link or shared implementation is proven."
       ].join("\n\n");
     }
 
@@ -2677,6 +2711,9 @@
     if(decision.rootCauseProven&&decision.evidenceType==="core_web_vitals_lcp_diagnostic"){
       return "Correct vault-doors LCP hero image loading";
     }
+    if(decision.rootCauseProven&&decision.evidenceType==="internal_redirect_link_source"){
+      return "Update SES internal links that point through permanent redirects";
+    }
     return decision.nextQuestion||"What is the next fact required to advance this Investigation?";
   }
 
@@ -2690,7 +2727,10 @@
     if(decision.rootCauseProven&&decision.evidenceType==="core_web_vitals_lcp_diagnostic"){
       return decision.nextEvidence||"Correct the LCP image loading behavior and rerun Core Web Vitals verification.";
     }
-    return decision.nextEvidence||"Capture the next evidence screenshot required to answer the current question.";
+    if(decision.rootCauseProven&&decision.evidenceType==="internal_redirect_link_source"){
+      return decision.nextEvidence||"Update affected internal source links to their final destination URLs, then rerun the SEMrush Site Audit.";
+    }
+    return decision.nextEvidence||"Enter the next verified evidence required to answer the current question.";
   }
 
   function updateDecisionControls(decision){
