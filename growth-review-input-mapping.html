@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Southeast Safes — Growth Review Input Mapping</title>
+<style>
+:root{--navy:#0d2744;--blue:#2f6fd6;--bg:#f2f6fb;--card:#fff;--border:#d7e0eb;--text:#16263a;--muted:#65758a;--green:#1f8b4c;--greenSoft:#edf9f1;--yellow:#9a6a00;--yellowSoft:#fff7dc;--red:#b33939;--redSoft:#fff0f0;--shadow:0 5px 16px rgba(21,43,72,.07)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.shell{display:grid;grid-template-columns:124px minmax(0,1fr);min-height:100vh}.sidebar{min-height:100vh}.page{max-width:1120px;margin:0 auto;padding:24px 22px 56px}.top{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:14px}.eyebrow{margin:0 0 4px;color:var(--blue);font-size:.68rem;font-weight:900;letter-spacing:.13em;text-transform:uppercase}h1{margin:0;color:var(--navy);font-size:1.72rem;line-height:1.12}.subtitle{max-width:720px;margin:7px 0 0;color:var(--muted);font-size:.82rem;line-height:1.5}.actions{display:flex;flex-wrap:wrap;gap:7px;justify-content:flex-end}.btn{display:inline-flex;align-items:center;justify-content:center;min-height:32px;padding:0 11px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--navy);font-size:.72rem;font-weight:800;text-decoration:none;cursor:pointer}.btn.primary{border-color:var(--blue);background:var(--blue);color:#fff}.banner{padding:10px 13px;margin-bottom:12px;border:1px solid var(--border);border-radius:9px;font-size:.76rem;font-weight:700}.banner.loading{background:#fff}.banner.pass{border-color:#b8dfc5;background:var(--greenSoft);color:var(--green)}.banner.fail{border-color:#efcccc;background:var(--redSoft);color:var(--red)}
+.summary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;margin-bottom:12px}.card,.panel{border:1px solid var(--border);background:var(--card);box-shadow:var(--shadow)}.card{padding:13px 14px;border-radius:10px}.label{color:var(--muted);font-size:.62rem;font-weight:900;letter-spacing:.07em;text-transform:uppercase}.value{display:block;margin-top:5px;color:var(--navy);font-size:1.18rem;font-weight:900}.subvalue{display:block;margin-top:4px;color:var(--muted);font-size:.63rem;line-height:1.35}.panel{border-radius:11px;overflow:hidden}.panel+.panel{margin-top:12px}.panel-head{padding:13px 15px 11px;border-bottom:1px solid var(--border)}.panel-head h2{margin:0;color:var(--navy);font-size:.96rem}.panel-head p{margin:4px 0 0;color:var(--muted);font-size:.73rem;line-height:1.45}.panel-body{padding:13px 15px 16px}.checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.check{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:10px 11px;border:1px solid var(--border);border-radius:9px}.check strong{display:block;color:var(--navy);font-size:.78rem}.check span{display:block;margin-top:3px;color:var(--muted);font-size:.68rem;line-height:1.42}.badge{display:inline-flex;min-width:62px;min-height:22px;align-items:center;justify-content:center;padding:0 7px;border-radius:999px;font-size:.58rem;font-weight:900;text-transform:uppercase}.badge.pass{background:var(--greenSoft);color:var(--green)}.badge.lock{background:var(--yellowSoft);color:var(--yellow)}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.records{display:grid;gap:8px}.record{padding:10px 11px;border:1px solid var(--border);border-radius:8px;background:#fff}.record strong{display:block;color:var(--navy);font-size:.79rem;line-height:1.35}.meta{margin-top:4px;color:var(--muted);font-size:.65rem;line-height:1.4}.record p{margin:6px 0 0;font-size:.71rem;line-height:1.45}.empty{padding:18px 12px;border:1px dashed var(--border);border-radius:8px;color:var(--muted);text-align:center;font-size:.72rem}.contract{display:grid;gap:8px}.contract-row{display:grid;grid-template-columns:180px minmax(0,1fr);gap:12px;padding:9px 0;border-bottom:1px solid #edf1f5;font-size:.72rem;line-height:1.45}.contract-row:last-child{border-bottom:0}.contract-row strong{color:var(--navy)}.note{margin-top:10px;padding:11px;border-radius:8px;background:#f8fafc;color:var(--muted);font-size:.71rem;line-height:1.5}.note strong{color:var(--navy)}.section-title{margin:0 0 8px;color:var(--navy);font-size:.8rem}.mini-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.locked{border:1px solid #ead79a;background:var(--yellowSoft);color:#6f5000;padding:11px;border-radius:8px;font-size:.71rem;line-height:1.5}
+@media(max-width:1000px){.summary{grid-template-columns:repeat(3,1fr)}}@media(max-width:780px){.shell{display:block}.summary,.grid,.checks,.mini-grid{grid-template-columns:1fr}.page{padding:16px}.top{flex-direction:column}.actions{justify-content:flex-start}.contract-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<!-- =========================================================
+ Global Concepts Media Operating System
+ File: growth-review-input-mapping.html
+ Version: 1.0.0
+ Status: Production Road-Test Candidate
+ Sprint: Growth Review — Existing Client Input Mapping
+ Purpose: Read-only adapter preview that maps authoritative SES operational
+          evidence into a neutral Existing Client Growth Review input contract.
+
+ Rules:
+ - Reviewed Findings are the primary interpretation layer.
+ - Measurements, completed work, Media, and current operations are supporting facts/context.
+ - Only source-dated findings and evidence inside the active 90-day period are mapped as dated review evidence.
+ - No D1 writes.
+ - No Growth Intelligence generation.
+ - No Consulting Knowledge generation.
+ - No Growth Review generation.
+ - No client conclusions.
+ ========================================================= -->
+<div class="shell">
+<aside class="sidebar" data-gcm-shell-sidebar></aside>
+<main><div class="page">
+<header class="top">
+  <div>
+    <p class="eyebrow">Client Growth Review</p>
+    <h1>Southeast Safes — Input Mapping</h1>
+    <p class="subtitle">Map the evidence that passed readiness into a neutral existing-client review contract before any Growth Intelligence, consulting recommendation, or Growth Review generator is allowed to run.</p>
+  </div>
+  <div class="actions">
+    <a class="btn" href="growth-review-readiness.html">Back to Readiness</a>
+    <a class="btn" href="business-workspace.html?business=southeast-safes">Open SES Workspace</a>
+    <button class="btn primary" id="refresh" type="button">Refresh Mapping</button>
+  </div>
+</header>
+
+<div class="banner loading" id="status">Loading authoritative SES evidence and building the read-only input map…</div>
+
+<section class="summary">
+  <article class="card"><span class="label">Review Window</span><strong class="value" id="window">—</strong><span class="subvalue">inclusive 90-day period</span></article>
+  <article class="card"><span class="label">Primary Findings</span><strong class="value" id="findingsCount">—</strong><span class="subvalue">source-dated Reviewed Findings</span></article>
+  <article class="card"><span class="label">Measurements</span><strong class="value" id="measurementsCount">—</strong><span class="subvalue" id="outcomeCount">supporting facts</span></article>
+  <article class="card"><span class="label">Completed Work</span><strong class="value" id="workCount">—</strong><span class="subvalue">Proof-rule eligible</span></article>
+  <article class="card"><span class="label">Media Context</span><strong class="value" id="mediaCount">—</strong><span class="subvalue">overlapping flights</span></article>
+  <article class="card"><span class="label">Generator</span><strong class="value">LOCKED</strong><span class="subvalue">mapping only</span></article>
+</section>
+
+<section class="panel">
+  <div class="panel-head"><h2>Input Mapping Gate</h2><p>This gate proves source-to-section placement. It does not decide what the evidence means.</p></div>
+  <div class="panel-body">
+    <div class="checks" id="checks"><div class="empty">Mapping evidence…</div></div>
+    <div class="note" id="decision">No review inputs have been approved yet.</div>
+  </div>
+</section>
+
+<section class="grid">
+  <article class="panel">
+    <div class="panel-head"><h2>Existing Client Review Contract</h2><p>The adapter contract the next engine stage is allowed to receive.</p></div>
+    <div class="panel-body">
+      <div class="contract" id="contract"></div>
+      <div class="locked"><strong>Generator lock:</strong> this page does not import or invoke <code>growth-intelligence-engine.js</code>, <code>consulting-knowledge.js</code>, or <code>growth-review-generator.js</code>.</div>
+    </div>
+  </article>
+
+  <article class="panel">
+    <div class="panel-head"><h2>Business & Current Operations</h2><p>Live workspace context. Current priorities are context for future action planning, not evidence of completed results.</p></div>
+    <div class="panel-body">
+      <div class="records" id="businessContext"></div>
+    </div>
+  </article>
+</section>
+
+<section class="grid">
+  <article class="panel">
+    <div class="panel-head"><h2>Primary Interpretation — Reviewed Findings</h2><p>These are the only records mapped as interpreted business findings. Monitoring and measurements do not silently become conclusions.</p></div>
+    <div class="panel-body"><div class="records" id="findings"></div></div>
+  </article>
+
+  <article class="panel">
+    <div class="panel-head"><h2>Supporting Measurements</h2><p>Factual observations only. Outcome metrics remain distinguishable from traffic/engagement metrics.</p></div>
+    <div class="panel-body"><div class="records" id="measurements"></div></div>
+  </article>
+</section>
+
+<section class="grid">
+  <article class="panel">
+    <div class="panel-head"><h2>Completed Work / Proof Context</h2><p>Only work qualifying under the existing Proof-page completion rules is mapped here.</p></div>
+    <div class="panel-body"><div class="records" id="completedWork"></div></div>
+  </article>
+
+  <article class="panel">
+    <div class="panel-head"><h2>Media Activity Context</h2><p>Media flights that overlap the review period. Presence is factual; effectiveness is not inferred here.</p></div>
+    <div class="panel-body"><div class="records" id="media"></div></div>
+  </article>
+</section>
+</div></main></div>
+
+<script src="shared/gcm-shell.js"></script>
+<script>
+window.addEventListener("DOMContentLoaded",function(){
+  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"proof",statusText:"Growth Review input mapping · v1.0.0"});
+});
+</script>
+<script>
+(function(){"use strict";
+const VERSION="1.0.0";
+const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+const ZONE="America/New_York";
+const REVIEW_DAYS=90;
+const OUTCOME_METRIC_PATTERN=/(conversion|lead|call|revenue|sale|sales|purchase|order|form|contact|showroom|transaction|key[_ ]?event)/i;
+const $=function(id){return document.getElementById(id)};
+const els={
+ status:$("status"),refresh:$("refresh"),window:$("window"),findingsCount:$("findingsCount"),
+ measurementsCount:$("measurementsCount"),outcomeCount:$("outcomeCount"),workCount:$("workCount"),
+ mediaCount:$("mediaCount"),checks:$("checks"),decision:$("decision"),contract:$("contract"),
+ businessContext:$("businessContext"),findings:$("findings"),measurements:$("measurements"),
+ completedWork:$("completedWork"),media:$("media")
+};
+
+function esc(v){return String(v==null?"":v).replace(/[&<>'"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]})}
+function clean(v){return String(v==null?"":v).trim()}
+function arr(v){return Array.isArray(v)?v:[]}
+function isoParts(value){const m=clean(value).match(/(\d{4})-(\d{2})-(\d{2})/);if(!m)return"";const y=Number(m[1]),mo=Number(m[2]),d=Number(m[3]);const dt=new Date(Date.UTC(y,mo-1,d));if(dt.getUTCFullYear()!==y||dt.getUTCMonth()!==mo-1||dt.getUTCDate()!==d)return"";return m[1]+"-"+m[2]+"-"+m[3]}
+function allIsoDates(value){const matches=clean(value).match(/\d{4}-\d{2}-\d{2}/g)||[];return matches.map(isoParts).filter(Boolean).sort()}
+function todayNY(){const parts=new Intl.DateTimeFormat("en-US",{timeZone:ZONE,year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());const v={};parts.forEach(function(p){v[p.type]=p.value});return v.year+"-"+v.month+"-"+v.day}
+function shiftDays(dateOnly,delta){const p=dateOnly.split("-").map(Number);const d=new Date(Date.UTC(p[0],p[1]-1,p[2]));d.setUTCDate(d.getUTCDate()+delta);return d.toISOString().slice(0,10)}
+function inWindow(d,start,end){return Boolean(d&&d>=start&&d<=end)}
+function rangesOverlap(a1,a2,b1,b2){if(!a1&&!a2)return false;const s=a1||a2,e=a2||a1;return s<=b2&&e>=b1}
+function findingDate(f){const direct=isoParts(f&&f.source_date);if(direct)return direct;const dates=allIsoDates(f&&f.reporting_period);return dates.length?dates[dates.length-1]:""}
+function measurementDate(m){return isoParts((m&&m.periodEnd)||(m&&m.period_end)||(m&&m.periodStart)||(m&&m.period_start))}
+function mediaStart(m){return isoParts((m&&m.startDate)||(m&&m.start_date))}
+function mediaEnd(m){return isoParts((m&&m.endDate)||(m&&m.end_date))}
+function proofDate(p){return isoParts((p&&p.date)||(p&&p.activity_date)||(p&&p.created_at))}
+function metricKey(m){return clean((m&&m.metricKey)||(m&&m.metric_key)).toLowerCase()}
+function metricValue(m){const v=(m&&m.metricValue)!==undefined?m.metricValue:m&&m.metric_value;return Number.isFinite(Number(v))?Number(v):v}
+function metricUnit(m){return clean((m&&m.metricUnit)||(m&&m.metric_unit))}
+function completeStatus(v){return ["completed","complete","closed","done"].includes(clean(v).toLowerCase())}
+function substantiveActivity(a){if(clean(a&&a.source_type).toLowerCase()==="gmail_monitoring")return false;if(!completeStatus(a&&a.status))return false;return Boolean(clean((a&&a.activity)||(a&&a.task)||(a&&a.title)))}
+function setStatus(kind,text){els.status.className="banner "+kind;els.status.textContent=text}
+function badge(label,state){return '<b class="badge '+state+'">'+esc(label)+'</b>'}
+function check(label,detail,state){return '<article class="check"><div><strong>'+esc(label)+'</strong><span>'+esc(detail)+'</span></div>'+badge(state==="pass"?"Mapped":"Locked",state)+'</article>'}
+function record(title,meta,body){return '<article class="record"><strong>'+esc(title)+'</strong><div class="meta">'+esc(meta)+'</div>'+(body?'<p>'+esc(body)+'</p>':'')+'</article>'}
+function empty(text){return '<div class="empty">'+esc(text)+'</div>'}
+function contractRow(label,value){return '<div class="contract-row"><strong>'+esc(label)+'</strong><span>'+esc(value)+'</span></div>'}
+async function api(action,extra){const body=Object.assign({action:action},extra||{});const r=await fetch(WORKER,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify(body)});const p=await r.json().catch(function(){return{}});if(!r.ok||p&&p.ok!==true)throw new Error(typeof p.error==="string"?p.error:(p&&p.error&&p.error.message)||("HTTP "+r.status));return p}
+
+async function load(){
+ els.refresh.disabled=true;
+ setStatus("loading","Loading authoritative SES evidence and building the read-only input map…");
+ try{
+  const end=todayNY(),start=shiftDays(end,-(REVIEW_DAYS-1));
+  els.window.textContent=start.slice(5).replace("-","/")+"–"+end.slice(5).replace("-","/");
+
+  const workspace=await api("get-client-workspace",{clientCode:"SES"});
+  const rec=workspace.record||{},op=workspace.operational||{};
+  const clientId=Number(rec&&rec.metadata&&rec.metadata.clientId||op&&op.client&&op.client.id||0);
+  if(!clientId)throw new Error("SES client id was not returned by Client Workspace.");
+
+  const loaded=await Promise.all([
+   api("get-client-findings",{clientCode:"SES"}),
+   api("measurement-observations",{operation:"list",clientId:clientId,limit:250}),
+   api("get-media-operations",{clientId:clientId})
+  ]);
+  const findings=arr(loaded[0]&&loaded[0].findings);
+  const measurements=arr(loaded[1]&&loaded[1].observations);
+  const media=arr(loaded[2]&&loaded[2].mediaOperations&&loaded[2].mediaOperations.records);
+  const work=arr(op.workItems),proof=arr(op.proofOfWork);
+
+  const eligibleFindings=findings.map(function(f){return {item:f,date:findingDate(f)}}).filter(function(x){return inWindow(x.date,start,end)});
+  const eligibleMeasurements=measurements.map(function(m){return {item:m,date:measurementDate(m)}}).filter(function(x){return inWindow(x.date,start,end)});
+  const outcomeMeasurements=eligibleMeasurements.filter(function(x){return OUTCOME_METRIC_PATTERN.test(metricKey(x.item))});
+
+  const completedWorkItems=work.map(function(w){return {item:w,date:isoParts((w&&w.completed_at)||(w&&w.updated_at)||(w&&w.created_at))}}).filter(function(x){return inWindow(x.date,start,end)&&completeStatus(x.item&&x.item.status)});
+  const completedIds=new Set(completedWorkItems.map(function(x){return Number(x.item&&x.item.id)}).filter(Boolean));
+  const completedActivities=proof.map(function(p){return {item:p,date:proofDate(p)}}).filter(function(x){
+    const linked=Number(x.item&&x.item.work_item_id);
+    return inWindow(x.date,start,end)&&(!linked||!completedIds.has(linked))&&substantiveActivity(x.item);
+  });
+  const completedWork=completedWorkItems.map(function(x){return {type:"Work Item",date:x.date,item:x.item}}).concat(completedActivities.map(function(x){return {type:"Activity",date:x.date,item:x.item}}));
+
+  const mediaInWindow=media.filter(function(m){return rangesOverlap(mediaStart(m),mediaEnd(m),start,end)});
+  const currentPriorities=arr(rec.currentPriorities);
+  const workQueue=arr(rec.workQueue);
+
+  const identity=rec.business||{};
+  const mapping={
+   schemaVersion:"1.0.0",
+   reviewType:"Existing Client 90-Day Growth Review",
+   reviewWindow:{start:start,end:end},
+   business:{
+    clientCode:clean(rec&&rec.metadata&&rec.metadata.clientCode)||"SES",
+    name:clean(identity.name),
+    website:clean(identity.website),
+    industry:clean(identity.industry),
+    relationshipStatus:clean(rec&&rec.relationship&&rec.relationship.status)
+   },
+   primaryInterpretation:{source:"Reviewed Findings",records:eligibleFindings},
+   supportingEvidence:{
+    measurements:eligibleMeasurements,
+    outcomeMeasurements:outcomeMeasurements,
+    completedWork:completedWork,
+    mediaActivity:mediaInWindow
+   },
+   currentOperationalContext:{
+    currentPriority:clean(rec&&rec.workspace&&rec.workspace.currentPriority),
+    nextAction:clean(rec&&rec.workspace&&rec.workspace.nextAction),
+    priorities:currentPriorities,
+    workQueue:workQueue
+   },
+   generatorState:"locked"
+  };
+
+  els.findingsCount.textContent=eligibleFindings.length;
+  els.measurementsCount.textContent=eligibleMeasurements.length;
+  els.outcomeCount.textContent=outcomeMeasurements.length+" outcome metric"+(outcomeMeasurements.length===1?"":"s");
+  els.workCount.textContent=completedWork.length;
+  els.mediaCount.textContent=mediaInWindow.length;
+
+  const checks=[
+   {label:"Business identity",detail:"Live Client Workspace identity mapped for "+(mapping.business.name||"SES")+".",state:"pass"},
+   {label:"Primary interpretation layer",detail:eligibleFindings.length+" source-dated Reviewed Findings mapped as interpretation; raw monitoring is not promoted to a conclusion.",state:"pass"},
+   {label:"Measurement layer",detail:eligibleMeasurements.length+" factual observations mapped, including "+outcomeMeasurements.length+" outcome-oriented observation"+(outcomeMeasurements.length===1?"":"s")+".",state:"pass"},
+   {label:"Completed-work layer",detail:completedWork.length+" records mapped under the same completed-work rules used by Proof.",state:"pass"},
+   {label:"Media activity layer",detail:mediaInWindow.length+" overlapping Media records mapped as context only.",state:"pass"},
+   {label:"Generator state",detail:"Growth Intelligence, Consulting Knowledge, and Growth Review generation remain disabled on this page.",state:"lock"}
+  ];
+  els.checks.innerHTML=checks.map(function(x){return check(x.label,x.detail,x.state)}).join("");
+
+  els.contract.innerHTML=[
+   contractRow("Business Overview Inputs","Live Client Workspace identity and relationship state"),
+   contractRow("Executive Summary Inputs","Source-dated Reviewed Findings only; no summary conclusion generated"),
+   contractRow("Business Health Inputs","Factual Measurement Observations, with outcome metrics separately identified"),
+   contractRow("Work / Proof Inputs","Completed Work Items plus qualifying non-monitoring completed activities"),
+   contractRow("Media Inputs","Flights overlapping the review window; no effectiveness inference"),
+   contractRow("Action Plan Inputs","Current priorities and open Work queue as unresolved operational context"),
+   contractRow("Excluded from conclusions","Undated Findings, monitoring-only activity, unsupported causality, stale static July Business Record"),
+   contractRow("Next adapter boundary","Transform reviewed findings into explicit candidate growth issues only after human mapping road test")
+  ].join("");
+
+  const businessRows=[
+   record(mapping.business.name||"Southeast Safes",[mapping.business.clientCode,mapping.business.industry,mapping.business.relationshipStatus].filter(Boolean).join(" · "),mapping.business.website),
+   record("Current Priority","Live Client Workspace",mapping.currentOperationalContext.currentPriority||"No open priority recorded."),
+   record("Current Next Action","Live Client Workspace",mapping.currentOperationalContext.nextAction||"No next action recorded.")
+  ];
+  currentPriorities.slice(0,4).forEach(function(p){businessRows.push(record(clean(p.title)||"Open Priority",["Current Priority",clean(p.category),clean(p.priority)].filter(Boolean).join(" · "),clean(p.businessValue)||clean(p.nextAction)))});
+  workQueue.slice(0,4).forEach(function(w){businessRows.push(record(clean(w.title)||"Open Work Item",["Open Work",clean(w.category),clean(w.priority)].filter(Boolean).join(" · "),clean(w.description)||clean(w.nextAction)))});
+  els.businessContext.innerHTML=businessRows.join("")||empty("No live business context returned.");
+
+  els.findings.innerHTML=eligibleFindings.slice(0,10).map(function(x){
+   const f=x.item;
+   return record(clean(f.source_title)||clean(f.category)||"Reviewed Finding",["Reviewed Finding",x.date,clean(f.category)].filter(Boolean).join(" · "),clean(f.analysis)||clean(f.decision)||clean(f.details));
+  }).join("")||empty("No eligible source-dated Reviewed Findings.");
+
+  els.measurements.innerHTML=eligibleMeasurements.slice(0,12).map(function(x){
+   const m=x.item,k=metricKey(m),isOutcome=OUTCOME_METRIC_PATTERN.test(k);
+   return record(k||"measurement",["Measurement",clean((m&&m.sourceSystem)||(m&&m.source_system)),x.date,isOutcome?"OUTCOME":"SUPPORTING"].filter(Boolean).join(" · "),String(metricValue(m))+" "+metricUnit(m));
+  }).join("")||empty("No eligible measurements.");
+
+  els.completedWork.innerHTML=completedWork.slice(0,10).map(function(x){
+   const w=x.item;
+   return record(clean(w.title)||clean(w.activity)||clean(w.task)||"Completed Work",[x.type,x.date,clean(w.category)].filter(Boolean).join(" · "),clean(w.actual_impact)||clean(w.description)||clean(w.notes)||clean(w.expected_impact));
+  }).join("")||empty("No eligible completed work.");
+
+  els.media.innerHTML=mediaInWindow.slice(0,10).map(function(m){
+   return record(clean(m.campaignName)||clean(m.creativeName)||clean(m.title)||"Media Record",[clean(m.mediaType),clean(m.market),[mediaStart(m),mediaEnd(m)].filter(Boolean).join("–")].filter(Boolean).join(" · "),[clean(m.outletName),clean(m.status),clean(m.trafficStatus),clean(m.confirmationStatus)].filter(Boolean).join(" · "));
+  }).join("")||empty("No overlapping Media records.");
+
+  els.decision.innerHTML="<strong>MAPPING READY FOR ROAD TEST:</strong> the evidence is now separated into primary interpretation, supporting facts, completed work, Media context, and unresolved operational context. The generator remains locked.";
+  setStatus("pass","SES evidence mapped successfully. No conclusions were generated and no D1 writes were performed.");
+ }catch(err){
+  console.error(err);
+  setStatus("fail","Input mapping failed: "+(err&&err.message?err.message:String(err)));
+  els.checks.innerHTML=empty("Mapping could not complete.");
+  els.decision.textContent="Generator remains locked.";
+ }finally{els.refresh.disabled=false}
+}
+els.refresh.addEventListener("click",load);
+load();
+})();
+</script>
+</body>
+</html>
