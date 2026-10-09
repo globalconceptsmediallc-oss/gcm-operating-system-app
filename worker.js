@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.41.0
+   Version: 7.42.0
    Status: OS 2.0 Production Road-Test Candidate
    Source: Production worker.js 7.35.0
    Sprint: Universal Email Intake — Human Disposition
@@ -9,6 +9,11 @@
             durable Prospecting Radar + CRM operations required to connect
             scheduled prospects, discovery, proposals, follow-up, agreements,
             payments, and eventual Client handoff.
+
+   Changes in 7.42.0:
+   - Upgrades Client Findings read output to include the original human-selected intake disposition.
+   - Exposes linked Investigation, Work Item, Activity, and Communication record IDs when present.
+   - Lets Growth Review mapping distinguish action-bearing findings from Monitoring/Information without reclassification.
 
    Changes in 7.41.0:
    - Adds a read-only client-level commerce-performance route for Growth Review evidence.
@@ -303,7 +308,7 @@ import {
   GMAIL_INTAKE_SYNC_VERSION
 } from "./routes/gmailIntakeSync.js";
 
-const WORKER_FILE_VERSION = "7.41.0";
+const WORKER_FILE_VERSION = "7.42.0";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
