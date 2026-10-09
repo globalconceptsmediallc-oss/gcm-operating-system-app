@@ -1,13 +1,19 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/workItemProcessing.js
-   Version: 7.6.0
+   Version: 7.7.0
    Status: Production Road-Test Candidate
    Source: Production routes/workItemProcessing.js 7.5.1
    Sprint: Work — Durable Due Dates
    Purpose: Preserve verified Work Item creation/completion behavior while
             adding an optional durable due date for real commitments so
             Mission Control and shared navigation can expose deadline urgency.
+
+   Changes in 7.7.0:
+   - Adds disposition=superseded for stale or duplicate Work Items.
+   - Superseded closure records a work_disposition Evidence entry and preserves the Work Item as closed history.
+   - Superseded closure never sets completed_at, never creates completion proof, and never claims work was performed.
+   - A linked Investigation is left unchanged; only the Work Item is reconciled.
 
    Changes in 7.6.0:
    - Accepts optional dueDate / due_date on create-requested-work.
@@ -116,6 +122,7 @@ export async function handleProcessWorkItem(body, env, requestId) {
   const disposition=normalizeDisposition(body?.disposition||body?.workDisposition||body?.work_disposition);
   const dispositionNote=clean(body?.dispositionNote||body?.disposition_note||body?.responsibilityNote||body?.responsibility_note);
   const isReassignment=disposition==="reassigned";
+  const isSuperseded=["superseded","duplicate","superseded_duplicate"].includes(disposition);
   const workPerformed=clean(body?.workPerformed||body?.work_performed);
   const actualImpact=clean(body?.actualImpact||body?.actual_impact||body?.result);
   const evidenceDescription=clean(body?.evidenceDescription||body?.evidence_description||body?.evidence);
@@ -127,9 +134,10 @@ export async function handleProcessWorkItem(body, env, requestId) {
   if(!clientCode) return jsonResponse({ok:false,requestId,action:ACTIONS.PROCESS_WORK_ITEM,error:"A clientCode is required."},400);
   if(!Number.isInteger(workItemId)||workItemId<=0) return jsonResponse({ok:false,requestId,action:ACTIONS.PROCESS_WORK_ITEM,error:"A valid workItemId is required."},400);
   if(isReassignment&&!dispositionNote) return jsonResponse({ok:false,requestId,action:ACTIONS.PROCESS_WORK_ITEM,error:"A responsibility/disposition note is required before a Work Item can be closed as reassigned."},400);
-  if(!isReassignment&&!workPerformed) return jsonResponse({ok:false,requestId,action:ACTIONS.PROCESS_WORK_ITEM,error:"A workPerformed value is required before a Work Item can be completed."},400);
-  if(!isReassignment&&!actualImpact) return jsonResponse({ok:false,requestId,action:ACTIONS.PROCESS_WORK_ITEM,error:"An actualImpact/result value is required before a Work Item can be completed."},400);
-  if(!isReassignment&&!evidenceDescription) return jsonResponse({ok:false,requestId,action:ACTIONS.PROCESS_WORK_ITEM,error:"Completion evidence is required before a Work Item can be completed."},400);
+  if(isSuperseded&&!dispositionNote) return jsonResponse({ok:false,requestId,action:ACTIONS.PROCESS_WORK_ITEM,error:"A reconciliation note is required before a Work Item can be closed as superseded / duplicate."},400);
+  if(!isReassignment&&!isSuperseded&&!workPerformed) return jsonResponse({ok:false,requestId,action:ACTIONS.PROCESS_WORK_ITEM,error:"A workPerformed value is required before a Work Item can be completed."},400);
+  if(!isReassignment&&!isSuperseded&&!actualImpact) return jsonResponse({ok:false,requestId,action:ACTIONS.PROCESS_WORK_ITEM,error:"An actualImpact/result value is required before a Work Item can be completed."},400);
+  if(!isReassignment&&!isSuperseded&&!evidenceDescription) return jsonResponse({ok:false,requestId,action:ACTIONS.PROCESS_WORK_ITEM,error:"Completion evidence is required before a Work Item can be completed."},400);
 
   try {
     const workItem=await db.prepare(`SELECT wi.id,wi.client_id,wi.investigation_id,wi.communication_id,wi.title,wi.description,wi.category,wi.priority,wi.status,wi.owner,wi.expected_impact,wi.actual_impact,wi.due_date,wi.started_at,wi.completed_at,wi.created_at,wi.updated_at,c.client_code,c.name AS client_name FROM work_items wi JOIN clients c ON c.id=wi.client_id WHERE wi.id=? AND c.client_code=? COLLATE NOCASE LIMIT 1`).bind(workItemId,clientCode).first();
@@ -184,6 +192,53 @@ export async function handleProcessWorkItem(body, env, requestId) {
       });
     }
 
+    if(isSuperseded){
+      if(isTerminalWorkItemStatus(workItem.status)){
+        const existingEvidence=await loadWorkItemEvidence(db,workItem.id);
+        return jsonResponse({
+          ok:true,
+          requestId,
+          action:ACTIONS.PROCESS_WORK_ITEM,
+          version:VERSION,
+          source:"D1",
+          updated:false,
+          alreadyClosed:true,
+          outcome:"superseded",
+          disposition:"superseded",
+          proofOfWorkEligible:false,
+          workItem:mapWorkItem(workItem),
+          evidence:existingEvidence.map(mapEvidence),
+          message:`Work Item #${workItem.id} is already closed. No duplicate superseded disposition was recorded.`
+        });
+      }
+
+      const businessTimestamp=gcmBusinessTimestamp();
+      const dispositionDescription=appendSupersededDisposition(workItem.description,dispositionNote);
+      const dispositionImpact="Superseded / Duplicate. No completion claim was recorded.";
+      const dispositionSource="Work Reconciliation";
+      const dispositionEvidenceType="work_disposition";
+      await db.batch([
+        db.prepare(`UPDATE work_items SET description=?,status='closed',actual_impact=?,updated_at=? WHERE id=? AND client_id=?`).bind(dispositionDescription,dispositionImpact,businessTimestamp,workItem.id,workItem.client_id),
+        db.prepare(`INSERT INTO evidence (client_id,investigation_id,work_item_id,communication_id,evidence_type,source,description,url,captured_at) SELECT ?,?,?,?,?,?,?,?,? WHERE NOT EXISTS (SELECT 1 FROM evidence WHERE work_item_id=? AND evidence_type=? AND source=? AND description=?)`).bind(workItem.client_id,workItem.investigation_id,workItem.id,workItem.communication_id,dispositionEvidenceType,dispositionSource,dispositionNote,null,businessTimestamp,workItem.id,dispositionEvidenceType,dispositionSource,dispositionNote)
+      ]);
+
+      const [updatedWorkItem,evidence]=await Promise.all([loadWorkItem(db,workItem.id),loadWorkItemEvidence(db,workItem.id)]);
+      if(!updatedWorkItem) throw new Error(`D1 closed the superseded Work Item but Work Item #${workItem.id} could not be reloaded.`);
+      return jsonResponse({
+        ok:true,
+        requestId,
+        action:ACTIONS.PROCESS_WORK_ITEM,
+        version:VERSION,
+        source:"D1",
+        updated:true,
+        outcome:"superseded",
+        disposition:"superseded",
+        proofOfWorkEligible:false,
+        workItem:mapWorkItem(updatedWorkItem),
+        evidence:evidence.map(mapEvidence)
+      });
+    }
+
     if(isCompletedStatus(workItem.status)&&workItem.completed_at){const existingEvidence=await loadWorkItemEvidence(db,workItem.id);return jsonResponse({ok:true,requestId,action:ACTIONS.PROCESS_WORK_ITEM,version:VERSION,source:"D1",updated:false,alreadyCompleted:true,workItem:mapWorkItem(workItem),evidence:existingEvidence.map(mapEvidence),message:`Work Item #${workItem.id} is already completed. No duplicate completion was recorded.`});}
 
     const completedDescription=appendWorkPerformed(workItem.description,workPerformed);
@@ -212,6 +267,7 @@ function mapInvestigation(r){if(!r)return null;return{id:r.id,clientId:r.client_
 function mapEvidence(r){if(!r)return null;return{id:r.id,clientId:r.client_id,investigationId:r.investigation_id,workItemId:r.work_item_id,communicationId:r.communication_id,evidenceType:r.evidence_type,source:r.source,description:r.description,url:r.url,capturedAt:r.captured_at,createdAt:r.created_at};}
 function appendWorkPerformed(existingDescription,workPerformed){const existing=clean(existingDescription);if(!existing)return `Work Performed: ${workPerformed}`;if(existing.includes(`Work Performed: ${workPerformed}`))return existing;return `${existing}\n\nWork Performed: ${workPerformed}`;}
 function appendDisposition(existingDescription,dispositionNote){const existing=clean(existingDescription);const marker=`Disposition: Reassigned / No Longer GCM Responsibility\n${dispositionNote}`;if(!existing)return marker;if(existing.includes(marker))return existing;return `${existing}\n\n${marker}`;}
+function appendSupersededDisposition(existingDescription,dispositionNote){const existing=clean(existingDescription);const marker=`Disposition: Superseded / Duplicate — No Completion Claim\n${dispositionNote}`;if(!existing)return marker;if(existing.includes(marker))return existing;return `${existing}\n\n${marker}`;}
 function normalizeDisposition(value){return clean(value).toLowerCase().replace(/[\s-]+/g,"_");}
 function isCompletedStatus(value){return String(value||"").trim().toLowerCase().replace(/\s+/g,"_")==="completed";}
 function isTerminalWorkItemStatus(value){return ["complete","completed","closed","resolved","cancelled","canceled"].includes(String(value||"").trim().toLowerCase().replace(/\s+/g,"_"));}
