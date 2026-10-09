@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Southeast Safes — Candidate Issue Groups</title>
+<style>
+:root{--navy:#0d2744;--blue:#2f6fd6;--bg:#f2f6fb;--card:#fff;--border:#d7e0eb;--text:#16263a;--muted:#65758a;--green:#1f8b4c;--greenSoft:#edf9f1;--yellow:#9a6a00;--yellowSoft:#fff7dc;--red:#b33939;--redSoft:#fff0f0;--gray:#68788c;--shadow:0 5px 16px rgba(21,43,72,.07)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.shell{display:grid;grid-template-columns:124px minmax(0,1fr);min-height:100vh}.sidebar{min-height:100vh}.page{max-width:1120px;margin:0 auto;padding:24px 22px 56px}.top{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:14px}.eyebrow{margin:0 0 4px;color:var(--blue);font-size:.68rem;font-weight:900;letter-spacing:.13em;text-transform:uppercase}h1{margin:0;color:var(--navy);font-size:1.72rem;line-height:1.12}.subtitle{max-width:760px;margin:7px 0 0;color:var(--muted);font-size:.82rem;line-height:1.5}.actions{display:flex;flex-wrap:wrap;gap:7px;justify-content:flex-end}.btn{display:inline-flex;align-items:center;justify-content:center;min-height:32px;padding:0 11px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--navy);font-size:.72rem;font-weight:800;text-decoration:none;cursor:pointer}.btn.primary{border-color:var(--blue);background:var(--blue);color:#fff}.banner{padding:10px 13px;margin-bottom:12px;border:1px solid var(--border);border-radius:9px;font-size:.76rem;font-weight:700}.banner.loading{background:#fff}.banner.pass{border-color:#b8dfc5;background:var(--greenSoft);color:var(--green)}.banner.fail{border-color:#efcccc;background:var(--redSoft);color:var(--red)}
+.summary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;margin-bottom:12px}.card,.panel{border:1px solid var(--border);background:var(--card);box-shadow:var(--shadow)}.card{padding:13px 14px;border-radius:10px}.label{color:var(--muted);font-size:.62rem;font-weight:900;letter-spacing:.07em;text-transform:uppercase}.value{display:block;margin-top:5px;color:var(--navy);font-size:1.18rem;font-weight:900}.subvalue{display:block;margin-top:4px;color:var(--muted);font-size:.63rem;line-height:1.35}.panel{border-radius:11px;overflow:hidden}.panel+.panel{margin-top:12px}.panel-head{padding:13px 15px 11px;border-bottom:1px solid var(--border)}.panel-head h2{margin:0;color:var(--navy);font-size:.96rem}.panel-head p{margin:4px 0 0;color:var(--muted);font-size:.73rem;line-height:1.45}.panel-body{padding:13px 15px 16px}.checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.check{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:10px 11px;border:1px solid var(--border);border-radius:9px}.check strong{display:block;color:var(--navy);font-size:.78rem}.check span{display:block;margin-top:3px;color:var(--muted);font-size:.68rem;line-height:1.42}.badge{display:inline-flex;min-width:62px;min-height:22px;align-items:center;justify-content:center;padding:0 7px;border-radius:999px;font-size:.58rem;font-weight:900;text-transform:uppercase}.badge.pass{background:var(--greenSoft);color:var(--green)}.badge.lock{background:var(--yellowSoft);color:var(--yellow)}.badge.open{background:var(--redSoft);color:var(--red)}.badge.closed{background:var(--greenSoft);color:var(--green)}.badge.unknown{background:#eef1f4;color:var(--gray)}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.records{display:grid;gap:9px}.group{padding:12px;border:1px solid var(--border);border-radius:9px;background:#fff}.group-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.group h3{margin:0;color:var(--navy);font-size:.82rem;line-height:1.35}.meta{margin-top:4px;color:var(--muted);font-size:.65rem;line-height:1.4}.group p{margin:7px 0 0;font-size:.71rem;line-height:1.45}.finding{margin-top:8px;padding-top:8px;border-top:1px solid #edf1f5}.finding strong{display:block;color:var(--navy);font-size:.72rem;line-height:1.35}.finding p{margin:4px 0 0;font-size:.68rem}.empty{padding:18px 12px;border:1px dashed var(--border);border-radius:8px;color:var(--muted);text-align:center;font-size:.72rem}.note{margin-top:10px;padding:11px;border-radius:8px;background:#f8fafc;color:var(--muted);font-size:.71rem;line-height:1.5}.note strong{color:var(--navy)}.lockbox{border:1px solid #ead79a;background:var(--yellowSoft);color:#6f5000;padding:11px;border-radius:8px;font-size:.71rem;line-height:1.5}
+@media(max-width:1000px){.summary{grid-template-columns:repeat(3,1fr)}}@media(max-width:780px){.shell{display:block}.summary,.grid,.checks{grid-template-columns:1fr}.page{padding:16px}.top{flex-direction:column}.actions{justify-content:flex-start}}
+</style>
+</head>
+<body>
+<!-- =========================================================
+ Global Concepts Media Operating System
+ File: growth-review-candidate-groups.html
+ Version: 1.0.0
+ Status: Production Road-Test Candidate
+ Sprint: Growth Review — Candidate Operational Status
+ Purpose: Group human-routed candidate findings by their exact linked
+          Investigation or Work Item and expose current operational status.
+
+ Rules:
+ - Candidate source remains explicit human Investigation / Work Item route.
+ - Group key is linked record type + linked record id.
+ - Current status comes from live Client Workspace operational history.
+ - Resolved/completed records do not become future open issues automatically.
+ - No severity, growth impact, priority, recommendation, or roadmap inference.
+ - No D1 writes.
+ - No Growth Intelligence generation.
+ - No Consulting Knowledge generation.
+ - No Growth Review generation.
+ ========================================================= -->
+<div class="shell">
+<aside class="sidebar" data-gcm-shell-sidebar></aside>
+<main><div class="page">
+<header class="top">
+  <div>
+    <p class="eyebrow">Client Growth Review</p>
+    <h1>Southeast Safes — Candidate Issue Groups</h1>
+    <p class="subtitle">Group the human-routed candidate Findings by their exact operational record and verify whether each Investigation or Work Item is still open, monitoring/waiting, or already resolved/completed.</p>
+  </div>
+  <div class="actions">
+    <a class="btn" href="growth-review-candidate-issues.html">Back to Candidates</a>
+    <a class="btn" href="growth-review-input-mapping.html">Input Mapping</a>
+    <button class="btn primary" id="refresh" type="button">Refresh Groups</button>
+  </div>
+</header>
+
+<div class="banner loading" id="status">Loading candidate Findings and live operational status…</div>
+
+<section class="summary">
+  <article class="card"><span class="label">Review Window</span><strong class="value" id="window">—</strong><span class="subvalue">inclusive 90-day period</span></article>
+  <article class="card"><span class="label">Candidate Findings</span><strong class="value" id="candidateFindings">—</strong><span class="subvalue">human-routed action Findings</span></article>
+  <article class="card"><span class="label">Operational Groups</span><strong class="value" id="groups">—</strong><span class="subvalue">deduplicated by linked record</span></article>
+  <article class="card"><span class="label">Open / Active</span><strong class="value" id="openGroups">—</strong><span class="subvalue">still requires operational attention</span></article>
+  <article class="card"><span class="label">Resolved / Complete</span><strong class="value" id="closedGroups">—</strong><span class="subvalue">historical review-period issue</span></article>
+  <article class="card"><span class="label">Generator</span><strong class="value">LOCKED</strong><span class="subvalue">status verification only</span></article>
+</section>
+
+<section class="panel">
+  <div class="panel-head"><h2>Operational-Status Gate</h2><p>A candidate does not become a future Growth Review issue merely because it was investigated during the review period.</p></div>
+  <div class="panel-body">
+    <div class="checks" id="checks"><div class="empty">Checking linked records…</div></div>
+    <div class="note" id="decision">No current Growth Review issue set has been approved.</div>
+  </div>
+</section>
+
+<section class="grid">
+  <article class="panel">
+    <div class="panel-head"><h2>Open / Active Candidate Groups</h2><p>Linked operational records that are still open or otherwise unresolved. These remain candidates for future-action review only.</p></div>
+    <div class="panel-body"><div class="records" id="openList"><div class="empty">Loading open groups…</div></div></div>
+  </article>
+
+  <article class="panel">
+    <div class="panel-head"><h2>Resolved / Completed Candidate Groups</h2><p>Historical issues that were acted on or closed during the review period. These belong in outcomes/work-history review, not automatically in the future issue list.</p></div>
+    <div class="panel-body"><div class="records" id="closedList"><div class="empty">Loading resolved groups…</div></div></div>
+  </article>
+</section>
+
+<section class="panel">
+  <div class="panel-head"><h2>Next Boundary</h2><p>The next stage remains human-reviewed and read-only.</p></div>
+  <div class="panel-body">
+    <div class="checks">
+      <article class="check"><div><strong>Allowed next</strong><span>Present the still-open grouped candidates beside their reviewed evidence and business-outcome context for human selection of the actual Growth Review issues.</span></div><b class="badge pass">Allowed</b></article>
+      <article class="check"><div><strong>Still prohibited</strong><span>Do not infer priority, severity, growth impact, 30/60/90 recommendations, or client-facing conclusions until the open group set is road-tested.</span></div><b class="badge lock">Locked</b></article>
+    </div>
+    <div class="lockbox"><strong>Generator lock:</strong> no Growth Intelligence, Consulting Knowledge, or Growth Review generator is imported or invoked on this page.</div>
+  </div>
+</section>
+</div></main></div>
+
+<script src="shared/gcm-shell.js"></script>
+<script>
+window.addEventListener("DOMContentLoaded",function(){
+  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"proof",statusText:"Growth Review candidate groups · v1.0.0"});
+});
+</script>
+<script>
+(function(){"use strict";
+const VERSION="1.0.0";
+const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+const ZONE="America/New_York";
+const REVIEW_DAYS=90;
+const ACTION_ROUTES=new Set(["investigation","requested_work"]);
+const CLOSED_INVESTIGATION=new Set(["resolved","closed","complete","completed","cancelled","canceled","archived","ignored","no_action"]);
+const CLOSED_WORK=new Set(["completed","complete","cancelled","canceled","closed","archived"]);
+const WAITING=new Set(["monitoring","awaiting_external_validation","waiting_external","waiting_on_external"]);
+const $=function(id){return document.getElementById(id)};
+const els={status:$("status"),refresh:$("refresh"),window:$("window"),candidateFindings:$("candidateFindings"),groups:$("groups"),openGroups:$("openGroups"),closedGroups:$("closedGroups"),checks:$("checks"),decision:$("decision"),openList:$("openList"),closedList:$("closedList")};
+
+function esc(v){return String(v==null?"":v).replace(/[&<>'"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]})}
+function clean(v){return String(v==null?"":v).trim()}
+function arr(v){return Array.isArray(v)?v:[]}
+function norm(v){return clean(v).toLowerCase()}
+function isoParts(value){const m=clean(value).match(/(\d{4})-(\d{2})-(\d{2})/);if(!m)return"";const y=Number(m[1]),mo=Number(m[2]),d=Number(m[3]);const dt=new Date(Date.UTC(y,mo-1,d));if(dt.getUTCFullYear()!==y||dt.getUTCMonth()!==mo-1||dt.getUTCDate()!==d)return"";return m[1]+"-"+m[2]+"-"+m[3]}
+function allIsoDates(value){const matches=clean(value).match(/\d{4}-\d{2}-\d{2}/g)||[];return matches.map(isoParts).filter(Boolean).sort()}
+function findingDate(f){const direct=isoParts(f&&f.source_date);if(direct)return direct;const dates=allIsoDates(f&&f.reporting_period);return dates.length?dates[dates.length-1]:""}
+function todayNY(){const parts=new Intl.DateTimeFormat("en-US",{timeZone:ZONE,year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());const v={};parts.forEach(function(p){v[p.type]=p.value});return v.year+"-"+v.month+"-"+v.day}
+function shiftDays(dateOnly,delta){const p=dateOnly.split("-").map(Number);const d=new Date(Date.UTC(p[0],p[1]-1,p[2]));d.setUTCDate(d.getUTCDate()+delta);return d.toISOString().slice(0,10)}
+function inWindow(d,start,end){return Boolean(d&&d>=start&&d<=end)}
+function routeOf(f){return norm(f&&f.intake_disposition)}
+function groupKey(f,route){
+  if(route==="investigation"){const id=Number(f&&f.linked_investigation_id);return id>0?"investigation:"+id:"";}
+  if(route==="requested_work"){const id=Number(f&&f.linked_work_item_id);return id>0?"work:"+id:"";}
+  return"";
+}
+function statusClass(type,status){
+  const s=norm(status);
+  if(type==="investigation"&&CLOSED_INVESTIGATION.has(s))return"closed";
+  if(type==="work"&&CLOSED_WORK.has(s))return"closed";
+  return"open";
+}
+function displayStatus(type,status){
+  const s=norm(status);
+  if(!s)return"Unknown";
+  if(type==="investigation"&&WAITING.has(s))return"Waiting / Monitoring";
+  if(statusClass(type,s)==="closed")return"Resolved / Complete";
+  return"Open / Active";
+}
+function setStatus(kind,text){els.status.className="banner "+kind;els.status.textContent=text}
+function check(label,detail,state){return '<article class="check"><div><strong>'+esc(label)+'</strong><span>'+esc(detail)+'</span></div><b class="badge '+esc(state)+'">'+(state==="pass"?"Ready":state==="open"?"Open":state==="closed"?"Closed":"Locked")+'</b></article>'}
+function empty(text){return '<div class="empty">'+esc(text)+'</div>'}
+function groupCard(g){
+  const op=g.operational||{};
+  const typeLabel=g.type==="investigation"?"Investigation":"Work Item";
+  const cls=g.state==="closed"?"closed":"open";
+  const title=clean(op.title)||typeLabel+" #"+g.id;
+  const meta=[typeLabel+" #"+g.id,displayStatus(g.type,op.status),clean(op.priority),g.findings.length+" source Finding"+(g.findings.length===1?"":"s")].filter(Boolean).join(" · ");
+  let html='<article class="group"><div class="group-head"><div><h3>'+esc(title)+'</h3><div class="meta">'+esc(meta)+'</div></div><b class="badge '+cls+'">'+(cls==="closed"?"Resolved":"Open")+'</b></div>';
+  const opText=clean(op.current_next_step)||clean(op.next_step)||clean(op.description)||clean(op.objective)||clean(op.finding_summary);
+  if(opText)html+='<p>'+esc(opText)+'</p>';
+  g.findings.forEach(function(x){
+    const f=x.item;
+    html+='<div class="finding"><strong>'+esc(clean(f.source_title)||"Reviewed Finding")+'</strong><div class="meta">'+esc(x.date+" · "+clean(f.category))+'</div>';
+    const analysis=clean(f.analysis)||clean(f.details);
+    if(analysis)html+='<p>'+esc(analysis)+'</p>';
+    if(clean(f.decision))html+='<p><b>Recorded decision:</b> '+esc(clean(f.decision))+'</p>';
+    html+='</div>';
+  });
+  html+='</article>';
+  return html;
+}
+async function api(action,extra){const body=Object.assign({action:action},extra||{});const r=await fetch(WORKER,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify(body)});const p=await r.json().catch(function(){return{}});if(!r.ok||p&&p.ok!==true)throw new Error(typeof p.error==="string"?p.error:(p&&p.error&&p.error.message)||("HTTP "+r.status));return p}
+
+async function load(){
+  els.refresh.disabled=true;
+  setStatus("loading","Loading candidate Findings and live operational status…");
+  try{
+    const end=todayNY(),start=shiftDays(end,-(REVIEW_DAYS-1));
+    els.window.textContent=start.slice(5).replace("-","/")+"–"+end.slice(5).replace("-","/");
+
+    const loaded=await Promise.all([
+      api("get-client-findings",{clientCode:"SES"}),
+      api("get-client-workspace",{clientCode:"SES"})
+    ]);
+    const findings=arr(loaded[0]&&loaded[0].findings);
+    const workspace=loaded[1]||{};
+    const op=workspace.operational||{};
+    const investigations=arr(op.investigationHistory);
+    const workItems=arr(op.workItems);
+    const investigationMap=new Map(investigations.map(function(x){return[Number(x.id),x]}));
+    const workMap=new Map(workItems.map(function(x){return[Number(x.id),x]}));
+
+    const candidates=findings.map(function(f){return{item:f,date:findingDate(f),route:routeOf(f)}}).filter(function(x){
+      return inWindow(x.date,start,end)&&ACTION_ROUTES.has(x.route)&&groupKey(x.item,x.route);
+    });
+
+    const groupsMap=new Map();
+    candidates.forEach(function(x){
+      const key=groupKey(x.item,x.route);
+      if(!groupsMap.has(key)){
+        const parts=key.split(":");
+        const type=parts[0],id=Number(parts[1]);
+        groupsMap.set(key,{key:key,type:type,id:id,findings:[],operational:type==="investigation"?investigationMap.get(id)||null:workMap.get(id)||null});
+      }
+      groupsMap.get(key).findings.push(x);
+    });
+
+    const groups=Array.from(groupsMap.values()).map(function(g){
+      const status=clean(g.operational&&g.operational.status);
+      g.state=g.operational?statusClass(g.type,status):"unknown";
+      return g;
+    });
+    const open=groups.filter(function(g){return g.state==="open"});
+    const closed=groups.filter(function(g){return g.state==="closed"});
+    const unknown=groups.filter(function(g){return g.state==="unknown"});
+
+    els.candidateFindings.textContent=candidates.length;
+    els.groups.textContent=groups.length;
+    els.openGroups.textContent=open.length;
+    els.closedGroups.textContent=closed.length;
+
+    els.checks.innerHTML=[
+      check("Exact grouping",candidates.length+" candidate Finding"+(candidates.length===1?"":"s")+" deduplicated into "+groups.length+" linked operational group"+(groups.length===1?"":"s")+".","pass"),
+      check("Live status resolution",(groups.length-unknown.length)+" of "+groups.length+" group"+(groups.length===1?"":"s")+" matched a live Client Workspace Investigation / Work Item record.",unknown.length===0?"pass":"lock"),
+      check("Open issue boundary",open.length+" group"+(open.length===1?" remains":"s remain")+" open/active and may continue to the next human review stage.","open"),
+      check("Historical issue boundary",closed.length+" group"+(closed.length===1?" is":"s are")+" resolved/completed and will not automatically become future Growth Review issues.","closed"),
+      check("No status inference","Operational status comes only from the linked D1 Investigation / Work Item record; Finding text is not used to guess whether an issue is open.","pass"),
+      check("Generator state","No impact, priority, recommendation, roadmap, or client-facing conclusion is generated.","lock")
+    ].join("");
+
+    open.sort(function(a,b){return Number(b.id)-Number(a.id)});
+    closed.sort(function(a,b){return Number(b.id)-Number(a.id)});
+    els.openList.innerHTML=open.map(groupCard).join("")||empty("No candidate groups remain open.");
+    els.closedList.innerHTML=closed.map(groupCard).join("")||empty("No candidate groups are resolved/completed.");
+
+    if(unknown.length){
+      els.closedList.innerHTML+=unknown.map(function(g){
+        return '<article class="group"><div class="group-head"><div><h3>'+esc((g.type==="investigation"?"Investigation":"Work Item")+" #"+g.id)+'</h3><div class="meta">Linked operational record was not returned by Client Workspace</div></div><b class="badge unknown">Unknown</b></div></article>';
+      }).join("");
+    }
+
+    els.decision.innerHTML="<strong>STATUS GROUPING READY FOR ROAD TEST:</strong> "+open.length+" still-open operational group"+(open.length===1?"":"s")+" separated from "+closed.length+" resolved/completed group"+(closed.length===1?"":"s")+". No Growth Review conclusion was generated.";
+    setStatus("pass","SES candidate Findings grouped by exact linked operational record. Current status was read from D1; no writes or conclusions were performed.");
+  }catch(err){
+    console.error(err);
+    setStatus("fail","Candidate grouping failed: "+(err&&err.message?err.message:String(err)));
+    els.checks.innerHTML=empty("Operational-status gate could not complete.");
+    els.openList.innerHTML=empty("No open group set available.");
+    els.closedList.innerHTML=empty("No resolved group set available.");
+    els.decision.textContent="Generator remains locked.";
+  }finally{els.refresh.disabled=false}
+}
+els.refresh.addEventListener("click",load);
+load();
+})();
+</script>
+</body>
+</html>
