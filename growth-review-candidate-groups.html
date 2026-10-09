@@ -15,7 +15,7 @@
 <!-- =========================================================
  Global Concepts Media Operating System
  File: growth-review-candidate-groups.html
- Version: 1.0.0
+ Version: 1.0.1
  Status: Production Road-Test Candidate
  Sprint: Growth Review — Candidate Operational Status
  Purpose: Group human-routed candidate findings by their exact linked
@@ -31,6 +31,8 @@
  - No Growth Intelligence generation.
  - No Consulting Knowledge generation.
  - No Growth Review generation.
+ - v1.0.1 displays the newest saved Investigation Progress as current context so
+   historical source Finding text cannot replace the operator's latest decision.
  ========================================================= -->
 <div class="shell">
 <aside class="sidebar" data-gcm-shell-sidebar></aside>
@@ -94,12 +96,12 @@
 <script src="shared/gcm-shell.js"></script>
 <script>
 window.addEventListener("DOMContentLoaded",function(){
-  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"proof",statusText:"Growth Review candidate groups · v1.0.0"});
+  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"proof",statusText:"Growth Review candidate groups · v1.0.1"});
 });
 </script>
 <script>
 (function(){"use strict";
-const VERSION="1.0.0";
+const VERSION="1.0.1";
 const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
 const ZONE="America/New_York";
 const REVIEW_DAYS=90;
@@ -142,6 +144,23 @@ function displayStatus(type,status){
 function setStatus(kind,text){els.status.className="banner "+kind;els.status.textContent=text}
 function check(label,detail,state){return '<article class="check"><div><strong>'+esc(label)+'</strong><span>'+esc(detail)+'</span></div><b class="badge '+esc(state)+'">'+(state==="pass"?"Ready":state==="open"?"Open":state==="closed"?"Closed":"Locked")+'</b></article>'}
 function empty(text){return '<div class="empty">'+esc(text)+'</div>'}
+function latestInvestigationProgress(item){
+  const updates=arr(item&&item.progressUpdates).map(function(entry){
+    let raw={};
+    try{
+      raw=typeof entry.raw_data==="string"?JSON.parse(entry.raw_data||"{}"):((entry.raw_data&&typeof entry.raw_data==="object")?entry.raw_data:{});
+    }catch(error){raw={};}
+    return {
+      id:Number(entry&&entry.id)||0,
+      findingSummary:clean(raw.findingSummary||raw.finding_summary),
+      nextQuestion:clean(raw.nextQuestion||raw.next_question),
+      nextEvidence:clean(raw.nextEvidence||raw.next_evidence),
+      capturedAt:clean((entry&&entry.captured_at)||(entry&&entry.created_at))
+    };
+  }).filter(function(x){return x.findingSummary||x.nextQuestion||x.nextEvidence});
+  updates.sort(function(a,b){return String(b.capturedAt).localeCompare(String(a.capturedAt))||b.id-a.id});
+  return updates[0]||null;
+}
 function groupCard(g){
   const op=g.operational||{};
   const typeLabel=g.type==="investigation"?"Investigation":"Work Item";
@@ -149,8 +168,11 @@ function groupCard(g){
   const title=clean(op.title)||typeLabel+" #"+g.id;
   const meta=[typeLabel+" #"+g.id,displayStatus(g.type,op.status),clean(op.priority),g.findings.length+" source Finding"+(g.findings.length===1?"":"s")].filter(Boolean).join(" · ");
   let html='<article class="group"><div class="group-head"><div><h3>'+esc(title)+'</h3><div class="meta">'+esc(meta)+'</div></div><b class="badge '+cls+'">'+(cls==="closed"?"Resolved":"Open")+'</b></div>';
-  const opText=clean(op.current_next_step)||clean(op.next_step)||clean(op.description)||clean(op.objective)||clean(op.finding_summary);
+  const latestProgress=g.type==="investigation"?latestInvestigationProgress(op):null;
+  const opText=clean(latestProgress&&latestProgress.findingSummary)||clean(op.current_next_step)||clean(op.next_step)||clean(op.finding_summary)||clean(op.description)||clean(op.objective);
   if(opText)html+='<p>'+esc(opText)+'</p>';
+  if(latestProgress&&clean(latestProgress.nextQuestion))html+='<p><b>Current next question:</b> '+esc(clean(latestProgress.nextQuestion))+'</p>';
+  if(latestProgress&&clean(latestProgress.nextEvidence))html+='<p><b>Current next evidence:</b> '+esc(clean(latestProgress.nextEvidence))+'</p>';
   g.findings.forEach(function(x){
     const f=x.item;
     html+='<div class="finding"><strong>'+esc(clean(f.source_title)||"Reviewed Finding")+'</strong><div class="meta">'+esc(x.date+" · "+clean(f.category))+'</div>';
