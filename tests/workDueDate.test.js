@@ -1,11 +1,16 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/workDueDate.test.js
-   Version: 1.1.3
+   Version: 1.1.4
    Status: Production Regression Test
    Source: tests/workDueDate.test.js 1.1.1
    Purpose: Verify the durable Work due-date contract and the Work Queue
             visibility contract stay wired in production.
+   Change notes — 1.1.4:
+   - Updates the Work Item processing route version lock to 7.7.0 after adding the
+     superseded / duplicate reconciliation disposition.
+   - Verifies the new disposition remains no-proof and does not reuse completion fields.
+
    Change notes — 1.1.3:
    - Recognizes shared/work-due-date.js 1.0.1 as the intentional Safari isolation build.
    - Keeps durable D1 due-date, Work route, navigation attention, and queue-visibility
@@ -63,7 +68,7 @@ assert.match(
 
 assert.match(
   route,
-  /Version: 7\.6\.0/
+  /Version: 7\.7\.0/
 );
 
 assert.match(
@@ -84,6 +89,21 @@ assert.match(
 assert.match(
   route,
   /dueDate must be a valid calendar date in YYYY-MM-DD format/
+);
+
+assert.match(
+  route,
+  /disposition===["']superseded["']/
+);
+
+assert.match(
+  route,
+  /proofOfWorkEligible:false/
+);
+
+assert.match(
+  route,
+  /Superseded \/ Duplicate\. No completion claim was recorded\./
 );
 
 assert.match(
