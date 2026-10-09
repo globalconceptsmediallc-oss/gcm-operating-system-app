@@ -1,13 +1,17 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.6.8
+   Version: 3.6.9
    Status: Production Candidate
-   Source: Production today.html 3.6.7
-   Sprint: Today — Dated Commitment Carry-Forward
-   Purpose: Preserve the locked Today layout, Gmail approvals, Mission Control,
-            Media logic, and operating workflow while keeping every open dated
-            commitment visible until its authoritative source marks it complete.
+   Source: Production today.html 3.6.8
+   Sprint: Today — Operator Copy Cleanup
+   Purpose: Preserve the locked Today workflow and production logic while removing
+            non-operational explanatory copy from the operator interface.
+
+   Production changes in 3.6.9:
+   - Removes non-operational instructional copy from the Today interface.
+   - Keeps labels, live status, warnings, evidence, due dates, and action controls intact.
+   - Shortens Morning Command and loading copy without changing D1, Mission Control, Forward Look, Media, or intake behavior.
 
    Production changes in 3.6.8:
    - Adds Manage to overdue Calendar rows in Forward Look.
@@ -2014,7 +2018,7 @@
 <a class="nav-link" href="finance.html"><span class="nav-icon">$</span><span>Billing</span></a>
 <a class="nav-link" href="proof.html"><span class="nav-icon">↗</span><span>Proof</span></a>
 </nav>
-<div class="sidebar-footer"><div class="sidebar-status"><span class="status-dot" aria-hidden="true"></span><span>Agency Command Center operational · Today v3.6.8</span></div></div>
+<div class="sidebar-footer"><div class="sidebar-status"><span class="status-dot" aria-hidden="true"></span><span>Agency Command Center operational · Today v3.6.9</span></div></div>
 </aside>
 <main class="main" id="main-content">
 <div class="main-inner">
@@ -2022,14 +2026,12 @@
 <div>
 <p class="eyebrow">Agency Command Center</p>
 <h1 class="page-title" id="greeting">Good morning, Andy.</h1>
-<p class="page-subtitle">
-              See what matters, decide what happens next, and uncover opportunities the agency may otherwise miss.
-            </p>
+
 </div>
 <div class="topbar-actions">
 <a class="button button-primary" href="https://globalconceptsmedia.com/sales-presentation.html" target="_blank" rel="noopener noreferrer">Sales Presentation ↗</a>
 <div aria-label="Current date" class="date-chip" id="current-date"></div>
-<div class="date-chip">GCM OS online</div>
+
 </div>
 </header>
 <article aria-live="polite" class="panel prospect-open-panel" hidden id="prospect-open-panel">
@@ -2058,12 +2060,12 @@
 <div class="forward-look-list" id="forward-look-list"><div class="forward-look-empty">Checking Prospect CRM, Calendar, Media, and open dated operating records…</div></div>
 <div class="forward-look-more" hidden id="forward-look-more"></div>
 </section>
-<section aria-labelledby="morning-command-title" class="panel morning-command"><div class="morning-command-body"><div class="morning-command-copy"><p class="eyebrow">Morning Command</p><h2 id="morning-command-title">Review incoming operational email from the Universal Intake queue.</h2><p id="gmail-status-copy">Loading Universal Email Intake from D1…</p></div><div class="morning-command-actions"><button class="button button-primary" disabled id="gmail-preview-button" type="button">Refresh Intake</button></div></div><div class="gmail-preview" hidden id="gmail-preview"></div></section>
+<section aria-labelledby="morning-command-title" class="panel morning-command"><div class="morning-command-body"><div class="morning-command-copy"><p class="eyebrow">Morning Command</p><h2 id="morning-command-title">Incoming signals</h2><p id="gmail-status-copy">Loading intake…</p></div><div class="morning-command-actions"><button class="button button-primary" disabled id="gmail-preview-button" type="button">Refresh Intake</button></div></div><div class="gmail-preview" hidden id="gmail-preview"></div></section>
 <section aria-labelledby="command-brief-title" class="command-brief">
 <div>
 <p class="brief-kicker">Today's Command Brief</p>
-<h2 class="brief-title" id="command-brief-title">Mission Control is checking the agency's live operating state.</h2>
-<p class="brief-copy" id="command-brief-copy">The highest-value operating priority is being assembled from the agency's live records.</p>
+<h2 class="brief-title" id="command-brief-title">Loading today's operating state…</h2>
+<p class="brief-copy" id="command-brief-copy">Checking current priorities…</p>
 </div>
 </section>
 
@@ -2080,13 +2082,11 @@
 <div>
 <p class="workflow-kicker">DECIDE</p>
 <h2>What needs your judgment?</h2>
-<p>Review the highest-value decision first, then move through the ordered client queue.</p>
 </div>
 </div><div class="decide-grid"><article class="panel priority-card">
 <div class="panel-header">
 <div>
 <h2 class="panel-title">Highest-Value Next Action</h2>
-<p class="panel-description">The single action most likely to protect revenue, deliver client value, or advance growth.</p>
 </div>
 <a class="priority-badge" href="clients.html" id="priority-badge">Decision</a>
 </div>
@@ -2130,7 +2130,7 @@
 </div>
 </div>
 </article><article class="panel">
-<div class="panel-header"><div><h2 class="panel-title">Needs Your Attention</h2><p class="panel-description">Live client decisions that require review.</p></div></div>
+<div class="panel-header"><div><h2 class="panel-title">Needs Your Attention</h2></div></div>
 <ul class="attention-list" id="attention-list"></ul>
 </article></div></section>
 <div aria-hidden="true" hidden="" id="mission-control-state-values"><span id="prospect-count">0</span><span id="attention-count">0</span><span id="open-task-count">0</span><span id="proof-count">0</span><span id="media-pulse-count">0</span></div></div>
