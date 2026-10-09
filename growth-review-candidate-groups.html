@@ -15,7 +15,7 @@
 <!-- =========================================================
  Global Concepts Media Operating System
  File: growth-review-candidate-groups.html
- Version: 1.0.1
+ Version: 1.0.2
  Status: Production Road-Test Candidate
  Sprint: Growth Review — Candidate Operational Status
  Purpose: Group human-routed candidate findings by their exact linked
@@ -31,6 +31,7 @@
  - No Growth Intelligence generation.
  - No Consulting Knowledge generation.
  - No Growth Review generation.
+ - v1.0.2 joins Investigation Progress evidence from Client Workspace to each linked Investigation before rendering.
  - v1.0.1 displays the newest saved Investigation Progress as current context so
    historical source Finding text cannot replace the operator's latest decision.
  ========================================================= -->
@@ -96,12 +97,12 @@
 <script src="shared/gcm-shell.js"></script>
 <script>
 window.addEventListener("DOMContentLoaded",function(){
-  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"proof",statusText:"Growth Review candidate groups · v1.0.1"});
+  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"proof",statusText:"Growth Review candidate groups · v1.0.2"});
 });
 </script>
 <script>
 (function(){"use strict";
-const VERSION="1.0.1";
+const VERSION="1.0.2";
 const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
 const ZONE="America/New_York";
 const REVIEW_DAYS=90;
@@ -202,7 +203,19 @@ async function load(){
     const op=workspace.operational||{};
     const investigations=arr(op.investigationHistory);
     const workItems=arr(op.workItems);
-    const investigationMap=new Map(investigations.map(function(x){return[Number(x.id),x]}));
+    const progressByInvestigation=new Map();
+    arr(op.evidence)
+      .filter(function(entry){return norm(entry&&entry.evidence_type)==="investigation_progress"&&Number(entry&&entry.investigation_id)>0})
+      .forEach(function(entry){
+        const id=Number(entry.investigation_id);
+        const list=progressByInvestigation.get(id)||[];
+        list.push(entry);
+        progressByInvestigation.set(id,list);
+      });
+    const investigationMap=new Map(investigations.map(function(x){
+      const id=Number(x.id);
+      return[id,Object.assign({},x,{progressUpdates:progressByInvestigation.get(id)||[]})];
+    }));
     const workMap=new Map(workItems.map(function(x){return[Number(x.id),x]}));
 
     const candidates=findings.map(function(f){return{item:f,date:findingDate(f),route:routeOf(f)}}).filter(function(x){
