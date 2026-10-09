@@ -1,11 +1,13 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/proofFindings.test.js
-   Version: 1.2.1
+   Version: 1.2.2
    Status: Production Regression Test
    Purpose:
    Verify reviewed client Findings are exposed to Proof and outrank raw
    monitoring as the primary Intelligence Audit interpretation.
+   Change notes — 1.2.2:
+   - Aligns Client Findings to v1.1.0 and locks read-only human disposition/link readback.
    Change notes — 1.2.1:
    - Aligns the Client Workspace version lock to 7.5.2 while preserving every Proof Findings assertion.
    ========================================================= */
@@ -19,9 +21,12 @@ const proof = fs.readFileSync(new URL("../proof.html", import.meta.url),"utf8");
 
 assert.match(workspace,/Version: 7\.5\.2/);
 assert.doesNotMatch(workspace,/FROM client_findings/);
-assert.match(findingsRoute,/Version: 1\.0\.0/);
+assert.match(findingsRoute,/Version: 1\.1\.0/);
 assert.match(findingsRoute,/FROM client_findings/);
 assert.match(findingsRoute,/GET_CLIENT_FINDINGS/);
+assert.match(findingsRoute,/intake_disposition/);
+assert.match(findingsRoute,/linked_investigation_id/);
+assert.match(findingsRoute,/linked_work_item_id/);
 
 assert.match(proof,/Version: 2\.3\.2/);
 assert.match(proof,/o\.clientFindings/);
