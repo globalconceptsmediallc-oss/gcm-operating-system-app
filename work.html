@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.40
+   Version: 1.9.41
    Status: FBDT Production Candidate
    Source: Stable production work.html 1.9.18
    Sprint: Work Queue Full Recovery
@@ -22,6 +22,9 @@
    - communications-operational-decision-v3
 
    Audited changes:
+   - v1.9.41 keeps the visible Investigation Decision synchronized with the newest locked evidence-derived decision after reload.
+   - Newer locked evidence now replaces stale saved What We Know / Next Question / Next Evidence text even when root cause is not yet proven.
+   - Production D1 history remains preserved; this change only corrects the current visible decision state.
    - v1.9.40 fixes redirect evidence gating: three matching redirect samples prove a repeated behavior pattern, not a shared root cause.
    - Create Work remains locked until SEMrush evidence identifies a current source page linking to an initial redirect URL and its final destination.
    - Once that source-link relationship is proven, Work can be created to replace affected internal links with final destination URLs and verify by recrawl.
@@ -224,7 +227,7 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Use Investigation when the correct action is unknown. Use Create Requested Work when the client need and deliverable are already clear.</p></div>
-        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.40</span>
+        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.41</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -309,7 +312,7 @@
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.40"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.41"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),externalValidation:byId("external-validation-list"),target:byId("target-banner"),requestedForm:byId("requested-work-form"),requestedClient:byId("requested-client"),requestedMessage:byId("requested-work-message"),createRequested:byId("create-requested-work")};
   let activeClients=[],directoryClients=[],investigations=[],monitoringInvestigations=[],workItems=[],validationWorkItems=[],selectedKey="",processing=false,processingWorkItem=false,processingRequestedWork=false;
 
@@ -1528,24 +1531,24 @@
     const evidence=byId("work-description");
     const refreshedLatest=history.at(-1);
 
-    if(refreshedLatest?.rootCauseProven){
+    /*
+     * v1.9.41 CURRENT DECISION SYNCHRONIZATION
+     *
+     * Production D1 progress is preserved as history, but the visible decision
+     * must reflect the newest locked evidence-derived state. Otherwise an older
+     * saved Next Question / Next Evidence can remain on screen after newer
+     * evidence changes the decision without yet proving root cause.
+     */
+    if(finding){
       finding.value=history
         .map(entry=>`Step ${entry.step}: ${entry.finding}`)
         .join("\n\n");
+    }
+    if(question){
       question.value=refreshedLatest.nextQuestion||extractNextQuestion(refreshedLatest.nextAction);
+    }
+    if(evidence){
       evidence.value=refreshedLatest.nextAction||"";
-    }else{
-      if(finding&&!finding.value.trim()){
-        finding.value=history
-          .map(entry=>`Step ${entry.step}: ${entry.finding}`)
-          .join("\n\n");
-      }
-      if(question&&!question.value.trim()){
-        question.value=refreshedLatest.nextQuestion||extractNextQuestion(refreshedLatest.nextAction);
-      }
-      if(evidence&&!evidence.value.trim()){
-        evidence.value=refreshedLatest.nextAction||"";
-      }
     }
 
     updateDecisionControls({
