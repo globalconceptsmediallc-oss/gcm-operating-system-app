@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.41
+   Version: 1.9.42
    Status: FBDT Production Candidate
    Source: Stable production work.html 1.9.18
    Sprint: Work Queue Full Recovery
@@ -22,6 +22,9 @@
    - communications-operational-decision-v3
 
    Audited changes:
+   - v1.9.42 fixes direct Work Item deep links when the Work Item is still open but its linked Investigation is no longer in the active Investigation queue.
+   - The deep link now selects the Work Item's client, renders the open Work list, and scrolls to the exact Work Item instead of leaving it visually hidden.
+   - No Work Item status or D1 record is changed.
    - v1.9.41 keeps the visible Investigation Decision synchronized with the newest locked evidence-derived decision after reload.
    - Newer locked evidence now replaces stale saved What We Know / Next Question / Next Evidence text even when root cause is not yet proven.
    - Production D1 history remains preserved; this change only corrects the current visible decision state.
@@ -529,8 +532,13 @@
           return;
         }
 
+        el.filter.value=item.clientCode;
         showTarget(`Work Item #${item.id} is open, but its linked Investigation is not in the current open Investigation queue.`);
+        renderList();
         renderWorkItems(null);
+        renderExternalValidationItems();
+        el.detail.innerHTML='<div class="detail-empty">This Work Item is still open even though its linked Investigation is no longer active. Review the Work Item record before deciding whether it should remain open, be completed, or otherwise reconciled.</div>';
+        document.querySelector(`[data-work-id="${item.id}"]`)?.scrollIntoView({behavior:"smooth",block:"center"});
         return;
       }
     }
