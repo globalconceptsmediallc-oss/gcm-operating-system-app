@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Southeast Safes — Candidate Growth Issues</title>
+<style>
+:root{--navy:#0d2744;--blue:#2f6fd6;--bg:#f2f6fb;--card:#fff;--border:#d7e0eb;--text:#16263a;--muted:#65758a;--green:#1f8b4c;--greenSoft:#edf9f1;--yellow:#9a6a00;--yellowSoft:#fff7dc;--red:#b33939;--redSoft:#fff0f0;--shadow:0 5px 16px rgba(21,43,72,.07)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.shell{display:grid;grid-template-columns:124px minmax(0,1fr);min-height:100vh}.sidebar{min-height:100vh}.page{max-width:1120px;margin:0 auto;padding:24px 22px 56px}.top{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:14px}.eyebrow{margin:0 0 4px;color:var(--blue);font-size:.68rem;font-weight:900;letter-spacing:.13em;text-transform:uppercase}h1{margin:0;color:var(--navy);font-size:1.72rem;line-height:1.12}.subtitle{max-width:760px;margin:7px 0 0;color:var(--muted);font-size:.82rem;line-height:1.5}.actions{display:flex;flex-wrap:wrap;gap:7px;justify-content:flex-end}.btn{display:inline-flex;align-items:center;justify-content:center;min-height:32px;padding:0 11px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--navy);font-size:.72rem;font-weight:800;text-decoration:none;cursor:pointer}.btn.primary{border-color:var(--blue);background:var(--blue);color:#fff}.banner{padding:10px 13px;margin-bottom:12px;border:1px solid var(--border);border-radius:9px;font-size:.76rem;font-weight:700}.banner.loading{background:#fff}.banner.pass{border-color:#b8dfc5;background:var(--greenSoft);color:var(--green)}.banner.fail{border-color:#efcccc;background:var(--redSoft);color:var(--red)}
+.summary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;margin-bottom:12px}.card,.panel{border:1px solid var(--border);background:var(--card);box-shadow:var(--shadow)}.card{padding:13px 14px;border-radius:10px}.label{color:var(--muted);font-size:.62rem;font-weight:900;letter-spacing:.07em;text-transform:uppercase}.value{display:block;margin-top:5px;color:var(--navy);font-size:1.18rem;font-weight:900}.subvalue{display:block;margin-top:4px;color:var(--muted);font-size:.63rem;line-height:1.35}.panel{border-radius:11px;overflow:hidden}.panel+.panel{margin-top:12px}.panel-head{padding:13px 15px 11px;border-bottom:1px solid var(--border)}.panel-head h2{margin:0;color:var(--navy);font-size:.96rem}.panel-head p{margin:4px 0 0;color:var(--muted);font-size:.73rem;line-height:1.45}.panel-body{padding:13px 15px 16px}.checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.check{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:10px 11px;border:1px solid var(--border);border-radius:9px}.check strong{display:block;color:var(--navy);font-size:.78rem}.check span{display:block;margin-top:3px;color:var(--muted);font-size:.68rem;line-height:1.42}.badge{display:inline-flex;min-width:62px;min-height:22px;align-items:center;justify-content:center;padding:0 7px;border-radius:999px;font-size:.58rem;font-weight:900;text-transform:uppercase}.badge.pass{background:var(--greenSoft);color:var(--green)}.badge.lock{background:var(--yellowSoft);color:var(--yellow)}.badge.info{background:#eef4ff;color:#325aa8}.grid{display:grid;grid-template-columns:1.1fr .9fr;gap:12px;margin-top:12px}.records{display:grid;gap:8px}.record{padding:11px 12px;border:1px solid var(--border);border-radius:8px;background:#fff}.record strong{display:block;color:var(--navy);font-size:.8rem;line-height:1.35}.meta{margin-top:4px;color:var(--muted);font-size:.65rem;line-height:1.4}.record p{margin:6px 0 0;font-size:.71rem;line-height:1.45}.record .decision{margin-top:7px;padding-top:7px;border-top:1px solid #edf1f5;font-size:.69rem;line-height:1.45}.record .decision b{color:var(--navy)}.empty{padding:18px 12px;border:1px dashed var(--border);border-radius:8px;color:var(--muted);text-align:center;font-size:.72rem}.note{margin-top:10px;padding:11px;border-radius:8px;background:#f8fafc;color:var(--muted);font-size:.71rem;line-height:1.5}.note strong{color:var(--navy)}.route-investigation{border-left:4px solid #c88a00}.route-work{border-left:4px solid #2f6fd6}.route-monitoring{border-left:4px solid #9aa8b8}.route-information{border-left:4px solid #6c8ac7}.route-legacy{border-left:4px solid #c3c8cf}.lockbox{border:1px solid #ead79a;background:var(--yellowSoft);color:#6f5000;padding:11px;border-radius:8px;font-size:.71rem;line-height:1.5}
+@media(max-width:1000px){.summary{grid-template-columns:repeat(3,1fr)}}@media(max-width:780px){.shell{display:block}.summary,.grid,.checks{grid-template-columns:1fr}.page{padding:16px}.top{flex-direction:column}.actions{justify-content:flex-start}}
+</style>
+</head>
+<body>
+<!-- =========================================================
+ Global Concepts Media Operating System
+ File: growth-review-candidate-issues.html
+ Version: 1.0.0
+ Status: Production Road-Test Candidate
+ Sprint: Growth Review — Human-Routed Candidate Issues
+ Purpose: Read-only view of candidate Growth Review issues derived only from
+          source-dated Reviewed Findings that already carry an explicit human
+          Investigation or Work Item disposition.
+
+ Rules:
+ - 90-day source date must be present.
+ - Candidate = human disposition investigation or requested_work only.
+ - Monitoring and Information remain supporting evidence.
+ - Legacy Findings with no recorded disposition are excluded from candidates.
+ - Linked Investigation / Work Item IDs are shown when available.
+ - No keyword-based promotion.
+ - No D1 writes.
+ - No Growth Intelligence generation.
+ - No Consulting Knowledge generation.
+ - No Growth Review generation.
+ - No client conclusions.
+ ========================================================= -->
+<div class="shell">
+<aside class="sidebar" data-gcm-shell-sidebar></aside>
+<main><div class="page">
+<header class="top">
+  <div>
+    <p class="eyebrow">Client Growth Review</p>
+    <h1>Southeast Safes — Candidate Growth Issues</h1>
+    <p class="subtitle">Separate action-bearing Reviewed Findings from supporting evidence using the original human-selected route already stored in the OS. This page does not decide severity, priority, business impact, or recommended action.</p>
+  </div>
+  <div class="actions">
+    <a class="btn" href="growth-review-input-mapping.html">Back to Input Mapping</a>
+    <a class="btn" href="growth-review-readiness.html">Readiness</a>
+    <button class="btn primary" id="refresh" type="button">Refresh Candidates</button>
+  </div>
+</header>
+
+<div class="banner loading" id="status">Loading source-dated SES Reviewed Findings and their human routes…</div>
+
+<section class="summary">
+  <article class="card"><span class="label">Review Window</span><strong class="value" id="window">—</strong><span class="subvalue">inclusive 90-day period</span></article>
+  <article class="card"><span class="label">Recent Findings</span><strong class="value" id="recent">—</strong><span class="subvalue">source-dated Reviewed Findings</span></article>
+  <article class="card"><span class="label">Candidate Issues</span><strong class="value" id="candidates">—</strong><span class="subvalue">human-routed action records</span></article>
+  <article class="card"><span class="label">Investigations</span><strong class="value" id="investigations">—</strong><span class="subvalue">explicit Investigation route</span></article>
+  <article class="card"><span class="label">Work Items</span><strong class="value" id="work">—</strong><span class="subvalue">explicit Work Item route</span></article>
+  <article class="card"><span class="label">Generator</span><strong class="value">LOCKED</strong><span class="subvalue">candidate selection only</span></article>
+</section>
+
+<section class="panel">
+  <div class="panel-head"><h2>Candidate-Issue Gate</h2><p>A finding can enter the candidate set only when the source date is inside the review window and the original human route was Investigation or Work Item.</p></div>
+  <div class="panel-body">
+    <div class="checks" id="checks"><div class="empty">Checking human routes…</div></div>
+    <div class="note" id="decision">No candidate issues have been approved for Growth Review generation.</div>
+  </div>
+</section>
+
+<section class="grid">
+  <article class="panel">
+    <div class="panel-head"><h2>Candidate Growth Issues</h2><p>Action-bearing findings only. These are candidates for the next interpretation stage, not conclusions.</p></div>
+    <div class="panel-body"><div class="records" id="candidateList"><div class="empty">Loading candidates…</div></div></div>
+  </article>
+
+  <article class="panel">
+    <div class="panel-head"><h2>Supporting / Excluded Findings</h2><p>Monitoring, Information, and legacy unrouted findings remain evidence but do not become Growth Review issues automatically.</p></div>
+    <div class="panel-body"><div class="records" id="supportingList"><div class="empty">Loading supporting evidence…</div></div></div>
+  </article>
+</section>
+
+<section class="panel">
+  <div class="panel-head"><h2>Next Boundary</h2><p>What the next stage may and may not do.</p></div>
+  <div class="panel-body">
+    <div class="checks">
+      <article class="check"><div><strong>Allowed next</strong><span>Group or deduplicate candidate issues by their linked Investigation / Work Item and source evidence, then present the grouped set for human review.</span></div><b class="badge pass">Allowed</b></article>
+      <article class="check"><div><strong>Still prohibited</strong><span>Do not assign growth impact, severity, opportunity score, 30/60/90 action, or client-facing conclusion until the candidate set is road-tested.</span></div><b class="badge lock">Locked</b></article>
+    </div>
+    <div class="lockbox"><strong>Generator lock:</strong> this page does not import or invoke the Growth Intelligence, Consulting Knowledge, or Growth Review generator files.</div>
+  </div>
+</section>
+</div></main></div>
+
+<script src="shared/gcm-shell.js"></script>
+<script>
+window.addEventListener("DOMContentLoaded",function(){
+  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"proof",statusText:"Growth Review candidate issues · v1.0.0"});
+});
+</script>
+<script>
+(function(){"use strict";
+const VERSION="1.0.0";
+const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+const ZONE="America/New_York";
+const REVIEW_DAYS=90;
+const ACTION_ROUTES=new Set(["investigation","requested_work"]);
+const SUPPORT_ROUTES=new Set(["monitoring","information"]);
+const $=function(id){return document.getElementById(id)};
+const els={status:$("status"),refresh:$("refresh"),window:$("window"),recent:$("recent"),candidates:$("candidates"),investigations:$("investigations"),work:$("work"),checks:$("checks"),decision:$("decision"),candidateList:$("candidateList"),supportingList:$("supportingList")};
+
+function esc(v){return String(v==null?"":v).replace(/[&<>'"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]})}
+function clean(v){return String(v==null?"":v).trim()}
+function arr(v){return Array.isArray(v)?v:[]}
+function isoParts(value){const m=clean(value).match(/(\d{4})-(\d{2})-(\d{2})/);if(!m)return"";const y=Number(m[1]),mo=Number(m[2]),d=Number(m[3]);const dt=new Date(Date.UTC(y,mo-1,d));if(dt.getUTCFullYear()!==y||dt.getUTCMonth()!==mo-1||dt.getUTCDate()!==d)return"";return m[1]+"-"+m[2]+"-"+m[3]}
+function allIsoDates(value){const matches=clean(value).match(/\d{4}-\d{2}-\d{2}/g)||[];return matches.map(isoParts).filter(Boolean).sort()}
+function findingDate(f){const direct=isoParts(f&&f.source_date);if(direct)return direct;const dates=allIsoDates(f&&f.reporting_period);return dates.length?dates[dates.length-1]:""}
+function todayNY(){const parts=new Intl.DateTimeFormat("en-US",{timeZone:ZONE,year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());const v={};parts.forEach(function(p){v[p.type]=p.value});return v.year+"-"+v.month+"-"+v.day}
+function shiftDays(dateOnly,delta){const p=dateOnly.split("-").map(Number);const d=new Date(Date.UTC(p[0],p[1]-1,p[2]));d.setUTCDate(d.getUTCDate()+delta);return d.toISOString().slice(0,10)}
+function inWindow(d,start,end){return Boolean(d&&d>=start&&d<=end)}
+function routeOf(f){return clean(f&&f.intake_disposition).toLowerCase()}
+function routeLabel(route){if(route==="requested_work")return"Work Item";if(route==="investigation")return"Investigation";if(route==="monitoring")return"Monitoring";if(route==="information")return"Information";return"Legacy / Unrouted"}
+function linkedRecord(f,route){
+  if(route==="investigation"&&Number(f&&f.linked_investigation_id)>0)return"Investigation #"+Number(f.linked_investigation_id);
+  if(route==="requested_work"&&Number(f&&f.linked_work_item_id)>0)return"Work Item #"+Number(f.linked_work_item_id);
+  if(route==="monitoring"&&Number(f&&f.linked_activity_record_id)>0)return"Activity #"+Number(f.linked_activity_record_id);
+  if(route==="information"&&Number(f&&f.linked_communication_id)>0)return"Communication #"+Number(f.linked_communication_id);
+  return"Linked record not present";
+}
+function routeClass(route){if(route==="investigation")return"route-investigation";if(route==="requested_work")return"route-work";if(route==="monitoring")return"route-monitoring";if(route==="information")return"route-information";return"route-legacy"}
+function setStatus(kind,text){els.status.className="banner "+kind;els.status.textContent=text}
+function check(label,detail,state){return '<article class="check"><div><strong>'+esc(label)+'</strong><span>'+esc(detail)+'</span></div><b class="badge '+esc(state)+'">'+(state==="pass"?"Ready":state==="info"?"Evidence":"Locked")+'</b></article>'}
+function empty(text){return '<div class="empty">'+esc(text)+'</div>'}
+function findingCard(x){
+  const f=x.item,route=x.route;
+  const body=clean(f.analysis)||clean(f.details);
+  const decision=clean(f.decision);
+  const source=[routeLabel(route),linkedRecord(f,route),x.date,clean(f.category)].filter(Boolean).join(" · ");
+  return '<article class="record '+routeClass(route)+'"><strong>'+esc(clean(f.source_title)||"Reviewed Finding")+'</strong><div class="meta">'+esc(source)+'</div>'+(body?'<p>'+esc(body)+'</p>':'')+(decision?'<div class="decision"><b>Recorded decision:</b> '+esc(decision)+'</div>':'')+'</article>';
+}
+async function api(action,extra){const body=Object.assign({action:action},extra||{});const r=await fetch(WORKER,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify(body)});const p=await r.json().catch(function(){return{}});if(!r.ok||p&&p.ok!==true)throw new Error(typeof p.error==="string"?p.error:(p&&p.error&&p.error.message)||("HTTP "+r.status));return p}
+
+async function load(){
+  els.refresh.disabled=true;
+  setStatus("loading","Loading source-dated SES Reviewed Findings and their human routes…");
+  try{
+    const end=todayNY(),start=shiftDays(end,-(REVIEW_DAYS-1));
+    els.window.textContent=start.slice(5).replace("-","/")+"–"+end.slice(5).replace("-","/");
+
+    const payload=await api("get-client-findings",{clientCode:"SES"});
+    const findings=arr(payload&&payload.findings);
+    const recent=findings.map(function(f){return{item:f,date:findingDate(f),route:routeOf(f)}}).filter(function(x){return inWindow(x.date,start,end)});
+    const candidates=recent.filter(function(x){return ACTION_ROUTES.has(x.route)});
+    const supporting=recent.filter(function(x){return !ACTION_ROUTES.has(x.route)});
+    const investigations=candidates.filter(function(x){return x.route==="investigation"});
+    const work=candidates.filter(function(x){return x.route==="requested_work"});
+    const monitoring=supporting.filter(function(x){return x.route==="monitoring"});
+    const information=supporting.filter(function(x){return x.route==="information"});
+    const legacy=supporting.filter(function(x){return !SUPPORT_ROUTES.has(x.route)});
+
+    els.recent.textContent=recent.length;
+    els.candidates.textContent=candidates.length;
+    els.investigations.textContent=investigations.length;
+    els.work.textContent=work.length;
+
+    const linkedCandidates=candidates.filter(function(x){
+      return (x.route==="investigation"&&Number(x.item&&x.item.linked_investigation_id)>0) ||
+             (x.route==="requested_work"&&Number(x.item&&x.item.linked_work_item_id)>0);
+    });
+
+    const gates=[
+      {label:"Source-date boundary",detail:recent.length+" Reviewed Findings are anchored to "+start+" through "+end+".",state:"pass"},
+      {label:"Human-route boundary",detail:candidates.length+" candidate issue"+(candidates.length===1?"":"s")+" came only from explicit Investigation / Work Item routes.",state:"pass"},
+      {label:"Linked operational records",detail:linkedCandidates.length+" of "+candidates.length+" candidate issue"+(candidates.length===1?"":"s")+" expose a linked Investigation or Work Item ID.",state:linkedCandidates.length===candidates.length?"pass":"info"},
+      {label:"Supporting evidence preserved",detail:monitoring.length+" Monitoring, "+information.length+" Information, and "+legacy.length+" legacy/unrouted recent Finding"+(legacy.length===1?"":"s")+" remain outside the candidate set.",state:"info"},
+      {label:"Keyword promotion",detail:"No finding is promoted because of words such as ranking, backlink, Merchant Center, sales, traffic, or conversion.",state:"pass"},
+      {label:"Generator state",detail:"No priority, impact, recommendation, roadmap, or client-facing conclusion is generated.",state:"lock"}
+    ];
+    els.checks.innerHTML=gates.map(function(g){return check(g.label,g.detail,g.state)}).join("");
+
+    const sortedCandidates=candidates.slice().sort(function(a,b){
+      if(a.route!==b.route)return a.route==="requested_work"?-1:1;
+      return b.date.localeCompare(a.date);
+    });
+    els.candidateList.innerHTML=sortedCandidates.map(findingCard).join("")||empty("No recent Findings were explicitly routed to Investigation or Work Item.");
+
+    const sortedSupport=supporting.slice().sort(function(a,b){
+      const order={monitoring:0,information:1,"":2};
+      return (order[a.route]??2)-(order[b.route]??2)||b.date.localeCompare(a.date);
+    });
+    els.supportingList.innerHTML=sortedSupport.slice(0,20).map(findingCard).join("")||empty("No supporting or excluded recent Findings.");
+
+    els.decision.innerHTML="<strong>CANDIDATE SET READY FOR ROAD TEST:</strong> "+candidates.length+" action-bearing Finding"+(candidates.length===1?" is":"s are")+" separated from "+supporting.length+" supporting/excluded Finding"+(supporting.length===1?"":"s")+". No conclusions were generated.";
+    setStatus("pass","SES Candidate Growth Issues assembled from existing human routes. No reclassification, conclusions, or D1 writes were performed.");
+  }catch(err){
+    console.error(err);
+    setStatus("fail","Candidate issue assembly failed: "+(err&&err.message?err.message:String(err)));
+    els.checks.innerHTML=empty("Candidate issue gate could not complete.");
+    els.candidateList.innerHTML=empty("No candidate set available.");
+    els.supportingList.innerHTML=empty("No supporting set available.");
+    els.decision.textContent="Generator remains locked.";
+  }finally{els.refresh.disabled=false}
+}
+els.refresh.addEventListener("click",load);
+load();
+})();
+</script>
+</body>
+</html>
