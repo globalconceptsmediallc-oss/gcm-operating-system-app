@@ -15,7 +15,7 @@
 <!-- =========================================================
  Global Concepts Media Operating System
  File: growth-review-input-mapping.html
- Version: 1.0.0
+ Version: 1.1.0
  Status: Production Road-Test Candidate
  Sprint: Growth Review — Existing Client Input Mapping
  Purpose: Read-only adapter preview that maps authoritative SES operational
@@ -30,6 +30,13 @@
  - No Consulting Knowledge generation.
  - No Growth Review generation.
  - No client conclusions.
+
+ Change Notes — 1.1.0
+ - Tightens the Growth Review completed-work layer beyond the general Proof history.
+ - Completed Work Items remain eligible.
+ - Standalone activity records whose category/title identifies monitoring, alerts,
+   ranking alerts, position tracking, or evidence-only review are excluded from
+   completed work and remain historical/supporting evidence.
  ========================================================= -->
 <div class="shell">
 <aside class="sidebar" data-gcm-shell-sidebar></aside>
@@ -111,12 +118,12 @@
 <script src="shared/gcm-shell.js"></script>
 <script>
 window.addEventListener("DOMContentLoaded",function(){
-  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"proof",statusText:"Growth Review input mapping · v1.0.0"});
+  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"proof",statusText:"Growth Review input mapping · v1.1.0"});
 });
 </script>
 <script>
 (function(){"use strict";
-const VERSION="1.0.0";
+const VERSION="1.1.0";
 const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
 const ZONE="America/New_York";
 const REVIEW_DAYS=90;
@@ -148,7 +155,20 @@ function metricKey(m){return clean((m&&m.metricKey)||(m&&m.metric_key)).toLowerC
 function metricValue(m){const v=(m&&m.metricValue)!==undefined?m.metricValue:m&&m.metric_value;return Number.isFinite(Number(v))?Number(v):v}
 function metricUnit(m){return clean((m&&m.metricUnit)||(m&&m.metric_unit))}
 function completeStatus(v){return ["completed","complete","closed","done"].includes(clean(v).toLowerCase())}
-function substantiveActivity(a){if(clean(a&&a.source_type).toLowerCase()==="gmail_monitoring")return false;if(!completeStatus(a&&a.status))return false;return Boolean(clean((a&&a.activity)||(a&&a.task)||(a&&a.title)))}
+function substantiveActivity(a){
+  if(clean(a&&a.source_type).toLowerCase()==="gmail_monitoring")return false;
+  if(!completeStatus(a&&a.status))return false;
+  const activity=clean((a&&a.activity)||(a&&a.task)||(a&&a.title));
+  const category=clean(a&&a.category);
+  if(!activity)return false;
+  const evidenceOnlyText=(activity+" "+category).toLowerCase();
+  if(/\bmonitoring\b/.test(evidenceOnlyText))return false;
+  if(/\branking alert\b/.test(evidenceOnlyText))return false;
+  if(/\bposition tracking\b/.test(evidenceOnlyText))return false;
+  if(/\bseo alert\b/.test(evidenceOnlyText))return false;
+  if(/\bevidence review\b/.test(evidenceOnlyText))return false;
+  return true;
+}
 function setStatus(kind,text){els.status.className="banner "+kind;els.status.textContent=text}
 function badge(label,state){return '<b class="badge '+state+'">'+esc(label)+'</b>'}
 function check(label,detail,state){return '<article class="check"><div><strong>'+esc(label)+'</strong><span>'+esc(detail)+'</span></div>'+badge(state==="pass"?"Mapped":"Locked",state)+'</article>'}
@@ -233,7 +253,7 @@ async function load(){
    {label:"Business identity",detail:"Live Client Workspace identity mapped for "+(mapping.business.name||"SES")+".",state:"pass"},
    {label:"Primary interpretation layer",detail:eligibleFindings.length+" source-dated Reviewed Findings mapped as interpretation; raw monitoring is not promoted to a conclusion.",state:"pass"},
    {label:"Measurement layer",detail:eligibleMeasurements.length+" factual observations mapped, including "+outcomeMeasurements.length+" outcome-oriented observation"+(outcomeMeasurements.length===1?"":"s")+".",state:"pass"},
-   {label:"Completed-work layer",detail:completedWork.length+" records mapped under the same completed-work rules used by Proof.",state:"pass"},
+   {label:"Completed-work layer",detail:completedWork.length+" records mapped under the Growth Review work rule: completed Work Items plus substantive non-monitoring completed activities.",state:"pass"},
    {label:"Media activity layer",detail:mediaInWindow.length+" overlapping Media records mapped as context only.",state:"pass"},
    {label:"Generator state",detail:"Growth Intelligence, Consulting Knowledge, and Growth Review generation remain disabled on this page.",state:"lock"}
   ];
@@ -243,7 +263,7 @@ async function load(){
    contractRow("Business Overview Inputs","Live Client Workspace identity and relationship state"),
    contractRow("Executive Summary Inputs","Source-dated Reviewed Findings only; no summary conclusion generated"),
    contractRow("Business Health Inputs","Factual Measurement Observations, with outcome metrics separately identified"),
-   contractRow("Work / Proof Inputs","Completed Work Items plus qualifying non-monitoring completed activities"),
+   contractRow("Work / Proof Inputs","Completed Work Items plus substantive non-monitoring/non-alert completed activities"),
    contractRow("Media Inputs","Flights overlapping the review window; no effectiveness inference"),
    contractRow("Action Plan Inputs","Current priorities and open Work queue as unresolved operational context"),
    contractRow("Excluded from conclusions","Undated Findings, monitoring-only activity, unsupported causality, stale static July Business Record"),
