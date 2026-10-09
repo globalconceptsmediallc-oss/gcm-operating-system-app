@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.43
+   Version: 1.9.44
    Status: FBDT Production Candidate
    Source: Stable production work.html 1.9.18
    Sprint: Work Queue Full Recovery
@@ -22,6 +22,9 @@
    - communications-operational-decision-v3
 
    Audited changes:
+   - v1.9.44 adds an explicit Superseded / Duplicate reconciliation action for external-validation Work Items.
+   - The action requires a written reconciliation note and confirms that no completion claim will be recorded.
+   - Closing as superseded preserves the Work Item and Evidence history while removing the stale open record from active operational state.
    - v1.9.43 removes the false external-validation fallback that claimed implementation was complete when no actual_impact was recorded.
    - External-validation cards now state when verified implementation evidence is missing and expose the record status/date context without changing D1.
    - v1.9.42 fixes direct Work Item deep links when the Work Item is still open but its linked Investigation is no longer in the active Investigation queue.
@@ -2946,9 +2949,65 @@
             <p>${esc(proofCopy)}</p>
           </section>
           <div class="status ${actualImpact?"ready":"error"}">${actualImpact?"No completion action is available while this item is awaiting external validation.":"External-validation status is present, but no verified implementation result is recorded. Reconcile this Work Item before treating it as completed implementation awaiting proof."}</div>
+          <section class="detail-section">
+            <h3>Reconcile Work Item</h3>
+            <label for="supersede-note-${esc(i.id)}">Superseded / Duplicate Reason</label>
+            <textarea id="supersede-note-${esc(i.id)}" placeholder="Example: Superseded by Investigation #46. No completion claim."></textarea>
+            <div class="processing-actions">
+              <button class="button" data-supersede-work="${esc(i.id)}">Close as Superseded / Duplicate</button>
+            </div>
+            <div id="supersede-message-${esc(i.id)}"></div>
+          </section>
         </article>
       `;
     }).join("");
+
+    el.externalValidation.querySelectorAll("[data-supersede-work]").forEach(button=>{
+      button.addEventListener("click",()=>{
+        const id=Number(button.dataset.supersedeWork);
+        const item=visibleValidation.find(entry=>Number(entry.id)===id);
+        if(item)reconcileSupersededWorkItem(item);
+      });
+    });
+  }
+
+  async function reconcileSupersededWorkItem(item){
+    if(processingWorkItem)return;
+
+    const id=Number(item.id);
+    const note=byId(`supersede-note-${id}`)?.value.trim()||"";
+    const message=byId(`supersede-message-${id}`);
+
+    if(!note){
+      message.className="status error";
+      message.textContent="Enter why this Work Item is superseded or duplicate before closing it.";
+      return;
+    }
+
+    if(!window.confirm(`Close Work Item #${id} as Superseded / Duplicate? No completion claim will be recorded.`))return;
+
+    processingWorkItem=true;
+    message.className="status loading";
+    message.textContent=`Reconciling Work Item #${id} in production D1…`;
+
+    try{
+      await post({
+        action:"process-work-item",
+        clientCode:item.clientCode,
+        workItemId:id,
+        disposition:"superseded",
+        dispositionNote:note
+      });
+
+      message.className="status ready";
+      message.textContent=`Work Item #${id} closed as Superseded / Duplicate. No completion claim was recorded.`;
+      await load();
+    }catch(error){
+      message.className="status error";
+      message.textContent=error.message||"The Work Item could not be reconciled.";
+    }finally{
+      processingWorkItem=false;
+    }
   }
 
   async function completeWorkItem(item){
