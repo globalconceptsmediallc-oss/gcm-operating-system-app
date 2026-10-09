@@ -15,7 +15,7 @@
 <!-- =========================================================
  Global Concepts Media Operating System
  File: growth-review-input-mapping.html
- Version: 1.1.0
+ Version: 1.2.0
  Status: Production Road-Test Candidate
  Sprint: Growth Review — Existing Client Input Mapping
  Purpose: Read-only adapter preview that maps authoritative SES operational
@@ -30,6 +30,12 @@
  - No Consulting Knowledge generation.
  - No Growth Review generation.
  - No client conclusions.
+
+ Change Notes — 1.2.0
+ - Adds a dedicated read-only Commerce Performance layer sourced from client-level D1 commerce snapshots.
+ - Keeps Shopify sales/order/funnel facts separate from campaign measurements and from Reviewed Findings.
+ - Preserves Shopify's Sep. 21 session-definition caveat beside session/conversion metrics.
+ - Does not convert commerce facts into a Growth Review conclusion.
 
  Change Notes — 1.1.0
  - Tightens the Growth Review completed-work layer beyond the general Proof history.
@@ -90,6 +96,11 @@
   </article>
 </section>
 
+<section class="panel">
+  <div class="panel-head"><h2>Commerce Performance — Shopify Analytics</h2><p>Client-level sales, order, and checkout-funnel facts for the review period. These are business outcomes, not campaign attribution.</p></div>
+  <div class="panel-body"><div class="records" id="commerce"><div class="empty">Loading Commerce Performance…</div></div></div>
+</section>
+
 <section class="grid">
   <article class="panel">
     <div class="panel-head"><h2>Primary Interpretation — Reviewed Findings</h2><p>These are the only records mapped as interpreted business findings. Monitoring and measurements do not silently become conclusions.</p></div>
@@ -118,12 +129,12 @@
 <script src="shared/gcm-shell.js"></script>
 <script>
 window.addEventListener("DOMContentLoaded",function(){
-  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"proof",statusText:"Growth Review input mapping · v1.1.0"});
+  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"proof",statusText:"Growth Review input mapping · v1.2.0"});
 });
 </script>
 <script>
 (function(){"use strict";
-const VERSION="1.1.0";
+const VERSION="1.2.0";
 const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
 const ZONE="America/New_York";
 const REVIEW_DAYS=90;
@@ -134,7 +145,7 @@ const els={
  measurementsCount:$("measurementsCount"),outcomeCount:$("outcomeCount"),workCount:$("workCount"),
  mediaCount:$("mediaCount"),checks:$("checks"),decision:$("decision"),contract:$("contract"),
  businessContext:$("businessContext"),findings:$("findings"),measurements:$("measurements"),
- completedWork:$("completedWork"),media:$("media")
+ completedWork:$("completedWork"),media:$("media"),commerce:$("commerce")
 };
 
 function esc(v){return String(v==null?"":v).replace(/[&<>'"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]})}
@@ -192,11 +203,13 @@ async function load(){
   const loaded=await Promise.all([
    api("get-client-findings",{clientCode:"SES"}),
    api("measurement-observations",{operation:"list",clientId:clientId,limit:250}),
-   api("get-media-operations",{clientId:clientId})
+   api("get-media-operations",{clientId:clientId}),
+   api("commerce-performance",{operation:"list",clientId:clientId,limit:25})
   ]);
   const findings=arr(loaded[0]&&loaded[0].findings);
   const measurements=arr(loaded[1]&&loaded[1].observations);
   const media=arr(loaded[2]&&loaded[2].mediaOperations&&loaded[2].mediaOperations.records);
+  const commerceSnapshots=arr(loaded[3]&&loaded[3].snapshots);
   const work=arr(op.workItems),proof=arr(op.proofOfWork);
 
   const eligibleFindings=findings.map(function(f){return {item:f,date:findingDate(f)}}).filter(function(x){return inWindow(x.date,start,end)});
@@ -212,6 +225,8 @@ async function load(){
   const completedWork=completedWorkItems.map(function(x){return {type:"Work Item",date:x.date,item:x.item}}).concat(completedActivities.map(function(x){return {type:"Activity",date:x.date,item:x.item}}));
 
   const mediaInWindow=media.filter(function(m){return rangesOverlap(mediaStart(m),mediaEnd(m),start,end)});
+  const commerceInWindow=commerceSnapshots.filter(function(c){return rangesOverlap(isoParts(c&&c.periodStart),isoParts(c&&c.periodEnd),start,end)});
+  const exactCommerce=commerceInWindow.find(function(c){return isoParts(c&&c.periodStart)===start&&isoParts(c&&c.periodEnd)===end})||commerceInWindow[0]||null;
   const currentPriorities=arr(rec.currentPriorities);
   const workQueue=arr(rec.workQueue);
 
@@ -231,6 +246,7 @@ async function load(){
    supportingEvidence:{
     measurements:eligibleMeasurements,
     outcomeMeasurements:outcomeMeasurements,
+    commercePerformance:exactCommerce,
     completedWork:completedWork,
     mediaActivity:mediaInWindow
    },
@@ -253,6 +269,7 @@ async function load(){
    {label:"Business identity",detail:"Live Client Workspace identity mapped for "+(mapping.business.name||"SES")+".",state:"pass"},
    {label:"Primary interpretation layer",detail:eligibleFindings.length+" source-dated Reviewed Findings mapped as interpretation; raw monitoring is not promoted to a conclusion.",state:"pass"},
    {label:"Measurement layer",detail:eligibleMeasurements.length+" factual observations mapped, including "+outcomeMeasurements.length+" outcome-oriented observation"+(outcomeMeasurements.length===1?"":"s")+".",state:"pass"},
+   {label:"Commerce Performance layer",detail:exactCommerce?"Shopify sales, orders, AOV, sessions, and funnel facts mapped for "+clean(exactCommerce.periodStart)+" through "+clean(exactCommerce.periodEnd)+".":"No client-level commerce snapshot overlaps the review period.",state:exactCommerce?"pass":"lock"},
    {label:"Completed-work layer",detail:completedWork.length+" records mapped under the Growth Review work rule: completed Work Items plus substantive non-monitoring completed activities.",state:"pass"},
    {label:"Media activity layer",detail:mediaInWindow.length+" overlapping Media records mapped as context only.",state:"pass"},
    {label:"Generator state",detail:"Growth Intelligence, Consulting Knowledge, and Growth Review generation remain disabled on this page.",state:"lock"}
@@ -263,6 +280,7 @@ async function load(){
    contractRow("Business Overview Inputs","Live Client Workspace identity and relationship state"),
    contractRow("Executive Summary Inputs","Source-dated Reviewed Findings only; no summary conclusion generated"),
    contractRow("Business Health Inputs","Factual Measurement Observations, with outcome metrics separately identified"),
+   contractRow("Commerce Performance Inputs","Client-level Shopify sales, orders, AOV, and checkout-funnel facts; source caveats preserved"),
    contractRow("Work / Proof Inputs","Completed Work Items plus substantive non-monitoring/non-alert completed activities"),
    contractRow("Media Inputs","Flights overlapping the review window; no effectiveness inference"),
    contractRow("Action Plan Inputs","Current priorities and open Work queue as unresolved operational context"),
@@ -284,6 +302,23 @@ async function load(){
    return record(clean(f.source_title)||clean(f.category)||"Reviewed Finding",["Reviewed Finding",x.date,clean(f.category)].filter(Boolean).join(" · "),clean(f.analysis)||clean(f.decision)||clean(f.details));
   }).join("")||empty("No eligible source-dated Reviewed Findings.");
 
+  if(exactCommerce){
+   const money=function(v){return v==null?"—":new Intl.NumberFormat("en-US",{style:"currency",currency:clean(exactCommerce.currency)||"USD",maximumFractionDigits:2}).format(Number(v))};
+   const delta=function(v){if(v==null)return"";const n=Number(v);return (n>0?"+":"")+n+"% vs "+clean(exactCommerce.comparisonStart)+"–"+clean(exactCommerce.comparisonEnd)};
+   const commerceRows=[
+    record("Total sales",[clean(exactCommerce.periodStart)+"–"+clean(exactCommerce.periodEnd),delta(exactCommerce.totalSalesChangePct)].filter(Boolean).join(" · "),money(exactCommerce.totalSales)),
+    record("Gross / net sales",["Gross "+delta(exactCommerce.grossSalesChangePct)].filter(Boolean).join(" · "),money(exactCommerce.grossSales)+" gross · "+money(exactCommerce.netSales)+" net"),
+    record("Orders / fulfilled",["Orders "+delta(exactCommerce.ordersChangePct),"Fulfilled "+delta(exactCommerce.ordersFulfilledChangePct)].filter(Boolean).join(" · "),String(exactCommerce.orders)+" orders · "+String(exactCommerce.ordersFulfilled)+" fulfilled"),
+    record("Average order value",delta(exactCommerce.averageOrderValueChangePct),money(exactCommerce.averageOrderValue)),
+    record("Sessions / conversion",["Sessions "+delta(exactCommerce.sessionsChangePct),"Conversion "+delta(exactCommerce.conversionRateChangePct)].filter(Boolean).join(" · "),String(exactCommerce.sessions)+" sessions · "+String(exactCommerce.conversionRate)+"% conversion rate"),
+    record("Checkout funnel",clean(exactCommerce.sourceSystem),String(exactCommerce.addedToCartCount)+" added to cart ("+String(exactCommerce.addedToCartRate)+"%) · "+String(exactCommerce.reachedCheckoutCount)+" reached checkout ("+String(exactCommerce.reachedCheckoutRate)+"%) · "+String(exactCommerce.completedCheckoutCount)+" completed ("+String(exactCommerce.completedCheckoutRate)+"%)")
+   ];
+   if(clean(exactCommerce.dataCaveat))commerceRows.push(record("Source caveat","Shopify Analytics definition warning",clean(exactCommerce.dataCaveat)));
+   els.commerce.innerHTML=commerceRows.join("");
+  }else{
+   els.commerce.innerHTML=empty("No client-level Commerce Performance snapshot overlaps this review window.");
+  }
+
   els.measurements.innerHTML=eligibleMeasurements.slice(0,12).map(function(x){
    const m=x.item,k=metricKey(m),isOutcome=OUTCOME_METRIC_PATTERN.test(k);
    return record(k||"measurement",["Measurement",clean((m&&m.sourceSystem)||(m&&m.source_system)),x.date,isOutcome?"OUTCOME":"SUPPORTING"].filter(Boolean).join(" · "),String(metricValue(m))+" "+metricUnit(m));
@@ -298,7 +333,7 @@ async function load(){
    return record(clean(m.campaignName)||clean(m.creativeName)||clean(m.title)||"Media Record",[clean(m.mediaType),clean(m.market),[mediaStart(m),mediaEnd(m)].filter(Boolean).join("–")].filter(Boolean).join(" · "),[clean(m.outletName),clean(m.status),clean(m.trafficStatus),clean(m.confirmationStatus)].filter(Boolean).join(" · "));
   }).join("")||empty("No overlapping Media records.");
 
-  els.decision.innerHTML="<strong>MAPPING READY FOR ROAD TEST:</strong> the evidence is now separated into primary interpretation, supporting facts, completed work, Media context, and unresolved operational context. The generator remains locked.";
+  els.decision.innerHTML="<strong>MAPPING READY FOR ROAD TEST:</strong> the evidence is now separated into primary interpretation, general measurements, client-level Commerce Performance, completed work, Media context, and unresolved operational context. The generator remains locked.";
   setStatus("pass","SES evidence mapped successfully. No conclusions were generated and no D1 writes were performed.");
  }catch(err){
   console.error(err);
