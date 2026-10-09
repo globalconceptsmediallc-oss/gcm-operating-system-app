@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.35
+   Version: 1.9.39
    Status: FBDT Production Candidate
    Source: Stable production work.html 1.9.18
    Sprint: Work Queue Full Recovery
@@ -22,6 +22,10 @@
    - communications-operational-decision-v3
 
    Audited changes:
+   - v1.9.39 makes Investigation evidence text-first and removes screenshot analysis from the operator workflow.
+   - Operators now paste verified source facts directly into Add Evidence; screenshots are no longer required.
+   - Existing evidence decision, relevance, duplicate, root-cause, history, and Work-gating rules remain unchanged.
+   - Existing local evidence/checklist state remains compatible by preserving the underlying workflow step IDs.
    - v1.9.32 re-evaluates previously locked evidence after a decision-rule upgrade.
    - Existing locked raw facts are preserved; only the derived finding/root-cause decision is refreshed when the newer rule produces a stronger supported conclusion.
    - When re-evaluation proves root cause, stale saved Investigation-progress text is replaced in the visible decision fields so the operator can create the supported Work Item without re-entering evidence.
@@ -217,7 +221,7 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Use Investigation when the correct action is unknown. Use Create Requested Work when the client need and deliverable are already clear.</p></div>
-        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.30</span>
+        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.39</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -302,7 +306,7 @@
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.38"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.39"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),externalValidation:byId("external-validation-list"),target:byId("target-banner"),requestedForm:byId("requested-work-form"),requestedClient:byId("requested-client"),requestedMessage:byId("requested-work-message"),createRequested:byId("create-requested-work")};
   let activeClients=[],directoryClients=[],investigations=[],monitoringInvestigations=[],workItems=[],validationWorkItems=[],selectedKey="",processing=false,processingWorkItem=false,processingRequestedWork=false;
 
@@ -751,10 +755,10 @@
 
   const EVIDENCE_STEPS=[
     {id:"open_semrush",title:"Open Evidence Source",detail:"Open the correct source page for this Investigation."},
-    {id:"review_issues",title:"Review Issues",detail:"Open the Issues screen and identify the highest-value issue."},
-    {id:"capture_screenshot",title:"Capture Screenshot",detail:"Choose the current evidence screenshot."},
-    {id:"analyze_evidence",title:"Analyze Evidence",detail:"Use Workers AI to extract visible facts and metrics."},
-    {id:"review_findings",title:"Review AI Findings",detail:"Confirm the extracted evidence and prefilled fields."},
+    {id:"review_issues",title:"Review Issues",detail:"Review the source and identify the highest-value issue."},
+    {id:"capture_screenshot",title:"Add Evidence",detail:"Paste the exact source facts you can verify."},
+    {id:"analyze_evidence",title:"Evaluate Evidence",detail:"Apply the Investigation decision rules to the verified facts."},
+    {id:"review_findings",title:"Review Findings",detail:"Confirm the evidence-supported finding and next step."},
     {id:"complete_investigation",title:"Complete Investigation",detail:"Approve the evidence-supported finding."},
     {id:"create_work",title:"Create Work Item",detail:"Create specific work only when evidence proves it is required."}
   ];
@@ -813,7 +817,7 @@
     if(capturedPanel)capturedPanel.hidden=true;
     if(status){
       status.className="status ready capture-status";
-      status.textContent="Road-test evidence cleared. Choose the first screenshot.";
+      status.textContent="Road-test evidence cleared. Enter the first verified source facts.";
     }
 
     updateDecisionControls({rootCauseProven:false});
@@ -827,8 +831,8 @@
     const targets={
       open_semrush:{section:"#evidence-actions",focus:"[data-evidence-tool]"},
       review_issues:{section:"#evidence-actions",focus:"[data-evidence-tool]"},
-      capture_screenshot:{section:"#evidence-capture",focus:"#investigation-evidence-file"},
-      analyze_evidence:{section:"#evidence-capture",focus:"#analyze-investigation-evidence"},
+      capture_screenshot:{section:"#evidence-capture",focus:"#manual-evidence-input"},
+      analyze_evidence:{section:"#evidence-capture",focus:"#lock-manual-evidence"},
       review_findings:{section:"#investigation-decision",focus:"#finding-summary"},
       complete_investigation:{section:"#investigation-decision-actions",focus:"#close-button"},
       create_work:{section:"#investigation-decision-actions",focus:"#create-button"}
@@ -1287,24 +1291,18 @@
          ${buildSearchConsoleLinkSetup(item)}
       </div>
       <div class="evidence-capture" id="evidence-capture">
-        <h4>Capture the Next Evidence Screenshot</h4>
-        <p>Each screenshot advances the Investigation by one step. Analyze it, follow the recommended next action, then return with the next screenshot. Completed evidence steps are locked below.</p>
-        <div class="evidence-upload-row">
-          <label class="button" for="investigation-evidence-file">Choose Screenshot</label>
-          <input class="evidence-file" id="investigation-evidence-file" type="file" accept="image/png,image/jpeg,image/webp" />
-          <button class="button primary" id="analyze-investigation-evidence" type="button" disabled>Analyze Evidence</button>
-        </div>
-        <img class="evidence-preview" id="investigation-evidence-preview" alt="Selected Investigation evidence screenshot preview" />
-        <div class="capture-status" id="investigation-evidence-status"></div>
-        <div class="manual-evidence-fallback" id="manual-evidence-fallback" hidden>
-          <h4>Screenshot analysis failed? Enter the evidence manually.</h4>
-          <p>Enter only facts you can verify on the source screen. Use one fact per line. The manual entry will use the same Investigation decision rules and will be preserved as operator-entered evidence.</p>
+        <h4>Add the Next Evidence</h4>
+        <p>Copy or type only facts you can verify in the source. Use one fact per line. Screenshots are no longer required; the same Investigation decision and Work-gating rules still apply.</p>
+        <div class="manual-evidence-fallback" id="manual-evidence-fallback">
+          <h4>Verified Source Evidence</h4>
+          <p>Enter the exact visible facts from SEMrush, Search Console, GA4, Merchant Center, Ahrefs, or the live site. Do not enter conclusions that the source does not prove.</p>
           <textarea id="manual-evidence-input" placeholder="${esc(manualEvidencePlaceholder(item))}"></textarea>
           <div class="manual-evidence-actions">
-            <button class="button primary" id="lock-manual-evidence" type="button">Use Manual Evidence</button>
-            <span class="manual-evidence-note">Manual entry does not automatically prove root cause.</span>
+            <button class="button primary" id="lock-manual-evidence" type="button">Use Evidence</button>
+            <span class="manual-evidence-note">Text evidence does not automatically prove root cause.</span>
           </div>
         </div>
+        <div class="capture-status" id="investigation-evidence-status"></div>
         <div class="captured-evidence" id="captured-evidence-panel" hidden>
           <h4>Current Evidence Step</h4>
           <ul id="captured-evidence-list"></ul>
@@ -1568,230 +1566,16 @@
   }
 
   function bindEvidenceCapture(item){
-    const input=byId("investigation-evidence-file");
-    const preview=byId("investigation-evidence-preview");
-    const analyze=byId("analyze-investigation-evidence");
     const status=byId("investigation-evidence-status");
     const manualPanel=byId("manual-evidence-fallback");
     const manualInput=byId("manual-evidence-input");
     const manualLock=byId("lock-manual-evidence");
-    let imageDataUrl="";
-    let fileName="investigation-evidence";
-    let analysisLocked=false;
 
-    const showManualFallback=(message="Screenshot extraction failed. Enter only the visible facts you can verify.")=>{
-      if(!manualPanel)return;
-      manualPanel.hidden=false;
-      const note=manualPanel.querySelector("p");
-      if(note&&message)note.textContent=message;
-    };
-
-    const hideManualFallback=()=>{
-      if(!manualPanel)return;
-      manualPanel.hidden=true;
-    };
-
-    input.addEventListener("change",event=>{
-      const [file]=event.target.files||[];
-      if(!file)return;
-
-      const allowed=new Set(["image/png","image/jpeg","image/webp"]);
-      if(!allowed.has(file.type)){
-        status.className="status error capture-status";
-        status.textContent="Choose a PNG, JPG, JPEG, or WEBP screenshot.";
-        input.value="";
-        analyze.disabled=true;
-        return;
-      }
-
-      if(file.size>10*1024*1024){
-        status.className="status error capture-status";
-        status.textContent="The screenshot is larger than 10 MB.";
-        input.value="";
-        analyze.disabled=true;
-        return;
-      }
-
-      const reader=new FileReader();
-      reader.onload=()=>{
-        analysisLocked=false;
-        hideManualFallback();
-        imageDataUrl=String(reader.result||"");
-        fileName=file.name||"investigation-evidence";
-        preview.src=imageDataUrl;
-        preview.classList.add("visible");
-        analyze.disabled=false;
-        completeEvidenceStep(item,"capture_screenshot");
-        status.className="status ready capture-status";
-        status.textContent="Screenshot ready. Analyze the visible evidence.";
-      };
-      reader.onerror=()=>{
-        status.className="status error capture-status";
-        status.textContent="The screenshot could not be read.";
-        showManualFallback("The screenshot file could not be read. Enter the verified facts from the source screen manually.");
-      };
-      reader.readAsDataURL(file);
-    });
-
-    analyze.addEventListener("click",async event=>{
-      event.preventDefault();
-      event.stopPropagation();
-
-      if(analysisLocked){
-        status.className="status error capture-status";
-        status.textContent="This screenshot is already locked. Choose the next screenshot.";
-        return;
-      }
-
-      if(!imageDataUrl){
-        status.className="status error capture-status";
-        status.textContent="No screenshot is loaded. Choose the next screenshot.";
-        return;
-      }
-
-      analyze.disabled=true;
-      analyze.textContent="Analyzing…";
-      status.className="status loading capture-status";
-      status.textContent="Analyze button confirmed. Sending screenshot to Workers AI…";
-      await new Promise(resolve=>setTimeout(resolve,50));
-
-      try{
-        const context=buildEvidenceExtractionPrompt(
-          item,
-          getDecisionEvidenceHistory(item)
-        );
-
-        const payload=await post({
-          action:"analyze-client-communication",
-          client:item.clientName,
-          clientId:item.clientCode,
-          sourceText:context,
-          image:imageDataUrl,
-          fileName,
-          contractVersion:"communications-operational-decision-v3"
-        });
-
-        /*
-         * v1.9.10 EVIDENCE LOCK INTEGRITY GUARD
-         *
-         * Investigation evidence is immutable once locked. A Worker response that
-         * is partial, failed, or carries processing errors may be useful for
-         * diagnostics, but it is not verified evidence and must never advance the
-         * Investigation. Keep the screenshot loaded so the same evidence can be
-         * retried after Workers AI recovers.
-         */
-        const processingStatus=String(payload?.processingStatus||"").trim().toLowerCase();
-        const workerErrors=Array.isArray(payload?.errors)?payload.errors:[];
-        const failedStages=Array.isArray(payload?.stages)
-          ? payload.stages.filter(stage=>String(stage?.status||"").trim().toLowerCase()==="failed")
-          : [];
-
-        const recoverySucceeded=Array.isArray(payload?.stages) &&
-          payload.stages.some(stage=>
-            String(stage?.stageName||"").trim().toLowerCase()==="guarded_evidence_recovery" &&
-            String(stage?.status||"").trim().toLowerCase()==="success"
-          );
-        const recoverableErrorCodes=new Set([
-          "OPERATIONAL_EVIDENCE_SINGLE_PASS_INCOMPLETE",
-          "OPERATIONAL_EVIDENCE_PARTIAL"
-        ]);
-        const blockingWorkerErrors=workerErrors.filter(error=>{
-          const code=String(error?.code||"").trim().toUpperCase();
-          return !(recoverySucceeded&&recoverableErrorCodes.has(code));
-        });
-        const blockingFailedStages=failedStages.filter(stage=>
-          !(
-            recoverySucceeded &&
-            String(stage?.stageName||"").trim().toLowerCase()==="operational_evidence_extraction"
-          )
-        );
-        const recoveredEvidenceUsable=recoverySucceeded && (
-          (Array.isArray(payload?.evidence?.visibleFacts)&&payload.evidence.visibleFacts.length>0) ||
-          (Array.isArray(payload?.evidence?.visibleMetrics)&&payload.evidence.visibleMetrics.length>0)
-        );
-
-        if(
-          payload?.ok!==true ||
-          (!recoveredEvidenceUsable&&processingStatus!=="complete") ||
-          blockingWorkerErrors.length>0 ||
-          blockingFailedStages.length>0
-        ){
-          const workerMessage=workerErrorMessage(
-            blockingWorkerErrors[0] ||
-            payload?.error ||
-            blockingFailedStages[0]?.rawAiError ||
-            workerErrors[0],
-            "The analysis did not complete successfully."
-          );
-
-          status.className="status error capture-status";
-          status.textContent=workerMessage
-            ? `Evidence not locked. ${workerMessage}`
-            : "Evidence not locked because the analysis did not complete successfully.";
-          showManualFallback("Screenshot analysis did not return usable evidence. Enter only the facts you can verify on the source screen, one per line.");
-          analyze.disabled=false;
-          analyze.textContent="Analyze Evidence";
-          analysisLocked=false;
-          return;
-        }
-
-        const captured=normalizeCapturedEvidence(payload);
-        const relevance=validateEvidenceRelevance(captured,item);
-        if(!relevance.ok){
-          renderCapturedEvidence(captured,{
-            evidenceType:"wrong_source",
-            issueName:"",
-            count:0,
-            rootCauseProven:false,
-            reason:relevance.reason,
-            nextQuestion:"Does this screenshot belong to the selected Investigation?",
-            nextEvidence:`Capture evidence from ${evidenceSourceName(item)} for Investigation #${item.id}.`
-          });
-          status.className="status error capture-status";
-          status.textContent=relevance.reason;
-          showManualFallback("If this is the correct source but the screenshot was misread, enter the verified facts manually. Do not enter inferred conclusions.");
-          analyze.disabled=false;
-          analyze.textContent="Analyze Evidence";
-          return;
-        }
-        const decision=buildNextStepDecision(captured,item);
-        renderCapturedEvidence(captured,decision);
-        prefillInvestigationFields(item,captured,decision);
-        const imageFingerprint=fingerprintImageData(imageDataUrl);
-        const historyResult=appendEvidenceHistory(item,captured,decision,imageFingerprint);
-
-        imageDataUrl="";
-        input.value="";
-        preview.removeAttribute("src");
-        preview.classList.remove("visible");
-        analyze.disabled=true;
-        analyze.textContent="Analyze Evidence";
-
-        if(historyResult.added){
-          analysisLocked=true;
-          completeEvidenceStep(item,"review_issues");
-          completeEvidenceStep(item,"analyze_evidence");
-          status.className="status ready capture-status";
-          status.textContent="Evidence step locked. Follow the next action, then choose the next screenshot.";
-        }else{
-          analysisLocked=false;
-          status.className="status error capture-status";
-          status.textContent=historyResult.reason==="duplicate_image"
-            ? "This exact screenshot is already locked for this Investigation. Choose the next evidence screenshot."
-            : "The evidence was analyzed but could not be locked. Choose the next evidence screenshot.";
-        }
-      }catch(error){
-        console.error(error);
-        status.className="status error capture-status";
-        status.textContent=error.message||"The evidence screenshot could not be analyzed.";
-        showManualFallback("Screenshot analysis failed. Enter only the visible source facts manually so the Investigation can continue.");
-      }finally{
-        if(!analysisLocked){
-          analyze.disabled=!imageDataUrl;
-          analyze.textContent="Analyze Evidence";
-        }
-      }
-    });
+    if(manualPanel)manualPanel.hidden=false;
+    if(status){
+      status.className="status ready capture-status";
+      status.textContent="Enter verified source facts, then click Use Evidence.";
+    }
 
     manualLock?.addEventListener("click",event=>{
       event.preventDefault();
@@ -1800,7 +1584,7 @@
       const raw=String(manualInput?.value||"").trim();
       if(!raw){
         status.className="status error capture-status";
-        status.textContent="Enter at least one verified evidence fact before using the manual fallback.";
+        status.textContent="Enter at least one verified evidence fact before continuing.";
         return;
       }
 
@@ -1811,7 +1595,7 @@
 
       if(!facts.length){
         status.className="status error capture-status";
-        status.textContent="Enter at least one verified evidence fact before using the manual fallback.";
+        status.textContent="Enter at least one verified evidence fact before continuing.";
         return;
       }
 
@@ -1819,7 +1603,7 @@
         facts,
         summary:"",
         source:`${evidenceSourceName(item)} · Operator-entered evidence`,
-        subject:"Manual evidence fallback",
+        subject:"Operator-entered source evidence",
         confidence:"Human verified",
         recommendation:""
       };
@@ -1832,7 +1616,7 @@
           count:0,
           rootCauseProven:false,
           reason:relevance.reason,
-          nextQuestion:"Does this manual evidence belong to the selected Investigation?",
+          nextQuestion:"Does this evidence belong to the selected Investigation?",
           nextEvidence:`Enter facts verified from ${evidenceSourceName(item)} for Investigation #${item.id}.`
         });
         status.className="status error capture-status";
@@ -1844,39 +1628,33 @@
       renderCapturedEvidence(captured,decision);
       prefillInvestigationFields(item,captured,decision);
 
-      const manualFingerprint=fingerprintImageData(
-        `manual:${evidenceSourceName(item)}:${raw}`
+      const evidenceFingerprint=fingerprintImageData(
+        `text:${evidenceSourceName(item)}:${raw}`
       );
       const historyResult=appendEvidenceHistory(
         item,
         captured,
         decision,
-        manualFingerprint
+        evidenceFingerprint
       );
 
       if(historyResult.added){
-        analysisLocked=true;
         completeEvidenceStep(item,"review_issues");
+        completeEvidenceStep(item,"capture_screenshot");
         completeEvidenceStep(item,"analyze_evidence");
-        imageDataUrl="";
-        input.value="";
-        preview.removeAttribute("src");
-        preview.classList.remove("visible");
-        analyze.disabled=true;
-        analyze.textContent="Analyze Evidence";
         manualInput.value="";
-        manualPanel.hidden=true;
         status.className="status ready capture-status";
-        status.textContent="Manual evidence locked as operator-entered evidence. Review the finding before making the Investigation decision.";
+        status.textContent=decision.rootCauseProven
+          ? "Evidence locked. Root cause is proven; review the finding before creating Work."
+          : "Evidence locked. Review the finding and add the next verified source facts if more proof is required.";
       }else{
         status.className="status error capture-status";
         status.textContent=historyResult.reason==="duplicate_image"
-          ? "This exact manual evidence is already locked for this Investigation."
-          : "The manual evidence could not be locked.";
+          ? "This exact evidence is already locked for this Investigation. Enter the next evidence."
+          : "The evidence could not be locked.";
       }
     });
   }
-
 
   function fingerprintImageData(value){
     const text=String(value||"");
