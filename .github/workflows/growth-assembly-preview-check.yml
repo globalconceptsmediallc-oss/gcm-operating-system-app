@@ -1,0 +1,49 @@
+# =========================================================
+# Global Concepts Media Operating System
+# File: .github/workflows/growth-assembly-preview-check.yml
+# Version: 1.0.0
+# Purpose: Road-test read-only Assembly Preview without Worker deployment.
+# =========================================================
+name: Growth Assembly Preview Pre-Deploy Check
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - growth-review-assembly-preview.html
+      - growth-review-assembly-core.js
+      - tests/growthReviewAssembly.test.js
+      - .github/workflows/growth-assembly-preview-check.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate adapter and exact-period behavior
+        run: |
+          node --check growth-review-assembly-core.js
+          node tests/growthReviewAssembly.test.js
+      - name: Validate inline page module and generator lock
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+          const html=fs.readFileSync("growth-review-assembly-preview.html","utf8");
+          const matches=[...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)];
+          const source=matches.at(-1)?.[1];
+          if(!source || !source.includes("assembleGrowthPreview"))throw Error("Assembly page module missing.");
+          if(!source.includes('api("growth-review-interpretation",{operation:"list"'))throw Error("Interpretation read missing.");
+          if(/api\([^)]*operation:\s*["'](?:save|approve|create|update)["']/.test(source))throw Error("Disallowed write action in Assembly page.");
+          if(/(?:import|fetch)\s*\(?[^\n]*(?:growth-review-generator|growth-intelligence-engine|consulting-knowledge)/i.test(source))throw Error("Generator module usage detected.");
+          fs.writeFileSync(".assembly-inline-check.mjs",source);
+          NODE
+          node --check .assembly-inline-check.mjs
+      - name: Full GCM regression suite
+        run: |
+          npm install
+          npm test
