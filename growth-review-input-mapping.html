@@ -15,7 +15,7 @@
 <!-- =========================================================
  Global Concepts Media Operating System
  File: growth-review-input-mapping.html
- Version: 1.5.0
+ Version: 1.5.1
  Status: Production Road-Test Candidate
  Sprint: Growth Review — Existing Client Input Mapping
  Purpose: Read-only adapter preview that maps authoritative SES operational
@@ -30,6 +30,10 @@
  - No Consulting Knowledge generation.
  - No Growth Review generation.
  - No client conclusions.
+
+ Change Notes — 1.5.1
+ - Clarifies Commerce Performance gating when a snapshot overlaps the selected period but does not exactly match it.
+ - Exact-period Commerce remains locked; overlapping snapshots are preserved as context and identified as excluded rather than incorrectly reported as absent.
 
  Change Notes — 1.5.0
  - Media Context now reads both authoritative legacy media_records and Media creative-workflow assignments, matching the sources used by Media Calendar.
@@ -163,12 +167,12 @@
 <script src="shared/gcm-shell.js"></script>
 <script>
 window.addEventListener("DOMContentLoaded",function(){
-  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"proof",statusText:"Growth Review input mapping · v1.5.0"});
+  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"proof",statusText:"Growth Review input mapping · v1.5.1"});
 });
 </script>
 <script>
 (function(){"use strict";
-const VERSION="1.5.0";
+const VERSION="1.5.1";
 const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
 const ZONE="America/New_York";
 const OUTCOME_METRIC_PATTERN=/(conversion|lead|call|revenue|sale|sales|purchase|order|form|contact|showroom|transaction|key[_ ]?event)/i;
@@ -351,6 +355,7 @@ async function load(){
   const mediaInWindow=media.filter(function(m){return rangesOverlap(mediaStart(m),mediaEnd(m),start,end)});
   const commerceInWindow=commerceSnapshots.filter(function(c){return rangesOverlap(isoParts(c&&c.periodStart),isoParts(c&&c.periodEnd),start,end)});
   const exactCommerce=commerceInWindow.find(function(c){return isoParts(c&&c.periodStart)===start&&isoParts(c&&c.periodEnd)===end})||null;
+  const overlappingCommerce=commerceInWindow.filter(function(c){return c!==exactCommerce});
 
   const eligibleMeasurements=eligibleMeasurementsRaw.filter(function(x){
     if(!exactCommerce)return true;
@@ -404,7 +409,7 @@ async function load(){
    {label:"Business identity",detail:"Live Client Workspace identity mapped for "+(mapping.business.name||"SES")+".",state:"pass"},
    {label:"Primary interpretation layer",detail:eligibleFindings.length+" source-dated Reviewed Findings mapped as interpretation; raw monitoring is not promoted to a conclusion.",state:"pass"},
    {label:"Measurement layer",detail:eligibleMeasurements.length+" general factual observations mapped"+(commerceMeasurementsExcluded?("; "+commerceMeasurementsExcluded+" Shopify commerce observation"+(commerceMeasurementsExcluded===1?"":"s")+" excluded from duplicate mapping"):"")+".",state:"pass"},
-   {label:"Commerce Performance layer",detail:exactCommerce?"Shopify sales, orders, AOV, sessions, and funnel facts mapped for "+clean(exactCommerce.periodStart)+" through "+clean(exactCommerce.periodEnd)+".":"No client-level commerce snapshot overlaps the review period.",state:exactCommerce?"pass":"lock"},
+   {label:"Commerce Performance layer",detail:exactCommerce?"Shopify sales, orders, AOV, sessions, and funnel facts mapped for "+clean(exactCommerce.periodStart)+" through "+clean(exactCommerce.periodEnd)+".":overlappingCommerce.length?("No exact Commerce snapshot matches "+start+" through "+end+". "+overlappingCommerce.length+" overlapping snapshot"+(overlappingCommerce.length===1?" exists":"s exist")+" but "+(overlappingCommerce.length===1?"is":"are")+" excluded from period performance."):"No Commerce snapshot matches the selected review period.",state:exactCommerce?"pass":"lock"},
    {label:"Completed-work layer",detail:completedWork.length+" records mapped under the Growth Review work rule: completed Work Items plus substantive non-monitoring completed activities.",state:"pass"},
    {label:"Media activity layer",detail:mediaInWindow.length+" overlapping recorded/assigned Media placement"+(mediaInWindow.length===1?"":"s")+" mapped as context only from Media Operations and creative workflow.",state:"pass"},
    {label:"Generator state",detail:"Growth Intelligence, Consulting Knowledge, and Growth Review generation remain disabled on this page.",state:"lock"}
@@ -450,8 +455,10 @@ async function load(){
    ];
    if(clean(exactCommerce.dataCaveat))commerceRows.push(record("Source caveat","Shopify Analytics definition warning",clean(exactCommerce.dataCaveat)));
    els.commerce.innerHTML=commerceRows.join("");
+  }else if(overlappingCommerce.length){
+   els.commerce.innerHTML=empty("Commerce is locked for this review because no snapshot exactly matches "+start+" through "+end+". An overlapping snapshot exists ("+overlappingCommerce.map(function(x){return clean(x.periodStart)+"–"+clean(x.periodEnd)}).join(", ")+") but is not being presented as "+start+"–"+end+" performance.");
   }else{
-   els.commerce.innerHTML=empty("No client-level Commerce Performance snapshot overlaps this review window.");
+   els.commerce.innerHTML=empty("No client-level Commerce Performance snapshot matches this review window.");
   }
 
   els.measurements.innerHTML=eligibleMeasurements.slice(0,12).map(function(x){
