@@ -1,10 +1,12 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gcm-worker-deploy.yml
-# Version: 1.5.76
+# Version: 1.5.77
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Worker with human-led Signal Finding capture.
 # Change Notes:
+# - v1.5.77 deploys Worker 7.44.0, migration 0044, and human-reviewed Growth Interpretation.
+# - Verifies read-only interpretation status and invalid approval boundary without production writes.
 # - v1.5.76 deploys Worker 7.43.0, migration 0043, and durable human Growth Review Issue Selection.
 # - Verifies exact-period selection reads are live and invalid-record saves perform no write.
 # - v1.5.75 applies migration 0042 with the exact SES Sep 1-30, 2026 Shopify Commerce snapshot and verifies it from production D1.
@@ -143,8 +145,8 @@ jobs:
           const healthResponse = await fetch(url);
           if (!healthResponse.ok) throw new Error(`Worker health returned HTTP ${healthResponse.status}`);
           const health = await healthResponse.json();
-          if (health.workerFileVersion !== "7.43.0") {
-            throw new Error(`Expected Worker 7.43.0, received ${health.workerFileVersion || "unknown"}`);
+          if (health.workerFileVersion !== "7.44.0") {
+            throw new Error(`Expected Worker 7.44.0, received ${health.workerFileVersion || "unknown"}`);
           }
           if (health.emailIntakeVersion !== "1.0.0") {
             throw new Error(`Expected Email Intake 1.0.0, received ${health.emailIntakeVersion || "unknown"}`);
@@ -199,6 +201,9 @@ jobs:
             throw new Error(`Expected Commerce Performance 1.0.0, received ${health.commercePerformanceVersion || "unknown"}`);
           }
 
+          if (health.growthReviewInterpretationVersion !== "1.0.0") {
+            throw new Error("Growth Interpretation route v1.0.0 is not live.");
+          }
           if (health.growthReviewIssueSelectionVersion !== "1.0.0") {
             throw new Error(`Expected Growth Review Issue Selection 1.0.0, received ${health.growthReviewIssueSelectionVersion || "unknown"}`);
           }
@@ -296,6 +301,35 @@ jobs:
             throw new Error("Growth Review Issue Selection invalid-record boundary reported a write.");
           }
           console.log("PASS Growth Review Issue Selection save boundary: invalid record rejected with 0 writes");
+
+          const interpretationResponse = await fetch(url, {
+            method:"POST",headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({action:"growth-review-interpretation",operation:"list",
+              clientCode:"SES",periodStart:"2026-09-01",periodEnd:"2026-09-30"})
+          });
+          if (!interpretationResponse.ok) {
+            throw new Error("Growth Interpretation read failed HTTP "+interpretationResponse.status);
+          }
+          const interpretation=await interpretationResponse.json();
+          if (interpretation?.ok !== true || interpretation?.generatorLocked !== true ||
+              interpretation?.growthReviewInterpretationVersion !== "1.0.0" ||
+              !Array.isArray(interpretation?.items) || interpretation?.writesPerformed !== 0) {
+            throw new Error("Growth Interpretation read/lock boundary is invalid.");
+          }
+          const approvalBoundaryResponse=await fetch(url,{
+            method:"POST",headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({action:"growth-review-interpretation",operation:"approve",
+              clientCode:"SES",periodStart:"2026-09-01",periodEnd:"2026-09-30",
+              selectionId:2147483647,expectedSourceSnapshot:"invalid"})
+          });
+          if (approvalBoundaryResponse.status !== 404) {
+            throw new Error("Invalid Growth Interpretation approval should be rejected with HTTP 404.");
+          }
+          const approvalBoundary=await approvalBoundaryResponse.json();
+          if (approvalBoundary?.writesPerformed !== 0) {
+            throw new Error("Invalid Growth Interpretation approval performed a write.");
+          }
+          console.log("PASS Growth Interpretation live read and no-write approval boundary; generator locked");
 
           const financeResponse = await fetch(url, {
             method:"POST",
