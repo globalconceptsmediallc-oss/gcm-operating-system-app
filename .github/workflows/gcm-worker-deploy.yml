@@ -1,10 +1,11 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gcm-worker-deploy.yml
-# Version: 1.5.74
+# Version: 1.5.75
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Worker with human-led Signal Finding capture.
 # Change Notes:
+# - v1.5.75 applies migration 0042 with the exact SES Sep 1-30, 2026 Shopify Commerce snapshot and verifies it from production D1.
 # - Re-run Worker 7.42.0 after aligning the stale Proof Findings regression lock to Client Findings 1.1.0.
 # - Deploy Worker 7.42.0 and Client Findings 1.1.0 with explicit human disposition/link readback for Growth Review mapping.
 # - Verify at least one SES Finding exposes its original human-selected disposition without any write.
@@ -218,6 +219,26 @@ jobs:
             throw new Error("SES commerce snapshot did not preserve the Shopify session-definition caveat.");
           }
           console.log("PASS SES Commerce Performance: $11,524.73 total sales, 5 orders, source caveat preserved");
+
+          const septemberCommerce = Array.isArray(commerce?.snapshots) ? commerce.snapshots.find(item =>
+            item?.periodStart === "2026-09-01" &&
+            item?.periodEnd === "2026-09-30" &&
+            item?.comparisonStart === "2026-08-02" &&
+            item?.comparisonEnd === "2026-08-31" &&
+            Number(item?.totalSales) === 2749 &&
+            Number(item?.orders) === 1 &&
+            Number(item?.sessions) === 5518
+          ) : null;
+          if (!septemberCommerce) {
+            throw new Error("SES Sep 1-30 exact Shopify commerce snapshot from migration 0042 was not returned from production D1.");
+          }
+          if (Number(septemberCommerce?.ordersFulfilled) !== 2 || Number(septemberCommerce?.completedCheckoutCount) !== 1) {
+            throw new Error("SES September commerce snapshot did not preserve fulfillment / completed-checkout facts.");
+          }
+          if (!String(septemberCommerce?.sourceReference || "").includes("exact Sep 1-Sep 30, 2026")) {
+            throw new Error("SES September commerce snapshot did not preserve its exact Shopify source period.");
+          }
+          console.log("PASS SES September Commerce Performance: exact Sep 1-30, $2,749 total sales, 1 order, 5,518 sessions");
 
           const financeResponse = await fetch(url, {
             method:"POST",
