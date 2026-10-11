@@ -1,14 +1,15 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: growth-review-assembly-core.js
-   Version: 1.0.0
+   Version: 1.1.0
    Status: SES September 2026 Read-Only Road-Test Candidate
    Purpose: Assemble only verified, date-scoped evidence and explicitly
             human-approved interpretations into a non-generated preview.
    NO writes, NO Growth Intelligence, NO Consulting Knowledge,
    NO report generator, NO client-facing export.
    ========================================================= */
-export const GROWTH_ASSEMBLY_VERSION = "1.0.0";
+import { classifyReviewFindings } from "./growth-review-measurement-classifier.js";
+export const GROWTH_ASSEMBLY_VERSION = "1.1.0";
 const OUTCOME = /(conversion|lead|call|revenue|sale|sales|purchase|order|form|contact|showroom|transaction|key[_ ]?event)/i;
 const SHOPIFY_COMMERCE = /(sale|sales|revenue|order|purchase|checkout|conversion)/i;
 const arr=v=>Array.isArray(v)?v:[];
@@ -25,12 +26,6 @@ export function validPeriod(start,end) {
 }
 function within(v,start,end){return Boolean(v&&v>=start&&v<=end)}
 function overlaps(s,e,start,end){if(!s&&!e)return false;return(s||e)<=end&&(e||s)>=start}
-function findingDate(f){
-  if(dateOnly(f?.source_date))return dateOnly(f.source_date);
-  const matches=clean(f?.reporting_period).match(/\d{4}-\d{2}-\d{2}/g)||[];
-  const dated=matches.map(dateOnly).filter(Boolean).sort();
-  return dated.length?dated[dated.length-1]:"";
-}
 function proofDate(p){return dateOnly(p?.date||p?.activity_date||p?.created_at)}
 function measurementDate(m){return dateOnly(m?.periodEnd||m?.period_end||m?.periodStart||m?.period_start)}
 function metricKey(m){return clean(m?.metricKey||m?.metric_key).toLowerCase()}
@@ -125,10 +120,32 @@ export function assembleGrowthPreview(input) {
   }
   if(overlapping.length)notes.push(overlapping.length+" overlapping commerce snapshot(s) excluded from exact-period results.");
 
-  const datedFindings=arr(findings).map(f=>({item:f,date:findingDate(f)})).filter(x=>within(x.date,start,end));
+  // A Finding's source date is NOT its report measurement period.
+  // Never infer the source date from reporting_period when source_date is absent.
+  const sourceAudit=classifyReviewFindings(findings,start,end);
+  const datedFindings=sourceAudit.sourceDated;
   const allMeasurements=arr(measurements).map(m=>({item:m,date:measurementDate(m)})).filter(x=>within(x.date,start,end));
   const generalMeasurements=allMeasurements.filter(x=>!(commerce&&metricSource(x.item).toLowerCase()==="shopify analytics"&&SHOPIFY_COMMERCE.test(metricKey(x.item))));
   const excludedShopifyDuplicates=allMeasurements.length-generalMeasurements.length;
+  const measurementCoverage={
+    structuredSeptemberCount:generalMeasurements.length,
+    sourceDatedPerformanceReports:sourceAudit.counts.reports,
+    exactPeriodReports:sourceAudit.counts.exact,
+    mixedPeriodReports:sourceAudit.counts.overlapping,
+    earlierPeriodReports:sourceAudit.counts.prior,
+    laterPeriodReports:sourceAudit.counts.later,
+    conflictingPeriodReports:sourceAudit.counts.conflict,
+    unverifiedPeriodReports:sourceAudit.counts.unverified
+  };
+  if(generalMeasurements.length===0) {
+    problems.push("No source-dated structured general measurement observations qualify for this exact reporting period. Source-dated reports are not substitutes for September measurement values.");
+  }
+  if(sourceAudit.counts.conflict) {
+    problems.push(sourceAudit.counts.conflict+" performance report(s) contain conflicting reporting-period indicators requiring source verification.");
+  }
+  if(sourceAudit.counts.reports) {
+    notes.push(sourceAudit.counts.reports+" performance-related source report(s) are cataloged by source date and separately classified by actual reporting period. Their narrative numbers were not converted into structured September measurements.");
+  }
   const outcomeMeasurements=generalMeasurements.filter(x=>OUTCOME.test(metricKey(x.item)));
   if(excludedShopifyDuplicates)notes.push(excludedShopifyDuplicates+" duplicate Shopify commerce measurement(s) removed from the general metrics layer.");
 
@@ -160,6 +177,8 @@ export function assembleGrowthPreview(input) {
     commerce,overlappingCommerceCount:overlapping.length,
     context:{
       sourceDatedFindings:datedFindings,
+      performanceReports:sourceAudit.performanceReports,
+      measurementCoverage,
       measurements:generalMeasurements,
       outcomes:outcomeMeasurements,
       excludedShopifyDuplicates,
@@ -173,7 +192,8 @@ export function assembleGrowthPreview(input) {
     previewOnly:true,generatorLocked:true,writesPerformed:0,
     excludedFromConclusions:[
       "Unapproved, excluded, stale or operationally ineligible issues",
-      "Undated/out-of-window findings and measurements",
+      "Undated/out-of-window findings and measurements; never substitute reporting-period end as a Finding source date",
+      "Performance-report narrative numbers that do not have verified exact-period structured measurement records",
       "Overlapping commerce periods and duplicate Shopify outcome observations",
       "Monitoring-only proof and non-completed work",
       "Unverified campaign-to-sales attribution or estimated revenue loss"
