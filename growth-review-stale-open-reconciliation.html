@@ -7,7 +7,7 @@
 <style>
 :root{--navy:#0d2744;--blue:#2f6fd6;--bg:#f2f6fb;--card:#fff;--border:#d7e0eb;--text:#16263a;--muted:#65758a;--green:#1f8b4c;--greenSoft:#edf9f1;--yellow:#9a6a00;--yellowSoft:#fff7dc;--red:#b33939;--redSoft:#fff0f0;--shadow:0 5px 16px rgba(21,43,72,.07)}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.shell{display:grid;grid-template-columns:124px minmax(0,1fr);min-height:100vh}.sidebar{min-height:100vh}.page{max-width:1160px;margin:0 auto;padding:24px 22px 56px}.top{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:14px}.eyebrow{margin:0 0 4px;color:var(--blue);font-size:.68rem;font-weight:900;letter-spacing:.13em;text-transform:uppercase}h1{margin:0;color:var(--navy);font-size:1.72rem;line-height:1.12}.subtitle{max-width:780px;margin:7px 0 0;color:var(--muted);font-size:.82rem;line-height:1.5}.actions{display:flex;flex-wrap:wrap;gap:7px;justify-content:flex-end}.btn{display:inline-flex;align-items:center;justify-content:center;min-height:32px;padding:0 11px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--navy);font-size:.72rem;font-weight:800;text-decoration:none;cursor:pointer}.btn.primary{border-color:var(--blue);background:var(--blue);color:#fff}.banner{padding:10px 13px;margin-bottom:12px;border:1px solid var(--border);border-radius:9px;font-size:.76rem;font-weight:700}.banner.loading{background:#fff}.banner.pass{border-color:#b8dfc5;background:var(--greenSoft);color:var(--green)}.banner.fail{border-color:#efcccc;background:var(--redSoft);color:var(--red)}
-.summary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;margin-bottom:12px}.card,.panel{border:1px solid var(--border);background:var(--card);box-shadow:var(--shadow)}.card{padding:13px 14px;border-radius:10px}.label{color:var(--muted);font-size:.62rem;font-weight:900;letter-spacing:.07em;text-transform:uppercase}.value{display:block;margin-top:5px;color:var(--navy);font-size:1.18rem;font-weight:900}.subvalue{display:block;margin-top:4px;color:var(--muted);font-size:.63rem;line-height:1.35}.panel{border-radius:11px;overflow:hidden}.panel+.panel{margin-top:12px}.panel-head{padding:13px 15px 11px;border-bottom:1px solid var(--border)}.panel-head h2{margin:0;color:var(--navy);font-size:.96rem}.panel-head p{margin:4px 0 0;color:var(--muted);font-size:.73rem;line-height:1.45}.panel-body{padding:13px 15px 16px}.checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.check{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:10px 11px;border:1px solid var(--border);border-radius:9px}.check strong{display:block;color:var(--navy);font-size:.78rem}.check span{display:block;margin-top:3px;color:var(--muted);font-size:.68rem;line-height:1.42}.badge{display:inline-flex;min-width:68px;min-height:22px;align-items:center;justify-content:center;padding:0 7px;border-radius:999px;font-size:.57rem;font-weight:900;text-transform:uppercase}.badge.review{background:var(--yellowSoft);color:var(--yellow)}.badge.open{background:var(--redSoft);color:var(--red)}.badge.pass{background:var(--greenSoft);color:var(--green)}.badge.lock{background:var(--yellowSoft);color:var(--yellow)}.records{display:grid;gap:10px}.issue{padding:12px;border:1px solid var(--border);border-radius:9px;background:#fff}.issue-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.issue h3{margin:0;color:var(--navy);font-size:.84rem;line-height:1.35}.meta{margin-top:4px;color:var(--muted);font-size:.65rem;line-height:1.4}.issue p{margin:7px 0 0;font-size:.71rem;line-height:1.45}.evidence-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.evidence-box{padding:9px;border:1px solid #e4e9ef;border-radius:7px;background:#fafbfd}.evidence-box strong{display:block;color:var(--navy);font-size:.7rem}.evidence-box ul{margin:5px 0 0;padding-left:17px}.evidence-box li{margin:3px 0;color:var(--muted);font-size:.66rem;line-height:1.4}.empty{padding:18px 12px;border:1px dashed var(--border);border-radius:8px;color:var(--muted);text-align:center;font-size:.72rem}.note{margin-top:10px;padding:11px;border-radius:8px;background:#f8fafc;color:var(--muted);font-size:.71rem;line-height:1.5}.note strong{color:var(--navy)}.lockbox{border:1px solid #ead79a;background:var(--yellowSoft);color:#6f5000;padding:11px;border-radius:8px;font-size:.71rem;line-height:1.5}
+.summary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;margin-bottom:12px}.card,.panel{border:1px solid var(--border);background:var(--card);box-shadow:var(--shadow)}.card{padding:13px 14px;border-radius:10px}.label{color:var(--muted);font-size:.62rem;font-weight:900;letter-spacing:.07em;text-transform:uppercase}.value{display:block;margin-top:5px;color:var(--navy);font-size:1.18rem;font-weight:900}.subvalue{display:block;margin-top:4px;color:var(--muted);font-size:.63rem;line-height:1.35}.panel{border-radius:11px;overflow:hidden}.panel+.panel{margin-top:12px}.panel-head{padding:13px 15px 11px;border-bottom:1px solid var(--border)}.panel-head h2{margin:0;color:var(--navy);font-size:.96rem}.panel-head p{margin:4px 0 0;color:var(--muted);font-size:.73rem;line-height:1.45}.panel-body{padding:13px 15px 16px}.checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.check{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:10px 11px;border:1px solid var(--border);border-radius:9px}.check strong{display:block;color:var(--navy);font-size:.78rem}.check span{display:block;margin-top:3px;color:var(--muted);font-size:.68rem;line-height:1.42}.badge{display:inline-flex;min-width:68px;min-height:22px;align-items:center;justify-content:center;padding:0 7px;border-radius:999px;font-size:.57rem;font-weight:900;text-transform:uppercase}.badge.review{background:var(--yellowSoft);color:var(--yellow)}.badge.open{background:var(--redSoft);color:var(--red)}.badge.pass{background:var(--greenSoft);color:var(--green)}.badge.lock{background:var(--yellowSoft);color:var(--yellow)}.records{display:grid;gap:10px}.issue{padding:12px;border:1px solid var(--border);border-radius:9px;background:#fff}.issue-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.issue h3{margin:0;color:var(--navy);font-size:.84rem;line-height:1.35}.meta{margin-top:4px;color:var(--muted);font-size:.65rem;line-height:1.4}.issue p{margin:7px 0 0;font-size:.71rem;line-height:1.45}.evidence-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.evidence-box{padding:9px;border:1px solid #e4e9ef;border-radius:7px;background:#fafbfd}.evidence-box strong{display:block;color:var(--navy);font-size:.7rem}.evidence-box ul{margin:5px 0 0;padding-left:17px}.evidence-box li{margin:3px 0;color:var(--muted);font-size:.66rem;line-height:1.4}.empty{padding:18px 12px;border:1px dashed var(--border);border-radius:8px;color:var(--muted);text-align:center;font-size:.72rem}.note{margin-top:10px;padding:11px;border-radius:8px;background:#f8fafc;color:var(--muted);font-size:.71rem;line-height:1.5}.note strong{color:var(--navy)}.lockbox{border:1px solid #ead79a;background:var(--yellowSoft);color:#6f5000;padding:11px;border-radius:8px;font-size:.71rem;line-height:1.5}.period-control{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:12px;padding:11px 13px;border:1px solid var(--border);border-radius:10px;background:#fff;box-shadow:var(--shadow)}.period-field{display:grid;gap:4px}.period-field label{color:var(--muted);font-size:.6rem;font-weight:900;letter-spacing:.07em;text-transform:uppercase}.period-field select,.period-field input{min-height:34px;padding:0 9px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--navy);font:inherit;font-size:.72rem;font-weight:750}.period-custom{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap}.period-custom[hidden]{display:none}.period-summary{margin-left:auto;color:var(--muted);font-size:.7rem;font-weight:750}.period-summary strong{color:var(--navy)}
 @media(max-width:1000px){.summary{grid-template-columns:repeat(3,1fr)}}@media(max-width:780px){.shell{display:block}.summary,.checks,.evidence-grid{grid-template-columns:1fr}.page{padding:16px}.top{flex-direction:column}.actions{justify-content:flex-start}}
 </style>
 </head>
@@ -15,7 +15,7 @@
 <!-- =========================================================
  Global Concepts Media Operating System
  File: growth-review-stale-open-reconciliation.html
- Version: 1.0.0
+ Version: 1.1.0
  Status: Production Road-Test Candidate
  Sprint: Growth Review — Stale-Open Reconciliation
  Purpose: Read-only reconciliation of still-open candidate Investigations
@@ -32,6 +32,7 @@
  - No Growth Intelligence generation.
  - No Consulting Knowledge generation.
  - No Growth Review generation.
+ - v1.1.0 adopts the shared Monthly / Quarterly / Yearly / Custom review-period contract, preserves exact dates through adjacent Growth Review links, and adds bounded read retries so the page cannot spin indefinitely.
  ========================================================= -->
 <div class="shell">
 <aside class="sidebar" data-gcm-shell-sidebar></aside>
@@ -40,19 +41,37 @@
   <div>
     <p class="eyebrow">Client Growth Review</p>
     <h1>Southeast Safes — Stale-Open Reconciliation</h1>
-    <p class="subtitle">Check the six still-open candidate Investigations against exact linked completed Work and Proof before any of them can become a future-facing Growth Review issue.</p>
+    <p class="subtitle">Check still-open candidate Investigations against exact linked completed Work and Proof before any of them can become a future-facing Growth Review issue.</p>
   </div>
   <div class="actions">
-    <a class="btn" href="growth-review-candidate-groups.html">Back to Candidate Groups</a>
-    <a class="btn" href="growth-review-input-mapping.html">Input Mapping</a>
+    <a class="btn" id="candidateGroupsLink" href="growth-review-candidate-groups.html">Back to Candidate Groups</a>
+    <a class="btn" id="inputMappingLink" href="growth-review-input-mapping.html">Input Mapping</a>
     <button class="btn primary" id="refresh" type="button">Refresh Reconciliation</button>
   </div>
 </header>
 
+<section class="period-control" aria-label="Growth Review period">
+  <div class="period-field">
+    <label for="periodPreset">Review Period</label>
+    <select id="periodPreset">
+      <option value="monthly">Monthly</option>
+      <option value="quarterly">Quarterly</option>
+      <option value="yearly">Yearly</option>
+      <option value="custom">Custom</option>
+    </select>
+  </div>
+  <div class="period-custom" id="customPeriod" hidden>
+    <div class="period-field"><label for="customStart">Start Date</label><input id="customStart" type="date"></div>
+    <div class="period-field"><label for="customEnd">End Date</label><input id="customEnd" type="date"></div>
+    <button class="btn primary" id="applyCustomPeriod" type="button">Apply</button>
+  </div>
+  <div class="period-summary" id="periodSummary">Loading review period…</div>
+</section>
+
 <div class="banner loading" id="status">Loading open candidate Investigations and exact linked completion evidence…</div>
 
 <section class="summary">
-  <article class="card"><span class="label">Review Window</span><strong class="value" id="window">—</strong><span class="subvalue">inclusive 90-day period</span></article>
+  <article class="card"><span class="label">Review Window</span><strong class="value" id="window">—</strong><span class="subvalue" id="windowLabel">selected reporting period</span></article>
   <article class="card"><span class="label">Open Candidates</span><strong class="value" id="openCandidates">—</strong><span class="subvalue">linked open Investigations</span></article>
   <article class="card"><span class="label">Review for Closure</span><strong class="value" id="reviewClosure">—</strong><span class="subvalue">exact completion evidence exists</span></article>
   <article class="card"><span class="label">No Completion Link</span><strong class="value" id="noCompletion">—</strong><span class="subvalue">still open with no exact completion link</span></article>
@@ -88,19 +107,18 @@
 <script src="shared/gcm-shell.js"></script>
 <script>
 window.addEventListener("DOMContentLoaded",function(){
-  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"proof",statusText:"Growth Review stale-open reconciliation · v1.0.0"});
+  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"proof",statusText:"Growth Review stale-open reconciliation · v1.1.0"});
 });
 </script>
 <script>
 (function(){"use strict";
-const VERSION="1.0.0";
+const VERSION="1.1.0";
 const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
 const ZONE="America/New_York";
-const REVIEW_DAYS=90;
 const CLOSED_INVESTIGATION=new Set(["resolved","closed","complete","completed","cancelled","canceled","archived","ignored","no_action"]);
 const CLOSED_WORK=new Set(["completed","complete","closed","resolved","cancelled","canceled"]);
 const $=function(id){return document.getElementById(id)};
-const els={status:$("status"),refresh:$("refresh"),window:$("window"),openCandidates:$("openCandidates"),reviewClosure:$("reviewClosure"),noCompletion:$("noCompletion"),checks:$("checks"),decision:$("decision"),issues:$("issues")};
+const els={status:$("status"),refresh:$("refresh"),window:$("window"),windowLabel:$("windowLabel"),openCandidates:$("openCandidates"),reviewClosure:$("reviewClosure"),noCompletion:$("noCompletion"),checks:$("checks"),decision:$("decision"),issues:$("issues"),periodPreset:$("periodPreset"),customPeriod:$("customPeriod"),customStart:$("customStart"),customEnd:$("customEnd"),applyCustomPeriod:$("applyCustomPeriod"),periodSummary:$("periodSummary"),candidateGroupsLink:$("candidateGroupsLink"),inputMappingLink:$("inputMappingLink")};
 
 function esc(v){return String(v==null?"":v).replace(/[&<>'"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]})}
 function clean(v){return String(v==null?"":v).trim()}
@@ -112,6 +130,46 @@ function findingDate(f){const direct=isoParts(f&&f.source_date);if(direct)return
 function activityDate(a){return isoParts((a&&a.activity_date)||(a&&a.date)||(a&&a.created_at))}
 function todayNY(){const parts=new Intl.DateTimeFormat("en-US",{timeZone:ZONE,year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());const v={};parts.forEach(function(p){v[p.type]=p.value});return v.year+"-"+v.month+"-"+v.day}
 function shiftDays(dateOnly,delta){const p=dateOnly.split("-").map(Number);const d=new Date(Date.UTC(p[0],p[1]-1,p[2]));d.setUTCDate(d.getUTCDate()+delta);return d.toISOString().slice(0,10)}
+function formatIsoDate(d){return d.toISOString().slice(0,10)}
+function periodFromPreset(type){
+  const p=todayNY().split("-").map(Number);
+  const y=p[0],m=p[1];
+  if(type==="quarterly"){
+    const currentQuarterStart=Math.floor((m-1)/3)*3;
+    return{type:"quarterly",start:formatIsoDate(new Date(Date.UTC(y,currentQuarterStart-3,1))),end:formatIsoDate(new Date(Date.UTC(y,currentQuarterStart,0))),label:"Previous completed quarter"};
+  }
+  if(type==="yearly")return{type:"yearly",start:(y-1)+"-01-01",end:(y-1)+"-12-31",label:"Previous completed calendar year"};
+  return{type:"monthly",start:formatIsoDate(new Date(Date.UTC(y,m-2,1))),end:formatIsoDate(new Date(Date.UTC(y,m-1,0))),label:"Previous completed calendar month"};
+}
+function resolvePeriod(){
+  const params=new URLSearchParams(location.search);
+  const requested=clean(params.get("period")).toLowerCase();
+  const start=isoParts(params.get("start")),end=isoParts(params.get("end"));
+  const labels={monthly:"Previous completed calendar month",quarterly:"Previous completed quarter",yearly:"Previous completed calendar year",custom:"Custom date range"};
+  if(start&&end&&start<=end&&Object.prototype.hasOwnProperty.call(labels,requested))return{type:requested,start:start,end:end,label:labels[requested]};
+  if(["monthly","quarterly","yearly"].includes(requested))return periodFromPreset(requested);
+  return periodFromPreset("monthly");
+}
+function periodQuery(period){
+  const params=new URLSearchParams();
+  params.set("period",period.type);params.set("start",period.start);params.set("end",period.end);
+  return params.toString();
+}
+function applyPeriodToUrl(period){
+  const query=periodQuery(period);
+  history.replaceState(null,"",location.pathname+"?"+query);
+  els.candidateGroupsLink.href="growth-review-candidate-groups.html?"+query;
+  els.inputMappingLink.href="growth-review-input-mapping.html?"+query;
+}
+function syncPeriodControls(period){
+  els.periodPreset.value=period.type;
+  els.customPeriod.hidden=period.type!=="custom";
+  els.customStart.value=period.start;els.customEnd.value=period.end;
+  const max=todayNY();els.customStart.max=max;els.customEnd.max=max;
+  els.periodSummary.innerHTML="<strong>"+period.label+"</strong> · "+period.start+" through "+period.end;
+  els.window.textContent=period.start.slice(5).replace("-","/")+"–"+period.end.slice(5).replace("-","/");
+  els.windowLabel.textContent=period.type==="monthly"?"completed month":period.type==="quarterly"?"completed quarter":period.type==="yearly"?"completed year":"custom range";
+}
 function inWindow(d,start,end){return Boolean(d&&d>=start&&d<=end)}
 function routeOf(f){return clean(f&&f.intake_disposition).toLowerCase()}
 function completedWork(w){return CLOSED_WORK.has(norm(w&&w.status))}
@@ -120,14 +178,43 @@ function setStatus(kind,text){els.status.className="banner "+kind;els.status.tex
 function check(label,detail,state){return '<article class="check"><div><strong>'+esc(label)+'</strong><span>'+esc(detail)+'</span></div><b class="badge '+esc(state)+'">'+(state==="review"?"Review":state==="open"?"Open":"Ready")+'</b></article>'}
 function empty(text){return '<div class="empty">'+esc(text)+'</div>'}
 function list(items,render){if(!items.length)return"<li>None linked</li>";return items.map(render).join("")}
-async function api(action,extra){const body=Object.assign({action:action},extra||{});const r=await fetch(WORKER,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify(body)});const p=await r.json().catch(function(){return{}});if(!r.ok||p&&p.ok!==true)throw new Error(typeof p.error==="string"?p.error:(p&&p.error&&p.error.message)||("HTTP "+r.status));return p}
+async function apiOnce(action,extra,timeoutMs){
+  const body=Object.assign({action:action},extra||{});
+  const controller=new AbortController();
+  const timer=setTimeout(function(){controller.abort()},timeoutMs||15000);
+  try{
+    const r=await fetch(WORKER,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify(body),signal:controller.signal});
+    const p=await r.json().catch(function(){return{}});
+    if(!r.ok||p&&p.ok!==true)throw new Error(typeof p.error==="string"?p.error:(p&&p.error&&p.error.message)||("HTTP "+r.status));
+    return p;
+  }catch(error){
+    if(error&&error.name==="AbortError")throw new Error(action+" request timed out.");
+    throw error;
+  }finally{
+    clearTimeout(timer);
+  }
+}
+async function api(action,extra){
+  try{
+    return await apiOnce(action,extra,15000);
+  }catch(firstError){
+    setStatus("loading","A reconciliation read stalled once. Retrying…");
+    try{
+      return await apiOnce(action,extra,15000);
+    }catch(secondError){
+      throw new Error(secondError&&secondError.message?secondError.message:(firstError&&firstError.message?firstError.message:"Reconciliation read failed."));
+    }
+  }
+}
 
 async function load(){
   els.refresh.disabled=true;
   setStatus("loading","Loading open candidate Investigations and exact linked completion evidence…");
   try{
-    const end=todayNY(),start=shiftDays(end,-(REVIEW_DAYS-1));
-    els.window.textContent=start.slice(5).replace("-","/")+"–"+end.slice(5).replace("-","/");
+    const period=resolvePeriod();
+    const start=period.start,end=period.end;
+    syncPeriodControls(period);
+    applyPeriodToUrl(period);
 
     const loaded=await Promise.all([
       api("get-client-findings",{clientCode:"SES"}),
@@ -227,6 +314,29 @@ async function load(){
   }finally{els.refresh.disabled=false}
 }
 els.refresh.addEventListener("click",load);
+els.periodPreset.addEventListener("change",function(){
+  const type=clean(els.periodPreset.value).toLowerCase();
+  if(type==="custom"){
+    const current=resolvePeriod();
+    els.customPeriod.hidden=false;
+    els.customStart.value=current.start;
+    els.customEnd.value=current.end;
+    return;
+  }
+  const period=periodFromPreset(type);
+  applyPeriodToUrl(period);
+  load();
+});
+els.applyCustomPeriod.addEventListener("click",function(){
+  const start=isoParts(els.customStart.value),end=isoParts(els.customEnd.value);
+  if(!start||!end||start>end){
+    setStatus("fail","Choose a valid custom start and end date.");
+    return;
+  }
+  const period={type:"custom",start:start,end:end,label:"Custom date range"};
+  applyPeriodToUrl(period);
+  load();
+});
 load();
 })();
 </script>
