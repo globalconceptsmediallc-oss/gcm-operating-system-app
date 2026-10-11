@@ -7,7 +7,7 @@
 <style>
 :root{--navy:#0d2744;--blue:#2f6fd6;--bg:#f2f6fb;--card:#fff;--border:#d7e0eb;--text:#16263a;--muted:#65758a;--green:#1f8b4c;--greenSoft:#edf9f1;--yellow:#9a6a00;--yellowSoft:#fff7dc;--red:#b33939;--redSoft:#fff0f0;--gray:#68788c;--shadow:0 5px 16px rgba(21,43,72,.07)}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.shell{display:grid;grid-template-columns:124px minmax(0,1fr);min-height:100vh}.sidebar{min-height:100vh}.page{max-width:1120px;margin:0 auto;padding:24px 22px 56px}.top{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:14px}.eyebrow{margin:0 0 4px;color:var(--blue);font-size:.68rem;font-weight:900;letter-spacing:.13em;text-transform:uppercase}h1{margin:0;color:var(--navy);font-size:1.72rem;line-height:1.12}.subtitle{max-width:760px;margin:7px 0 0;color:var(--muted);font-size:.82rem;line-height:1.5}.actions{display:flex;flex-wrap:wrap;gap:7px;justify-content:flex-end}.btn{display:inline-flex;align-items:center;justify-content:center;min-height:32px;padding:0 11px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--navy);font-size:.72rem;font-weight:800;text-decoration:none;cursor:pointer}.btn.primary{border-color:var(--blue);background:var(--blue);color:#fff}.banner{padding:10px 13px;margin-bottom:12px;border:1px solid var(--border);border-radius:9px;font-size:.76rem;font-weight:700}.banner.loading{background:#fff}.banner.pass{border-color:#b8dfc5;background:var(--greenSoft);color:var(--green)}.banner.fail{border-color:#efcccc;background:var(--redSoft);color:var(--red)}
-.summary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;margin-bottom:12px}.card,.panel{border:1px solid var(--border);background:var(--card);box-shadow:var(--shadow)}.card{padding:13px 14px;border-radius:10px}.label{color:var(--muted);font-size:.62rem;font-weight:900;letter-spacing:.07em;text-transform:uppercase}.value{display:block;margin-top:5px;color:var(--navy);font-size:1.18rem;font-weight:900}.subvalue{display:block;margin-top:4px;color:var(--muted);font-size:.63rem;line-height:1.35}.panel{border-radius:11px;overflow:hidden}.panel+.panel{margin-top:12px}.panel-head{padding:13px 15px 11px;border-bottom:1px solid var(--border)}.panel-head h2{margin:0;color:var(--navy);font-size:.96rem}.panel-head p{margin:4px 0 0;color:var(--muted);font-size:.73rem;line-height:1.45}.panel-body{padding:13px 15px 16px}.checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.check{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:10px 11px;border:1px solid var(--border);border-radius:9px}.check strong{display:block;color:var(--navy);font-size:.78rem}.check span{display:block;margin-top:3px;color:var(--muted);font-size:.68rem;line-height:1.42}.badge{display:inline-flex;min-width:62px;min-height:22px;align-items:center;justify-content:center;padding:0 7px;border-radius:999px;font-size:.58rem;font-weight:900;text-transform:uppercase}.badge.pass{background:var(--greenSoft);color:var(--green)}.badge.lock{background:var(--yellowSoft);color:var(--yellow)}.badge.open{background:var(--redSoft);color:var(--red)}.badge.closed{background:var(--greenSoft);color:var(--green)}.badge.unknown{background:#eef1f4;color:var(--gray)}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.records{display:grid;gap:9px}.group{padding:12px;border:1px solid var(--border);border-radius:9px;background:#fff}.group-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.group h3{margin:0;color:var(--navy);font-size:.82rem;line-height:1.35}.meta{margin-top:4px;color:var(--muted);font-size:.65rem;line-height:1.4}.group p{margin:7px 0 0;font-size:.71rem;line-height:1.45}.finding{margin-top:8px;padding-top:8px;border-top:1px solid #edf1f5}.finding strong{display:block;color:var(--navy);font-size:.72rem;line-height:1.35}.finding p{margin:4px 0 0;font-size:.68rem}.empty{padding:18px 12px;border:1px dashed var(--border);border-radius:8px;color:var(--muted);text-align:center;font-size:.72rem}.note{margin-top:10px;padding:11px;border-radius:8px;background:#f8fafc;color:var(--muted);font-size:.71rem;line-height:1.5}.note strong{color:var(--navy)}.lockbox{border:1px solid #ead79a;background:var(--yellowSoft);color:#6f5000;padding:11px;border-radius:8px;font-size:.71rem;line-height:1.5}.period-control{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:12px;padding:11px 13px;border:1px solid var(--border);border-radius:10px;background:#fff;box-shadow:var(--shadow)}.period-field{display:grid;gap:4px}.period-field label{color:var(--muted);font-size:.6rem;font-weight:900;letter-spacing:.07em;text-transform:uppercase}.period-field select,.period-field input{min-height:34px;padding:0 9px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--navy);font:inherit;font-size:.72rem;font-weight:750}.period-custom{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap}.period-custom[hidden]{display:none}.period-summary{margin-left:auto;color:var(--muted);font-size:.7rem;font-weight:750}.period-summary strong{color:var(--navy)}
+.summary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;margin-bottom:12px}.card,.panel{border:1px solid var(--border);background:var(--card);box-shadow:var(--shadow)}.card{padding:13px 14px;border-radius:10px}.label{color:var(--muted);font-size:.62rem;font-weight:900;letter-spacing:.07em;text-transform:uppercase}.value{display:block;margin-top:5px;color:var(--navy);font-size:1.18rem;font-weight:900}.subvalue{display:block;margin-top:4px;color:var(--muted);font-size:.63rem;line-height:1.35}.panel{border-radius:11px;overflow:hidden}.panel+.panel{margin-top:12px}.panel-head{padding:13px 15px 11px;border-bottom:1px solid var(--border)}.panel-head h2{margin:0;color:var(--navy);font-size:.96rem}.panel-head p{margin:4px 0 0;color:var(--muted);font-size:.73rem;line-height:1.45}.panel-body{padding:13px 15px 16px}.checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.check{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:10px 11px;border:1px solid var(--border);border-radius:9px}.check strong{display:block;color:var(--navy);font-size:.78rem}.check span{display:block;margin-top:3px;color:var(--muted);font-size:.68rem;line-height:1.42}.badge{display:inline-flex;min-width:62px;min-height:22px;align-items:center;justify-content:center;padding:0 7px;border-radius:999px;font-size:.58rem;font-weight:900;text-transform:uppercase}.badge.pass{background:var(--greenSoft);color:var(--green)}.badge.lock{background:var(--yellowSoft);color:var(--yellow)}.badge.open{background:var(--redSoft);color:var(--red)}.badge.closed{background:var(--greenSoft);color:var(--green)}.badge.unknown{background:#eef1f4;color:var(--gray)}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.records{display:grid;gap:9px}.group{padding:12px;border:1px solid var(--border);border-radius:9px;background:#fff}.group-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.group h3{margin:0;color:var(--navy);font-size:.82rem;line-height:1.35}.meta{margin-top:4px;color:var(--muted);font-size:.65rem;line-height:1.4}.group p{margin:7px 0 0;font-size:.71rem;line-height:1.45}.review-line{margin-top:8px;font-size:.71rem;line-height:1.45}.review-line b{color:var(--navy)}.group-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.group-link{display:inline-flex;align-items:center;justify-content:center;min-height:28px;padding:0 9px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--navy);font-size:.65rem;font-weight:850;text-decoration:none}.group-link:hover{border-color:var(--blue);color:var(--blue)}.finding{margin-top:8px;padding-top:8px;border-top:1px solid #edf1f5}.finding strong{display:block;color:var(--navy);font-size:.72rem;line-height:1.35}.finding p{margin:4px 0 0;font-size:.68rem}.empty{padding:18px 12px;border:1px dashed var(--border);border-radius:8px;color:var(--muted);text-align:center;font-size:.72rem}.note{margin-top:10px;padding:11px;border-radius:8px;background:#f8fafc;color:var(--muted);font-size:.71rem;line-height:1.5}.note strong{color:var(--navy)}.lockbox{border:1px solid #ead79a;background:var(--yellowSoft);color:#6f5000;padding:11px;border-radius:8px;font-size:.71rem;line-height:1.5}.period-control{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:12px;padding:11px 13px;border:1px solid var(--border);border-radius:10px;background:#fff;box-shadow:var(--shadow)}.period-field{display:grid;gap:4px}.period-field label{color:var(--muted);font-size:.6rem;font-weight:900;letter-spacing:.07em;text-transform:uppercase}.period-field select,.period-field input{min-height:34px;padding:0 9px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--navy);font:inherit;font-size:.72rem;font-weight:750}.period-custom{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap}.period-custom[hidden]{display:none}.period-summary{margin-left:auto;color:var(--muted);font-size:.7rem;font-weight:750}.period-summary strong{color:var(--navy)}
 @media(max-width:1000px){.summary{grid-template-columns:repeat(3,1fr)}}@media(max-width:780px){.shell{display:block}.summary,.grid,.checks{grid-template-columns:1fr}.page{padding:16px}.top{flex-direction:column}.actions{justify-content:flex-start}}
 </style>
 </head>
@@ -15,7 +15,7 @@
 <!-- =========================================================
  Global Concepts Media Operating System
  File: growth-review-candidate-groups.html
- Version: 1.1.3
+ Version: 1.2.0
  Status: Production Road-Test Candidate
  Sprint: Growth Review — Candidate Operational Status
  Purpose: Group human-routed candidate findings by their exact linked
@@ -31,6 +31,8 @@
  - No Growth Intelligence generation.
  - No Consulting Knowledge generation.
  - No Growth Review generation.
+ - v1.2.0 simplifies grouped Investigation / Work Item cards for Growth Review understanding. Open groups show only What We Know, Current Question, and Next Evidence / Action when available; resolved groups show a concise reviewed outcome. Raw Finding prose and recorded-decision text remain preserved in D1 and are available through the linked operational record.
+ - Adds direct Open Investigation / Open Work Item drill-down links so evidence detail stays in the operational workspace instead of being repeated on the Growth Review surface.
  - v1.1.3 hides the custom Start Date, End Date, and Apply controls unless Custom is selected.
  - v1.1.2 preserves the exact start/end dates carried in the URL for every named preset so a saved Monthly, Quarterly, or Yearly review cannot drift later.
  - v1.1.1 corrects the Review Period helper declaration before road testing.
@@ -122,12 +124,12 @@
 <script src="shared/gcm-shell.js"></script>
 <script>
 window.addEventListener("DOMContentLoaded",function(){
-  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"proof",statusText:"Growth Review candidate groups · v1.1.3"});
+  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"proof",statusText:"Growth Review candidate groups · v1.2.0"});
 });
 </script>
 <script>
 (function(){"use strict";
-const VERSION="1.1.3";
+const VERSION="1.2.0";
 const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
 const ZONE="America/New_York";
 const ACTION_ROUTES=new Set(["investigation","requested_work"]);
@@ -241,26 +243,64 @@ function latestInvestigationProgress(item){
   updates.sort(function(a,b){return String(b.capturedAt).localeCompare(String(a.capturedAt))||b.id-a.id});
   return updates[0]||null;
 }
+function concise(text,limit){
+  const value=clean(text).replace(/\s+/g," ");
+  const max=Number(limit)||420;
+  if(value.length<=max)return value;
+  return value.slice(0,max).replace(/\s+\S*$/,"").trim()+"…";
+}
+function groupOperationalLink(g){
+  if(g.type==="investigation")return "work.html?client=SES&investigation="+encodeURIComponent(g.id);
+  return "work.html?client=SES&workItem="+encodeURIComponent(g.id);
+}
+function sourceUnderstanding(g){
+  for(const x of g.findings){
+    const f=x&&x.item||{};
+    const value=clean(f.analysis)||clean(f.details);
+    if(value)return value;
+  }
+  return "";
+}
 function groupCard(g){
   const op=g.operational||{};
   const typeLabel=g.type==="investigation"?"Investigation":"Work Item";
   const cls=g.state==="closed"?"closed":"open";
   const title=clean(op.title)||typeLabel+" #"+g.id;
   const meta=[typeLabel+" #"+g.id,displayStatus(g.type,op.status),clean(op.priority),g.findings.length+" source Finding"+(g.findings.length===1?"":"s")].filter(Boolean).join(" · ");
+  const latestProgress=g.type==="investigation"?latestInvestigationProgress(op):null;
   let html='<article class="group"><div class="group-head"><div><h3>'+esc(title)+'</h3><div class="meta">'+esc(meta)+'</div></div><b class="badge '+cls+'">'+(cls==="closed"?"Resolved":"Open")+'</b></div>';
-  const latestProgress=g.type==="investigation"&&g.state!=="closed"?latestInvestigationProgress(op):null;
-  const opText=clean(latestProgress&&latestProgress.findingSummary)||clean(op.current_next_step)||clean(op.next_step)||clean(op.finding_summary)||clean(op.description)||clean(op.objective);
-  if(opText)html+='<p>'+esc(opText)+'</p>';
-  if(latestProgress&&clean(latestProgress.nextQuestion))html+='<p><b>Current next question:</b> '+esc(clean(latestProgress.nextQuestion))+'</p>';
-  if(latestProgress&&clean(latestProgress.nextEvidence))html+='<p><b>Current next evidence:</b> '+esc(clean(latestProgress.nextEvidence))+'</p>';
-  g.findings.forEach(function(x){
-    const f=x.item;
-    html+='<div class="finding"><strong>'+esc(clean(f.source_title)||"Reviewed Finding")+'</strong><div class="meta">'+esc(x.date+" · "+clean(f.category))+'</div>';
-    const analysis=clean(f.analysis)||clean(f.details);
-    if(analysis)html+='<p>'+esc(analysis)+'</p>';
-    if(clean(f.decision))html+='<p><b>Recorded decision:</b> '+esc(clean(f.decision))+'</p>';
-    html+='</div>';
-  });
+
+  if(g.state==="closed"){
+    const outcome=concise(
+      clean(latestProgress&&latestProgress.findingSummary)||
+      clean(op.actual_impact)||
+      clean(op.finding_summary)||
+      sourceUnderstanding(g),
+      460
+    );
+    if(outcome)html+='<div class="review-line"><b>Reviewed outcome:</b> '+esc(outcome)+'</div>';
+  }else{
+    const whatWeKnow=concise(
+      clean(latestProgress&&latestProgress.findingSummary)||
+      clean(op.finding_summary)||
+      clean(op.description)||
+      clean(op.objective)||
+      sourceUnderstanding(g),
+      460
+    );
+    const nextQuestion=concise(clean(latestProgress&&latestProgress.nextQuestion),320);
+    const nextEvidence=concise(
+      clean(latestProgress&&latestProgress.nextEvidence)||
+      clean(op.current_next_step)||
+      clean(op.next_step),
+      360
+    );
+    if(whatWeKnow)html+='<div class="review-line"><b>What we know:</b> '+esc(whatWeKnow)+'</div>';
+    if(nextQuestion)html+='<div class="review-line"><b>Current question:</b> '+esc(nextQuestion)+'</div>';
+    if(nextEvidence)html+='<div class="review-line"><b>Next evidence / action:</b> '+esc(nextEvidence)+'</div>';
+  }
+
+  html+='<div class="group-actions"><a class="group-link" href="'+esc(groupOperationalLink(g))+'">Open '+esc(typeLabel)+' →</a></div>';
   html+='</article>';
   return html;
 }
