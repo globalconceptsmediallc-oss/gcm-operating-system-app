@@ -1,21 +1,20 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.1.98",
+  "version": "6.1.99",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.1.98",
+    "fileVersion": "6.1.99",
     "status": "Production Candidate",
-    "purpose": "Make Forward Look row dispositions durable across refresh.",
+    "purpose": "Add a human-reviewed, evidence-bound Growth Interpretation test without unlocking report generation.",
     "changeNotes": [
-      "Adds a D1-backed Forward Look disposition layer keyed to the exact Today row.",
-      "Closed passed commitments stay hidden after refresh while authoritative source history remains intact.",
-      "Preserves existing interactive Forward Look and production test coverage."
+      "Adds draft and approval regression coverage for the September SES Growth Review stage.",
+      "Preserves existing operational evidence, selection records and production generator lock."
     ]
   },
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:finance-operations && npm run test:measurement-observations && npm run test:work-due-date && npm run test:work-core-web-vitals && npm run test:media-deadline-attention && npm run test:universal-email-intake && npm run test:email-intake-queue && npm run test:gmail-intake-sync && npm run test:email-intake-finding && npm run test:google-review-quick-action && npm run test:proof-findings && npm run test:email-intake-disposition && npm run test:gmail-decisions && npm run test:gmail-monitoring-parity && npm run test:gmail-backlink-investigation && npm run test:gmail-intake && npm run test:gmail-backlog && npm run test:gmail-source-display && npm run test:gmail-handle-now && npm run test:gmail-thread-routing && npm run test:gmail-requested-work-content && npm run test:prospect-crm && npm run test:prospect-test-site && npm run test:radar-test-site && npm run test:prospect-call-points && npm run test:prospect-intelligence-source && npm run test:prospect-concept-tracking && npm run test:prospect-engagement-today && npm run test:forward-look-interaction && npm run test:mediaforge-home && npm run test:mediaforge-variants && npm run test:mediaforge-naming && npm run test:business-workspace-health-v2 && npm run test:client-health-v2 && npm run test:asset-versions",
+    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:finance-operations && npm run test:measurement-observations && npm run test:growth-review-interpretation && npm run test:work-due-date && npm run test:work-core-web-vitals && npm run test:media-deadline-attention && npm run test:universal-email-intake && npm run test:email-intake-queue && npm run test:gmail-intake-sync && npm run test:email-intake-finding && npm run test:google-review-quick-action && npm run test:proof-findings && npm run test:email-intake-disposition && npm run test:gmail-decisions && npm run test:gmail-monitoring-parity && npm run test:gmail-backlink-investigation && npm run test:gmail-intake && npm run test:gmail-backlog && npm run test:gmail-source-display && npm run test:gmail-handle-now && npm run test:gmail-thread-routing && npm run test:gmail-requested-work-content && npm run test:prospect-crm && npm run test:prospect-test-site && npm run test:radar-test-site && npm run test:prospect-call-points && npm run test:prospect-intelligence-source && npm run test:prospect-concept-tracking && npm run test:prospect-engagement-today && npm run test:forward-look-interaction && npm run test:mediaforge-home && npm run test:mediaforge-variants && npm run test:mediaforge-naming && npm run test:business-workspace-health-v2 && npm run test:client-health-v2 && npm run test:asset-versions",
     "test:website-intelligence": "node tests/websiteIntelligence.test.js",
     "test:code-intelligence": "node tests/codeIntelligence.test.js",
     "test:operating-sessions": "node tests/operatingSessionTasks.test.js && node tests/osAuth.test.js && node tests/operatingSessionIntake.test.js",
@@ -54,7 +53,8 @@
     "test:finance-operations": "node tests/financeOperations.test.js",
     "test:measurement-observations": "node tests/measurementObservations.test.js",
     "test:prospect-intelligence-source": "node tests/prospectIntelligenceSourceSemantics.test.js",
-    "test:forward-look-interaction": "node tests/forwardLookInteraction.test.js"
+    "test:forward-look-interaction": "node tests/forwardLookInteraction.test.js",
+    "test:growth-review-interpretation": "node --check routes/growthReviewInterpretation.js && node tests/growthReviewInterpretation.test.js"
   },
   "dependencies": {
     "postal-mime": "^3.0.0"

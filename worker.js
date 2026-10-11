@@ -10,6 +10,11 @@
             scheduled prospects, discovery, proposals, follow-up, agreements,
             payments, and eventual Client handoff.
 
+   Changes in 7.44.0:
+   - Adds SES Growth Interpretation read, draft and human approval controls.
+   - Approval is bound to current operational source and included period.
+   - Generator remains locked; no operational records are modified.
+
    Changes in 7.43.0:
    - Adds durable human Growth Review Issue Selection for exact client/reporting periods.
    - Persists Include / Exclude decisions separately from Investigations and Work Items.
@@ -234,6 +239,11 @@ import {
   GROWTH_REVIEW_ISSUE_SELECTION_VERSION
 } from "./routes/growthReviewIssueSelection.js";
 import {
+  handleGrowthReviewInterpretation,
+  GROWTH_REVIEW_INTERPRETATION_ACTION,
+  GROWTH_REVIEW_INTERPRETATION_VERSION
+} from "./routes/growthReviewInterpretation.js";
+import {
   handleForwardLookOperations,
   FORWARD_LOOK_OPERATIONS_ACTION,
   FORWARD_LOOK_OPERATIONS_VERSION
@@ -318,7 +328,7 @@ import {
   GMAIL_INTAKE_SYNC_VERSION
 } from "./routes/gmailIntakeSync.js";
 
-const WORKER_FILE_VERSION = "7.43.0";
+const WORKER_FILE_VERSION = "7.44.0";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
@@ -336,6 +346,7 @@ const SUPPORTED_ACTIONS = [
   MEASUREMENT_OBSERVATIONS_ACTION,
   COMMERCE_PERFORMANCE_ACTION,
   GROWTH_REVIEW_ISSUE_SELECTION_ACTION,
+  GROWTH_REVIEW_INTERPRETATION_ACTION,
   FINANCE_OPERATIONS_ACTION,
   ACTIONS.GET_GUIDED_INVESTIGATION,
   ACTIONS.CREATE_INVESTIGATION,
@@ -399,6 +410,7 @@ export default {
         measurementObservationsVersion: MEASUREMENT_OBSERVATIONS_VERSION,
         commercePerformanceVersion: COMMERCE_PERFORMANCE_VERSION,
         growthReviewIssueSelectionVersion: GROWTH_REVIEW_ISSUE_SELECTION_VERSION,
+        growthReviewInterpretationVersion: GROWTH_REVIEW_INTERPRETATION_VERSION,
         contractVersion: API_CONTRACT_VERSION,
         sprint: "Universal Email Intake — Cloudflare Email Routing",
         architecture:
@@ -415,6 +427,7 @@ export default {
           "measurement-observations",
           "commerce-performance",
           "growth-review-issue-selection",
+          "growth-review-interpretation",
           "gmail-work-requests",
           "gmail-dispositions",
           "historical-rehabilitation",
@@ -452,6 +465,7 @@ export default {
             "measurement-observations",
             "commerce-performance",
             "growth-review-issue-selection",
+            "growth-review-interpretation",
             "gmail-work-requests",
             "gmail-dispositions",
             "historical-rehabilitation",
@@ -619,6 +633,9 @@ export default {
 
         case GROWTH_REVIEW_ISSUE_SELECTION_ACTION:
           return await handleGrowthReviewIssueSelection(body, env, requestId);
+
+        case GROWTH_REVIEW_INTERPRETATION_ACTION:
+          return await handleGrowthReviewInterpretation(body, env, requestId);
 
         case FINANCE_OPERATIONS_ACTION:
           return await handleFinanceOperations(body, env, requestId);
