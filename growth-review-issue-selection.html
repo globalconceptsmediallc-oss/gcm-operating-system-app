@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Southeast Safes — Growth Issue Selection</title>
+<style>
+:root{--navy:#0d2744;--blue:#2f6fd6;--bg:#f2f6fb;--card:#fff;--border:#d7e0eb;--text:#16263a;--muted:#65758a;--green:#1f8b4c;--greenSoft:#edf9f1;--yellow:#9a6a00;--yellowSoft:#fff7dc;--red:#b33939;--redSoft:#fff0f0;--graySoft:#f5f7fa;--shadow:0 5px 16px rgba(21,43,72,.07)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.shell{display:grid;grid-template-columns:124px minmax(0,1fr);min-height:100vh}.sidebar{min-height:100vh}.page{max-width:1160px;margin:0 auto;padding:24px 22px 56px}.top{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:14px}.eyebrow{margin:0 0 4px;color:var(--blue);font-size:.68rem;font-weight:900;letter-spacing:.13em;text-transform:uppercase}h1{margin:0;color:var(--navy);font-size:1.72rem;line-height:1.12}.subtitle{max-width:800px;margin:7px 0 0;color:var(--muted);font-size:.82rem;line-height:1.5}.actions{display:flex;flex-wrap:wrap;gap:7px;justify-content:flex-end}.btn{display:inline-flex;align-items:center;justify-content:center;min-height:32px;padding:0 11px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--navy);font-size:.72rem;font-weight:800;text-decoration:none;cursor:pointer}.btn.primary{border-color:var(--blue);background:var(--blue);color:#fff}.btn:disabled{opacity:.55;cursor:not-allowed}.period-control{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:12px;padding:11px 13px;border:1px solid var(--border);border-radius:10px;background:#fff;box-shadow:var(--shadow)}.period-field{display:grid;gap:4px}.period-field label{color:var(--muted);font-size:.6rem;font-weight:900;letter-spacing:.07em;text-transform:uppercase}.period-field select,.period-field input{min-height:34px;padding:0 9px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--navy);font:inherit;font-size:.72rem;font-weight:750}.period-custom{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap}.period-custom[hidden]{display:none}.period-summary{margin-left:auto;color:var(--muted);font-size:.7rem;font-weight:750}.period-summary strong{color:var(--navy)}.banner{padding:10px 13px;margin-bottom:12px;border:1px solid var(--border);border-radius:9px;font-size:.76rem;font-weight:700}.banner.loading{background:#fff}.banner.pass{border-color:#b8dfc5;background:var(--greenSoft);color:var(--green)}.banner.fail{border-color:#efcccc;background:var(--redSoft);color:var(--red)}.summary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;margin-bottom:12px}.card,.panel{border:1px solid var(--border);background:var(--card);box-shadow:var(--shadow)}.card{padding:13px 14px;border-radius:10px}.label{color:var(--muted);font-size:.62rem;font-weight:900;letter-spacing:.07em;text-transform:uppercase}.value{display:block;margin-top:5px;color:var(--navy);font-size:1.18rem;font-weight:900}.subvalue{display:block;margin-top:4px;color:var(--muted);font-size:.63rem;line-height:1.35}.panel{border-radius:11px;overflow:hidden}.panel+.panel{margin-top:12px}.panel-head{padding:13px 15px 11px;border-bottom:1px solid var(--border)}.panel-head h2{margin:0;color:var(--navy);font-size:.96rem}.panel-head p{margin:4px 0 0;color:var(--muted);font-size:.73rem;line-height:1.45}.panel-body{padding:13px 15px 16px}.records{display:grid;gap:10px}.issue{padding:13px;border:1px solid var(--border);border-radius:10px;background:#fff}.issue-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.issue h3{margin:0;color:var(--navy);font-size:.88rem;line-height:1.35}.meta{margin-top:4px;color:var(--muted);font-size:.65rem;line-height:1.4}.status{display:inline-flex;min-width:70px;min-height:22px;align-items:center;justify-content:center;padding:0 8px;border-radius:999px;font-size:.57rem;font-weight:900;text-transform:uppercase;background:var(--yellowSoft);color:var(--yellow)}.status.include{background:var(--greenSoft);color:var(--green)}.status.exclude{background:var(--graySoft);color:#536273}.review-line{margin-top:8px;font-size:.72rem;line-height:1.48}.review-line b{color:var(--navy)}.decision-zone{margin-top:12px;padding-top:11px;border-top:1px solid #edf1f5;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.decision-copy{color:var(--muted);font-size:.68rem;line-height:1.4}.decision-buttons{display:flex;gap:7px;flex-wrap:wrap}.decision-btn{min-height:32px;padding:0 11px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--navy);font-size:.68rem;font-weight:850;cursor:pointer}.decision-btn.include.selected{border-color:#acd8bc;background:var(--greenSoft);color:var(--green)}.decision-btn.exclude.selected{border-color:#cfd7e1;background:var(--graySoft);color:#536273}.record-link{display:inline-flex;margin-top:9px;min-height:28px;align-items:center;justify-content:center;padding:0 9px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--navy);font-size:.65rem;font-weight:850;text-decoration:none}.empty{padding:18px 12px;border:1px dashed var(--border);border-radius:8px;color:var(--muted);text-align:center;font-size:.72rem}.lockbox{border:1px solid #ead79a;background:var(--yellowSoft);color:#6f5000;padding:11px;border-radius:8px;font-size:.71rem;line-height:1.5}.check-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.check{padding:10px 11px;border:1px solid var(--border);border-radius:9px}.check strong{display:block;color:var(--navy);font-size:.78rem}.check span{display:block;margin-top:3px;color:var(--muted);font-size:.68rem;line-height:1.42}
+@media(max-width:1000px){.summary{grid-template-columns:repeat(3,1fr)}}@media(max-width:780px){.shell{display:block}.summary,.check-grid{grid-template-columns:1fr}.page{padding:16px}.top{flex-direction:column}.actions{justify-content:flex-start}.period-summary{margin-left:0}}
+</style>
+</head>
+<body>
+<!-- =========================================================
+ Global Concepts Media Operating System
+ File: growth-review-issue-selection.html
+ Version: 1.0.0
+ Status: Production Road-Test Candidate
+ Sprint: Existing Client Growth Review — Human Issue Selection
+ Purpose:
+ - Present only still-open action-bearing Growth Review candidates.
+ - Require an explicit human Include / Exclude decision for this exact period.
+ - Persist the decision without altering the underlying operational record.
+ - Keep all Growth Intelligence / generator behavior locked.
+ ========================================================= -->
+<div class="shell">
+<aside class="sidebar" data-gcm-shell-sidebar></aside>
+<main><div class="page">
+<header class="top">
+  <div>
+    <p class="eyebrow">Client Growth Review</p>
+    <h1>Southeast Safes — Growth Issue Selection</h1>
+    <p class="subtitle">Choose which still-valid operational issues belong in this exact client review. An open Investigation does not enter the Growth Review unless you explicitly include it.</p>
+  </div>
+  <div class="actions">
+    <a class="btn" id="reconciliationLink" href="growth-review-stale-open-reconciliation.html">Back to Reconciliation</a>
+    <a class="btn" id="inputMappingLink" href="growth-review-input-mapping.html">Input Mapping</a>
+    <button class="btn primary" id="refresh" type="button">Refresh Selection</button>
+  </div>
+</header>
+
+<section class="period-control" aria-label="Growth Review period">
+  <div class="period-field">
+    <label for="periodPreset">Review Period</label>
+    <select id="periodPreset">
+      <option value="monthly">Monthly</option>
+      <option value="quarterly">Quarterly</option>
+      <option value="yearly">Yearly</option>
+      <option value="custom">Custom</option>
+    </select>
+  </div>
+  <div class="period-custom" id="customPeriod" hidden>
+    <div class="period-field"><label for="customStart">Start Date</label><input id="customStart" type="date"></div>
+    <div class="period-field"><label for="customEnd">End Date</label><input id="customEnd" type="date"></div>
+    <button class="btn primary" id="applyCustomPeriod" type="button">Apply</button>
+  </div>
+  <div class="period-summary" id="periodSummary">Loading review period…</div>
+</section>
+
+<div class="banner loading" id="status">Loading still-valid candidates and saved human selections…</div>
+
+<section class="summary">
+  <article class="card"><span class="label">Review Window</span><strong class="value" id="window">—</strong><span class="subvalue" id="windowLabel">selected reporting period</span></article>
+  <article class="card"><span class="label">Candidates</span><strong class="value" id="candidateCount">—</strong><span class="subvalue">still-open operational issues</span></article>
+  <article class="card"><span class="label">Undecided</span><strong class="value" id="undecidedCount">—</strong><span class="subvalue">human decision required</span></article>
+  <article class="card"><span class="label">Included</span><strong class="value" id="includedCount">—</strong><span class="subvalue">approved for this review</span></article>
+  <article class="card"><span class="label">Excluded</span><strong class="value" id="excludedCount">—</strong><span class="subvalue">kept out of this review</span></article>
+  <article class="card"><span class="label">Generator</span><strong class="value">LOCKED</strong><span class="subvalue">selection only</span></article>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>Human Selection Gate</h2>
+    <p>Selection is scoped to Southeast Safes and this exact reporting period. It does not close the Investigation, create Work, assign priority, or generate a recommendation.</p>
+  </div>
+  <div class="panel-body">
+    <div class="check-grid">
+      <article class="check"><strong>Period-specific</strong><span>A September decision does not automatically carry into a quarterly or yearly review.</span></article>
+      <article class="check"><strong>Operational record preserved</strong><span>Include / Exclude changes only the Growth Review selection record; original evidence remains untouched.</span></article>
+      <article class="check"><strong>Human decision only</strong><span>No keyword, status, AI score, or unresolved condition can include an issue automatically.</span></article>
+      <article class="check"><strong>Generator locked</strong><span>No client-facing conclusion is generated on this page.</span></article>
+    </div>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>Still-Valid Candidate Issues</h2>
+    <p>Review the compact operational understanding, then explicitly include or exclude each issue from this reporting period.</p>
+  </div>
+  <div class="panel-body"><div class="records" id="issues"><div class="empty">Loading candidates…</div></div></div>
+</section>
+
+<section class="panel">
+  <div class="panel-head"><h2>Next Boundary</h2><p>The next stage may use only the issues you explicitly include here.</p></div>
+  <div class="panel-body">
+    <div class="lockbox" id="nextBoundary"><strong>Generator lock:</strong> complete the human issue-selection road test before any Growth Intelligence or client-facing Growth Review generation is enabled.</div>
+  </div>
+</section>
+</div></main></div>
+
+<script src="shared/gcm-shell.js"></script>
+<script>
+window.addEventListener("DOMContentLoaded",function(){
+  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"proof",statusText:"Growth Review issue selection · v1.0.0"});
+});
+</script>
+<script>
+(function(){"use strict";
+const VERSION="1.0.0";
+const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+const CLIENT_CODE="SES";
+const ZONE="America/New_York";
+const CLOSED_INVESTIGATION=new Set(["resolved","closed","complete","completed","cancelled","canceled","archived","ignored","no_action"]);
+const CLOSED_WORK=new Set(["completed","complete","closed","resolved","cancelled","canceled"]);
+const $=function(id){return document.getElementById(id)};
+const els={
+  status:$("status"),refresh:$("refresh"),window:$("window"),windowLabel:$("windowLabel"),
+  candidateCount:$("candidateCount"),undecidedCount:$("undecidedCount"),includedCount:$("includedCount"),excludedCount:$("excludedCount"),
+  periodPreset:$("periodPreset"),customPeriod:$("customPeriod"),customStart:$("customStart"),customEnd:$("customEnd"),applyCustomPeriod:$("applyCustomPeriod"),
+  periodSummary:$("periodSummary"),reconciliationLink:$("reconciliationLink"),inputMappingLink:$("inputMappingLink"),issues:$("issues"),nextBoundary:$("nextBoundary")
+};
+
+function esc(v){return String(v==null?"":v).replace(/[&<>'"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]})}
+function clean(v){return String(v==null?"":v).trim()}
+function arr(v){return Array.isArray(v)?v:[]}
+function norm(v){return clean(v).toLowerCase().replace(/[-\s]+/g,"_")}
+function isoParts(value){const m=clean(value).match(/(\d{4})-(\d{2})-(\d{2})/);if(!m)return"";const y=Number(m[1]),mo=Number(m[2]),d=Number(m[3]);const dt=new Date(Date.UTC(y,mo-1,d));if(dt.getUTCFullYear()!==y||dt.getUTCMonth()!==mo-1||dt.getUTCDate()!==d)return"";return m[1]+"-"+m[2]+"-"+m[3]}
+function allIsoDates(value){const matches=clean(value).match(/\d{4}-\d{2}-\d{2}/g)||[];return matches.map(isoParts).filter(Boolean).sort()}
+function findingDate(f){const direct=isoParts(f&&f.source_date);if(direct)return direct;const dates=allIsoDates(f&&f.reporting_period);return dates.length?dates[dates.length-1]:""}
+function inWindow(d,start,end){return Boolean(d&&d>=start&&d<=end)}
+function todayNY(){const parts=new Intl.DateTimeFormat("en-US",{timeZone:ZONE,year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());const v={};parts.forEach(function(p){v[p.type]=p.value});return v.year+"-"+v.month+"-"+v.day}
+function formatIsoDate(d){return d.toISOString().slice(0,10)}
+function periodFromPreset(type){
+  const p=todayNY().split("-").map(Number),y=p[0],m=p[1];
+  if(type==="quarterly"){
+    const currentQuarterStart=Math.floor((m-1)/3)*3;
+    return{type:"quarterly",start:formatIsoDate(new Date(Date.UTC(y,currentQuarterStart-3,1))),end:formatIsoDate(new Date(Date.UTC(y,currentQuarterStart,0))),label:"Previous completed quarter"};
+  }
+  if(type==="yearly")return{type:"yearly",start:(y-1)+"-01-01",end:(y-1)+"-12-31",label:"Previous completed calendar year"};
+  return{type:"monthly",start:formatIsoDate(new Date(Date.UTC(y,m-2,1))),end:formatIsoDate(new Date(Date.UTC(y,m-1,0))),label:"Previous completed calendar month"};
+}
+function resolvePeriod(){
+  const params=new URLSearchParams(location.search);
+  const requested=clean(params.get("period")).toLowerCase();
+  const start=isoParts(params.get("start")),end=isoParts(params.get("end"));
+  const labels={monthly:"Previous completed calendar month",quarterly:"Previous completed quarter",yearly:"Previous completed calendar year",custom:"Custom date range"};
+  if(start&&end&&start<=end&&Object.prototype.hasOwnProperty.call(labels,requested))return{type:requested,start:start,end:end,label:labels[requested]};
+  if(["monthly","quarterly","yearly"].includes(requested))return periodFromPreset(requested);
+  return periodFromPreset("monthly");
+}
+function periodQuery(period){
+  const params=new URLSearchParams();
+  params.set("period",period.type);params.set("start",period.start);params.set("end",period.end);
+  return params.toString();
+}
+function applyPeriodToUrl(period){
+  const query=periodQuery(period);
+  history.replaceState(null,"",location.pathname+"?"+query);
+  els.reconciliationLink.href="growth-review-stale-open-reconciliation.html?"+query;
+  els.inputMappingLink.href="growth-review-input-mapping.html?"+query;
+}
+function syncPeriodControls(period){
+  els.periodPreset.value=period.type;
+  els.customPeriod.hidden=period.type!=="custom";
+  els.customStart.value=period.start;els.customEnd.value=period.end;
+  const max=todayNY();els.customStart.max=max;els.customEnd.max=max;
+  els.periodSummary.innerHTML="<strong>"+esc(period.label)+"</strong> · "+esc(period.start)+" through "+esc(period.end);
+  els.window.textContent=period.start.slice(5).replace("-","/")+"–"+period.end.slice(5).replace("-","/");
+  els.windowLabel.textContent=period.type==="monthly"?"completed month":period.type==="quarterly"?"completed quarter":period.type==="yearly"?"completed year":"custom range";
+}
+function setStatus(kind,text){els.status.className="banner "+kind;els.status.textContent=text}
+function concise(text,limit){const value=clean(text).replace(/\s+/g," ");const max=Number(limit)||440;if(value.length<=max)return value;return value.slice(0,max).replace(/\s+\S*$/,"").trim()+"…"}
+function latestProgress(item){
+  const updates=arr(item&&item.progressUpdates).map(function(entry){
+    let raw={};try{raw=typeof entry.raw_data==="string"?JSON.parse(entry.raw_data||"{}"):((entry.raw_data&&typeof entry.raw_data==="object")?entry.raw_data:{})}catch(error){raw={}}
+    return{id:Number(entry&&entry.id)||0,findingSummary:clean(raw.findingSummary||raw.finding_summary),nextQuestion:clean(raw.nextQuestion||raw.next_question),nextEvidence:clean(raw.nextEvidence||raw.next_evidence),capturedAt:clean((entry&&entry.captured_at)||(entry&&entry.created_at))};
+  }).filter(function(x){return x.findingSummary||x.nextQuestion||x.nextEvidence});
+  updates.sort(function(a,b){return String(b.capturedAt).localeCompare(String(a.capturedAt))||b.id-a.id});
+  return updates[0]||null;
+}
+function routeOf(f){return clean(f&&f.intake_disposition).toLowerCase()}
+function isOpen(type,record){return type==="investigation"?!CLOSED_INVESTIGATION.has(norm(record&&record.status)):!CLOSED_WORK.has(norm(record&&record.status))}
+function candidateKey(type,id){return type+":"+String(id)}
+function recordLink(type,id){return type==="investigation"?"work.html?client=SES&investigation="+encodeURIComponent(id):"work.html?client=SES&workItem="+encodeURIComponent(id)}
+
+async function apiOnce(action,extra,timeoutMs){
+  const body=Object.assign({action:action},extra||{}),controller=new AbortController(),timer=setTimeout(function(){controller.abort()},timeoutMs||15000);
+  try{
+    const r=await fetch(WORKER,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify(body),signal:controller.signal});
+    const p=await r.json().catch(function(){return{}});
+    if(!r.ok||p&&p.ok!==true)throw new Error(typeof p.error==="string"?p.error:(p&&p.error&&p.error.message)||("HTTP "+r.status));
+    return p;
+  }catch(error){if(error&&error.name==="AbortError")throw new Error(action+" request timed out.");throw error}
+  finally{clearTimeout(timer)}
+}
+async function api(action,extra){try{return await apiOnce(action,extra,15000)}catch(first){setStatus("loading","A Growth Review read stalled once. Retrying…");return await apiOnce(action,extra,15000)}}
+
+function buildCandidates(findings,op,start,end){
+  const investigations=arr(op.investigationHistory),workItems=arr(op.workItems),evidence=arr(op.evidence);
+  const progressByInvestigation=new Map();
+  evidence.filter(function(entry){return norm(entry&&entry.evidence_type)==="investigation_progress"&&Number(entry&&entry.investigation_id)>0}).forEach(function(entry){
+    const id=Number(entry.investigation_id),list=progressByInvestigation.get(id)||[];list.push(entry);progressByInvestigation.set(id,list);
+  });
+  const invMap=new Map(investigations.map(function(i){const id=Number(i.id);return[id,Object.assign({},i,{progressUpdates:progressByInvestigation.get(id)||[]})]}));
+  const workMap=new Map(workItems.map(function(w){return[Number(w.id),w]}));
+  const grouped=new Map();
+
+  findings.map(function(f){return{item:f,date:findingDate(f),route:routeOf(f)}}).filter(function(x){return inWindow(x.date,start,end)}).forEach(function(x){
+    let type="",id=0,record=null;
+    if(x.route==="investigation"&&Number(x.item&&x.item.linked_investigation_id)>0){
+      type="investigation";id=Number(x.item.linked_investigation_id);record=invMap.get(id);
+    }else if(x.route==="requested_work"&&Number(x.item&&x.item.linked_work_item_id)>0){
+      type="work_item";id=Number(x.item.linked_work_item_id);record=workMap.get(id);
+    }
+    if(!type||!id||!record||!isOpen(type,record))return;
+    const key=candidateKey(type,id);
+    if(!grouped.has(key))grouped.set(key,{key:key,type:type,id:id,record:record,findings:[]});
+    grouped.get(key).findings.push(x);
+  });
+  return Array.from(grouped.values()).sort(function(a,b){return b.id-a.id});
+}
+
+function card(candidate,selection,period){
+  const record=candidate.record||{},source=candidate.findings[0]&&candidate.findings[0].item||{},progress=candidate.type==="investigation"?latestProgress(record):null;
+  const typeLabel=candidate.type==="investigation"?"Investigation":"Work Item";
+  const whatWeKnow=concise(clean(progress&&progress.findingSummary)||clean(record.finding_summary)||clean(source.analysis)||clean(source.details)||clean(record.description)||clean(record.objective),470);
+  const question=concise(clean(progress&&progress.nextQuestion),330);
+  const nextAction=concise(clean(progress&&progress.nextEvidence)||clean(record.current_next_step)||clean(record.next_step)||clean(record.description)||clean(record.expected_impact),380);
+  const current=clean(selection&&selection.selection);
+  const stateLabel=current==="include"?"Included":current==="exclude"?"Excluded":"Undecided";
+  const selectedAt=clean(selection&&selection.decidedAt);
+  let html='<article class="issue" data-key="'+esc(candidate.key)+'"><div class="issue-head"><div><h3>'+esc(clean(record.title)||typeLabel+" #"+candidate.id)+'</h3><div class="meta">'+esc(typeLabel+" #"+candidate.id+" · "+(clean(record.status)||"open")+" · "+candidate.findings.length+" source Finding"+(candidate.findings.length===1?"":"s"))+'</div></div><b class="status '+esc(current)+'">'+esc(stateLabel)+'</b></div>';
+  if(whatWeKnow)html+='<div class="review-line"><b>What we know:</b> '+esc(whatWeKnow)+'</div>';
+  if(question)html+='<div class="review-line"><b>Current question:</b> '+esc(question)+'</div>';
+  if(nextAction)html+='<div class="review-line"><b>Next evidence / action:</b> '+esc(nextAction)+'</div>';
+  html+='<a class="record-link" href="'+esc(recordLink(candidate.type,candidate.id))+'">Open '+esc(typeLabel)+' →</a>';
+  html+='<div class="decision-zone"><div class="decision-copy">'+(selectedAt?("Saved for "+esc(period.start)+"–"+esc(period.end)+" · "+esc(selectedAt)):"No Growth Review decision has been saved for this period.")+'</div><div class="decision-buttons">';
+  html+='<button class="decision-btn include '+(current==="include"?"selected":"")+'" type="button" data-select="include" data-type="'+esc(candidate.type)+'" data-id="'+candidate.id+'">Include in Growth Review</button>';
+  html+='<button class="decision-btn exclude '+(current==="exclude"?"selected":"")+'" type="button" data-select="exclude" data-type="'+esc(candidate.type)+'" data-id="'+candidate.id+'">Exclude from Growth Review</button>';
+  html+='</div></div></article>';
+  return html;
+}
+
+let state={period:null,candidates:[],selections:new Map()};
+
+function render(){
+  const candidates=state.candidates,selections=state.selections,period=state.period;
+  let included=0,excluded=0;
+  candidates.forEach(function(c){const s=selections.get(c.key);if(s&&s.selection==="include")included++;else if(s&&s.selection==="exclude")excluded++});
+  const undecided=Math.max(0,candidates.length-included-excluded);
+  els.candidateCount.textContent=candidates.length;
+  els.undecidedCount.textContent=undecided;
+  els.includedCount.textContent=included;
+  els.excludedCount.textContent=excluded;
+  els.issues.innerHTML=candidates.map(function(c){return card(c,selections.get(c.key)||null,period)}).join("")||'<div class="empty">No still-open action-bearing candidates remain for this period.</div>';
+  if(candidates.length&&undecided===0){
+    els.nextBoundary.innerHTML="<strong>Human selection complete:</strong> "+included+" issue"+(included===1?"":"s")+" included and "+excluded+" excluded for this exact review period. The Growth Review generator remains locked until the next stage is road-tested.";
+  }else{
+    els.nextBoundary.innerHTML="<strong>Generator lock:</strong> "+undecided+" candidate"+(undecided===1?" remains":"s remain")+" undecided for this exact review period. No Growth Intelligence or client-facing generation is enabled.";
+  }
+  els.issues.querySelectorAll("[data-select]").forEach(function(button){button.addEventListener("click",saveDecision)});
+}
+
+async function saveDecision(event){
+  const button=event.currentTarget,recordType=clean(button.dataset.type),recordId=Number(button.dataset.id),selection=clean(button.dataset.select);
+  const all=Array.from(els.issues.querySelectorAll("button[data-select]"));
+  all.forEach(function(b){b.disabled=true});
+  setStatus("loading","Saving explicit human Growth Review selection…");
+  try{
+    const p=state.period;
+    const result=await api("growth-review-issue-selection",{operation:"save",clientCode:CLIENT_CODE,periodType:p.type,periodStart:p.start,periodEnd:p.end,recordType:recordType,recordId:recordId,selection:selection,decidedBy:"Andy"});
+    const saved=result&&result.selection;
+    if(!saved)throw new Error("The saved selection was not returned.");
+    state.selections.set(candidateKey(recordType,recordId),saved);
+    render();
+    setStatus("pass",(selection==="include"?"Included":"Excluded")+" "+(recordType==="investigation"?"Investigation":"Work Item")+" #"+recordId+" for "+p.start+" through "+p.end+". No operational record was changed.");
+  }catch(error){
+    console.error(error);
+    setStatus("fail","Growth Review selection could not be saved: "+(error&&error.message?error.message:String(error)));
+    all.forEach(function(b){b.disabled=false});
+  }
+}
+
+async function load(){
+  els.refresh.disabled=true;
+  setStatus("loading","Loading still-valid candidates and saved human selections…");
+  try{
+    const period=resolvePeriod();
+    state.period=period;syncPeriodControls(period);applyPeriodToUrl(period);
+    const loaded=await Promise.all([
+      api("get-client-findings",{clientCode:CLIENT_CODE}),
+      api("get-client-workspace",{clientCode:CLIENT_CODE}),
+      api("growth-review-issue-selection",{operation:"list",clientCode:CLIENT_CODE,periodType:period.type,periodStart:period.start,periodEnd:period.end})
+    ]);
+    const findings=arr(loaded[0]&&loaded[0].findings),op=loaded[1]&&loaded[1].operational||{};
+    state.candidates=buildCandidates(findings,op,period.start,period.end);
+    state.selections=new Map(arr(loaded[2]&&loaded[2].selections).map(function(s){return[candidateKey(s.recordType,s.recordId),s]}));
+    render();
+    setStatus("pass","Human Growth Review selection loaded for Southeast Safes. No issue is included unless an explicit saved decision says Include.");
+  }catch(error){
+    console.error(error);
+    setStatus("fail","Growth Issue Selection failed: "+(error&&error.message?error.message:String(error)));
+    els.issues.innerHTML='<div class="empty">No selection result is available.</div>';
+  }finally{els.refresh.disabled=false}
+}
+
+els.refresh.addEventListener("click",load);
+els.periodPreset.addEventListener("change",function(){
+  const type=clean(els.periodPreset.value).toLowerCase();
+  if(type==="custom"){
+    const current=resolvePeriod();els.customPeriod.hidden=false;els.customStart.value=current.start;els.customEnd.value=current.end;return;
+  }
+  const period=periodFromPreset(type);applyPeriodToUrl(period);load();
+});
+els.applyCustomPeriod.addEventListener("click",function(){
+  const start=isoParts(els.customStart.value),end=isoParts(els.customEnd.value);
+  if(!start||!end||start>end){setStatus("fail","Choose a valid custom start and end date.");return}
+  const period={type:"custom",start:start,end:end,label:"Custom date range"};applyPeriodToUrl(period);load();
+});
+load();
+})();
+</script>
+</body>
+</html>
