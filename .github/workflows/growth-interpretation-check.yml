@@ -1,0 +1,40 @@
+# =========================================================
+# Global Concepts Media Operating System
+# File: .github/workflows/growth-interpretation-check.yml
+# Version: 1.0.0
+# Purpose: Test proposed Growth Interpretation changes before deployment.
+# No database migrations or production deployment run in this workflow.
+# =========================================================
+name: Growth Interpretation Pre-Deploy Check
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "routes/growthReviewInterpretation.js"
+      - "growth-review-interpretation.html"
+      - "tests/growthReviewInterpretation.test.js"
+      - "worker.js"
+      - "migrations/0044_growth_review_interpretations.sql"
+      - "package.json"
+      - ".github/workflows/growth-interpretation-check.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - name: Syntax and focused safeguards
+        run: |
+          node --check worker.js
+          node --check routes/growthReviewInterpretation.js
+          npm run test:growth-review-interpretation
+      - name: Full production regression suite
+        run: npm test
