@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.42.0
+   Version: 7.43.0
    Status: OS 2.0 Production Road-Test Candidate
    Source: Production worker.js 7.35.0
    Sprint: Universal Email Intake — Human Disposition
@@ -9,6 +9,11 @@
             durable Prospecting Radar + CRM operations required to connect
             scheduled prospects, discovery, proposals, follow-up, agreements,
             payments, and eventual Client handoff.
+
+   Changes in 7.43.0:
+   - Adds durable human Growth Review Issue Selection for exact client/reporting periods.
+   - Persists Include / Exclude decisions separately from Investigations and Work Items.
+   - Keeps Growth Review selection human-led and leaves generators locked.
 
    Changes in 7.42.0:
    - Upgrades Client Findings read output to include the original human-selected intake disposition.
@@ -224,6 +229,11 @@ import {
   COMMERCE_PERFORMANCE_VERSION
 } from "./routes/commercePerformance.js";
 import {
+  handleGrowthReviewIssueSelection,
+  GROWTH_REVIEW_ISSUE_SELECTION_ACTION,
+  GROWTH_REVIEW_ISSUE_SELECTION_VERSION
+} from "./routes/growthReviewIssueSelection.js";
+import {
   handleForwardLookOperations,
   FORWARD_LOOK_OPERATIONS_ACTION,
   FORWARD_LOOK_OPERATIONS_VERSION
@@ -308,7 +318,7 @@ import {
   GMAIL_INTAKE_SYNC_VERSION
 } from "./routes/gmailIntakeSync.js";
 
-const WORKER_FILE_VERSION = "7.42.0";
+const WORKER_FILE_VERSION = "7.43.0";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
@@ -325,6 +335,7 @@ const SUPPORTED_ACTIONS = [
   FORWARD_LOOK_OPERATIONS_ACTION,
   MEASUREMENT_OBSERVATIONS_ACTION,
   COMMERCE_PERFORMANCE_ACTION,
+  GROWTH_REVIEW_ISSUE_SELECTION_ACTION,
   FINANCE_OPERATIONS_ACTION,
   ACTIONS.GET_GUIDED_INVESTIGATION,
   ACTIONS.CREATE_INVESTIGATION,
@@ -387,6 +398,7 @@ export default {
         forwardLookOperationsVersion: FORWARD_LOOK_OPERATIONS_VERSION,
         measurementObservationsVersion: MEASUREMENT_OBSERVATIONS_VERSION,
         commercePerformanceVersion: COMMERCE_PERFORMANCE_VERSION,
+        growthReviewIssueSelectionVersion: GROWTH_REVIEW_ISSUE_SELECTION_VERSION,
         contractVersion: API_CONTRACT_VERSION,
         sprint: "Universal Email Intake — Cloudflare Email Routing",
         architecture:
@@ -402,6 +414,7 @@ export default {
           "forward-look-operations",
           "measurement-observations",
           "commerce-performance",
+          "growth-review-issue-selection",
           "gmail-work-requests",
           "gmail-dispositions",
           "historical-rehabilitation",
@@ -438,6 +451,7 @@ export default {
             "schedule-operations",
             "measurement-observations",
             "commerce-performance",
+            "growth-review-issue-selection",
             "gmail-work-requests",
             "gmail-dispositions",
             "historical-rehabilitation",
@@ -602,6 +616,9 @@ export default {
 
         case COMMERCE_PERFORMANCE_ACTION:
           return await handleCommercePerformance(body, env, requestId);
+
+        case GROWTH_REVIEW_ISSUE_SELECTION_ACTION:
+          return await handleGrowthReviewIssueSelection(body, env, requestId);
 
         case FINANCE_OPERATIONS_ACTION:
           return await handleFinanceOperations(body, env, requestId);
