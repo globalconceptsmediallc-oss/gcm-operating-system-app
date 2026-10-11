@@ -15,7 +15,7 @@
 <!-- =========================================================
  Global Concepts Media Operating System
  File: growth-review-stale-open-reconciliation.html
- Version: 1.2.0
+ Version: 1.2.1
  Status: Production Road-Test Candidate
  Sprint: Growth Review — Stale-Open Reconciliation
  Purpose: Read-only reconciliation of still-open candidate Investigations
@@ -32,6 +32,7 @@
  - No Growth Intelligence generation.
  - No Consulting Knowledge generation.
  - No Growth Review generation.
+ - v1.2.1 adds the explicit next-stage Human Issue Selection link and preserves the exact review period through that handoff.
  - v1.2.0 simplifies reconciliation cards to the Growth Review decision context: What We Know, Current Question, Next Evidence / Action, and the exact-link reconciliation result.
  - Full linked Work / Proof detail is collapsed behind an optional evidence disclosure instead of occupying the main review surface.
  - Adds a direct Open Investigation link; no operational evidence is deleted or rewritten.
@@ -49,7 +50,8 @@
   <div class="actions">
     <a class="btn" id="candidateGroupsLink" href="growth-review-candidate-groups.html">Back to Candidate Groups</a>
     <a class="btn" id="inputMappingLink" href="growth-review-input-mapping.html">Input Mapping</a>
-    <button class="btn primary" id="refresh" type="button">Refresh Reconciliation</button>
+    <a class="btn primary" id="issueSelectionLink" href="growth-review-issue-selection.html">Issue Selection</a>
+    <button class="btn" id="refresh" type="button">Refresh Reconciliation</button>
   </div>
 </header>
 
@@ -110,18 +112,18 @@
 <script src="shared/gcm-shell.js"></script>
 <script>
 window.addEventListener("DOMContentLoaded",function(){
-  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"proof",statusText:"Growth Review stale-open reconciliation · v1.2.0"});
+  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"proof",statusText:"Growth Review stale-open reconciliation · v1.2.1"});
 });
 </script>
 <script>
 (function(){"use strict";
-const VERSION="1.2.0";
+const VERSION="1.2.1";
 const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
 const ZONE="America/New_York";
 const CLOSED_INVESTIGATION=new Set(["resolved","closed","complete","completed","cancelled","canceled","archived","ignored","no_action"]);
 const CLOSED_WORK=new Set(["completed","complete","closed","resolved","cancelled","canceled"]);
 const $=function(id){return document.getElementById(id)};
-const els={status:$("status"),refresh:$("refresh"),window:$("window"),windowLabel:$("windowLabel"),openCandidates:$("openCandidates"),reviewClosure:$("reviewClosure"),noCompletion:$("noCompletion"),checks:$("checks"),decision:$("decision"),issues:$("issues"),periodPreset:$("periodPreset"),customPeriod:$("customPeriod"),customStart:$("customStart"),customEnd:$("customEnd"),applyCustomPeriod:$("applyCustomPeriod"),periodSummary:$("periodSummary"),candidateGroupsLink:$("candidateGroupsLink"),inputMappingLink:$("inputMappingLink")};
+const els={status:$("status"),refresh:$("refresh"),window:$("window"),windowLabel:$("windowLabel"),openCandidates:$("openCandidates"),reviewClosure:$("reviewClosure"),noCompletion:$("noCompletion"),checks:$("checks"),decision:$("decision"),issues:$("issues"),periodPreset:$("periodPreset"),customPeriod:$("customPeriod"),customStart:$("customStart"),customEnd:$("customEnd"),applyCustomPeriod:$("applyCustomPeriod"),periodSummary:$("periodSummary"),candidateGroupsLink:$("candidateGroupsLink"),inputMappingLink:$("inputMappingLink"),issueSelectionLink:$("issueSelectionLink")};
 
 function esc(v){return String(v==null?"":v).replace(/[&<>'"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]})}
 function clean(v){return String(v==null?"":v).trim()}
@@ -163,6 +165,7 @@ function applyPeriodToUrl(period){
   history.replaceState(null,"",location.pathname+"?"+query);
   els.candidateGroupsLink.href="growth-review-candidate-groups.html?"+query;
   els.inputMappingLink.href="growth-review-input-mapping.html?"+query;
+  els.issueSelectionLink.href="growth-review-issue-selection.html?"+query;
 }
 function syncPeriodControls(period){
   els.periodPreset.value=period.type;
