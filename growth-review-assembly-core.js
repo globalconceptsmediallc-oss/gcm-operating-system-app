@@ -139,8 +139,12 @@ export function assembleGrowthPreview(input) {
   const activities=arr(operational.proofOfWork).map(p=>({item:p,date:proofDate(p),type:"Activity"}))
     .filter(x=>within(x.date,start,end)&&substantiveActivity(x.item)&&(!Number(x.item?.work_item_id)||!completedIds.has(Number(x.item.work_item_id))));
   const completedWork=completedItems.concat(activities);
-  const mediaInput=arr(mediaRecords).filter(m=>Number(m?.clientId||m?.client_id)===clientId)
-    .concat(workflowMediaRows(creativeWorkflow,clientId));
+  // Legacy Media Operations records are already scoped by the clientId API request.
+  // Enforce any explicit row owner while keeping legacy rows that omit an owner.
+  const mediaInput=arr(mediaRecords).filter(m=>{
+    const owner=m?.clientId??m?.client_id;
+    return owner==null||owner===""||Number(owner)===clientId;
+  }).concat(workflowMediaRows(creativeWorkflow,clientId));
   const mediaSeen=new Set();
   const media=mediaInput.filter(m=>{
     const k=mediaKey(m);if(mediaSeen.has(k))return false;mediaSeen.add(k);
