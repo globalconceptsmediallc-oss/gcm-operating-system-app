@@ -38,7 +38,7 @@ ul{padding-left:20px;margin:8px 0}li{margin:7px 0;line-height:1.45}
 <!-- =========================================================
  Global Concepts Media Operating System
  File: growth-review-assembly-preview.html
- Version: 1.0.0
+ Version: 1.1.0
  Status: SES September 2026 Human Road-Test Candidate
  Purpose: Read-only assembly of exact-period evidence and approved text.
  Does NOT import/call Growth Intelligence, Consulting Knowledge, generator,
@@ -74,8 +74,14 @@ ul{padding-left:20px;margin:8px 0}li{margin:7px 0;line-height:1.45}
   <div id="interpretations" class="stack"></div>
  </section>
  <section class="grid">
-  <div class="panel"><h2>Source-dated findings</h2><p class="meta">Supporting source evidence only, not a second set of growth conclusions</p><div id="findings" class="stack"></div></div>
-  <div class="panel"><h2>Measurements & marketing signals</h2><p class="meta">Source-dated factual observations; duplicate Shopify outcomes excluded</p><div id="measurements" class="stack"></div></div>
+  <div class="panel"><h2>September source-dated findings</h2><p class="meta">Dated by the original Finding's source date, NOT automatically by the report's measurement window. Supporting evidence only, never automatic conclusions.</p><div id="findings" class="stack"></div></div>
+  <div class="panel"><h2>Structured measurements & marketing signals</h2><p class="meta">Only dated Measurement Observations (not numbers inside reports or Findings). Duplicate Shopify outcomes excluded.</p><div id="measurements" class="stack"></div></div>
+ </section>
+ <section class="panel">
+  <div class="panel-head"><div><h2>Performance report timing audit</h2>
+  <p class="meta">Distinguishes the source date of a September Finding from the measurement period actually covered by a GA4, Search Console, YouTube or other performance report. Reports are NOT new measurements.</p></div></div>
+  <div id="measurementAudit" class="metrics"></div>
+  <div id="reportTiming" class="stack" style="margin-top:12px"></div>
  </section>
  <section class="grid">
   <div class="panel"><h2>Completed work & Proof</h2><p class="meta">Only qualifying completed work and substantive completed activities</p><div id="work" class="stack"></div></div>
@@ -134,7 +140,7 @@ function render(view){
  const ctx=view.context;
  const counts=[
   ["Included issues",view.interpretation.included],["Valid approvals",view.interpretation.approved.length],
-  ["Source-dated findings",ctx.sourceDatedFindings.length],["General measurements",ctx.measurements.length],
+  ["Source-dated findings",ctx.sourceDatedFindings.length],["Structured general measurements",ctx.measurements.length],
   ["Completed work / Proof",ctx.completedWork.length],["Media records",ctx.media.length]
  ];
  $("coverage").innerHTML=counts.map(x=>item(x[0],String(x[1]),"")).join("");
@@ -179,11 +185,33 @@ function render(view){
  $("findings").innerHTML=f.slice(0,12).map(x=>item(clean(x.item?.source_title||x.item?.category)||"Reviewed Finding",
   [x.date,clean(x.item?.category),clean(x.item?.intake_disposition)].filter(Boolean).join(" · "),
   clean(x.item?.analysis||x.item?.decision||x.item?.details))).join("")||empty("No source-dated findings in the review window.");
+ const mc=ctx.measurementCoverage;
+ $("measurementAudit").innerHTML=[
+  fact("Structured observations",String(mc.structuredSeptemberCount),"Exact review-window dates"),
+  fact("Source-dated reports",String(mc.sourceDatedPerformanceReports),"Informational, not imported metrics"),
+  fact("Exact report periods",String(mc.exactPeriodReports),"Only verified metadata; not numeric observations"),
+  fact("Mixed periods",String(mc.mixedPeriodReports),"Coverage overlaps but is not September-only"),
+  fact("Unverified coverage",String(mc.unverifiedPeriodReports+mc.conflictingPeriodReports),"Needs source period verification")
+ ].join("");
+ $("reportTiming").innerHTML=ctx.performanceReports.length?
+   ctx.performanceReports.map(x=>{
+     const timing=x.timing;
+     const details=x.explicitCoverage
+       ?x.explicitCoverage.start+" through "+x.explicitCoverage.end+" ("+x.explicitCoverage.precision+")"
+       :x.reportingPeriodText
+         ?"Unverified reporting-period text: "+x.reportingPeriodText
+         :"No verified reporting-period dates provided";
+     const hints=x.titleMonthHints.length?" · Title mentions "+x.titleMonthHints.join(", "):"";
+     return item(x.title,
+       "Source date "+x.sourceDate+" · "+x.timingLabel,
+       details+hints+". No numerical metric imported or claimed for September.");
+   }).join(""):
+   empty("No matching performance-related reports with a source date in this review period.");
  $("measurements").innerHTML=ctx.measurements.slice(0,16).map(x=>{
   const m=x.item||{},key=clean(m.metricKey||m.metric_key);
   return item(key||"Measurement",[x.date,clean(m.sourceSystem||m.source_system),clean(m.measurementPhase||m.measurement_phase)].filter(Boolean).join(" · "),
    String(m.metricValue??m.metric_value??"—")+" "+clean(m.metricUnit||m.metric_unit));
- }).join("")||empty("No source-dated measurements for this period.");
+ }).join("")||empty("No structured general Measurement Observations qualify for this exact period. Reports in Findings appear separately below; their numbers have not been converted into September metrics.");
  $("work").innerHTML=ctx.completedWork.slice(0,12).map(x=>item(clean(x.item?.title||x.item?.activity||x.item?.task)||x.type,
   x.type+" · "+x.date,clean(x.item?.actual_impact||x.item?.description||x.item?.notes||x.item?.expected_impact))).join("")||empty("No qualifying completed work or Proof activity.");
  $("media").innerHTML=ctx.media.slice(0,16).map(m=>item(clean(m.creativeName||m.campaignName||m.title)||"Media placement",
@@ -222,8 +250,8 @@ async function load(){
    interpretationClientCode:interpretations.clientCode,
    interpretationPeriodStart:interpretations.periodStart,interpretationPeriodEnd:interpretations.periodEnd});
   render(view);
-  setStatus(view.reviewReady?"Read-only September assembly loaded. Evidence is ready for HUMAN REVIEW only; generator remains LOCKED.":
-    "Assembly loaded with blocking evidence gaps. Resolve these before using any conclusion; generator remains LOCKED.",false,view.reviewReady);
+  setStatus(view.reviewReady?"Read-only September assembly loaded for human inspection; generator remains LOCKED.":
+    "Assembly loaded with a measurement coverage gap. Source reports and true September measurements are classified separately. Generator remains LOCKED.",false,view.reviewReady);
  }catch(error){
   console.error(error);setStatus("Assembly Preview blocked: "+clean(error?.message||error)+". Generator remains LOCKED.",true);
  }finally{busy=false;$("refresh").disabled=false}
