@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Southeast Safes — Growth Interpretation</title>
+<style>
+:root{--navy:#0d2744;--blue:#2f6fd6;--bg:#f2f6fb;--line:#d7e0eb;--ink:#16263a;--muted:#65758a;--green:#1f8b4c;--yellow:#8b6100;--red:#b33939}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px}
+.shell{display:grid;grid-template-columns:124px minmax(0,1fr);min-height:100vh}.page{max-width:1120px;margin:0 auto;padding:25px 22px 55px}
+header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}.eyebrow{margin:0;color:var(--blue);font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.12em}
+h1{margin:5px 0;color:var(--navy);font-size:25px}h2{font-size:17px;color:var(--navy);margin:0 0 7px}h3{font-size:15px;color:var(--navy);margin:0 0 5px}
+p{line-height:1.5}.muted{color:var(--muted)}.intro{max-width:750px;margin:5px 0 15px;color:var(--muted)}
+.btn{border:1px solid var(--line);background:white;color:var(--navy);display:inline-flex;align-items:center;justify-content:center;border-radius:7px;padding:9px 12px;min-height:36px;font-weight:800;font-size:12px;cursor:pointer;text-decoration:none}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:white}.btn.approve{background:var(--green);border-color:var(--green);color:white}
+.btn:disabled{opacity:.45;cursor:not-allowed}.actions{display:flex;gap:8px;flex-wrap:wrap}
+.panel{background:white;border:1px solid var(--line);border-radius:11px;padding:17px;margin:13px 0;box-shadow:0 4px 13px rgba(10,40,80,.05)}
+.banner{padding:12px 14px;background:#edf9f1;border:1px solid #b8dfc5;border-radius:8px;margin:13px 0;color:#1a7443;font-weight:750;line-height:1.45}
+.banner.error{background:#fff0f0;border-color:#efcccc;color:var(--red)}
+.lock{background:#fff7dc;border-color:#ead79a;color:#735200}.pill{border-radius:30px;background:#f5f7fa;color:#536273;padding:5px 11px;font-size:11px;font-weight:850}
+.pill.approved{background:#edf9f1;color:var(--green)}.pill.needs_review{background:#fff7dc;color:var(--yellow)}
+.meta{color:var(--muted);font-size:12px;line-height:1.5;margin:4px 0 8px}.source{border:1px solid var(--line);border-radius:8px;background:#fafcfe;padding:13px;margin:13px 0}
+.source p{margin:7px 0}.editor{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.field{display:grid;gap:6px}.field.wide{grid-column:1/-1}
+label{font-size:12px;font-weight:800;color:var(--navy)}textarea{width:100%;min-height:105px;border:1px solid #c7d2e0;border-radius:7px;padding:10px;font:inherit;line-height:1.5;resize:vertical}
+textarea:focus{outline:2px solid #a8c8ff;outline-offset:1px}.hint{color:var(--muted);font-size:11px;line-height:1.4}
+.editor-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px}.statusline{font-size:12px;color:var(--muted);flex:1}
+.empty{border:1px dashed var(--line);padding:20px;border-radius:8px;text-align:center;color:var(--muted)}
+@media(max-width:780px){.shell{display:block}.page{padding:17px 14px}.editor{grid-template-columns:1fr}header{display:block}.actions{margin-top:12px}}
+</style>
+</head>
+<body>
+<!-- =========================================================
+ Global Concepts Media Operating System
+ File: growth-review-interpretation.html
+ Version: 1.0.0
+ Status: Production Road-Test Candidate
+ Purpose: Human-authored, evidence-bound Growth Review interpretation.
+ No generator calls, no operational record writes, no permanent navigation.
+ ========================================================= -->
+<div class="shell"><aside data-gcm-shell-sidebar></aside><main><div class="page">
+<header>
+ <div><p class="eyebrow">Client Growth Review · Stage 3</p><h1>Southeast Safes — Human Interpretation</h1>
+ <p class="intro">Work only from issues explicitly included for the selected reporting period. Separate verified evidence from the business interpretation, and approve the wording yourself.</p></div>
+ <div class="actions"><a class="btn" id="back" href="growth-review-issue-selection.html">← Issue Selection</a><button class="btn primary" id="refresh" type="button">Refresh Evidence</button></div>
+</header>
+<div class="banner lock"><strong>Growth Review generator: LOCKED.</strong> Saving or approving an interpretation does not generate a report, close an investigation, attribute sales, or alter Issue Selection.</div>
+<section class="panel"><h2>Review boundary</h2><div id="period">Loading September review period…</div><p class="meta">Southeast Safes (SES) only for this road test. No general client selection or permanent navigation yet.</p></section>
+<div class="banner" id="status">Loading included issues and interpretation records…</div>
+<section id="items"><div class="empty">Loading…</div></section>
+</div></main></div>
+<script src="shared/gcm-shell.js"></script>
+<script>
+window.addEventListener("DOMContentLoaded",function(){
+ if(window.GCMOShell)window.GCMOShell.mount({currentPage:"proof",statusText:"Growth Interpretation · v1.0.0"});
+});
+</script>
+<script>
+(function(){"use strict";
+const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+const NAMES=[
+ {key:"verifiedFacts",label:"Verified facts",hint:"What do the operational records and dated sources actually establish? Avoid assuming a revenue effect."},
+ {key:"evidenceReferences",label:"Evidence references",hint:"Record source Finding, Investigation, Merchant Center or Shopify references and dates. Distinguish September from later updates."},
+ {key:"growthImplications",label:"Potential growth implications",hint:"Explain opportunity or constraints as interpretation, not confirmed causal impact."},
+ {key:"recommendedAction",label:"Recommended next action",hint:"State the next investigation or correction, not an action already completed."},
+ {key:"clientNarrative",label:"Client-facing draft",hint:"Plain-language wording for your review. This page never publishes it."},
+ {key:"caveats",label:"Caveats / follow-up",hint:"Unknowns, timing distinctions and what still needs verification. Optional."}
+];
+const $=id=>document.getElementById(id);
+const clean=v=>String(v==null?"":v).trim();
+const esc=v=>clean(v).replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
+let state={items:[],period:null,busy:false};
+function periodFromUrl(){
+ const p=new URLSearchParams(location.search),start=clean(p.get("start")),end=clean(p.get("end"));
+ const legal=s=>/^\d{4}-\d{2}-\d{2}$/.test(s)&&!Number.isNaN(Date.parse(s+"T00:00:00Z"));
+ if(legal(start)&&legal(end)&&start<=end)return {start,end,type:clean(p.get("period"))||"custom"};
+ return {start:"2026-09-01",end:"2026-09-30",type:"monthly"};
+}
+function status(text,fail){$("status").className="banner"+(fail?" error":"");$("status").textContent=text}
+async function api(operation,extra){
+ const c=new AbortController(),timeout=setTimeout(()=>c.abort(),18000);
+ try{
+  const response=await fetch(WORKER,{method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify(Object.assign({action:"growth-review-interpretation",operation,clientCode:"SES",
+     periodStart:state.period.start,periodEnd:state.period.end},extra||{})),signal:c.signal});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||data.ok!==true)throw new Error(clean(data.error)||"Request failed (HTTP "+response.status+")");
+  return data;
+ }finally{clearTimeout(timeout)}
+}
+function fieldMarkup(item,name){
+ const value=clean(item.interpretation&&item.interpretation[name.key]);
+ return '<div class="field'+(name.key==="clientNarrative"||name.key==="caveats"?" wide":"")+'"><label for="'+esc(name.key)+"-"+item.selectionId+'">'+esc(name.label)+'</label>'+
+ '<textarea maxlength="10000" data-field="'+esc(name.key)+'" id="'+esc(name.key)+"-"+item.selectionId+'" placeholder="'+esc(name.hint)+'">'+esc(value)+'</textarea>'+
+ '<div class="hint">'+esc(name.hint)+'</div></div>';
+}
+function card(item){
+ const record=item.operationalRecord||{},i=item.interpretation||{};
+ const label=item.recordType==="investigation"?"Investigation":"Work Item";
+ const danger=!item.eligibleForReview||item.sourceChanged||item.effectiveStatus==="needs_review";
+ const headline=esc(clean(record.title)||label+" #"+item.recordId);
+ const link=item.recordType==="investigation"?"work.html?client=SES&investigation="+item.recordId:"work.html?client=SES&workItem="+item.recordId;
+ let html='<article class="panel" data-selection="'+item.selectionId+'"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap">'+
+ '<div><h2>'+headline+'</h2><p class="meta">'+esc(label+" #"+item.recordId)+" · "+esc(record.status||"source unavailable")+
+ ' · Explicitly INCLUDED in this period</p></div><span class="pill '+esc(item.effectiveStatus)+'">'+
+ esc(item.effectiveStatus.replace(/_/g," ").toUpperCase())+'</span></div>';
+ html+='<div class="source"><h3>Operational source (read-only)</h3>'+
+ '<p><strong>Last record update:</strong> '+esc(record.updatedAt||"not available")+'</p>'+
+ (record.latestProgressSummary?'<p><strong>Latest investigation progress:</strong> '+esc(record.latestProgressSummary)+'</p>':"")+
+ '<a class="btn" href="'+esc(link)+'">Open original '+esc(label)+'</a></div>';
+ if(danger)html+='<div class="banner lock">'+(!item.eligibleForReview?
+ 'Operational source is closed or unavailable. Reconciliation is required before interpretation approval.':
+ item.sourceChanged?'Underlying source evidence has changed. Refresh and save a revised draft before approving.':
+ 'This interpretation requires review before approval.')+'</div>';
+ html+='<div class="editor">'+NAMES.map(n=>fieldMarkup(item,n)).join("")+'</div>'+
+ '<div class="editor-actions"><button type="button" class="btn primary" data-save="'+item.selectionId+'"'+(!item.eligibleForReview?' disabled':'')+'>Save Draft</button>'+
+ '<button type="button" class="btn approve" data-approve="'+item.selectionId+'"'+(!item.eligibleForReview||!i.id||item.sourceChanged||item.effectiveStatus==="approved"?' disabled':'')+'>Approve Interpretation</button>'+
+ '<span class="statusline">Saved: '+esc(i.updatedAt||"not yet saved")+
+ (i.approvedAt?' · Approved: '+esc(i.approvedAt)+" by "+esc(i.approvedBy):"")+'</span></div></article>';
+ return html;
+}
+function render(){
+ $("items").innerHTML=state.items.length?state.items.map(card).join(""):'<div class="panel empty">No explicitly included issues were found for this period. Return to Issue Selection before drafting interpretations.</div>';
+ $("items").querySelectorAll("[data-save]").forEach(el=>el.addEventListener("click",()=>change("save",Number(el.dataset.save))));
+ $("items").querySelectorAll("[data-approve]").forEach(el=>el.addEventListener("click",()=>change("approve",Number(el.dataset.approve))));
+}
+async function load(){
+ if(state.busy)return;
+ state.busy=true;$("refresh").disabled=true;
+ status("Loading saved selections, operational evidence and interpretation drafts…");
+ try{
+  const data=await api("list");
+  state.items=Array.isArray(data.items)?data.items:[];
+  render();
+  const approved=state.items.filter(x=>x.effectiveStatus==="approved").length;
+  status("Loaded "+state.items.length+" included issue(s); "+approved+" human-approved interpretation(s). Generator remains LOCKED.");
+ }catch(err){status("Unable to load interpretations: "+clean(err.message),true);$("items").innerHTML='<div class="empty">No verified interpretation data is available.</div>'}
+ finally{state.busy=false;$("refresh").disabled=false}
+}
+async function change(operation,id){
+ if(state.busy)return;
+ const item=state.items.find(x=>x.selectionId===id),panel=$("items").querySelector('[data-selection="'+id+'"]');
+ if(!item||!panel)return;
+ let extra={selectionId:id,expectedSourceSnapshot:item.sourceSnapshot,reviewedBy:"Andy"};
+ if(operation==="save"){
+  const interpretation={};
+  NAMES.forEach(n=>{interpretation[n.key]=panel.querySelector('[data-field="'+n.key+'"]').value});
+  extra.interpretation=interpretation;
+ }else{
+  if(!window.confirm("Approve this saved interpretation as reviewed? This does not unlock the generator or publish a report."))return;
+ }
+ state.busy=true;panel.querySelectorAll("button").forEach(b=>b.disabled=true);
+ status(operation==="save"?"Saving a draft without approving…":"Recording your explicit human approval…");
+ try{
+  await api(operation,extra);
+  status(operation==="save"?"Draft saved. Review it before pressing Approve.":"Interpretation approved. The Growth Review generator remains LOCKED.");
+ }catch(err){status("Could not "+operation+" interpretation: "+clean(err.message),true)}
+ finally{state.busy=false;await load()}
+}
+state.period=periodFromUrl();
+const query=new URLSearchParams({period:state.period.type,start:state.period.start,end:state.period.end});
+$("back").href="growth-review-issue-selection.html?"+query.toString();
+$("period").textContent=state.period.start+" through "+state.period.end+" (SES)";
+$("refresh").addEventListener("click",load);
+load();
+})();
+</script>
+</body>
+</html>
