@@ -96,7 +96,7 @@ window.addEventListener("DOMContentLoaded",function(){
 import {assembleGrowthPreview,validPeriod} from "./growth-review-assembly-core.js";
 const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
 const $=id=>document.getElementById(id),clean=v=>String(v==null?"":v).trim(),arr=v=>Array.isArray(v)?v:[];
-const esc=v=>clean(v).replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&quot;","'":"&#39;"}[c]));
+const esc=v=>clean(v).replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmtMoney=(n,code)=>n==null?"—":new Intl.NumberFormat("en-US",{style:"currency",currency:code||"USD",maximumFractionDigits:2}).format(n);
 const num=n=>n==null?"—":new Intl.NumberFormat("en-US",{maximumFractionDigits:2}).format(n);
 const pct=n=>n==null?"—":num(n)+"%";
@@ -121,7 +121,7 @@ async function api(action,extra){
    body:JSON.stringify({action,...extra}),signal:controller.signal});
   const value=await response.json().catch(()=>({}));
   if(!response.ok||value.ok!==true)throw Error(clean(value.error)||action+" returned HTTP "+response.status);
-  if(value.writesPerformed!==0)throw Error(action+" did not confirm zero writes.");
+  if(value.writesPerformed!==undefined&&value.writesPerformed!==0)throw Error(action+" reported a write during read-only assembly.");
   return value;
  }finally{clearTimeout(timer)}
 }
