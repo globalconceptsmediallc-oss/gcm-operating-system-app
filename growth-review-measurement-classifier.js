@@ -90,7 +90,8 @@ export function classifyPerformanceFinding(finding,sourceDate,periodStart,period
   let timing=classifyTiming(parsed,periodStart,periodEnd);
   // When source metadata disagrees with the title, report a discrepancy
   // instead of silently promoting the value to an exact-period metric.
-  if(timing==="exact"&&titleHints.length&&titleHints.some(m=>m.toLowerCase()!=="september")&&periodStart.startsWith("2026-09")){
+  const targetMonth=MONTHS[Number(periodStart.slice(5,7))-1]||"";
+  if(timing==="exact"&&titleHints.some(m=>m.toLowerCase()!==targetMonth)){
     timing="conflict";
   }
   const label={
