@@ -1,13 +1,14 @@
 /* =========================================================
  Global Concepts Media Operating System
  File: tests/growthReviewAssembly.test.js
- Version: 1.0.0
+ Version: 1.1.0
  Purpose: Lock exact-period SES preview, approval freshness,
           Shopify deduplication, and non-generating read-only assembly.
  ========================================================= */
 import assert from "node:assert/strict";
 import {assembleGrowthPreview,validPeriod,GROWTH_ASSEMBLY_VERSION} from "../growth-review-assembly-core.js";
-assert.equal(GROWTH_ASSEMBLY_VERSION,"1.0.0");
+import {classifyPerformanceFinding,parseExplicitCoverage,classifyReviewFindings} from "../growth-review-measurement-classifier.js";
+assert.equal(GROWTH_ASSEMBLY_VERSION,"1.1.0");
 function fixture(){
  return {
   period:{start:"2026-09-01",end:"2026-09-30",type:"custom"},
@@ -133,4 +134,53 @@ function fixture(){
 }
 assert.equal(validPeriod("2026-09-01","2026-09-30"),true);
 assert.equal(validPeriod("2026-09-31","2026-10-01"),false);
-console.log("PASS Growth Assembly Preview: SES boundary, exact commerce, approved interpretation, date limits, deduplication, no writes");
+// Verified period classification is independent from the source notification date.
+{
+ const x=fixture();
+ x.measurements=[];
+ x.findings.push(
+  {id:10,source_date:"2026-09-17",source_title:"Your Google Analytics performance report is in for August 21st - September 17th",reporting_period:"2026-08-21 to 2026-09-17"},
+  {id:11,source_date:"2026-09-17",source_title:"Southeast Safes, your August Creator Month in Review is here",reporting_period:"August 2026"},
+  {id:12,source_date:"2026-09-19",source_title:"GA4 monthly analytics",reporting_period:"2026-09-01 to 2026-09-30"},
+  {id:13,source_date:"2026-09-25",source_title:"Search Console performance report",reporting_period:"unavailable"},
+  {id:14,source_date:null,source_title:"GA4 performance report",reporting_period:"2026-09-01 to 2026-09-30"},
+  {id:15,source_date:"2026-09-20",source_title:"August 2026 GA4 performance report",reporting_period:"2026-09-01 to 2026-09-30"}
+ );
+ const view=assembleGrowthPreview(x);
+ assert.equal(view.reviewReady,false);
+ assert.equal(view.context.measurements.length,0);
+ assert.equal(view.interpretation.approved.length,1);
+ assert.equal(view.commerce.totalSales,2749);
+ assert.equal(view.context.sourceDatedFindings.length,6);
+ assert.equal(view.context.performanceReports.length,5);
+ const byId=Object.fromEntries(view.context.performanceReports.map(v=>[v.findingId,v]));
+ assert.equal(byId[10].timing,"overlapping");
+ assert.equal(byId[11].timing,"prior");
+ assert.equal(byId[12].timing,"exact");
+ assert.equal(byId[13].timing,"unverified");
+ assert.equal(byId[15].timing,"conflict");
+ assert.equal(byId[12].metricImported,false);
+ assert.equal(view.context.measurementCoverage.structuredSeptemberCount,0);
+ assert.equal(view.context.measurementCoverage.mixedPeriodReports,1);
+ assert.equal(view.context.measurementCoverage.earlierPeriodReports,1);
+ assert.equal(view.context.measurementCoverage.conflictingPeriodReports,1);
+ assert.match(view.problems.join(" "),/No source-dated structured general measurement observations/);
+}
+{
+ const reports=classifyReviewFindings([
+  {id:1,source_date:null,source_title:"GA4 September report",reporting_period:"2026-09-01 to 2026-09-30"},
+  {id:2,source_date:"2026-09-15",source_title:"August Creator Month in Review"},
+  {id:3,source_date:"2026-10-04",source_title:"September GA4 analytics"},
+  {id:4,source_date:"2026-09-18",source_title:"Google Analytics performance report",reporting_period:"2026-08-21 to 2026-09-17"}
+ ],"2026-09-01","2026-09-30");
+ assert.equal(reports.sourceDated.length,2);
+ assert.equal(reports.performanceReports.length,2);
+ assert.equal(reports.performanceReports[0].timing,"unverified");
+ assert.deepEqual(reports.performanceReports[0].titleMonthHints,["August"]);
+ assert.equal(reports.performanceReports[1].timing,"overlapping");
+}
+assert.deepEqual(parseExplicitCoverage("August 2026"),{start:"2026-08-01",end:"2026-08-31",precision:"month"});
+assert.equal(parseExplicitCoverage("August 21 - September 17"),null);
+assert.equal(parseExplicitCoverage("2026-09-31 to 2026-10-01"),null);
+assert.equal(classifyPerformanceFinding({source_title:"SEM Rush Position Tracking Update",reporting_period:"2026-08"},"2026-09-25","2026-09-01","2026-09-30")?.timing,"prior");
+console.log("PASS Growth Assembly Preview 1.1: dates vs coverage, mixed-period reports, empty structured data, source boundaries, no writes");

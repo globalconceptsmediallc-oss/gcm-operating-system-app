@@ -1,7 +1,7 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/growth-assembly-preview-check.yml
-# Version: 1.0.0
+# Version: 1.1.0
 # Purpose: Road-test read-only Assembly Preview without Worker deployment.
 # =========================================================
 name: Growth Assembly Preview Pre-Deploy Check
@@ -11,6 +11,7 @@ on:
     paths:
       - growth-review-assembly-preview.html
       - growth-review-assembly-core.js
+      - growth-review-measurement-classifier.js
       - tests/growthReviewAssembly.test.js
       - .github/workflows/growth-assembly-preview-check.yml
   workflow_dispatch:
@@ -28,6 +29,7 @@ jobs:
       - name: Validate adapter and exact-period behavior
         run: |
           node --check growth-review-assembly-core.js
+          node --check growth-review-measurement-classifier.js
           node tests/growthReviewAssembly.test.js
       - name: Validate inline page module and generator lock
         run: |
