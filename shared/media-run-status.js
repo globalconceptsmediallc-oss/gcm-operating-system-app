@@ -1,7 +1,7 @@
 /* =========================================================
  Global Concepts Media Operating System
  File: shared/media-run-status.js
- Version: 1.0.0
+ Version: 1.0.1
  Status: Read-Only Media Operating State Projection
  Purpose: Derive an explicitly linked, dated traffic-backed operating
           state without mutating legacy placement, traffic or D1 evidence.
@@ -74,7 +74,11 @@ function linkedProof(workflow){
  const confByPackage=new Map();
  for(const c of arr(workflow?.confirmations)){
   const id=positive(c.trafficPackageId);
-  if(id&&c.stationTraffickedConfirmed===true)confByPackage.set(id,true);
+  const confirmedDate=mediaDate(c.receivedAt||c.approvedAt||c.createdAt);
+  if(id&&c.stationTraffickedConfirmed===true&&confirmedDate){
+   if(!confByPackage.has(id))confByPackage.set(id,[]);
+   confByPackage.get(id).push(confirmedDate);
+  }
  }
  const byAssignment=new Map();
  for(const link of arr(workflow?.trafficPackageAssignments)){
@@ -84,8 +88,9 @@ function linkedProof(workflow){
   const state=lower(p.packageStatus);
   const sent=validPackage.has(state)?mediaDate(p.sentAt||p.confirmedAt):"";
   if(!byAssignment.has(id))byAssignment.set(id,[]);
-  byAssignment.get(id).push({sentDate:sent,stationTraffickedConfirmed:confByPackage.get(pid)===true||state==="confirmed",
-   packageId:pid,clientId:positive(a.clientId),creativeId:positive(a.creativeId)});
+  byAssignment.get(id).push({sentDate:sent,stationConfirmationDates:[
+      ...arr(confByPackage.get(pid)),...(state==="confirmed"&&mediaDate(p.confirmedAt)?[mediaDate(p.confirmedAt)]:[])
+    ],packageId:pid,clientId:positive(a.clientId),creativeId:positive(a.creativeId)});
  }
  return {assignments,byAssignment};
 }
@@ -93,8 +98,9 @@ function latestFor(proofs,clientId,asOf){
  const cutoff=determineAsOf(asOf);
  const eligible=arr(proofs).filter(p=>p.clientId===clientId&&p.sentDate&&p.sentDate<=cutoff)
   .sort((a,b)=>b.sentDate.localeCompare(a.sentDate)||b.packageId-a.packageId);
- if(eligible.length)return eligible[0];
- return {sentDate:"",stationTraffickedConfirmed:arr(proofs).some(p=>p.clientId===clientId&&p.stationTraffickedConfirmed)};
+ const stationTraffickedConfirmed=arr(proofs).some(p=>p.clientId===clientId&&arr(p.stationConfirmationDates).some(d=>d<=cutoff));
+ if(eligible.length)return {...eligible[0],stationTraffickedConfirmed};
+ return {sentDate:"",stationTraffickedConfirmed};
 }
 export function mediaRunProjector(workflow,asOf){
  const day=determineAsOf(asOf);
@@ -113,7 +119,8 @@ export function mediaRunProjector(workflow,asOf){
    // Older legacy traffic records are useful evidence but lack an
    // authoritative sent date; do not silently turn them into running.
    if(!evidence.sentDate && lower(r?.trafficStatus)==="sent")evidence.undatedTraffic=true;
-   if(lower(r?.confirmationStatus)==="confirmed")evidence.stationTraffickedConfirmed=true;
+   // A legacy confirmation flag has no date. Keep it visible in the
+   // original record rather than claiming historical station confirmation.
    return deriveMediaRunStatus(r,evidence,day);
   },
   assignment(a,creative){
