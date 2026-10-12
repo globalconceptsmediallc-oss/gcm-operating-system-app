@@ -138,10 +138,14 @@ export function assembleGrowthPreview(input) {
     titleOtherMonthClues:sourceAudit.counts.titleOtherMonth,
     titleReviewMonthClues:sourceAudit.counts.titleReviewMonth,
     monthLabelsOnly:sourceAudit.counts.monthLabelOnly,
+    explicitMetadataConflicts:sourceAudit.counts.explicitConflict,
     unverifiedPeriodReports:sourceAudit.counts.unverified
   };
   if(generalMeasurements.length===0) {
     problems.push("No source-dated structured general measurement observations qualify for this exact reporting period. Source-dated reports are not substitutes for September measurement values.");
+  }
+  if(sourceAudit.counts.explicitConflict) {
+    problems.push(sourceAudit.counts.explicitConflict+" explicitly date-bounded performance report(s) disagree with title month and require source verification.");
   }
   // A generic reporting month is administrative context, not a contradictory
   // measured period. Title clues are visible for manual checking, never a
