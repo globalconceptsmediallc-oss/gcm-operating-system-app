@@ -1,13 +1,18 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media.html
-   Version: 2.5.0
+   Version: 2.5.1
    Status: Production Candidate
    Source: Production media.html 2.4.0
    Sprint: Media Operations — Production Record Connection
    Purpose: Preserve the working Media operator workspace while extending it
             to all client media, creative-age monitoring, production workflow,
             reusable historical planning, and direct production recordkeeping.
+
+   Changes in 2.5.1:
+   - Scope Commercial Workflow creatives to selected numeric client ID.
+   - Enforce scope before deriving cards, workflow counts and filter options.
+   - No media, schedule, traffic or confirmation evidence is written.
 
    Changes in 2.4.9:
    - Adds a Creative / Script Drafts lane for Idea / Direction and Working Script records.
@@ -114,7 +119,7 @@
           <button class="button" id="expand-all" type="button">Expand All</button>
           <button class="button" id="collapse-all" type="button">Collapse All</button>
           <button class="button" id="refresh" type="button">Refresh</button>
-          <span class="version">media.html · v2.5.0</span>
+          <span class="version">media.html · v2.5.1</span>
         </div>
       </header>
       <section class="summary">
@@ -167,7 +172,14 @@
     const as = Array.isArray(creativeWorkflow.assignments) ? creativeWorkflow.assignments : [];
     const ps = Array.isArray(creativeWorkflow.trafficPackages) ? creativeWorkflow.trafficPackages : [];
     const cf = Array.isArray(creativeWorkflow.confirmations) ? creativeWorkflow.confirmations : [];
-    return cs.map(c => {
+    // The Creative Workflow API returns all clients. Scope by the authoritative
+    // numeric client ID before constructing cards, dashboard counts or filters.
+    // Missing/invalid owner IDs cannot be shown under a selected client.
+    const selectedClientId = Number($("client").value);
+    const visibleCreatives = selectedClientId > 0
+      ? cs.filter(c => Number(c.clientId) === selectedClientId)
+      : cs;
+    return visibleCreatives.map(c => {
       const assignments = as.filter(a => +a.creativeId === +c.id);
       const packages = ps.filter(p => +p.creativeId === +c.id);
       const packageIds = new Set(packages.map(p => +p.id));
