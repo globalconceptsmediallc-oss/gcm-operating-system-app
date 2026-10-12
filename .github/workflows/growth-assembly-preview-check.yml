@@ -1,8 +1,8 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/growth-assembly-preview-check.yml
-# Version: 1.1.0
-# Purpose: Road-test read-only Assembly Preview without Worker deployment.
+# Version: 1.2.0
+# Purpose: Road-test Assembly Preview and shared Media operating statuses without Worker deployment.
 # =========================================================
 name: Growth Assembly Preview Pre-Deploy Check
 on:
@@ -12,6 +12,11 @@ on:
       - growth-review-assembly-preview.html
       - growth-review-assembly-core.js
       - growth-review-measurement-classifier.js
+      - shared/media-run-status.js
+      - media.html
+      - media-calendar.html
+      - tests/mediaRunStatus.test.js
+      - package.json
       - tests/growthReviewAssembly.test.js
       - .github/workflows/growth-assembly-preview-check.yml
   workflow_dispatch:
@@ -30,6 +35,8 @@ jobs:
         run: |
           node --check growth-review-assembly-core.js
           node --check growth-review-measurement-classifier.js
+          node --check shared/media-run-status.js
+          node tests/mediaRunStatus.test.js
           node tests/growthReviewAssembly.test.js
       - name: Validate inline page module and generator lock
         run: |
@@ -45,6 +52,18 @@ jobs:
           fs.writeFileSync(".assembly-inline-check.mjs",source);
           NODE
           node --check .assembly-inline-check.mjs
+      - name: Validate Media and Calendar inline JavaScript
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+          for(const page of ["media.html","media-calendar.html"]){
+            const html=fs.readFileSync(page,"utf8");
+            const inline=[...html.matchAll(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/g)].at(-1)?.[1];
+            if(!inline || !inline.includes("media-run-status.js?v=1.0.1"))throw Error(page+" is missing derived status integration");
+            fs.writeFileSync(".media-inline-check.js",inline);
+          }
+          NODE
+          node --check .media-inline-check.js
       - name: Full GCM regression suite
         run: |
           npm install
