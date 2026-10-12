@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: growth-review-assembly-core.js
-   Version: 1.2.0
+   Version: 1.3.0
    Status: SES September 2026 Read-Only Road-Test Candidate
    Purpose: Assemble only verified, date-scoped evidence and explicitly
             human-approved interpretations into a non-generated preview.
@@ -9,7 +9,8 @@
    NO report generator, NO client-facing export.
    ========================================================= */
 import { classifyReviewFindings } from "./growth-review-measurement-classifier.js";
-export const GROWTH_ASSEMBLY_VERSION = "1.2.0";
+import {mediaRunProjector} from "./shared/media-run-status.js";
+export const GROWTH_ASSEMBLY_VERSION = "1.3.0";
 const OUTCOME = /(conversion|lead|call|revenue|sale|sales|purchase|order|form|contact|showroom|transaction|key[_ ]?event)/i;
 const SHOPIFY_COMMERCE = /(sale|sales|revenue|order|purchase|checkout|conversion)/i;
 const arr=v=>Array.isArray(v)?v:[];
@@ -43,14 +44,19 @@ function mediaKey(m){return [
  clean(m?.creativeName||m?.campaignName).toLowerCase(),clean(m?.market).toLowerCase(),
  clean(m?.outletName).toLowerCase(),mediaStart(m),mediaEnd(m)
 ].join("|")}
-function workflowMediaRows(workflow,clientId){
+function workflowMediaRows(workflow,clientId,projector){
   const creativeMap=new Map(arr(workflow?.creatives).map(c=>[Number(c.id),c]));
   return arr(workflow?.assignments).map(a=>{
     const creative=creativeMap.get(Number(a.creativeId))||{};
     const id=Number(a.clientId||creative.clientId||0);
     if(id!==clientId)return null;
+    const projected=projector.assignment(a,creative);
     return {
       sourceType:"creative_workflow",id:"assignment:"+clean(a.id),clientId:id,
+      operatingStatus:projected.operatingStatus,operatingLabel:projected.operatingLabel,
+      operatingBasis:projected.operatingBasis,trafficEvidenceDate:projected.trafficEvidenceDate,
+      stationTraffickedConfirmed:projected.stationTraffickedConfirmed,
+      broadcastVerified:false,
       mediaType:clean(a.mediaType||creative.mediaType),
       market:clean(a.market),outletName:clean(a.outletName),
       creativeName:clean(creative.creativeName||a.campaignName)||"Media assignment",
@@ -169,10 +175,11 @@ export function assembleGrowthPreview(input) {
   const completedWork=completedItems.concat(activities);
   // Legacy Media Operations records are already scoped by the clientId API request.
   // Enforce any explicit row owner while keeping legacy rows that omit an owner.
+  const mediaProjector=mediaRunProjector(creativeWorkflow,end);
   const mediaInput=arr(mediaRecords).filter(m=>{
     const owner=m?.clientId??m?.client_id;
     return owner==null||owner===""||Number(owner)===clientId;
-  }).concat(workflowMediaRows(creativeWorkflow,clientId));
+  }).map(m=>mediaProjector.record(m)).concat(workflowMediaRows(creativeWorkflow,clientId,mediaProjector));
   const mediaSeen=new Set();
   const media=mediaInput.filter(m=>{
     const k=mediaKey(m);if(mediaSeen.has(k))return false;mediaSeen.add(k);

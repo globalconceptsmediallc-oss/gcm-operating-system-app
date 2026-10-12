@@ -1,14 +1,14 @@
 /* =========================================================
  Global Concepts Media Operating System
  File: tests/growthReviewAssembly.test.js
- Version: 1.2.0
+ Version: 1.3.0
  Purpose: Lock exact-period SES preview, approval freshness,
           Shopify deduplication, and non-generating read-only assembly.
  ========================================================= */
 import assert from "node:assert/strict";
 import {assembleGrowthPreview,validPeriod,GROWTH_ASSEMBLY_VERSION} from "../growth-review-assembly-core.js";
 import {classifyPerformanceFinding,parseExplicitCoverage,classifyReviewFindings} from "../growth-review-measurement-classifier.js";
-assert.equal(GROWTH_ASSEMBLY_VERSION,"1.2.0");
+assert.equal(GROWTH_ASSEMBLY_VERSION,"1.3.0");
 function fixture(){
  return {
   period:{start:"2026-09-01",end:"2026-09-30",type:"custom"},
@@ -208,4 +208,32 @@ assert.equal(classifyPerformanceFinding({source_title:"SEM Rush Position Trackin
  assert.equal(view.reviewReady,false);
  assert.equal(view.problems.length,1);
 }
-console.log("PASS Growth Assembly Preview 1.2: dates vs coverage, mixed-period reports, empty structured data, source boundaries, no writes");
+// Media only advances after a dated package linked to the exact market
+// assignment, and September status cannot claim October confirmation.
+{
+ const x=fixture();
+ x.mediaRecords=[
+  {id:71,clientId:11,creativeName:"Radio Spot",mediaType:"Radio",market:"Orlando",outletName:"WFLA",startDate:"2026-09-01",endDate:"2026-10-31",status:"planned"},
+  {id:72,clientId:11,creativeName:"Other Spot",mediaType:"Radio",market:"Melbourne",outletName:"WMMB",startDate:"2026-09-01",endDate:"2026-10-31",status:"planned"}
+ ];
+ x.creativeWorkflow={
+  creatives:[{id:1,clientId:11,creativeName:"Radio Spot"}],
+  assignments:[{id:40,clientId:11,creativeId:1,mediaRecordId:71,market:"Orlando",outletName:"WFLA",rotationStartDate:"2026-09-01",rotationEndDate:"2026-10-31",assignmentStatus:"planned"}],
+  trafficPackages:[{id:88,creativeId:1,packageStatus:"confirmed",sentAt:"2026-08-27T17:00:00Z",confirmedAt:"2026-10-01T17:00:00Z"}],
+  trafficPackageAssignments:[{trafficPackageId:88,assignmentId:40}],
+  confirmations:[{trafficPackageId:88,stationTraffickedConfirmed:true,receivedAt:"2026-10-01T17:00:00Z"}]
+ };
+ const view=assembleGrowthPreview(x);
+ assert.equal(view.context.media.length,2);
+ const linked=view.context.media.find(r=>r.id===71);
+ const other=view.context.media.find(r=>r.id===72);
+ assert.equal(linked.operatingStatus,"running");
+ assert.equal(linked.operatingBasis,"dated_linked_traffic");
+ assert.equal(linked.stationTraffickedConfirmed,false);
+ assert.equal(linked.broadcastVerified,false);
+ assert.equal(other.operatingStatus,"planned");
+ assert.equal(linked.status,"planned");
+ assert.equal(view.generatorLocked,true);
+ assert.equal(view.writesPerformed,0);
+}
+console.log("PASS Growth Assembly Preview 1.3: dates vs coverage, mixed-period reports, empty structured data, source boundaries, no writes");

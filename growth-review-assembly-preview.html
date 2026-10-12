@@ -38,7 +38,7 @@ ul{padding-left:20px;margin:8px 0}li{margin:7px 0;line-height:1.45}
 <!-- =========================================================
  Global Concepts Media Operating System
  File: growth-review-assembly-preview.html
- Version: 1.2.0
+ Version: 1.3.0
  Status: SES September 2026 Human Road-Test Candidate
  Purpose: Read-only assembly of exact-period evidence and approved text.
  Does NOT import/call Growth Intelligence, Consulting Knowledge, generator,
@@ -85,7 +85,7 @@ ul{padding-left:20px;margin:8px 0}li{margin:7px 0;line-height:1.45}
  </section>
  <section class="grid">
   <div class="panel"><h2>Completed work & Proof</h2><p class="meta">Only qualifying completed work and substantive completed activities</p><div id="work" class="stack"></div></div>
-  <div class="panel"><h2>Recorded media activity</h2><p class="meta">Overlapping placements and assignments; presence is not evidence of effectiveness</p><div id="media" class="stack"></div></div>
+  <div class="panel"><h2>Recorded media activity</h2><p class="meta">As-of September 30: Running means a dated, explicitly linked traffic package reached its scheduled start, NOT broadcast verification. Unlinked records retain their stored status; station confirmation remains separate.</p><div id="media" class="stack"></div></div>
  </section>
  <section class="panel"><h2>Current operational context</h2><p class="meta">Open priorities are future action context, not September accomplishments.</p><div id="operations" class="stack"></div></section>
  <section class="panel"><h2>Caveats, exclusions & audit boundary</h2>
@@ -217,7 +217,7 @@ function render(view){
   x.type+" · "+x.date,clean(x.item?.actual_impact||x.item?.description||x.item?.notes||x.item?.expected_impact))).join("")||empty("No qualifying completed work or Proof activity.");
  $("media").innerHTML=ctx.media.slice(0,16).map(m=>item(clean(m.creativeName||m.campaignName||m.title)||"Media placement",
   [clean(m.mediaType),clean(m.market),dateText(m.startDate||m.start_date)+" – "+dateText(m.endDate||m.end_date)].filter(Boolean).join(" · "),
-  [clean(m.outletName),clean(m.status),clean(m.trafficStatus),clean(m.confirmationStatus)].filter(Boolean).join(" · "))).join("")||
+  [clean(m.outletName),clean(m.operatingLabel||m.status),m.trafficEvidenceDate?"Traffic dated "+m.trafficEvidenceDate:"",m.operatingBasis==="dated_linked_traffic"?(m.stationTraffickedConfirmed?"Station trafficked confirmed":"Station confirmation separate; airplay not verified"):"Stored status; linked traffic date unavailable"].filter(Boolean).join(" · "))).join("")||
   empty("No overlapping media placements or assignments in this period.");
  $("operations").innerHTML=[
   item("Current priority","Live Client Workspace",ctx.currentPriority||"None supplied"),
