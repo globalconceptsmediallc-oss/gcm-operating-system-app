@@ -38,7 +38,7 @@ ul{padding-left:20px;margin:8px 0}li{margin:7px 0;line-height:1.45}
 <!-- =========================================================
  Global Concepts Media Operating System
  File: growth-review-assembly-preview.html
- Version: 1.1.0
+ Version: 1.2.0
  Status: SES September 2026 Human Road-Test Candidate
  Purpose: Read-only assembly of exact-period evidence and approved text.
  Does NOT import/call Growth Intelligence, Consulting Knowledge, generator,
@@ -189,21 +189,22 @@ function render(view){
  $("measurementAudit").innerHTML=[
   fact("Structured observations",String(mc.structuredSeptemberCount),"Exact review-window dates"),
   fact("Source-dated reports",String(mc.sourceDatedPerformanceReports),"Informational, not imported metrics"),
-  fact("Exact report periods",String(mc.exactPeriodReports),"Only verified metadata; not numeric observations"),
-  fact("Mixed periods",String(mc.mixedPeriodReports),"Coverage overlaps but is not September-only"),
-  fact("Unverified coverage",String(mc.unverifiedPeriodReports+mc.conflictingPeriodReports),"Needs source period verification")
+  fact("Exact dated coverage",String(mc.exactPeriodReports),"Explicit date bounds only; not imported metrics"),
+  fact("Title month clues",String(mc.titleMixedMonthClues+mc.titleOtherMonthClues+mc.titleReviewMonthClues),"Unverified, including August and mixed reports"),
+  fact("Month labels / unknown",String(mc.monthLabelsOnly+mc.unverifiedPeriodReports),"Labels are not measurement windows")
  ].join("");
  $("reportTiming").innerHTML=ctx.performanceReports.length?
    ctx.performanceReports.map(x=>{
-     const timing=x.timing;
      const details=x.explicitCoverage
-       ?x.explicitCoverage.start+" through "+x.explicitCoverage.end+" ("+x.explicitCoverage.precision+")"
-       :x.reportingPeriodText
-         ?"Unverified reporting-period text: "+x.reportingPeriodText
-         :"No verified reporting-period dates provided";
-     const hints=x.titleMonthHints.length?" · Title mentions "+x.titleMonthHints.join(", "):"";
+       ?"Explicit metadata range: "+x.explicitCoverage.start+" through "+x.explicitCoverage.end+" ("+x.explicitCoverage.precision+")"
+       :x.reportingMonthLabel
+         ?"Administrative report-month label: "+x.reportingMonthLabel+" — NOT verified measured dates"
+         :x.reportingPeriodText
+           ?"Unverified reporting-period text: "+x.reportingPeriodText
+           :"No explicit measured-period dates supplied";
+     const hints=x.titleMonthHints.length?" · Title suggests "+x.titleMonthHints.join("–")+" (unverified title clue)":"";
      return item(x.title,
-       "Source date "+x.sourceDate+" · "+x.timingLabel,
+       "Finding source date "+x.sourceDate+" · "+x.timingLabel,
        details+hints+". No numerical metric imported or claimed for September.");
    }).join(""):
    empty("No matching performance-related reports with a source date in this review period.");
