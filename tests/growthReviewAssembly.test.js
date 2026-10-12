@@ -1,14 +1,14 @@
 /* =========================================================
  Global Concepts Media Operating System
  File: tests/growthReviewAssembly.test.js
- Version: 1.1.0
+ Version: 1.2.0
  Purpose: Lock exact-period SES preview, approval freshness,
           Shopify deduplication, and non-generating read-only assembly.
  ========================================================= */
 import assert from "node:assert/strict";
 import {assembleGrowthPreview,validPeriod,GROWTH_ASSEMBLY_VERSION} from "../growth-review-assembly-core.js";
 import {classifyPerformanceFinding,parseExplicitCoverage,classifyReviewFindings} from "../growth-review-measurement-classifier.js";
-assert.equal(GROWTH_ASSEMBLY_VERSION,"1.1.0");
+assert.equal(GROWTH_ASSEMBLY_VERSION,"1.2.0");
 function fixture(){
  return {
   period:{start:"2026-09-01",end:"2026-09-30",type:"custom"},
@@ -155,15 +155,16 @@ assert.equal(validPeriod("2026-09-31","2026-10-01"),false);
  assert.equal(view.context.performanceReports.length,5);
  const byId=Object.fromEntries(view.context.performanceReports.map(v=>[v.findingId,v]));
  assert.equal(byId[10].timing,"overlapping");
- assert.equal(byId[11].timing,"prior");
+ assert.equal(byId[11].timing,"title_other_month");
  assert.equal(byId[12].timing,"exact");
  assert.equal(byId[13].timing,"unverified");
- assert.equal(byId[15].timing,"conflict");
+ assert.equal(byId[15].timing,"explicit_conflict");
  assert.equal(byId[12].metricImported,false);
  assert.equal(view.context.measurementCoverage.structuredSeptemberCount,0);
  assert.equal(view.context.measurementCoverage.mixedPeriodReports,1);
- assert.equal(view.context.measurementCoverage.earlierPeriodReports,1);
- assert.equal(view.context.measurementCoverage.conflictingPeriodReports,1);
+ assert.equal(view.context.measurementCoverage.earlierPeriodReports,0);
+ assert.equal(view.context.measurementCoverage.titleOtherMonthClues,1);
+ assert.equal(view.context.measurementCoverage.explicitMetadataConflicts,1);
  assert.match(view.problems.join(" "),/No source-dated structured general measurement observations/);
 }
 {
@@ -175,12 +176,36 @@ assert.equal(validPeriod("2026-09-31","2026-10-01"),false);
  ],"2026-09-01","2026-09-30");
  assert.equal(reports.sourceDated.length,2);
  assert.equal(reports.performanceReports.length,2);
- assert.equal(reports.performanceReports[0].timing,"unverified");
+ assert.equal(reports.performanceReports[0].timing,"title_other_month");
  assert.deepEqual(reports.performanceReports[0].titleMonthHints,["August"]);
  assert.equal(reports.performanceReports[1].timing,"overlapping");
 }
-assert.deepEqual(parseExplicitCoverage("August 2026"),{start:"2026-08-01",end:"2026-08-31",precision:"month"});
+assert.equal(parseExplicitCoverage("August 2026"),null);
+assert.equal(parseExplicitCoverage("2026-09"),null);
 assert.equal(parseExplicitCoverage("August 21 - September 17"),null);
 assert.equal(parseExplicitCoverage("2026-09-31 to 2026-10-01"),null);
-assert.equal(classifyPerformanceFinding({source_title:"SEM Rush Position Tracking Update",reporting_period:"2026-08"},"2026-09-25","2026-09-01","2026-09-30")?.timing,"prior");
-console.log("PASS Growth Assembly Preview 1.1: dates vs coverage, mixed-period reports, empty structured data, source boundaries, no writes");
+assert.equal(classifyPerformanceFinding({source_title:"SEM Rush Position Tracking Update",reporting_period:"2026-08"},"2026-09-25","2026-09-01","2026-09-30")?.timing,"month_label_only");
+// Reproduce the five source reports seen in the actual September SES preview:
+{
+ const x=fixture();
+ x.measurements=[];
+ x.findings=[
+  {id:1,source_date:"2026-09-23",source_title:"Position Tracking Update - Your rankings increased (sesafes.com)",reporting_period:"2026-09"},
+  {id:2,source_date:"2026-09-16",source_title:"Position Tracking Update - Your rankings declined (sesafes.com)",reporting_period:"2026-09"},
+  {id:3,source_date:"2026-09-17",source_title:"Southeast Safes, your August Creator Month in Review is here",reporting_period:"2026-09"},
+  {id:4,source_date:"2026-09-17",source_title:"Your Google Analytics performance report is in for August 21st - September 17th",reporting_period:"2026-09"},
+  {id:5,source_date:"2026-09-08",source_title:"Position Tracking Update - Your rankings increased (sesafes.com)"}
+ ];
+ const view=assembleGrowthPreview(x);
+ const statuses=view.context.performanceReports.map(r=>r.timing);
+ assert.deepEqual(statuses,["month_label_only","month_label_only","title_other_month","title_multiple_months","unverified"]);
+ assert.equal(view.context.measurementCoverage.exactPeriodReports,0);
+ assert.equal(view.context.measurementCoverage.explicitMetadataConflicts,0);
+ assert.equal(view.context.measurementCoverage.titleOtherMonthClues,1);
+ assert.equal(view.context.measurementCoverage.titleMixedMonthClues,1);
+ assert.equal(view.context.measurementCoverage.structuredSeptemberCount,0);
+ assert.equal(view.interpretation.approved.length,1);
+ assert.equal(view.reviewReady,false);
+ assert.equal(view.problems.length,1);
+}
+console.log("PASS Growth Assembly Preview 1.2: dates vs coverage, mixed-period reports, empty structured data, source boundaries, no writes");

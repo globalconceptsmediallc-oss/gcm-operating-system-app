@@ -1,142 +1,136 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: growth-review-measurement-classifier.js
-   Version: 1.0.0
+   Version: 1.1.0
    Status: SES September Growth Review — Read-Only Date Audit
-   Purpose: Distinguish a source Finding's date from the period covered
-            by an external performance report without manufacturing metrics.
+   Purpose: Separate source date, administrative month label, explicit
+            measurement-period metadata, and unverified title clues.
    Rules:
-   - Only explicit complete source dates establish a source-dated Finding.
-   - Only unambiguous machine-readable coverage dates establish report timing.
-   - A report title's month hints are displayed, never treated as proof
-     of exact-period measurement or numeric data.
-   - No D1 writes, no AI interpretation, no report generation.
+   - Only source_date establishes the date a Finding belongs to a review.
+   - Only explicit valid ISO date bounds establish measured coverage.
+   - A YYYY-MM or "August 2026" label is NOT evidence of actual coverage.
+   - Months in the report title are clues, NEVER verified metric periods.
+   - No D1 writes, source rewrites, AI interpretation or report generation.
    ========================================================= */
-const clean = value => String(value == null ? "" : value).trim();
-const MONTHS = ["january","february","march","april","may","june","july","august","september","october","november","december"];
-const SHORT_MONTHS = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
-const REPORT_PATTERN = /\b(google analytics|ga4|search console|youtube|creator month|performance report|position tracking update|semrush|google ads|facebook insights|meta ads|marketing performance|traffic report)\b/i;
+const clean = v => String(v==null?"":v).trim();
+const MONTHS=["january","february","march","april","may","june","july","august","september","october","november","december"];
+const SHORT_MONTHS=["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
+const REPORT_PATTERN=/\b(google analytics|ga4|search console|youtube|creator month|performance report|position tracking update|semrush|google ads|facebook insights|meta ads|marketing performance|traffic report)\b/i;
+const showMonth=i=>MONTHS[i]?MONTHS[i][0].toUpperCase()+MONTHS[i].slice(1):"";
 
-export function strictIso(value) {
-  const text=clean(value);
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(text))return "";
-  const y=+text.slice(0,4),m=+text.slice(5,7),d=+text.slice(8,10);
+export function strictIso(value){
+  const t=clean(value);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(t))return "";
+  const y=+t.slice(0,4),m=+t.slice(5,7),d=+t.slice(8,10);
   const date=new Date(Date.UTC(y,m-1,d));
-  return date.getUTCFullYear()===y&&date.getUTCMonth()===m-1&&date.getUTCDate()===d?text:"";
+  return date.getUTCFullYear()===y&&date.getUTCMonth()===m-1&&date.getUTCDate()===d?t:"";
 }
 
-export function getSourceDate(finding) {
+export function getSourceDate(finding){
   return strictIso(clean(finding?.source_date).slice(0,10));
 }
-
-function monthNames(text) {
-  const found=[];
+function monthNames(value){
+  const text=clean(value),names=[];
   for(let i=0;i<MONTHS.length;i++){
-    const full=MONTHS[i],abbrev=SHORT_MONTHS[i];
-    if(new RegExp("\\b(?:"+full+"|"+abbrev+")\\b","i").test(clean(text)))found.push(full[0].toUpperCase()+full.slice(1));
+    if(new RegExp("\\b(?:"+MONTHS[i]+"|"+SHORT_MONTHS[i]+")\\b","i").test(text))names.push(showMonth(i));
   }
-  return found;
+  return names;
 }
-
-function monthRange(year,month) {
-  const first=year+"-"+String(month).padStart(2,"0")+"-01";
-  const last=new Date(Date.UTC(year,month,0)).toISOString().slice(0,10);
-  return {start:first,end:last,precision:"month"};
-}
-
-export function parseExplicitCoverage(value) {
+export function parsePeriodLabel(value){
   const raw=clean(value);
-  if(!raw)return null;
-  // Only recognize exact dates when the raw report-period field contains
-  // exactly two valid ISO dates or one isolated ISO date.
-  const matches=raw.match(/\d{4}-\d{2}-\d{2}/g)||[];
-  if(matches.length===2){
-    const start=strictIso(matches[0]),end=strictIso(matches[1]);
+  let m=raw.match(/^(\d{4})-(\d{2})$/);
+  if(m && Number(m[2])>=1 && Number(m[2])<=12)return showMonth(Number(m[2])-1)+" "+m[1];
+  m=raw.match(/^([A-Za-z]+)\s+(\d{4})$/);
+  if(m){
+    const n=MONTHS.indexOf(m[1].toLowerCase());
+    if(n>=0)return showMonth(n)+" "+m[2];
+  }
+  return "";
+}
+
+export function parseExplicitCoverage(value){
+  const raw=clean(value),dates=raw.match(/\d{4}-\d{2}-\d{2}/g)||[];
+  if(dates.length===2){
+    const start=strictIso(dates[0]),end=strictIso(dates[1]);
     return start&&end&&start<=end?{start,end,precision:"date_range"}:null;
   }
-  if(matches.length===1 && /^\s*\d{4}-\d{2}-\d{2}\s*$/.test(raw)){
-    const date=strictIso(matches[0]);
+  if(dates.length===1&&/^\d{4}-\d{2}-\d{2}$/.test(raw)){
+    const date=strictIso(raw);
     return date?{start:date,end:date,precision:"single_date"}:null;
   }
-  if(matches.length)return null;
-  const numeric=raw.match(/^(\d{4})-(\d{2})$/);
-  if(numeric && +numeric[2]>=1 && +numeric[2]<=12){
-    return monthRange(+numeric[1],+numeric[2]);
-  }
-  const long=raw.match(/^([A-Za-z]+)\s+(\d{4})$/);
-  if(long){
-    const m=MONTHS.indexOf(long[1].toLowerCase());
-    if(m>=0)return monthRange(+long[2],m+1);
-  }
+  // Critically, a generic 2026-09 or September 2026 label does not
+  // establish that the measured period was September 1 through 30.
   return null;
 }
-
-function classifyTiming(coverage,start,end){
-  if(!coverage)return "unverified";
+function coverageTiming(coverage,start,end){
+  if(!coverage)return null;
   if(coverage.start===start&&coverage.end===end)return "exact";
   if(coverage.end<start)return "prior";
   if(coverage.start>end)return "later";
   return "overlapping";
 }
 
-export function classifyPerformanceFinding(finding,sourceDate,periodStart,periodEnd) {
-  const title=clean(finding?.source_title);
-  const sourceType=clean(finding?.source_type);
-  const sourceReference=clean(finding?.source_reference);
-  if(!REPORT_PATTERN.test(title+" "+sourceType+" "+sourceReference))return null;
+export function classifyPerformanceFinding(finding,sourceDate,periodStart,periodEnd){
+  const title=clean(finding?.source_title),sourceType=clean(finding?.source_type),reference=clean(finding?.source_reference);
+  if(!REPORT_PATTERN.test(title+" "+sourceType+" "+reference))return null;
   const rawPeriod=clean(finding?.reporting_period);
-  const parsed=parseExplicitCoverage(rawPeriod);
-  const titleHints=monthNames(title);
-  let timing=classifyTiming(parsed,periodStart,periodEnd);
-  // When source metadata disagrees with the title, report a discrepancy
-  // instead of silently promoting the value to an exact-period metric.
-  const targetMonth=MONTHS[Number(periodStart.slice(5,7))-1]||"";
-  if(timing==="exact"&&titleHints.some(m=>m.toLowerCase()!==targetMonth)){
-    timing="conflict";
+  const parsed=parseExplicitCoverage(rawPeriod),monthLabel=parsePeriodLabel(rawPeriod),titleHints=monthNames(title);
+  const target=showMonth(Number(periodStart.slice(5,7))-1);
+  let timing=coverageTiming(parsed,periodStart,periodEnd);
+  // A genuine contradiction requires explicit full date bounds, not a
+  // general month label. This is a source-review flag, not a data mutation.
+  if(timing==="exact"&&titleHints.length===1&&titleHints[0]!==target){
+    timing="explicit_conflict";
   }
-  const label={
-    exact:"Exact review-period coverage (metadata only)",
-    overlapping:"Mixed/overlapping measurement period",
-    prior:"Earlier measurement period",
-    later:"Later measurement period",
-    unverified:"Measurement period not verified",
-    conflict:"Conflicting period indicators — review source"
-  }[timing];
+  // Title months are distinct from verified period bounds. Even a literal
+  // range in a subject can have an unknown year: never promote it to a metric.
+  if(!timing){
+    if(titleHints.length>1)timing="title_multiple_months";
+    else if(titleHints.length===1&&titleHints[0]!==target)timing="title_other_month";
+    else if(titleHints.length===1)timing="title_review_month";
+    else if(monthLabel)timing="month_label_only";
+    else timing="unverified";
+  }
+  const labels={
+    exact:"Exact review-period coverage (explicit metadata)",
+    overlapping:"Overlapping measurement period (explicit metadata)",
+    prior:"Earlier measurement period (explicit metadata)",
+    later:"Later measurement period (explicit metadata)",
+    explicit_conflict:"Explicit date bounds disagree with title month — verify source",
+    title_multiple_months:"Title refers to multiple months; measured dates unverified",
+    title_other_month:"Title refers to a different month; measured dates unverified",
+    title_review_month:"Title refers to review month; measured dates unverified",
+    month_label_only:"Reporting-month label only; measured dates unverified",
+    unverified:"Measurement period not verified"
+  };
   return {
-    findingId:Number(finding?.id)||null,
-    title:title||"Source performance report",
-    sourceDate,
-    reportingPeriodText:rawPeriod,
-    explicitCoverage:parsed,
-    titleMonthHints:titleHints,
-    timing,
-    timingLabel:label,
+    findingId:Number(finding?.id)||null,title:title||"Source performance report",
+    sourceDate,reportingPeriodText:rawPeriod,reportingMonthLabel:monthLabel,
+    explicitCoverage:parsed,titleMonthHints:titleHints,
+    timing,timingLabel:labels[timing],
     septemberMetricEligible:timing==="exact",
-    // Intentional: source reports can support a review but are never
-    // imported as quantitative Measurement Observations by this adapter.
     metricImported:false
   };
 }
-
-export function classifyReviewFindings(findings,periodStart,periodEnd) {
+export function classifyReviewFindings(findings,periodStart,periodEnd){
   const sourceDated=[],performanceReports=[];
   for(const finding of Array.isArray(findings)?findings:[]){
     const date=getSourceDate(finding);
     if(!date||date<periodStart||date>periodEnd)continue;
-    const result={item:finding,date};
-    sourceDated.push(result);
+    sourceDated.push({item:finding,date});
     const report=classifyPerformanceFinding(finding,date,periodStart,periodEnd);
     if(report)performanceReports.push(report);
   }
-  const counts={
-    sourceDated:sourceDated.length,
-    reports:performanceReports.length,
-    exact:performanceReports.filter(x=>x.timing==="exact").length,
-    overlapping:performanceReports.filter(x=>x.timing==="overlapping").length,
-    prior:performanceReports.filter(x=>x.timing==="prior").length,
-    later:performanceReports.filter(x=>x.timing==="later").length,
-    conflict:performanceReports.filter(x=>x.timing==="conflict").length,
-    unverified:performanceReports.filter(x=>x.timing==="unverified").length
-  };
-  return {sourceDated,performanceReports,counts};
+  const count=key=>performanceReports.filter(x=>x.timing===key).length;
+  return {sourceDated,performanceReports,counts:{
+    sourceDated:sourceDated.length,reports:performanceReports.length,
+    exact:count("exact"),overlapping:count("overlapping"),
+    prior:count("prior"),later:count("later"),
+    explicitConflict:count("explicit_conflict"),
+    titleMultipleMonths:count("title_multiple_months"),
+    titleOtherMonth:count("title_other_month"),
+    titleReviewMonth:count("title_review_month"),
+    monthLabelOnly:count("month_label_only"),
+    unverified:count("unverified")
+  }};
 }

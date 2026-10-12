@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: growth-review-assembly-core.js
-   Version: 1.1.0
+   Version: 1.2.0
    Status: SES September 2026 Read-Only Road-Test Candidate
    Purpose: Assemble only verified, date-scoped evidence and explicitly
             human-approved interpretations into a non-generated preview.
@@ -9,7 +9,7 @@
    NO report generator, NO client-facing export.
    ========================================================= */
 import { classifyReviewFindings } from "./growth-review-measurement-classifier.js";
-export const GROWTH_ASSEMBLY_VERSION = "1.1.0";
+export const GROWTH_ASSEMBLY_VERSION = "1.2.0";
 const OUTCOME = /(conversion|lead|call|revenue|sale|sales|purchase|order|form|contact|showroom|transaction|key[_ ]?event)/i;
 const SHOPIFY_COMMERCE = /(sale|sales|revenue|order|purchase|checkout|conversion)/i;
 const arr=v=>Array.isArray(v)?v:[];
@@ -134,17 +134,28 @@ export function assembleGrowthPreview(input) {
     mixedPeriodReports:sourceAudit.counts.overlapping,
     earlierPeriodReports:sourceAudit.counts.prior,
     laterPeriodReports:sourceAudit.counts.later,
-    conflictingPeriodReports:sourceAudit.counts.conflict,
+    titleMixedMonthClues:sourceAudit.counts.titleMultipleMonths,
+    titleOtherMonthClues:sourceAudit.counts.titleOtherMonth,
+    titleReviewMonthClues:sourceAudit.counts.titleReviewMonth,
+    monthLabelsOnly:sourceAudit.counts.monthLabelOnly,
+    explicitMetadataConflicts:sourceAudit.counts.explicitConflict,
     unverifiedPeriodReports:sourceAudit.counts.unverified
   };
   if(generalMeasurements.length===0) {
     problems.push("No source-dated structured general measurement observations qualify for this exact reporting period. Source-dated reports are not substitutes for September measurement values.");
   }
-  if(sourceAudit.counts.conflict) {
-    problems.push(sourceAudit.counts.conflict+" performance report(s) contain conflicting reporting-period indicators requiring source verification.");
+  if(sourceAudit.counts.explicitConflict) {
+    problems.push(sourceAudit.counts.explicitConflict+" explicitly date-bounded performance report(s) disagree with title month and require source verification.");
+  }
+  // A generic reporting month is administrative context, not a contradictory
+  // measured period. Title clues are visible for manual checking, never a
+  // source-data inconsistency requiring mutation.
+  if(sourceAudit.counts.titleMultipleMonths || sourceAudit.counts.titleOtherMonth) {
+    notes.push((sourceAudit.counts.titleMultipleMonths+sourceAudit.counts.titleOtherMonth)+
+      " source report(s) mention different or multiple months in their titles. Their measured windows remain unverified until the original reports are checked.");
   }
   if(sourceAudit.counts.reports) {
-    notes.push(sourceAudit.counts.reports+" performance-related source report(s) are cataloged by source date and separately classified by actual reporting period. Their narrative numbers were not converted into structured September measurements.");
+    notes.push(sourceAudit.counts.reports+" performance-related source report(s) are dated by their original Finding source dates. Explicit date ranges, month labels and title clues remain separate; no narrative metrics were converted to September observations.");
   }
   const outcomeMeasurements=generalMeasurements.filter(x=>OUTCOME.test(metricKey(x.item)));
   if(excludedShopifyDuplicates)notes.push(excludedShopifyDuplicates+" duplicate Shopify commerce measurement(s) removed from the general metrics layer.");
