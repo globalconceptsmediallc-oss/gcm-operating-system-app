@@ -688,7 +688,7 @@
     state.scheduleAuthorityLoaded=false;
     state.scheduleEvents=[];
     try{
-      state.mediaRunStatus=await import("./shared/media-run-status.js?v=1.0.0");
+      state.mediaRunStatus=await import("./shared/media-run-status.js?v=1.0.1");
       var body={action:"get-media-operations"},selected=$("client").value;if(selected)body.clientId=Number(selected);
       var responses=await Promise.allSettled([
         fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}).then(async function(response){return{response:response,payload:await response.json().catch(function(){return{};})};}),
