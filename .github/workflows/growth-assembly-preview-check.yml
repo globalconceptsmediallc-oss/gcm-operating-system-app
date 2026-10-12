@@ -1,7 +1,7 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/growth-assembly-preview-check.yml
-# Version: 1.2.0
+# Version: 1.2.1
 # Purpose: Road-test Assembly Preview and shared Media operating statuses without Worker deployment.
 # =========================================================
 name: Growth Assembly Preview Pre-Deploy Check
@@ -58,7 +58,7 @@ jobs:
           import fs from "node:fs";
           for(const page of ["media.html","media-calendar.html"]){
             const html=fs.readFileSync(page,"utf8");
-            const inline=[...html.matchAll(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/g)].at(-1)?.[1];
+            const inline=[...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].at(-1)?.[1];
             if(!inline || !inline.includes("media-run-status.js?v=1.0.1"))throw Error(page+" is missing derived status integration");
             fs.writeFileSync(".media-inline-check.js",inline);
           }
