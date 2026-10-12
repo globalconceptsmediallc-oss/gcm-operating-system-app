@@ -77,6 +77,11 @@ export function classifyPerformanceFinding(finding,sourceDate,periodStart,period
   const parsed=parseExplicitCoverage(rawPeriod),monthLabel=parsePeriodLabel(rawPeriod),titleHints=monthNames(title);
   const target=showMonth(Number(periodStart.slice(5,7))-1);
   let timing=coverageTiming(parsed,periodStart,periodEnd);
+  // A genuine contradiction requires explicit full date bounds, not a
+  // general month label. This is a source-review flag, not a data mutation.
+  if(timing==="exact"&&titleHints.length===1&&titleHints[0]!==target){
+    timing="explicit_conflict";
+  }
   // Title months are distinct from verified period bounds. Even a literal
   // range in a subject can have an unknown year: never promote it to a metric.
   if(!timing){
@@ -91,6 +96,7 @@ export function classifyPerformanceFinding(finding,sourceDate,periodStart,period
     overlapping:"Overlapping measurement period (explicit metadata)",
     prior:"Earlier measurement period (explicit metadata)",
     later:"Later measurement period (explicit metadata)",
+    explicit_conflict:"Explicit date bounds disagree with title month — verify source",
     title_multiple_months:"Title refers to multiple months; measured dates unverified",
     title_other_month:"Title refers to a different month; measured dates unverified",
     title_review_month:"Title refers to review month; measured dates unverified",
@@ -120,6 +126,7 @@ export function classifyReviewFindings(findings,periodStart,periodEnd){
     sourceDated:sourceDated.length,reports:performanceReports.length,
     exact:count("exact"),overlapping:count("overlapping"),
     prior:count("prior"),later:count("later"),
+    explicitConflict:count("explicit_conflict"),
     titleMultipleMonths:count("title_multiple_months"),
     titleOtherMonth:count("title_other_month"),
     titleReviewMonth:count("title_review_month"),
