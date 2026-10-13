@@ -658,7 +658,7 @@
     }];
   }
   function eventItems(rows){var seen=new Set(),out=[];rows.forEach(function(r){
-    if(r.source==="promotion-post"||r.source==="schedule-deadline"||r.source==="promotion-takedown")return;
+    if(r.source==="promotion-post"||r.source==="schedule-deadline"||r.source==="promotion-takedown"||r.source==="schedule-radio")return;
     var l=lower([r.campaign,r.creative].filter(Boolean).join(" "));
     if((state.scheduleAuthorityLoaded||state.gunShows.length)&&/gun show/.test(l)&&r.source!=="gun-show-source")return;
     if(r.source==="schedule-event"||r.source==="promotion-run"||r.source==="gun-show-source"){out.push(r);return;}
@@ -692,7 +692,7 @@
     ].map(function(x,i){return'<div class="status-line"><span>'+esc(x[0])+'</span>'+(x[0]==="Schedule Authority"?'<strong class="status-pill">'+esc(x[1])+'</strong>':'<strong>'+esc(x[1])+'</strong>')+'</div>';}).join("");
   }
   function withinMonth(d){return d&&d>=monthStart()&&d<=monthEnd();}
-  function renderKeyDates(rows){var items=[],seen=new Set();rows.forEach(function(r){var key=productionKey(r),s=toDate(r.startDate),e=toDate(r.endDate);if(r.source==="promotion-post"){if(withinMonth(s))items.push({date:s,label:"Social Due",text:r.creative,meta:r.outlet||"Social"});return;}if(r.source==="promotion-takedown"){if(withinMonth(s))items.push({date:s,label:"Takedown Due",text:r.campaign||r.creative,meta:"Liberty promotion"});return;}if(withinMonth(s))items.push({date:s,label:"Starts",text:r.creative,meta:r.market||r.outlet||r.type});if(withinMonth(e))items.push({date:e,label:"Ends",text:r.creative,meta:r.market||r.outlet||r.type});if(typeGroup(r.type)==="Radio"&&!seen.has(key)){seen.add(key);var refresh=thresholdDate(r,46),stale=thresholdDate(r,61);if(withinMonth(refresh))items.push({date:refresh,label:"Refresh Due",text:r.creative,meta:"Creative age day 46"});if(withinMonth(stale))items.push({date:stale,label:"Stale",text:r.creative,meta:"Creative age day 61"});}});items.sort(function(a,b){return a.date-b.date;});$("key-dates").innerHTML=items.length?items.slice(0,12).map(function(x){return'<div class="date-row"><span class="date-dot"></span><div><strong>'+esc(shortDate(x.date)+" · "+x.label)+'</strong><span>'+esc(x.text+" · "+x.meta)+'</span></div></div>';}).join(""):'<div class="mini-empty">No starts, endings, or age thresholds in this month.</div>';}
+  function renderKeyDates(rows){var items=[],seen=new Set();rows.forEach(function(r){var key=productionKey(r),s=toDate(r.startDate),e=toDate(r.endDate);if(r.source==="schedule-radio"){if(withinMonth(s))items.push({date:s,label:"Schedule only",text:r.creative,meta:(r.market||"Market")+" / "+(r.outlet||"Station")+" · no linked commercial"});return;}if(r.source==="promotion-post"){if(withinMonth(s))items.push({date:s,label:"Social Due",text:r.creative,meta:r.outlet||"Social"});return;}if(r.source==="promotion-takedown"){if(withinMonth(s))items.push({date:s,label:"Takedown Due",text:r.campaign||r.creative,meta:"Liberty promotion"});return;}if(withinMonth(s))items.push({date:s,label:"Starts",text:r.creative,meta:r.market||r.outlet||r.type});if(withinMonth(e))items.push({date:e,label:"Ends",text:r.creative,meta:r.market||r.outlet||r.type});if(typeGroup(r.type)==="Radio"&&!seen.has(key)){seen.add(key);var refresh=thresholdDate(r,46),stale=thresholdDate(r,61);if(withinMonth(refresh))items.push({date:refresh,label:"Refresh Due",text:r.creative,meta:"Creative age day 46"});if(withinMonth(stale))items.push({date:stale,label:"Stale",text:r.creative,meta:"Creative age day 61"});}});items.sort(function(a,b){return a.date-b.date;});$("key-dates").innerHTML=items.length?items.slice(0,12).map(function(x){return'<div class="date-row"><span class="date-dot"></span><div><strong>'+esc(shortDate(x.date)+" · "+x.label)+'</strong><span>'+esc(x.text+" · "+x.meta)+'</span></div></div>';}).join(""):'<div class="mini-empty">No starts, endings, or age thresholds in this month.</div>';}
 
   function render(){
     syncControls();
@@ -700,8 +700,14 @@
 
     grid.appendChild(sectionTitle("Radio"));
     var radio=radioLanes(rows);
-    if(radio.length){radio.forEach(function(l){grid.appendChild(createLane(l.market+" / "+l.outlet,l.items.length+" production"+(l.items.length===1?"":"s")+" in rotation",l.items,hueMap,"Radio"));});}
-    else grid.appendChild(createLane("Radio","No station / market record",[],hueMap,"Radio","No radio placement recorded for this month"));
+    if(radio.length){radio.forEach(function(l){grid.appendChild(createLane(l.market+" / "+l.outlet,l.items.length+" named commercial"+(l.items.length===1?"":"s")+" in rotation",l.items,hueMap,"Radio"));});}
+    else grid.appendChild(createLane("Radio","No identified commercials",[],hueMap,"Radio","No identified radio commercial for this month"));
+    var radioNotes=radioNoteLanes(rows);
+    if(radioNotes.length){
+      grid.appendChild(sectionTitle("Radio schedule-only notes — not commercials"));
+      radioNotes.forEach(function(l){grid.appendChild(createLane(l.market+" / "+l.outlet,
+        l.items.length+" schedule-only record"+(l.items.length===1?"":"s")+" · no creative linked",l.items,hueMap,"Schedule"));});
+    }
 
     grid.appendChild(sectionTitle("Online Media"));
     ["Google Business","Facebook","YouTube","Other Digital"].forEach(function(channel){
