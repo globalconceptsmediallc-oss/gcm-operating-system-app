@@ -1,9 +1,9 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/prospectConceptTracking.test.js
-   Version: 1.10.0
+   Version: 1.11.0
    Status: Regression Test
-   Purpose: Lock privacy-minimized prospect engagement tracking, including GeoNest and Indian River Furniture.
+   Purpose: Lock privacy-minimized prospect engagement tracking, including Barkingham Palace.
    ========================================================= */
 
 import fs from "node:fs";
@@ -21,8 +21,9 @@ const rollingSudsPage = fs.readFileSync(new URL("../prospect-previews/rolling-su
 const windowWorldPage = fs.readFileSync(new URL("../prospect-previews/window-world-space-coast/index.html", import.meta.url),"utf8");
 const geoNestPage = fs.readFileSync(new URL("../prospect-previews/geonest-windows-refresh/index.html", import.meta.url),"utf8");
 const indianRiverPage = fs.readFileSync(new URL("../prospect-previews/indian-river-furniture/index.html", import.meta.url),"utf8");
+const barkinghamPage = fs.readFileSync(new URL("../prospect-previews/barkingham-palace/index.html", import.meta.url),"utf8");
 
-assert.match(route,/Version: 1\.1\.4/);
+assert.match(route,/Version: 1\.1\.5/);
 assert.match(route,/agnor-aviation-90-day-v1/);
 assert.match(route,/businessName: "Agnor Aviation"/);
 assert.match(route,/sourceReference: "\/prospect-previews\/agnor-aviation\/"/);
@@ -147,7 +148,22 @@ assert.match(indianRiverPage,/August 31, 2026/);
 assert.match(indianRiverPage,/90 days to make the next mailer more accountable/);
 assert.doesNotMatch(indianRiverPage,/431 Vizcaya|32940-1833|Teresa S Belcher/);
 
+assert.match(route,/barkingham-palace-free-day-loyal-customer-v1/);
+assert.match(route,/businessName: "Barkingham Palace"/);
+assert.match(route,/sourceReference: "\/prospect-previews\/barkingham-palace\/"/);
+assert.match(route,/Barkingham Palace free-day growth concept viewed/);
+assert.match(barkinghamPage,/Version: 1\.0\.0/);
+assert.match(barkinghamPage,/CONCEPT_KEY = "barkingham-palace-free-day-loyal-customer-v1"/);
+assert.match(barkinghamPage,/prospect-concept-view/);
+assert.match(barkinghamPage,/gcm_preview/);
+assert.match(barkinghamPage,/document\.visibilityState !== "visible"/);
+assert.match(barkinghamPage,/sessionStorage\.getItem\(SESSION_KEY\)/);
+assert.match(barkinghamPage,/FREE DAY/);
+assert.match(barkinghamPage,/Barkingham Palace/);
+assert.match(barkinghamPage,/90-day new-customer measurement pilot/);
+assert.doesNotMatch(barkinghamPage,/431 Vizcaya|32940-1833|Teresa S Belcher/);
+
 assert.doesNotMatch(route,/user[_-]?agent/i);
 assert.doesNotMatch(route,/visitor[_-]?ip/i);
 
-console.log("PASS tracked prospect concepts preserve privacy-minimized engagement for Agnor, Honor Financial Group, Kitchen Saver, McPherson Financial Group, Wadadli Financial Group, Corvex Roofing, Leonard Financial Group, Rolling Suds, Window World Space Coast, GeoNest Windows Refresh, and Indian River Furniture");
+console.log("PASS tracked prospect concepts preserve privacy-minimized engagement for Agnor, Honor Financial Group, Kitchen Saver, McPherson Financial Group, Wadadli Financial Group, Corvex Roofing, Leonard Financial Group, Rolling Suds, Window World Space Coast, GeoNest Windows Refresh, Indian River Furniture, and Barkingham Palace");
