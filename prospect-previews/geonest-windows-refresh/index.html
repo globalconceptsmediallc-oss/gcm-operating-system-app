@@ -1,13 +1,14 @@
 <!-- =========================================================
  Global Concepts Media
  File: prospect-previews/geonest-windows-refresh/index.html
- Version: 1.0.0
+ Version: 1.0.1
  Status: Unlisted Prospect Concept Preview
  Purpose: Evidence-based SMS-to-installation growth review for
           GeoNest, Inc. / Windows Refresh.
  Privacy: No recipient name, street address, mobile number, or
           personalized landing-page token is included.
- Tracking: Not enabled in v1.0.0. Awaiting GCM OS allowlist approval.
+ Tracking: Privacy-minimized per-session GCM OS concept-view event.
+          Operator preview can use ?gcm_preview=1.
  ========================================================= -->
 <!doctype html>
 <html lang="en">
@@ -119,7 +120,40 @@ section{padding:58px 0 0}.section-head{max-width:850px;margin-bottom:25px}.kicke
 </section>
 </main>
 <div class="sources"><strong>Public-source reference:</strong> <a href="https://www.windowrefresh.com/" target="_blank" rel="noopener noreferrer">Windows Refresh quote journey</a> and <a href="https://geo-nest.com/" target="_blank" rel="noopener noreferrer">GeoNest, Inc. website</a>. Campaign outreach was also reviewed privately; no recipient-specific data is reproduced here.</div>
-<footer class="footer"><div>Prepared by <strong>Global Concepts Media</strong> · An evidence-based, unlisted prospect concept</div><div>Version 1.0.0 · Preview only · Not an internal analytics audit</div></footer>
+<footer class="footer"><div>Prepared by <strong>Global Concepts Media</strong> · An evidence-based, unlisted prospect concept</div><div>Version 1.0.1 · Preview only · Not an internal analytics audit</div></footer>
 </div>
+<script>
+(() => {
+  "use strict";
+  const FILE_VERSION = "1.0.1";
+  const WORKER = "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+  const ACTION = "prospect-concept-view";
+  const CONCEPT_KEY = "geonest-windows-refresh-lead-to-install-v1";
+  const SESSION_KEY = "gcm-concept-view:" + CONCEPT_KEY;
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("gcm_preview") === "1") return;
+  try { if (sessionStorage.getItem(SESSION_KEY)) return; } catch {}
+  const trackView = async () => {
+    if (document.visibilityState !== "visible") return;
+    try {
+      const response = await fetch(WORKER, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: ACTION, conceptKey: CONCEPT_KEY,
+          pagePath: window.location.pathname,
+          pageVersion: FILE_VERSION,
+          viewedAt: new Date().toISOString()
+        }),
+        keepalive: true
+      });
+      if (response.ok) {
+        try { sessionStorage.setItem(SESSION_KEY, new Date().toISOString()); } catch {}
+      }
+    } catch {}
+  };
+  window.setTimeout(trackView, 2500);
+})();
+</script>
 </body>
 </html>
