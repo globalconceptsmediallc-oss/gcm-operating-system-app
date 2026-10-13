@@ -1,10 +1,15 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/prospectConceptTracking.js
-   Version: 1.1.4
+   Version: 1.1.5
    Status: Production Road-Test Candidate
    Purpose: Record privacy-minimized engagement when a personalized
             GCM prospect concept page is viewed.
+
+   Change Notes — 1.1.5:
+   - Adds Barkingham Palace's personalized first-free-day to loyal-customer
+     concept to the exact-name Radar engagement allowlist.
+   - Preserves existing prospect tracking, privacy and history.
 
    Change Notes — 1.1.4:
    - Adds Indian River Furniture mailer-to-showroom prospect concept to the
@@ -86,7 +91,7 @@ import {
 } from "../shared/http.js";
 
 export const PROSPECT_CONCEPT_VIEW_ACTION = "prospect-concept-view";
-export const PROSPECT_CONCEPT_TRACKING_VERSION = "1.1.4";
+export const PROSPECT_CONCEPT_TRACKING_VERSION = "1.1.5";
 
 const CONCEPTS = new Map([
   ["john-curri-v1", {
@@ -168,6 +173,12 @@ const CONCEPTS = new Map([
     sourceReference: "/prospect-previews/indian-river-furniture/",
     subject: "Indian River Furniture direct-mail growth concept viewed",
     summary: "The Indian River Furniture Bassett and Stressless direct-mail-to-showroom growth concept page was viewed."
+  }],
+  ["barkingham-palace-free-day-loyal-customer-v1", {
+    businessName: "Barkingham Palace",
+    sourceReference: "/prospect-previews/barkingham-palace/",
+    subject: "Barkingham Palace free-day growth concept viewed",
+    summary: "The personalized Barkingham Palace free-day-to-loyal-customer direct-mail growth concept page was viewed."
   }]
 ]);
 
