@@ -1,10 +1,15 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/prospectConceptTracking.js
-   Version: 1.1.2
+   Version: 1.1.3
    Status: Production Road-Test Candidate
    Purpose: Record privacy-minimized engagement when a personalized
             GCM prospect concept page is viewed.
+
+   Change Notes — 1.1.3:
+   - Adds GeoNest, Inc. / Windows Refresh's SMS-to-installation concept
+     with an exact Radar business-name match to prevent cross-prospect attribution.
+   - Preserves privacy-minimized tracking and existing relationship history.
 
    Change Notes — 1.1.2:
    - Adds Window World of Space Coast's personalized direct-mail attribution concept to the prospect engagement allowlist.
@@ -77,7 +82,7 @@ import {
 } from "../shared/http.js";
 
 export const PROSPECT_CONCEPT_VIEW_ACTION = "prospect-concept-view";
-export const PROSPECT_CONCEPT_TRACKING_VERSION = "1.1.2";
+export const PROSPECT_CONCEPT_TRACKING_VERSION = "1.1.3";
 
 const CONCEPTS = new Map([
   ["john-curri-v1", {
@@ -147,7 +152,13 @@ const CONCEPTS = new Map([
     sourceReference: "/prospect-previews/window-world-space-coast/",
     subject: "Window World Space Coast direct-mail growth concept viewed",
     summary: "The personalized Window World of Space Coast direct-mail attribution and growth concept was viewed."
-  }]
+  }],
+  ["geonest-windows-refresh-lead-to-install-v1", {
+    businessName: "GeoNest, Inc. / Windows Refresh",
+    sourceReference: "/prospect-previews/geonest-windows-refresh/",
+    subject: "GeoNest Windows Refresh concept viewed",
+    summary: "The personalized GeoNest / Windows Refresh SMS-to-installation attribution concept page was viewed."
+]
 ]);
 
 export async function handleProspectConceptView(body, env, requestId) {
