@@ -1,10 +1,11 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gcm-worker-deploy.yml
-# Version: 1.5.79
+# Version: 1.5.80
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Worker with human-led Signal Finding capture.
 # Change Notes:
+# - v1.5.80 verifies Prospect Concept Tracking 1.1.4 for Indian River Furniture.
 # - v1.5.79 verifies Prospect Concept Tracking 1.1.3 for GeoNest / Windows Refresh.
  # - v1.5.78 deploys Prospect CRM 1.7.0 and archived Radar read/write boundaries without touching existing data.
 # - v1.5.77 deploys Worker 7.44.0, migration 0044, and human-reviewed Growth Interpretation.
@@ -422,7 +423,7 @@ jobs:
             throw new Error(`Prospect concept boundary expected HTTP 404 for an unknown concept key, received ${conceptBoundaryResponse.status}`);
           }
           const conceptBoundary = await conceptBoundaryResponse.json();
-          if (conceptBoundary?.action !== "prospect-concept-view" || conceptBoundary?.trackingVersion !== "1.1.3") {
+          if (conceptBoundary?.action !== "prospect-concept-view" || conceptBoundary?.trackingVersion !== "1.1.4") {
             throw new Error("Prospect concept tracking route is not live with the expected contract.");
           }
 

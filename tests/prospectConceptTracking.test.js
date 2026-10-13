@@ -1,9 +1,9 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/prospectConceptTracking.test.js
-   Version: 1.9.0
+   Version: 1.10.0
    Status: Regression Test
-   Purpose: Lock privacy-minimized prospect engagement tracking, including GeoNest.
+   Purpose: Lock privacy-minimized prospect engagement tracking, including GeoNest and Indian River Furniture.
    ========================================================= */
 
 import fs from "node:fs";
@@ -20,8 +20,9 @@ const leonardPage = fs.readFileSync(new URL("../prospect-previews/leonard-financ
 const rollingSudsPage = fs.readFileSync(new URL("../prospect-previews/rolling-suds-melbourne-palm-bay/index.html", import.meta.url),"utf8");
 const windowWorldPage = fs.readFileSync(new URL("../prospect-previews/window-world-space-coast/index.html", import.meta.url),"utf8");
 const geoNestPage = fs.readFileSync(new URL("../prospect-previews/geonest-windows-refresh/index.html", import.meta.url),"utf8");
+const indianRiverPage = fs.readFileSync(new URL("../prospect-previews/indian-river-furniture/index.html", import.meta.url),"utf8");
 
-assert.match(route,/Version: 1\.1\.3/);
+assert.match(route,/Version: 1\.1\.4/);
 assert.match(route,/agnor-aviation-90-day-v1/);
 assert.match(route,/businessName: "Agnor Aviation"/);
 assert.match(route,/sourceReference: "\/prospect-previews\/agnor-aviation\/"/);
@@ -130,7 +131,23 @@ assert.match(geoNestPage,/windowrefresh\.com/);
 assert.match(geoNestPage,/90-day measurement pilot/);
 assert.doesNotMatch(geoNestPage,/431 Vizcaya|geonest1\.com|q9wioy|626-3807/);
 
+assert.match(route,/indian-river-furniture-mailer-to-showroom-v1/);
+assert.match(route,/businessName: "Indian River Furniture"/);
+assert.match(route,/sourceReference: "\/prospect-previews\/indian-river-furniture\/"/);
+assert.match(route,/Indian River Furniture direct-mail growth concept viewed/);
+assert.match(indianRiverPage,/Version: 1\.0\.0/);
+assert.match(indianRiverPage,/CONCEPT_KEY = "indian-river-furniture-mailer-to-showroom-v1"/);
+assert.match(indianRiverPage,/prospect-concept-view/);
+assert.match(indianRiverPage,/gcm_preview/);
+assert.match(indianRiverPage,/document\.visibilityState !== "visible"/);
+assert.match(indianRiverPage,/sessionStorage\.getItem\(SESSION_KEY\)/);
+assert.match(indianRiverPage,/Bassett/);
+assert.match(indianRiverPage,/Stressless/);
+assert.match(indianRiverPage,/August 31, 2026/);
+assert.match(indianRiverPage,/90 days to make the next mailer more accountable/);
+assert.doesNotMatch(indianRiverPage,/431 Vizcaya|32940-1833|Teresa S Belcher/);
+
 assert.doesNotMatch(route,/user[_-]?agent/i);
 assert.doesNotMatch(route,/visitor[_-]?ip/i);
 
-console.log("PASS tracked prospect concepts preserve privacy-minimized engagement for Agnor, Honor Financial Group, Kitchen Saver, McPherson Financial Group, Wadadli Financial Group, Corvex Roofing, Leonard Financial Group, Rolling Suds, Window World Space Coast, and GeoNest Windows Refresh");
+console.log("PASS tracked prospect concepts preserve privacy-minimized engagement for Agnor, Honor Financial Group, Kitchen Saver, McPherson Financial Group, Wadadli Financial Group, Corvex Roofing, Leonard Financial Group, Rolling Suds, Window World Space Coast, GeoNest Windows Refresh, and Indian River Furniture");

@@ -1,10 +1,14 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/prospectConceptTracking.js
-   Version: 1.1.3
+   Version: 1.1.4
    Status: Production Road-Test Candidate
    Purpose: Record privacy-minimized engagement when a personalized
             GCM prospect concept page is viewed.
+
+   Change Notes — 1.1.4:
+   - Adds Indian River Furniture mailer-to-showroom prospect concept to the
+     exact-name Radar allowlist without altering existing tracking or history.
 
    Change Notes — 1.1.3:
    - Adds GeoNest, Inc. / Windows Refresh's SMS-to-installation concept
@@ -82,7 +86,7 @@ import {
 } from "../shared/http.js";
 
 export const PROSPECT_CONCEPT_VIEW_ACTION = "prospect-concept-view";
-export const PROSPECT_CONCEPT_TRACKING_VERSION = "1.1.3";
+export const PROSPECT_CONCEPT_TRACKING_VERSION = "1.1.4";
 
 const CONCEPTS = new Map([
   ["john-curri-v1", {
@@ -158,6 +162,12 @@ const CONCEPTS = new Map([
     sourceReference: "/prospect-previews/geonest-windows-refresh/",
     subject: "GeoNest Windows Refresh concept viewed",
     summary: "The personalized GeoNest / Windows Refresh SMS-to-installation attribution concept page was viewed."
+  }],
+  ["indian-river-furniture-mailer-to-showroom-v1", {
+    businessName: "Indian River Furniture",
+    sourceReference: "/prospect-previews/indian-river-furniture/",
+    subject: "Indian River Furniture direct-mail growth concept viewed",
+    summary: "The Indian River Furniture Bassett and Stressless direct-mail-to-showroom growth concept page was viewed."
   }]
 ]);
 
