@@ -3630,7 +3630,7 @@ function followUpAfterActivity(activityType, occurredAt, outcome) {
 function mapRadarRow(row) {
   const status = row.status || "radar";
   const nextActionDueDate = row.next_action_due_date || null;
-  const managementState = radarManagementState(status, nextActionDueDate);
+  const managementState = row.archived_at ? "closed" : radarManagementState(status, nextActionDueDate);
 
   return {
     id: Number(row.id),
