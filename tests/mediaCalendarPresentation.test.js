@@ -1,7 +1,7 @@
 /* =========================================================
  Global Concepts Media Operating System
  File: tests/mediaCalendarPresentation.test.js
- Version: 1.0.0
+ Version: 1.0.1
  Purpose: Verify radio Schedule Authority placeholders remain distinct from
  named commercials and that traffic-derived status is visible alongside age.
  Read-only page regression; no database, browser or email writes.
@@ -52,7 +52,7 @@ assert.equal(bundle.uniqueProductions(rows).length,3,
  "Creative age must not count a schedule-only placeholder as a creative");
 bundle.renderCampaignStatus(rows);
 assert.match(statusBox.innerHTML,/2 markets · 3 creatives/);
-assert.match(statusBox.innerHTML,/Schedule-only radio notes/);
+assert.match(statusBox.innerHTML,/Radio schedule-only notes/);
 assert.match(statusBox.innerHTML,/1 unlinked schedule item/);
 assert.match(statusBox.innerHTML,/Schedule Authority/);
 assert.match(statusBox.innerHTML,/Connected/);
