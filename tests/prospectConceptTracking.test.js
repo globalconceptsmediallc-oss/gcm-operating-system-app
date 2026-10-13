@@ -1,9 +1,9 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/prospectConceptTracking.test.js
-   Version: 1.8.0
+   Version: 1.9.0
    Status: Regression Test
-   Purpose: Lock privacy-minimized Agnor Aviation 90-day plan engagement tracking.
+   Purpose: Lock privacy-minimized prospect engagement tracking, including GeoNest.
    ========================================================= */
 
 import fs from "node:fs";
@@ -19,8 +19,9 @@ const corvexPage = fs.readFileSync(new URL("../prospect-previews/corvex-roofing/
 const leonardPage = fs.readFileSync(new URL("../prospect-previews/leonard-financial-group/index.html", import.meta.url),"utf8");
 const rollingSudsPage = fs.readFileSync(new URL("../prospect-previews/rolling-suds-melbourne-palm-bay/index.html", import.meta.url),"utf8");
 const windowWorldPage = fs.readFileSync(new URL("../prospect-previews/window-world-space-coast/index.html", import.meta.url),"utf8");
+const geoNestPage = fs.readFileSync(new URL("../prospect-previews/geonest-windows-refresh/index.html", import.meta.url),"utf8");
 
-assert.match(route,/Version: 1\.1\.2/);
+assert.match(route,/Version: 1\.1\.3/);
 assert.match(route,/agnor-aviation-90-day-v1/);
 assert.match(route,/businessName: "Agnor Aviation"/);
 assert.match(route,/sourceReference: "\/prospect-previews\/agnor-aviation\/"/);
@@ -115,7 +116,21 @@ assert.match(windowWorldPage,/\$947/);
 assert.match(windowWorldPage,/15 months/);
 assert.match(windowWorldPage,/My Safe Florida Home/);
 
+assert.match(route,/geonest-windows-refresh-lead-to-install-v1/);
+assert.match(route,/businessName: "GeoNest, Inc. \/ Windows Refresh"/);
+assert.match(route,/sourceReference: "\/prospect-previews\/geonest-windows-refresh\/"/);
+assert.match(route,/GeoNest Windows Refresh concept viewed/);
+assert.match(geoNestPage,/Version: 1\.0\.1/);
+assert.match(geoNestPage,/CONCEPT_KEY = "geonest-windows-refresh-lead-to-install-v1"/);
+assert.match(geoNestPage,/prospect-concept-view/);
+assert.match(geoNestPage,/gcm_preview/);
+assert.match(geoNestPage,/document\.visibilityState !== "visible"/);
+assert.match(geoNestPage,/sessionStorage\.getItem\(SESSION_KEY\)/);
+assert.match(geoNestPage,/windowrefresh\.com/);
+assert.match(geoNestPage,/90-day measurement pilot/);
+assert.doesNotMatch(geoNestPage,/431 Vizcaya|geonest1\.com|q9wioy|626-3807/);
+
 assert.doesNotMatch(route,/user[_-]?agent/i);
 assert.doesNotMatch(route,/visitor[_-]?ip/i);
 
-console.log("PASS tracked prospect concepts preserve privacy-minimized engagement for Agnor, Honor Financial Group, Kitchen Saver, McPherson Financial Group, Wadadli Financial Group, Corvex Roofing, Leonard Financial Group, Rolling Suds, and Window World Space Coast");
+console.log("PASS tracked prospect concepts preserve privacy-minimized engagement for Agnor, Honor Financial Group, Kitchen Saver, McPherson Financial Group, Wadadli Financial Group, Corvex Roofing, Leonard Financial Group, Rolling Suds, Window World Space Coast, and GeoNest Windows Refresh");
