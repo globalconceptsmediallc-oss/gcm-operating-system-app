@@ -1,9 +1,15 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/prospectCrm.js
-   Version: 1.6.0
+   Version: 1.7.0
    Status: Production Road-Test Candidate
    Purpose: Durable Prospecting Radar + CRM operations for GCM.
+
+   Change Notes — 1.7.0:
+   - Adds history-preserving Closed / Archived state to Radar with required closure reason.
+   - Read-only archive listing, explicit restore and audited transitions; no deletion.
+   - Excludes archived records from active follow-up while retaining original outreach.
+   - Blocks archived records from normal Radar mutation and promotional operations.
 
    Change Notes — 1.5.0:
    - Adds a durable test_site_url to Radar / pre-appointment records.
@@ -72,7 +78,7 @@ import {
 } from "../shared/http.js";
 
 export const PROSPECT_CRM_ACTION = "prospect-crm";
-export const PROSPECT_CRM_VERSION = "1.6.0";
+export const PROSPECT_CRM_VERSION = "1.7.0";
 
 const ACTIVE_MANAGED_STATUSES = new Set(["active", "nurture"]);
 const ALLOWED_STATUSES = new Set([
@@ -306,6 +312,12 @@ export async function handleProspectCrm(body, env, requestId) {
     switch (operation) {
       case "list_radar":
         return await listRadar(db, requestId);
+      case "list_archived_radar":
+        return await listArchivedRadar(db, requestId);
+      case "archive_radar":
+        return await archiveRadar(body, db, requestId);
+      case "restore_archived_radar":
+        return await restoreArchivedRadar(body, db, requestId);
       case "get_radar":
         return await getRadar(body, db, requestId);
       case "update_radar":
@@ -396,6 +408,9 @@ export async function handleProspectCrm(body, env, requestId) {
 function supportedOperations() {
   return [
     "list_radar",
+    "list_archived_radar",
+    "archive_radar",
+    "restore_archived_radar",
     "get_radar",
     "update_radar",
     "create_radar",
@@ -485,6 +500,104 @@ async function listRadar(db, requestId) {
 }
 
 
+
+// History-preserving archive; archiving does not enroll a contact in marketing.
+async function listArchivedRadar(db, requestId) {
+  const result = await db.prepare(`
+    SELECT r.*,
+      (SELECT a.summary FROM crm_prospect_radar_activities a
+       WHERE a.radar_id = r.id AND a.activity_type = 'radar_archived'
+       ORDER BY a.id DESC LIMIT 1) AS archive_reason
+    FROM crm_prospect_radar r
+    WHERE r.archived_at IS NOT NULL AND r.promoted_prospect_id IS NULL
+    ORDER BY datetime(r.archived_at) DESC, r.id DESC
+  `).all();
+  const radar = rowsOf(result).map(mapRadarRow);
+  return jsonResponse({
+    ok: true, requestId, action: PROSPECT_CRM_ACTION,
+    operation: "list_archived_radar", prospectCrmVersion: PROSPECT_CRM_VERSION,
+    source: "D1", count: radar.length, radar, writesPerformed: 0
+  });
+}
+
+async function archiveRadar(body, db, requestId) {
+  const radarId = positiveInteger(body?.radarId || body?.radar_id);
+  const reason = cleanText(body?.closureReason || body?.closure_reason);
+  if (!radarId || !reason || reason.length > 750) {
+    return validationError(requestId, "archive_radar", "Select a Radar record and provide a closure reason (750 characters maximum).");
+  }
+  const existing = await readRadarById(db, radarId);
+  if (!existing) return validationError(requestId, "archive_radar", `Radar record ${radarId} was not found.`, 404);
+  if (existing.promotedProspectId) return validationError(requestId, "archive_radar", "Promoted Radar records must be managed through their formal Prospect.");
+  if (existing.archivedAt) {
+    return jsonResponse({
+      ok: true, requestId, action: PROSPECT_CRM_ACTION,
+      operation: "archive_radar", prospectCrmVersion: PROSPECT_CRM_VERSION,
+      alreadyArchived: true, radar: await readRadarDetail(db, radarId), writesPerformed: 0
+    });
+  }
+  await db.batch([
+    db.prepare(`
+      UPDATE crm_prospect_radar SET archived_at = CURRENT_TIMESTAMP,
+        next_action_title = NULL, next_action_due_date = NULL,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ? AND archived_at IS NULL AND promoted_prospect_id IS NULL
+    `).bind(radarId),
+    db.prepare(`
+      INSERT INTO crm_prospect_radar_activities (
+        radar_id, activity_type, occurred_at, direction, subject, summary, outcome,
+        meaningful_contact, source_type, source_reference, external_key, notes, created_at
+      ) VALUES (?, 'radar_archived', CURRENT_TIMESTAMP, 'internal',
+        'Radar closed / archived', ?, 'closed', 0,
+        'crm', 'radar_archive', NULL,
+        'Historical record retained. Archive is not permission for bulk email.', CURRENT_TIMESTAMP)
+    `).bind(radarId, reason)
+  ]);
+  return jsonResponse({
+    ok: true, requestId, action: PROSPECT_CRM_ACTION,
+    operation: "archive_radar", prospectCrmVersion: PROSPECT_CRM_VERSION,
+    radar: await readRadarDetail(db, radarId), writesPerformed: 2
+  });
+}
+
+async function restoreArchivedRadar(body, db, requestId) {
+  const radarId = positiveInteger(body?.radarId || body?.radar_id);
+  if (!radarId) return validationError(requestId, "restore_archived_radar", "A valid Radar ID is required.");
+  const existing = await readRadarById(db, radarId);
+  if (!existing) return validationError(requestId, "restore_archived_radar", `Radar record ${radarId} was not found.`, 404);
+  if (existing.promotedProspectId) return validationError(requestId, "restore_archived_radar", "Promoted Radar records cannot be restored.");
+  if (!existing.archivedAt) {
+    return jsonResponse({
+      ok: true, requestId, action: PROSPECT_CRM_ACTION,
+      operation: "restore_archived_radar", prospectCrmVersion: PROSPECT_CRM_VERSION,
+      alreadyActive: true, radar: await readRadarDetail(db, radarId), writesPerformed: 0
+    });
+  }
+  await db.batch([
+    db.prepare(`
+      UPDATE crm_prospect_radar SET archived_at = NULL, status = 'radar',
+        nurture_reason = NULL, nurture_trigger = NULL,
+        next_action_title = NULL, next_action_due_date = NULL,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ? AND archived_at IS NOT NULL AND promoted_prospect_id IS NULL
+    `).bind(radarId),
+    db.prepare(`
+      INSERT INTO crm_prospect_radar_activities (
+        radar_id, activity_type, occurred_at, direction, subject, summary, outcome,
+        meaningful_contact, source_type, source_reference, external_key, notes, created_at
+      ) VALUES (?, 'radar_restored', CURRENT_TIMESTAMP, 'internal',
+        'Radar restored from archive', 'Restored to Radar without adding a follow-up.',
+        'restored', 0, 'crm', 'radar_archive', NULL,
+        'Former outreach and research preserved; no marketing permission created.', CURRENT_TIMESTAMP)
+    `).bind(radarId)
+  ]);
+  return jsonResponse({
+    ok: true, requestId, action: PROSPECT_CRM_ACTION,
+    operation: "restore_archived_radar", prospectCrmVersion: PROSPECT_CRM_VERSION,
+    radar: await readRadarDetail(db, radarId), writesPerformed: 2
+  });
+}
+
 async function getRadar(body, db, requestId) {
   const radarId = positiveInteger(body?.radarId || body?.radar_id);
   if (!radarId) {
@@ -518,6 +631,7 @@ async function updateRadar(body, db, requestId) {
   if (!existing) {
     return validationError(requestId, "update_radar", `Radar record ${radarId} was not found.`, 404);
   }
+  if (existing.archivedAt) return validationError(requestId, "update_radar", "This Radar record is archived; restore it before changing or promoting it.", 409);
   if (existing.promotedProspectId) {
     return validationError(requestId, "update_radar", "This Radar record has already been promoted. Edit the formal Prospect instead.");
   }
@@ -623,6 +737,7 @@ async function addRadarActivity(body, db, requestId) {
   if (!radar) {
     return validationError(requestId, "add_radar_activity", `Radar record ${radarId} was not found.`, 404);
   }
+  if (radar.archivedAt) return validationError(requestId, "add_radar_activity", "This Radar record is archived; restore it before changing or promoting it.", 409);
   if (radar.promotedProspectId) {
     return validationError(requestId, "add_radar_activity", "This Radar record has already been promoted. Record new activity on the formal Prospect instead.");
   }
@@ -744,6 +859,7 @@ async function addRadarIntelligence(body, db, requestId) {
   if (!radar) {
     return validationError(requestId, "add_radar_intelligence", `Radar record ${radarId} was not found.`, 404);
   }
+  if (radar.archivedAt) return validationError(requestId, "add_radar_intelligence", "This Radar record is archived; restore it before changing or promoting it.", 409);
   if (radar.promotedProspectId) {
     return validationError(requestId, "add_radar_intelligence", "This Radar record has already been promoted. Save new intelligence to the formal Prospect instead.");
   }
@@ -829,6 +945,7 @@ async function replaceRadarIntelligence(body, db, requestId) {
   if (!radar) {
     return validationError(requestId, "replace_radar_intelligence", `Radar record ${radarId} was not found.`, 404);
   }
+  if (radar.archivedAt) return validationError(requestId, "replace_radar_intelligence", "This Radar record is archived; restore it before changing or promoting it.", 409);
   if (radar.promotedProspectId) {
     return validationError(requestId, "replace_radar_intelligence", "This Radar record has already been promoted. Save refreshed intelligence to the formal Prospect instead.");
   }
@@ -1001,6 +1118,7 @@ async function promoteRadar(body, db, requestId) {
     return validationError(requestId, "promote_radar", `Radar record ${radarId} was not found.`, 404);
   }
 
+  if (radar.archivedAt) return validationError(requestId, "promote_radar", "This Radar record is archived; restore it before changing or promoting it.", 409);
   if (radar.promotedProspectId) {
     const existing = await readProspectSummary(db, radar.promotedProspectId);
     return jsonResponse({
@@ -1708,6 +1826,7 @@ async function placeRadarOnHold(body, db, requestId) {
 
   const existing = await readRadarById(db, radarId);
   if (!existing) return validationError(requestId, "place_radar_on_hold", `Radar record ${radarId} was not found.`, 404);
+  if (existing.archivedAt) return validationError(requestId, "place_radar_on_hold", "This Radar record is archived; restore it before changing or promoting it.", 409);
   if (existing.promotedProspectId) return validationError(requestId, "place_radar_on_hold", "This Radar record has already been promoted.");
 
   await db.prepare(`
@@ -1751,6 +1870,7 @@ async function reactivateRadar(body, db, requestId) {
 
   const existing = await readRadarById(db, radarId);
   if (!existing) return validationError(requestId, "reactivate_radar", `Radar record ${radarId} was not found.`, 404);
+  if (existing.archivedAt) return validationError(requestId, "reactivate_radar", "This Radar record is archived; restore it before changing or promoting it.", 409);
   if (existing.status !== "nurture") return validationError(requestId, "reactivate_radar", "Only a nurture/hold Radar record can be reactivated.");
 
   const nextStatus = existing.lastOutreachAt ? "outreach" : "radar";
@@ -3510,7 +3630,7 @@ function followUpAfterActivity(activityType, occurredAt, outcome) {
 function mapRadarRow(row) {
   const status = row.status || "radar";
   const nextActionDueDate = row.next_action_due_date || null;
-  const managementState = radarManagementState(status, nextActionDueDate);
+  const managementState = row.archived_at ? "closed" : radarManagementState(status, nextActionDueDate);
 
   return {
     id: Number(row.id),
@@ -3544,7 +3664,8 @@ function mapRadarRow(row) {
     createdAt: row.created_at || null,
     updatedAt: row.updated_at || null,
     promotedAt: row.promoted_at || null,
-    archivedAt: row.archived_at || null
+    archivedAt: row.archived_at || null,
+    archiveReason: row.archive_reason || null
   };
 }
 

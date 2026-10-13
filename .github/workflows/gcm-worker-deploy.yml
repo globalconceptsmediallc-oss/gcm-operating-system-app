@@ -1,10 +1,11 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gcm-worker-deploy.yml
-# Version: 1.5.77
+# Version: 1.5.78
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Worker with human-led Signal Finding capture.
 # Change Notes:
+ # - v1.5.78 deploys Prospect CRM 1.7.0 and archived Radar read/write boundaries without touching existing data.
 # - v1.5.77 deploys Worker 7.44.0, migration 0044, and human-reviewed Growth Interpretation.
 # - Verifies read-only interpretation status and invalid approval boundary without production writes.
 # - v1.5.76 deploys Worker 7.43.0, migration 0043, and durable human Growth Review Issue Selection.
@@ -446,8 +447,8 @@ jobs:
             throw new Error(`Prospect CRM service catalog returned HTTP ${serviceCatalogResponse.status}`);
           }
           const serviceCatalog = await serviceCatalogResponse.json();
-          if (serviceCatalog?.prospectCrmVersion !== "1.6.0") {
-            throw new Error(`Expected Prospect CRM 1.6.0, received ${serviceCatalog?.prospectCrmVersion || "unknown"}`);
+          if (serviceCatalog?.prospectCrmVersion !== "1.7.0") {
+            throw new Error(`Expected Prospect CRM 1.7.0, received ${serviceCatalog?.prospectCrmVersion || "unknown"}`);
           }
           const requiredServices = ["website_rebuild", "seo_search_visibility", "analytics_measurement", "consulting_agency_of_record"];
           for (const serviceKey of requiredServices) {
@@ -474,7 +475,7 @@ jobs:
             throw new Error(`Prospect Radar list returned HTTP ${radarResponse.status}; Radar continuity migration may be unavailable.`);
           }
           const radar = await radarResponse.json();
-          if (radar?.prospectCrmVersion !== "1.6.0" || !Array.isArray(radar?.radar)) {
+          if (radar?.prospectCrmVersion !== "1.7.0" || !Array.isArray(radar?.radar)) {
             throw new Error("Prospect Radar live read contract is invalid or Radar continuity migration is unavailable.");
           }
 
