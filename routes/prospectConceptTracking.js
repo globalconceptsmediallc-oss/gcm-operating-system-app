@@ -158,7 +158,7 @@ const CONCEPTS = new Map([
     sourceReference: "/prospect-previews/geonest-windows-refresh/",
     subject: "GeoNest Windows Refresh concept viewed",
     summary: "The personalized GeoNest / Windows Refresh SMS-to-installation attribution concept page was viewed."
-]
+  }]
 ]);
 
 export async function handleProspectConceptView(body, env, requestId) {
