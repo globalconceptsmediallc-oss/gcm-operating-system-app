@@ -1,10 +1,14 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/prospectNextActionUi.test.js
-   Version: 1.0.2
+   Version: 1.0.3
    Status: Regression Test
    Purpose: Lock the Prospect relationship workspace to the existing durable
             set_next_action CRM operation without creating unrelated records.
+
+   Change Notes — 1.0.3
+   - Verifies Prospects 3.8.0 summary navigation and unified attention queue.
+   - Requires count/list parity and existing record-detail Open routes.
 
    Change Notes — 1.0.1
    - Uses an exact source-string assertion for the Prospects-only loader scope.
@@ -76,7 +80,7 @@ const prospectsPage = fs.readFileSync(
   new URL("../prospects.html", import.meta.url),
   "utf8"
 );
-assert.match(prospectsPage,/Version: 3\.7\.0/);
+assert.match(prospectsPage,/Version: 3\\.8\\.0/);
 assert.match(prospectsPage,/Nurture \/ Hold/);
 assert.match(prospectsPage,/holdReason/);
 assert.match(prospectsPage,/reactivationTrigger/);
@@ -86,4 +90,22 @@ assert.match(prospectsPage,/place_radar_on_hold/);
 assert.match(prospectsPage,/reactivate_prospect/);
 assert.match(prospectsPage,/reactivate_radar/);
 
-console.log(`PASS Prospect Next Action UI ${fileVersion}: explicit dated action plus Nurture / Hold controls`);
+
+// Four summary cards must navigate to lists rather than remain inert articles.
+for (const kind of ["active", "due", "unmanaged", "radar"]) {
+  assert.match(prospectsPage, new RegExp('data-summary="' + kind + '"'),
+    'Clickable summary button missing: ' + kind);
+}
+assert.match(prospectsPage, /id="view-attention"/);
+assert.match(prospectsPage, /data-view="attention"/);
+assert.match(prospectsPage, /function attentionItems\(mode\)/);
+assert.match(prospectsPage, /"due-count"\)\.textContent=attentionItems\("due"\)\.length/);
+assert.match(prospectsPage, /"unmanaged-count"\)\.textContent=attentionItems\("unmanaged"\)\.length/);
+assert.match(prospectsPage, /"attention-count"\)\.textContent=items\.length/);
+assert.match(prospectsPage, /data-action-kind=/);
+assert.match(prospectsPage, /data-action-id=/);
+assert.match(prospectsPage, /if\(b\.dataset\.actionKind==="prospect"\)openProspect\(id\)/);
+assert.match(prospectsPage, /else openRadar\(id\)/);
+assert.match(prospectsPage, /setRadarListCollapsed\(false,\{persist:false\}\)/);
+
+console.log(`PASS Prospect Next Action UI ${fileVersion}: dated actions, summary navigation and Nurture / Hold controls`);
