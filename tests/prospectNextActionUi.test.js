@@ -80,7 +80,7 @@ const prospectsPage = fs.readFileSync(
   new URL("../prospects.html", import.meta.url),
   "utf8"
 );
-assert.match(prospectsPage,/Version: 3\\.8\\.0/);
+assert.match(prospectsPage,/Version: 3\.8\.0/);
 assert.match(prospectsPage,/Nurture \/ Hold/);
 assert.match(prospectsPage,/holdReason/);
 assert.match(prospectsPage,/reactivationTrigger/);
