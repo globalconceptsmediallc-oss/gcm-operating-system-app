@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: prospects.html
-   Version: 3.7.0
+   Version: 3.8.0
    Status: Production Road-Test Candidate
    Source: Production prospects.html 2.0.0 + client-pre-research.html 1.1.0
    Backend: Prospect CRM 1.7.0
@@ -10,6 +10,13 @@
    One operating workspace for GCM prospecting from first evidence through
    Radar, outreach, appointment, CRM, services, signed scope, startup package,
    and the eventual Client handoff.
+
+   Change Notes — 3.8.0
+   - Turns all four summary cards into accessible navigation controls.
+   - Adds a unified read-only Action Queue for due and unmanaged records from
+     both formal Prospects and pre-appointment Radar.
+   - Calculates each card total from the exact records displayed in its list.
+   - Preserves existing CRM record writes, detail views, and source history.
 
    Change Notes — 3.7.0
    - Adds Closed / Archived as a separate Radar choice with an audit reason.
@@ -152,6 +159,12 @@
     .summary-card span{display:block;color:var(--muted);font-size:.68rem;font-weight:850;text-transform:uppercase;letter-spacing:.08em}
     .summary-card strong{display:block;margin-top:7px;font-size:1.9rem;line-height:1;color:var(--navy-950)}
     .summary-card small{display:block;margin-top:7px;color:var(--soft);font-size:.72rem}
+    .summary-button{display:block;width:100%;font:inherit;text-align:left;cursor:pointer;transition:border-color .16s,box-shadow .16s,transform .16s}
+    .summary-button:hover{border-color:var(--blue-500);box-shadow:0 10px 26px rgba(25,68,110,.11);transform:translateY(-1px)}
+    .summary-button:focus-visible{outline:3px solid var(--blue-500);outline-offset:3px}
+    .summary-button.selected{border-color:var(--blue-500);box-shadow:inset 0 0 0 1px var(--blue-500),var(--shadow)}
+    .attention-tools{display:flex;gap:8px;flex-wrap:wrap;padding:13px 20px;border-bottom:1px solid var(--border)}
+    .attention-mode.selected{background:var(--navy-900);border-color:var(--navy-900);color:#fff}
     .tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
     .tab{min-height:38px;padding:0 14px;border:1px solid var(--border);border-radius:999px;background:#fff;color:var(--muted);font-weight:850;font-size:.76rem}
     .tab.active{background:var(--navy-900);border-color:var(--navy-900);color:#fff}
@@ -242,20 +255,33 @@
         <span class="life-step">Startup</span><span class="life-arrow">→</span><span class="life-step">Client</span>
       </div>
 
-      <section class="summary-grid">
-        <article class="summary-card"><span>Active Prospects</span><strong id="active-count">—</strong><small>Formal opportunities being managed.</small></article>
-        <article class="summary-card"><span>Due / Overdue</span><strong id="due-count">—</strong><small>Relationship actions requiring attention.</small></article>
-        <article class="summary-card"><span>Unmanaged</span><strong id="unmanaged-count">—</strong><small>Active Prospect or outreach record without a dated action.</small></article>
-        <article class="summary-card"><span>Radar</span><strong id="radar-count">—</strong><small>Pre-appointment businesses and opportunities.</small></article>
+      <section class="summary-grid" aria-label="Prospect summaries">
+        <button class="summary-card summary-button" data-summary="active" aria-controls="view-pipeline" type="button"><span>Active Prospects</span><strong id="active-count">—</strong><small>Open all active formal opportunities.</small></button>
+        <button class="summary-card summary-button" data-summary="due" aria-controls="view-attention" type="button"><span>Due / Overdue</span><strong id="due-count">—</strong><small>Open actions requiring attention.</small></button>
+        <button class="summary-card summary-button" data-summary="unmanaged" aria-controls="view-attention" type="button"><span>Unmanaged</span><strong id="unmanaged-count">—</strong><small>Open records without a dated action.</small></button>
+        <button class="summary-card summary-button" data-summary="radar" aria-controls="view-radar" type="button"><span>Radar</span><strong id="radar-count">—</strong><small>Open pre-appointment businesses and opportunities.</small></button>
       </section>
 
       <div class="tabs">
         <button class="tab active" data-view="pipeline" type="button">Active Opportunities</button>
+        <button class="tab" data-view="attention" type="button">Action Queue</button>
         <button class="tab" data-view="radar" type="button">Radar & Outreach</button>
         <button class="tab" data-view="nurture" type="button">Nurture / Hold</button>
         <button class="tab" data-view="archived" type="button">Closed / Archived</button>
         <button class="tab" data-view="research" type="button">Research</button>
       </div>
+
+      <section id="view-attention" hidden>
+        <article class="panel" id="attention-panel">
+          <div class="panel-head"><div><h2 id="attention-title" tabindex="-1">Due / Overdue</h2><p id="attention-copy">Dated actions requiring attention across Prospect and Radar records.</p></div><span class="count" id="attention-count">0</span></div>
+          <div class="attention-tools" role="group" aria-label="Filter action queue">
+            <button class="btn btn-secondary btn-small attention-mode" data-attention-mode="due" type="button">Due / Overdue</button>
+            <button class="btn btn-secondary btn-small attention-mode" data-attention-mode="unmanaged" type="button">Unmanaged</button>
+          </div>
+          <div class="list" id="attention-list"></div>
+          <div class="empty" id="attention-empty" hidden><strong id="attention-empty-title">No actions needing attention.</strong><span id="attention-empty-copy">You are caught up in this queue.</span></div>
+        </article>
+      </section>
 
       <section id="view-pipeline">
         <div class="workspace">
@@ -510,9 +536,9 @@
 <script>
 (() => {
   "use strict";
-  const FILE_VERSION="3.7.0";
+  const FILE_VERSION="3.8.0";
   const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
-  const state={prospects:[],radar:[],archivedRadar:[],services:[],selectedProspect:null,selectedRadar:null,view:"pipeline",
+  const state={prospects:[],radar:[],archivedRadar:[],services:[],selectedProspect:null,selectedRadar:null,view:"pipeline",attentionFilter:"due",
     researchTarget:{type:"new",id:null},researchResult:null,researchContext:null,images:[]};
 
   const $=id=>document.getElementById(id);
@@ -566,10 +592,31 @@
   function showView(view){
     state.view=view;
     document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
-    ["pipeline","radar","nurture","archived","research"].forEach(v=>$(`view-${v}`).hidden=v!==view);
+    ["pipeline","attention","radar","nurture","archived","research"].forEach(v=>$(`view-${v}`).hidden=v!==view);
+    const selected=view==="pipeline"?"active":view==="radar"?"radar":view==="attention"?state.attentionFilter:null;
+    document.querySelectorAll("[data-summary]").forEach(b=>b.classList.toggle("selected",b.dataset.summary===selected));
+    if(view==="attention")renderAttention();
     if(view==="research")$("research-website").focus();
   }
   document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>showView(b.dataset.view)));
+  document.querySelectorAll("[data-summary]").forEach(b=>b.addEventListener("click",()=>{
+    const which=b.dataset.summary;
+    if(which==="active"){
+      $("search").value="";$("stage-filter").value="all";renderPipeline();showView("pipeline");
+      $("view-pipeline").scrollIntoView({behavior:"smooth",block:"start"});
+    }else if(which==="radar"){
+      setRadarListCollapsed(false,{persist:false});showView("radar");
+      $("view-radar").scrollIntoView({behavior:"smooth",block:"start"});
+    }else{
+      state.attentionFilter=which;showView("attention");
+      $("attention-panel").scrollIntoView({behavior:"smooth",block:"start"});
+      $("attention-title").focus({preventScroll:true});
+    }
+  }));
+  document.querySelectorAll("[data-attention-mode]").forEach(b=>b.addEventListener("click",()=>{
+    state.attentionFilter=b.dataset.attentionMode;showView("attention");
+    $("attention-title").focus({preventScroll:true});
+  }));
   $("radar-collapse").addEventListener("click",()=>setRadarListCollapsed(!$("radar-list-content").hidden));
   restoreRadarListCollapsed();
 
@@ -579,15 +626,55 @@
       const [p,r,a,s]=await Promise.all([api("list_prospects"),api("list_radar"),api("list_archived_radar"),api("list_service_catalog")]);
       state.prospects=p.prospects||[];state.radar=r.radar||[];state.archivedRadar=a.radar||[];state.services=s.services||[];
       if(p.prospectCrmVersion!=="1.7.0")throw new Error(`This page requires Prospect CRM 1.7.0; live version is ${p.prospectCrmVersion||"unknown"}.`);
-      renderSummary(p.counts||{});renderPipeline();renderRadar();renderNurture();renderArchived();renderPriority();populateStages();
+      renderSummary();renderPipeline();renderRadar();renderAttention();renderNurture();renderArchived();renderPriority();populateStages();
       $("system-state").textContent=`D1 connected · CRM ${p.prospectCrmVersion}`;
     }catch(e){$("system-state").textContent=`CRM unavailable · ${e.message}`;console.error(e)}
   }
-  function renderSummary(c){
-    $("active-count").textContent=Number(c.active||0);
-    $("due-count").textContent=Number(c.overdue||0)+Number(c.dueToday||0)+state.radar.filter(x=>x.nextAction?.dueState==="overdue"||x.nextAction?.dueState==="due_today").length;
-    $("unmanaged-count").textContent=Number(c.unmanaged||0)+state.radar.filter(x=>x.isUnmanaged).length;
-    $("radar-count").textContent=state.radar.filter(x=>!["promoted","nurture"].includes(x.status)).length;
+  const DUE_STATES=new Set(["overdue","due_today"]);
+  function attentionItems(mode){
+    const rows=[
+      ...state.prospects.map(record=>({kind:"prospect",record})),
+      ...state.radar.map(record=>({kind:"radar",record}))
+    ].filter(({record})=>mode==="unmanaged"?record.isUnmanaged:DUE_STATES.has(record.nextAction?.dueState));
+    rows.sort((a,b)=>{
+      if(mode==="due"){
+        const dates=String(a.record.nextAction?.dueDate||"").localeCompare(String(b.record.nextAction?.dueDate||""));
+        if(dates)return dates;
+      }
+      return String(a.record.businessName||"").localeCompare(String(b.record.businessName||""));
+    });
+    return rows;
+  }
+  function renderSummary(){
+    $("active-count").textContent=state.prospects.filter(p=>p.status==="active").length;
+    $("due-count").textContent=attentionItems("due").length;
+    $("unmanaged-count").textContent=attentionItems("unmanaged").length;
+    $("radar-count").textContent=state.radar.filter(r=>!["promoted","nurture"].includes(r.status)).length;
+  }
+  function renderAttention(){
+    const mode=state.attentionFilter,items=attentionItems(mode),isDue=mode==="due";
+    $("attention-title").textContent=isDue?"Due / Overdue":"Unmanaged";
+    $("attention-copy").textContent=isDue?"Dated actions due today or overdue across formal Prospects and Radar.":"Formal Prospects and active Radar relationships missing a dated action.";
+    $("attention-count").textContent=items.length;
+    document.querySelectorAll("[data-attention-mode]").forEach(b=>b.classList.toggle("selected",b.dataset.attentionMode===mode));
+    $("attention-list").innerHTML=items.map(({kind,record:r})=>{
+      const formal=kind==="prospect";
+      const contact=formal?r.primaryContact?.name:r.contactName;
+      const market=r.market||(formal?r.industry:r.vertical);
+      const label=formal?`Formal Prospect · ${stageLabel(r.stage)}`:`Pre-Appointment Radar · ${clean(r.status)||"radar"}`;
+      const title=r.isUnmanaged?"No dated Next Action":r.nextAction?.title||"Review relationship";
+      return `<article class="record"><div><h3>${esc(r.businessName||r.vertical||"Unnamed Relationship")}</h3><p class="meta">${esc(contact||"Contact not recorded")} · ${esc(market||"Market not recorded")}</p><div class="chips"><span class="chip">${esc(label)}</span></div></div>
+      <div><p class="next-label">Next Action</p><p class="next-title">${esc(title)}</p><p class="next-due">${esc(dueText(r.nextAction,r.isUnmanaged))}</p></div>
+      <div><button class="btn btn-secondary btn-small" data-action-kind="${kind}" data-action-id="${Number(r.id)}" type="button">Open</button></div></article>`;
+    }).join("");
+    $("attention-empty").hidden=items.length>0;
+    $("attention-empty-title").textContent=isDue?"Nothing due or overdue.":"No unmanaged relationships.";
+    $("attention-empty-copy").textContent=isDue?"No dated actions currently need attention.":"Every active relationship in this group has a dated follow-up.";
+    $("attention-list").querySelectorAll("[data-action-id]").forEach(b=>b.addEventListener("click",()=>{
+      const id=Number(b.dataset.actionId);
+      if(b.dataset.actionKind==="prospect")openProspect(id);
+      else openRadar(id);
+    }));
   }
   function populateStages(){const cur=$("stage-filter").value||"all";const vals=[...new Set(state.prospects.filter(p=>p.status==="active").map(p=>p.stage))];$("stage-filter").innerHTML='<option value="all">All stages</option>'+vals.map(x=>`<option value="${esc(x)}">${esc(stageLabel(x))}</option>`).join("");$("stage-filter").value=vals.includes(cur)?cur:"all"}
   function prospectSearch(p){return[p.businessName,p.website,p.industry,p.market,p.opportunitySummary,p.primaryContact?.name,p.primaryContact?.email,p.nextAction?.title,stageLabel(p.stage)].filter(Boolean).join(" ").toLowerCase()}
