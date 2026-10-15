@@ -1,12 +1,13 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.2.5",
+  "version": "6.2.6",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.2.5",
+    "fileVersion": "6.2.6",
     "status": "Production Candidate",
     "purpose": "Regression-test secure private Radar advertising evidence without touching existing client data.",
     "changeNotes": [
+      "Rerun full production tests after Safari-compatible image compression and Prospects 3.9.1 regression alignment.",
       "Regression-locks Radar advertising evidence UI script syntax and secure upload controls.",
       "Adds private source-evidence upload/read authentication and idempotency regression to the full Worker deployment gate.",
       "Adds a dedicated Radar archive separate from Nurture / Hold.",
