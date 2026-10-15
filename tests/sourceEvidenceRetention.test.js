@@ -1,13 +1,21 @@
 /* =========================================================
    GCM Operating System
    File: tests/sourceEvidenceRetention.test.js
-   Version: 1.0.2
+   Version: 1.0.3
    Purpose: Mock-D1 private R2 30-day lifecycle cleanup regression.
    No production writes, no actual R2 access.
    ========================================================= */
 import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
 import {runSourceEvidenceRetention} from "../routes/sourceEvidenceRetention.js";
 const BUCKET="gcm-os-source-evidence-private";
+const worker=readFileSync("worker.js","utf8");
+const wrangler=readFileSync("wrangler.toml","utf8");
+assert.match(worker,/async scheduled\(controller, env, ctx\)/);
+assert.match(worker,/runSourceEvidenceRetention\(env\)/);
+assert.match(worker,/workerFileVersion|WORKER_FILE_VERSION/);
+assert.match(wrangler,/\[triggers\][\s\S]*crons = \["0 12 \* \* \*"\]/);
+assert.match(wrangler,/bucket_name = "gcm-os-source-evidence-private"/);
 const now="2026-10-15 13:00:00";
 const key=n=>"radar/"+n+"/"+String(n).padStart(64,"a")+".jpg";
 function setup({assets,objects,links,radars,reopenOnRecheck=false,failDelete=false}){
