@@ -1,7 +1,7 @@
 /* =========================================================
    GCM Operating System
    File: tests/sourceEvidenceRetention.test.js
-   Version: 1.0.0
+   Version: 1.0.1
    Purpose: Mock-D1 private R2 30-day lifecycle cleanup regression.
    No production writes, no actual R2 access.
    ========================================================= */
@@ -97,11 +97,14 @@ shared.radars.push({id:12,archived_at:null,promoted_prospect_id:null});shared.li
 assert.equal((await runSourceEvidenceRetention(setup(shared).env)).deleted,0);
 const badKey=base();badKey.objects[0].object_key="../other-client/secret.jpg";
 const invalid=await runSourceEvidenceRetention(setup(badKey).env);assert.equal(invalid.invalidKeys,1);assert.equal(invalid.deleted,0);
-const pending=setup(base(),);pending.radars[0].archived_at="2026-09-01 12:00:00";
-const race=setup({...base() ,reopenOnRecheck:true});
-const switched=await runSourceEvidenceRetention({...race.env}, {dryRun:false});assert.equal(switched.deleted,1);
-const recheck=setup({...base(),reopenOnRecheck:true});
-const recheckResult=await runSourceEvidenceRetention(recheck.env);assert.equal(recheckResult.deleted,1);
-const fail=setup({...base(),failDelete:true});const failResult=await runSourceEvidenceRetention(fail.env);
-assert.equal(failResult.deleted,1);
-console.log("PASS 30-day private R2 retention: dry run, due archival, reopen, age, hold, client/prospect, promoted, shared object, invalid key, metadata audit.");
+const race=setup({...base(),reopenOnRecheck:true});
+const raceResult=await runSourceEvidenceRetention(race.env);
+assert.equal(raceResult.deleted,0);
+assert.equal(raceResult.skippedOnRecheck,1);
+assert.equal(race.assets[0].retention_state,"pending_deletion");
+const failure=setup({...base(),failDelete:true});
+const failureResult=await runSourceEvidenceRetention(failure.env);
+assert.equal(failureResult.deleted,0);
+assert.equal(failureResult.errors,1);
+assert.equal(failure.objects[0].deleted_at,null);
+console.log("PASS 30-day private R2 retention: dry run, due archival, reopen, age, hold, client/prospect, promoted, shared object, invalid key, recheck race and R2 failure.");
