@@ -16,7 +16,7 @@ assert.match(html,/id="source-evidence-form"/);
 assert.match(html,/gcm_os_session/);
 assert.match(html,/sessionStorage\.setItem\(EVIDENCE_SESSION_KEY,token\)/);
 assert.match(html,/history\.replaceState/);
-assert.match(html,/Authorization:"Bearer "\+token/);
+assert.match(html,/"Authorization":"Bearer "\+token/);
 assert.match(html,/action:"source-evidence"/);
 assert.match(html,/toBlob\(resolve,"image\/webp"/);
 assert.match(html,/evidenceBusy=true/);
