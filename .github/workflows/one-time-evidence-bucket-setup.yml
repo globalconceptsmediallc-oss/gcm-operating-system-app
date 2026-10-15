@@ -1,0 +1,55 @@
+# =========================================================
+# GCM OS | Approved Evidence Storage Foundation
+# File: .github/workflows/one-time-evidence-bucket-setup.yml
+# Version: 1.0.0
+# One-time create/verify private empty R2 bucket. Never touches D1,
+# existing buckets, files, prospect records or Google Drive.
+# Remove after successful verification.
+# =========================================================
+name: One-time private evidence bucket setup
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-evidence-bucket-setup.yml
+permissions:
+  contents: read
+jobs:
+  provision-private-bucket:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Create bucket only if absent; verify private endpoints
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          node --input-type=module <<'NODE'
+          const token=process.env.CLOUDFLARE_API_TOKEN;
+          const account=process.env.CLOUDFLARE_ACCOUNT_ID;
+          const bucket="gcm-os-source-evidence-private";
+          if(!token||!account)throw Error("Cloudflare account credentials are unavailable");
+          const base="https://api.cloudflare.com/client/v4/accounts/"+account+"/r2/buckets";
+          async function cf(path,method="GET",body){
+            const res=await fetch(path,{method,headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},body:body?JSON.stringify(body):undefined});
+            const data=await res.json().catch(()=>({}));
+            return {http:res.status,ok:res.ok&&data.success===true,data};
+          }
+          let check=await cf(base+"/"+bucket);
+          let created=false;
+          if(check.http===404){
+            const add=await cf(base,"POST",{name:bucket});
+            if(!add.ok)throw Error("R2 bucket create failed: HTTP "+add.http+"; "+JSON.stringify(add.data.errors||[]));
+            created=true;
+            check=await cf(base+"/"+bucket);
+          }
+          if(!check.ok||check.data?.result?.name!==bucket)throw Error("R2 bucket verification failed: HTTP "+check.http+"; "+JSON.stringify(check.data.errors||[]));
+          const managed=await cf(base+"/"+bucket+"/domains/managed");
+          if(!managed.ok)throw Error("R2 managed-domain privacy verification failed: HTTP "+managed.http+"; "+JSON.stringify(managed.data.errors||[]));
+          if(managed.data?.result?.enabled!==false)throw Error("R2 r2.dev domain is not explicitly disabled; stop");
+          const custom=await cf(base+"/"+bucket+"/domains/custom");
+          if(!custom.ok)throw Error("R2 custom-domain privacy verification failed: HTTP "+custom.http+"; "+JSON.stringify(custom.data.errors||[]));
+          const domains=custom.data?.result?.domains;
+          if(!Array.isArray(domains)||domains.length)throw Error("R2 custom-domain list is nonempty or unexpectedly shaped; privacy not assured");
+          console.log("PRIVATE_R2_BUCKET_VERIFIED",JSON.stringify({name:bucket,created,managedDomain:false,customDomainCount:domains.length,contents:"no uploads performed"}));
+          NODE
