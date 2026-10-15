@@ -1,7 +1,8 @@
 # GCM OS | Worker bindings
 # File: wrangler.toml
-# Version: 1.0.1
-# Change: Add private R2 evidence bucket to existing Worker; preserve D1 and other bindings.
+# Version: 1.0.2
+# Change: Persist approved private R2 binding and retry deployment after test-lock alignment.
+# R2 objects remain private; upload, read and lifecycle routes are not enabled yet.
 name = "gcm-business-intelligence-worker"
 main = "worker.js"
 compatibility_date = "2026-07-02"
