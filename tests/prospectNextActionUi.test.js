@@ -1,13 +1,13 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/prospectNextActionUi.test.js
-   Version: 1.0.3
+   Version: 1.0.4
    Status: Regression Test
    Purpose: Lock the Prospect relationship workspace to the existing durable
             set_next_action CRM operation without creating unrelated records.
 
    Change Notes — 1.0.3
-   - Verifies Prospects 3.8.0 summary navigation and unified attention queue.
+   - Verifies Prospects 3.9.0 summary navigation and unified attention queue.
    - Requires count/list parity and existing record-detail Open routes.
 
    Change Notes — 1.0.1
@@ -80,7 +80,7 @@ const prospectsPage = fs.readFileSync(
   new URL("../prospects.html", import.meta.url),
   "utf8"
 );
-assert.match(prospectsPage,/Version: 3\.8\.0/);
+assert.match(prospectsPage,/Version: 3\.9\.0/);
 assert.match(prospectsPage,/Nurture \/ Hold/);
 assert.match(prospectsPage,/holdReason/);
 assert.match(prospectsPage,/reactivationTrigger/);
