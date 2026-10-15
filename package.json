@@ -1,12 +1,13 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.2.12",
+  "version": "6.2.13",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.2.12",
+    "fileVersion": "6.2.13",
     "status": "Production Candidate",
     "purpose": "Regression-test secure private Radar advertising evidence without touching existing client data.",
     "changeNotes": [
+      "Deploys approved daily Cloudflare Cron for 30-day private R2 cleanup, preserving held/client/shared assets with metadata audit.",
       "Retests 30-day R2 cleanup model with corrected mocked batch LIMIT/recheck argument distinction.",
       "Tests safe private R2 cleanup eligibility, reopened/client/shared/held protections, idempotence and failure handling, prior to scheduled activation.",
       "Reverify 30-day evidence retention transition regression after distinguishing archive and restoration SQL in mock.",
