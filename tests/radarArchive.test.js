@@ -1,10 +1,10 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/radarArchive.test.js
-   Version: 1.0.5
+   Version: 1.0.6
    Status: Production Regression
    Purpose: Verify non-destructive Radar closure, archive retrieval and restore.
-   Change: Align archive regression UI version lock with deployed prospects.html 3.9.3.
+   Change: Verifies 30-day evidence eligibility on archive and cancelation upon restore without file deletion.
    No production database writes are performed.
    ========================================================= */
 
@@ -35,6 +35,12 @@ const row={
   next_action_title:"Check for response",next_action_due_date:"2026-10-20",
   archived_at:null,promoted_prospect_id:null
 };
+const evidence = [
+  {id:101,radar_id:42,prospect_id:null,client_id:null,retention_state:"active",archived_at:null,deletion_eligible_at:null,deletion_completed_at:null},
+  {id:102,radar_id:42,prospect_id:9,client_id:null,retention_state:"active",archived_at:null,deletion_eligible_at:null,deletion_completed_at:null},
+  {id:103,radar_id:42,prospect_id:null,client_id:12,retention_state:"active",archived_at:null,deletion_eligible_at:null,deletion_completed_at:null},
+  {id:104,radar_id:42,prospect_id:null,client_id:null,retention_state:"hold",archived_at:null,deletion_eligible_at:null,deletion_completed_at:null}
+];
 const activities=[
  {id:1,radar_id:42,activity_type:"outreach_email",occurred_at:"2026-10-12T10:00:00Z",
   direction:"outbound",subject:"First outreach",summary:"Original relationship email",
@@ -68,6 +74,23 @@ class Statement{
     if(q.includes("update crm_prospect_radar")&&q.includes("archived_at = null")){
       row.archived_at=null;row.status="radar";row.next_action_title=null;
       row.next_action_due_date=null;return {success:true};
+    }
+    if(q.includes("update crm_source_evidence_items")&&q.includes("retention_state = 'pending_deletion'")){
+      for(const asset of evidence)if(asset.radar_id===this.args[0]&&asset.retention_state==="active"
+        &&asset.prospect_id===null&&asset.client_id===null&&!asset.deletion_completed_at){
+        asset.retention_state="pending_deletion";
+        asset.archived_at="2026-10-15 13:00:00";
+        asset.deletion_eligible_at="2026-11-14 13:00:00";
+      }
+      return {success:true};
+    }
+    if(q.includes("update crm_source_evidence_items")&&q.includes("retention_state = 'active'")){
+      for(const asset of evidence)if(asset.radar_id===this.args[0]&&asset.retention_state==="pending_deletion"
+        &&!asset.deletion_completed_at){
+        asset.retention_state="active";
+        asset.archived_at=null;asset.deletion_eligible_at=null;
+      }
+      return {success:true};
     }
     if(q.includes("insert into crm_prospect_radar_activities")){
       const archived=q.includes("'radar_archived'");
@@ -103,7 +126,12 @@ assert.equal(before.data.radar[0].nextAction.title,"Check for response");
 
 const closed=await action("archive_radar",{radarId:42,closureReason:"No Current Opportunity — Prospect Declined"});
 assert.equal(closed.status,200);
-assert.equal(closed.data.writesPerformed,2);
+assert.equal(closed.data.writesPerformed,3);
+assert.equal(evidence[0].retention_state,"pending_deletion");
+assert.equal(evidence[0].deletion_eligible_at,"2026-11-14 13:00:00");
+assert.equal(evidence[1].retention_state,"active");
+assert.equal(evidence[2].retention_state,"active");
+assert.equal(evidence[3].retention_state,"hold");
 assert.ok(closed.data.radar.archivedAt);
 assert.equal(closed.data.radar.managementState,"closed");
 assert.equal(closed.data.radar.isUnmanaged,false);
@@ -129,7 +157,11 @@ assert.equal((await action("promote_radar",{radarId:42,appointmentAt:"2026-10-14
 assert.equal((await action("add_radar_activity",{radarId:42,activityType:"phone_call",occurredAt:"2026-10-13T11:00:00",summary:"Should not happen"})).status,409);
 
 const restored=await action("restore_archived_radar",{radarId:42});
-assert.equal(restored.data.writesPerformed,2);
+assert.equal(restored.data.writesPerformed,3);
+assert.equal(evidence[0].retention_state,"active");
+assert.equal(evidence[0].deletion_eligible_at,null);
+assert.equal(evidence[1].retention_state,"active");
+assert.equal(evidence[3].retention_state,"hold");
 assert.equal(restored.data.radar.status,"radar");
 assert.equal(restored.data.radar.archivedAt,null);
 assert.equal(restored.data.radar.nextAction,null);
