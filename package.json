@@ -1,12 +1,13 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.2.11",
+  "version": "6.2.12",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.2.11",
+    "fileVersion": "6.2.12",
     "status": "Production Candidate",
     "purpose": "Regression-test secure private Radar advertising evidence without touching existing client data.",
     "changeNotes": [
+      "Retests 30-day R2 cleanup model with corrected mocked batch LIMIT/recheck argument distinction.",
       "Tests safe private R2 cleanup eligibility, reopened/client/shared/held protections, idempotence and failure handling, prior to scheduled activation.",
       "Reverify 30-day evidence retention transition regression after distinguishing archive and restoration SQL in mock.",
       "Test 30-day Radar advertisement-evidence retention metadata, held/owned asset exclusions, and reopening cancellation before enabling physical cleanup.",
