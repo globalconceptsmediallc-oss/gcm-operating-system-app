@@ -1,9 +1,14 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/prospectCrm.js
-   Version: 1.7.0
+   Version: 1.7.1
    Status: Production Road-Test Candidate
    Purpose: Durable Prospecting Radar + CRM operations for GCM.
+
+   Change Notes — 1.7.1:
+   - Atomic duplicate guard on business name and market, including archived records.
+   - Returns existing ID with zero writes; allows distinct known markets.
+   - No database migration. Public CRM API version remains 1.7.0.
 
    Change Notes — 1.7.0:
    - Adds history-preserving Closed / Archived state to Radar with required closure reason.
@@ -1057,53 +1062,56 @@ async function createRadar(body, db, requestId) {
     return validationError(requestId, "create_radar", "Radar requires a businessName, vertical, or sourceDescription so the lead intelligence has durable meaning.");
   }
 
-  const result = await db.prepare(`
+  // This is an atomic SQLite insert: concurrent retries cannot both create
+  // a matching name/market row. The comparison includes archived and promoted
+  // records to preserve all prior CRM intelligence and outreach history.
+  // Distinct, nonempty markets can contain same-name companies.
+  const nameKey = radarIdentityText(businessName);
+  const marketKey = radarIdentityText(market);
+  const existingNameSql = "lower(trim(replace(replace(replace(coalesce(r.business_name,''),'  ',' '),'  ',' '),'  ',' ')))";
+  const existingMarketSql = "lower(trim(replace(replace(replace(coalesce(r.market,''),'  ',' '),'  ',' '),'  ',' ')))";
+  const matchingSql = "FROM crm_prospect_radar r WHERE " + existingNameSql +
+    " = ? AND (" + existingMarketSql + " = ? OR " + existingMarketSql + " = '' OR ? = '')";
+
+  const insertSql = `
     INSERT INTO crm_prospect_radar (
-      entry_type,
-      business_name,
-      website,
-      test_site_url,
-      vertical,
-      market,
-      source_type,
-      source_description,
-      contact_name,
-      contact_email,
-      contact_phone,
-      evidence_reference,
-      notes,
-      status,
-      created_at,
-      updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-  `).bind(
-    entryType,
-    businessName,
-    website,
-    testSiteUrl,
-    vertical,
-    market,
-    sourceType,
-    sourceDescription,
-    contactName,
-    contactEmail,
-    contactPhone,
-    evidenceReference,
-    notes,
-    status
-  ).run();
+      entry_type, business_name, website, test_site_url, vertical, market,
+      source_type, source_description, contact_name, contact_email, contact_phone,
+      evidence_reference, notes, status, created_at, updated_at
+    )
+    SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    WHERE ${nameKey ? 'NOT EXISTS (SELECT 1 ' + matchingSql + ')' : '1 = 1'}
+    RETURNING id
+  `;
+  const values = [
+    entryType, businessName, website, testSiteUrl, vertical, market,
+    sourceType, sourceDescription, contactName, contactEmail, contactPhone,
+    evidenceReference, notes, status
+  ];
+  const inserted = await db.prepare(insertSql)
+    .bind(...values, ...(nameKey ? [nameKey, marketKey, marketKey] : []))
+    .all();
+  const newId = positiveInteger(rowsOf(inserted)[0]?.id);
 
-  const radarId = await insertedId(db, result);
-  const radar = await readRadarById(db, radarId);
+  if (!newId && nameKey) {
+    const matched = await db.prepare("SELECT id " + matchingSql + " ORDER BY id ASC LIMIT 1")
+      .bind(nameKey, marketKey, marketKey).all();
+    const existingId = positiveInteger(rowsOf(matched)[0]?.id);
+    if (!existingId) throw new Error("Radar duplicate guard could not reconcile the existing record.");
+    const radar = await readRadarById(db, existingId);
+    return jsonResponse({
+      ok: true, requestId, action: PROSPECT_CRM_ACTION, operation: "create_radar",
+      prospectCrmVersion: PROSPECT_CRM_VERSION, duplicateProtected: true,
+      radar, writesPerformed: 0
+    });
+  }
 
+  if (!newId) throw new Error("Radar insert did not return a new record ID.");
+  const radar = await readRadarById(db, newId);
   return jsonResponse({
-    ok: true,
-    requestId,
-    action: PROSPECT_CRM_ACTION,
-    operation: "create_radar",
-    prospectCrmVersion: PROSPECT_CRM_VERSION,
-    radar,
-    writesPerformed: 1
+    ok: true, requestId, action: PROSPECT_CRM_ACTION, operation: "create_radar",
+    prospectCrmVersion: PROSPECT_CRM_VERSION, duplicateProtected: false,
+    radar, writesPerformed: 1
   }, 201);
 }
 
@@ -4137,6 +4145,10 @@ function positiveInteger(value) {
   return Number.isInteger(number) && number > 0 ? number : null;
 }
 
+function radarIdentityText(value) {
+  return cleanText(value).replace(/\s+/g, " ").toLowerCase();
+}
+
 function cleanText(value) {
   return String(value ?? "").trim();
 }
@@ -4182,4 +4194,4 @@ function parseJson(value) {
   }
 }
 
-/* END OF FILE — routes/prospectCrm.js v1.6.0 — full install */
+/* END OF FILE — routes/prospectCrm.js v1.7.1 — full install */
