@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/radarArchive.test.js
-   Version: 1.0.6
+   Version: 1.0.7
    Status: Production Regression
    Purpose: Verify non-destructive Radar closure, archive retrieval and restore.
    Change: Verifies 30-day evidence eligibility on archive and cancelation upon restore without file deletion.
@@ -75,7 +75,7 @@ class Statement{
       row.archived_at=null;row.status="radar";row.next_action_title=null;
       row.next_action_due_date=null;return {success:true};
     }
-    if(q.includes("update crm_source_evidence_items")&&q.includes("retention_state = 'pending_deletion'")){
+    if(q.includes("update crm_source_evidence_items")&&q.includes("set retention_state = 'pending_deletion'")){
       for(const asset of evidence)if(asset.radar_id===this.args[0]&&asset.retention_state==="active"
         &&asset.prospect_id===null&&asset.client_id===null&&!asset.deletion_completed_at){
         asset.retention_state="pending_deletion";
@@ -84,7 +84,7 @@ class Statement{
       }
       return {success:true};
     }
-    if(q.includes("update crm_source_evidence_items")&&q.includes("retention_state = 'active'")){
+    if(q.includes("update crm_source_evidence_items")&&q.includes("set retention_state = 'active'")){
       for(const asset of evidence)if(asset.radar_id===this.args[0]&&asset.retention_state==="pending_deletion"
         &&!asset.deletion_completed_at){
         asset.retention_state="active";
