@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: prospects.html
-   Version: 3.8.0
+   Version: 3.9.0
    Status: Production Road-Test Candidate
    Source: Production prospects.html 2.0.0 + client-pre-research.html 1.1.0
    Backend: Prospect CRM 1.7.0
@@ -10,6 +10,12 @@
    One operating workspace for GCM prospecting from first evidence through
    Radar, outreach, appointment, CRM, services, signed scope, startup package,
    and the eventual Client handoff.
+
+   Change Notes — 3.9.0
+   - Adds verified-operator Advertising & Source Evidence upload and gallery to Radar.
+   - Optimizes images in-browser; stores only compressed copies in private R2.
+   - Uses short-lived Google-backed OS session tokens; blocks unsigned uploads and reads.
+   - Preserves existing relationship workflows; retention deletion is not active.
 
    Change Notes — 3.8.0
    - Turns all four summary cards into accessible navigation controls.
@@ -380,6 +386,26 @@
   </main>
 </div>
 
+<!-- Add Advertising & Source Evidence (private R2, operator sign-in required) -->
+<dialog id="source-evidence-dialog"><form id="source-evidence-form">
+  <div class="modal-head"><div><h2>Add Advertising Evidence</h2><p id="source-evidence-business">Private evidence archive · optimized images only</p></div><button class="modal-close" type="button" data-close="source-evidence-dialog">×</button></div>
+  <div class="modal-body"><div class="error" id="source-evidence-error" hidden></div><input type="hidden" name="radarId"/>
+    <div class="form-grid">
+      <div class="field span-2"><label>Evidence title *</label><input class="input" name="title" placeholder="Door hanger — October 2026" maxlength="130" required/></div>
+      <div class="field"><label>Advertising type *</label><select class="select" name="sourceType" required>
+        <option value="door_hanger">Door hanger</option><option value="direct_mail">Direct mail</option><option value="business_card">Business card</option>
+        <option value="postcard">Postcard</option><option value="flyer">Flyer</option><option value="advertisement">Other advertisement</option><option value="other">Other source</option>
+      </select></div>
+      <div class="field"><label>Date received (optional)</label><input class="input" type="date" name="observedAt"/></div>
+      <div class="field span-2"><label>Images (1–2 sides) *</label><input class="input" type="file" name="files" accept="image/jpeg,image/png,image/webp" multiple required/><p class="meta">Select the front and back together. Images are resized and compressed before private storage; untouched originals are not uploaded in this first phase.</p></div>
+      <div class="field span-2"><label>What the advertisement says</label><textarea class="textarea" name="description" maxlength="1200" placeholder="Offer, call to action, contact details, QR code destination…"></textarea></div>
+      <div class="field span-2"><label>Campaign observations (optional)</label><textarea class="textarea" name="campaignNotes" maxlength="1200" placeholder="Phone number different from business card, campaign tracking questions…"></textarea></div>
+    </div>
+    <p id="source-evidence-status" class="meta" role="status">Images remain private. Maximum two images per entry.</p>
+    <div class="form-actions"><button class="btn btn-secondary" type="button" data-close="source-evidence-dialog">Cancel</button><button class="btn btn-primary" id="source-evidence-save" type="submit">Optimize &amp; Save Evidence</button></div>
+  </div>
+</form></dialog>
+
 <!-- Basic add Radar -->
 <dialog id="radar-dialog"><form id="radar-form">
   <div class="modal-head"><div><h2>Add to Radar</h2><p>Use when GCM knows the business is worth remembering but has not scheduled a real appointment.</p></div><button class="modal-close" type="button" data-close="radar-dialog">×</button></div>
@@ -536,7 +562,7 @@
 <script>
 (() => {
   "use strict";
-  const FILE_VERSION="3.8.0";
+  const FILE_VERSION="3.9.0";
   const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const state={prospects:[],radar:[],archivedRadar:[],services:[],selectedProspect:null,selectedRadar:null,view:"pipeline",attentionFilter:"due",
     researchTarget:{type:"new",id:null},researchResult:null,researchContext:null,images:[]};
@@ -967,7 +993,8 @@
     $("radar-title").textContent=r.businessName||r.vertical||"Radar Record";$("radar-subtitle").textContent=`${r.status==="nurture"?"Nurture / Hold":r.status==="outreach"?"Outreach":"Radar"} · ${r.contactName||"Contact not recorded"}`;
     $("radar-body").innerHTML=`<div class="detail-grid">${detail("Source",r.sourceType||"Unknown")}${detail("Market",r.market||r.vertical||"Unknown")}${detail("Contact",r.contactName||"Not recorded")}${detail("Email",r.contactEmail||"Not recorded")}${detail("Phone",r.contactPhone||"Not recorded")}${detail("Website",r.website||"Not recorded")}${detail("Test Site",r.testSiteUrl||"Not recorded")}${detail("Last Outreach",fmtDate(r.lastOutreachAt))}${detail("Next Action",r.isUnmanaged?"MISSING":r.nextAction?.title||"Not in active outreach")}${r.status==="nurture"?detail("Hold Reason",r.nurtureReason||"Not recorded")+detail("Reactivation Trigger",r.nurtureTrigger||"Not recorded"):""}</div>
     <div class="section-title"><div><h3>Radar Actions</h3><p>Move naturally from evidence to outreach to appointment.</p></div></div>
-    <div class="quick-actions"><button class="btn btn-secondary btn-small" id="radar-edit" type="button">Edit Radar Record</button><button class="btn btn-secondary btn-small" id="radar-test-site-edit" type="button">${r.testSiteUrl?"Edit Test Site":"Add Test Site"}</button><button class="btn btn-secondary btn-small" id="radar-research" type="button">Research / Update Intelligence</button><button class="btn btn-secondary btn-small" id="radar-outreach" type="button">Record Outreach</button>${r.status==="nurture"?'<button class="btn btn-primary btn-small" id="radar-reactivate" type="button">Reactivate</button>':'<button class="btn btn-secondary btn-small" id="radar-hold" type="button">Nurture / Hold</button>'}<button class="btn btn-secondary btn-small" id="radar-archive" type="button">Closed / Archived</button>${clean(r.nextAction?.title).toLowerCase().replace(/\s+/g,"_")==="follow_up_after_prospect_engagement"?'<button class="btn btn-secondary btn-small" id="radar-followup-email" type="button">Prepare Follow-Up Email</button><button class="btn btn-secondary btn-small" id="radar-confirm-email" type="button">Check Sent Email</button>':""}<button class="btn btn-primary btn-small" id="radar-promote" type="button">Appointment Scheduled</button></div>
+    <div class="quick-actions"><button class="btn btn-secondary btn-small" id="radar-edit" type="button">Edit Radar Record</button><button class="btn btn-secondary btn-small" id="radar-test-site-edit" type="button">${r.testSiteUrl?"Edit Test Site":"Add Test Site"}</button><button class="btn btn-secondary btn-small" id="radar-research" type="button">Research / Update Intelligence</button><button class="btn btn-secondary btn-small" id="radar-evidence-add" type="button">Add Advertising Evidence</button><button class="btn btn-secondary btn-small" id="radar-outreach" type="button">Record Outreach</button>${r.status==="nurture"?'<button class="btn btn-primary btn-small" id="radar-reactivate" type="button">Reactivate</button>':'<button class="btn btn-secondary btn-small" id="radar-hold" type="button">Nurture / Hold</button>'}<button class="btn btn-secondary btn-small" id="radar-archive" type="button">Closed / Archived</button>${clean(r.nextAction?.title).toLowerCase().replace(/\s+/g,"_")==="follow_up_after_prospect_engagement"?'<button class="btn btn-secondary btn-small" id="radar-followup-email" type="button">Prepare Follow-Up Email</button><button class="btn btn-secondary btn-small" id="radar-confirm-email" type="button">Check Sent Email</button>':""}<button class="btn btn-primary btn-small" id="radar-promote" type="button">Appointment Scheduled</button></div>
+    <div class="section-title"><div><h3>Advertising &amp; Source Evidence</h3><p>Private original-campaign history: optimized images and verified notes.</p></div></div><div id="radar-evidence-list" aria-live="polite">Open a record to view its advertising archive.</div>
     <div class="section-title"><div><h3>Intelligence</h3><p>${(r.intelligence||[]).length} durable record(s).</p></div></div><div class="timeline">${(r.intelligence||[]).slice(0,5).map(i=>`<div class="timeline-item"><strong>${esc(i.title)}</strong><p>${esc(i.summary||"Prospect intelligence saved in Radar.")}</p><time>${esc(fmtDate(i.capturedAt))}</time></div>`).join("")||'<div class="timeline-item"><strong>No research saved yet.</strong><p>Run Research / Update Intelligence.</p></div>'}</div>
     <div class="section-title"><div><h3>Outreach History</h3></div></div><div class="timeline">${(r.activities||[]).slice(0,10).map(a=>`<div class="timeline-item"><strong>${esc(a.subject||a.activityType.replaceAll("_"," "))}</strong><p>${esc(a.summary)}</p><time>${esc(fmtDate(a.occurredAt))}${a.outcome?` · ${esc(a.outcome)}`:""}</time></div>`).join("")||'<div class="timeline-item"><strong>No outreach yet.</strong><p>Radar can remain passive until GCM decides to pursue it.</p></div>'}</div>`;
     const topTestSite=$("radar-test-site-top");
@@ -979,6 +1006,8 @@
     $("radar-edit").addEventListener("click",()=>openRadarEdit(r));
     $("radar-test-site-edit").addEventListener("click",()=>editRadarTestSite(r));
     $("radar-research").addEventListener("click",()=>startResearch({type:"radar",id:r.id,record:r}));
+    $("radar-evidence-add").addEventListener("click",()=>openSourceEvidenceDialog(r));
+    loadSourceEvidenceGallery(r.id);
     $("radar-outreach").addEventListener("click",()=>{const f=$("outreach-form");f.elements.radarId.value=r.id;setDefaults(f);openDialog($("outreach-dialog"))});
     $("radar-hold")?.addEventListener("click",()=>openHoldDialog("radar",r));
     $("radar-archive")?.addEventListener("click",()=>{const f=$("archive-form");f.reset();f.elements.radarId.value=r.id;$("archive-error").hidden=true;openDialog($("archive-dialog"));});
@@ -1126,6 +1155,149 @@
   $("agreement-form").addEventListener("submit",async e=>{e.preventDefault();const v=formObj(e.currentTarget);try{const d=await api("record_agreement",{prospectId:Number(v.prospectId),signedAt:localDT(v.date,v.time),scopeSummary:v.scopeSummary,contractValue:v.contractValue,initialPaymentRequired:v.initialPaymentRequired||null});closeDialog($("agreement-dialog"));renderProspect(d.prospect);await load()}catch(err){$("agreement-error").textContent=err.message;$("agreement-error").hidden=false}});
   $("payment-form").addEventListener("submit",async e=>{e.preventDefault();const v=formObj(e.currentTarget);try{const d=await api("record_payment",{prospectId:Number(v.prospectId),amount:v.amount,receivedAt:localDT(v.date,v.time),paymentMethod:v.paymentMethod||null});closeDialog($("payment-dialog"));renderProspect(d.prospect);await load()}catch(err){$("payment-error").textContent=err.message;$("payment-error").hidden=false}});
 
+
+  // Advertising & Source Evidence v1.0.0 — signed operator, private R2, compressed previews.
+  const EVIDENCE_SESSION_KEY="gcm-evidence-os-session";
+  const EVIDENCE_PENDING_KEY="gcm-evidence-pending-radar";
+  let evidenceBusy=false;
+  function evidenceSession(){try{return sessionStorage.getItem(EVIDENCE_SESSION_KEY)||"";}catch{return"";}}
+  function consumeEvidenceSession(){
+    const params=new URLSearchParams(location.hash.replace(/^#/,""));
+    const token=params.get("gcm_os_session");
+    if(!token)return;
+    try{sessionStorage.setItem(EVIDENCE_SESSION_KEY,token);}catch{}
+    history.replaceState(null,"",location.pathname+location.search);
+  }
+  consumeEvidenceSession();
+  function beginEvidenceSignIn(radarId){
+    try{sessionStorage.setItem(EVIDENCE_PENDING_KEY,String(radarId));}catch{}
+    const back=location.origin+location.pathname+location.search;
+    location.href=WORKER+"auth/google?os_login=1&return_to="+encodeURIComponent(back);
+  }
+  async function evidenceApi(operation,payload={}){
+    const token=evidenceSession();
+    if(!token)throw new Error("Sign in securely with Google to use the advertising archive.");
+    const response=await fetch(WORKER,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},
+      body:JSON.stringify({action:"source-evidence",operation,...payload})});
+    const data=await response.json().catch(()=>({}));
+    if(response.status===401){
+      try{sessionStorage.removeItem(EVIDENCE_SESSION_KEY);}catch{}
+      throw new Error("Your secure session has expired. Sign in with Google again.");
+    }
+    if(!response.ok||data.ok!==true)throw new Error(data.error||"Evidence archive is unavailable.");
+    return data;
+  }
+  function evidenceSignInControl(container,radarId,message){
+    container.innerHTML="";
+    const p=document.createElement("p");p.className="meta";p.textContent=message||"Sign in with your verified GCM Google account to view the private archive.";
+    const b=document.createElement("button");b.type="button";b.className="btn btn-secondary btn-small";b.textContent="Secure Google Sign-In";
+    b.addEventListener("click",()=>beginEvidenceSignIn(radarId));
+    container.append(p,b);
+  }
+  async function loadSourceEvidenceGallery(radarId){
+    const host=$("radar-evidence-list");
+    if(!host||Number(state.selectedRadar?.id)!==Number(radarId))return;
+    if(!evidenceSession()){evidenceSignInControl(host,radarId);return;}
+    host.textContent="Loading private advertising archive…";
+    try{
+      const data=await evidenceApi("list",{radarId});
+      if(Number(state.selectedRadar?.id)!==Number(radarId))return;
+      host.textContent="";
+      const items=data.evidence||[];
+      if(!items.length){host.innerHTML='<div class="timeline-item"><strong>No archived advertisements yet.</strong><p>Use Add Advertising Evidence to preserve the original campaign details.</p></div>';return;}
+      const stack=document.createElement("div");stack.className="timeline";
+      for(const item of items.slice(0,12)){
+        const entry=document.createElement("article");entry.className="timeline-item";
+        const h=document.createElement("strong");h.textContent=item.title;
+        const desc=document.createElement("p");desc.textContent=[String(item.sourceType||"").replaceAll("_"," "),item.observedAt||"",item.description||""].filter(Boolean).join(" · ");
+        entry.append(h,desc);
+        if(item.campaignNotes){const note=document.createElement("p");note.textContent=item.campaignNotes;entry.append(note);}
+        const grid=document.createElement("div");grid.style.cssText="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:12px 0;";
+        for(const photo of item.images||[]){
+          const tile=document.createElement("div");tile.style.cssText="border:1px solid #d9e2eb;border-radius:10px;overflow:hidden;background:#f7f8fa;";
+          const img=document.createElement("img");img.alt=item.title+" — archived advertisement";img.loading="lazy";
+          img.style.cssText="width:100%;height:210px;object-fit:contain;display:block;";
+          const caption=document.createElement("div");caption.className="meta";caption.style.padding="8px";caption.textContent=Math.round(Number(photo.sizeBytes||0)/1024)+" KB · private";
+          tile.append(img,caption);grid.append(tile);
+          // Short-lived base64 display; no public object URL or public R2 access.
+          evidenceApi("get_image",{radarId,imageId:photo.id}).then(result=>{
+            if(Number(state.selectedRadar?.id)===Number(radarId))img.src="data:"+result.contentType+";base64,"+result.dataBase64;
+          }).catch(()=>{caption.textContent="Image could not be loaded securely.";});
+        }
+        entry.append(grid);stack.append(entry);
+      }
+      host.append(stack);
+      if(items.length>12){const p=document.createElement("p");p.className="meta";p.textContent="Displaying the latest 12 evidence entries.";host.append(p);}
+    }catch(err){
+      if(Number(state.selectedRadar?.id)!==Number(radarId))return;
+      evidenceSignInControl(host,radarId,err.message);
+    }
+  }
+  function openSourceEvidenceDialog(r){
+    if(!evidenceSession()){
+      const host=$("radar-evidence-list");if(host)evidenceSignInControl(host,r.id);
+      beginEvidenceSignIn(r.id);return;
+    }
+    const f=$("source-evidence-form");f.reset();f.elements.radarId.value=r.id;
+    $("source-evidence-business").textContent=(r.businessName||"Radar") + " · Private source evidence";
+    $("source-evidence-status").textContent="Select one or both sides of the advertisement.";
+    $("source-evidence-error").hidden=true;
+    openDialog($("source-evidence-dialog"));
+  }
+  function imageData(blob){
+    return new Promise((resolve,reject)=>{const reader=new FileReader();
+      reader.onload=()=>resolve(String(reader.result||"").split(",")[1]||"");
+      reader.onerror=()=>reject(new Error("Could not encode the optimized image."));reader.readAsDataURL(blob);});
+  }
+  async function compressEvidenceFile(file){
+    if(!/^image\/(jpeg|png|webp)$/i.test(file.type)||file.size>12*1024*1024)throw new Error("Choose a JPEG, PNG or WebP image smaller than 12 MB.");
+    let bitmap,objectUrl,plainImage;
+    try{
+      if(typeof createImageBitmap==="function")bitmap=await createImageBitmap(file);
+      else{
+        objectUrl=URL.createObjectURL(file);plainImage=new Image();
+        await new Promise((resolve,reject)=>{plainImage.onload=resolve;plainImage.onerror=()=>reject(new Error("Cannot decode image."));plainImage.src=objectUrl;});
+      }
+      const width=bitmap?.width||plainImage.naturalWidth,height=bitmap?.height||plainImage.naturalHeight;
+      if(!width||!height)throw new Error("The selected image dimensions are unavailable.");
+      const factor=Math.min(1,2000/Math.max(width,height));
+      const w=Math.max(1,Math.round(width*factor)),h=Math.max(1,Math.round(height*factor));
+      const canvas=document.createElement("canvas");canvas.width=w;canvas.height=h;
+      const ctx=canvas.getContext("2d");if(!ctx)throw new Error("Your browser cannot optimize this image.");
+      ctx.imageSmoothingQuality="high";ctx.drawImage(bitmap||plainImage,0,0,w,h);
+      let chosen;
+      for(const quality of [0.85,0.75,0.65,0.52,0.4]){
+        const data=await new Promise(resolve=>canvas.toBlob(resolve,"image/webp",quality));
+        if(data&&data.size<=1100000){chosen=data;break;}
+      }
+      if(!chosen)throw new Error("This image is too detailed for the private archive limit. Please reduce its resolution.");
+      const type=chosen.type==="image/webp"?"image/webp":"image/jpeg";
+      return {contentType:type,dataBase64:await imageData(chosen),widthPx:w,heightPx:h};
+    }finally{
+      if(bitmap?.close)bitmap.close();
+      if(objectUrl)URL.revokeObjectURL(objectUrl);
+    }
+  }
+  $("source-evidence-form").addEventListener("submit",async e=>{
+    e.preventDefault();if(evidenceBusy)return;
+    const form=e.currentTarget,radarId=Number(form.elements.radarId.value),files=[...form.elements.files.files];
+    const status=$("source-evidence-status"),save=$("source-evidence-save"),error=$("source-evidence-error");
+    error.hidden=true;
+    if(files.length<1||files.length>2){error.textContent="Select one or two image files.";error.hidden=false;return;}
+    evidenceBusy=true;save.disabled=true;save.textContent="Optimizing…";
+    try{
+      const optimized=[];
+      for(let n=0;n<files.length;n++){status.textContent="Optimizing image "+(n+1)+" of "+files.length+"…";optimized.push(await compressEvidenceFile(files[n]));}
+      save.textContent="Saving securely…";status.textContent="Saving to the private R2 archive…";
+      const payload=formObj(form);delete payload.files;
+      const response=await evidenceApi("create",{...payload,radarId,files:optimized});
+      closeDialog($("source-evidence-dialog"));
+      await loadSourceEvidenceGallery(radarId);
+      if(response.duplicateProtected)alert("These images were already saved. No duplicate advertising entry was created.");
+    }catch(err){error.textContent=err.message;error.hidden=false;status.textContent="Nothing has been confirmed as saved. You can retry.";}
+    finally{evidenceBusy=false;save.disabled=false;save.textContent="Optimize & Save Evidence";}
+  });
+
   // Research workflow
   const MAX_IMAGES=2,MAX_BYTES=4*1024*1024;
   function fileData(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result||""));r.onerror=()=>rej(new Error(`Could not read ${file.name}.`));r.readAsDataURL(file)})}
@@ -1188,7 +1360,7 @@
 
   if(window.GCMOShell)window.GCMOShell.mount({currentPage:"prospects",statusText:`Prospecting cycle · Prospects v${FILE_VERSION}`});
   else console.error("GCM OS shared shell did not load.");
-  load();
+  load().then(()=>{try{const resume=Number(sessionStorage.getItem(EVIDENCE_PENDING_KEY));sessionStorage.removeItem(EVIDENCE_PENDING_KEY);if(resume>0&&state.radar.some(x=>x.id===resume))openRadar(resume);}catch{}});
 })();
 </script>
 </body>
