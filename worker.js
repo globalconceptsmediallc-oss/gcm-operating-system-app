@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.44.1
+   Version: 7.44.2
    Status: OS 2.0 Production Road-Test Candidate
    Source: Production worker.js 7.35.0
    Sprint: Universal Email Intake — Human Disposition
@@ -9,6 +9,11 @@
             durable Prospecting Radar + CRM operations required to connect
             scheduled prospects, discovery, proposals, follow-up, agreements,
             payments, and eventual Client handoff.
+
+   Changes in 7.44.2:
+   - Adds scheduled private R2 evidence retention after 30-day Radar archive.
+   - Every image is rechecked against active, held, promoted and shared links.
+   - All existing fetch, Email Routing and CRM operations remain unchanged.
 
    Changes in 7.44.1:
    - Adds authenticated, private Source Evidence operations for Radar.
@@ -201,6 +206,7 @@ import {
 
 import { handleCommunicationAnalysis } from "./routes/communicationAnalysis.js";
 import { handleSourceEvidenceArchive, SOURCE_EVIDENCE_ACTION } from "./routes/sourceEvidenceArchive.js";
+import { runSourceEvidenceRetention } from "./routes/sourceEvidenceRetention.js";
 import { handleProspectIntelligence } from "./routes/prospectIntelligence.js";
 import {
   handleProspectCrm,
@@ -333,7 +339,7 @@ import {
   GMAIL_INTAKE_SYNC_VERSION
 } from "./routes/gmailIntakeSync.js";
 
-const WORKER_FILE_VERSION = "7.44.1";
+const WORKER_FILE_VERSION = "7.44.2";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
@@ -704,6 +710,14 @@ export default {
 
   async email(message, env, ctx) {
     return await handleInboundEmail(message, env, ctx);
+  },
+
+  // Cloudflare Cron Trigger: expire only closed Radar advertising images
+  // past the approved 30-day period, with R2 / D1 client-sharing checks.
+  async scheduled(controller, env, ctx) {
+    ctx.waitUntil(runSourceEvidenceRetention(env).catch(error => {
+      console.error("Private advertising evidence retention failed", String(error?.message || error));
+    }));
   }
 };
 
