@@ -1,7 +1,7 @@
 /* =========================================================
    GCM Operating System
    File: tests/sourceEvidenceRetention.test.js
-   Version: 1.0.1
+   Version: 1.0.2
    Purpose: Mock-D1 private R2 30-day lifecycle cleanup regression.
    No production writes, no actual R2 access.
    ========================================================= */
@@ -37,7 +37,7 @@ function setup({assets,objects,links,radars,reopenOnRecheck=false,failDelete=fal
        if(!sql.trim().startsWith("SELECT o.id,"))throw Error("Unexpected SQL list");
        candidatesCalls++;
        if(reopenOnRecheck&&candidatesCalls===2)radars[0].archived_at=null;
-       const filtered=objects.filter(rowList).filter(o=>args.length<2||o.id===args[1]).slice(0,30);
+       const filtered=objects.filter(rowList).filter(o=>!sql.includes("AND o.id = ?")||o.id===args[1]).slice(0,30);
        return {results:filtered.map(o=>({id:o.id,bucket_name:o.bucket_name,object_key:o.object_key}))};
      },
      async run(){
