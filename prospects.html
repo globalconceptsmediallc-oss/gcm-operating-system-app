@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: prospects.html
-   Version: 3.9.1
+   Version: 3.9.2
    Status: Production Road-Test Candidate
    Source: Production prospects.html 2.0.0 + client-pre-research.html 1.1.0
    Backend: Prospect CRM 1.7.0
@@ -10,6 +10,11 @@
    One operating workspace for GCM prospecting from first evidence through
    Radar, outreach, appointment, CRM, services, signed scope, startup package,
    and the eventual Client handoff.
+
+   Change Notes — 3.9.2
+   - Fixes Safari Blob/createImageBitmap decoder rejection during evidence upload.
+   - Falls back to HTMLImageElement while preserving optimization and private storage.
+   - Offers a clear re-export path only when both decoders fail.
 
    Change Notes — 3.9.1
    - Adds a JPEG encoder fallback when a browser cannot generate WebP.
@@ -566,7 +571,7 @@
 <script>
 (() => {
   "use strict";
-  const FILE_VERSION="3.9.1";
+  const FILE_VERSION="3.9.2";
   const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const state={prospects:[],radar:[],archivedRadar:[],services:[],selectedProspect:null,selectedRadar:null,view:"pipeline",attentionFilter:"due",
     researchTarget:{type:"new",id:null},researchResult:null,researchContext:null,images:[]};
@@ -1257,10 +1262,19 @@
     if(!/^image\/(jpeg|png|webp)$/i.test(file.type)||file.size>12*1024*1024)throw new Error("Choose a JPEG, PNG or WebP image smaller than 12 MB.");
     let bitmap,objectUrl,plainImage;
     try{
-      if(typeof createImageBitmap==="function")bitmap=await createImageBitmap(file);
-      else{
+      // Safari may expose createImageBitmap but reject valid JPEG files or Blob inputs.
+      // Fall back to the ordinary image decoder instead of abandoning the upload.
+      if(typeof createImageBitmap==="function"){
+        try{bitmap=await createImageBitmap(file);}
+        catch(err){console.warn("Evidence image bitmap decoding failed; using image element fallback.",err?.message||err);}
+      }
+      if(!bitmap){
         objectUrl=URL.createObjectURL(file);plainImage=new Image();
-        await new Promise((resolve,reject)=>{plainImage.onload=resolve;plainImage.onerror=()=>reject(new Error("Cannot decode image."));plainImage.src=objectUrl;});
+        await new Promise((resolve,reject)=>{
+          plainImage.onload=()=>plainImage.naturalWidth&&plainImage.naturalHeight?resolve():reject(new Error("Image dimensions could not be read."));
+          plainImage.onerror=()=>reject(new Error("Safari could not read this image. Open it in Preview, choose File → Export as JPEG, and select the exported image."));
+          plainImage.src=objectUrl;
+        });
       }
       const width=bitmap?.width||plainImage.naturalWidth,height=bitmap?.height||plainImage.naturalHeight;
       if(!width||!height)throw new Error("The selected image dimensions are unavailable.");
