@@ -1,9 +1,15 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/prospectCrm.js
-   Version: 1.7.1
+   Version: 1.7.2
    Status: Production Road-Test Candidate
    Purpose: Durable Prospecting Radar + CRM operations for GCM.
+
+   Change Notes — 1.7.2:
+   - Schedules Radar-only evidence 30-day retention when archived.
+   - Reopening cancels pending deletion while preserving all campaign metadata.
+   - Promoted, client, already deleted or held evidence is never scheduled.
+   - Atomic with existing archive/restore history; no physical deletion yet.
 
    Change Notes — 1.7.1:
    - Atomic duplicate guard on business name and market, including archived records.
@@ -556,12 +562,23 @@ async function archiveRadar(body, db, requestId) {
         'Radar closed / archived', ?, 'closed', 0,
         'crm', 'radar_archive', NULL,
         'Historical record retained. Archive is not permission for bulk email.', CURRENT_TIMESTAMP)
-    `).bind(radarId, reason)
+    `).bind(radarId, reason),
+    db.prepare(`
+      UPDATE crm_source_evidence_items
+      SET retention_state = 'pending_deletion',
+          archived_at = CURRENT_TIMESTAMP,
+          deletion_eligible_at = datetime(CURRENT_TIMESTAMP, '+30 days'),
+          retention_hold_reason = NULL,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE radar_id = ? AND retention_state = 'active'
+        AND prospect_id IS NULL AND client_id IS NULL
+        AND deletion_completed_at IS NULL
+    `).bind(radarId)
   ]);
   return jsonResponse({
     ok: true, requestId, action: PROSPECT_CRM_ACTION,
     operation: "archive_radar", prospectCrmVersion: PROSPECT_CRM_VERSION,
-    radar: await readRadarDetail(db, radarId), writesPerformed: 2
+    radar: await readRadarDetail(db, radarId), writesPerformed: 3
   });
 }
 
@@ -594,12 +611,20 @@ async function restoreArchivedRadar(body, db, requestId) {
         'Radar restored from archive', 'Restored to Radar without adding a follow-up.',
         'restored', 0, 'crm', 'radar_archive', NULL,
         'Former outreach and research preserved; no marketing permission created.', CURRENT_TIMESTAMP)
+    `).bind(radarId),
+    db.prepare(`
+      UPDATE crm_source_evidence_items
+      SET retention_state = 'active', archived_at = NULL,
+          deletion_eligible_at = NULL,
+          retention_hold_reason = NULL, updated_at = CURRENT_TIMESTAMP
+      WHERE radar_id = ? AND retention_state = 'pending_deletion'
+        AND deletion_completed_at IS NULL
     `).bind(radarId)
   ]);
   return jsonResponse({
     ok: true, requestId, action: PROSPECT_CRM_ACTION,
     operation: "restore_archived_radar", prospectCrmVersion: PROSPECT_CRM_VERSION,
-    radar: await readRadarDetail(db, radarId), writesPerformed: 2
+    radar: await readRadarDetail(db, radarId), writesPerformed: 3
   });
 }
 
@@ -4194,4 +4219,4 @@ function parseJson(value) {
   }
 }
 
-/* END OF FILE — routes/prospectCrm.js v1.7.1 — full install */
+/* END OF FILE — routes/prospectCrm.js v1.7.2 — full install */
