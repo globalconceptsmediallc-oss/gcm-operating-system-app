@@ -1,10 +1,11 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gcm-worker-deploy.yml
-# Version: 1.5.82
+# Version: 1.5.83
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Worker with human-led Signal Finding capture.
 # Change Notes:
+# - v1.5.83 verifies unauthenticated Source Evidence requests cannot read or write private archives.
 # - v1.5.82 verifies Worker 7.44.1 with authenticated private Source Evidence route and R2 binding.
 # - v1.5.81 verifies Prospect Concept Tracking 1.1.5 for Barkingham Palace.
 # - v1.5.80 verifies Prospect Concept Tracking 1.1.4 for Indian River Furniture.
@@ -147,6 +148,17 @@ jobs:
         run: |
           node <<'NODE'
           const url = process.env.WORKER_URL;
+          const evidenceBlocked = await fetch(url, {
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({action:"source-evidence",operation:"list",radarId:1})
+          });
+          const evidenceDenied = await evidenceBlocked.json().catch(()=>({}));
+          if(evidenceBlocked.status !== 401 || evidenceDenied.ok !== false || Number(evidenceDenied.writesPerformed) !== 0) {
+            throw new Error("Private Source Evidence accepted an unsigned request.");
+          }
+          console.log("PASS private Source Evidence operator sign-in boundary: 401, 0 writes");
+
           const healthResponse = await fetch(url);
           if (!healthResponse.ok) throw new Error(`Worker health returned HTTP ${healthResponse.status}`);
           const health = await healthResponse.json();
