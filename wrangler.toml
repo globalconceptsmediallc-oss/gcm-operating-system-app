@@ -1,3 +1,7 @@
+# GCM OS | Worker bindings
+# File: wrangler.toml
+# Version: 1.0.1
+# Change: Add private R2 evidence bucket to existing Worker; preserve D1 and other bindings.
 name = "gcm-business-intelligence-worker"
 main = "worker.js"
 compatibility_date = "2026-07-02"
@@ -15,3 +19,7 @@ binding = "IMAGES"
 binding = "DB"
 database_name = "gcm-operating-system"
 database_id = "ce93408a-85ee-4103-88aa-cd4a12169305"
+
+[[r2_buckets]]
+binding = "EVIDENCE_BUCKET"
+bucket_name = "gcm-os-source-evidence-private"
