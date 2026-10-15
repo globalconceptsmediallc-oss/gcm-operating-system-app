@@ -1,14 +1,14 @@
 /* =========================================================
    GCM OS — Advertising & Source Evidence UI Regression
    File: tests/sourceEvidenceUi.test.js
-   Version: 1.0.2
-   No production writes; verifies Radar v3.9.2 syntax and security wiring.
+   Version: 1.0.3
+   No production writes; verifies Radar v3.9.3 syntax and security wiring.
    ========================================================= */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { Script } from "node:vm";
 const html=readFileSync("prospects.html","utf8");
-assert.match(html,/File: prospects\.html[\s\S]*?Version: 3\.9\.2/);
+assert.match(html,/File: prospects\.html[\s\S]*?Version: 3\.9\.3/);
 assert.match(html,/id="radar-evidence-add"/);
 assert.match(html,/id="radar-evidence-list"/);
 assert.match(html,/id="source-evidence-dialog"/);
@@ -25,7 +25,7 @@ assert.match(html,/if\(evidenceBusy\)return/);
 assert.match(html,/renderRadarDetail\(r\)/);
 assert.match(html,/loadSourceEvidenceGallery\(r\.id\)/);
 const scripts=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].map(x=>x[1]).filter(Boolean);
-const main=scripts.find(s=>s.includes('const FILE_VERSION="3.9.2"'));
+const main=scripts.find(s=>s.includes('const FILE_VERSION="3.9.3"'));
 assert.ok(main,"Prospects main JavaScript is present");
 new Script(main,{filename:"prospects.html:inline"});
 
@@ -84,4 +84,4 @@ assert.equal(normal.trace.revoked.length,0);
 await assert.rejects(exerciseOptimizer({bitmapFails:true,imageFails:true}),
   /Safari could not read this image/);
 console.log("PASS Safari Blob decode error recovery: image-element fallback, optimized output and safe resource cleanup");
-console.log("PASS Prospects 3.9.2 private evidence dialog/gallery, login session, compression, single-save guard and JavaScript syntax");
+console.log("PASS Prospects 3.9.3 private evidence dialog/gallery, login session, compression, single-save guard and JavaScript syntax");
