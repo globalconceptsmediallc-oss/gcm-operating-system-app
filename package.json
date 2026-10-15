@@ -1,12 +1,13 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.2.3",
+  "version": "6.2.4",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.2.3",
+    "fileVersion": "6.2.4",
     "status": "Production Candidate",
-    "purpose": "Verify Radar Closed / Archived with history retention, no active follow-up and deliberate restore.",
+    "purpose": "Regression-test secure private Radar advertising evidence without touching existing client data.",
     "changeNotes": [
+      "Adds private source-evidence upload/read authentication and idempotency regression to the full Worker deployment gate.",
       "Adds a dedicated Radar archive separate from Nurture / Hold.",
       "Keeps existing contact, outreach and intelligence evidence without automatic bulk-marketing enrollment.",
       "Regression-locks archive and restore actions using an in-memory D1 stand-in; no production record writes.",
@@ -18,7 +19,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:finance-operations && npm run test:measurement-observations && npm run test:growth-review-interpretation && npm run test:work-due-date && npm run test:work-core-web-vitals && npm run test:media-deadline-attention && npm run test:universal-email-intake && npm run test:email-intake-queue && npm run test:gmail-intake-sync && npm run test:email-intake-finding && npm run test:google-review-quick-action && npm run test:proof-findings && npm run test:email-intake-disposition && npm run test:gmail-decisions && npm run test:gmail-monitoring-parity && npm run test:gmail-backlink-investigation && npm run test:gmail-intake && npm run test:gmail-backlog && npm run test:gmail-source-display && npm run test:gmail-handle-now && npm run test:gmail-thread-routing && npm run test:gmail-requested-work-content && npm run test:prospect-crm && npm run test:radar-archive && npm run test:prospect-test-site && npm run test:radar-test-site && npm run test:prospect-call-points && npm run test:prospect-intelligence-source && npm run test:prospect-concept-tracking && npm run test:prospect-engagement-today && npm run test:forward-look-interaction && npm run test:mediaforge-home && npm run test:mediaforge-variants && npm run test:mediaforge-naming && npm run test:business-workspace-health-v2 && npm run test:client-health-v2 && npm run test:asset-versions && npm run test:media-run-status && npm run test:growth-review-assembly && npm run test:media-client-scope && npm run test:media-calendar-presentation",
+    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:finance-operations && npm run test:measurement-observations && npm run test:growth-review-interpretation && npm run test:work-due-date && npm run test:work-core-web-vitals && npm run test:media-deadline-attention && npm run test:universal-email-intake && npm run test:email-intake-queue && npm run test:gmail-intake-sync && npm run test:email-intake-finding && npm run test:google-review-quick-action && npm run test:proof-findings && npm run test:email-intake-disposition && npm run test:gmail-decisions && npm run test:gmail-monitoring-parity && npm run test:gmail-backlink-investigation && npm run test:gmail-intake && npm run test:gmail-backlog && npm run test:gmail-source-display && npm run test:gmail-handle-now && npm run test:gmail-thread-routing && npm run test:gmail-requested-work-content && npm run test:prospect-crm && npm run test:radar-archive && npm run test:prospect-test-site && npm run test:radar-test-site && npm run test:prospect-call-points && npm run test:prospect-intelligence-source && npm run test:prospect-concept-tracking && npm run test:prospect-engagement-today && npm run test:forward-look-interaction && npm run test:mediaforge-home && npm run test:mediaforge-variants && npm run test:mediaforge-naming && npm run test:business-workspace-health-v2 && npm run test:client-health-v2 && npm run test:asset-versions && npm run test:media-run-status && npm run test:growth-review-assembly && npm run test:media-client-scope && npm run test:media-calendar-presentation && npm run test:source-evidence",
     "test:website-intelligence": "node tests/websiteIntelligence.test.js",
     "test:code-intelligence": "node tests/codeIntelligence.test.js",
     "test:operating-sessions": "node tests/operatingSessionTasks.test.js && node tests/osAuth.test.js && node tests/operatingSessionIntake.test.js",
@@ -63,7 +64,8 @@
     "test:growth-review-assembly": "node tests/growthReviewAssembly.test.js",
     "test:media-client-scope": "node tests/mediaCreativeClientScope.test.js",
     "test:media-calendar-presentation": "node tests/mediaCalendarPresentation.test.js",
-    "test:radar-archive": "node tests/radarArchive.test.js"
+    "test:radar-archive": "node tests/radarArchive.test.js",
+    "test:source-evidence": "node --check routes/sourceEvidenceArchive.js && node tests/sourceEvidenceArchive.test.js"
   },
   "dependencies": {
     "postal-mime": "^3.0.0"
