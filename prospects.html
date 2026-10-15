@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: prospects.html
-   Version: 3.9.2
+   Version: 3.9.3
    Status: Production Road-Test Candidate
    Source: Production prospects.html 2.0.0 + client-pre-research.html 1.1.0
    Backend: Prospect CRM 1.7.0
@@ -10,6 +10,11 @@
    One operating workspace for GCM prospecting from first evidence through
    Radar, outreach, appointment, CRM, services, signed scope, startup package,
    and the eventual Client handoff.
+
+   Change Notes — 3.9.3
+   - Locks Radar Save while processing and handles existing-record duplicate responses.
+   - Shows the original Radar, archived or promoted relationship instead of a new row.
+   - Preserves every other prospect workflow, source evidence and outreach history.
 
    Change Notes — 3.9.2
    - Fixes Safari Blob/createImageBitmap decoder rejection during evidence upload.
@@ -571,7 +576,7 @@
 <script>
 (() => {
   "use strict";
-  const FILE_VERSION="3.9.2";
+  const FILE_VERSION="3.9.3";
   const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const state={prospects:[],radar:[],archivedRadar:[],services:[],selectedProspect:null,selectedRadar:null,view:"pipeline",attentionFilter:"due",
     researchTarget:{type:"new",id:null},researchResult:null,researchContext:null,images:[]};
@@ -1154,7 +1159,37 @@
     }catch(err){$("hold-error").textContent=err.message;$("hold-error").hidden=false}
   });
 
-  $("radar-form").addEventListener("submit",async e=>{e.preventDefault();const v=formObj(e.currentTarget);try{await api("create_radar",v);closeDialog($("radar-dialog"));e.currentTarget.reset();await load();showView("radar")}catch(err){$("radar-error").textContent=err.message;$("radar-error").hidden=false}});
+  // Guard both in-flight clicks and database retries; never add a second Radar record.
+  let radarCreatePending=false;
+  $("radar-form").addEventListener("submit",async e=>{
+    e.preventDefault();
+    if(radarCreatePending)return;
+    const form=e.currentTarget,save=form.querySelector('button[type="submit"]'),v=formObj(form);
+    radarCreatePending=true;save.disabled=true;save.textContent="Saving…";
+    $("radar-error").hidden=true;
+    try{
+      const result=await api("create_radar",v);
+      closeDialog($("radar-dialog"));form.reset();
+      await load();
+      if(result.duplicateProtected){
+        const r=result.radar;
+        if(r.archivedAt){
+          showView("archived");
+          alert("This business is already in Closed / Archived (Radar #"+r.id+"). Restore that original record rather than creating a duplicate.");
+        }else if(r.promotedProspectId){
+          showView("pipeline");
+          alert("This business was already promoted to Prospect. No duplicate Radar record was created.");
+        }else{
+          await openRadar(r.id);
+          alert("This business is already in Radar. Opened the existing record (no new record or outreach was created).");
+        }
+      }else showView("radar");
+    }catch(err){
+      $("radar-error").textContent=err.message;$("radar-error").hidden=false;
+    }finally{
+      radarCreatePending=false;save.disabled=false;save.textContent="Save Radar Record";
+    }
+  });
   $("radar-edit-form").addEventListener("submit",async e=>{e.preventDefault();const v=formObj(e.currentTarget);try{const d=await api("update_radar",{radarId:Number(v.radarId),businessName:v.businessName,website:v.website,vertical:v.vertical,market:v.market,sourceType:v.sourceType,sourceDescription:v.sourceDescription,contactName:v.contactName,contactEmail:v.contactEmail,contactPhone:v.contactPhone,testSiteUrl:v.testSiteUrl?normalizeUrl(v.testSiteUrl):null,notes:v.notes});closeDialog($("radar-edit-dialog"));await load();state.selectedRadar=d.radar;renderRadarDetail(d.radar)}catch(err){$("radar-edit-error").textContent=err.message;$("radar-edit-error").hidden=false}});
   $("prospect-form").addEventListener("submit",async e=>{e.preventDefault();const v=formObj(e.currentTarget),appointmentAt=localDT(v.appointmentDate,v.appointmentTime);const last=v.lastContactDate?localDT(v.lastContactDate,v.lastContactTime||"12:00"):null;try{const d=await api("create_prospect",{businessName:v.businessName,stage:v.stage,appointmentAt,website:v.website||null,industry:v.industry||null,market:v.market||null,sourceType:v.sourceType||null,opportunitySummary:v.opportunitySummary||null,lastMeaningfulContactAt:last,estimatedValueLow:v.estimatedValueLow||null,estimatedValueHigh:v.estimatedValueHigh||null,recurringValue:v.recurringValue||null,recurringPeriod:v.recurringPeriod||null,notes:v.notes||null,primaryContact:v.contactName?{name:v.contactName,email:v.contactEmail||null,role:"decision_maker"}:null});closeDialog($("prospect-dialog"));e.currentTarget.reset();await load();openProspect(d.prospect.id)}catch(err){$("prospect-error").textContent=err.message;$("prospect-error").hidden=false}});
   $("outreach-form").addEventListener("submit",async e=>{e.preventDefault();const v=formObj(e.currentTarget);try{const d=await api("add_radar_activity",{radarId:Number(v.radarId),activityType:v.activityType,occurredAt:localDT(v.date,v.time),summary:v.summary,outcome:v.outcome||null,meaningfulContact:true,nextActionTitle:v.nextActionTitle,nextActionDueDate:v.nextActionDueDate});closeDialog($("outreach-dialog"));await load();renderRadarDetail(d.radar)}catch(err){$("outreach-error").textContent=err.message;$("outreach-error").hidden=false}});
