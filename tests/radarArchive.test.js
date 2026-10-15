@@ -1,10 +1,10 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/radarArchive.test.js
-   Version: 1.0.4
+   Version: 1.0.5
    Status: Production Regression
    Purpose: Verify non-destructive Radar closure, archive retrieval and restore.
-   Change: Align archive regression UI version lock with deployed prospects.html 3.9.2.
+   Change: Align archive regression UI version lock with deployed prospects.html 3.9.3.
    No production database writes are performed.
    ========================================================= */
 
@@ -23,7 +23,7 @@ assert.match(ui,/api\("archive_radar"/);
 assert.match(ui,/api\("restore_archived_radar"/);
 assert.match(ui,/id="archived-search"/);
 assert.match(ui,/function renderArchived\(/);
-assert.match(ui,/Version: 3\.9\.2/);
+assert.match(ui,/Version: 3\.9\.3/);
 assert.match(ui,/This page requires Prospect CRM 1\.7\.0/);
 
 const row={
