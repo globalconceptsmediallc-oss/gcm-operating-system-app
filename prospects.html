@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: prospects.html
-   Version: 3.9.0
+   Version: 3.9.1
    Status: Production Road-Test Candidate
    Source: Production prospects.html 2.0.0 + client-pre-research.html 1.1.0
    Backend: Prospect CRM 1.7.0
@@ -10,6 +10,10 @@
    One operating workspace for GCM prospecting from first evidence through
    Radar, outreach, appointment, CRM, services, signed scope, startup package,
    and the eventual Client handoff.
+
+   Change Notes — 3.9.1
+   - Adds a JPEG encoder fallback when a browser cannot generate WebP.
+   - Verifies actual compressed MIME type before private upload.
 
    Change Notes — 3.9.0
    - Adds verified-operator Advertising & Source Evidence upload and gallery to Radar.
@@ -562,7 +566,7 @@
 <script>
 (() => {
   "use strict";
-  const FILE_VERSION="3.9.0";
+  const FILE_VERSION="3.9.1";
   const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const state={prospects:[],radar:[],archivedRadar:[],services:[],selectedProspect:null,selectedRadar:null,view:"pipeline",attentionFilter:"due",
     researchTarget:{type:"new",id:null},researchResult:null,researchContext:null,images:[]};
@@ -1266,13 +1270,16 @@
       const ctx=canvas.getContext("2d");if(!ctx)throw new Error("Your browser cannot optimize this image.");
       ctx.imageSmoothingQuality="high";ctx.drawImage(bitmap||plainImage,0,0,w,h);
       let chosen;
-      for(const quality of [0.85,0.75,0.65,0.52,0.4]){
-        const data=await new Promise(resolve=>canvas.toBlob(resolve,"image/webp",quality));
-        if(data&&data.size<=1100000){chosen=data;break;}
+      // WebP is preferred; JPEG is the safe fallback for browsers without WebP encoding.
+      for(const mime of ["image/webp","image/jpeg"]){
+        for(const quality of [0.85,0.75,0.65,0.52,0.4]){
+          const data=await new Promise(resolve=>canvas.toBlob(resolve,mime,quality));
+          if(data&&data.type===mime&&data.size<=1100000){chosen=data;break;}
+        }
+        if(chosen)break;
       }
       if(!chosen)throw new Error("This image is too detailed for the private archive limit. Please reduce its resolution.");
-      const type=chosen.type==="image/webp"?"image/webp":"image/jpeg";
-      return {contentType:type,dataBase64:await imageData(chosen),widthPx:w,heightPx:h};
+      return {contentType:chosen.type,dataBase64:await imageData(chosen),widthPx:w,heightPx:h};
     }finally{
       if(bitmap?.close)bitmap.close();
       if(objectUrl)URL.revokeObjectURL(objectUrl);
