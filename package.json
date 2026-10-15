@@ -1,12 +1,13 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.2.6",
+  "version": "6.2.7",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.2.6",
+    "fileVersion": "6.2.7",
     "status": "Production Candidate",
     "purpose": "Regression-test secure private Radar advertising evidence without touching existing client data.",
     "changeNotes": [
+      "Fix Safari image decoding in Advertising Evidence: fallback after createImageBitmap Blob rejection and verify no write until both images compress.",
       "Rerun full production tests after Safari-compatible image compression and Prospects 3.9.1 regression alignment.",
       "Regression-locks Radar advertising evidence UI script syntax and secure upload controls.",
       "Adds private source-evidence upload/read authentication and idempotency regression to the full Worker deployment gate.",
