@@ -1,8 +1,8 @@
 # GCM OS | Worker bindings
 # File: wrangler.toml
-# Version: 1.0.2
-# Change: Persist approved private R2 binding and retry deployment after test-lock alignment.
-# R2 objects remain private; upload, read and lifecycle routes are not enabled yet.
+# Version: 1.0.3
+# Change: Schedule protected daily 30-day Radar evidence cleanup at 12:00 UTC.
+# R2 remains private. No public image access; protected R2 deletion occurs only after archive eligibility.
 name = "gcm-business-intelligence-worker"
 main = "worker.js"
 compatibility_date = "2026-07-02"
@@ -24,3 +24,6 @@ database_id = "ce93408a-85ee-4103-88aa-cd4a12169305"
 [[r2_buckets]]
 binding = "EVIDENCE_BUCKET"
 bucket_name = "gcm-os-source-evidence-private"
+
+[triggers]
+crons = ["0 12 * * *"]
