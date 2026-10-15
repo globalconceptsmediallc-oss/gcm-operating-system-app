@@ -1,12 +1,13 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.2.9",
+  "version": "6.2.10",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.2.9",
+    "fileVersion": "6.2.10",
     "status": "Production Candidate",
     "purpose": "Regression-test secure private Radar advertising evidence without touching existing client data.",
     "changeNotes": [
+      "Reverify 30-day evidence retention transition regression after distinguishing archive and restoration SQL in mock.",
       "Test 30-day Radar advertisement-evidence retention metadata, held/owned asset exclusions, and reopening cancellation before enabling physical cleanup.",
       "Adds atomic Radar business/market duplicate guard and browser Save lock, with no schema or CRM contract change.",
       "Fix Safari image decoding in Advertising Evidence: fallback after createImageBitmap Blob rejection and verify no write until both images compress.",
