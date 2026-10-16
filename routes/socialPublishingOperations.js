@@ -8,8 +8,9 @@
  ========================================================= */
 import {authorizeOsRequest} from "../shared/osAuth.js";
 import {jsonResponse} from "../shared/http.js";
+import {importVerifiedSesHistory} from "./socialPublishingHistoryImport.js";
 export const SOCIAL_PUBLISHING_OPERATIONS_ACTION="social-publishing-operations";
-export const SOCIAL_PUBLISHING_OPERATIONS_VERSION="1.0.0";
+export const SOCIAL_PUBLISHING_OPERATIONS_VERSION="1.1.0";
 const CHANNELS=new Set(["Facebook","Google Business Profile","Instagram","YouTube","Other"]);
 const clean=(v,max=200)=>String(v??"").trim().slice(0,max);
 const id=v=>{const n=Number(v);return Number.isSafeInteger(n)&&n>0?n:null;};
@@ -127,6 +128,7 @@ export async function handleSocialPublishingOperations(body,env,requestId,reques
     if(op==="list")return await list(db);
     if(op==="save_publisher")return await savePublisher(db,body,identity);
     if(op==="add_additional")return await addAdditional(db,body,identity);
+    if(op==="import_historical")return await importVerifiedSesHistory(db,body,identity);
     return bad("Unsupported social publishing operation.");
   }catch(error){
     console.error("social-publishing-operations",requestId,String(error?.message||error));

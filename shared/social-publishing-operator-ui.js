@@ -1,7 +1,7 @@
 /* =========================================================
  Global Concepts Media Operating System
  File: shared/social-publishing-operator-ui.js
- Version: 1.0.0
+ Version: 1.1.0
  Status: Authenticated Operator Controls
  Purpose: Publisher attribution and independently verified extra placements
           without rewriting Schedule Authority or Forward Look.
@@ -87,15 +87,40 @@ function renderExtras(){
   $("count-extra").textContent="—";$("extras-visible").textContent="Operator sign-in required";
   $("extras").innerHTML='<div class="state">Sign in securely to view additional verified placements.</div>';return;
  }
- const list=extrasForFilters();
+ const list=extrasForFilters(),grouped=new Map();
+ list.forEach(p=>{if(!grouped.has(p.postId))grouped.set(p.postId,{...p,placements:[]});
+  grouped.get(p.postId).placements.push(p);});
  $("count-extra").textContent=String(list.length);
- $("extras-visible").textContent=list.length+" additional verified placement"+(list.length===1?"":"s");
- $("extras").innerHTML=list.length?list.map(x=>'<div class="extra-row"><strong>'+safe(x.title)+'</strong>'+
- '<p>'+safe(x.clientName)+' · '+safe(x.campaign)+' · '+safe(x.platform)+' · Published '+safe(x.actualDate)+'</p>'+
- '<p>Published by '+safe(x.publishedBy)+' · <a href="'+safe(x.proofReference)+'" target="_blank" rel="noopener noreferrer">Open proof ↗</a></p>'+
- (x.relatedForwardKey?'<p>Linked to the original scheduled campaign</p>':'')+
- '</div>').join(""):'<div class="state">No additional placements match these filters.</div>';
+ $("extras-visible").textContent=grouped.size+" content record(s) · "+list.length+" verified platform placement(s)";
+ $("extras").innerHTML=grouped.size?[...grouped.values()].map(x=>
+  '<div class="extra-row"><strong>'+safe(x.title)+'</strong><p>'+safe(x.clientName)+' · '+safe(x.campaign)+'</p>'+
+  x.placements.map(p=>'<p>'+safe(p.platform)+' · Published '+safe(p.actualDate)+
+   ' · Published by '+safe(p.publishedBy)+' · <a href="'+safe(p.proofReference)+'" target="_blank" rel="noopener noreferrer">Open proof ↗</a></p>').join("")+
+  (x.relatedForwardKey?'<p>Linked to the original scheduled campaign</p>':'')+
+  '</div>').join(""):'<div class="state">No additional placements match these filters.</div>';
 }
+async function importSesHistory(){
+ if(!requireSignedIn()||working)return;
+ const snapshot=root.GCMSESHistory2026, matchingIds=[...new Set(posts()
+  .filter(p=>p.clientName==="Southeast Safes"&&Number.isSafeInteger(p.clientId)&&p.clientId>0)
+  .map(p=>p.clientId))];
+ if(matchingIds.length!==1||!Array.isArray(snapshot?.posts)||snapshot.posts.length!==25){
+  notify("Source snapshot or Southeast Safes client identity could not be verified. Nothing imported.");return;
+ }
+ const total=snapshot.posts.reduce((n,p)=>n+(p.placements||[]).length,0);
+ if(total!==43){notify("Historical placement count mismatch. Nothing imported.");return;}
+ const approval="Import 25 reviewed Southeast Safes content records (18 cross-posted Reels + 7 Facebook posts) and 43 verified placements to D1? The existing scheduled BOGO posts are excluded. This does not change scheduled publishing outcomes.";
+ if(!root.confirm(approval))return;
+ working=true;const button=$("import-ses-history");button.disabled=true;
+ try{
+  const result=await api("import_historical",{clientId:matchingIds[0],posts:snapshot.posts});
+  await refreshOperator();
+  notify(result.duplicateProtected?"Historical backfill was already present — no duplicate writes.":
+    "Verified history saved: "+result.postsAdded+" content records, "+result.placementsAdded+" platform placements.");
+ }catch(e){notify("Backfill not confirmed: "+e.message);}
+ finally{working=false;button.disabled=false;}
+}
+
 function paint(){decorate();renderExtras();}
 function requireSignedIn(){
  if(operatorData)return true;
@@ -155,6 +180,7 @@ function init(){
  consume();
  $("operator-sign-in").addEventListener("click",()=>{if(!operatorData)beginSignIn();});
  $("add-placement").addEventListener("click",()=>openExtra());
+ $("import-ses-history").addEventListener("click",importSesHistory);
  document.querySelectorAll('[data-close]').forEach(btn=>btn.addEventListener("click",()=>$(btn.dataset.close).close()));
  $("publisher-form").addEventListener("submit",savePublisher);
  $("extra-form").addEventListener("submit",saveExtra);
@@ -163,6 +189,6 @@ function init(){
  refreshOperator();
 }
 init();
-root.GCMSocialPublishingOperator={version:"1.0.0",refreshOperator};
+root.GCMSocialPublishingOperator={version:"1.1.0",refreshOperator};
 })(typeof window!=="undefined"?window:globalThis);
 /* END OF FILE — shared/social-publishing-operator-ui.js v1.0.0 */
