@@ -2,6 +2,7 @@
  * Independent from Schedule Authority and Forward Look; no status rewrites.
  * All records are authenticated, reviewed in UI, transactionally inserted.
  */
+import {jsonResponse} from "../shared/http.js";
 const clean=(v,max=200)=>String(v??"").trim().slice(0,max);
 const date=s=>/^2026-(?:09|10)-\d{2}$/.test(String(s||"")) && !Number.isNaN(Date.parse(s+"T12:00:00Z")) &&
  new Date(s+"T12:00:00Z").toISOString().slice(0,10)===s;
@@ -16,8 +17,7 @@ const fingerprint=async s=>{
  const data=new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s)));
  return [...data].map(x=>x.toString(16).padStart(2,"0")).join("");
 };
-const response=(object,status=200)=>new Response(JSON.stringify({action:"social-publishing-operations",socialPublishingOperationsVersion:"1.1.0",...object}),{
- status,headers:{"content-type":"application/json; charset=utf-8"}});
+const response=(object,status=200)=>jsonResponse({action:"social-publishing-operations",socialPublishingOperationsVersion:"1.1.0",...object},status);
 const fail=(error,status=400)=>response({ok:false,error,writesPerformed:0},status);
 export async function importVerifiedSesHistory(db,body,identity){
  const clientId=Number(body?.clientId),sourcePosts=body?.posts;
