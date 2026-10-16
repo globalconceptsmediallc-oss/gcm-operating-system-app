@@ -1,7 +1,7 @@
 /* =========================================================
  Global Concepts Media Operating System
  File: tests/mediaCalendarPresentation.test.js
- Version: 1.2.0
+ Version: 1.2.1
  Purpose: Verify radio Schedule Authority placeholders remain distinct from
  named commercials and that traffic-derived status is visible alongside age.
  Read-only page regression; no database, browser or email writes.
@@ -9,7 +9,7 @@
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 const html=readFileSync(new URL("../media-calendar.html",import.meta.url),"utf8");
-assert.match(html,/Version: 1\.8\.3/);
+assert.match(html,/Version: 1\.8\.4/);
 const block=(from,to)=>{
  const a=html.indexOf("  function "+from+"("),b=html.indexOf("  function "+to+"(",a+1);
  assert.ok(a>0&&b>a,"Calendar must contain "+from+" before "+to);
@@ -96,7 +96,7 @@ assert.deepEqual(bundle.eventItems(calendarCandidates).map(x=>x.source),
  ["schedule-event","gun-show-source","promotion-run"],
  "Radio spots named Halloween must not appear again as Events");
 assert.equal(calendarCandidates[0].type,"Radio","Filtering may not rewrite media records");
-console.log("PASS Media Calendar 1.8.3: notes inside station radio lanes, no radio/event duplication, evidence semantics preserved");
+console.log("PASS Media Calendar 1.8.4: notes inside station radio lanes, no radio/event duplication, evidence semantics preserved");
 
 const socialEvent={key:"ses:gun-show:orlando:2026-10-10:social_post:2026-10-05:SOCIAL #1 — SHOW WEEK ANNOUNCEMENT · Orlando",startDate:"2026-10-05",scheduleItemId:99};
 const exactKey="schedule|"+socialEvent.key+"|2026-10-05";
