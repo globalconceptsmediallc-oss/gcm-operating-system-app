@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/social-publishing-library.js
-   Version: 1.0.0
+   Version: 1.0.1
    Status: Read-only Foundation
    Purpose: Project exact Schedule Authority events + D1 Forward Look
             dispositions into client-scoped social publishing records.
@@ -12,10 +12,19 @@
    ========================================================= */
 (function(root){
   "use strict";
-  const VERSION="1.0.0";
+  const VERSION="1.0.1";
   function val(x){return String(x??"").trim();}
   function date(x){var d=val(x).slice(0,10);return /^\d{4}-\d{2}-\d{2}$/.test(d)?d:"";}
   function safeUrl(value){var s=val(value);return /^https:\/\/[^\s<>"]+$/i.test(s)?s:"";}
+  function monthsForPosts(posts){
+    return [...new Set((Array.isArray(posts)?posts:[]).map(function(p){
+      var d=date(p?.plannedDate);return d?d.slice(0,7):"";
+    }).filter(function(month){return /^\d{4}-(?:0[1-9]|1[0-2])$/.test(month);}))].sort().reverse();
+  }
+  function monthLabel(month){
+    if(!/^\d{4}-(?:0[1-9]|1[0-2])$/.test(val(month)))return "";
+    return new Date(month+"-01T12:00:00").toLocaleDateString("en-US",{month:"long",year:"numeric"});
+  }
   function evidence(row){
     try{var p=JSON.parse(row?.reason||"{}");return p?.schema==="gcm-social-execution-v1"?p:null;}
     catch(_err){return null;}
@@ -83,5 +92,5 @@
     });
     return counts;
   }
-  root.GCMSocialPublishingLibrary={version:VERSION,normalizedScheduled,totals,safeUrl};
+  root.GCMSocialPublishingLibrary={version:VERSION,normalizedScheduled,totals,safeUrl,monthsForPosts,monthLabel};
 })(typeof window!=="undefined"?window:globalThis);
