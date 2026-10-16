@@ -1,11 +1,18 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media-calendar.html
-   Version: 1.8.1
+   Version: 1.8.2
    Status: Production Candidate
    Sprint: Media Operations — Prototype Match
    Purpose: Read-only client campaign command board matching the approved
             visual prototype while using existing D1 Media records.
+
+   Changes in 1.8.2:
+   - Reads exact Forward Look D1 social publishing dispositions alongside Schedule Authority.
+   - Displays published/missed/pending/unverified post outcomes by platform; preserves original planned dates.
+   - Does not infer publication from a schedule or a generic media record.
+   - Changes scheduled campaign event labels from "Recorded" to "Scheduled · outcome unverified".
+   - Displays visible warning if the publishing-status source is unavailable, without guessing completion.
 
    Changes in 1.8.1:
    - Separates D1 Schedule-only radio flight notes from named commercials.
@@ -164,7 +171,10 @@
     .production-shell.schedule-note .bar-label{color:#263a50;text-shadow:none}
     .support-marker{position:absolute;top:4px;bottom:4px;width:2px;background:rgba(255,255,255,.95);z-index:5;pointer-events:auto}
     .support-marker::after{content:"";position:absolute;width:7px;height:7px;border-radius:999px;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;border:2px solid #6e7d90;box-shadow:0 1px 2px rgba(8,23,42,.18)}
-    .support-marker.recorded::after{background:#2aa876;border-color:#fff}
+    .support-marker.recorded::after,.support-marker.published::after{background:#2aa876;border-color:#fff}
+    .support-marker.missed::after{background:#d64545;border-color:#fff}
+    .support-marker.pending::after{background:#e1a833;border-color:#fff}
+    .support-marker.unverified::after,.support-marker.media-record::after{background:#8b94a4;border-color:#fff}
     .support-marker.planned::after{background:#fff;border-color:#6e7d90}
     .today-line{position:absolute;top:0;bottom:0;width:2px;background:#e04d4d;z-index:8;pointer-events:none}
     .today-line::before{content:"TODAY";position:absolute;top:2px;left:4px;padding:2px 4px;border-radius:4px;background:#e04d4d;color:#fff;font-size:.47rem;font-weight:950;letter-spacing:.05em}
@@ -214,7 +224,7 @@
           <a class="button" href="media.html">Operator Workspace</a>
           <a class="button" href="media-production.html">Production Records</a>
           <a class="button" href="schedule.html?v=1.0.6">Schedule Control</a>
-          <span class="version">media-calendar.html · v1.8.1</span>
+          <span class="version">media-calendar.html · v1.8.2</span>
         </div>
       </div>
 
@@ -250,6 +260,7 @@
           </div>
           <div id="calendar-state" class="loading">Loading campaign timeline…</div>
           <div id="schedule-authority-state" class="error" hidden>Schedule data unavailable — D1 Schedule Authority did not respond. Static seed files are not used as production fallback.</div>
+          <div id="publishing-status-state" class="error" hidden>Social publishing dispositions unavailable — planned dates are shown, but past publication status cannot be confirmed.</div>
           <div id="calendar-wrap" class="timeline-scroll" hidden><div id="calendar-grid" class="timeline"></div></div>
           <div class="footnote">Radio bar text shows <strong>operating status</strong> as of the selected month; bar colors show <strong>creative age</strong>. “Running” indicates a linked sent traffic package and an active scheduled flight, <strong>not verified broadcasts</strong>. Schedule-only notes are not commercials.</div>
         </section>
@@ -294,7 +305,7 @@
   "use strict";
   var ENDPOINT="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   var MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
-  var state={viewDate:new Date(new Date().getFullYear(),new Date().getMonth(),1),records:[],promotions:[],promotionChannels:[],gunShows:[],scheduleEvents:[],scheduleAuthorityLoaded:false,operationalAlertMarkets:["Melbourne","Orlando"],workflow:{clients:[],creatives:[],assignments:[],trafficPackages:[],confirmations:[]},mediaRunStatus:null,clients:[],initialClient:""};
+  var state={viewDate:new Date(new Date().getFullYear(),new Date().getMonth(),1),records:[],promotions:[],promotionChannels:[],gunShows:[],scheduleEvents:[],scheduleAuthorityLoaded:false,socialDispositions:new Map(),socialDispositionsLoaded:false,operationalAlertMarkets:["Melbourne","Orlando"],workflow:{clients:[],creatives:[],assignments:[],trafficPackages:[],confirmations:[]},mediaRunStatus:null,clients:[],initialClient:""};
 
   function $(id){return document.getElementById(id);}
   function lower(v){return String(v||"").trim().toLowerCase();}
@@ -365,6 +376,39 @@
     if(c.indexOf("instagram")>=0)return{type:"Digital",group:"Other Digital",outlet:"Instagram"};
     if(c.indexOf("youtube")>=0)return{type:"YouTube",group:"YouTube",outlet:"YouTube"};
     return{type:"Digital",group:"Other Digital",outlet:channel||"Social"};
+  }
+  function socialPublishingStatus(ev,channel){
+    var date=String(ev&&ev.startDate||"").slice(0,10);
+    var today=new Date(),todayKey=today.getFullYear()+"-"+String(today.getMonth()+1).padStart(2,"0")+"-"+String(today.getDate()).padStart(2,"0");
+    var fallback=date&&date<todayKey?"unverified":"planned";
+    var key="schedule|"+String(ev&&ev.key||"")+"|"+date;
+    var row=state.socialDispositions.get(key.toLowerCase());
+    if(!row||!["social_published","social_missed","social_mixed","social_partial"].includes(String(row.disposition||"")))return{status:fallback};
+    var proof;
+    try{proof=JSON.parse(row.reason||"");}catch(_err){return{status:"unverified"};}
+    if(proof.schema!=="gcm-social-execution-v1"||proof.plannedDate!==date||
+      Number(proof.scheduleItemId)!==Number(ev.scheduleItemId)||!Array.isArray(proof.platforms))return{status:"unverified"};
+    var match=proof.platforms.find(function(p){return p.platform===channel;});
+    if(!match||!["published","missed","pending"].includes(match.status))return{status:"unverified"};
+    if(match.status==="published"&&(!match.publishedDate||!match.proofReference))return{status:"unverified"};
+    return{status:match.status,publishedDate:match.publishedDate||"",proofReference:match.proofReference||""};
+  }
+  function socialSupportStatus(r){
+    if(r.source!=="promotion-post")return"media-record";
+    return["planned","published","missed","pending","unverified"].includes(r.executionStatus)?r.executionStatus:"unverified";
+  }
+  function socialSupportCounts(rows){
+    var result={published:0,missed:0,pending:0,planned:0,unverified:0,"media-record":0};
+    rows.forEach(function(row){result[socialSupportStatus(row)]++;});
+    return result;
+  }
+  function socialSupportDescription(rows){
+    var count=socialSupportCounts(rows),parts=[];
+    [["published","published (proof referenced)"],["missed","missed"],["pending","pending"],["planned","planned"],
+    ["unverified","unverified"],["media-record","other media records"]].forEach(function(pair){
+      if(count[pair[0]])parts.push(count[pair[0]]+" "+pair[1]);
+    });
+    return parts.join(" · ")||"No record";
   }
   function hasRecordedSocial(channel,date,promoName){
     var spec=plannedChannel(channel),words=normalizedPromoWords(promoName);
@@ -472,14 +516,17 @@
       if(ev.kind==="social_post"){
         var channels=ev.metadata&&Array.isArray(ev.metadata.channels)&&ev.metadata.channels.length?ev.metadata.channels:["Facebook","Google Business Profile","Instagram"];
         channels.forEach(function(channel){
-          if(hasRecordedSocial(channel,ev.startDate,ev.title||""))return;
-          var spec=plannedChannel(channel);
+          // Keep the source schedule visible even if a separate media record matches loosely.
+          // The exact Forward Look decision is authoritative for this scheduled post outcome.
+          var spec=plannedChannel(channel),outcome=socialPublishingStatus(ev,channel);
           out.push(Object.assign({},base,{
             source:"promotion-post",
             id:"schedule-social-"+index+"-"+lower(spec.outlet).replace(/[^a-z0-9]+/g,"-"),
             type:spec.type,
             outlet:spec.outlet,
-            creative:ev.title||"Scheduled Social Post"
+            creative:ev.title||"Scheduled Social Post",
+            status:outcome.status,executionStatus:outcome.status,
+            publishedDate:outcome.publishedDate||"",proofReference:outcome.proofReference||""
           }));
         });
         return;
@@ -604,13 +651,14 @@
         var pd=toDate(point.date);if(!pd||pd<ds||pd>de)return;
         var offset=(pd.getTime()-ds.getTime())/86400000,totalSpan=Math.max(1,(de.getTime()-ds.getTime())/86400000);
         var marker=document.createElement("span");
-        marker.className="support-marker "+(point.status==="recorded"?"recorded":"planned");
+        marker.className="support-marker "+point.status;
         marker.style.left=Math.max(0,Math.min(100,(offset/totalSpan)*100))+"%";
-        marker.title=[shortDate(pd),point.status==="recorded"?"Recorded":"Planned",point.title,point.outlet].filter(Boolean).join(" · ");
+        marker.title=[shortDate(pd),point.status==="media-record"?"Media record (publication unverified)":point.status==="published"?"Published (proof referenced)":point.status,point.title,point.outlet].filter(Boolean).join(" · ");
         shell.appendChild(marker);
       });
     }
-    var endFresh=planned?{label:(scheduleNote?"Schedule only":item.source==="planned-support"?"Support":"Planned")}:freshnessAt(item,de),
+    var isScheduleCampaign=item.source==="schedule-event"||item.source==="promotion-run"||item.source==="gun-show-source"||item.source==="promotion-takedown"||item.source==="schedule-deadline";
+    var endFresh=planned?{label:(scheduleNote?"Schedule only":item.source==="planned-support"?"Support":item.executionStatus||"Planned")}:isScheduleCampaign?{label:"Scheduled · outcome unverified"}:freshnessAt(item,de),
       radioStatus=isRecordedRadio(item)?radioOperatingText(item):"",
       tag=scheduleNote?"Schedule only":radioStatus?radioStatus+" · "+endFresh.label:endFresh.label,
       label=document.createElement("div");label.className="bar-label";
@@ -618,8 +666,8 @@
     shell.title=[item.creative,item.market,item.outlet,dateText(item.startDate)+" – "+dateText(item.endDate),
       scheduleNote?"D1 Schedule Authority note ONLY; no identified commercial, no confirmed airplay":isRecordedRadio(item)?"Operating as of "+dayForView()+": "+(item.statusLabel||radioOperatingText(item)):"",
       isRecordedRadio(item)?radioEvidenceText(item):"",
-      item.source==="planned-support"?"Markers = planned/recorded post dates":"Base color = production identity",
-      scheduleNote?"Neutral bar = schedule placeholder; not a creative":item.source==="planned-support"?"Green markers = recorded · white markers = planned":"Bar segments = creative age"].filter(Boolean).join("\n");
+      item.source==="planned-support"?"Markers = scheduled dates and recorded per-platform outcomes":"Base color = production identity",
+      scheduleNote?"Neutral bar = schedule placeholder; not a creative":item.source==="planned-support"?"Green = proof-referenced published · red = missed · gold = pending · gray = unverified/media record · white = planned":isScheduleCampaign?"Scheduled event is not proof of execution":"Bar segments = creative age"].filter(Boolean).join("\n");
     function open(){if(item.openUrl)window.location.href=item.openUrl;}shell.addEventListener("click",open);shell.addEventListener("keydown",function(ev){if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();open();}});
     track.appendChild(shell);
   }
@@ -637,22 +685,21 @@
   function onlineLaneItems(rows,channel){
     var all=channelItems(rows,channel);
     if(!all.length)return[];
-    var first=all[0],last=all[all.length-1],planned=all.filter(function(x){return x.source==="promotion-post";}).length,recorded=all.length-planned;
+    var first=all[0],last=all[all.length-1],summary=socialSupportDescription(all);
     return [{
       source:"planned-support",
       id:"planned-support-"+lower(channel).replace(/[^a-z0-9]+/g,"-"),
       clientId:first.clientId,clientName:first.clientName,clientCode:first.clientCode,
       type:first.type,market:"Social",outlet:first.outlet||channel,
       campaign:"Coordinated social support",
-      creative:(recorded?recorded+" recorded":"")+(recorded&&planned?" · ":"")+(planned?planned+" planned":""),
+      creative:summary,
       startDate:first.startDate,endDate:last.endDate||last.startDate,
       creativeStartDate:first.startDate,status:"planned",trafficId:"",
       openUrl:"calendar.html?month="+String(first.startDate||"").slice(0,7),
-      plannedCount:planned,recordedCount:recorded,
       supportPoints:all.map(function(x){return{
         date:x.startDate,
         title:x.creative||x.campaign||"Social support",
-        status:x.source==="promotion-post"?"planned":"recorded",
+        status:socialSupportStatus(x),
         outlet:x.outlet||channel
       };})
     }];
@@ -668,31 +715,30 @@
 
   function uniqueProductions(rows){var map=new Map();rows.filter(isRecordedRadio).forEach(function(r){var k=productionKey(r),x=map.get(k);if(!x){x={item:r,markets:new Set()};map.set(k,x);}x.markets.add(r.market||r.outlet||"Market");});return Array.from(map.values());}
   function renderCreativeAge(rows,hueMap){var asof=asOfDate(),items=uniqueProductions(rows).map(function(x){x.fresh=freshnessAt(x.item,asof);return x;}).sort(function(a,b){return(b.fresh.days||0)-(a.fresh.days||0);});$("creative-age-list").innerHTML=items.length?items.map(function(x){var hue=hueMap[productionKey(x.item)],meta=(x.fresh.days?x.fresh.days+" days as of "+shortDate(asof):x.fresh.label)+" · "+Array.from(x.markets).join(", ");return'<div class="creative-card"><span class="production-swatch" style="background:'+esc(baseColor(hue))+'"></span><div><strong>'+esc(x.item.creative)+'</strong><small>'+esc(meta)+'</small></div><span class="age-badge '+badgeClass(x.fresh.level)+'">'+esc(x.fresh.label)+'</span></div>';}).join(""):'<div class="mini-empty">No radio productions recorded in this month.</div>';}
-  function setSupport(id,recorded,planned){
-    var el=$(id);
-    if(recorded){el.textContent=recorded+" recorded"+(planned?" · "+planned+" planned":"");el.className="status ok";return;}
-    if(planned){el.textContent=planned+" planned";el.className="status ok";return;}
-    el.textContent="No record";el.className="status missing";
+  function setSupport(id,items){
+    var el=$(id),count=socialSupportCounts(items);
+    el.textContent=socialSupportDescription(items);
+    el.className="status "+(count.missed||count.unverified?"missing":items.length?"ok":"missing");
   }
   function renderSupport(rows){
-    function counts(channel){var items=channelItems(rows,channel);return{recorded:items.filter(function(x){return x.source!=="promotion-post";}).length,planned:items.filter(function(x){return x.source==="promotion-post";}).length};}
-    var gb=counts("Google Business"),fb=counts("Facebook"),yt=counts("YouTube");
-    setSupport("support-gbp",gb.recorded,gb.planned);setSupport("support-facebook",fb.recorded,fb.planned);setSupport("support-youtube",yt.recorded,yt.planned);
+    setSupport("support-gbp",channelItems(rows,"Google Business"));
+    setSupport("support-facebook",channelItems(rows,"Facebook"));
+    setSupport("support-youtube",channelItems(rows,"YouTube"));
   }
   function renderCampaignStatus(rows){
     var radio=rows.filter(isRecordedRadio),notes=radioScheduleNotes(rows),markets=new Set(radio.map(function(r){return r.market||r.outlet||"Market";})),creatives=new Set(radio.map(productionKey));
-    var online=rows.filter(function(r){return["Google Business","Facebook","YouTube","Other Digital"].includes(typeGroup(r.type));}),planned=online.filter(function(r){return r.source==="promotion-post";}).length,recorded=online.length-planned;
+    var online=rows.filter(function(r){return["Google Business","Facebook","YouTube","Other Digital"].includes(typeGroup(r.type));}),supportText=socialSupportDescription(online);
     var events=eventItems(rows),authority=state.scheduleAuthorityLoaded?"Connected":"Unavailable";
     $("campaign-status-list").innerHTML=[
       ["Radio",markets.size+" market"+(markets.size===1?"":"s")+" · "+creatives.size+" creative"+(creatives.size===1?"":"s")],
       ...(notes.length?[["Radio schedule-only notes",notes.length+" unlinked schedule item"+(notes.length===1?"":"s")]]:[]),
-      ["Online Media",(planned||recorded)?((planned?planned+" planned":"")+(planned&&recorded?" · ":"")+(recorded?recorded+" recorded":"")):"No coordinated support"],
+      ["Online Media",supportText],
       ["Promotions / Events",events.length+" visible"],
       ["Schedule Authority",authority]
     ].map(function(x,i){return'<div class="status-line"><span>'+esc(x[0])+'</span>'+(x[0]==="Schedule Authority"?'<strong class="status-pill">'+esc(x[1])+'</strong>':'<strong>'+esc(x[1])+'</strong>')+'</div>';}).join("");
   }
   function withinMonth(d){return d&&d>=monthStart()&&d<=monthEnd();}
-  function renderKeyDates(rows){var items=[],seen=new Set();rows.forEach(function(r){var key=productionKey(r),s=toDate(r.startDate),e=toDate(r.endDate);if(r.source==="schedule-radio"){if(withinMonth(s))items.push({date:s,label:"Schedule only",text:r.creative,meta:(r.market||"Market")+" / "+(r.outlet||"Station")+" · no linked commercial"});return;}if(r.source==="promotion-post"){if(withinMonth(s))items.push({date:s,label:"Social Due",text:r.creative,meta:r.outlet||"Social"});return;}if(r.source==="promotion-takedown"){if(withinMonth(s))items.push({date:s,label:"Takedown Due",text:r.campaign||r.creative,meta:"Liberty promotion"});return;}if(withinMonth(s))items.push({date:s,label:"Starts",text:r.creative,meta:r.market||r.outlet||r.type});if(withinMonth(e))items.push({date:e,label:"Ends",text:r.creative,meta:r.market||r.outlet||r.type});if(typeGroup(r.type)==="Radio"&&!seen.has(key)){seen.add(key);var refresh=thresholdDate(r,46),stale=thresholdDate(r,61);if(withinMonth(refresh))items.push({date:refresh,label:"Refresh Due",text:r.creative,meta:"Creative age day 46"});if(withinMonth(stale))items.push({date:stale,label:"Stale",text:r.creative,meta:"Creative age day 61"});}});items.sort(function(a,b){return a.date-b.date;});$("key-dates").innerHTML=items.length?items.slice(0,12).map(function(x){return'<div class="date-row"><span class="date-dot"></span><div><strong>'+esc(shortDate(x.date)+" · "+x.label)+'</strong><span>'+esc(x.text+" · "+x.meta)+'</span></div></div>';}).join(""):'<div class="mini-empty">No starts, endings, or age thresholds in this month.</div>';}
+  function renderKeyDates(rows){var items=[],seen=new Set();rows.forEach(function(r){var key=productionKey(r),s=toDate(r.startDate),e=toDate(r.endDate);if(r.source==="schedule-radio"){if(withinMonth(s))items.push({date:s,label:"Schedule only",text:r.creative,meta:(r.market||"Market")+" / "+(r.outlet||"Station")+" · no linked commercial"});return;}if(r.source==="promotion-post"){if(withinMonth(s))items.push({date:s,label:"Social · "+socialSupportStatus(r),text:r.creative,meta:r.outlet||"Social"});return;}if(r.source==="promotion-takedown"){if(withinMonth(s))items.push({date:s,label:"Takedown Due",text:r.campaign||r.creative,meta:"Liberty promotion"});return;}if(withinMonth(s))items.push({date:s,label:"Starts",text:r.creative,meta:r.market||r.outlet||r.type});if(withinMonth(e))items.push({date:e,label:"Ends",text:r.creative,meta:r.market||r.outlet||r.type});if(typeGroup(r.type)==="Radio"&&!seen.has(key)){seen.add(key);var refresh=thresholdDate(r,46),stale=thresholdDate(r,61);if(withinMonth(refresh))items.push({date:refresh,label:"Refresh Due",text:r.creative,meta:"Creative age day 46"});if(withinMonth(stale))items.push({date:stale,label:"Stale",text:r.creative,meta:"Creative age day 61"});}});items.sort(function(a,b){return a.date-b.date;});$("key-dates").innerHTML=items.length?items.slice(0,12).map(function(x){return'<div class="date-row"><span class="date-dot"></span><div><strong>'+esc(shortDate(x.date)+" · "+x.label)+'</strong><span>'+esc(x.text+" · "+x.meta)+'</span></div></div>';}).join(""):'<div class="mini-empty">No starts, endings, or age thresholds in this month.</div>';}
 
   function render(){
     syncControls();
@@ -711,8 +757,8 @@
 
     grid.appendChild(sectionTitle("Online Media"));
     ["Google Business","Facebook","YouTube","Other Digital"].forEach(function(channel){
-      var raw=channelItems(rows,channel),items=onlineLaneItems(rows,channel),planned=raw.filter(function(x){return x.source==="promotion-post";}).length,recorded=raw.length-planned;
-      var sub=raw.length?([recorded?recorded+" recorded":"",planned?planned+" planned":""].filter(Boolean).join(" · ")+" · markers show dates"):"Coordinated support";
+      var raw=channelItems(rows,channel),items=onlineLaneItems(rows,channel);
+      var sub=raw.length?socialSupportDescription(raw)+" · markers show dates":"Coordinated support";
       grid.appendChild(createLane(channel,sub,items,hueMap,"Online","No coordinated placement recorded"));
     });
 
@@ -732,13 +778,17 @@
     $("schedule-authority-state").hidden=true;
     state.scheduleAuthorityLoaded=false;
     state.scheduleEvents=[];
+    state.socialDispositions=new Map();
+    state.socialDispositionsLoaded=false;
+    $("publishing-status-state").hidden=true;
     try{
       state.mediaRunStatus=await import("./shared/media-run-status.js?v=1.0.1");
       var body={action:"get-media-operations"},selected=$("client").value;if(selected)body.clientId=Number(selected);
       var responses=await Promise.allSettled([
         fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}).then(async function(response){return{response:response,payload:await response.json().catch(function(){return{};})};}),
         fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"get-media-operations",operation:"get_creative_workflow"})}).then(async function(response){return{response:response,payload:await response.json().catch(function(){return{};})};}),
-        fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"schedule-operations",operation:"list"})}).then(async function(response){return{response:response,payload:await response.json().catch(function(){return{};})};})
+        fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"schedule-operations",operation:"list"})}).then(async function(response){return{response:response,payload:await response.json().catch(function(){return{};})};}),
+        fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"forward-look-operations",operation:"list"})}).then(async function(response){return{response:response,payload:await response.json().catch(function(){return{};})};})
       ]);
 
       if(responses[0].status!=="fulfilled"||!responses[0].value.response.ok||responses[0].value.payload.ok!==true){
@@ -760,6 +810,16 @@
         console.warn("Media Calendar D1 Schedule Authority unavailable. Static schedule seeds are intentionally not used.");
       }
 
+      if(responses[3].status==="fulfilled"&&responses[3].value.response.ok&&responses[3].value.payload.ok===true&&Array.isArray(responses[3].value.payload.dispositions)){
+        state.socialDispositions=new Map(responses[3].value.payload.dispositions.map(function(d){
+          return[String(d.forwardKey||"").toLowerCase(),d];
+        }));
+        state.socialDispositionsLoaded=true;
+      }else{
+        $("publishing-status-state").hidden=false;
+        console.warn("Media Calendar could not reconcile social publishing dispositions. Do not infer actual publication from the plan.");
+      }
+
       var prior=$("client").value;
       $("client").innerHTML='<option value="">All clients</option>'+state.clients.map(function(c){return'<option value="'+esc(c.clientId)+'">'+esc(c.clientName)+'</option>';}).join("");
       var desired=prior||chooseDefaultClient();if(desired&&$("client").querySelector('option[value="'+CSS.escape(String(desired))+'"]'))$("client").value=String(desired);
@@ -769,7 +829,7 @@
 
   state.initialClient=readQuery();
   populateControls();
-  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"media",statusText:"D1 Media connected · Media Calendar v1.8.1"});
+  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"media",statusText:"D1 Media connected · Media Calendar v1.8.2"});
   else console.error("Media Calendar 1.8.1: shared/gcm-shell.js did not load.");
 
   $("prev-month").addEventListener("click",function(){shiftMonth(-1);});
