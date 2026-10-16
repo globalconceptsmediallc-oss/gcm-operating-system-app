@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/socialPublishingLibrary.test.js
-   Version: 1.0.2
+   Version: 1.0.3
    Status: Read-only Regression Test
    Purpose: Guarantee scoped, accurate D1 publishing projections and
             schema-only library foundation without migration/backfill.
@@ -100,9 +100,9 @@ const media=fs.readFileSync(new URL("../media.html",import.meta.url),"utf8");
 const script=html.match(/<script>([\s\S]*?)<\/script>/);
 assert.ok(script);
 new vm.Script(script[1],{filename:"social-publishing.html inline script"});
-assert.match(html,/Version: 1\.0\.2/);
+assert.match(html,/Version: 1\.1\.0/);
 assert.match(html,/Social Publishing Library/);
-assert.match(html,/read-only/i);
+assert.match(html,/Schedule Authority and Forward Look remain the source of truth/);
 assert.match(html,/data-gcm-shell-sidebar/);
 assert.match(html,/social-publishing-library\.js\?v=1\.0\.1/);
 assert.match(media,/href="social-publishing\.html"/);
@@ -154,5 +154,5 @@ assert.match(migration,/UNIQUE \(post_id,platform\)/);
 assert.match(migration,/UNIQUE \(post_id,storage_provider,storage_reference\)/);
 assert.doesNotMatch(migration,/\b(?:INSERT|UPDATE|DELETE|DROP|ALTER)\s+(?:INTO|FROM|TABLE|social_|schedule_|forward_look_)/i,
  "Phase 1 migration creates empty tables without touching production source rows");
-console.log("PASS Social Publishing Library v1.0.2 client proof isolation, real dates, mixed states, unmatched history, and empty/error UI");
-console.log("PASS Phase 1 creates only new D1 tables, links Media, and exposes no publishing/edit/upload writes");
+console.log("PASS Social Publishing Library v1.1.0 client proof isolation, real dates, mixed states, unmatched history, and empty/error UI");
+console.log("PASS Phase 1 projection remains read-only; Phase 2 supplemental changes are separately authorized");

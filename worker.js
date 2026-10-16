@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: worker.js
-   Version: 7.44.2
+   Version: 7.44.3
    Status: OS 2.0 Production Road-Test Candidate
    Source: Production worker.js 7.35.0
    Sprint: Universal Email Intake — Human Disposition
@@ -9,6 +9,10 @@
             durable Prospecting Radar + CRM operations required to connect
             scheduled prospects, discovery, proposals, follow-up, agreements,
             payments, and eventual Client handoff.
+
+   Changes in 7.44.3:
+   - Adds authenticated Social Publishing Library publisher attribution and extra placements.
+   - Keeps Schedule Authority and Forward Look publication evidence untouched.
 
    Changes in 7.44.2:
    - Adds scheduled private R2 evidence retention after 30-day Radar archive.
@@ -206,6 +210,7 @@ import {
 
 import { handleCommunicationAnalysis } from "./routes/communicationAnalysis.js";
 import { handleSourceEvidenceArchive, SOURCE_EVIDENCE_ACTION } from "./routes/sourceEvidenceArchive.js";
+import { handleSocialPublishingOperations, SOCIAL_PUBLISHING_OPERATIONS_ACTION, SOCIAL_PUBLISHING_OPERATIONS_VERSION } from "./routes/socialPublishingOperations.js";
 import { runSourceEvidenceRetention } from "./routes/sourceEvidenceRetention.js";
 import { handleProspectIntelligence } from "./routes/prospectIntelligence.js";
 import {
@@ -339,13 +344,14 @@ import {
   GMAIL_INTAKE_SYNC_VERSION
 } from "./routes/gmailIntakeSync.js";
 
-const WORKER_FILE_VERSION = "7.44.2";
+const WORKER_FILE_VERSION = "7.44.3";
 
 const SUPPORTED_ACTIONS = [
   ACTIONS.ANALYZE_COMMUNICATION,
   ACTIONS.ANALYZE_PROSPECT_INTELLIGENCE,
   PROSPECT_CRM_ACTION,
   SOURCE_EVIDENCE_ACTION,
+  SOCIAL_PUBLISHING_OPERATIONS_ACTION,
   PROSPECT_CONCEPT_VIEW_ACTION,
   ACTIONS.GET_CLIENT_WORKSPACE,
   ACTIONS.GET_CLIENT_FINDINGS,
@@ -419,6 +425,7 @@ export default {
         clientFindingsVersion: CLIENT_FINDINGS_VERSION,
         scheduleOperationsVersion: SCHEDULE_OPERATIONS_VERSION,
         forwardLookOperationsVersion: FORWARD_LOOK_OPERATIONS_VERSION,
+        socialPublishingOperationsVersion: SOCIAL_PUBLISHING_OPERATIONS_VERSION,
         measurementObservationsVersion: MEASUREMENT_OBSERVATIONS_VERSION,
         commercePerformanceVersion: COMMERCE_PERFORMANCE_VERSION,
         growthReviewIssueSelectionVersion: GROWTH_REVIEW_ISSUE_SELECTION_VERSION,
@@ -436,6 +443,7 @@ export default {
           "calendar-operations",
           "schedule-operations",
           "forward-look-operations",
+          "social-publishing-operations",
           "measurement-observations",
           "commerce-performance",
           "growth-review-issue-selection",
@@ -605,6 +613,9 @@ export default {
 
         case SOURCE_EVIDENCE_ACTION:
           return await handleSourceEvidenceArchive(body, env, requestId, request);
+
+        case SOCIAL_PUBLISHING_OPERATIONS_ACTION:
+          return await handleSocialPublishingOperations(body, env, requestId, request);
 
         case PROSPECT_CONCEPT_VIEW_ACTION:
           return await handleProspectConceptView(body, env, requestId);
