@@ -1,10 +1,10 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/forwardLookInteraction.test.js
-   Version: 1.3.0
+   Version: 1.4.0
    Status: Regression Test
-   Purpose: Lock the first interactive Forward Look workflow for
-            passed radio / traffic commitments.
+   Purpose: Lock durable Forward Look corrections, preserved revision history,
+            and passed radio / traffic commitments.
    Change notes — 1.1.2:
    - Replaces the stale exact Today 3.6.8 version lock with the 3.6.x release-family contract.
    - Preserves every Forward Look durability and close-passed assertion.
@@ -40,6 +40,12 @@ assert.match(forwardLookRoute,/social_partial/);
 assert.match(today,/social-post-resolution-dialog/);
 assert.match(today,/openSocialPostResolution/);
 assert.match(today,/saveSocialPostResolution/);
+assert.match(today,/Review \/ Correct Published Outcomes/);
+assert.match(today,/id="forward-look-review-panel" hidden/);
+assert.match(today,/function renderClosedSocialOutcomes/);
+assert.match(today,/data-forward-manage-correction/);
+assert.match(today,/Correcting existing record/);
+assert.match(forwardLookRoute,/correctionHistory/);
 assert.match(forwardLookMigration,/CREATE TABLE IF NOT EXISTS forward_look_dispositions/);
 assert.match(forwardLookMigration,/forward_key TEXT NOT NULL UNIQUE/);
 
@@ -67,7 +73,11 @@ const db={
   const statement={
    params:[],
    bind(...args){this.params=args;return this;},
-   async first(){return sql.includes("FROM schedule_items")?source:null;},
+   async first(){
+    if (sql.includes("FROM schedule_items")) return source;
+    if (sql.includes("FROM forward_look_dispositions")) return row;
+    return null;
+   },
    async all(){
     if(sql.includes("FROM forward_look_dispositions"))return {results:row?[row]:[]};
     return {results:[]};
@@ -113,6 +123,27 @@ result=await invoke("record_social_post",{...request(platforms(["missed","missed
 assert.equal(result.ok,false,"Tampered event must be rejected");
 assert.equal(writes,before,"Invalid event must not write");
 console.log("PASS social posting records distinguish published/missed/partial, preserve proof gates, and hide only resolved rows");
+
+const originalSchedule = structuredClone(source);
+const amended = platforms(["published", "published", "published"]).map((item,index)=>({
+ ...item,
+ publishedDate:index===0?"2026-09-28":"2026-09-29",
+ proofReference:"https://example.org/final/"+index
+}));
+result=await invoke("record_social_post",{...request(amended),note:"Corrected prior all-missed entry with publication evidence"});
+assert.equal(result.disposition,"social_published");
+assert.equal((await invoke("list")).closedKeys.includes(key),true,"Amended outcome remains closed");
+const correctedPayload=JSON.parse(row.reason);
+assert.equal(correctedPayload.platforms.filter(p=>p.status==="published").length,3);
+assert.equal(correctedPayload.platforms[1].publishedDate,"2026-09-29","Actual date must not be replaced by planned date");
+assert.equal(correctedPayload.correctionHistory.length,1,"Original missed entry must survive evidence correction");
+assert.equal(correctedPayload.correctionHistory[0].previousDisposition,"social_missed");
+assert.equal(correctedPayload.correctionHistory[0].previous.platforms.every(p=>p.status==="missed"),true);
+assert.deepEqual(source,originalSchedule,"Authoritative scheduled source must remain unchanged");
+const stableHistory=JSON.stringify(correctedPayload.correctionHistory);
+result=await invoke("record_social_post",{...request(amended),note:"Corrected prior all-missed entry with publication evidence"});
+assert.equal(JSON.stringify(JSON.parse(row.reason).correctionHistory),stableHistory,"Repeating unchanged correction must not add duplicate revisions");
+console.log("PASS closed All Missed can be corrected in place with proof, actual dates, and earlier decision snapshots");
 
 
 // Historical confirmed gun shows leave Forward Look without losing Schedule Authority.
