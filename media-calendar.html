@@ -689,7 +689,7 @@
       launchProof?"Launch-day scheduled social placement verified. Retail checkout, stock, and fulfillment not independently verified.":"",
       launchProof?launchProof.channels.map(function(p){return p.platform+" published "+p.publishedDate+": "+p.proofReference;}).join("\n"):"",
       item.source==="planned-support"?"Markers = scheduled dates and recorded per-platform outcomes":"Base color = production identity",
-      scheduleNote?"Neutral bar = schedule placeholder; not a creative":item.source==="planned-support"?"Green = proof-referenced published · red = missed · gold = pending · gray = unverified/media record · white = planned":launchProof?"Promotion dates are the scheduled sale window; launch label refers only to published marketing":"":isScheduleCampaign?"Scheduled event is not proof of execution":"Bar segments = creative age"].filter(Boolean).join("\n");
+      scheduleNote?"Neutral bar = schedule placeholder; not a creative":item.source==="planned-support"?"Green = proof-referenced published · red = missed · gold = pending · gray = unverified/media record · white = planned":launchProof?"Promotion dates are the scheduled sale window; launch label refers only to published marketing":isScheduleCampaign?"Scheduled event is not proof of execution":"Bar segments = creative age"].filter(Boolean).join("\n");
     function open(){if(item.openUrl)window.location.href=item.openUrl;}shell.addEventListener("click",open);shell.addEventListener("keydown",function(ev){if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();open();}});
     track.appendChild(shell);
   }
