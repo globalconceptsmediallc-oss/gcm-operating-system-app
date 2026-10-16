@@ -1,12 +1,17 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.6.12
+   Version: 3.6.13
    Status: Production Candidate
    Source: Production today.html 3.6.8
    Sprint: Today — Operator Copy Cleanup
    Purpose: Preserve the locked Today workflow and production logic while removing
             non-operational explanatory copy from the operator interface.
+
+   Production changes in 3.6.13:
+   - Clears only a promotion-start Forward Look milestone when the exact launch-day social post
+     has fully verified scheduled-platform publication evidence in D1.
+   - Keeps the active promotion and its scheduled takedown; no D1 writes or status edits.
 
    Production changes in 3.6.12:
    - Adds Review / Correct Published Outcomes to Forward Look for closed social posts.
@@ -2191,6 +2196,7 @@
 </main>
 </div>
 <script src="shared/gcm-shell.js?v=2.0.64"></script>
+<script src="shared/promotion-launch-evidence.js?v=1.0.0"></script>
 <script>
     (() => {
       "use strict";
@@ -2261,6 +2267,7 @@
       let missionControlUnavailable = false;
       let navAttentionState = null;
       let forwardLookSourceItems = [];
+      let forwardLookScheduleEvents = [];
       let forwardLookLoadFailures = 0;
       let forwardLookLoaded = false;
       let forwardLookScheduleAuthorityUnavailable = false;
@@ -3318,6 +3325,19 @@
         });
       }
 
+      function promotionStartLaunchPublished(item) {
+        if (!item || item.kind !== "Promotion Start" || !window.GCMPromotionLaunchEvidence) return false;
+        // Match the exact source event, not a campaign-name approximation.
+        const promotion = forwardLookScheduleEvents.find(function(ev) {
+          return ev && ev.kind === "promotion" &&
+            ("schedule|" + String(ev.key || "") + "|" + String(ev.startDate || "")).toLowerCase() ===
+              String(item.key || "").toLowerCase();
+        });
+        return Boolean(promotion && window.GCMPromotionLaunchEvidence.findVerifiedPromotionLaunch(
+          promotion, forwardLookScheduleEvents, forwardLookDispositionByKey
+        ));
+      }
+
       function renderForwardLook() {
         if (!forwardLookList || !forwardLookSummary || !forwardLookLoaded) return;
 
@@ -3328,7 +3348,8 @@
         const deduped = Array.from(new Map(items.map(function(item) {
           return [String(item.key || "").toLowerCase(), item];
         })).values()).filter(function(item) {
-          return !forwardLookClosedKeys.has(String(item.key || "").toLowerCase());
+          return !forwardLookClosedKeys.has(String(item.key || "").toLowerCase()) &&
+            !promotionStartLaunchPublished(item);
         }).sort(function(a, b) {
           if (a.daysUntil !== b.daysUntil) return a.daysUntil - b.daysUntil;
           return a.kind.localeCompare(b.kind) || a.title.localeCompare(b.title);
@@ -3596,6 +3617,7 @@
         forwardLookLoaded = false;
         forwardLookScheduleAuthorityUnavailable = false;
         forwardLookDispositionsUnavailable = false;
+        forwardLookScheduleEvents = [];
         const items = [];
 
         const results = await Promise.allSettled([
@@ -3740,6 +3762,7 @@
           const scheduleEvents = Array.isArray(scheduleAuthorityResult.value && scheduleAuthorityResult.value.scheduleEvents)
             ? scheduleAuthorityResult.value.scheduleEvents
             : [];
+          forwardLookScheduleEvents = scheduleEvents;
           scheduleEvents.forEach(function(event) {
             addScheduleForwardItem(items, event, scheduleEvents, gunShowMediaRecords);
           });

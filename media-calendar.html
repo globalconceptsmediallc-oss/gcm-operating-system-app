@@ -1,11 +1,17 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media-calendar.html
-   Version: 1.8.3
+   Version: 1.8.4
    Status: Production Candidate
    Sprint: Media Operations — Prototype Match
    Purpose: Read-only client campaign command board matching the approved
             visual prototype while using existing D1 Media records.
+
+   Changes in 1.8.4:
+   - Labels promotion sale runs as launch-posted only when their exact D1 social launch
+     has complete scheduled-platform publication evidence.
+   - Keeps the original sale/takedown dates intact; this is not storefront verification.
+   - Links platform proof references in the sale bar's hover details.
 
    Changes in 1.8.3:
    - Places schedule-only radio flight notes inside their matching station's Radio lane.
@@ -306,6 +312,7 @@
 </div>
 
 <script src="shared/gcm-shell.js?v=2.0.34"></script>
+<script src="shared/promotion-launch-evidence.js?v=1.0.0"></script>
 <script>
 (function(){
   "use strict";
@@ -538,7 +545,13 @@
         return;
       }
       if(ev.kind==="promotion"){
-        out.push(Object.assign({},base,{source:"promotion-run",id:"schedule-promo-"+index,type:"Promotion",outlet:"Liberty Safe",creative:"SALE RUN — "+(ev.title||"Liberty Promotion")}));
+        var launch=window.GCMPromotionLaunchEvidence&&state.socialDispositionsLoaded&&
+          window.GCMPromotionLaunchEvidence.findVerifiedPromotionLaunch(ev,state.scheduleEvents,state.socialDispositions);
+        out.push(Object.assign({},base,{
+          source:"promotion-run",id:"schedule-promo-"+index,type:"Promotion",
+          outlet:"Liberty Safe",creative:"SALE RUN — "+(ev.title||"Liberty Promotion"),
+          launchEvidence:launch||null
+        }));
         return;
       }
       if(ev.kind==="takedown_due"){
@@ -664,7 +677,8 @@
       });
     }
     var isScheduleCampaign=item.source==="schedule-event"||item.source==="promotion-run"||item.source==="gun-show-source"||item.source==="promotion-takedown"||item.source==="schedule-deadline";
-    var endFresh=planned?{label:(scheduleNote?"Schedule only":item.source==="planned-support"?"Support":item.executionStatus||"Planned")}:isScheduleCampaign?{label:"Scheduled · outcome unverified"}:freshnessAt(item,de),
+    var launchProof=item.source==="promotion-run"&&item.launchEvidence?item.launchEvidence:null;
+    var endFresh=planned?{label:(scheduleNote?"Schedule only":item.source==="planned-support"?"Support":item.executionStatus||"Planned")}:launchProof?{label:"Launch posted · "+launchProof.channels.length+" channels"}:isScheduleCampaign?{label:"Scheduled · outcome unverified"}:freshnessAt(item,de),
       radioStatus=isRecordedRadio(item)?radioOperatingText(item):"",
       tag=scheduleNote?"Schedule only":radioStatus?radioStatus+" · "+endFresh.label:endFresh.label,
       label=document.createElement("div");label.className="bar-label";
@@ -672,8 +686,10 @@
     shell.title=[item.creative,item.market,item.outlet,dateText(item.startDate)+" – "+dateText(item.endDate),
       scheduleNote?"D1 scheduled station flight with no matched insertion record for this flight; broadcast airplay unverified":isRecordedRadio(item)?"Operating as of "+dayForView()+": "+(item.statusLabel||radioOperatingText(item)):"",
       isRecordedRadio(item)?radioEvidenceText(item):"",
+      launchProof?"Launch-day scheduled social placement verified. Retail checkout, stock, and fulfillment not independently verified.":"",
+      launchProof?launchProof.channels.map(function(p){return p.platform+" published "+p.publishedDate+": "+p.proofReference;}).join("\n"):"",
       item.source==="planned-support"?"Markers = scheduled dates and recorded per-platform outcomes":"Base color = production identity",
-      scheduleNote?"Neutral bar = schedule placeholder; not a creative":item.source==="planned-support"?"Green = proof-referenced published · red = missed · gold = pending · gray = unverified/media record · white = planned":isScheduleCampaign?"Scheduled event is not proof of execution":"Bar segments = creative age"].filter(Boolean).join("\n");
+      scheduleNote?"Neutral bar = schedule placeholder; not a creative":item.source==="planned-support"?"Green = proof-referenced published · red = missed · gold = pending · gray = unverified/media record · white = planned":launchProof?"Promotion dates are the scheduled sale window; launch label refers only to published marketing":isScheduleCampaign?"Scheduled event is not proof of execution":"Bar segments = creative age"].filter(Boolean).join("\n");
     function open(){if(item.openUrl)window.location.href=item.openUrl;}shell.addEventListener("click",open);shell.addEventListener("keydown",function(ev){if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();open();}});
     track.appendChild(shell);
   }
@@ -839,7 +855,7 @@
 
   state.initialClient=readQuery();
   populateControls();
-  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"media",statusText:"D1 Media connected · Media Calendar v1.8.3"});
+  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"media",statusText:"D1 Media connected · Media Calendar v1.8.4"});
   else console.error("Media Calendar 1.8.1: shared/gcm-shell.js did not load.");
 
   $("prev-month").addEventListener("click",function(){shiftMonth(-1);});
