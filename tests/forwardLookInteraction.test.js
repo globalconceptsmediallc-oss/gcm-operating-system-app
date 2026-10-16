@@ -12,6 +12,7 @@
 
 import fs from "node:fs";
 import assert from "node:assert/strict";
+import vm from "node:vm";
 import { handleForwardLookOperations } from "../routes/forwardLookOperations.js";
 
 const today = fs.readFileSync(new URL("../today.html", import.meta.url), "utf8");
@@ -46,6 +47,10 @@ assert.match(today,/function renderClosedSocialOutcomes/);
 assert.match(today,/data-forward-manage-correction/);
 assert.match(today,/Correcting existing record/);
 assert.match(forwardLookRoute,/correctionHistory/);
+assert.match(forwardLookRoute,/FORWARD_LOOK_OPERATIONS_VERSION = "1.2.0"/);
+const todayInline = today.match(/<script>([\s\S]*?)<\/script>/);
+assert.ok(todayInline, "Today inline script must exist");
+new vm.Script(todayInline[1], {filename:"today-inline.js"});
 assert.match(forwardLookMigration,/CREATE TABLE IF NOT EXISTS forward_look_dispositions/);
 assert.match(forwardLookMigration,/forward_key TEXT NOT NULL UNIQUE/);
 
