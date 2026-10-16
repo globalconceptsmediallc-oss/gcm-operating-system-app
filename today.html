@@ -1,12 +1,17 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.6.10
+   Version: 3.6.11
    Status: Production Candidate
    Source: Production today.html 3.6.8
    Sprint: Today — Operator Copy Cleanup
    Purpose: Preserve the locked Today workflow and production logic while removing
             non-operational explanatory copy from the operator interface.
+
+   Production changes in 3.6.11:
+   - Automatically drops ended, confirmed SES gun shows from active Forward Look only.
+   - Preserves scheduled events in Calendar and Schedule authority, without claiming attendance or completion of social/radio work.
+   - Leaves unconfirmed/candidate events and standalone deadlines unaffected.
 
    Production changes in 3.6.10:
    - Adds evidence-aware Social Post Manage in Forward Look for publishing or missed-platform outcomes.
@@ -3166,10 +3171,22 @@
         });
       }
 
+      function shouldArchivePastConfirmedGunShow(event) {
+        if (!event || event.kind !== "gun_show") return false;
+        if (String(event.status || "").toLowerCase() !== "confirmed") return false;
+        if (String(event.metadata && event.metadata.participationStatus || "").toLowerCase() !== "confirmed") return false;
+        const endDate = forwardDateOnly(event.endDate || event.startDate);
+        const daysAfterEnd = endDate ? forwardDaysUntil(endDate) : NaN;
+        return Number.isFinite(daysAfterEnd) && daysAfterEnd < 0;
+      }
+
       function addScheduleForwardItem(target, event, scheduleEvents, mediaRecords) {
         if (!event || !event.startDate) return;
         const status = String(event.status || "").toLowerCase();
         if (["cancelled", "canceled", "complete", "completed"].includes(status)) return;
+        // A confirmed show that has ended is calendar history, not unfinished agency work.
+        // Do not infer attendance, advertising delivery, or any other campaign outcome.
+        if (shouldArchivePastConfirmedGunShow(event)) return;
         if ((event.kind === "traffic_due" || event.kind === "station_deadline") && scheduleTrafficComplete(event, scheduleEvents, mediaRecords)) return;
 
         const channels = event.metadata && Array.isArray(event.metadata.channels) ? event.metadata.channels.join(" + ") : "";
