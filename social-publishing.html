@@ -1,0 +1,182 @@
+<!-- =========================================================
+ Global Concepts Media Operating System
+ File: social-publishing.html
+ Version: 1.0.1
+ Status: Read-only Foundation
+ Purpose: Explore platform-level publication proof by client without
+          duplicating or changing D1 Schedule Authority / Forward Look.
+ No publishing, editing, upload, or status-writing controls in Phase 1.
+ ========================================================= -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Social Publishing Library | GCM OS</title>
+<style>
+:root{--navy:#10243d;--blue:#316cdb;--line:#dbe3ed;--ink:#152437;--muted:#617087;--surface:#fff;--bg:#f3f6fa;--gold:#dcae43}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink)}
+.shell{display:grid;grid-template-columns:225px minmax(0,1fr);min-height:100vh}main{min-width:0;padding:30px 30px 70px}
+.page{max-width:1390px;margin:0 auto}
+.head{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:18px}
+.eyebrow{font-size:.7rem;text-transform:uppercase;letter-spacing:.15em;color:#336ad4;font-weight:800;margin:0 0 8px}
+h1{font-size:clamp(1.75rem,3vw,2.5rem);letter-spacing:-.045em;margin:0 0 8px}h2{font-size:1.04rem;letter-spacing:-.02em;margin:0}
+.sub{color:var(--muted);font-size:.89rem;line-height:1.55;margin:0}
+.actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.action{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:9px;background:white;color:var(--navy);font-size:.78rem;font-weight:750;padding:10px 14px;min-height:40px;text-decoration:none;cursor:pointer}
+.action.primary{background:#316cdb;border-color:#316cdb;color:#fff}
+.action:hover{border-color:#6f9cef}.panel{background:white;border:1px solid var(--line);border-radius:18px;padding:22px;margin-bottom:18px;box-shadow:0 7px 18px rgba(18,40,64,.035)}
+.notice{font-size:.8rem;line-height:1.5;background:#f5f8fe;border-left:3px solid #3c76d8;border-radius:6px;padding:12px 16px;margin-bottom:17px;color:#33465e}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}
+.metric{padding:16px 18px;background:#fff;border:1px solid var(--line);border-radius:13px}
+.metric strong{display:block;font-size:1.6rem;font-weight:800}.metric span{color:var(--muted);font-size:.75rem}
+.filters{display:grid;grid-template-columns:1fr 1fr 1fr 1fr minmax(180px,1.5fr);gap:12px;align-items:end}
+.field{display:grid;gap:6px;min-width:0}.field label{font-size:.69rem;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:#57667d}
+.field select,.field input{font:inherit;font-size:.82rem;color:var(--ink);min-height:42px;width:100%;border:1px solid #cbd7e5;border-radius:9px;background:#fff;padding:0 10px}
+.section-head{display:flex;justify-content:space-between;gap:18px;align-items:center;margin:0 0 14px}
+.small{font-size:.76rem;color:var(--muted)}.items{display:grid;gap:12px}
+.post{border:1px solid var(--line);background:#fff;border-radius:12px;overflow:hidden}
+.posthead{display:flex;align-items:flex-start;justify-content:space-between;gap:15px;padding:16px 18px;background:#fbfcff}
+.post h3{font-size:.94rem;margin:5px 0 7px}.meta{color:var(--muted);font-size:.76rem;line-height:1.5}
+.channel-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));border-top:1px solid var(--line)}
+.channel{padding:13px 16px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);min-width:0}
+.channel .line{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.channel strong{font-size:.82rem}.channel p{margin:7px 0 0;font-size:.74rem;color:var(--muted);line-height:1.5}
+.status{font-size:.66rem;font-weight:800;border-radius:20px;padding:4px 7px;background:#eaf0fb;color:#475d7b;white-space:nowrap}
+.status.published{background:#e8f5ee;color:#24734c}.status.missed{background:#fceced;color:#a83e49}
+.status.pending{background:#fff3d9;color:#805b0d}.status.unverified{background:#f2f1f0;color:#635e56}
+.proof{font-size:.74rem;color:#235fc5;display:inline-block;margin-top:6px;text-decoration:underline;text-underline-offset:2px}
+.postdetails{border-top:1px solid var(--line);padding:12px 16px;font-size:.75rem;color:#53657e}
+.postdetails summary{cursor:pointer;font-weight:700;color:#335277}.postdetails p{overflow-wrap:anywhere;line-height:1.55}
+.state{padding:22px;font-size:.84rem;color:var(--muted);background:white;border:1px dashed #c5d1df;border-radius:12px}
+.state.error{color:#963e41;border-color:#e9bbc0;background:#fff6f7}
+.unmatched{margin-top:20px}.unmatched details{font-size:.8rem;color:var(--muted)}.unmatched summary{cursor:pointer;font-weight:750;color:var(--navy);padding:8px 0}
+.unmatched li{margin:8px 0}.footer-note{margin:19px 0;font-size:.76rem;color:var(--muted);line-height:1.5}
+@media(max-width:1120px){.filters{grid-template-columns:repeat(2,minmax(0,1fr))}.filters .field:last-child{grid-column:span 2}}
+@media(max-width:860px){.shell{grid-template-columns:1fr}main{padding:22px 16px}.head{flex-direction:column}.actions{justify-content:flex-start}.metrics{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:520px){.filters{grid-template-columns:1fr}.filters .field:last-child{grid-column:auto}.metrics{grid-template-columns:1fr 1fr}.posthead{display:block}}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside data-gcm-shell-sidebar aria-label="Primary navigation"></aside>
+<main><div class="page">
+<header class="head">
+<div><p class="eyebrow">Media / Publication Evidence</p><h1>Social Publishing Library</h1>
+<p class="sub">One record per scheduled post, with platform outcomes, actual publishing dates, and lasting evidence.</p></div>
+<div class="actions"><a class="action" href="media.html">Media Workspace</a>
+<a class="action" href="media-calendar.html">Media Calendar</a>
+<button class="action primary" type="button" id="refresh">Refresh evidence</button></div>
+</header>
+<div class="notice"><strong>Phase 1 · Read-only.</strong> This view uses existing D1 Schedule Authority and Forward Look evidence. Original scheduled dates are retained. Unscheduled placements (such as the October 16 YouTube BOGO post) are currently in supporting notes; they are not counted as independent platform records until the next phase. Author names are not inferred from the person who recorded a correction.</div>
+<div class="metrics" aria-label="Publishing summary">
+<div class="metric"><strong id="count-posts">—</strong><span>Scheduled posts</span></div>
+<div class="metric"><strong id="count-published">—</strong><span>Published placements</span></div>
+<div class="metric"><strong id="count-missed">—</strong><span>Missed placements</span></div>
+<div class="metric"><strong id="count-unverified">—</strong><span>Unverified / pending / planned</span></div>
+</div>
+<section class="panel" aria-label="Publishing filters">
+<div class="filters">
+<div class="field"><label for="client">Client</label><select id="client"><option value="">All clients</option></select></div>
+<div class="field"><label for="platform">Platform</label><select id="platform"><option value="">All platforms</option><option value="Facebook">Facebook</option><option value="Instagram">Instagram</option><option value="Google Business Profile">Google Business Profile</option><option value="YouTube">YouTube</option></select></div>
+<div class="field"><label for="status">Outcome</label><select id="status"><option value="">All outcomes</option><option value="published">Published</option><option value="missed">Missed</option><option value="pending">Pending</option><option value="planned">Planned</option><option value="unverified">Unverified</option></select></div>
+<div class="field"><label for="month">Scheduled month</label><input type="month" id="month"></div>
+<div class="field"><label for="search">Search</label><input id="search" type="search" placeholder="Post, campaign, client…"></div>
+</div>
+</section>
+<section class="panel" aria-label="Scheduled publication records">
+<div class="section-head"><h2>Publishing Records</h2><span class="small" id="count-visible">Waiting for D1…</span></div>
+<div class="items" id="records" aria-live="polite"><div class="state">Loading authoritative schedule and publication evidence…</div></div>
+<div class="unmatched" id="history-box" hidden><details><summary id="history-summary">Unlinked historical publishing records</summary><ul id="history-list"></ul></details></div>
+</section>
+<p class="footer-note">Publication proof is distinct from verified store sales, paid performance, and actual broadcast delivery. Phase 1 does not create, update, or delete records. The new dedicated D1 publishing tables remain empty until separately approved data entry is enabled.</p>
+</div></main></div>
+<script src="shared/gcm-shell.js?v=2.0.66"></script>
+<script src="shared/social-publishing-library.js?v=1.0.0"></script>
+<script>
+(function(){
+"use strict";
+const API="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+const $=id=>document.getElementById(id);
+const esc=x=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const lib=window.GCMSocialPublishingLibrary;
+let posts=[],unmatched=[],sourceAvailable=false;
+const pretty=d=>d?new Date(d+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}):"Unknown";
+function getToday(){const d=new Date();return[d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-");}
+async function request(action){
+ const response=await fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,operation:"list"})});
+ const json=await response.json().catch(()=>null);
+ if(!response.ok||json?.ok!==true)throw Error(action+" failed ("+response.status+").");
+ return json;
+}
+function renderClients(){
+ const selected=$("client").value, known=new Map();
+ posts.forEach(p=>{if(p.clientId&&p.clientName)known.set(String(p.clientId),p.clientName);});
+ const options=[...known].sort((a,b)=>a[1].localeCompare(b[1]));
+ $("client").innerHTML='<option value="">All clients</option>'+options.map(v=>'<option value="'+esc(v[0])+'">'+esc(v[1])+'</option>').join("");
+ const requested=new URLSearchParams(location.search).get("clientId")||"";
+ $("client").value=options.some(v=>v[0]===selected)?selected:options.some(v=>v[0]===requested)?requested:"";
+}
+function platformHtml(p){
+ const meta=p.status==="published"?"Published "+pretty(p.actualDate):p.status==="missed"?"Not published":p.status==="pending"?"Awaiting outcome":p.status==="planned"?"Scheduled; not due":"Publication not verified";
+ const proof=p.status==="published"&&lib.safeUrl(p.proofReference)?
+   '<a class="proof" href="'+esc(p.proofReference)+'" target="_blank" rel="noopener noreferrer">Open proof reference ↗</a>':"";
+ return '<div class="channel"><div class="line"><strong>'+esc(p.platform)+'</strong><span class="status '+esc(p.status)+'">'+esc(p.status)+'</span></div>'+
+ '<p>'+esc(meta)+'</p>'+proof+'</div>';
+}
+function postHtml(p,visiblePlatforms){
+ const metadata=[p.clientName||"Unattributed client",p.campaign,"Scheduled "+pretty(p.plannedDate)].filter(Boolean).join(" · ");
+ const publisherNote='Publisher: not yet recorded'+(p.reviewedBy?" · Outcome recorded by "+p.reviewedBy:"");
+ const details=(p.note||p.revisions||p.evidenceMismatch)?
+  '<details class="postdetails"><summary>Notes and correction history'+(p.revisions?" · "+p.revisions+" revision(s)":"")+'</summary>'+
+  '<p>'+esc(p.note||"No internal note")+'</p><p>'+esc(publisherNote)+'</p>'+
+  (p.evidenceMismatch?'<p>Source-key evidence mismatch: record requires review.</p>':"")+'</details>':
+  '<div class="postdetails">'+esc(publisherNote)+'</div>';
+ return '<article class="post"><div class="posthead"><div><div class="meta">'+esc(metadata)+'</div><h3>'+esc(p.title)+'</h3><div class="meta">Source: Schedule Authority · No status changes from this view</div></div></div>'+
+  '<div class="channel-list">'+(visiblePlatforms.length?visiblePlatforms.map(platformHtml).join(""):'<div class="channel"><p>No scheduled channels are defined. Publication cannot be verified.</p></div>')+'</div>'+details+'</article>';
+}
+function render(){
+ if(!sourceAvailable)return;
+ const client=$("client").value, platform=$("platform").value, status=$("status").value, month=$("month").value, q=$("search").value.trim().toLowerCase();
+ let filtered=posts.filter(p=>(!client||String(p.clientId)===client)&&(!month||p.plannedDate.startsWith(month))&&
+   (!q||[p.title,p.campaign,p.clientName,p.clientCode].join(" ").toLowerCase().includes(q)));
+ let view=filtered.map(p=>({p,visible:p.platforms.filter(v=>(!platform||v.platform===platform)&&(!status||v.status===status))})).filter(x=>x.visible.length||(!platform&&!status&&!x.p.platforms.length));
+ const metrics=lib.totals(view.map(({p,visible})=>({...p,platforms:visible})));
+ $("count-posts").textContent=String(metrics.posts);
+ $("count-published").textContent=String(metrics.published);
+ $("count-missed").textContent=String(metrics.missed);
+ $("count-unverified").textContent=String(metrics.unverified+metrics.pending+metrics.planned);
+ $("count-visible").textContent=view.length+" scheduled post"+(view.length===1?"":"s")+" shown";
+ $("records").innerHTML=view.length?view.map(x=>postHtml(x.p,x.visible)).join(""):'<div class="state">No publishing records match these filters. Try a different month, client, or outcome.</div>';
+ const showHistory=!client&&!platform&&!status&&!month&&!q&&unmatched.length>0;
+ $("history-box").hidden=!showHistory;
+ if(showHistory){
+  $("history-summary").textContent=unmatched.length+" unlinked historical outcome"+(unmatched.length===1?"":"s")+" (client not inferred)";
+  $("history-list").innerHTML=unmatched.map(row=>'<li>'+esc(row.title)+' — '+esc(pretty(row.plannedDate))+' · '+esc(row.disposition)+'</li>').join("");
+ }
+}
+async function load(){
+ sourceAvailable=false;posts=[];unmatched=[];
+ $("records").innerHTML='<div class="state">Loading authoritative schedule and publication evidence…</div>';
+ $("count-visible").textContent="Checking D1…";
+ $("refresh").disabled=true;
+ try{
+  if(!lib)throw Error("Publishing projection module did not load.");
+  const [schedule,dispositions]=await Promise.all([request("schedule-operations"),request("forward-look-operations")]);
+  if(!Array.isArray(schedule.scheduleEvents)||!Array.isArray(dispositions.dispositions))throw Error("Publishing source response is incomplete.");
+  const projection=lib.normalizedScheduled(schedule.scheduleEvents,dispositions.dispositions,getToday());
+  posts=projection.posts;unmatched=projection.unmatched;sourceAvailable=true;
+  renderClients();render();
+ }catch(err){
+  $("records").innerHTML='<div class="state error">Publishing evidence is unavailable. Nothing was assumed or changed. '+esc(err?.message||"Try Refresh evidence.")+'</div>';
+  $("count-visible").textContent="Source unavailable";
+  ["count-posts","count-published","count-missed","count-unverified"].forEach(k=>$(k).textContent="—");
+ }finally{$("refresh").disabled=false;}
+}
+["client","platform","status","month","search"].forEach(id=>$(id).addEventListener(id==="search"?"input":"change",render));
+$("refresh").addEventListener("click",load);
+if(window.GCMOShell)window.GCMOShell.mount({currentPage:"media",statusText:"D1 Publishing Library · read-only v1.0.0"});
+load();
+})();
+</script>
+</body></html>

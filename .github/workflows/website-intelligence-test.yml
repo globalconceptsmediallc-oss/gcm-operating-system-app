@@ -39,3 +39,6 @@ jobs:
 
       - name: Run Promotion Launch Evidence Regression
         run: npm run test:promotion-launch-evidence
+
+      - name: Run Social Publishing Library Regression
+        run: npm run test:social-publishing-library
