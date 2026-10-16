@@ -1,12 +1,13 @@
 {
   "name": "gcm-operating-system-app",
-  "version": "6.2.17",
+  "version": "6.2.18",
   "gcm": {
     "file": "package.json",
-    "fileVersion": "6.2.17",
+    "fileVersion": "6.2.18",
     "status": "Production Candidate",
-    "purpose": "Authenticated publisher attribution and additional verified placements, with unchanged Forward Look evidence.",
+    "purpose": "Reviewed, transaction-safe historical Southeast Safes social publishing backfill and publisher attribution.",
     "changeNotes": [
+      "Prepare reviewed Southeast Safes September–October Facebook/Instagram history import: 25 content records, 43 platform placements, with existing scheduled BOGO outcomes excluded; nothing writes before operator confirmation.",
       "Signed publisher attribution and revision history, duplicate-safe additional placements linked to exact clients and optional existing scheduled sources.",
       "Add Social Publishing Library (read-only) under Media; preserve schedules/outcomes, prepare empty client publishing/placement/assets D1 tables.",
       "Close only first-day promotion launch milestones supported by complete D1 social publication proof; preserve full sale window and takedown.",
@@ -32,7 +33,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:finance-operations && npm run test:measurement-observations && npm run test:growth-review-interpretation && npm run test:work-due-date && npm run test:work-core-web-vitals && npm run test:media-deadline-attention && npm run test:universal-email-intake && npm run test:email-intake-queue && npm run test:gmail-intake-sync && npm run test:email-intake-finding && npm run test:google-review-quick-action && npm run test:proof-findings && npm run test:email-intake-disposition && npm run test:gmail-decisions && npm run test:gmail-monitoring-parity && npm run test:gmail-backlink-investigation && npm run test:gmail-intake && npm run test:gmail-backlog && npm run test:gmail-source-display && npm run test:gmail-handle-now && npm run test:gmail-thread-routing && npm run test:gmail-requested-work-content && npm run test:prospect-crm && npm run test:radar-archive && npm run test:prospect-test-site && npm run test:radar-test-site && npm run test:prospect-call-points && npm run test:prospect-intelligence-source && npm run test:prospect-concept-tracking && npm run test:prospect-engagement-today && npm run test:forward-look-interaction && npm run test:promotion-launch-evidence && npm run test:social-publishing-library && npm run test:social-publishing-operator && npm run test:mediaforge-home && npm run test:mediaforge-variants && npm run test:mediaforge-naming && npm run test:business-workspace-health-v2 && npm run test:client-health-v2 && npm run test:asset-versions && npm run test:media-run-status && npm run test:growth-review-assembly && npm run test:media-client-scope && npm run test:media-calendar-presentation && npm run test:source-evidence && npm run test:source-evidence-ui && npm run test:radar-duplicate-protection && npm run test:source-evidence-retention",
+    "test": "npm run test:website-intelligence && npm run test:code-intelligence && npm run test:operating-sessions && npm run test:calendar-durability && npm run test:finance-operations && npm run test:measurement-observations && npm run test:growth-review-interpretation && npm run test:work-due-date && npm run test:work-core-web-vitals && npm run test:media-deadline-attention && npm run test:universal-email-intake && npm run test:email-intake-queue && npm run test:gmail-intake-sync && npm run test:email-intake-finding && npm run test:google-review-quick-action && npm run test:proof-findings && npm run test:email-intake-disposition && npm run test:gmail-decisions && npm run test:gmail-monitoring-parity && npm run test:gmail-backlink-investigation && npm run test:gmail-intake && npm run test:gmail-backlog && npm run test:gmail-source-display && npm run test:gmail-handle-now && npm run test:gmail-thread-routing && npm run test:gmail-requested-work-content && npm run test:prospect-crm && npm run test:radar-archive && npm run test:prospect-test-site && npm run test:radar-test-site && npm run test:prospect-call-points && npm run test:prospect-intelligence-source && npm run test:prospect-concept-tracking && npm run test:prospect-engagement-today && npm run test:forward-look-interaction && npm run test:promotion-launch-evidence && npm run test:social-publishing-library && npm run test:social-publishing-operator && npm run test:social-publishing-history && npm run test:mediaforge-home && npm run test:mediaforge-variants && npm run test:mediaforge-naming && npm run test:business-workspace-health-v2 && npm run test:client-health-v2 && npm run test:asset-versions && npm run test:media-run-status && npm run test:growth-review-assembly && npm run test:media-client-scope && npm run test:media-calendar-presentation && npm run test:source-evidence && npm run test:source-evidence-ui && npm run test:radar-duplicate-protection && npm run test:source-evidence-retention",
     "test:website-intelligence": "node tests/websiteIntelligence.test.js",
     "test:code-intelligence": "node tests/codeIntelligence.test.js",
     "test:operating-sessions": "node tests/operatingSessionTasks.test.js && node tests/osAuth.test.js && node tests/operatingSessionIntake.test.js",
@@ -84,7 +85,8 @@
     "test:source-evidence-retention": "node --check routes/sourceEvidenceRetention.js && node tests/sourceEvidenceRetention.test.js",
     "test:promotion-launch-evidence": "node tests/promotionLaunchEvidence.test.js",
     "test:social-publishing-library": "node tests/socialPublishingLibrary.test.js",
-    "test:social-publishing-operator": "node tests/socialPublishingOperator.test.js"
+    "test:social-publishing-operator": "node tests/socialPublishingOperator.test.js",
+    "test:social-publishing-history": "node tests/socialPublishingHistoryImport.test.js"
   },
   "dependencies": {
     "postal-mime": "^3.0.0"
