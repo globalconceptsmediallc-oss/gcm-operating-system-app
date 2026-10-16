@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/forwardLookOperations.js
-   Version: 1.1.0
+   Version: 1.2.0
    Status: Production Candidate
    Sprint: Today — Interactive Forward Look
    Purpose:
@@ -15,13 +15,15 @@
    - Source records remain intact for history, audit, Media, Calendar, Schedule,
      Prospect, Work, Proof, and client reporting.
    - A closed row can be reopened later without reconstructing source history.
+   - Corrected social outcomes retain their prior status, dates, evidence, and note
+     inside the same D1 disposition reason (correctionHistory); no new row or migration.
    ========================================================= */
 
 import { getDatabase, rowsOf } from "../shared/database.js";
 import { jsonResponse, logWorkerError, safeErrorMessage } from "../shared/http.js";
 
 export const FORWARD_LOOK_OPERATIONS_ACTION = "forward-look-operations";
-export const FORWARD_LOOK_OPERATIONS_VERSION = "1.1.0";
+export const FORWARD_LOOK_OPERATIONS_VERSION = "1.2.0";
 
 export async function handleForwardLookOperations(body, env, requestId) {
   const db = getDatabase(env);
@@ -172,8 +174,35 @@ async function recordSocialPost(body, db, requestId) {
   const disposition = counts.pending ? "social_partial" :
     !counts.missed ? "social_published" :
     !counts.published ? "social_missed" : "social_mixed";
+  // Preserve previous operator decisions when a closed or partial outcome is corrected.
+  // The source schedule and durable Forward Look key remain untouched. A correction
+  // is a revision of the SAME disposition, not a second scheduled/social post.
+  const previous = await db.prepare(
+    "SELECT disposition, reason, reviewed_by, updated_at FROM forward_look_dispositions WHERE forward_key=?"
+  ).bind(forwardKey).first();
+  const previousPayload = parseJson(previous?.reason);
+  const correctionHistory = previousPayload?.schema === "gcm-social-execution-v1" &&
+    Array.isArray(previousPayload.correctionHistory)
+      ? previousPayload.correctionHistory : [];
+  if (previousPayload?.schema === "gcm-social-execution-v1" &&
+      (JSON.stringify(previousPayload.platforms || []) !== JSON.stringify(normalized) ||
+       clean(previousPayload.note) !== note)) {
+    correctionHistory.push({
+      correctedAt:new Date().toISOString(), correctedBy:reviewedBy,
+      previousDisposition:clean(previous?.disposition),
+      previousReviewedBy:clean(previous?.reviewed_by),
+      previousUpdatedAt:clean(previous?.updated_at),
+      previous:{
+        scheduleItemId:previousPayload.scheduleItemId,
+        plannedDate:previousPayload.plannedDate,
+        platforms:previousPayload.platforms || [],
+        note:clean(previousPayload.note)
+      }
+    });
+  }
   const reason = JSON.stringify({
-    schema:"gcm-social-execution-v1", scheduleItemId, plannedDate, platforms:normalized, note
+    schema:"gcm-social-execution-v1", scheduleItemId, plannedDate, platforms:normalized, note,
+    correctionHistory
   });
 
   await db.prepare(`

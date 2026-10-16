@@ -1,10 +1,11 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gcm-worker-deploy.yml
-# Version: 1.5.85
+# Version: 1.5.86
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Worker with human-led Signal Finding capture.
 # Change Notes:
+# - v1.5.86 verifies Forward Look 1.2.0 correction history before production deployment.
 # - v1.5.85 aligns the live Forward Look route version gate with the released 1.1.0 social publishing dispositions.
 # - v1.5.84 verifies Worker 7.44.2 and 30-day private evidence cleanup before activation.
 # - v1.5.83 verifies unauthenticated Source Evidence requests cannot read or write private archives.
@@ -210,8 +211,8 @@ jobs:
           if (health.scheduleOperationsVersion !== "1.0.0") {
             throw new Error(`Expected Schedule Operations 1.0.0, received ${health.scheduleOperationsVersion || "unknown"}`);
           }
-          if (health.forwardLookOperationsVersion !== "1.1.0") {
-            throw new Error(`Expected Forward Look Operations 1.1.0, received ${health.forwardLookOperationsVersion || "unknown"}`);
+          if (health.forwardLookOperationsVersion !== "1.2.0") {
+            throw new Error(`Expected Forward Look Operations 1.2.0, received ${health.forwardLookOperationsVersion || "unknown"}`);
           }
           if (health.measurementObservationsVersion !== "1.0.0") {
             throw new Error(`Expected Measurement Observations 1.0.0, received ${health.measurementObservationsVersion || "unknown"}`);

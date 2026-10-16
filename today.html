@@ -1,12 +1,17 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.6.11
+   Version: 3.6.12
    Status: Production Candidate
    Source: Production today.html 3.6.8
    Sprint: Today — Operator Copy Cleanup
    Purpose: Preserve the locked Today workflow and production logic while removing
             non-operational explanatory copy from the operator interface.
+
+   Production changes in 3.6.12:
+   - Adds Review / Correct Published Outcomes to Forward Look for closed social posts.
+   - Reuses the existing evidence modal and exact schedule key; saves only on operator confirmation.
+   - Preserves prior platform dispositions in correctionHistory and does not create duplicate commitments.
 
    Production changes in 3.6.11:
    - Automatically drops ended, confirmed SES gun shows from active Forward Look only.
@@ -2063,14 +2068,27 @@
 </div>
 <div class="forward-look-actions">
 <span class="forward-look-window">Overdue + Next 30 Days</span>
+<button class="button button-secondary" type="button" id="forward-look-review-toggle" aria-expanded="false" aria-controls="forward-look-review-panel">Review / Correct Published Outcomes</button>
 <a class="button button-secondary" href="calendar.html">Open Calendar</a>
 <a class="button button-secondary" href="schedule.html?v=1.0.6">Schedule Control</a>
 </div>
 </div>
 <div class="forward-look-list" id="forward-look-list"><div class="forward-look-empty">Checking Prospect CRM, Calendar, Media, and open dated operating records…</div></div>
 <div class="forward-look-more" hidden id="forward-look-more"></div>
+<div class="forward-look-review-panel" id="forward-look-review-panel" hidden>
+<p class="forward-look-review-intro">Review closed social-post outcomes and correct recorded platform evidence. The original schedule stays intact; earlier decisions are retained when saved.</p>
+<div class="forward-look-review-list" id="forward-look-review-list" aria-live="polite"></div>
+</div>
 </section>
 <style>
+.forward-look-review-panel{padding:14px 22px 18px;border-top:1px solid #eadfbe;background:#fff}
+.forward-look-review-panel[hidden]{display:none}
+.forward-look-review-intro{margin:0 0 12px;font-size:.78rem;color:var(--text-muted);line-height:1.5}
+.forward-look-review-list{display:grid;gap:9px}
+.forward-look-review-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface-soft)}
+.forward-look-review-row strong{display:block;color:var(--text);font-size:.8rem}
+.forward-look-review-row span{display:block;margin-top:4px;color:var(--text-muted);font-size:.72rem}
+@media(max-width:760px){.forward-look-review-panel{padding:12px 16px}.forward-look-review-row{align-items:flex-start;flex-direction:column}}
 .social-resolution-dialog{border:1px solid #d5dfeb;border-radius:16px;padding:24px;width:min(92vw,680px);max-height:85vh;box-shadow:0 24px 80px rgba(0,0,0,.25);color:#132238}
 .social-resolution-dialog::backdrop{background:rgba(6,24,45,.5)}
 .social-resolution-dialog h2{margin:0 0 8px;font-size:22px}
@@ -2216,6 +2234,9 @@
       const forwardLookSummary = document.getElementById("forward-look-summary");
       const forwardLookList = document.getElementById("forward-look-list");
       const forwardLookMore = document.getElementById("forward-look-more");
+      const forwardLookReviewToggle = document.getElementById("forward-look-review-toggle");
+      const forwardLookReviewPanel = document.getElementById("forward-look-review-panel");
+      const forwardLookReviewList = document.getElementById("forward-look-review-list");
       const commandBriefTitle = document.getElementById("command-brief-title");
       const commandBriefCopy = document.getElementById("command-brief-copy");
       const mediaPulseCount = document.getElementById("media-pulse-count");
@@ -2245,6 +2266,7 @@
       let forwardLookScheduleAuthorityUnavailable = false;
       let forwardLookClosedKeys = new Set();
       let forwardLookDispositionByKey = new Map();
+      let forwardLookDispositionsUnavailable = false;
       let mediaLoaded = false;
       let mediaUnavailable = false;
       let agencyCommandLoaded = false;
@@ -3301,6 +3323,7 @@
 
         const items = forwardLookSourceItems.slice();
         buildForwardLookFromNav(items);
+        renderClosedSocialOutcomes();
 
         const deduped = Array.from(new Map(items.map(function(item) {
           return [String(item.key || "").toLowerCase(), item];
@@ -3370,6 +3393,55 @@
         } catch { return null; }
       }
 
+      function renderClosedSocialOutcomes() {
+        if (!forwardLookReviewPanel || forwardLookReviewPanel.hidden || !forwardLookReviewList) return;
+        if (forwardLookDispositionsUnavailable) {
+          forwardLookReviewList.innerHTML = '<p class="forward-look-empty">Publishing history could not be loaded. Refresh Today to try again.</p>';
+          return;
+        }
+        const rows = [...forwardLookDispositionByKey.values()].filter(function(row) {
+          return ["social_published", "social_missed", "social_mixed"].includes(row.disposition) &&
+            socialOutcomePayload(row)?.schema === "gcm-social-execution-v1";
+        }).sort(function(a,b) {
+          return String(b.updatedAt || "").localeCompare(String(a.updatedAt || ""));
+        });
+        if (!rows.length) {
+          forwardLookReviewList.innerHTML = '<p class="forward-look-empty">No closed social-post outcomes have been recorded yet.</p>';
+          return;
+        }
+        forwardLookReviewList.innerHTML = rows.slice(0,50).map(function(row) {
+          const payload = socialOutcomePayload(row);
+          const scheduled = forwardLookSourceItems.find(item => String(item.key || "").toLowerCase() === String(row.forwardKey || "").toLowerCase());
+          const platforms = (payload.platforms || []).map(item => item.platform).filter(Boolean);
+          const corrections = Array.isArray(payload.correctionHistory) ? payload.correctionHistory.length : 0;
+          const status = row.disposition === "social_missed" ? "Previously marked missed" :
+            row.disposition === "social_published" ? "Recorded as published" : "Recorded as mixed outcomes";
+          return '<div class="forward-look-review-row"><div><strong>' + escapeHtml(row.title || "Scheduled social post") +
+            '</strong><span>Scheduled ' + escapeHtml(payload.plannedDate || "unknown") + ' · ' + escapeHtml(status) +
+            (scheduled?.meta ? ' · ' + escapeHtml(scheduled.meta) : '') +
+            (corrections ? ' · ' + corrections + ' prior correction' + (corrections === 1 ? '' : 's') : '') +
+            '</span></div><button class="forward-look-manage" type="button" data-forward-manage-correction="true" data-forward-manage-key="' +
+            escapeHtml(row.forwardKey) + '" data-forward-manage-id="' + escapeHtml(payload.scheduleItemId) +
+            '" data-forward-manage-date="' + escapeHtml(payload.plannedDate) +
+            '" data-forward-manage-platforms="' + escapeHtml(JSON.stringify(platforms)) +
+            '" data-forward-manage-title="' + escapeHtml(row.title || "Scheduled social post") +
+            '">Correct outcome</button></div>';
+        }).join("");
+        forwardLookReviewList.querySelectorAll('[data-forward-manage-correction="true"]').forEach(function(button) {
+          button.addEventListener("click", function() { openSocialPostResolution(button); });
+        });
+      }
+
+      forwardLookReviewToggle?.addEventListener("click", function() {
+        if (!forwardLookReviewPanel) return;
+        forwardLookReviewPanel.hidden = !forwardLookReviewPanel.hidden;
+        forwardLookReviewToggle.setAttribute("aria-expanded", String(!forwardLookReviewPanel.hidden));
+        if (!forwardLookReviewPanel.hidden) {
+          if (!forwardLookLoaded) forwardLookReviewList.textContent = "Loading publishing history…";
+          else renderClosedSocialOutcomes();
+        }
+      });
+
       function openSocialPostResolution(button) {
         const dialog = document.getElementById("social-post-resolution-dialog");
         const form = document.getElementById("social-post-resolution-form");
@@ -3383,7 +3455,7 @@
         form.dataset.scheduleItemId = button.dataset.forwardManageId;
         form.dataset.plannedDate = date;
         document.getElementById("social-post-resolution-heading").textContent = cleanDisplay(button.dataset.forwardManageTitle);
-        document.getElementById("social-post-resolution-context").textContent = "Scheduled " + date + " · " + platforms.join(" + ");
+        document.getElementById("social-post-resolution-context").textContent = (button.dataset.forwardManageCorrection === "true" ? "Correcting existing record · " : "") + "Scheduled " + date + " · " + platforms.join(" + ");
         document.getElementById("social-post-resolution-note").value = existing?.note || "";
         document.getElementById("social-post-resolution-platforms").innerHTML = platforms.map(function(name, index) {
           const old = (existing?.platforms || []).find(p => p.platform === name) || {};
@@ -3523,6 +3595,7 @@
         forwardLookLoadFailures = 0;
         forwardLookLoaded = false;
         forwardLookScheduleAuthorityUnavailable = false;
+        forwardLookDispositionsUnavailable = false;
         const items = [];
 
         const results = await Promise.allSettled([
@@ -3688,6 +3761,7 @@
           }));
         } else {
           forwardLookLoadFailures += 1;
+          forwardLookDispositionsUnavailable = true;
           forwardLookClosedKeys = new Set();
           forwardLookDispositionByKey = new Map();
         }
