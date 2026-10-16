@@ -556,7 +556,7 @@
           var outlet=lower(r.outlet),s=String(r.startDate||"").slice(0,10),e=String(r.endDate||"").slice(0,10);
           return outlet.indexOf(lower(station))>=0&&s<=base.endDate&&e>=base.startDate;
         });
-        if(!hasRecorded)out.push(Object.assign({},base,{source:"schedule-radio",id:"schedule-radio-"+index,type:"Radio",outlet:station,creative:ev.title||station+" Radio Flight",statusLabel:"Schedule-only · no linked commercial"}));
+        if(!hasRecorded)out.push(Object.assign({},base,{source:"schedule-radio",id:"schedule-radio-"+index,type:"Radio",outlet:station,creative:ev.title||station+" Radio Flight",statusLabel:"Schedule-only flight · no matched insertion"}));
         return;
       }
       if(ev.kind==="traffic_due"||ev.kind==="station_deadline"||ev.kind==="deadline"){
@@ -670,7 +670,7 @@
       label=document.createElement("div");label.className="bar-label";
     label.innerHTML="<strong>"+esc(item.creative)+"</strong><span>"+esc(tag)+"</span>";shell.appendChild(label);
     shell.title=[item.creative,item.market,item.outlet,dateText(item.startDate)+" – "+dateText(item.endDate),
-      scheduleNote?"D1 Schedule Authority note ONLY; no identified commercial, no confirmed airplay":isRecordedRadio(item)?"Operating as of "+dayForView()+": "+(item.statusLabel||radioOperatingText(item)):"",
+      scheduleNote?"D1 scheduled station flight with no matched insertion record for this flight; broadcast airplay unverified":isRecordedRadio(item)?"Operating as of "+dayForView()+": "+(item.statusLabel||radioOperatingText(item)):"",
       isRecordedRadio(item)?radioEvidenceText(item):"",
       item.source==="planned-support"?"Markers = scheduled dates and recorded per-platform outcomes":"Base color = production identity",
       scheduleNote?"Neutral bar = schedule placeholder; not a creative":item.source==="planned-support"?"Green = proof-referenced published · red = missed · gold = pending · gray = unverified/media record · white = planned":isScheduleCampaign?"Scheduled event is not proof of execution":"Bar segments = creative age"].filter(Boolean).join("\n");
