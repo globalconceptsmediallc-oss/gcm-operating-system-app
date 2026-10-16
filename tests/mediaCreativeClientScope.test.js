@@ -1,7 +1,7 @@
 /* =========================================================
  Global Concepts Media Operating System
  File: tests/mediaCreativeClientScope.test.js
- Version: 1.0.0
+ Version: 1.0.1
  Purpose: Guard against cross-client creative cards, status counts and
           filter options when Media Workspace client selector is active.
  No production data writes or external calls.
@@ -12,7 +12,7 @@ const html=readFileSync(new URL("../media.html",import.meta.url),"utf8");
 const start=html.indexOf("  function creativeItems() {");
 const end=html.indexOf("\n  function creativeStage(",start);
 assert.ok(start>=0&&end>start,"Media page must declare its creativeItems projection");
-assert.match(html,/Version: 2\.5\.1/);
+assert.match(html,/Version: 2\.5\.2/);
 assert.match(html,/const ci=creativeItems\(\)/,"Media filter options must use scoped creatives");
 assert.match(html,/const creativeVisible=creativeItems\(\)\.filter\(creativeMatchesFilters\)/,"Commercial dashboard counts must use scoped creatives");
 const source=html.slice(start,end);
@@ -58,4 +58,4 @@ selected="999";assert.deepEqual(creativeItems(),[],"Unknown valid numeric client
 selected="invalid";assert.deepEqual(creativeItems(),[],"Unexpected client selector must fail closed");
 selected="11";assert.equal(creativeItems().length,2,"Changing client back must update without page reload");
 assert.equal(workflow.creatives.length,5,"Filtering must not mutate source records");
-console.log("PASS Media v2.5.1 Creative Client Scope: SES, A1, all, invalid, counts, options, confirmation and read-only");
+console.log("PASS Media v2.5.2 Creative Client Scope: SES, A1, all, invalid, counts, options, confirmation and read-only");
