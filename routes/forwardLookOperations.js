@@ -105,7 +105,7 @@ async function recordSocialPost(body, db, requestId) {
   const reviewedBy = clean(body?.reviewedBy || "Operator").slice(0,120);
   const note = clean(body?.note).slice(0,1500);
   if (!forwardKey || !Number.isSafeInteger(scheduleItemId) || scheduleItemId <= 0 ||
-      !/^\\d{4}-\\d{2}-\\d{2}$/.test(plannedDate)) {
+      !/^\d{4}-\d{2}-\d{2}$/.test(plannedDate)) {
     return bad(requestId, "A valid schedule item and dated social-post key are required.");
   }
 
@@ -154,7 +154,7 @@ async function recordSocialPost(body, db, requestId) {
       return bad(requestId, "Unknown, duplicate, or invalid scheduled platform status.");
     }
     if (status === "published" &&
-        (!proofReference || !/^\\d{4}-\\d{2}-\\d{2}$/.test(publishedDate))) {
+        (!proofReference || !/^\d{4}-\d{2}-\d{2}$/.test(publishedDate))) {
       return bad(requestId, "Published platforms require their actual publication date and a durable proof reference.");
     }
     seen.add(platform);
@@ -197,7 +197,7 @@ function parseJson(raw) {
   try { return JSON.parse(raw || "{}"); } catch { return null; }
 }
 function addDays(date, offset) {
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(clean(date)) || !Number.isInteger(offset) || Math.abs(offset)>365) return "";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(clean(date)) || !Number.isInteger(offset) || Math.abs(offset)>365) return "";
   const dt = new Date(date + "T12:00:00Z");
   dt.setUTCDate(dt.getUTCDate() + offset);
   return dt.toISOString().slice(0,10);
