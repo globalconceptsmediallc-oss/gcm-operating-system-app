@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/socialPublishingLibrary.test.js
-   Version: 1.0.0
+   Version: 1.0.1
    Status: Read-only Regression Test
    Purpose: Guarantee scoped, accurate D1 publishing projections and
             schema-only library foundation without migration/backfill.
@@ -88,7 +88,7 @@ const media=fs.readFileSync(new URL("../media.html",import.meta.url),"utf8");
 const script=html.match(/<script>([\s\S]*?)<\/script>/);
 assert.ok(script);
 new vm.Script(script[1],{filename:"social-publishing.html inline script"});
-assert.match(html,/Version: 1\.0\.0/);
+assert.match(html,/Version: 1\.0\.1/);
 assert.match(html,/Social Publishing Library/);
 assert.match(html,/read-only/i);
 assert.match(html,/data-gcm-shell-sidebar/);
@@ -99,6 +99,9 @@ assert.doesNotMatch(html,/operation:"(create|update|delete|save|post|publish)"/)
 assert.match(html,/if\(!response\.ok\|\|json\?\.ok!==true\)/,"Failed source calls must not masquerade as empty history");
 assert.match(html,/No publishing records match these filters/);
 assert.match(html,/Unattributed client/);
+assert.match(html,/No scheduled channels are defined/);
+assert.match(html,/sourceAvailable=false/);
+assert.match(html,/if\(!sourceAvailable\)return;/);
 
 const migration=fs.readFileSync(new URL("../migrations/0046_social_publishing_library.sql",import.meta.url),"utf8");
 assert.match(migration,/CREATE TABLE IF NOT EXISTS social_publishing_posts/);
