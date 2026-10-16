@@ -33,3 +33,6 @@ jobs:
 
       - name: Run Calendar Source Sync Lock
         run: node tests/calendarSourceSync.test.js
+
+      - name: Run Forward Look Outcome Correction Regression
+        run: npm run test:forward-look-interaction
