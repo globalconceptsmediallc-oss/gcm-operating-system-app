@@ -42,3 +42,6 @@ jobs:
 
       - name: Run Social Publishing Library Regression
         run: npm run test:social-publishing-library
+
+      - name: Run Authenticated Publishing Operator Regression
+        run: npm run test:social-publishing-operator
