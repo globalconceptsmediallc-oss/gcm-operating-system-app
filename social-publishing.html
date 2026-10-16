@@ -1,7 +1,7 @@
 <!-- =========================================================
  Global Concepts Media Operating System
  File: social-publishing.html
- Version: 1.0.2
+ Version: 1.1.0
  Status: Read-only Foundation
  Purpose: Explore platform-level publication proof by client without
           duplicating or changing D1 Schedule Authority / Forward Look.
@@ -52,6 +52,16 @@ h1{font-size:clamp(1.75rem,3vw,2.5rem);letter-spacing:-.045em;margin:0 0 8px}h2{
 .state.error{color:#963e41;border-color:#e9bbc0;background:#fff6f7}
 .unmatched{margin-top:20px}.unmatched details{font-size:.8rem;color:var(--muted)}.unmatched summary{cursor:pointer;font-weight:750;color:var(--navy);padding:8px 0}
 .unmatched li{margin:8px 0}.footer-note{margin:19px 0;font-size:.76rem;color:var(--muted);line-height:1.5}
+.operator-notice{font-size:.79rem;color:var(--muted);margin:10px 0}
+.record-link{display:inline-block;font-size:.73rem;margin:9px 8px 0 0;border:1px solid #cbd7e5;padding:6px 9px;color:#215ac1;border-radius:7px;background:#fff;cursor:pointer}
+dialog{width:min(540px,calc(100vw - 30px));max-height:90vh;overflow:auto;border:1px solid var(--line);border-radius:15px;padding:24px;box-shadow:0 18px 70px rgba(15,34,61,.3)}
+dialog::backdrop{background:rgba(6,26,49,.5)}
+dialog form{display:grid;gap:13px}dialog label{display:grid;gap:5px;font-size:.78rem;color:var(--ink);font-weight:700}
+dialog input,dialog select,dialog textarea{font:inherit;padding:10px;border:1px solid #becce0;border-radius:8px;width:100%;font-weight:400}
+dialog menu{display:flex;gap:10px;justify-content:flex-end;padding:0;margin:9px 0 0}
+.form-error{font-size:.79rem;color:#9c3341;margin:0}.extras{display:grid;gap:9px}
+.extra-row{padding:14px 15px;border:1px solid var(--line);border-radius:10px;background:#fbfcff}
+.extra-row strong{font-size:.87rem}.extra-row p{font-size:.78rem;color:var(--muted);margin:8px 0 0;line-height:1.5}
 @media(max-width:1120px){.filters{grid-template-columns:repeat(2,minmax(0,1fr))}.filters .field:last-child{grid-column:span 2}}
 @media(max-width:860px){.shell{grid-template-columns:1fr}main{padding:22px 16px}.head{flex-direction:column}.actions{justify-content:flex-start}.metrics{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:520px){.filters{grid-template-columns:1fr}.filters .field:last-child{grid-column:auto}.metrics{grid-template-columns:1fr 1fr}.posthead{display:block}}
@@ -66,14 +76,18 @@ h1{font-size:clamp(1.75rem,3vw,2.5rem);letter-spacing:-.045em;margin:0 0 8px}h2{
 <p class="sub">One record per scheduled post, with platform outcomes, actual publishing dates, and lasting evidence.</p></div>
 <div class="actions"><a class="action" href="media.html">Media Workspace</a>
 <a class="action" href="media-calendar.html">Media Calendar</a>
+<button class="action" type="button" id="operator-sign-in">Secure Google Sign-In</button>
+<button class="action" type="button" id="add-placement">Add verified placement</button>
 <button class="action primary" type="button" id="refresh">Refresh evidence</button></div>
 </header>
-<div class="notice"><strong>Phase 1 · Read-only.</strong> This view uses existing D1 Schedule Authority and Forward Look evidence. Original scheduled dates are retained. Unscheduled placements (such as the October 16 YouTube BOGO post) are currently in supporting notes; they are not counted as independent platform records until the next phase. Author names are not inferred from the person who recorded a correction.</div>
+<div class="notice"><strong>Publisher tracking · Step 2.</strong> Schedule Authority and Forward Look remain the source of truth for scheduled publishing. Verified Google operator sign-in is required to record publisher names and additional placements, such as the BOGO YouTube post. This does not edit prior publishing outcomes. Creative uploads come later.</div>
+<p class="operator-notice" id="operator-state" role="status">Sign in to view and record publisher attribution and additional placements.</p>
 <div class="metrics" aria-label="Publishing summary">
 <div class="metric"><strong id="count-posts">—</strong><span>Scheduled posts</span></div>
 <div class="metric"><strong id="count-published">—</strong><span>Published placements</span></div>
 <div class="metric"><strong id="count-missed">—</strong><span>Missed placements</span></div>
 <div class="metric"><strong id="count-unverified">—</strong><span>Unverified / pending / planned</span></div>
+<div class="metric"><strong id="count-extra">—</strong><span>Additional verified placements</span></div>
 </div>
 <section class="panel" aria-label="Publishing filters">
 <div class="filters">
@@ -89,10 +103,15 @@ h1{font-size:clamp(1.75rem,3vw,2.5rem);letter-spacing:-.045em;margin:0 0 8px}h2{
 <div class="items" id="records" aria-live="polite"><div class="state">Loading authoritative schedule and publication evidence…</div></div>
 <div class="unmatched" id="history-box" hidden><details><summary id="history-summary">Unlinked historical publishing records</summary><ul id="history-list"></ul></details></div>
 </section>
-<p class="footer-note">Publication proof is distinct from verified store sales, paid performance, and actual broadcast delivery. Phase 1 does not create, update, or delete records. The new dedicated D1 publishing tables remain empty until separately approved data entry is enabled.</p>
+<section class="panel" aria-label="Additional verified placements">
+<div class="section-head"><h2>Additional Placements</h2><span class="small" id="extras-visible">Sign in to review</span></div>
+<div class="extras" id="extras"><div class="state">Extra platform placements are stored separately from scheduled obligations.</div></div>
+</section>
+<p class="footer-note">Publishing proof is distinct from store sales, stock or broadcast verification. Changing publisher attribution preserves a revision history. Additional placements do not change scheduled post obligations.</p>
 </div></main></div>
 <script src="shared/gcm-shell.js?v=2.0.66"></script>
 <script src="shared/social-publishing-library.js?v=1.0.1"></script>
+<script src="shared/social-publishing-operator-ui.js?v=1.0.0"></script>
 <script>
 (function(){
 "use strict";
@@ -133,7 +152,7 @@ function platformHtml(p){
  const meta=p.status==="published"?"Published "+pretty(p.actualDate):p.status==="missed"?"Not published":p.status==="pending"?"Awaiting outcome":p.status==="planned"?"Scheduled; not due":"Publication not verified";
  const proof=p.status==="published"&&lib.safeUrl(p.proofReference)?
    '<a class="proof" href="'+esc(p.proofReference)+'" target="_blank" rel="noopener noreferrer">Open proof reference ↗</a>':"";
- return '<div class="channel"><div class="line"><strong>'+esc(p.platform)+'</strong><span class="status '+esc(p.status)+'">'+esc(p.status)+'</span></div>'+
+ return '<div class="channel" data-platform="'+esc(p.platform)+'"><div class="line"><strong>'+esc(p.platform)+'</strong><span class="status '+esc(p.status)+'">'+esc(p.status)+'</span></div>'+
  '<p>'+esc(meta)+'</p>'+proof+'</div>';
 }
 function postHtml(p,visiblePlatforms){
@@ -144,7 +163,7 @@ function postHtml(p,visiblePlatforms){
   '<p>'+esc(p.note||"No internal note")+'</p><p>'+esc(publisherNote)+'</p>'+
   (p.evidenceMismatch?'<p>Source-key evidence mismatch: record requires review.</p>':"")+'</details>':
   '<div class="postdetails">'+esc(publisherNote)+'</div>';
- return '<article class="post"><div class="posthead"><div><div class="meta">'+esc(metadata)+'</div><h3>'+esc(p.title)+'</h3><div class="meta">Source: Schedule Authority · No status changes from this view</div></div></div>'+
+ return '<article class="post" data-post-id="'+esc(p.id)+'"><div class="posthead"><div><div class="meta">'+esc(metadata)+'</div><h3>'+esc(p.title)+'</h3><div class="meta">Source: Schedule Authority · No status changes from this view</div></div></div>'+
   '<div class="channel-list">'+(visiblePlatforms.length?visiblePlatforms.map(platformHtml).join(""):'<div class="channel"><p>No scheduled channels are defined. Publication cannot be verified.</p></div>')+'</div>'+details+'</article>';
 }
 function render(){
@@ -160,6 +179,7 @@ function render(){
  $("count-unverified").textContent=String(metrics.unverified+metrics.pending+metrics.planned);
  $("count-visible").textContent=view.length+" scheduled post"+(view.length===1?"":"s")+" shown";
  $("records").innerHTML=view.length?view.map(x=>postHtml(x.p,x.visible)).join(""):'<div class="state">No publishing records match these filters. Try a different month, client, or outcome.</div>';
+ document.dispatchEvent(new Event("gcm-social-library-render"));
  const showHistory=!client&&!platform&&!status&&!month&&!q&&unmatched.length>0;
  $("history-box").hidden=!showHistory;
  if(showHistory){
@@ -187,7 +207,8 @@ async function load(){
 }
 ["client","platform","status","month","search"].forEach(id=>$(id).addEventListener(id==="search"?"input":"change",render));
 $("refresh").addEventListener("click",load);
-if(window.GCMOShell)window.GCMOShell.mount({currentPage:"media",statusText:"D1 Publishing Library · read-only v1.0.2"});
+window.GCMSocialLibraryBridge={getPosts:()=>posts,refresh:load};
+if(window.GCMOShell)window.GCMOShell.mount({currentPage:"media",statusText:"D1 Publishing Library · publisher tracking v1.1.0"});
 load();
 })();
 </script>
