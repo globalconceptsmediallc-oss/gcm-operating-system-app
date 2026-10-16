@@ -1,6 +1,6 @@
 /* =========================================================
  GCM OS · tests/socialPublishingOperator.test.js
- Version: 1.0.0
+ Version: 1.0.1
  Auth, exact-client publisher attribution, revision history and
  duplicate-safe extras. All tests use an isolated in-memory D1 mock.
  ========================================================= */
@@ -126,7 +126,7 @@ answer=await call("add_additional",extra);
 assert.equal(answer.ok,true);
 assert.equal(rows.posts.length,1);
 assert.equal(rows.placements.length,1);
-assert.equal(batchCount,1,"Extra placement creation is atomic in D1 batch");
+assert.equal(batchCount,2,"One atomic batch preserves attribution change history; another atomically records extra placement");
 assert.equal(rows.placements[0].proof_reference,"https://youtube.com/post/UgkxExample");
 answer=await call("add_additional",{...extra,proofReference:"https://youtube.com/post/UgkxExample?si=different"});
 assert.equal(answer.duplicateProtected,true);
