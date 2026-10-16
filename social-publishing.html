@@ -109,6 +109,24 @@ dialog menu{display:flex;gap:10px;justify-content:flex-end;padding:0;margin:9px 
 </section>
 <p class="footer-note">Publishing proof is distinct from store sales, stock or broadcast verification. Changing publisher attribution preserves a revision history. Additional placements do not change scheduled post obligations.</p>
 </div></main></div>
+<dialog id="publisher-dialog" aria-labelledby="publisher-title"><form id="publisher-form">
+<h2 id="publisher-title">Attribute the published post</h2><p class="sub" id="publisher-context"></p>
+<label>Actual publisher<input id="publisher-person" required minlength="2" maxlength="120" placeholder="Who published this post?"></label>
+<p class="form-error" id="publisher-error" hidden></p><menu><button class="action" type="button" data-close="publisher-dialog">Cancel</button><button class="action primary" type="submit">Save publisher</button></menu>
+</form></dialog>
+<dialog id="extra-dialog" aria-labelledby="extra-title"><form id="extra-form">
+<h2 id="extra-title">Additional verified placement</h2>
+<p class="sub">This adds a verified extra publication, not a scheduled campaign task.</p>
+<label>Client<select id="extra-client" required><option value="">Select client</option></select></label>
+<label>Campaign<input id="extra-campaign" maxlength="150" required placeholder="Liberty Fall Savings"></label>
+<label>Post title<input id="extra-post-title" maxlength="150" required placeholder="BOGO launch — YouTube Community"></label>
+<label>Platform<select id="extra-platform" required><option>YouTube</option><option>Facebook</option><option>Instagram</option><option>Google Business Profile</option><option>Other</option></select></label>
+<label>Actual publication date<input id="extra-date" type="date" required></label>
+<label>Published by<input id="extra-person" required minlength="2" maxlength="120" placeholder="Person who actually published"></label>
+<label>Published post HTTPS link<input id="extra-link" required type="url" placeholder="https://youtube.com/post/…"></label>
+<label>Notes (optional)<textarea id="extra-notes" rows="2" maxlength="1000"></textarea></label>
+<p class="form-error" id="extra-error" hidden></p><menu><button class="action" type="button" data-close="extra-dialog">Cancel</button><button class="action primary" type="submit">Record verified placement</button></menu>
+</form></dialog>
 <script src="shared/gcm-shell.js?v=2.0.66"></script>
 <script src="shared/social-publishing-library.js?v=1.0.1"></script>
 <script src="shared/social-publishing-operator-ui.js?v=1.0.0"></script>
