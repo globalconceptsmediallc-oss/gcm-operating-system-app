@@ -141,9 +141,10 @@ assert.equal((await invoke("list")).closedKeys.includes(key),true,"Amended outco
 const correctedPayload=JSON.parse(row.reason);
 assert.equal(correctedPayload.platforms.filter(p=>p.status==="published").length,3);
 assert.equal(correctedPayload.platforms[1].publishedDate,"2026-09-29","Actual date must not be replaced by planned date");
-assert.equal(correctedPayload.correctionHistory.length,1,"Original missed entry must survive evidence correction");
-assert.equal(correctedPayload.correctionHistory[0].previousDisposition,"social_missed");
-assert.equal(correctedPayload.correctionHistory[0].previous.platforms.every(p=>p.status==="missed"),true);
+assert.equal(correctedPayload.correctionHistory.length,3,"All earlier corrected outcomes must survive");
+const mostRecentRevision=correctedPayload.correctionHistory.at(-1);
+assert.equal(mostRecentRevision.previousDisposition,"social_missed");
+assert.equal(mostRecentRevision.previous.platforms.every(p=>p.status==="missed"),true,"The original All Missed decision is retained");
 assert.deepEqual(source,originalSchedule,"Authoritative scheduled source must remain unchanged");
 const stableHistory=JSON.stringify(correctedPayload.correctionHistory);
 result=await invoke("record_social_post",{...request(amended),note:"Corrected prior all-missed entry with publication evidence"});
