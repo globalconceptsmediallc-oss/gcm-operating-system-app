@@ -1,11 +1,17 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: media-calendar.html
-   Version: 1.8.2
+   Version: 1.8.3
    Status: Production Candidate
    Sprint: Media Operations — Prototype Match
    Purpose: Read-only client campaign command board matching the approved
             visual prototype while using existing D1 Media records.
+
+   Changes in 1.8.3:
+   - Places schedule-only radio flight notes inside their matching station's Radio lane.
+   - Keeps those grey notes distinct from named commercials, traffic evidence, and creative counts.
+   - Excludes radio productions from Promotions / Events keyword-based campaign classification.
+   - Preserves schedule authority, media evidence and D1 history without any writes.
 
    Changes in 1.8.2:
    - Reads exact Forward Look D1 social publishing dispositions alongside Schedule Authority.
@@ -224,7 +230,7 @@
           <a class="button" href="media.html">Operator Workspace</a>
           <a class="button" href="media-production.html">Production Records</a>
           <a class="button" href="schedule.html?v=1.0.6">Schedule Control</a>
-          <span class="version">media-calendar.html · v1.8.2</span>
+          <span class="version">media-calendar.html · v1.8.3</span>
         </div>
       </div>
 
@@ -679,8 +685,11 @@
   }
 
   function radioLanesFor(items){var map=new Map();items.forEach(function(r){var k=[r.market||"Market",r.outlet||"Station"].join("|");if(!map.has(k))map.set(k,{market:r.market||"Market",outlet:r.outlet||"Station",items:[]});map.get(k).items.push(r);});return Array.from(map.values()).sort(function(a,b){return(a.market+" "+a.outlet).localeCompare(b.market+" "+b.outlet);});}
-  function radioLanes(rows){return radioLanesFor(rows.filter(isRecordedRadio));}
-  function radioNoteLanes(rows){return radioLanesFor(radioScheduleNotes(rows));}
+  function radioLanes(rows){
+    // Planned station flights stay visible in Radio, but only real media records count
+    // as named commercials or receive creative-age and traffic-derived labels.
+    return radioLanesFor(rows.filter(function(r){return isRecordedRadio(r)||r.source==="schedule-radio";}));
+  }
   function channelItems(rows,channel){return rows.filter(function(r){return typeGroup(r.type)===channel;}).sort(function(a,b){return String(a.startDate||"").localeCompare(String(b.startDate||""));});}
   function onlineLaneItems(rows,channel){
     var all=channelItems(rows,channel);
@@ -706,6 +715,8 @@
   }
   function eventItems(rows){var seen=new Set(),out=[];rows.forEach(function(r){
     if(r.source==="promotion-post"||r.source==="schedule-deadline"||r.source==="promotion-takedown"||r.source==="schedule-radio")return;
+    // Never turn a radio commercial (e.g. Halloween One/Two) into a second campaign bar.
+    if(typeGroup(r.type)==="Radio")return;
     var l=lower([r.campaign,r.creative].filter(Boolean).join(" "));
     if((state.scheduleAuthorityLoaded||state.gunShows.length)&&/gun show/.test(l)&&r.source!=="gun-show-source")return;
     if(r.source==="schedule-event"||r.source==="promotion-run"||r.source==="gun-show-source"){out.push(r);return;}
@@ -746,14 +757,13 @@
 
     grid.appendChild(sectionTitle("Radio"));
     var radio=radioLanes(rows);
-    if(radio.length){radio.forEach(function(l){grid.appendChild(createLane(l.market+" / "+l.outlet,l.items.length+" named commercial"+(l.items.length===1?"":"s")+" in rotation",l.items,hueMap,"Radio"));});}
-    else grid.appendChild(createLane("Radio","No identified commercials",[],hueMap,"Radio","No identified radio commercial for this month"));
-    var radioNotes=radioNoteLanes(rows);
-    if(radioNotes.length){
-      grid.appendChild(sectionTitle("Radio schedule-only notes — not commercials"));
-      radioNotes.forEach(function(l){grid.appendChild(createLane(l.market+" / "+l.outlet,
-        l.items.length+" schedule-only record"+(l.items.length===1?"":"s")+" · no creative linked",l.items,hueMap,"Schedule"));});
-    }
+    if(radio.length){radio.forEach(function(l){
+      var named=l.items.filter(isRecordedRadio).length,notes=l.items.length-named;
+      var description=named+" named commercial"+(named===1?"":"s")+" in rotation"+
+        (notes?" · "+notes+" schedule-only flight"+(notes===1?"":"s")+" (unlinked)":"");
+      grid.appendChild(createLane(l.market+" / "+l.outlet,description,l.items,hueMap,"Radio"));
+    });}
+    else grid.appendChild(createLane("Radio","No radio production or schedule records",[],hueMap,"Radio","No radio schedule or production recorded for this month"));
 
     grid.appendChild(sectionTitle("Online Media"));
     ["Google Business","Facebook","YouTube","Other Digital"].forEach(function(channel){
@@ -829,7 +839,7 @@
 
   state.initialClient=readQuery();
   populateControls();
-  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"media",statusText:"D1 Media connected · Media Calendar v1.8.2"});
+  if(window.GCMOShell)window.GCMOShell.mount({currentPage:"media",statusText:"D1 Media connected · Media Calendar v1.8.3"});
   else console.error("Media Calendar 1.8.1: shared/gcm-shell.js did not load.");
 
   $("prev-month").addEventListener("click",function(){shiftMonth(-1);});
