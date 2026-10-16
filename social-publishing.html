@@ -1,7 +1,7 @@
 <!-- =========================================================
  Global Concepts Media Operating System
  File: social-publishing.html
- Version: 1.0.0
+ Version: 1.0.1
  Status: Read-only Foundation
  Purpose: Explore platform-level publication proof by client without
           duplicating or changing D1 Schedule Authority / Forward Look.
@@ -100,7 +100,7 @@ const API="https://gcm-business-intelligence-worker.globalconceptsmediallc.worke
 const $=id=>document.getElementById(id);
 const esc=x=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const lib=window.GCMSocialPublishingLibrary;
-let posts=[],unmatched=[];
+let posts=[],unmatched=[],sourceAvailable=false;
 const pretty=d=>d?new Date(d+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}):"Unknown";
 function getToday(){const d=new Date();return[d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-");}
 async function request(action){
@@ -133,13 +133,14 @@ function postHtml(p,visiblePlatforms){
   (p.evidenceMismatch?'<p>Source-key evidence mismatch: record requires review.</p>':"")+'</details>':
   '<div class="postdetails">'+esc(publisherNote)+'</div>';
  return '<article class="post"><div class="posthead"><div><div class="meta">'+esc(metadata)+'</div><h3>'+esc(p.title)+'</h3><div class="meta">Source: Schedule Authority · No status changes from this view</div></div></div>'+
-  '<div class="channel-list">'+visiblePlatforms.map(platformHtml).join("")+'</div>'+details+'</article>';
+  '<div class="channel-list">'+(visiblePlatforms.length?visiblePlatforms.map(platformHtml).join(""):'<div class="channel"><p>No scheduled channels are defined. Publication cannot be verified.</p></div>')+'</div>'+details+'</article>';
 }
 function render(){
+ if(!sourceAvailable)return;
  const client=$("client").value, platform=$("platform").value, status=$("status").value, month=$("month").value, q=$("search").value.trim().toLowerCase();
  let filtered=posts.filter(p=>(!client||String(p.clientId)===client)&&(!month||p.plannedDate.startsWith(month))&&
    (!q||[p.title,p.campaign,p.clientName,p.clientCode].join(" ").toLowerCase().includes(q)));
- let view=filtered.map(p=>({p,visible:p.platforms.filter(v=>(!platform||v.platform===platform)&&(!status||v.status===status))})).filter(x=>x.visible.length);
+ let view=filtered.map(p=>({p,visible:p.platforms.filter(v=>(!platform||v.platform===platform)&&(!status||v.status===status))})).filter(x=>x.visible.length||(!platform&&!status&&!x.p.platforms.length));
  const metrics=lib.totals(view.map(({p,visible})=>({...p,platforms:visible})));
  $("count-posts").textContent=String(metrics.posts);
  $("count-published").textContent=String(metrics.published);
@@ -155,6 +156,7 @@ function render(){
  }
 }
 async function load(){
+ sourceAvailable=false;posts=[];unmatched=[];
  $("records").innerHTML='<div class="state">Loading authoritative schedule and publication evidence…</div>';
  $("count-visible").textContent="Checking D1…";
  $("refresh").disabled=true;
@@ -163,7 +165,7 @@ async function load(){
   const [schedule,dispositions]=await Promise.all([request("schedule-operations"),request("forward-look-operations")]);
   if(!Array.isArray(schedule.scheduleEvents)||!Array.isArray(dispositions.dispositions))throw Error("Publishing source response is incomplete.");
   const projection=lib.normalizedScheduled(schedule.scheduleEvents,dispositions.dispositions,getToday());
-  posts=projection.posts;unmatched=projection.unmatched;
+  posts=projection.posts;unmatched=projection.unmatched;sourceAvailable=true;
   renderClients();render();
  }catch(err){
   $("records").innerHTML='<div class="state error">Publishing evidence is unavailable. Nothing was assumed or changed. '+esc(err?.message||"Try Refresh evidence.")+'</div>';
