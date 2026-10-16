@@ -6,6 +6,11 @@
    Purpose: Record privacy-minimized engagement when a personalized
             GCM prospect concept page is viewed.
 
+   Change Notes — 1.2.0:
+   - Adds eight independently prepared Central Florida print-mailer prospect concepts.
+   - Match exact Radar business names; engagement remains privacy minimized.
+   - Excludes the River Rocks venue from prospect tracking; advertiser is Renewal by Andersen.
+
    Change Notes — 1.1.5:
    - Adds Barkingham Palace's personalized first-free-day to loyal-customer
      concept to the exact-name Radar engagement allowlist.
@@ -91,7 +96,7 @@ import {
 } from "../shared/http.js";
 
 export const PROSPECT_CONCEPT_VIEW_ACTION = "prospect-concept-view";
-export const PROSPECT_CONCEPT_TRACKING_VERSION = "1.1.5";
+export const PROSPECT_CONCEPT_TRACKING_VERSION = "1.2.0";
 
 const CONCEPTS = new Map([
   ["john-curri-v1", {
@@ -179,6 +184,54 @@ const CONCEPTS = new Map([
     sourceReference: "/prospect-previews/barkingham-palace/",
     subject: "Barkingham Palace free-day growth concept viewed",
     summary: "The personalized Barkingham Palace free-day-to-loyal-customer direct-mail growth concept page was viewed."
+  }],
+  ["heron-home-outdoor-mailer-to-customer-v1", {
+    businessName: "Heron Home & Outdoor",
+    sourceReference: "/prospect-previews/heron-home-outdoor/",
+    subject: "Heron Home & Outdoor print-campaign concept viewed",
+    summary: "The independent GCM Heron Home & Outdoor print-to-lawn-care response-to-recurring-client growth concept page was viewed."
+  }],
+  ["florida-pest-control-mailer-to-customer-v1", {
+    businessName: "Florida Pest Control",
+    sourceReference: "/prospect-previews/florida-pest-control/",
+    subject: "Florida Pest Control print-campaign concept viewed",
+    summary: "The independent GCM Florida Pest Control print-to-first-service-to-protection-plan growth concept page was viewed."
+  }],
+  ["renewal-by-andersen-river-rocks-mailer-to-customer-v1", {
+    businessName: "Renewal by Andersen",
+    sourceReference: "/prospect-previews/renewal-by-andersen-river-rocks/",
+    subject: "Renewal by Andersen print-campaign concept viewed",
+    summary: "The independent GCM Renewal by Andersen print-to-event-to-window-project growth concept page was viewed."
+  }],
+  ["prosper-exterior-cleaning-mailer-to-customer-v1", {
+    businessName: "Prosper Exterior Cleaning LLC",
+    sourceReference: "/prospect-previews/prosper-exterior-cleaning/",
+    subject: "Prosper Exterior Cleaning LLC print-campaign concept viewed",
+    summary: "The independent GCM Prosper Exterior Cleaning LLC print-to-estimate-to-completed-paver-project growth concept page was viewed."
+  }],
+  ["restore-wellness-center-mailer-to-customer-v1", {
+    businessName: "Restore Wellness Center",
+    sourceReference: "/prospect-previews/restore-wellness-center/",
+    subject: "Restore Wellness Center print-campaign concept viewed",
+    summary: "The independent GCM Restore Wellness Center print-to-print-to-booked-consultation growth concept page was viewed."
+  }],
+  ["a-picture-perfect-pet-mailer-to-customer-v1", {
+    businessName: "A Picture Perfect Pet",
+    sourceReference: "/prospect-previews/a-picture-perfect-pet/",
+    subject: "A Picture Perfect Pet print-campaign concept viewed",
+    summary: "The independent GCM A Picture Perfect Pet print-to-first-groom-to-repeat-visit growth concept page was viewed."
+  }],
+  ["karen-nierenberg-one-percent-lists-mailer-to-customer-v1", {
+    businessName: "Karen Nierenberg / 1 Percent Lists",
+    sourceReference: "/prospect-previews/karen-nierenberg-one-percent-lists/",
+    subject: "Karen Nierenberg / 1 Percent Lists print-campaign concept viewed",
+    summary: "The independent GCM Karen Nierenberg / 1 Percent Lists print-to-seller-inquiry-to-signed-listing growth concept page was viewed."
+  }],
+  ["fiesta-azteca-melbourne-mailer-to-customer-v1", {
+    businessName: "Fiesta Azteca",
+    sourceReference: "/prospect-previews/fiesta-azteca-melbourne/",
+    subject: "Fiesta Azteca print-campaign concept viewed",
+    summary: "The independent GCM Fiesta Azteca print-to-coupon-to-repeat-guest growth concept page was viewed."
   }]
 ]);
 
