@@ -1,7 +1,7 @@
 /* =========================================================
  Global Concepts Media Operating System
  File: tests/mediaCalendarPresentation.test.js
- Version: 1.0.1
+ Version: 1.1.0
  Purpose: Verify radio Schedule Authority placeholders remain distinct from
  named commercials and that traffic-derived status is visible alongside age.
  Read-only page regression; no database, browser or email writes.
@@ -9,13 +9,14 @@
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 const html=readFileSync(new URL("../media-calendar.html",import.meta.url),"utf8");
-assert.match(html,/Version: 1\.8\.1/);
+assert.match(html,/Version: 1\.8\.2/);
 const block=(from,to)=>{
  const a=html.indexOf("  function "+from+"("),b=html.indexOf("  function "+to+"(",a+1);
  assert.ok(a>0&&b>a,"Calendar must contain "+from+" before "+to);
  return html.slice(a,b);
 };
-const source=block("productionKey","hashText")+"\n"+
+const source=block("socialPublishingStatus","hasRecordedSocial")+"\n"+
+ block("productionKey","hashText")+"\n"+
  block("radioLanesFor","channelItems")+"\n"+
  block("uniqueProductions","renderCreativeAge")+"\n"+
  block("renderCampaignStatus","withinMonth");
@@ -23,10 +24,10 @@ const statusBox={innerHTML:""};
 const $=id=>{assert.equal(id,"campaign-status-list");return statusBox;};
 const typeGroup=t=>String(t).toLowerCase()==="radio"?"Radio":t;
 const lower=v=>String(v||"").toLowerCase();
-const state={scheduleAuthorityLoaded:true};
+const state={scheduleAuthorityLoaded:true,socialDispositions:new Map()};
 const esc=v=>String(v);
 const bundle=new Function("typeGroup","lower","$","state","eventItems","esc",
- source+"\nreturn {isRecordedRadio,radioScheduleNotes,radioLanes,radioNoteLanes,uniqueProductions,radioOperatingText,radioEvidenceText,renderCampaignStatus};")(typeGroup,lower,$,state,()=>[],esc);
+ source+"\nreturn {socialPublishingStatus,socialSupportStatus,socialSupportCounts,socialSupportDescription,isRecordedRadio,radioScheduleNotes,radioLanes,radioNoteLanes,uniqueProductions,radioOperatingText,radioEvidenceText,renderCampaignStatus};")(typeGroup,lower,$,state,()=>[],esc);
 const creatives=["Before Disaster Strikes","Safe Moving Services 2","Safe Repair Services 2"];
 const rows=[];
 for(const market of ["Melbourne","Orlando"]){
@@ -74,3 +75,41 @@ assert.match(html,/mediaRunProjector\(state\.workflow,dayForView\(\)\)/,
 assert.match(html,/not verified broadcasts/,"Disclaim airplay validation");
 assert.equal(rows.at(-1).status,"planned","Source data must not be rewritten");
 console.log("PASS Media Calendar 1.8.1: 2 radio markets x 3 commercials, separate schedule note, dated traffic status, no fabricated airplay");
+
+const socialEvent={key:"ses:gun-show:orlando:2026-10-10:social_post:2026-10-05:SOCIAL #1 — SHOW WEEK ANNOUNCEMENT · Orlando",startDate:"2026-10-05",scheduleItemId:99};
+const exactKey="schedule|"+socialEvent.key+"|2026-10-05";
+state.socialDispositions.set(exactKey.toLowerCase(),{
+ disposition:"social_mixed",
+ reason:JSON.stringify({
+  schema:"gcm-social-execution-v1",scheduleItemId:99,plannedDate:"2026-10-05",
+  platforms:[
+   {platform:"Facebook",status:"missed"},
+   {platform:"Google Business Profile",status:"published",publishedDate:"2026-10-05",proofReference:"archive:post-123"},
+   {platform:"Instagram",status:"missed"}
+  ]
+ })
+});
+assert.equal(bundle.socialPublishingStatus(socialEvent,"Facebook").status,"missed");
+const gbOutcome=bundle.socialPublishingStatus(socialEvent,"Google Business Profile");
+assert.equal(gbOutcome.status,"published");
+assert.equal(gbOutcome.proofReference,"archive:post-123");
+assert.equal(bundle.socialPublishingStatus(socialEvent,"Instagram").status,"missed");
+assert.equal(bundle.socialPublishingStatus({...socialEvent,scheduleItemId:100},"Facebook").status,"unverified",
+ "Do not import another schedule item's publishing decision");
+assert.equal(bundle.socialPublishingStatus({...socialEvent,startDate:"2026-10-06"},"Facebook").status,"unverified",
+ "Do not import another scheduled date's publishing decision");
+assert.equal(bundle.socialPublishingStatus({...socialEvent,startDate:"2027-01-01"},"Facebook").status,"planned",
+ "Future scheduled posts should remain planned without outcome evidence");
+assert.equal(bundle.socialSupportDescription([
+ {source:"promotion-post",executionStatus:"missed"},
+ {source:"promotion-post",executionStatus:"published"},
+ {source:"promotion-post",executionStatus:"unverified"},
+ {source:"record",status:"planned"}
+]),"1 published (proof referenced) · 1 missed · 1 unverified · 1 other media records");
+assert.match(html,/action:"forward-look-operations",operation:"list"/,
+ "Media Calendar must load the same D1 decisions as Today");
+assert.match(html,/Scheduled · outcome unverified/,
+ "Scheduled campaign should never be labeled Recorded as proof of launch");
+assert.match(html,/id="publishing-status-state"/,
+ "Missing source must produce a visible evidence-quality warning");
+console.log("PASS Media Calendar social publishing statuses map exact D1 evidence per platform; incomplete facts remain unverified");
