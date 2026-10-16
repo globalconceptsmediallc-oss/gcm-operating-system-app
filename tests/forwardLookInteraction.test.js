@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/forwardLookInteraction.test.js
-   Version: 1.2.0
+   Version: 1.3.0
    Status: Regression Test
    Purpose: Lock the first interactive Forward Look workflow for
             passed radio / traffic commitments.
@@ -113,3 +113,34 @@ result=await invoke("record_social_post",{...request(platforms(["missed","missed
 assert.equal(result.ok,false,"Tampered event must be rejected");
 assert.equal(writes,before,"Invalid event must not write");
 console.log("PASS social posting records distinguish published/missed/partial, preserve proof gates, and hide only resolved rows");
+
+
+// Historical confirmed gun shows leave Forward Look without losing Schedule Authority.
+// This is a UI-only view classification, NOT proof of attendance, traffic, or publication.
+const matches = today.match(/function shouldArchivePastConfirmedGunShow\(event\) \{[\s\S]*?\n      \}/);
+assert.ok(matches, "Forward Look must have a dedicated past-show view rule");
+const shouldArchive = new Function(
+  "forwardDateOnly", "forwardDaysUntil",
+  matches[0] + "\nreturn shouldArchivePastConfirmedGunShow;"
+)(
+  value => /^\d{4}-\d{2}-\d{2}$/.test(value || "") ? value : "",
+  value => Math.round((Date.parse(value + "T00:00:00Z") - Date.parse("2026-10-16T00:00:00Z")) / 86400000)
+);
+const show = {
+ kind:"gun_show",status:"confirmed",startDate:"2026-10-03",endDate:"2026-10-04",
+ metadata:{participationStatus:"confirmed"}
+};
+assert.equal(shouldArchive(show), true, "Oct 3 Melbourne confirmed show should leave Forward Look");
+assert.equal(shouldArchive({...show,startDate:"2026-10-10",endDate:"2026-10-11"}), true,
+  "Oct 10 Orlando confirmed show should leave Forward Look");
+assert.equal(shouldArchive({...show,endDate:"2026-10-16"}), false,
+  "A show is not archival until its scheduled end date passes");
+assert.equal(shouldArchive({...show,status:"candidate"}), false,
+  "Unconfirmed schedule records must remain actionable");
+assert.equal(shouldArchive({...show,metadata:{participationStatus:"official_schedule_candidate"}}), false,
+  "Promoter-only date does not confirm SES participation");
+assert.equal(shouldArchive({...show,kind:"social_post"}), false,
+  "A past show's social-post obligations must remain independent");
+assert.equal(shouldArchive({...show,kind:"station_deadline"}), false,
+  "A past show's station obligations must remain independent");
+console.log("PASS confirmed ended gun-show events leave active Forward Look without rewriting or clearing campaign work");
