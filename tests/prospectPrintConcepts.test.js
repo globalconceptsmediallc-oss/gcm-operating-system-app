@@ -20,7 +20,7 @@ assert.match(route,/VERSION = "1\.2\.0"/);
 for(const [slug,name,offer,boundary] of files){
  const html=fs.readFileSync(new URL("../prospect-previews/"+slug+"/index.html",import.meta.url),"utf8");
  assert.match(html,/noindex,nofollow,noarchive,noimageindex/);
- assert.match(html,/independent/i);assert.ok(html.includes(name));
+ assert.match(html,/independent/i);assert.ok(html.includes(name.replaceAll('&','&amp;')));
  assert.ok(html.includes(offer));assert.ok(html.includes(boundary));
  assert.ok(html.includes(slug+"-mailer-to-customer-v1"));
  assert.ok(route.includes('businessName: "'+name+'"'));
