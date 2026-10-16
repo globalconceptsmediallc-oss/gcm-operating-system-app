@@ -1,7 +1,7 @@
 <!-- =========================================================
  Global Concepts Media Operating System
  File: social-publishing.html
- Version: 1.1.0
+ Version: 1.2.0
  Status: Read-only Foundation
  Purpose: Explore platform-level publication proof by client without
           duplicating or changing D1 Schedule Authority / Forward Look.
@@ -78,9 +78,10 @@ dialog menu{display:flex;gap:10px;justify-content:flex-end;padding:0;margin:9px 
 <a class="action" href="media-calendar.html">Media Calendar</a>
 <button class="action" type="button" id="operator-sign-in">Secure Google Sign-In</button>
 <button class="action" type="button" id="add-placement">Add verified placement</button>
+<button class="action" type="button" id="import-ses-history">Review SES historical backfill</button>
 <button class="action primary" type="button" id="refresh">Refresh evidence</button></div>
 </header>
-<div class="notice"><strong>Publisher tracking · Step 2.</strong> Schedule Authority and Forward Look remain the source of truth for scheduled publishing. Verified Google operator sign-in is required to record publisher names and additional placements, such as the BOGO YouTube post. This does not edit prior publishing outcomes. Creative uploads come later.</div>
+<div class="notice"><strong>Publisher tracking · Verified historical backfill.</strong> Schedule Authority and Forward Look remain the source of truth for scheduled publishing. Verified Google operator sign-in is required to record publisher names and additional placements, such as the BOGO YouTube post. This does not edit prior publishing outcomes. Creative uploads come later.</div>
 <p class="operator-notice" id="operator-state" role="status">Sign in to view and record publisher attribution and additional placements.</p>
 <div class="metrics" aria-label="Publishing summary">
 <div class="metric"><strong id="count-posts">—</strong><span>Scheduled posts</span></div>
@@ -129,7 +130,8 @@ dialog menu{display:flex;gap:10px;justify-content:flex-end;padding:0;margin:9px 
 </form></dialog>
 <script src="shared/gcm-shell.js?v=2.0.66"></script>
 <script src="shared/social-publishing-library.js?v=1.0.1"></script>
-<script src="shared/social-publishing-operator-ui.js?v=1.0.0"></script>
+<script src="shared/ses-social-history-2026.js?v=1.0.0"></script>
+<script src="shared/social-publishing-operator-ui.js?v=1.1.0"></script>
 <script>
 (function(){
 "use strict";
