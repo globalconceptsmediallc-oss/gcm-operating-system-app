@@ -1,7 +1,7 @@
 <!-- =========================================================
  Global Concepts Media Operating System
  File: social-publishing.html
- Version: 1.0.1
+ Version: 1.0.2
  Status: Read-only Foundation
  Purpose: Explore platform-level publication proof by client without
           duplicating or changing D1 Schedule Authority / Forward Look.
@@ -80,7 +80,7 @@ h1{font-size:clamp(1.75rem,3vw,2.5rem);letter-spacing:-.045em;margin:0 0 8px}h2{
 <div class="field"><label for="client">Client</label><select id="client"><option value="">All clients</option></select></div>
 <div class="field"><label for="platform">Platform</label><select id="platform"><option value="">All platforms</option><option value="Facebook">Facebook</option><option value="Instagram">Instagram</option><option value="Google Business Profile">Google Business Profile</option><option value="YouTube">YouTube</option></select></div>
 <div class="field"><label for="status">Outcome</label><select id="status"><option value="">All outcomes</option><option value="published">Published</option><option value="missed">Missed</option><option value="pending">Pending</option><option value="planned">Planned</option><option value="unverified">Unverified</option></select></div>
-<div class="field"><label for="month">Scheduled month</label><input type="month" id="month"></div>
+<div class="field"><label for="month">Scheduled month</label><select id="month"><option value="">All months</option></select></div>
 <div class="field"><label for="search">Search</label><input id="search" type="search" placeholder="Post, campaign, client…"></div>
 </div>
 </section>
@@ -92,7 +92,7 @@ h1{font-size:clamp(1.75rem,3vw,2.5rem);letter-spacing:-.045em;margin:0 0 8px}h2{
 <p class="footer-note">Publication proof is distinct from verified store sales, paid performance, and actual broadcast delivery. Phase 1 does not create, update, or delete records. The new dedicated D1 publishing tables remain empty until separately approved data entry is enabled.</p>
 </div></main></div>
 <script src="shared/gcm-shell.js?v=2.0.66"></script>
-<script src="shared/social-publishing-library.js?v=1.0.0"></script>
+<script src="shared/social-publishing-library.js?v=1.0.1"></script>
 <script>
 (function(){
 "use strict";
@@ -116,6 +116,18 @@ function renderClients(){
  $("client").innerHTML='<option value="">All clients</option>'+options.map(v=>'<option value="'+esc(v[0])+'">'+esc(v[1])+'</option>').join("");
  const requested=new URLSearchParams(location.search).get("clientId")||"";
  $("client").value=options.some(v=>v[0]===selected)?selected:options.some(v=>v[0]===requested)?requested:"";
+}
+function renderMonths(){
+ // Safari can treat input type=month as a text box and return "October 2026",
+ // which cannot match a Schedule Authority YYYY-MM-DD value. Use canonical
+ // YYYY-MM select values on every supported browser.
+ const existing=$("month").value, available=lib.monthsForPosts(posts);
+ const requested=new URLSearchParams(location.search).get("month")||"";
+ const preference=existing||(/^(?:19|20)\d\d-(?:0[1-9]|1[0-2])$/.test(requested)?requested:getToday().slice(0,7));
+ $("month").innerHTML='<option value="">All months</option>'+available.map(m=>
+   '<option value="'+esc(m)+'">'+esc(lib.monthLabel(m))+'</option>'
+ ).join("");
+ $("month").value=available.includes(preference)?preference:"";
 }
 function platformHtml(p){
  const meta=p.status==="published"?"Published "+pretty(p.actualDate):p.status==="missed"?"Not published":p.status==="pending"?"Awaiting outcome":p.status==="planned"?"Scheduled; not due":"Publication not verified";
@@ -166,7 +178,7 @@ async function load(){
   if(!Array.isArray(schedule.scheduleEvents)||!Array.isArray(dispositions.dispositions))throw Error("Publishing source response is incomplete.");
   const projection=lib.normalizedScheduled(schedule.scheduleEvents,dispositions.dispositions,getToday());
   posts=projection.posts;unmatched=projection.unmatched;sourceAvailable=true;
-  renderClients();render();
+  renderClients();renderMonths();render();
  }catch(err){
   $("records").innerHTML='<div class="state error">Publishing evidence is unavailable. Nothing was assumed or changed. '+esc(err?.message||"Try Refresh evidence.")+'</div>';
   $("count-visible").textContent="Source unavailable";
@@ -175,7 +187,7 @@ async function load(){
 }
 ["client","platform","status","month","search"].forEach(id=>$(id).addEventListener(id==="search"?"input":"change",render));
 $("refresh").addEventListener("click",load);
-if(window.GCMOShell)window.GCMOShell.mount({currentPage:"media",statusText:"D1 Publishing Library · read-only v1.0.0"});
+if(window.GCMOShell)window.GCMOShell.mount({currentPage:"media",statusText:"D1 Publishing Library · read-only v1.0.2"});
 load();
 })();
 </script>
