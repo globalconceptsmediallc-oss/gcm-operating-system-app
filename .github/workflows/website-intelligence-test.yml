@@ -36,3 +36,6 @@ jobs:
 
       - name: Run Forward Look Outcome Correction Regression
         run: npm run test:forward-look-interaction
+
+      - name: Run Promotion Launch Evidence Regression
+        run: npm run test:promotion-launch-evidence
