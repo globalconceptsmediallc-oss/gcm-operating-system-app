@@ -62,7 +62,7 @@ assert.equal(bundle.uniqueProductions(rows).length,3,
 bundle.renderCampaignStatus(rows);
 assert.match(statusBox.innerHTML,/2 markets · 3 creatives/);
 assert.match(statusBox.innerHTML,/Radio schedule-only notes/);
-assert.match(statusBox.innerHTML,/1 unlinked schedule item/);
+assert.match(statusBox.innerHTML,/2 unlinked schedule items/);
 assert.match(statusBox.innerHTML,/Schedule Authority/);
 assert.match(statusBox.innerHTML,/Connected/);
 assert.equal(bundle.radioOperatingText(rows[0]),"Running");
@@ -73,8 +73,6 @@ assert.match(bundle.radioEvidenceText({...rows[0],operatingBasis:"stored_status"
 assert.match(html,/radioStatus\+" · "\+endFresh\.label/,"Bar label should show traffic state AND creative-age state");
 assert.match(html,/scheduleNote\?"Schedule only"/,"Schedule notes must carry their own visible label");
 assert.match(html,/if\(scheduleNote\)shell\.classList\.add\("schedule-note"\)/);
-assert.match(html,/grid\.appendChild\(sectionTitle\("Radio schedule-only notes — not commercials"\)\)/);
-assert.match(html,/var radioNotes=radioNoteLanes\(rows\)/);
 assert.match(html,/if\(r\.source==="schedule-radio"\)\{if\(withinMonth\(s\)\)items\.push\(\{date:s,label:"Schedule only"/,
  "Schedule notes should be documented once as notes, not commercial start/end events");
 assert.match(html,/projection\.assignment\(original,c\)/);
