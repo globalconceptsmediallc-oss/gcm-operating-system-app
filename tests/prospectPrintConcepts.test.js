@@ -25,8 +25,17 @@ for(const [slug,name,offer,boundary] of files){
  assert.ok(html.includes(slug+"-mailer-to-customer-v1"));
  assert.ok(route.includes('businessName: "'+name+'"'));
  assert.ok(route.includes('"/prospect-previews/'+slug+'/"'));
- assert.match(html,/prospect-print-concept\.css/);assert.match(html,/prospect-print-concept\.js/);
- assert.match(html,/compare|Compare/);assert.match(html,/90-day|90 days/i);
+ assert.match(html,/prospect-print-concept\.js/);
+ if(slug==="heron-home-outdoor"){
+  assert.match(html,/Version: 2\.0\.0/);
+  assert.match(html,/id="experience"/);
+  assert.match(html,/id="preview-handoff"/);
+  assert.match(html,/id="talk"/);
+  assert.match(html,/one upcoming mail campaign/i);
+ }else{
+  assert.match(html,/prospect-print-concept\.css/);
+  assert.match(html,/compare|Compare/);assert.match(html,/90-day|90 days/i);
+ }
  assert.doesNotMatch(html,/Teresa S Belcher|431 Vizcaya Ct|32940-1833/i);
 }
 assert.match(css,/\.hero/);assert.match(css,/\.mailer/);
