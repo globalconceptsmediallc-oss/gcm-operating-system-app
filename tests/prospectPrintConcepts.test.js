@@ -1,4 +1,4 @@
-/* GCM OS • Eight advertiser print-source concepts, October 2026 */
+/* GCM OS • Eight advertiser print-source concepts • Version: 1.2.0 */
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
@@ -27,11 +27,11 @@ for(const [slug,name,offer,boundary] of files){
  assert.ok(route.includes('"/prospect-previews/'+slug+'/"'));
  assert.match(html,/prospect-print-concept\.js/);
  if(slug==="heron-home-outdoor"){
-  assert.match(html,/Version: 2\.0\.0/);
-  assert.match(html,/id="experience"/);
-  assert.match(html,/id="preview-handoff"/);
-  assert.match(html,/id="talk"/);
-  assert.match(html,/one upcoming mail campaign/i);
+  assert.match(html,/Version: 3\.0\.0/);
+  assert.match(html,/id="comparison"/);
+  assert.match(html,/id="try-handoff"/);
+  assert.match(html,/id="meeting"/);
+  assert.match(html,/One next mailing/i);
  }else{
   assert.match(html,/prospect-print-concept\.css/);
   assert.match(html,/compare|Compare/);assert.match(html,/90-day|90 days/i);
