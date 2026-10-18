@@ -5,239 +5,311 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive,noimageindex">
 <meta name="referrer" content="strict-origin-when-cross-origin">
-<meta name="theme-color" content="#102b40">
-<meta name="description" content="A personal demonstration for Heron Home & Outdoor: connecting an existing lawn-care mailer to a clearer quote request and potential long-term lawn-care customer.">
-<title>Heron | See the Next Mailer Experience — GCM</title>
+<meta name="theme-color" content="#0e2937">
+<meta name="description" content="An independent, custom GCM growth idea for Heron Home & Outdoor: a side-by-side look at the existing lawn-care mailer response and a proposed coupon-to-quote improvement.">
+<title>Heron | Make the Next Mailer Worth More — GCM</title>
 <!-- ========================================================
- GCM OS | Independent Heron prospect presentation
+ GCM OS — Independent Heron Prospect Presentation
  File: prospect-previews/heron-home-outdoor/index.html
- Version: 2.0.0 | 2026-10-17
- Focus: make the sales invitation, proposed deliverable and buyer value tangible.
- Sources: physical $100 Heron lawn-care mailer from GCM prospect research;
-          public myheronhome.com/lawn/ and /lawn/lawn-care/ on 2026-10-17.
- Important: Heron's public website ALREADY offers free quotes and a
-          $100 lawn-care promotion. This concept does NOT assert otherwise.
- Boundaries: unlisted independent GCM proposal, not official Heron,
-          not a customer quote form, active coupon, or performance result.
- Privacy: no forms, stored customer inputs, pixels, third-party imagery.
-          Preview excludes the existing privacy-minimized Radar view signal.
+ Version: 3.0.0 | Updated 2026-10-18
+ PURPOSE: Explain why the demonstration benefits Heron, using its
+ existing customer journey compared with a genuinely proposed alternative.
+ PUBLIC EVIDENCE:
+  - Original paper mailer supplied by GCM, expired Aug 31 2026.
+  - https://www.myheronhome.com/lawn-care-offer-save100/
+    (both existing quote and coupon claim paths; read-only observed)
+  - https://www.myheronhome.com/specials/ (Oct 31 2026 lawn offer)
+ NOT CLAIMED:
+  - No claim Heron loses leads or has duplicate CRM records.
+  - No claim the campaign landing page is broken or invalid.
+  - No submission/CRM integration or actual prospect/customer metrics.
+  - No current offer redemption through this GCM page.
+ PRIVACY: No customer data, local persistence, cookies, forms, or pixels.
+ The existing GCM privacy-minimized view signal is skipped by ?gcm_preview=1.
  ======================================================== -->
 <style>
-:root{--navy:#102b40;--deep:#071f2d;--ink:#172b37;--muted:#526472;--leaf:#cbea48;--green:#337c58;--cream:#f7f8f2;--white:#fff;--line:#dce5e5;--mist:#edf3f1;--orange:#fc723e}
-*{box-sizing:border-box}html{scroll-behavior:smooth}
-body{margin:0;font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:var(--ink);background:var(--cream)}
-a{color:inherit}a:focus-visible,button:focus-visible{outline:3px solid var(--orange);outline-offset:4px}
-h1,h2,h3,p{margin:0}h1,h2{letter-spacing:-.046em}h2{font-size:clamp(32px,4vw,53px);line-height:1.14;font-weight:750}
-h3{line-height:1.25;letter-spacing:-.022em}
-.wrap{max-width:1160px;width:calc(100% - 48px);margin:0 auto}
-.skip{position:absolute;left:-9999px;top:12px;padding:12px;background:var(--white);z-index:10}.skip:focus{left:15px}
-.topbar{background:var(--white);border-bottom:1px solid var(--line)}.topbar .wrap{display:flex;justify-content:space-between;gap:18px;align-items:center;min-height:76px}
-.agency{display:flex;align-items:center;gap:13px;text-decoration:none}
-.gmark{display:grid;place-items:center;border:2px solid var(--navy);width:41px;height:41px;font-size:20px;font-weight:900;color:var(--navy)}
-.agency strong{display:block;font-size:13px;font-weight:900;letter-spacing:.06em}.agency small{display:block;color:#667a83;font-size:10px;letter-spacing:.08em;text-transform:uppercase}
-.topbar nav{display:flex;gap:24px;align-items:center}.topbar nav a{font-size:11px;text-decoration:none;font-weight:800;letter-spacing:.03em}
-.pilllink{background:var(--navy);color:#fff!important;padding:11px 15px;border-radius:7px}
-.eyebrow{text-transform:uppercase;letter-spacing:.17em;font-weight:900;font-size:11px}
-.hero{color:#fff;background:radial-gradient(circle at 89% 15%,#3f6a55 0%,transparent 31%),linear-gradient(120deg,#092334,#143b4a 62%,#163b39);position:relative;overflow:hidden}
-.hero:after{content:"";position:absolute;pointer-events:none;width:520px;height:520px;border:1px solid #9abc6d44;border-radius:50%;right:-160px;bottom:-290px;box-shadow:0 0 0 45px #ffffff04,0 0 0 110px #ffffff04}
-.hero .wrap{padding:87px 0 91px;position:relative;z-index:1;display:grid;grid-template-columns:1.12fr .88fr;gap:64px;align-items:center}
-.hero .eyebrow{color:var(--leaf)}h1{font-size:clamp(43px,5.9vw,75px);line-height:1.09;font-weight:800;margin:16px 0 22px}
-.hero h1 em{font-style:normal;color:var(--leaf)}.hero .lead{font-size:18px;line-height:1.74;color:#e2eceb;max-width:625px}
-.hero .reason{font-size:14px;line-height:1.8;color:#d8e7e4;max-width:585px;margin:22px 0 0}
-.button{display:inline-flex;align-items:center;justify-content:center;padding:15px 23px;border-radius:7px;font-size:13px;font-weight:900;text-decoration:none;min-height:49px;transition:transform .18s,filter .18s}
-.button:hover{transform:translateY(-2px);filter:brightness(1.05)}.button.primary{color:#102b40;background:var(--leaf)}
-.button.light{color:#173a3b;background:#fff}.button.outline{border:1px solid #ffffff66;color:white}
-.hero-buttons{display:flex;gap:11px;flex-wrap:wrap;margin-top:27px}
-.hero-foot{font-size:11px;color:#b5c9cc;margin-top:21px;line-height:1.6}
-.mailer-frame{background:#ffffff10;border:1px solid #ffffff4d;padding:18px;transform:rotate(2deg);box-shadow:0 30px 65px #0004}
-.paper{min-height:398px;background:#fff;color:#143253;display:flex;flex-direction:column;box-shadow:0 8px 20px #0003}
-.paper-top{background:linear-gradient(#08312e44,#08312e44),repeating-linear-gradient(95deg,#487b44,#43763d 4px,#55874a 8px);padding:32px 23px;min-height:285px;color:white;display:flex;flex-direction:column;justify-content:center;position:relative}
-.paper-top:before{content:"";position:absolute;left:0;right:0;top:0;height:35px;background:linear-gradient(140deg,#eaf3ef,#fff8 50%,transparent 50%);clip-path:polygon(0 0,100% 0,100% 28%,0 100%);opacity:.48}
-.paper-kicker{font-size:12px;letter-spacing:.19em;font-weight:900}.paper-head{font-size:clamp(38px,4.8vw,58px);line-height:.97;font-weight:1000;letter-spacing:-.045em;margin:15px 0}
-.paper-head span{color:#dbf750}.paper-sub{font-size:13px;color:#f4fff5}.paper-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:17px 18px;min-height:100px}
-.paper-foot strong{font-size:17px;line-height:1.18}.paper-offer{display:block;background:var(--orange);color:#fff;font-size:19px;font-weight:1000;line-height:1.1;border-radius:4px;padding:12px 10px;text-align:center;transform:rotate(-6deg)}
-.paper-caption{font-size:11px;color:#c4d4d7;margin-top:19px;text-align:center;line-height:1.65}
-.problem{background:#fff;padding:85px 0}.intro{max-width:860px;margin-bottom:36px}
-.intro .eyebrow{color:#2d7960;margin-bottom:12px}.intro p{font-size:17px;color:var(--muted);margin-top:15px;line-height:1.8}
-.problem .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:17px}
-.proof-card{border:1px solid var(--line);border-top:4px solid var(--green);background:#f8fbf9;padding:29px 25px;min-height:219px}
-.proof-card .num{color:#397e64;font-size:12px;font-weight:900;letter-spacing:.13em}
-.proof-card h3{font-size:22px;margin:14px 0 10px}.proof-card p{font-size:13px;line-height:1.75;color:var(--muted)}
-.problem .integrity{margin-top:24px;border-left:3px solid #8bc39f;background:#eef5f0;padding:16px 21px;color:#345847;font-size:13px;line-height:1.75}
-.demo{padding:92px 0;background:#eaf1ed}.demo-grid{display:grid;grid-template-columns:.77fr 1.23fr;gap:56px;align-items:center}
-.demo .eyebrow{color:#2b7458}.demo-copy h2{margin:12px 0 19px}
-.demo-copy p{font-size:16px;color:var(--muted);margin-bottom:22px}
-.demo-copy ul{padding:0;list-style:none;display:grid;gap:16px;margin:23px 0}
-.demo-copy li{display:flex;align-items:start;gap:12px;font-size:14px;line-height:1.65}
-.stepnum{display:grid;place-items:center;flex:0 0 29px;height:29px;background:#d8e9dc;color:#236643;border-radius:50%;font-size:12px;font-weight:900}
-.disclaimer{font-size:12px!important;color:#63737b!important;line-height:1.7!important}
-.demo-board{display:grid;grid-template-columns:1fr .78fr;gap:15px;align-items:stretch}
-.phone{background:#fff;border:9px solid #173341;border-radius:30px;overflow:hidden;box-shadow:0 26px 60px #24463435;min-height:560px}
-.phone .chrome{height:28px;background:#173341;display:flex;justify-content:center;align-items:flex-start}
-.phone .chrome span{display:block;width:78px;height:12px;background:#0a1c26;border-radius:0 0 10px 10px}
-.mobile-head{background:#f4f8f5;padding:12px 18px;border-bottom:1px solid #d7e5dc}
-.mobile-head b{font-size:16px;font-weight:1000;letter-spacing:.075em;color:#163c50}.mobile-head small{display:block;font-size:9px;color:#59776c;text-transform:uppercase;letter-spacing:.11em}
-.mobile-banner{background:linear-gradient(140deg,#184a3e,#30764f);padding:23px 19px 19px;color:white}
-.mobile-banner .micro{font-weight:850;font-size:9px;text-transform:uppercase;letter-spacing:.11em;color:#d8e899}
-.mobile-banner h3{font-size:25px;line-height:1.13;margin:10px 0}
-.mobile-banner p{font-size:11px;line-height:1.55;color:#e5f2e4}
-.mobile-body{padding:20px 16px}.mobile-body h4{font-size:14px;line-height:1.4;margin:0 0 7px}.mobile-body>p{font-size:11px;color:#677680;margin:0 0 15px}
-.issue-list{display:grid;gap:9px}
-.issue{border:1px solid #d9e6dc;border-radius:9px;padding:12px 11px;background:#fff;text-align:left;color:#223c42;font-size:12px;font-weight:850;cursor:pointer;transition:border .16s,background .16s}
-.issue[aria-pressed="true"]{background:#e4f1d5;border:2px solid #4d9550;padding:11px 10px}
-.issue .detail{display:block;font-size:10px;font-weight:500;color:#61746d;line-height:1.45}
-.demo-action{display:block;background:#214d3e;border:0;width:100%;margin-top:17px;color:#fff;font-size:12px;font-weight:850;border-radius:8px;padding:13px 10px;cursor:pointer}
-.demo-action:disabled{background:#aab8b1;cursor:not-allowed}
-.mobile-note{font-size:10px;color:#76857a;text-align:center;line-height:1.5;margin-top:13px}
-.hand-off{background:#163341;color:#fff;border-radius:15px;padding:22px 20px;align-self:center;min-height:322px;box-shadow:0 18px 35px #24463426}
-.hand-off .eyebrow{font-size:10px;color:var(--leaf)}.hand-off h3{font-size:23px;margin:10px 0 15px}
-.handoff-row{padding:13px 0;border-top:1px solid #ffffff29}
-.handoff-row small{display:block;font-size:10px;color:#a8c7c5;text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px}
-.handoff-row strong{display:block;font-size:12px;line-height:1.5}
-.handoff-foot{font-size:10px;line-height:1.6;color:#b5cdd0;margin-top:16px}
-.pilot{padding:94px 0;background:#fff}.pilot-grid{display:grid;grid-template-columns:1fr 1fr;gap:55px;align-items:start}
-.pilot .eyebrow{color:#2c7858}.pilot h2{margin:12px 0 21px}
-.pilot-copy p{color:var(--muted);font-size:16px;line-height:1.8}
-.deliverable{background:#f1f6ee;border:1px solid #d9e8d5;border-radius:13px;padding:30px}
-.deliverable h3{font-size:24px;margin-bottom:15px}.deliverable ol{margin:0;padding-left:19px}
-.deliverable li{font-size:14px;margin:0 0 15px;line-height:1.75}.deliverable li:last-child{margin-bottom:0}
-.outcome{margin-top:28px;border-top:1px solid var(--line);padding-top:20px;font-size:13px;color:#5c6d74;line-height:1.8}
-.outcome strong{color:var(--ink)}
-.cta{background:linear-gradient(120deg,#102b40,#255349);color:#fff;padding:95px 0;text-align:center}
-.cta .eyebrow{color:var(--leaf)}
-.cta h2{max-width:920px;margin:16px auto 19px}
-.cta p{font-size:18px;line-height:1.8;color:#d5e6e5;max-width:810px;margin:0 auto 30px}
-.cta .button{margin:0 5px 13px}.cta .after{font-size:12px;color:#b6ccd0}
-.sources{padding:29px 0 35px;font-size:11px;color:#66757c;line-height:1.8}
-.sources a{color:#265d59;text-underline-offset:2px}
-footer{padding:28px 0;background:#0b2432;color:#c5d9dd;font-size:11px}
+:root{--navy:#112d3a;--deep:#0b202c;--grass:#bde64e;--green:#356d5d;--text:#203139;--muted:#586b72;--line:#dce6e3;--soft:#f3f7f4;--paper:#fff;--teal:#245c58;--amber:#f9c67c}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:#f7f8f5;color:var(--text);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+a{color:inherit}a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid #d5893b;outline-offset:3px}
+h1,h2,h3,p{margin:0}h1,h2{letter-spacing:-.045em}h2{font-size:clamp(30px,4.1vw,53px);line-height:1.12}
+h3{font-size:22px;line-height:1.3;letter-spacing:-.02em}.wrap{width:min(1140px,calc(100% - 44px));margin:0 auto}
+.kicker{font-size:11px;font-weight:900;letter-spacing:.16em;text-transform:uppercase}
+.skip{position:absolute;top:8px;left:-9999px;z-index:50;background:white;padding:10px}.skip:focus{left:10px}
+header{background:white;border-bottom:1px solid var(--line)}header .wrap{min-height:78px;display:flex;justify-content:space-between;align-items:center;gap:20px}
+.agency{display:flex;align-items:center;gap:12px;text-decoration:none}.mark{display:grid;place-items:center;width:40px;height:40px;border:2px solid var(--navy);font-weight:1000;font-size:22px}
+.agency strong{font-size:13px;letter-spacing:.08em;display:block}.agency small{display:block;text-transform:uppercase;font-size:10px;letter-spacing:.1em;color:#68818b}
+nav{display:flex;align-items:center;gap:23px}nav a{text-decoration:none;font-size:11px;font-weight:850}
+nav a:last-child{background:var(--navy);color:#fff;padding:11px 14px;border-radius:7px}
+.hero{color:#fff;background:radial-gradient(circle at 86% 20%,#496a44 0%,transparent 35%),linear-gradient(125deg,#0b2434,#1b463f);overflow:hidden}
+.hero .wrap{padding:92px 0 95px;display:grid;grid-template-columns:1.09fr .91fr;gap:67px;align-items:center}
+.hero .kicker{color:var(--grass)}
+h1{font-size:clamp(44px,5.75vw,76px);line-height:1.07;margin:18px 0 21px}
+h1 em{font-style:normal;color:var(--grass)}
+.hero .lead{font-size:18px;color:#deebe9;line-height:1.75;max-width:640px}
+.hero .note{font-size:13px;color:#cfdfde;margin:19px 0 0;line-height:1.7}
+.hero-actions{display:flex;gap:12px;flex-wrap:wrap;margin:29px 0 16px}
+.btn{display:inline-flex;min-height:47px;align-items:center;justify-content:center;border-radius:7px;padding:13px 19px;text-decoration:none;font-weight:850;font-size:13px;border:0;cursor:pointer}
+.btn.lime{background:var(--grass);color:#122b34}.btn.white{background:#fff;color:#172f3d}.btn.line{color:#fff;border:1px solid #fff8}
+.tiny{font-size:11px;color:#bdcecc;line-height:1.65}
+.mailer{border:1px solid #ffffff55;padding:16px;background:#ffffff0e;box-shadow:0 24px 55px #091f2888;transform:rotate(1deg)}
+.m-header{background:#ebf2e8;color:#1d4944;padding:20px 22px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.m-header strong{font-weight:1000;letter-spacing:.1em}.m-header span{font-size:9px;letter-spacing:.08em;text-transform:uppercase}
+.m-main{background:repeating-linear-gradient(97deg,#316a40,#316a40 7px,#337244 14px);padding:32px 27px 28px}
+.m-main h3{font-size:clamp(35px,4vw,56px);line-height:1.02;letter-spacing:-.055em}
+.m-main h3 span{color:var(--grass)}.m-main p{font-size:13px;margin-top:13px;color:#e9f6e5}
+.m-bottom{background:#f9fcf9;color:#1e3f42;padding:18px 20px;display:flex;justify-content:space-between;gap:20px;align-items:center}
+.m-bottom strong{font-size:13px;max-width:170px}.discount{background:#ee7149;color:white;padding:10px 13px;border-radius:5px;font-size:21px;font-weight:950;transform:rotate(-5deg)}
+.mail-caption{color:#c1d4d3;font-size:11px;text-align:center;margin-top:17px;line-height:1.6}
+section.block{padding:90px 0}
+.intro{max-width:830px;margin-bottom:36px}
+.intro .kicker{color:#286b51}.intro h2{margin:12px 0 16px}.intro p{font-size:16px;color:var(--muted)}
+.truth{background:white}.truth-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:17px}
+.truth-card{border-top:5px solid #86b79e;border-left:1px solid var(--line);border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:27px 25px;background:#fcfdfb}
+.truth-card b{color:#3b7b59;font-size:11px;letter-spacing:.1em}.truth-card h3{margin:17px 0 10px}.truth-card p{font-size:13px;line-height:1.78;color:var(--muted)}
+.caveat{border-left:3px solid #7db197;background:#eff6f1;padding:16px 19px;margin-top:23px;font-size:13px;color:#35554b;line-height:1.72}
+.compare{background:#eaf2ed}
+.side-by-side{display:grid;grid-template-columns:1fr 1fr;gap:21px;align-items:stretch}
+.panel{background:#fff;border:1px solid #d6e3de;border-radius:12px;overflow:hidden;box-shadow:0 15px 35px #193b3120}
+.panel-heading{padding:19px 24px;color:white;background:#435b64}.panel.proposed .panel-heading{background:#1d5b4b}
+.panel-heading .kicker{font-size:10px;color:#c9e1d8}
+.panel-heading h3{font-size:25px;margin-top:6px}.panel-body{padding:28px 24px}
+.path-card{border:1px solid #dce8e1;border-radius:10px;padding:18px 17px;margin-bottom:12px;background:#f9fbf9}
+.path-card .cap{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#71867d;font-weight:900}
+.path-card strong{display:block;font-size:18px;margin:5px 0 7px}
+.path-card p{font-size:13px;color:#62737a;line-height:1.7}
+.path-card .outlink{display:inline-block;color:#2b665a;font-size:12px;text-decoration:underline;text-underline-offset:3px;margin-top:10px}
+.or{display:flex;align-items:center;gap:10px;margin:7px 0 15px;color:#778b83;font-size:11px;font-weight:850}
+.or:before,.or:after{content:"";height:1px;background:#dfe9e5;flex:1}
+.route-summary{border-radius:8px;background:#f1f5f2;padding:17px;font-size:13px;color:#526a61;margin-top:18px}
+.route-summary b{color:#2b5242}.route-summary a{color:#2b5a54}
+.proposed .path-card{background:#f0f8f0;border-color:#bcdabf}.proposed .path-card strong{color:#255944}
+.mock-choice{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:17px 0 14px}
+.mock-choice button{background:#fff;border:1px solid #b9cfc0;border-radius:8px;padding:13px 11px;font-size:12px;font-weight:850;line-height:1.45;color:#345148;text-align:left;cursor:pointer}
+.mock-choice button[aria-pressed="true"]{border:2px solid #2d7649;padding:12px 10px;background:#e5f4dc}
+.sample{border-radius:9px;background:#14392f;color:#fff;padding:21px;margin-top:17px}
+.sample .kicker{color:#b9de78}.sample h4{font-size:18px;margin:9px 0 15px}
+.sample dl{margin:0}.sample dt{font-size:10px;letter-spacing:.08em;color:#b1ccc5;text-transform:uppercase}.sample dd{margin:1px 0 11px;font-size:13px;font-weight:800}
+.sample .result-note{border-top:1px solid #ffffff35;padding-top:13px;font-size:12px;color:#d0e3dc;line-height:1.65}
+.compare-foot{margin-top:23px;font-size:13px;color:#567368;background:#fff;border-left:4px solid #78a789;padding:17px 21px}
+.calculator{background:#fff}
+.cal-grid{display:grid;grid-template-columns:1fr 1fr;gap:44px}
+.cal-copy h2{margin:13px 0 19px}.cal-copy p{color:var(--muted);font-size:16px}
+.cal-copy ul{margin:23px 0;padding-left:21px;color:#475f59;font-size:14px;line-height:2}
+.calc{background:#123542;color:#fff;padding:28px;border-radius:14px;box-shadow:0 20px 45px #0b343124}
+.calc .kicker{color:#c0e77e}.calc h3{margin:10px 0 10px;font-size:26px}.calc p{color:#c7d9de;font-size:12px}
+.inputs{display:grid;grid-template-columns:repeat(2,1fr);gap:15px;margin:24px 0}
+.inputs label{display:block;font-size:12px;color:#dae9e5;font-weight:750}
+.inputs input{display:block;width:100%;font:700 19px/1.2 Arial,sans-serif;color:#143849;background:#fff;border:0;border-radius:6px;padding:12px;margin-top:7px}
+.inputs label.full{grid-column:span 2}
+.cal-output{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:17px}
+.cal-result{background:#ffffff14;border:1px solid #ffffff25;padding:16px;border-radius:8px}
+.cal-result small{display:block;font-size:11px;color:#cae0db}.cal-result strong{display:block;font-size:clamp(27px,3vw,40px);font-weight:900;color:var(--grass);margin:7px 0}
+.cal-disclaimer{font-size:11px;color:#b8cbd0;line-height:1.65;margin-top:15px}
+.pilot{background:#eef4f0}
+.pilot-grid{display:grid;grid-template-columns:.95fr 1.05fr;gap:55px}
+.pilot h2{margin:12px 0 20px}.pilot p{color:var(--muted);font-size:16px}
+.pilot .kicker{color:#306e52}
+.deliver{background:#fff;border:1px solid #d5e4d8;border-radius:12px;padding:26px 30px}
+.deliver h3{margin-bottom:12px}.deliver ol{margin:0;padding-left:23px;font-size:14px}.deliver li{padding:10px 0;line-height:1.75}
+.deliver li strong{color:#205b48}
+.test-measures{margin-top:21px;border-top:1px solid var(--line);padding-top:16px;font-size:13px;color:#4c6559;line-height:1.75}
+.closing{background:linear-gradient(120deg,#102c3d,#265249);color:#fff;padding:88px 0;text-align:center}
+.closing .kicker{color:var(--grass)}.closing h2{max-width:850px;margin:16px auto 20px}
+.closing p{max-width:790px;margin:0 auto 26px;color:#d8e6e2;font-size:17px}
+.closing small{display:block;color:#c4d4d0;font-size:11px;margin-top:16px;line-height:1.7}
+.sources{padding:27px 0;font-size:11px;color:#66787a;line-height:1.75}.sources a{color:#2b6252;text-decoration:underline}
+footer{background:#0b2633;padding:30px 0;color:#bacfd1;font-size:11px}
 footer .wrap{display:flex;justify-content:space-between;gap:20px}
-@media(max-width:1000px){.hero .wrap{gap:32px}.demo-grid{grid-template-columns:1fr}.demo-copy{max-width:760px}.demo-board{max-width:650px;margin:0 auto;width:100%}}
-@media(max-width:780px){.topbar nav a:not(.pilllink){display:none}.hero .wrap,.pilot-grid{grid-template-columns:1fr}.hero .wrap{padding:67px 0}.mailer-frame{max-width:485px;margin:auto}.problem .cards{grid-template-columns:1fr}.proof-card{min-height:auto}.demo,.problem,.pilot,.cta{padding:70px 0}.hero h1{font-size:clamp(41px,8vw,64px)}}
-@media(max-width:510px){.wrap{width:calc(100% - 34px)}.topbar nav{display:none}.demo-board{grid-template-columns:1fr;max-width:330px}.phone{min-height:auto}.hand-off{min-height:auto}.cta .button{width:100%;margin:0 0 11px}.hero .lead{font-size:16px}.mailer-frame{transform:none}footer .wrap{display:block}}
-@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.button{transition:none}.issue{transition:none}}
+@media(max-width:970px){.hero .wrap{gap:35px}.cal-grid,.pilot-grid{gap:27px}}
+@media(max-width:800px){.hero .wrap,.cal-grid,.pilot-grid{grid-template-columns:1fr}.hero .wrap{padding:64px 0}.mailer{max-width:530px}.truth-grid{grid-template-columns:1fr}.truth-card{min-height:0}.side-by-side{grid-template-columns:1fr}section.block{padding:64px 0}}
+@media(max-width:520px){.wrap{width:calc(100% - 34px)}nav{display:none}.mailer{transform:none}.hero .lead{font-size:16px}.mock-choice,.inputs,.cal-output{grid-template-columns:1fr}.inputs label.full{grid-column:span 1}.closing .btn{width:100%}footer .wrap{display:block}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 </style>
 </head>
 <body data-concept-key="heron-home-outdoor-mailer-to-customer-v1">
 <a class="skip" href="#main">Skip to main content</a>
-<header class="topbar"><div class="wrap">
-<a href="#main" class="agency" aria-label="GCM prospect presentation"><span class="gmark">G</span><span><strong>GLOBAL CONCEPTS MEDIA</strong><small>A specific idea for Heron Home &amp; Outdoor</small></span></a>
-<nav aria-label="Page sections"><a href="#why">Why this idea</a><a href="#experience">See the demonstration</a><a href="#pilot">What GCM would deliver</a><a class="pilllink" href="#talk">15-minute walkthrough ↗</a></nav>
+<header><div class="wrap">
+<a class="agency" href="#main" aria-label="Global Concepts Media home of Heron independent proposal"><span class="mark">G</span><span><strong>GLOBAL CONCEPTS MEDIA</strong><small>Prepared for Heron Home &amp; Outdoor</small></span></a>
+<nav aria-label="Page navigation"><a href="#finding">What we found</a><a href="#comparison">See the difference</a><a href="#value">What it could be worth</a><a href="#meeting">15-minute review →</a></nav>
 </div></header>
 <main id="main">
-<section class="hero" aria-labelledby="headline"><div class="wrap">
-<div><div class="eyebrow">A personal campaign idea for Heron Home &amp; Outdoor</div>
-<h1 id="headline">Your next lawn-care mailer could <em>work harder.</em></h1>
-<p class="lead">Your <strong>“Green Looks Good on Every Lawn”</strong> postcard caught our attention. The $100 first-service offer is clear. We put together an example of how the next mailing could turn that interest into a more useful conversation with your sales team.</p>
-<p class="reason"><strong>We noticed you already have a website quote process.</strong> This isn't a proposal to replace it. It's a way to make the journey from the specific postcard to that process feel more connected—and potentially help Heron win more recurring lawn-care customers.</p>
-<div class="hero-buttons"><a class="button primary" href="#experience">Try the 60-second example →</a><a class="button outline" href="#pilot">What we could build for Heron</a></div>
-<div class="hero-foot">Independent idea from GCM · Illustrative experience, not a Heron campaign or active coupon.</div>
-</div>
+<section class="hero"><div class="wrap">
 <div>
-<div class="mailer-frame" aria-label="Stylized reference to Heron's printed direct-mail campaign">
-<div class="paper"><div class="paper-top"><div class="paper-kicker">HERON · HOME &amp; OUTDOOR</div><div class="paper-head"><span>GREEN</span><br>LOOKS GOOD<br>ON EVERY<br>LAWN</div><div class="paper-sub">An actual campaign, reinterpreted for this presentation</div></div>
-<div class="paper-foot"><strong>Better lawns.<br>Strong first impression.</strong><span class="paper-offer">SAVE<br>$100</span></div></div></div>
-<div class="paper-caption">Inspired by the printed offer GCM received. Original mailer expired August 31, 2026. This is not a reproduction or active offer.</div>
-</div></div></section>
-
-<section class="problem" id="why"><div class="wrap">
-<div class="intro"><div class="eyebrow">Why we chose this campaign</div><h2>Heron already does the hard part: getting noticed.</h2>
-<p>We visited your public lawn-care pages. You already explain fertilization, weed suppression, insect suppression and ongoing lawn treatments—and you already invite homeowners to request a quote. The opportunity isn't another generic contact form. It's a <strong>more relevant starting point for people responding to one particular mailing.</strong></p></div>
-<div class="cards">
-<article class="proof-card"><div class="num">01 / THE POSTCARD</div><h3>Keep the promise recognizable.</h3><p>A homeowner sees a $100 campaign in the mailbox. A dedicated scan destination could immediately recognize the same message and direct them toward the right next step.</p></article>
-<article class="proof-card"><div class="num">02 / THE HOMEOWNER</div><h3>Ask one useful question.</h3><p>Someone with stubborn weeds needs a different conversation than someone seeing lawn insects. A quick choice can help frame the request without adding a long form.</p></article>
-<article class="proof-card"><div class="num">03 / HERON'S TEAM</div><h3>Give the quote team better context.</h3><p>Pass the campaign source and selected lawn concern into Heron's existing follow-up process, if the current tools support it. No new CRM would be required just to test the idea.</p></article>
+<div class="kicker">Heron Home &amp; Outdoor · Independent business opportunity</div>
+<h1>Your next lawn-care mailer could <em>win more customers</em> from the same interest.</h1>
+<p class="lead">Your “Green Looks Good on Every Lawn” postcard caught our attention. We followed the campaign through the website and found something worth testing: people can claim the $100 offer or request a quote—but the two choices collect overlapping information.</p>
+<p class="note"><strong>We aren't proposing another website or a replacement quote system.</strong> We built a side-by-side example of how those two actions could work together, making it easier for interested homeowners to take the next step toward a recurring lawn-care plan.</p>
+<div class="hero-actions"><a class="btn lime" href="#comparison">See what we found and built →</a><a class="btn line" href="#value">Explore the business upside</a></div>
+<div class="tiny">No invented performance claims. No assumption that Heron's current forms are disconnected internally.</div>
 </div>
-<p class="integrity"><strong>Important:</strong> We haven't audited Heron's private sales tools or tested its current mailer conversion rate. These are specific improvements to explore—not claims that something is broken.</p>
+<div><div class="mailer" aria-label="Stylized reference to Heron's original printed lawn-care mailer">
+<div class="m-header"><strong>HERON</strong><span>Home &amp; Outdoor</span></div>
+<div class="m-main"><h3><span>GREEN</span><br>LOOKS GOOD<br>ON EVERY<br>LAWN</h3><p>Direct-mail creative that inspired this independent concept</p></div>
+<div class="m-bottom"><strong>One compelling reason to call.</strong><span class="discount">$100 OFF</span></div>
+</div><p class="mail-caption">Stylized illustration of the original mailer, not a current coupon. The received print offer expired August 31, 2026.</p></div>
 </div></section>
 
-<section class="demo" id="experience"><div class="wrap demo-grid">
-<div class="demo-copy"><div class="eyebrow">The part we wanted to show you</div>
-<h2>See the customer's next 60 seconds.</h2>
-<p>Imagine the next lawn-care postcard sends homeowners to a simple campaign page. It immediately recognizes the mailer and asks only what matters for their lawn.</p>
+<section class="block truth" id="finding"><div class="wrap">
+<div class="intro"><div class="kicker">01 / What we actually found</div><h2>Heron already has the marketing foundations. That's the point.</h2>
+<p>Heron has a campaign-specific page, online forms, recognizable creative, and an established ongoing lawn-care program. The opportunity isn't to sell you things you already own. It is to test whether one clearer response path helps more existing visitors become service customers.</p></div>
+<div class="truth-grid">
+<div class="truth-card"><b>OBSERVED · MAILER DESTINATION</b><h3>Campaign-specific page exists.</h3><p>Your mailer already leads to a dedicated lawn-care offer page. We would preserve that investment, not replace it with another generic landing page.</p></div>
+<div class="truth-card"><b>OBSERVED · PUBLIC FORMS</b><h3>Two overlapping ways to respond.</h3><p>A visitor can complete a detailed quote form or request the coupon and optionally ask to be contacted. The public page does not reveal whether Heron already joins these inquiries internally.</p></div>
+<div class="truth-card"><b>OBSERVED · OFFER HISTORY</b><h3>Two campaign dates, different contexts.</h3><p>Our printed mailer expired August 31. Heron's public Specials page separately advertises a $100 annual lawn-plan offer through October 31, 2026. Each future mailing should clearly reflect its own approved terms.</p></div>
+</div>
+<div class="caveat"><strong>Important distinction:</strong> We have not seen Heron's internal lead routing or conversion figures. The risk of missed inquiries is a hypothesis to test, not a defect we can claim to have proven.</div>
+</div></section>
+
+<section class="block compare" id="comparison"><div class="wrap">
+<div class="intro"><div class="kicker">02 / Side-by-side demonstration</div><h2>Same lawn-care offer. A clearer path from interest to quote.</h2>
+<p>Left: the two publicly visible paths on Heron's existing campaign page. Right: a proposed combined experience that keeps Heron's existing sales process, but removes the need for a homeowner to decide between claiming the incentive and requesting service.</p></div>
+<div class="side-by-side">
+<article class="panel existing">
+<div class="panel-heading"><div class="kicker">Today · Observed public experience</div><h3>Two separate response choices</h3></div>
+<div class="panel-body">
+<div class="path-card"><div class="cap">Action A</div><strong>Get a free quote</strong><p>The customer provides contact and property details plus service type to begin the estimate process.</p><a class="outlink" href="https://www.myheronhome.com/lawn-care-offer-save100/" target="_blank" rel="noopener noreferrer">View Heron's actual page ↗</a></div>
+<div class="or">OR</div>
+<div class="path-card"><div class="cap">Action B</div><strong>Claim the $100 offer</strong><p>A second form requests overlapping contact and address details, and asks if the customer wants Heron's team to call.</p><a class="outlink" href="https://www.myheronhome.com/lawn-care-offer-save100/" target="_blank" rel="noopener noreferrer">View the existing coupon path ↗</a></div>
+<div class="route-summary"><b>The question worth testing:</b> Would more coupon claimants request a service estimate if claiming the offer and starting the quote process were presented together?</div>
+</div></article>
+
+<article class="panel proposed">
+<div class="panel-heading"><div class="kicker">GCM concept · Interactive, not yet implemented</div><h3>One clear offer-to-quote path</h3></div>
+<div class="panel-body">
+<div class="path-card"><div class="cap">Proposed campaign flow · Step 1</div>
+<strong>“I'd like a lawn-care quote—and any offer I qualify for.”</strong>
+<p>One relevant choice puts the homeowner on the path toward a quote, while keeping offer eligibility separate from approval.</p>
+<div class="mock-choice" role="group" aria-label="Try two example campaign response choices">
+<button type="button" class="mock" data-choice="quote-offer" aria-pressed="true">I want a quote + eligible offer</button>
+<button type="button" class="mock" data-choice="quote-only" aria-pressed="false">Just give me a lawn-care quote</button>
+</div>
+<p id="choice-explanation">The customer would submit contact and service details once, with their offer interest attached.</p>
+</div>
+<div class="path-card"><div class="cap">Proposed campaign flow · Step 2</div>
+<strong>Heron's existing team receives one prepared inquiry.</strong>
+<p>Use Heron's approved CRM or quote workflow. Keep a clear campaign source and the homeowner's offer interest with the request.</p></div>
+<div class="sample" aria-live="polite">
+<div class="kicker">Try the simulated handoff</div><h4>What the Heron team could receive</h4>
+<dl><dt>Source</dt><dd>Next direct-mail campaign</dd>
+<dt>Customer intent</dt><dd id="handoff-intent">Lawn-care quote + offer eligibility review</dd>
+<dt>Proposed route</dt><dd id="handoff-route">One request to the existing quote process</dd>
+<dt>Offer treatment</dt><dd id="handoff-offer">Show approved terms; confirm annual-plan eligibility</dd></dl>
+<button type="button" class="btn lime" id="try-handoff">Demonstrate the handoff →</button>
+<p class="result-note" id="handoff-result">No personal details are entered or sent. Try either option above.</p>
+</div>
+</div></article>
+</div>
+<p class="compare-foot"><strong>What's different here?</strong> Not the underlying service or an invented new marketing channel. The proposed change is a single decision path that captures offer interest and quote intent together, then hands it off to Heron's current process. Whether that improves results is measurable—not assumed.</p>
+</div></section>
+
+<section class="block calculator" id="value"><div class="wrap cal-grid">
+<div class="cal-copy"><div class="kicker" style="color:#286a52">03 / What Heron could gain</div>
+<h2>The win isn't a prettier form. It's more profitable customers from the same mailing.</h2>
+<p>If a clearer response process increases completed, qualified quotes, Heron could earn more first-service appointments and recurring annual lawn-care accounts without buying extra postcard impressions.</p>
 <ul>
-<li><span class="stepnum">1</span><span>Homeowner scans the next Heron mailer and recognizes the campaign.</span></li>
-<li><span class="stepnum">2</span><span>They choose the lawn issue that brought them there.</span></li>
-<li><span class="stepnum">3</span><span>Heron's team receives a more informative quote inquiry through an approved handoff to its existing workflow.</span></li>
+<li>More of the existing campaign audience moves toward an actual quote.</li>
+<li>Heron's team gets a clearer description of what the customer wants.</li>
+<li>One controlled test can show whether the change adds profitable customers.</li>
 </ul>
-<p class="disclaimer">This example is interactive, but no customer details are entered, sent, collected or saved. The $100 message represents the historical mailing; any future offer requires Heron's approval.</p></div>
-
-<div class="demo-board">
-<div class="phone" aria-label="Illustrative mobile landing page for Heron's next direct-mail campaign">
-<div class="chrome"><span></span></div>
-<div class="mobile-head"><b>HERON</b><small>Home &amp; Outdoor · Campaign concept</small></div>
-<div class="mobile-banner"><div class="micro">From your neighborhood lawn-care mailer</div>
-<h3>Let's get your lawn looking great.</h3><p>Recognize the offer. Start with the issue you want solved. This is a demonstration—not a live discount or quote request.</p></div>
-<div class="mobile-body">
-<h4>What's your biggest lawn concern?</h4>
-<p>Tap a choice to see how a better-prepared inquiry might work.</p>
-<div class="issue-list" role="group" aria-label="Choose one sample lawn concern">
-<button class="issue" type="button" data-issue="Broadleaf weeds" data-need="Weed suppression" aria-pressed="false">Weeds taking over<span class="detail">Dandelions, clover and other unwanted growth</span></button>
-<button class="issue" type="button" data-issue="Lawn insects" data-need="Insect suppression" aria-pressed="false">Signs of lawn insects<span class="detail">Chinch bugs and other turf pests</span></button>
-<button class="issue" type="button" data-issue="Brown or thin grass" data-need="Lawn health assessment" aria-pressed="false">Thin or brown patches<span class="detail">Help finding the right lawn treatment</span></button>
+<p><strong>We don't know Heron's actual conversion rates or margins.</strong> Adjust the assumptions in this illustration to see why even a modest improvement might—or might not—justify the work.</p>
 </div>
-<button id="preview-handoff" class="demo-action" type="button" disabled>Choose a concern to continue →</button>
-<div class="mobile-note">Demonstration only · No personal information requested</div>
+<div class="calc" aria-label="Hypothetical incremental annual gross contribution example">
+<div class="kicker">Illustrative business case · Not Heron results</div>
+<h3>What would a small conversion lift mean?</h3>
+<p>Change any assumption. Everything below is illustrative, not a forecast or a guarantee.</p>
+<div class="inputs">
+<label>Visits from a mailing<input id="calc-visits" type="number" min="0" max="100000" step="25" value="400"></label>
+<label>Current quote-completion rate (%)<input id="calc-before" type="number" min="0" max="100" step="0.5" value="8"></label>
+<label>Potential test quote-completion rate (%)<input id="calc-after" type="number" min="0" max="100" step="0.5" value="10"></label>
+<label>Share of added quotes becoming customers (%)<input id="calc-close" type="number" min="0" max="100" step="1" value="25"></label>
+<label class="full">Estimated first-year gross contribution per additional recurring customer ($)<input id="calc-value" type="number" min="0" max="100000" step="50" value="450"></label>
 </div>
+<div class="cal-output">
+<div class="cal-result"><small>Additional completed quote requests</small><strong id="result-quotes">8</strong></div>
+<div class="cal-result"><small>Potential added first-year gross contribution</small><strong id="result-money">$900</strong></div>
 </div>
-<aside class="hand-off" aria-live="polite" aria-label="What Heron's team could receive">
-<div class="eyebrow">Behind the scenes · Example</div><h3>What Heron's team could see</h3>
-<div class="handoff-row"><small>Campaign source</small><strong>Next lawn-care direct mail</strong></div>
-<div class="handoff-row"><small>Homeowner's concern</small><strong id="handoff-concern">Choose an issue on the phone</strong></div>
-<div class="handoff-row"><small>Service conversation</small><strong id="handoff-service">Relevant treatment needs appear here</strong></div>
-<div class="handoff-row"><small>Next step</small><strong id="handoff-next">Heron's existing quote process (proposed)</strong></div>
-<p class="handoff-foot" id="handoff-caption">Try the example. No lead is submitted or transmitted.</p>
-</aside>
+<div class="cal-disclaimer" id="calc-disclaimer">Sample only. The projection ignores implementation costs and uncertainty, and is not a revenue or profit guarantee. Confirm all rates, contribution and customer longevity with Heron.</div>
 </div>
 </div></section>
 
-<section class="pilot" id="pilot"><div class="wrap pilot-grid">
-<div class="pilot-copy"><div class="eyebrow">A focused offer from GCM</div>
-<h2>One campaign. One improvement we can prove or reject.</h2>
-<p>We wouldn't recommend replacing your website, sales software or mail vendor. We'd propose a limited pilot on <strong>one upcoming mail campaign</strong>, designed around the systems Heron already uses.</p>
-<div class="outcome"><strong>What success would look like:</strong> a clearer path to qualified quote inquiries, with the option to measure how many become completed first services and recurring lawn-care accounts. Actual customer outcomes and economics would come from Heron's records—not invented projections.</div></div>
-<div class="deliverable"><h3>What we would actually deliver</h3>
-<ol>
-<li><strong>A campaign-specific scan page</strong> built around Heron's approved offer and recognizable mailer message.</li>
-<li><strong>A simple lawn-concern choice</strong> to help a homeowner tell the team why they're reaching out.</li>
-<li><strong>A connection to the existing quote path,</strong> using whichever handoff is approved and technically feasible.</li>
-<li><strong>A short campaign review</strong> comparing useful inquiries and new customer outcomes where source data exists.</li>
-</ol></div>
+<section class="block pilot" id="pilot"><div class="wrap pilot-grid">
+<div><div class="kicker">04 / Exactly what GCM proposes</div>
+<h2>One next mailing. One controlled comparison. One clear decision.</h2>
+<p>We would not ask Heron to rebuild its website or buy a new CRM. The first step is to confirm how its existing forms work, then test a revised response experience on a small, approved segment against the current version.</p>
+<p style="margin-top:20px">If Heron's two forms already work well together—or a simpler flow doesn't improve qualified customer acquisition—we would say so and stop. That's how a pilot protects budget instead of turning into a long agency project.</p></div>
+<div class="deliver"><h3>What we'd bring to the review</h3><ol>
+<li><strong>Show the evidence:</strong> the current two-path experience, campaign dates and the specific decision we think is worth examining.</li>
+<li><strong>Demonstrate the alternative:</strong> a working prototype of one combined quote-and-offer journey.</li>
+<li><strong>Agree on one real test:</strong> use Heron's existing quote and sales system where technically feasible, and check offer eligibility before publishing anything.</li>
+<li><strong>Judge business results:</strong> compare qualified quote completion, first services booked and new recurring accounts—not clicks alone.</li>
+</ol><div class="test-measures"><strong>What GCM needs from Heron:</strong> a short discussion of their current form routing, source attribution, approved offer terms and a practical way to observe completed customer outcomes.</div></div>
 </div></section>
 
-<section class="cta" id="talk"><div class="wrap"><div class="eyebrow">The next step is easy</div>
-<h2>Give us 15 minutes. We'll show how this could work for Heron's next mailing.</h2>
-<p>We already built the example above. A short walkthrough is enough to see the customer journey, discuss how Heron currently handles quotes, and decide whether one limited pilot would be worth testing.</p>
-<a class="button primary" href="mailto:globalconceptsmediallc@gmail.com?subject=Show%20me%20the%20Heron%20mailer%20concept&amp;body=I%27d%20like%20a%2015-minute%20walkthrough%20of%20the%20Heron%20lawn-care%20mailer%20concept.">Request the 15-minute demo →</a>
-<div class="after">Or simply reply to the email that brought you here: <strong>“Show me the demo.”</strong> No commitment, no sales-system changes.</div>
+<section class="closing" id="meeting"><div class="wrap">
+<div class="kicker">A specific invitation, not a generic sales pitch</div>
+<h2>Give us 15 minutes to show you where the next mailer might earn more.</h2>
+<p>We'll walk through the two existing actions, demonstrate our alternative, and explain a low-risk way to find out if the change helps Heron win additional recurring lawn-care accounts. You'll leave with the comparison and pilot outline whether or not we work together.</p>
+<a class="btn lime" href="mailto:globalconceptsmediallc@gmail.com?subject=Heron%20mailer%20conversion%20review&amp;body=I%27d%20like%20to%20review%20the%20side-by-side%20Heron%20mailer%20concept%20and%20a%20small%20campaign%20test.">See the 15-minute review →</a>
+<small>Or simply reply to our outreach email: <strong>“Show me the Heron comparison.”</strong><br>Independent proposal by Global Concepts Media; not an official Heron website, claim form or active discount.</small>
 </div></section>
 </main>
-<div class="wrap sources"><strong>Research basis:</strong> Heron's publicly available <a href="https://www.myheronhome.com/lawn/lawn-care/" rel="noopener noreferrer" target="_blank">lawn-care and quote information</a> and <a href="https://www.myheronhome.com/lawn/" rel="noopener noreferrer" target="_blank">recurring lawn program</a>, plus a physical $100 mailer received by GCM. Reviewed October 17, 2026. The received mailer's expiration was August 31, 2026. This presentation is independent work by Global Concepts Media; Heron has not authorized or endorsed this demonstration. No real homeowner inquiry is accepted here, and no results are claimed.</div>
-<footer><div class="wrap"><span>GLOBAL CONCEPTS MEDIA · An independent invitation to connect</span><span>Heron demonstration · v2.0.0</span></div></footer>
+<div class="wrap sources"><strong>Research:</strong> physical Heron direct mail with August 31, 2026 expiration; <a href="https://www.myheronhome.com/lawn-care-offer-save100/" target="_blank" rel="noopener noreferrer">Heron's current public mailer response page</a> and <a href="https://www.myheronhome.com/specials/" target="_blank" rel="noopener noreferrer">Heron's Specials page</a>, reviewed October 18, 2026. Publicly visible quote/coupon fields do not establish how lead records are joined internally. Heron's publicly advertised October 31 offer is separate from the expired physical mailing. All sample numbers are editable hypotheticals.</div>
+<footer><div class="wrap"><span>GLOBAL CONCEPTS MEDIA · Find the leak → Fix the leak → Prove the result.</span><span>Heron prospect comparison v3.0.0</span></div></footer>
 <script>
 (function(){"use strict";
-const buttons=[...document.querySelectorAll(".issue")];
-const advance=document.getElementById("preview-handoff");
-const concern=document.getElementById("handoff-concern");
-const service=document.getElementById("handoff-service");
-const next=document.getElementById("handoff-next");
-const caption=document.getElementById("handoff-caption");
-let current=null;
-buttons.forEach(b=>b.addEventListener("click",()=>{
- current={issue:b.dataset.issue,need:b.dataset.need};
- buttons.forEach(item=>item.setAttribute("aria-pressed",String(item===b)));
- concern.textContent=current.issue;service.textContent=current.need;
- next.textContent="Proposed handoff to Heron's current quote team";
- caption.textContent="Sample context updated. Choose another issue or view the simulated handoff.";
- advance.textContent="See the proposed handoff →";advance.disabled=false;
-}));
-advance.addEventListener("click",()=>{
- if(!current)return;
- next.textContent="Quote inquiry prepared for Heron's current process";
- caption.textContent="This is where GCM would connect the campaign context to Heron's approved quote process. No actual lead was sent.";
- advance.textContent="Handoff demonstrated ✓";
+const choices=[...document.querySelectorAll(".mock")];
+const message=document.getElementById("choice-explanation");
+const intent=document.getElementById("handoff-intent");
+const route=document.getElementById("handoff-route");
+const offer=document.getElementById("handoff-offer");
+const result=document.getElementById("handoff-result");
+const button=document.getElementById("try-handoff");
+let selected="quote-offer";
+function select(value){
+ selected=value;
+ choices.forEach(c=>c.setAttribute("aria-pressed",String(c.dataset.choice===value)));
+ if(value==="quote-offer"){
+  message.textContent="The homeowner asks for a quote and approved promotion together without having to submit the same contact details twice.";
+  intent.textContent="Lawn-care quote + offer eligibility review";
+  offer.textContent="Check eligibility for the approved annual-plan offer";
+ }else{
+  message.textContent="The homeowner only needs a quote. No offer is promised or added to the request.";
+  intent.textContent="Lawn-care quote only";
+  offer.textContent="No coupon requested";
+ }
+ route.textContent="One proposed request to Heron's existing quote process";
+ button.textContent="Demonstrate the handoff →";
+ result.textContent="Nothing has been submitted. This is a working illustration only.";
+}
+choices.forEach(c=>c.addEventListener("click",()=>select(c.dataset.choice)));
+button.addEventListener("click",()=>{
+ route.textContent="Prepared for existing Heron quote process (not connected)";
+ result.textContent="Simulated successfully: campaign source and quote intent are ready. No information was transmitted to Heron or GCM.";
+ button.textContent="Handoff simulated ✓";
 });
+const ids=["calc-visits","calc-before","calc-after","calc-close","calc-value"];
+const inputs=ids.map(id=>document.getElementById(id));
+const quoteOut=document.getElementById("result-quotes");
+const moneyOut=document.getElementById("result-money");
+const disclaimer=document.getElementById("calc-disclaimer");
+const whole=new Intl.NumberFormat("en-US",{maximumFractionDigits:1});
+const dollars=new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0});
+function read(el,max){const n=Number(el.value);return Number.isFinite(n)?Math.min(max,Math.max(0,n)):0;}
+function update(){
+ const visits=read(inputs[0],100000);
+ const before=read(inputs[1],100),after=read(inputs[2],100),close=read(inputs[3],100),value=read(inputs[4],100000);
+ const extra=visits*(after-before)/100,accounts=extra*close/100;
+ quoteOut.textContent=whole.format(extra);
+ moneyOut.textContent=dollars.format(accounts*value);
+ disclaimer.textContent=extra<0?"Under these hypothetical inputs, the proposed test would lose qualified quote requests. That is a reason not to adopt the change. No actual Heron results are known.":
+ "Illustration only: approximately "+whole.format(accounts)+" additional recurring accounts before implementation costs. Sample rates and first-year gross contribution are not Heron data and are not a prediction.";
+}
+inputs.forEach(el=>el.addEventListener("input",update));
+select(selected);update();
 })();
 </script>
 <script src="../../shared/prospect-print-concept.js?v=1.0.0"></script>
-</body></html>
+</body>
+</html>
