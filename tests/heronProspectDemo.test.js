@@ -1,6 +1,6 @@
 /* =========================================================
  GCM OS | tests/heronProspectDemo.test.js
- Version: 4.0.0 — Owner-to-owner Heron prospect note
+ Version: 4.1.0 — Melbourne owner-to-owner prospect note
  Verifies candid personal language, retained researched evidence,
  optional interactive demo, privacy and no manufactured economics.
  ========================================================= */
@@ -8,7 +8,9 @@ import fs from "node:fs";
 import assert from "node:assert/strict";
 import vm from "node:vm";
 const html=fs.readFileSync(new URL("../prospect-previews/heron-home-outdoor/index.html",import.meta.url),"utf8");
-assert.match(html,/Version: 4\.0\.0/);
+assert.match(html,/Version: 4\.1\.0/);
+assert.match(html,/marketing agency here in Melbourne, Florida/);
+assert.match(html,/45 years working in sales, management, and business ownership/);
 assert.match(html,/noindex,nofollow,noarchive,noimageindex/);
 assert.match(html,/heron-home-outdoor-mailer-to-customer-v1/);
 assert.match(html,/I saw your lawn-care postcard, and/);
