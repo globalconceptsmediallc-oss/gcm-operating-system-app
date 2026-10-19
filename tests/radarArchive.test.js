@@ -23,7 +23,7 @@ assert.match(ui,/api\("archive_radar"/);
 assert.match(ui,/api\("restore_archived_radar"/);
 assert.match(ui,/id="archived-search"/);
 assert.match(ui,/function renderArchived\(/);
-assert.match(ui,/Version: 3\.9\.3/);
+assert.match(ui,/Version: 3\.10\.0/);
 assert.match(ui,/This page requires Prospect CRM 1\.7\.0/);
 
 const row={
