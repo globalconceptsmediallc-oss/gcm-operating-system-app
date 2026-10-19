@@ -1,9 +1,15 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/prospectCrm.js
-   Version: 1.7.2
+   Version: 1.7.3
    Status: Production Road-Test Candidate
    Purpose: Durable Prospecting Radar + CRM operations for GCM.
+
+   Change Notes — 1.7.3:
+   - Adds opt-in parent-company group operations for related Radar brands.
+   - Keeps independent relationship records and activity; grouping uses
+     additive membership tables without changing legacy CRM schemas.
+   - D1 migration 0048 required for only the three new operations.
 
    Change Notes — 1.7.2:
    - Schedules Radar-only evidence 30-day retention when archived.
@@ -82,6 +88,7 @@
    ========================================================= */
 
 import { getDatabase, rowsOf } from "../shared/database.js";
+import {isParentCompanyOperation,handleParentCompanyOperation} from "./prospectCompanyGroups.js";
 import {
   jsonResponse,
   logWorkerError,
@@ -320,6 +327,7 @@ export async function handleProspectCrm(body, env, requestId) {
   const operation = cleanText(body?.operation || "list_prospects").toLowerCase();
 
   try {
+    if (isParentCompanyOperation(operation)) return await handleParentCompanyOperation(body,db,requestId);
     switch (operation) {
       case "list_radar":
         return await listRadar(db, requestId);
@@ -418,6 +426,9 @@ export async function handleProspectCrm(body, env, requestId) {
 
 function supportedOperations() {
   return [
+    "list_parent_companies",
+    "create_parent_company",
+    "set_radar_parent_company",
     "list_radar",
     "list_archived_radar",
     "archive_radar",
