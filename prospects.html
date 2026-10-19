@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: prospects.html
-   Version: 3.9.3
+   Version: 3.10.0
    Status: Production Road-Test Candidate
    Source: Production prospects.html 2.0.0 + client-pre-research.html 1.1.0
    Backend: Prospect CRM 1.7.0
@@ -10,6 +10,11 @@
    One operating workspace for GCM prospecting from first evidence through
    Radar, outreach, appointment, CRM, services, signed scope, startup package,
    and the eventual Client handoff.
+
+   Change Notes — 3.10.0
+   - Adds optional parent-company groups to Radar: one corporation, many brands.
+   - Keeps all outreach, status, next actions and evidence in each brand's own record.
+   - Parent controls fail closed before migration 0048; legacy CRM stays available.
 
    Change Notes — 3.9.3
    - Locks Radar Save while processing and handles existing-record duplicate responses.
@@ -328,6 +333,14 @@
       </section>
 
       <section id="view-radar" hidden>
+        <article class="panel" id="parent-companies-panel">
+          <div class="panel-head"><div><p class="eyebrow">Corporate Relationships</p><h2>Parent Companies &amp; Brands</h2>
+          <p>Connect related brands without merging their contacts, outreach or follow-up history.</p></div>
+          <button class="btn btn-secondary btn-small" id="add-parent-company" type="button">Add Parent Company</button></div>
+          <div class="list" id="parent-company-list"></div>
+          <div class="empty" id="parent-company-empty">No parent-company relationships recorded yet.</div>
+          <div class="note" id="parent-company-unavailable" hidden>Parent-company grouping needs D1 migration 0048. Existing Radar records still work.</div>
+        </article>
         <article class="panel" id="radar-list-panel">
           <div class="panel-head">
             <div><h2>Radar & Outreach</h2><p>Pre-appointment intelligence. Once outreach begins, the record must have a dated follow-up.</p></div>
@@ -420,6 +433,24 @@
   </div>
 </form></dialog>
 
+<!-- Parent company: one corporate relationship with many independent brands -->
+<dialog id="parent-company-dialog"><form id="parent-company-form">
+  <div class="modal-head"><div><h2>Add Parent Company</h2><p>Use one corporate record for the brands it owns. This is not a new Radar prospect or a contact list.</p></div><button class="modal-close" type="button" data-close="parent-company-dialog">×</button></div>
+  <div class="modal-body"><div class="error" id="parent-company-error" hidden></div><div class="form-grid">
+    <div class="field"><label for="parent-company-name">Parent Company Name *</label><input class="input" id="parent-company-name" name="name" maxlength="160" required /></div>
+    <div class="field"><label for="parent-company-website">Corporate Website</label><input class="input" id="parent-company-website" name="website" type="url" /></div>
+    <div class="field"><label for="parent-contact-name">Shared Corporate Contact (optional)</label><input class="input" id="parent-contact-name" name="contactName" maxlength="160" /></div>
+    <div class="field"><label for="parent-contact-role">Contact Role</label><input class="input" id="parent-contact-role" name="contactRole" maxlength="160" /></div>
+    <div class="field span-2"><label for="parent-contact-url">Public Contact Profile URL (optional)</label><input class="input" id="parent-contact-url" type="url" name="contactUrl" /></div>
+    <div class="field span-2"><label for="parent-company-notes">Parent Relationship Notes</label><textarea class="textarea" id="parent-company-notes" name="relationshipNotes" maxlength="2000"></textarea></div>
+  </div><div class="form-actions"><button class="btn btn-secondary" type="button" data-close="parent-company-dialog">Cancel</button><button class="btn btn-primary" type="submit">Save Parent Company</button></div></div>
+</form></dialog>
+<dialog id="radar-parent-dialog"><form id="radar-parent-form">
+  <div class="modal-head"><div><h2>Connect Brand to Parent</h2><p>The brand keeps its own Radar history. No contacts or messages will be copied.</p></div><button class="modal-close" type="button" data-close="radar-parent-dialog">×</button></div>
+  <div class="modal-body"><div class="error" id="radar-parent-error" hidden></div><input type="hidden" name="radarId" />
+  <div class="field"><label for="radar-parent-select">Parent Company</label><select class="select" id="radar-parent-select" name="parentCompanyId"><option value="">No parent company</option></select></div>
+  <div class="form-actions"><button class="btn btn-secondary" type="button" data-close="radar-parent-dialog">Cancel</button><button class="btn btn-primary" type="submit">Save Parent Link</button></div></div>
+</form></dialog>
 <!-- Basic add Radar -->
 <dialog id="radar-dialog"><form id="radar-form">
   <div class="modal-head"><div><h2>Add to Radar</h2><p>Use when GCM knows the business is worth remembering but has not scheduled a real appointment.</p></div><button class="modal-close" type="button" data-close="radar-dialog">×</button></div>
@@ -578,7 +609,7 @@
   "use strict";
   const FILE_VERSION="3.9.3";
   const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
-  const state={prospects:[],radar:[],archivedRadar:[],services:[],selectedProspect:null,selectedRadar:null,view:"pipeline",attentionFilter:"due",
+  const state={prospects:[],radar:[],archivedRadar:[],services:[],parentCompanies:[],parentCompanyAvailable:false,selectedProspect:null,selectedRadar:null,view:"pipeline",attentionFilter:"due",
     researchTarget:{type:"new",id:null},researchResult:null,researchContext:null,images:[]};
 
   const $=id=>document.getElementById(id);
@@ -663,10 +694,12 @@
   async function load(){
     $("system-state").textContent="Connecting to D1…";
     try{
-      const [p,r,a,s]=await Promise.all([api("list_prospects"),api("list_radar"),api("list_archived_radar"),api("list_service_catalog")]);
+      const [p,r,a,s,groups]=await Promise.all([api("list_prospects"),api("list_radar"),api("list_archived_radar"),api("list_service_catalog"),
+        api("list_parent_companies").catch(error=>({companies:[],groupingUnavailable:error.message}))]);
       state.prospects=p.prospects||[];state.radar=r.radar||[];state.archivedRadar=a.radar||[];state.services=s.services||[];
+      state.parentCompanies=groups.companies||[];state.parentCompanyAvailable=!groups.groupingUnavailable;
       if(p.prospectCrmVersion!=="1.7.0")throw new Error(`This page requires Prospect CRM 1.7.0; live version is ${p.prospectCrmVersion||"unknown"}.`);
-      renderSummary();renderPipeline();renderRadar();renderAttention();renderNurture();renderArchived();renderPriority();populateStages();
+      renderSummary();renderPipeline();renderRadar();renderParentCompanies();renderAttention();renderNurture();renderArchived();renderPriority();populateStages();
       $("system-state").textContent=`D1 connected · CRM ${p.prospectCrmVersion}`;
     }catch(e){$("system-state").textContent=`CRM unavailable · ${e.message}`;console.error(e)}
   }
@@ -734,9 +767,54 @@
   }
   $("search").addEventListener("input",renderPipeline);$("stage-filter").addEventListener("change",renderPipeline);$("refresh").addEventListener("click",load);
 
+
+  // Corporate relationships never replace or merge individual brand Radar histories.
+  const companyForRadar = radarId => state.parentCompanies.find(c=>(c.members||[]).some(m=>m.radarId===Number(radarId)))||null;
+  function renderParentCompanies(){
+    $("add-parent-company").disabled=!state.parentCompanyAvailable;
+    $("parent-company-unavailable").hidden=state.parentCompanyAvailable;
+    const list=state.parentCompanies;
+    $("parent-company-empty").hidden=Boolean(list.length)||!state.parentCompanyAvailable;
+    $("parent-company-list").innerHTML=list.map(c=>`<article class="record"><div>
+      <h3>${esc(c.name)}</h3>
+      <p class="meta">${esc(c.contactName||"Corporate contact not recorded")}${c.contactRole?" · "+esc(c.contactRole):""}</p>
+      <p class="insight">${esc(c.relationshipNotes||"Corporate relationship. Brand histories remain separate.")}</p>
+      <div class="chips">${(c.members||[]).map(m=>`<span class="chip">${esc(m.businessName||"Unnamed brand")}${m.status==="nurture"?" (Hold)":m.archivedAt?" (Archived)":m.promotedProspectId?" (Promoted)":""}</span>`).join("")||'<span class="chip">No brands linked yet</span>'}</div>
+    </div><div><p class="next-label">Related Brands</p><p class="next-title">${(c.members||[]).length} linked</p>
+    <div class="quick-actions">${(c.members||[]).filter(m=>!m.archivedAt).map(m=>`<button class="btn btn-secondary btn-small" type="button" data-parent-open-radar="${m.radarId}" data-parent-promoted="${m.promotedProspectId||""}">Open ${esc(m.businessName||"brand")}</button>`).join("")}</div></div></article>`).join("");
+    $("parent-company-list").querySelectorAll("[data-parent-open-radar]").forEach(b=>b.addEventListener("click",()=>{
+      const promoted=Number(b.dataset.parentPromoted);if(promoted)openProspect(promoted);else openRadar(Number(b.dataset.parentOpenRadar));
+    }));
+  }
+  function openRadarParentDialog(record){
+    if(!state.parentCompanyAvailable){alert("Parent-company grouping is not yet enabled. Complete D1 migration 0048.");return;}
+    const form=$("radar-parent-form");form.elements.radarId.value=record.id;
+    const current=companyForRadar(record.id);
+    $("radar-parent-select").innerHTML='<option value="">No parent company</option>'+state.parentCompanies.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("");
+    form.elements.parentCompanyId.value=String(current?.id||"");
+    openDialog($("radar-parent-dialog"));
+  }
+  $("add-parent-company").addEventListener("click",()=>openDialog($("parent-company-dialog")));
+  $("parent-company-form").addEventListener("submit",async e=>{
+    e.preventDefault();const form=e.currentTarget,save=form.querySelector('button[type="submit"]');
+    if(save.disabled)return;save.disabled=true;$("parent-company-error").hidden=true;
+    try{const d=await api("create_parent_company",formObj(form));closeDialog($("parent-company-dialog"));form.reset();await load();
+      if(d.duplicateProtected)alert("Parent company already exists. The original record was preserved.");
+    }catch(error){$("parent-company-error").textContent=error.message;$("parent-company-error").hidden=false}
+    finally{save.disabled=false}
+  });
+  $("radar-parent-form").addEventListener("submit",async e=>{
+    e.preventDefault();const form=e.currentTarget,v=formObj(form),save=form.querySelector('button[type="submit"]');
+    if(save.disabled)return;save.disabled=true;$("radar-parent-error").hidden=true;
+    try{await api("set_radar_parent_company",{radarId:Number(v.radarId),parentCompanyId:v.parentCompanyId?Number(v.parentCompanyId):null});
+      closeDialog($("radar-parent-dialog"));await load();await openRadar(Number(v.radarId));
+    }catch(error){$("radar-parent-error").textContent=error.message;$("radar-parent-error").hidden=false}
+    finally{save.disabled=false}
+  });
+
   function renderRadar(){
     const list=state.radar.filter(r=>!["promoted","nurture"].includes(r.status));$("radar-list-count").textContent=list.length;
-    $("radar-list").innerHTML=list.map(r=>`<article class="record"><div><h3>${esc(r.businessName||r.vertical||"Radar Record")}</h3><p class="meta">${esc(r.contactName||"Contact not recorded")} · ${esc(r.market||r.vertical||"Market not recorded")}</p><p class="insight">${esc(r.sourceDescription||"Lead source preserved in Radar.")}</p><div class="chips"><span class="badge ${r.isUnmanaged?"red":r.status==="outreach"?"blue":"gray"}">${esc(r.isUnmanaged?"Unmanaged Outreach":r.status==="outreach"?"Outreach":"Radar")}</span><span class="chip">${esc(r.sourceType||"source unknown")}</span></div></div>
+    $("radar-list").innerHTML=list.map(r=>`<article class="record"><div><h3>${esc(r.businessName||r.vertical||"Radar Record")}</h3><p class="meta">${esc(r.contactName||"Contact not recorded")} · ${esc(r.market||r.vertical||"Market not recorded")}</p>${companyForRadar(r.id)?`<p class="meta">Parent: ${esc(companyForRadar(r.id).name)}</p>`:""}<p class="insight">${esc(r.sourceDescription||"Lead source preserved in Radar.")}</p><div class="chips"><span class="badge ${r.isUnmanaged?"red":r.status==="outreach"?"blue":"gray"}">${esc(r.isUnmanaged?"Unmanaged Outreach":r.status==="outreach"?"Outreach":"Radar")}</span><span class="chip">${esc(r.sourceType||"source unknown")}</span></div></div>
     <div><p class="next-label">Next Action</p><p class="next-title">${esc(r.isUnmanaged?"Outreach has no dated follow-up":r.nextAction?.title||"Not in active outreach")}</p><p class="next-due">${esc(dueText(r.nextAction,r.isUnmanaged))}</p></div>
     <div><button class="btn btn-secondary btn-small" data-open-radar="${r.id}" type="button">Open</button></div></article>`).join("");
     $("radar-empty").hidden=list.length>0;$("radar-list").querySelectorAll("[data-open-radar]").forEach(b=>b.addEventListener("click",()=>openRadar(Number(b.dataset.openRadar))))
@@ -1005,9 +1083,9 @@
   }
   function renderRadarDetail(r){
     $("radar-title").textContent=r.businessName||r.vertical||"Radar Record";$("radar-subtitle").textContent=`${r.status==="nurture"?"Nurture / Hold":r.status==="outreach"?"Outreach":"Radar"} · ${r.contactName||"Contact not recorded"}`;
-    $("radar-body").innerHTML=`<div class="detail-grid">${detail("Source",r.sourceType||"Unknown")}${detail("Market",r.market||r.vertical||"Unknown")}${detail("Contact",r.contactName||"Not recorded")}${detail("Email",r.contactEmail||"Not recorded")}${detail("Phone",r.contactPhone||"Not recorded")}${detail("Website",r.website||"Not recorded")}${detail("Test Site",r.testSiteUrl||"Not recorded")}${detail("Last Outreach",fmtDate(r.lastOutreachAt))}${detail("Next Action",r.isUnmanaged?"MISSING":r.nextAction?.title||"Not in active outreach")}${r.status==="nurture"?detail("Hold Reason",r.nurtureReason||"Not recorded")+detail("Reactivation Trigger",r.nurtureTrigger||"Not recorded"):""}</div>
+    $("radar-body").innerHTML=`<div class="detail-grid">${detail("Source",r.sourceType||"Unknown")}${detail("Market",r.market||r.vertical||"Unknown")}${detail("Parent Company",companyForRadar(r.id)?.name||"Independent / not linked")}${detail("Contact",r.contactName||"Not recorded")}${detail("Email",r.contactEmail||"Not recorded")}${detail("Phone",r.contactPhone||"Not recorded")}${detail("Website",r.website||"Not recorded")}${detail("Test Site",r.testSiteUrl||"Not recorded")}${detail("Last Outreach",fmtDate(r.lastOutreachAt))}${detail("Next Action",r.isUnmanaged?"MISSING":r.nextAction?.title||"Not in active outreach")}${r.status==="nurture"?detail("Hold Reason",r.nurtureReason||"Not recorded")+detail("Reactivation Trigger",r.nurtureTrigger||"Not recorded"):""}</div>
     <div class="section-title"><div><h3>Radar Actions</h3><p>Move naturally from evidence to outreach to appointment.</p></div></div>
-    <div class="quick-actions"><button class="btn btn-secondary btn-small" id="radar-edit" type="button">Edit Radar Record</button><button class="btn btn-secondary btn-small" id="radar-test-site-edit" type="button">${r.testSiteUrl?"Edit Test Site":"Add Test Site"}</button><button class="btn btn-secondary btn-small" id="radar-research" type="button">Research / Update Intelligence</button><button class="btn btn-secondary btn-small" id="radar-evidence-add" type="button">Add Advertising Evidence</button><button class="btn btn-secondary btn-small" id="radar-outreach" type="button">Record Outreach</button>${r.status==="nurture"?'<button class="btn btn-primary btn-small" id="radar-reactivate" type="button">Reactivate</button>':'<button class="btn btn-secondary btn-small" id="radar-hold" type="button">Nurture / Hold</button>'}<button class="btn btn-secondary btn-small" id="radar-archive" type="button">Closed / Archived</button>${clean(r.nextAction?.title).toLowerCase().replace(/\s+/g,"_")==="follow_up_after_prospect_engagement"?'<button class="btn btn-secondary btn-small" id="radar-followup-email" type="button">Prepare Follow-Up Email</button><button class="btn btn-secondary btn-small" id="radar-confirm-email" type="button">Check Sent Email</button>':""}<button class="btn btn-primary btn-small" id="radar-promote" type="button">Appointment Scheduled</button></div>
+    <div class="quick-actions"><button class="btn btn-secondary btn-small" id="radar-edit" type="button">Edit Radar Record</button><button class="btn btn-secondary btn-small" id="radar-parent-link" type="button" ${!state.parentCompanyAvailable?"disabled":""}>Assign Parent Company</button><button class="btn btn-secondary btn-small" id="radar-test-site-edit" type="button">${r.testSiteUrl?"Edit Test Site":"Add Test Site"}</button><button class="btn btn-secondary btn-small" id="radar-research" type="button">Research / Update Intelligence</button><button class="btn btn-secondary btn-small" id="radar-evidence-add" type="button">Add Advertising Evidence</button><button class="btn btn-secondary btn-small" id="radar-outreach" type="button">Record Outreach</button>${r.status==="nurture"?'<button class="btn btn-primary btn-small" id="radar-reactivate" type="button">Reactivate</button>':'<button class="btn btn-secondary btn-small" id="radar-hold" type="button">Nurture / Hold</button>'}<button class="btn btn-secondary btn-small" id="radar-archive" type="button">Closed / Archived</button>${clean(r.nextAction?.title).toLowerCase().replace(/\s+/g,"_")==="follow_up_after_prospect_engagement"?'<button class="btn btn-secondary btn-small" id="radar-followup-email" type="button">Prepare Follow-Up Email</button><button class="btn btn-secondary btn-small" id="radar-confirm-email" type="button">Check Sent Email</button>':""}<button class="btn btn-primary btn-small" id="radar-promote" type="button">Appointment Scheduled</button></div>
     <div class="section-title"><div><h3>Advertising &amp; Source Evidence</h3><p>Private original-campaign history: optimized images and verified notes.</p></div></div><div id="radar-evidence-list" aria-live="polite">Open a record to view its advertising archive.</div>
     <div class="section-title"><div><h3>Intelligence</h3><p>${(r.intelligence||[]).length} durable record(s).</p></div></div><div class="timeline">${(r.intelligence||[]).slice(0,5).map(i=>`<div class="timeline-item"><strong>${esc(i.title)}</strong><p>${esc(i.summary||"Prospect intelligence saved in Radar.")}</p><time>${esc(fmtDate(i.capturedAt))}</time></div>`).join("")||'<div class="timeline-item"><strong>No research saved yet.</strong><p>Run Research / Update Intelligence.</p></div>'}</div>
     <div class="section-title"><div><h3>Outreach History</h3></div></div><div class="timeline">${(r.activities||[]).slice(0,10).map(a=>`<div class="timeline-item"><strong>${esc(a.subject||a.activityType.replaceAll("_"," "))}</strong><p>${esc(a.summary)}</p><time>${esc(fmtDate(a.occurredAt))}${a.outcome?` · ${esc(a.outcome)}`:""}</time></div>`).join("")||'<div class="timeline-item"><strong>No outreach yet.</strong><p>Radar can remain passive until GCM decides to pursue it.</p></div>'}</div>`;
@@ -1018,6 +1096,7 @@
       ? window.open(normalizeUrl(r.testSiteUrl),"_blank","noopener,noreferrer")
       : editRadarTestSite(r);
     $("radar-edit").addEventListener("click",()=>openRadarEdit(r));
+    $("radar-parent-link").addEventListener("click",()=>openRadarParentDialog(r));
     $("radar-test-site-edit").addEventListener("click",()=>editRadarTestSite(r));
     $("radar-research").addEventListener("click",()=>startResearch({type:"radar",id:r.id,record:r}));
     $("radar-evidence-add").addEventListener("click",()=>openSourceEvidenceDialog(r));
