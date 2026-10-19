@@ -27,7 +27,7 @@ for(const [slug,name,offer,boundary] of files){
  assert.ok(route.includes('"/prospect-previews/'+slug+'/"'));
  assert.match(html,/prospect-print-concept\.js/);
  if(slug==="heron-home-outdoor"){
-  assert.match(html,/Version: 4\.0\.0/);
+  assert.match(html,/Version: 4\.1\.0/);
   assert.match(html,/id="campaign-detail"/);
   assert.match(html,/id="try-handoff"/);
   assert.match(html,/id="conversation"/);
