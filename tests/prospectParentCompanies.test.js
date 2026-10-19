@@ -105,7 +105,7 @@ assert.equal((await call({operation:"set_radar_parent_company",radarId:18,parent
 assert.equal((await call({operation:"set_radar_parent_company",radarId:17,parentCompanyId:999})).status,404);
 assert.equal((await call({operation:"set_radar_parent_company",radarId:17,parentCompanyId:null})).status,200);
 assert.equal(links.has(17),false);
-const unavailable=await call({operation:"list_parent_companies",{...db,prepare(){throw Error("no such table: crm_parent_companies")}}});
+const unavailable=await call({operation:"list_parent_companies"}, {...db,prepare(){throw Error("no such table: crm_parent_companies")}});
 assert.equal(unavailable.status,503);
 assert.equal(parents.length,1);
 console.log("PASS multi-brand parent grouping: unique corporation, independent member history, safe linking, unlinking, archive guard, migration fallback.");
