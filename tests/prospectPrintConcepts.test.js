@@ -1,4 +1,4 @@
-/* GCM OS • Eight advertiser print-source concepts • Version: 1.3.0 */
+/* GCM OS • Eight advertiser print-source concepts • Version: 2.0.0 */
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
@@ -33,8 +33,16 @@ for(const [slug,name,offer,boundary] of files){
   assert.match(html,/id="conversation"/);
   assert.match(html,/I saw your lawn-care postcard/i);
  }else{
-  assert.match(html,/prospect-print-concept\.css/);
-  assert.match(html,/compare|Compare/);assert.match(html,/90-day|90 days/i);
+  assert.match(html,/Version: 2\.0\.0/);
+  assert.match(html,/owner-to-owner-prospect\.css/);
+  assert.match(html,/marketing agency here in Melbourne, Florida/);
+  assert.match(html,/45 years working in sales, management, and business ownership/);
+  assert.match(html,/First|first|start/i);
+  assert.match(html,/id="talk"/);
+  assert.match(html,/<details>/);
+  assert.match(html,/I don't know enough about/);
+  assert.match(html,/mailto:globalconceptsmediallc@gmail.com/);
+  assert.doesNotMatch(html,/<form|type="email"|type="tel"/i);
  }
  assert.doesNotMatch(html,/Teresa S Belcher|431 Vizcaya Ct|32940-1833/i);
 }
