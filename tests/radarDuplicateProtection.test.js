@@ -11,7 +11,7 @@ import {Script} from "node:vm";
 import {handleProspectCrm} from "../routes/prospectCrm.js";
 
 const ui=readFileSync("prospects.html","utf8");
-assert.match(ui,/File: prospects\.html[\s\S]*?Version: 3\.9\.3/);
+assert.match(ui,/File: prospects\.html[\s\S]*?Version: 3\.10\.0/);
 assert.match(ui,/let radarCreatePending=false/);
 assert.match(ui,/if\(radarCreatePending\)return/);
 assert.match(ui,/radarCreatePending=true;save\.disabled=true/);
@@ -21,7 +21,7 @@ assert.match(ui,/await openRadar\(r\.id\)/);
 assert.match(ui,/if\(r\.archivedAt\)/);
 assert.match(ui,/else if\(r\.promotedProspectId\)/);
 const scripts=[...ui.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].map(x=>x[1]).filter(Boolean);
-const main=scripts.find(x=>x.includes('const FILE_VERSION="3.9.3"'));
+const main=scripts.find(x=>x.includes('const FILE_VERSION="3.10.0"'));
 assert.ok(main);
 new Script(main,{filename:"prospects.html:inline"});
 
@@ -120,4 +120,4 @@ const validation=await create({businessName:"Empty",sourceType:""});
 assert.equal(validation.status,400);
 assert.equal(actualInserts,before+1);
 console.log("PASS Radar duplicate guard: one atomic insert, concurrent retries, normalization, distinct markets, archived and promoted preservation, no history changes");
-console.log("PASS Prospects 3.9.3 UI: single Save guard, existing-record navigation and inline JavaScript syntax");
+console.log("PASS Prospects 3.10.0 UI: single Save guard, existing-record navigation and inline JavaScript syntax");
