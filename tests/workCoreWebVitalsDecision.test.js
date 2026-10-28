@@ -1,11 +1,15 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/workCoreWebVitalsDecision.test.js
-   Version: 1.1.2
+   Version: 1.1.3
    Status: Production Regression Test
    Purpose: Lock the Work Queue Core Web Vitals decision contract so
             page-specific Lighthouse evidence can unlock corrective work
             only when the LCP image loading defect is explicitly proven.
+   Change notes — 1.1.3:
+   - Requires URL-scoped homepage and Vault Doors work titles and actions.
+   - Requires saved decision text to persist without bypassing evidence gating.
+
    Change notes — 1.1.2:
    - Aligns the current-decision assertion with Work v1.9.41+, where the newest
      locked evidence drives updateDecisionControls directly instead of an older
@@ -36,6 +40,13 @@ assert.match(work,/lazy\[ -\]\?loaded\\s\+lcp\\s\+image/i);
 assert.match(work,/hasImageLcpElement/);
 assert.match(work,/rootCauseProven:true/);
 assert.match(work,/Correct vault-doors LCP hero image loading/);
+assert.ok(work.includes('Correct homepage promotional LCP image loading priority.'));
+assert.ok(work.includes('const isHomepage=lcpPath==="/"'));
+assert.ok(work.includes('nextQuestion:lcpWorkTitle'));
+assert.ok(work.includes('return decision.nextQuestion||"Correct the verified LCP image loading behavior."'));
+assert.ok(work.includes('const savedProgress=investigationProgressEntries(item)[0]||null'));
+assert.ok(work.includes('if(question&&!savedProgress?.nextQuestion)'));
+assert.ok(work.includes('if(evidence&&!savedProgress?.nextEvidence)'));
 assert.match(work,/not lazy loaded; load it eagerly\/high priority/i);
 assert.match(work,/Treat remaining TBT\/main-thread findings as a separate follow-up/i);
 assert.match(work,/DERIVED-DECISION REFRESH/);
