@@ -1,11 +1,12 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/workInvestigationExternalValidation.test.js
-   Version: 1.0.0
+   Version: 1.0.1
    Status: Production Regression Test
    Purpose: Verify monitored Investigations remain visible, distinct from
             external-validation Work Items and original active queue;
             action requires evidence and resume requires a new result.
+   1.0.1: Accept Work v1.9.48 while keeping all monitoring invariants.
    No production D1 writes.
    ========================================================= */
 
@@ -16,7 +17,7 @@ const work=fs.readFileSync(new URL("../work.html",import.meta.url),"utf8");
 const processing=fs.readFileSync(new URL("../routes/investigationProcessing.js",import.meta.url),"utf8");
 const workspace=fs.readFileSync(new URL("../routes/clientWorkspace.js",import.meta.url),"utf8");
 
-assert.match(work,/Version: 1\.9\.47/);
+assert.match(work,/Version: 1\.9\.4[78]/);
 assert.match(work,/sourceMonitoringInvestigations=Array\.isArray\(op\.monitoringInvestigations\)/);
 assert.match(work,/monitoringInvestigations\.push\(\.\.\.monitorById\.values\(\)\)/);
 assert.match(work,/data-validation-investigation-id/);
