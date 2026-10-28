@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.44
+   Version: 1.9.45
    Status: FBDT Production Candidate
    Source: Stable production work.html 1.9.18
    Sprint: Work Queue Full Recovery
@@ -22,6 +22,7 @@
    - communications-operational-decision-v3
 
    Audited changes:
+   - v1.9.45 protects Google Search Console Redirect error investigations from incidental Merchant Listings/Product snippets evidence, preserves locked evidence, and records pending external Google validation without claiming a repair.
    - v1.9.44 adds an explicit Superseded / Duplicate reconciliation action for external-validation Work Items.
    - The action requires a written reconciliation note and confirms that no completion claim will be recorded.
    - Closing as superseded preserves the Work Item and Evidence history while removing the stale open record from active operational state.
@@ -682,6 +683,15 @@
         "CLS | 0.000"
       ].join("\n");
     }
+    if(isGoogleSearchConsoleRedirectError(item)){
+      return [
+        "Example:",
+        "Affected URL | https://example.com/products/product-handle",
+        "Historical issue | Redirect error",
+        "Live URL test | URL is available to Google; page can be indexed",
+        "Google Search Console validation | Started, awaiting result"
+      ].join("\n");
+    }
     if(isGoogleSearchConsolePageIndexing(item)){
       return [
         "Example:",
@@ -729,6 +739,18 @@
       combined.includes("being indexed") ||
       combined.includes("canonical") ||
       combined.includes("sitemap");
+  }
+
+  /*
+   * v1.9.45: Original investigation scope has priority over incidental data.
+   * Exclude finding_summary and older derived classifications because they
+   * may already contain a mistaken Merchant Listings determination.
+   */
+  function isGoogleSearchConsoleRedirectError(item){
+    if(!isGoogleSearchConsolePageIndexing(item))return false;
+    const original=[item?.title,item?.description,item?.communication?.subject,item?.communication?.raw_content]
+      .map(value=>norm(value)).join(" ");
+    return /\bredirect error\b/.test(original);
   }
 
   function investigationKnownContext(item){
@@ -1948,7 +1970,61 @@
     return {ok:true,reason:""};
   }
 
+  /*
+   * v1.9.45: Historical GSC Redirect error takes precedence over incidental
+   * product snippets and Merchant Listings counts in the same live test.
+   * A live eligible URL is not proof that Google's stored error is cleared.
+   */
+  function buildGoogleSearchConsoleRedirectDecision({facts,item}){
+    const text=(facts||[]).join("\n");
+    const match=text.match(/(?:affected|inspected|tested)\s+url\s*(?:\||:|-)\s*(https?:\/\/[^\s|]+)/i);
+    const url=match?String(match[1]||"").replace(/[),.;]+$/,""):"";
+    const liveEligible=/\burl is available to google\b|\bpage can be indexed\b/i.test(text);
+    const started=/\bvalidation\s*(?:started|in progress|pending)\b|google search console validation\s*(?:\||:|-)?\s*started/i.test(text);
+    const failed=/\b(?:google search console\s+)?validation\s*(?:failed|unsuccessful)\b/i.test(text);
+    const pending=started&&!failed;
+    const reason=failed
+      ?"Google Search Console validation was reported as failed. The exact current redirect behavior needs review; a historical alert alone does not prove root cause."
+      :pending&&liveEligible
+      ?"Google's live URL test shows current indexing eligibility while the historical Redirect error is undergoing external validation. This does not establish that Google's historical report has cleared."
+      :pending
+      ?"Google Search Console validation has started. The current live indexing status still needs confirmation; no corrective cause is proven."
+      :liveEligible
+      ?"Google's live URL test indicates the page can be indexed, but the historical Redirect error has not been formally cleared by Search Console."
+      :"Google previously reported a Redirect error. Live indexability and the current redirect chain are not yet verified.";
+    const nextQuestion=failed
+      ?"What current redirect response or chain caused Google's validation to fail?"
+      :pending
+      ?"Has Google Search Console completed validation of the historical Redirect error?"
+      :liveEligible
+      ?"Has Google Search Console started validation of the historical Redirect error?"
+      :"Does the affected URL pass Google's current Test Live URL check?";
+    const nextEvidence=failed
+      ?"Open Google Search Console validation details and inspect the URL's live redirect chain. Record the failing response before proposing corrective Work."
+      :pending
+      ?"Check Google Search Console > Page indexing > Redirect error > See details for Passed or Failed validation. Leave this Investigation open while awaiting the external result. Do not create corrective Work without a verified defect."
+      :liveEligible
+      ?"Start validation in Google Search Console > Page indexing > Redirect error and record the date. Do not close until Google reports the outcome."
+      :"Test the affected URL live in Google Search Console. Record current indexing eligibility and any actual redirect failure before deciding on corrective Work.";
+    return {
+      evidenceType:failed?"redirect_validation_failed":pending?"redirect_external_validation_pending":liveEligible?"redirect_live_eligible":"redirect_error_unverified",
+      issueName:"Google Search Console Redirect error",
+      count:1,
+      severity:"error",
+      sampleUrl:url,
+      rootCauseProven:false,
+      reason,
+      expectedImpact:"Verify current search accessibility without claiming a website repair.",
+      nextQuestion,
+      nextEvidence
+    };
+  }
+
   function buildGoogleSearchConsoleDecision({facts,joined,history,item}){
+    if(isGoogleSearchConsoleRedirectError(item)){
+      return buildGoogleSearchConsoleRedirectDecision({facts,item});
+    }
+
     const factText=(facts||[]).join("\n");
     const userCanonicalMatch=factText.match(/User-declared canonical\s*(?:\||:|-)?\s*(https?:\/\/[^\s|]+)/i);
     const googleCanonicalMatch=factText.match(/Google-selected canonical\s*(?:\||:|-)?\s*(https?:\/\/[^\s|]+)/i);
@@ -2682,6 +2758,20 @@
       totals.errors?`${totals.errors} errors are active.`:"",
       totals.warnings?`${totals.warnings} warnings are active.`:""
     ].filter(Boolean).join(" ");
+
+    if([
+      "redirect_external_validation_pending",
+      "redirect_validation_failed",
+      "redirect_live_eligible",
+      "redirect_error_unverified"
+    ].includes(decision.evidenceType)){
+      return [
+        "Original issue: Google Search Console Redirect error.",
+        decision.sampleUrl?"Affected URL: "+decision.sampleUrl+".":"",
+        decision.reason,
+        "Decision state: No corrective Work Item is justified yet. Keep the Investigation open until Google validation or current redirect-chain evidence supports a disposition."
+      ].filter(Boolean).join("\n\n");
+    }
 
     if(decision.evidenceType==="live_url_sample"){
       return [
