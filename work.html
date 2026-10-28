@@ -1,10 +1,11 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.47
+   Version: 1.9.48
    Status: FBDT Production Candidate
    Source: Stable production work.html 1.9.18
    Sprint: Work Queue Full Recovery
+   - v1.9.48 retains saved D1 findings on refresh and scopes Core Web Vitals tasks to their affected URLs.
    - v1.9.33 makes Evidence Actions source-aware for SEMrush, Search Console, GA4, and Merchant Center.
    - Each supported investigation opens its matching evidence platform instead of falling through to a generic source.
    - Existing saved direct SEMrush/Search Console links remain authoritative when available.
@@ -325,7 +326,7 @@
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.47"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.48"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),externalValidation:byId("external-validation-list"),target:byId("target-banner"),requestedForm:byId("requested-work-form"),requestedClient:byId("requested-client"),requestedMessage:byId("requested-work-message"),createRequested:byId("create-requested-work")};
   let activeClients=[],directoryClients=[],investigations=[],monitoringInvestigations=[],workItems=[],validationWorkItems=[],selectedKey="",processing=false,processingWorkItem=false,processingRequestedWork=false;
 
@@ -1583,15 +1584,18 @@
      * saved Next Question / Next Evidence can remain on screen after newer
      * evidence changes the decision without yet proving root cause.
      */
-    if(finding){
+    // v1.9.48: Preserve the latest operator-saved D1 decision fields.
+    // The separately locked source facts continue to gate Create Work.
+    const savedProgress=investigationProgressEntries(item)[0]||null;
+    if(finding&&!savedProgress?.findingSummary){
       finding.value=history
         .map(entry=>`Step ${entry.step}: ${entry.finding}`)
         .join("\n\n");
     }
-    if(question){
+    if(question&&!savedProgress?.nextQuestion){
       question.value=refreshedLatest.nextQuestion||extractNextQuestion(refreshedLatest.nextAction);
     }
-    if(evidence){
+    if(evidence&&!savedProgress?.nextEvidence){
       evidence.value=refreshedLatest.nextAction||"";
     }
 
@@ -2332,12 +2336,23 @@
         const hasImageLcpElement=
           /largest(?:\s+lcp)?\s+element[^\n]*(?:image|<img|\bimg\b)/i.test(joined) ||
           /largest\s+contentful\s+paint[^\n]*(?:image|<img|\bimg\b)/i.test(joined);
-        const lazyLoadedLcpImage=/lazy[ -]?loaded\s+lcp\s+image/i.test(joined);
+        const lazyLoadedLcpImage=/lazy[ -]?loaded\s+lcp\s+image/i.test(joined) ||
+          /\b(?:lcp\s+(?:element|image)|largest\s+contentful\s+paint\s+image).{0,160}\bloading\s*=\s*["']?lazy["']?/i.test(joined);
         const preloadLcpImage=/preload\s+largest\s+contentful\s+paint\s+image/i.test(joined);
         const renderBlocking=/eliminate\s+render[ -]?blocking\s+resources/i.test(joined);
         const criticalRequestChain=/avoid\s+chaining\s+critical\s+requests/i.test(joined);
 
         if(decliningMetric==="LCP"&&hasImageLcpElement&&lazyLoadedLcpImage){
+          // v1.9.48: Avoid converting homepage evidence to a Vault Doors task.
+          const lcpPath=(()=>{try{return new URL(cwv.pageUrl).pathname.replace(/\/+$/,"")||"/";}catch{return "";}})();
+          const isHomepage=lcpPath==="/";
+          const isVaultDoors=lcpPath.toLowerCase()==="/pages/vault-doors";
+          const lcpTarget=isHomepage?"homepage":isVaultDoors?"vault-doors":"affected-page";
+          const lcpWorkTitle=isHomepage
+            ?"Correct homepage promotional LCP image loading priority."
+            :isVaultDoors
+            ?"Correct vault-doors LCP hero image loading behavior."
+            :`Correct LCP image loading behavior on ${cwv.pageUrl}.`;
           const secondary=[
             preloadLcpImage ? "the LCP image is not being prioritized/preloaded" : "",
             criticalRequestChain ? "critical request chains add delivery delay" : "",
@@ -2359,8 +2374,8 @@
               secondary.length ? `Supporting diagnostics also show ${secondary.join("; ")}.` : ""
             ].filter(Boolean).join(" "),
             expectedImpact:"Loading the LCP image eagerly and at high priority should remove the directly identified LCP-loading defect; rerun Lighthouse/Site Audit afterward to verify the measured result.",
-            nextQuestion:"Correct the vault-doors LCP hero image loading behavior.",
-            nextEvidence:"Update the vault-doors Largest Contentful Paint image so it is not lazy loaded; load it eagerly/high priority and preload it when appropriate. Then rerun the SEMrush Core Web Vitals/Lighthouse test and verify LCP improves. Treat remaining TBT/main-thread findings as a separate follow-up only if they remain after the LCP correction."
+            nextQuestion:lcpWorkTitle,
+            nextEvidence:`Update the ${lcpTarget} Largest Contentful Paint image so it is not lazy loaded; load it eagerly/high priority and preload it when appropriate. Then rerun the SEMrush Core Web Vitals/Lighthouse test and verify LCP improves. Treat remaining TBT/main-thread findings as a separate follow-up only if they remain after the LCP correction.`
           };
         }
 
@@ -2825,7 +2840,7 @@
       return "301 redirect obsolete URL to Google-selected canonical";
     }
     if(decision.rootCauseProven&&decision.evidenceType==="core_web_vitals_lcp_diagnostic"){
-      return "Correct vault-doors LCP hero image loading";
+      return decision.nextQuestion||"Correct the verified LCP image loading behavior.";
     }
     if(decision.rootCauseProven&&decision.evidenceType==="internal_redirect_link_source"){
       return "Update SES internal links that point through permanent redirects";
