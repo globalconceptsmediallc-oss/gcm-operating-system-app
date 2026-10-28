@@ -3031,13 +3031,37 @@
     const visibleValidation=validationWorkItems
       .filter(item=>!selectedClient||normalizedClientCode(item.clientCode)===selectedClient)
       .sort((a,b)=>Number(b.id)-Number(a.id));
-
-    if(!visibleValidation.length){
-      el.externalValidation.innerHTML='<div class="empty">No Work Items are awaiting external validation in this view.</div>';
+    const visibleMonitoring=monitoringInvestigations
+      .filter(item=>!selectedClient||normalizedClientCode(item.clientCode)===selectedClient)
+      .sort(sortInvestigations);
+    if(!visibleValidation.length&&!visibleMonitoring.length){
+      el.externalValidation.innerHTML='<div class="empty">No Investigations or Work Items are awaiting external validation in this view.</div>';
       return;
     }
 
-    el.externalValidation.innerHTML=visibleValidation.map(i=>{
+    const monitoringCards=visibleMonitoring.map(i=>{
+      const saved=investigationProgressEntries(i)[0]||null;
+      const finding=String(saved?.findingSummary||i.finding_summary||"Awaiting a documented external result.");
+      const question=String(saved?.nextQuestion||"What result has the external platform confirmed?");
+      const requiredEvidence=String(saved?.nextEvidence||"Obtain final platform validation before deciding next steps.");
+      const updated=String(i.updated_at||saved?.capturedAt||"");
+      return '<article class="work-card" data-validation-investigation-id="'+esc(i.id)+'">'
+        +'<span class="direct-work-label">Monitoring Investigation — Awaiting External Validation</span>'
+        +'<h3>Investigation #'+esc(i.id)+' · '+esc(i.title||"Investigation")+'</h3>'
+        +'<p class="detail-subtitle">'+esc(i.clientName)+' · '+esc(i.assigned_to||"Owner not assigned")+(updated?' · Updated '+esc(updated):'')+'</p>'
+        +'<section class="detail-section"><h3>Recorded Finding</h3><p>'+esc(finding)+'</p></section>'
+        +'<section class="detail-section"><h3>Next External Question</h3><p>'+esc(question)+'</p></section>'
+        +'<section class="detail-section"><h3>Required Follow-up Evidence</h3><p>'+esc(requiredEvidence)+'</p></section>'
+        +'<p class="status ready">Investigation remains unresolved. No corrective Work or completed website repair is claimed.</p>'
+        +'<section class="detail-section"><h3>New external result received?</h3>'
+        +'<p>Record the source, date, and new validation result to resume this case for review.</p>'
+        +'<label for="resume-validation-'+esc(i.id)+'">New externally reported result</label>'
+        +'<textarea id="resume-validation-'+esc(i.id)+'" placeholder="Example: Google Search Console — 2026-11-02 — Redirect error validation passed/failed for the affected product URL."></textarea>'
+        +'<div class="processing-actions"><button class="button" type="button" data-resume-investigation="'+esc(i.id)+'">Resume Investigation for Review</button></div>'
+        +'<div id="resume-message-'+esc(i.id)+'"></div></section></article>';
+    });
+
+    el.externalValidation.innerHTML=monitoringCards.join("")+visibleValidation.map(i=>{
       const actualImpact=String(i.actual_impact||i.actualImpact||"").trim();
       const expectedImpact=String(i.expected_impact||i.expectedImpact||"").trim();
       const statusLabel=String(i.status||"awaiting_external_validation").replaceAll("_"," ");
@@ -3080,6 +3104,56 @@
         if(item)reconcileSupersededWorkItem(item);
       });
     });
+    el.externalValidation.querySelectorAll("[data-resume-investigation]").forEach(button=>{
+      button.addEventListener("click",()=>{
+        const id=Number(button.dataset.resumeInvestigation);
+        const item=visibleMonitoring.find(entry=>Number(entry.id)===id);
+        if(item)resumeMonitoredInvestigation(item);
+      });
+    });
+  }
+
+  async function resumeMonitoredInvestigation(item){
+    if(processing)return;
+    const fresh=byId("resume-validation-"+item.id)?.value.trim()||"";
+    const message=byId("resume-message-"+item.id);
+    if(fresh.length<25){
+      message.className="status error";
+      message.textContent="Enter the actual external source, date, and reported result. Resuming is not closure.";
+      return;
+    }
+    const latest=investigationProgressEntries(item)[0]||null;
+    const finding=String(latest?.findingSummary||item.finding_summary||"Current investigation preserved.")
+      +"\n\nNew operator-reported external result requiring verification: "+fresh;
+    processing=true;
+    message.className="status loading";
+    message.textContent="Recording the new result and resuming the Investigation for review.";
+    const button=el.externalValidation.querySelector('[data-resume-investigation="'+Number(item.id)+'"]');
+    if(button)button.disabled=true;
+    try{
+      const response=await post({
+        action:"process-investigation",clientCode:item.clientCode,
+        investigationId:Number(item.id),outcome:"continue_investigation",
+        findingSummary:finding,
+        nextQuestion:"What does the new external validation result establish about the original issue?",
+        nextEvidence:"Verify the external result against the source and affected URLs. Decide whether evidence supports closure, continued monitoring, or corrective Work."
+      });
+      if(response.outcome!=="continue_investigation"||response.workItemCreated===true||response.investigationKeptOpen!==true){
+        throw new Error("Unexpected D1 processing response. Check the saved status before retrying.");
+      }
+      await load();
+      const reopened=investigations.find(i=>Number(i.id)===Number(item.id)&&i.clientCode===item.clientCode);
+      if(reopened){
+        el.filter.value=reopened.clientCode;
+        renderExternalValidationItems();
+        showTarget("Investigation #"+reopened.id+" resumed for evidence review; no closure or corrective Work was created.");
+        selectInvestigation(reopened,true);
+      }
+    }catch(error){
+      message.className="status error";
+      message.textContent=error.message||"Unable to resume the Investigation.";
+      if(button)button.disabled=false;
+    }finally{processing=false;}
   }
 
   async function reconcileSupersededWorkItem(item){
