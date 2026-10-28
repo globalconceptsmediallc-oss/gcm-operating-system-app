@@ -9,16 +9,17 @@
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,select,input,textarea{font:inherit}a{color:inherit;text-decoration:none}.shell{min-height:100vh;display:grid;grid-template-columns:240px minmax(0,1fr)}.sidebar{min-width:0}.brand{display:flex;align-items:center;gap:8px;padding:2px 6px 18px;border-bottom:1px solid rgba(255,255,255,.12)}.brand-mark{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;background:rgba(255,255,255,.08);color:var(--gold);font-weight:900}.brand-copy strong,.brand-copy span{display:block}.brand-copy strong{font-size:.72rem}.brand-copy span{margin-top:3px;color:rgba(255,255,255,.56);font-size:.54rem;letter-spacing:.11em;text-transform:uppercase}.nav-label{margin:18px 8px 8px;color:rgba(255,255,255,.42);font-size:.53rem;font-weight:800;letter-spacing:.13em;text-transform:uppercase}.nav{display:grid;gap:6px}.nav a{min-height:32px;display:flex;align-items:center;gap:8px;padding:0 9px;border-radius:8px;color:rgba(255,255,255,.72);font-size:.72rem;font-weight:700}.nav a.active{background:rgba(38,111,218,.2);color:#fff;box-shadow:inset 3px 0 0 var(--gold)}.footer{margin-top:auto;padding:14px 6px 2px;border-top:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.58);font-size:.58rem;line-height:1.5}main{padding:24px 28px 44px}.page{max-width:1320px;margin:0 auto}.top{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;margin-bottom:16px}.eyebrow{margin:0 0 7px;color:var(--blue);font-size:.72rem;font-weight:900;letter-spacing:.13em;text-transform:uppercase}h1{margin:0;color:var(--navy);font-size:clamp(1.75rem,3.2vw,2.5rem);line-height:1}.subtitle{max-width:820px;margin:8px 0 0;color:var(--muted);line-height:1.5}.chip{padding:9px 12px;border:1px solid #c8d9f2;border-radius:999px;background:var(--blueSoft);color:#205c9f;font-size:.58rem;font-weight:850;white-space:nowrap}.summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px}.card,.panel{border:1px solid var(--border);background:var(--card);box-shadow:var(--shadow)}.card{padding:14px 16px;border-radius:12px}.label{color:var(--muted);font-size:.7rem;font-weight:850;letter-spacing:.07em;text-transform:uppercase}.value{display:block;margin-top:5px;color:var(--navy);font-size:1.45rem;font-weight:900}.panel{border-radius:13px;overflow:hidden}.panel+.panel{margin-top:12px}.panel-head{padding:14px 16px 12px;border-bottom:1px solid var(--border)}.panel-head h2{margin:0;color:var(--navy);font-size:1rem}.panel-head p{margin:5px 0 0;color:var(--muted);font-size:.8rem;line-height:1.45}.panel-body{padding:14px 16px 18px}.filters{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:10px}.field label{display:block;margin-bottom:6px;color:var(--muted);font-size:.67rem;font-weight:850;letter-spacing:.05em;text-transform:uppercase}select,input[type=date],button,textarea{border:1px solid var(--border);border-radius:9px;background:#fff;color:var(--text)}select,input[type=date],button{min-height:40px;padding:0 11px;width:100%}.dates{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.opts{display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin-top:12px}.check{display:inline-flex;align-items:center;gap:7px;font-size:.8rem;font-weight:700}.actions{display:flex;gap:9px;margin-top:14px}.actions button{width:auto;min-width:120px;font-size:.8rem;font-weight:850;cursor:pointer}.primary{border-color:var(--blue);background:var(--blue);color:#fff}.status{margin-top:12px;padding:12px 13px;border-radius:10px;font-size:.79rem;font-weight:750;line-height:1.45}.loading{border:1px solid #cbdcf4;background:var(--blueSoft);color:#225e9e}.ready{border:1px solid #cbe5d6;background:var(--greenSoft);color:var(--green)}.error{border:1px solid #efcccc;background:var(--redSoft);color:var(--red)}.grid{display:grid;grid-template-columns:minmax(320px,.85fr) minmax(0,1.15fr);gap:12px;align-items:start;margin-top:12px}.records{display:grid;gap:9px;max-height:720px;overflow:auto}.record{padding:12px 13px;border:1px solid var(--border);border-radius:9px;background:#fff}.record strong{display:block;color:var(--navy);font-size:.86rem;line-height:1.35}.meta{margin-top:5px;color:var(--muted);font-size:.69rem;line-height:1.4}.record p{margin:8px 0 0;font-size:.79rem;line-height:1.45}.badge{display:inline-flex;align-items:center;padding:3px 7px;margin-right:5px;border-radius:999px;background:#eef2f7;color:#59677b;font-size:.61rem;font-weight:850;text-transform:uppercase}.result{background:var(--greenSoft);color:var(--green)}.monitor{background:var(--yellowSoft);color:var(--yellow)}.output-wrap{position:sticky;top:16px}.output{width:100%;min-height:520px;white-space:pre-wrap;line-height:1.55;font-size:.84rem;resize:vertical;padding:14px}.empty{padding:28px 18px;border:1px dashed var(--border);border-radius:9px;color:var(--muted);text-align:center;font-size:.82rem}@media(max-width:1050px){.summary{grid-template-columns:repeat(2,1fr)}.filters{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.output-wrap{position:static}}@media(max-width:760px){.shell{display:block}.sidebar{position:static;height:auto}main{padding:18px}.top{flex-direction:column}.filters,.dates,.summary{grid-template-columns:1fr}}
 
 .badge.investigation{background:#eaf2ff;color:#1f5c9e}
+.card-sub{display:block;margin-top:5px;color:var(--muted);font-size:.67rem;font-weight:700;line-height:1.35}
 </style>
 </head>
 <body>
 <!-- =========================================================
  Global Concepts Media Operating System
  File: proof.html
- Version: 2.3.3
+ Version: 2.3.4
  Status: Production Candidate
  Purpose: Read-only Proof / Client Reporting view over existing D1 records, including completed Work Items and historical activity records, using the shared GCM OS shell.
- Change Notes: v2.3.3 distinguishes evidence-supported investigation closure from corrective work in client and internal reporting; no D1 changes.
+ Change Notes: v2.3.4 separates reusable lessons for internal intelligence and tracks completed investigation decisions distinctly from work results.
  ========================================================= -->
 <div class="shell">
 <aside class="sidebar" data-gcm-shell-sidebar></aside>
@@ -26,8 +27,8 @@
 <header class="top"><div><p class="eyebrow">Prove</p><h1>Proof & Client Reporting</h1><p class="subtitle">Assemble completed work and available outcomes from existing D1 records. Proof is a reporting view only; it does not create a second source of truth.</p></div><span class="chip">D1 READ-ONLY REPORTING</span></header>
 
 <section class="summary">
-<article class="card"><span class="label">Completed Activities</span><strong id="completed" class="value">—</strong></article>
-<article class="card"><span class="label">Documented Outcomes</span><strong id="results" class="value">—</strong></article>
+<article class="card"><span class="label">Completed Activities</span><strong id="completed" class="value">—</strong><span id="investigationDecisions" class="card-sub">—</span></article>
+<article class="card"><span class="label">Work Results</span><strong id="results" class="value">—</strong></article>
 <article class="card"><span class="label">Time Recorded</span><strong id="time" class="value">—</strong></article>
 <article class="card"><span class="label">Reviewed Findings</span><strong id="monitoring" class="value">—</strong></article>
 </section>
@@ -65,16 +66,16 @@ window.addEventListener("DOMContentLoaded", () => {
   if (window.GCMOShell) {
     window.GCMOShell.mount({
       currentPage: "proof",
-      statusText: "Proof reporting operational · Proof v2.3.3"
+      statusText: "Proof reporting operational · Proof v2.3.4"
     });
   }
 });
 </script>
 <script>
 (()=>{"use strict";
-const VERSION="2.3.2",WORKER_URL="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
+const VERSION="2.3.4",WORKER_URL="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
 const C=[{code:"SES",name:"Southeast Safes"},{code:"SFS",name:"South Florida Safes"},{code:"A1",name:"A1 Action Safe & Lock"},{code:"HBG",name:"HB Guns"},{code:"PW",name:"Pickett Weaponry"},{code:"NFS",name:"North Florida Safes"},{code:"MAS",name:"Move A Safe"},{code:"GCM",name:"Global Concepts Media"},{code:"LUMI",name:"Lumi Studio"},{code:"4A",name:"1-800 4A Gun Safe"}];
-const $=id=>document.getElementById(id),e={client:$("client"),period:$("period"),outputType:$("outputType"),groupMode:$("groupMode"),dates:$("dates"),startDate:$("startDate"),endDate:$("endDate"),includeWork:$("includeWork"),includeMonitoring:$("includeMonitoring"),generate:$("generate"),refresh:$("refresh"),copy:$("copy"),status:$("status"),recordList:$("recordList"),output:$("output"),outputMeta:$("outputMeta"),completed:$("completed"),results:$("results"),monitoring:$("monitoring"),time:$("time")};
+const $=id=>document.getElementById(id),e={client:$("client"),period:$("period"),outputType:$("outputType"),groupMode:$("groupMode"),dates:$("dates"),startDate:$("startDate"),endDate:$("endDate"),includeWork:$("includeWork"),includeMonitoring:$("includeMonitoring"),generate:$("generate"),refresh:$("refresh"),copy:$("copy"),status:$("status"),recordList:$("recordList"),output:$("output"),outputMeta:$("outputMeta"),completed:$("completed"),investigationDecisions:$("investigationDecisions"),results:$("results"),monitoring:$("monitoring"),time:$("time")};
 let W=[],R=[],D=[];
 [e.client,e.period,e.outputType,e.groupMode,e.includeWork,e.includeMonitoring,e.startDate,e.endDate].forEach(x=>x.addEventListener("change",()=>{syncDates();status("pending","Selection changed. Click Generate Proof to rebuild. Your current draft has not been overwritten.")}));
 e.generate.onclick=generate;e.refresh.onclick=load;e.copy.onclick=copy;setDates("this_week");load();
@@ -197,6 +198,7 @@ function records(w,range){
         why:inv?(info.clientValue||clean(a.expected_impact)):clean(a.expected_impact),
         result:inv?info.disposition:(useful(a.actual_impact)?clean(a.actual_impact):""),
         limitation:inv?info.limitation:"",
+        lesson:inv?info.reusableLesson:"",
         evidence:clean(a.evidence_reference)||clean(a.source_reference),
         minutes:num(a.time_minutes),
         win:!inv&&Number(a.win)===1,
@@ -276,6 +278,8 @@ function summary(){
   const w=R.filter(r=>r.stream==="work"),i=R.filter(r=>r.stream==="investigation"),f=R.filter(r=>r.stream==="finding");
   const minutes=[...w,...i].reduce((s,r)=>s+r.minutes,0);
   e.completed.textContent=w.length+i.length;
+  const decisions=i.filter(r=>r.result).length;
+  e.investigationDecisions.textContent=decisions+" investigation decision"+(decisions===1?"":"s")+" recorded";
   e.results.textContent=w.filter(r=>r.win||r.result).length;
   e.monitoring.textContent=f.length;
   e.time.textContent=minutes?duration(minutes):"Not recorded";
@@ -291,6 +295,7 @@ function renderRecords(){
     if(r.why)s+='<p><strong>'+(inv?'Client value':r.stream==="finding"?'What we learned':'Why it matters')+':</strong> '+esc(r.why)+'</p>';
     if(r.result)s+='<p><strong>'+(inv?'Disposition':r.stream==="finding"?'Decision / next action':'Recorded result')+':</strong> '+esc(r.result)+'</p>';
     if(r.limitation)s+='<p><strong>Verification limit:</strong> '+esc(r.limitation)+'</p>';
+    if(r.lesson)s+='<p><strong>Internal reusable lesson:</strong> '+esc(r.lesson)+'</p>';
     return s+'</article>';
   }).join('');
 }
@@ -306,11 +311,11 @@ function isInvestigationClosure(a){
   return clean(a.source_type).toLowerCase()==="investigation_closure"||/^investigation:\d+:(no_work_required|closed|completed)/.test(clean(a.source_reference).toLowerCase());
 }
 function investigationFields(notes){
-  const f={verifiedFinding:"",disposition:"",limitation:"",clientValue:"",finalFinding:"",fallback:""};
-  const names={"verified finding":"verifiedFinding","disposition":"disposition","limitation":"limitation","client value":"clientValue","final investigation finding":"finalFinding"};
+  const f={verifiedFinding:"",disposition:"",limitation:"",clientValue:"",reusableLesson:"",finalFinding:"",fallback:""};
+  const names={"verified finding":"verifiedFinding","disposition":"disposition","limitation":"limitation","client value":"clientValue","reusable lesson":"reusableLesson","final investigation finding":"finalFinding"};
   let active="";
   for(const line of clean(notes).split(/\r?\n/)){
-    const m=line.match(/^\s*(Verified finding|Disposition|Limitation|Client value|Final investigation finding)\s*:\s*(.*)$/i);
+    const m=line.match(/^\s*(Verified finding|Disposition|Limitation|Client value|Reusable lesson|Final investigation finding)\s*:\s*(.*)$/i);
     if(m){active=names[m[1].toLowerCase()];f[active]=m[2].trim();}
     else if(active&&line.trim())f[active]+=" "+line.trim();
   }
@@ -332,7 +337,7 @@ function theme(r){const x=`${r.category} ${r.title} ${r.summary}`.toLowerCase();
 function themeSentence(k,a){const labels={search:'Search visibility',technical:'Website health',authority:'Search authority & protection',content:'Content & customer reach',other:'Account progress'},w=a.filter(r=>r.stream==='work'),f=a.filter(r=>r.stream==='finding'),m=a.filter(r=>r.stream==='monitoring'),res=w.map(r=>r.result).filter(Boolean);let s=`${labels[k]}: `;if(f.length){const x=f[0];s+=short(x.why||x.summary,220);if(x.result)s+=` Next: ${short(x.result,150)}`;if(w.length)s+=` We also completed ${w.length} related work item${w.length===1?'':'s'}.`;return s.replace(/\.\./g,'.')}if(w.length){s+=w.length===1?'we completed a documented work item':'we completed several documented work items';if(res.length)s+=`, with a recorded result of ${lower(short(res[0],140))}`;s+='.'}else s+=trend(m)+'.';if(w.length&&m.length)s+=` We also monitored ${m.length} related update${m.length===1?'':'s'} to track what changed after the work.`;return s.replace(/\.\./g,'.')}
 function trend(a){const x=a.map(r=>`${r.title} ${r.summary}`).join(' ').toLowerCase(),p=(x.match(/\b(improved|increase|increased|gained|entered|enters|up\b|top 10|top 3)/g)||[]).length,n=(x.match(/\b(declined|decrease|decreased|dropped|lost|leaves|left|down\b)/g)||[]).length;if(p&&n)return`we tracked both positive and negative movement across ${a.length} updates, giving us a clearer trend instead of reacting to one alert`;if(p)return`we tracked ${a.length} update${a.length===1?'':'s'} showing positive movement or stronger visibility`;if(n)return`we tracked ${a.length} update${a.length===1?'':'s'} showing declines that need continued observation before corrective work is warranted`;return`we monitored ${a.length} meaningful update${a.length===1?'':'s'} to keep progress and risks visible`}
 function digest(range){const lines=['GCM OS — PROOF OF WORK & MANAGEMENT DIGEST',period(range).toUpperCase(),''];groups(R).forEach(g=>{lines.push(g.label);g.records.forEach(r=>{const tag=r.stream==='investigation'?'COMPLETED INVESTIGATION':r.stream==='work'?'COMPLETED WORK':r.stream==='finding'?'REVIEWED FINDING':'SUPPORTING MONITORING';lines.push(`• ${r.date} — ${r.client} — [${tag}] ${r.title}`);if(r.summary)lines.push(`  Detail: ${r.summary}`);if(r.why)lines.push(`  ${r.stream==='investigation'?'Client value':r.stream==='finding'?'What we learned':'Why it matters'}: ${r.why}`);if(r.result)lines.push(`  ${r.stream==='investigation'?'Disposition':r.stream==='finding'?'Decision / next action':'Recorded result'}: ${r.result}`);if(r.limitation)lines.push(`  Verification limit: ${r.limitation}`);if(r.evidence)lines.push(`  Evidence/source: ${r.evidence}`);if(r.minutes)lines.push(`  Time: ${duration(r.minutes)}`)});lines.push('')});return lines.join('\n')}
-function internal(range){const w=R.filter(r=>r.stream==='work'),f=R.filter(r=>r.stream==='finding'),m=R.filter(r=>r.stream==='monitoring'),lines=['GCM OS — INTERNAL CLIENT SUMMARY',period(range).toUpperCase(),'',`Completed corrective/work records: ${w.length}`,`Completed investigation records: ${R.filter(r=>r.stream==='investigation').length}`,`Recorded results / wins: ${w.filter(r=>r.win||r.result).length}`,`Reviewed findings: ${f.length}`,`Supporting monitoring signals: ${m.length}`,`Recorded time: ${[...w,...R.filter(r=>r.stream==='investigation')].reduce((s,r)=>s+r.minutes,0)?duration([...w,...R.filter(r=>r.stream==='investigation')].reduce((s,r)=>s+r.minutes,0)):'Not recorded'}`,''];const ordered=[...f,...R.filter(r=>r.stream==='investigation'),...w,...m];groups(ordered).forEach(g=>{lines.push(g.label);g.records.forEach(r=>{lines.push(`- ${r.date} | ${r.stream.toUpperCase()} | ${r.category} | ${r.title}`);if(r.summary)lines.push(`  Summary: ${r.summary}`);if(r.why)lines.push(`  ${r.stream==='investigation'?'Client value':r.stream==='finding'?'What we learned':'Why'}: ${r.why}`);if(r.result)lines.push(`  ${r.stream==='investigation'?'Disposition':r.stream==='finding'?'Decision':'Result'}: ${r.result}`);if(r.limitation)lines.push(`  Verification limit: ${r.limitation}`)});lines.push('')});return lines.join('\n')}
+function internal(range){const w=R.filter(r=>r.stream==='work'),f=R.filter(r=>r.stream==='finding'),m=R.filter(r=>r.stream==='monitoring'),lines=['GCM OS — INTERNAL CLIENT SUMMARY',period(range).toUpperCase(),'',`Completed corrective/work records: ${w.length}`,`Completed investigation records: ${R.filter(r=>r.stream==='investigation').length}`,`Documented work results: ${w.filter(r=>r.win||r.result).length}`,`Reviewed findings: ${f.length}`,`Supporting monitoring signals: ${m.length}`,`Recorded time: ${[...w,...R.filter(r=>r.stream==='investigation')].reduce((s,r)=>s+r.minutes,0)?duration([...w,...R.filter(r=>r.stream==='investigation')].reduce((s,r)=>s+r.minutes,0)):'Not recorded'}`,''];const ordered=[...f,...R.filter(r=>r.stream==='investigation'),...w,...m];groups(ordered).forEach(g=>{lines.push(g.label);g.records.forEach(r=>{lines.push(`- ${r.date} | ${r.stream.toUpperCase()} | ${r.category} | ${r.title}`);if(r.summary)lines.push(`  Summary: ${r.summary}`);if(r.why)lines.push(`  ${r.stream==='investigation'?'Client value':r.stream==='finding'?'What we learned':'Why'}: ${r.why}`);if(r.result)lines.push(`  ${r.stream==='investigation'?'Disposition':r.stream==='finding'?'Decision':'Result'}: ${r.result}`);if(r.limitation)lines.push(`  Verification limit: ${r.limitation}`);if(r.lesson)lines.push(`  Internal reusable lesson: ${r.lesson}`)});lines.push('')});return lines.join('\n')}
 function audit(range,cn){
   const w=R.filter(r=>r.stream==='work'),f=R.filter(r=>r.stream==='finding'),m=R.filter(r=>r.stream==='monitoring');
   const search=m.filter(r=>theme(r)==='search'),technical=m.filter(r=>theme(r)==='technical'),authority=m.filter(r=>theme(r)==='authority');
@@ -416,7 +421,7 @@ function audit(range,cn){
   lines.push('WORK / EVIDENCE CONNECTION');
   if(w.length) lines.push(`• ${w.length} completed corrective/work records are available to compare with subsequent measured results without assuming causation.`);
   else lines.push('• No completed corrective/work records are available in this selection.');
-  R.filter(r=>r.stream==='investigation').forEach(r=>lines.push(`• Completed investigation: ${r.title}. ${r.result||''} ${r.limitation||''}`));
+  R.filter(r=>r.stream==='investigation').forEach(r=>{lines.push(`• Completed investigation: ${r.title}`);if(r.summary)lines.push(`  Verified finding: ${r.summary}`);if(r.result)lines.push(`  Decision: ${r.result}`);if(r.limitation)lines.push(`  Verification limit: ${r.limitation}`);if(r.lesson)lines.push(`  Internal reusable lesson: ${r.lesson}`)});
   lines.push('');
 
   lines.push('RECOMMENDED NEXT ACTION');
