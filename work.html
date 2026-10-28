@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.45
+   Version: 1.9.46
    Status: FBDT Production Candidate
    Source: Stable production work.html 1.9.18
    Sprint: Work Queue Full Recovery
@@ -22,6 +22,8 @@
    - communications-operational-decision-v3
 
    Audited changes:
+   - v1.9.46 fixes the original GSC Redirect error guard for norm() values that replace whitespace with underscores; correctly re-evaluates preserved locked evidence on reload.
+   - v1.9.46 updates visible Work-page version indicators to avoid confusion when checking deployed builds.
    - v1.9.45 protects Google Search Console Redirect error investigations from incidental Merchant Listings/Product snippets evidence, preserves locked evidence, and records pending external Google validation without claiming a repair.
    - v1.9.44 adds an explicit Superseded / Duplicate reconciliation action for external-validation Work Items.
    - The action requires a written reconciliation note and confirms that no completion claim will be recorded.
@@ -236,7 +238,7 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Use Investigation when the correct action is unknown. Use Create Requested Work when the client need and deliverable are already clear.</p></div>
-        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.41</span>
+        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.46</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -321,7 +323,7 @@
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.41"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.46"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),externalValidation:byId("external-validation-list"),target:byId("target-banner"),requestedForm:byId("requested-work-form"),requestedClient:byId("requested-client"),requestedMessage:byId("requested-work-message"),createRequested:byId("create-requested-work")};
   let activeClients=[],directoryClients=[],investigations=[],monitoringInvestigations=[],workItems=[],validationWorkItems=[],selectedKey="",processing=false,processingWorkItem=false,processingRequestedWork=false;
 
@@ -750,7 +752,7 @@
     if(!isGoogleSearchConsolePageIndexing(item))return false;
     const original=[item?.title,item?.description,item?.communication?.subject,item?.communication?.raw_content]
       .map(value=>norm(value)).join(" ");
-    return /\bredirect error\b/.test(original);
+    return original.includes("redirect_error");
   }
 
   function investigationKnownContext(item){

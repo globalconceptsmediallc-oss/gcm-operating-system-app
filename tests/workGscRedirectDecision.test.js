@@ -1,10 +1,11 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/workGscRedirectDecision.test.js
-   Version: 1.0.0
+   Version: 1.0.1
    Status: GCM OS Work Regression Test
    Purpose: Protect GSC Redirect error investigations from unrelated
             Merchant Listings / Product snippets evidence.
+   v1.0.1 executes the exact production norm() instead of a simplified mock.
    No production D1 writes.
    ========================================================= */
 
@@ -26,8 +27,12 @@ const finding=extract("  function buildInvestigationFinding(","  function buildS
 const factory=new Function("norm","extractAuditTotals","evidenceSourceName",
   scope+"\n"+decisions+"\n"+finding+"\nreturn {isGoogleSearchConsoleRedirectError,buildGoogleSearchConsoleDecision,buildInvestigationFinding};"
 );
+const normSource=work.match(/function norm\(v\)\{[^\n]+\}/)?.[0];
+assert.ok(normSource,"Production norm() function must be present");
+const realNorm=new Function(normSource+";return norm;")();
+assert.equal(realNorm("Redirect error"),"redirect_error","Regression must exercise real normalization");
 const logic=factory(
-  value=>String(value??"").toLowerCase().trim(),
+  realNorm,
   ()=>({errors:0,warnings:0,notices:0,siteHealth:0}),
   ()=>"Google Search Console"
 );
@@ -55,7 +60,7 @@ const evidence=[
 ];
 function decide(item,facts){return logic.buildGoogleSearchConsoleDecision({facts,joined:facts.join(" ").toLowerCase(),history:[],item});}
 
-assert.ok(logic.isGoogleSearchConsoleRedirectError(investigation101));
+assert.ok(logic.isGoogleSearchConsoleRedirectError(investigation101),"The original Redirect error must take precedence over previously misclassified Merchant Listings evidence");
 const actual=decide(investigation101,evidence);
 assert.equal(actual.issueName,"Google Search Console Redirect error");
 assert.equal(actual.evidenceType,"redirect_external_validation_pending");
@@ -107,4 +112,4 @@ assert.match(work,/const refreshedDecision=buildNextStepDecision\(captured,item\
 assert.match(work,/saveEvidenceHistory\(item,fullHistory\)/);
 assert.doesNotMatch(decisions,/resetEvidenceWorkflow\(/);
 
-console.log("PASS GSC Redirect error original scope, validation state, no-work gate, evidence preservation and Merchant Listings/canonical regressions");
+console.log("PASS GSC redirect_error normalization, original issue scope, external validation, Work gate, evidence preservation and Merchant Listings/canonical regressions");
