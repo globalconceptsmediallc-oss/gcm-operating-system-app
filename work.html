@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.46
+   Version: 1.9.47
    Status: FBDT Production Candidate
    Source: Stable production work.html 1.9.18
    Sprint: Work Queue Full Recovery
@@ -22,6 +22,8 @@
    - communications-operational-decision-v3
 
    Audited changes:
+   - v1.9.47 adds evidence-gated monitoring decisions, reads the client workspace monitoringInvestigations collection, and displays monitored Investigations in the external follow-up queue.
+   - Reusable external result evidence can resume review, but cannot automatically close or create Work. The Work Item external-validation panel remains intact.
    - v1.9.46 fixes the original GSC Redirect error guard for norm() values that replace whitespace with underscores; correctly re-evaluates preserved locked evidence on reload.
    - v1.9.46 updates visible Work-page version indicators to avoid confusion when checking deployed builds.
    - v1.9.45 protects Google Search Console Redirect error investigations from incidental Merchant Listings/Product snippets evidence, preserves locked evidence, and records pending external Google validation without claiming a repair.
@@ -238,7 +240,7 @@
     <div class="page">
       <header class="page-header">
         <div><p class="eyebrow">Mission Control</p><h1>Work Queue</h1><p class="subtitle">Use Investigation when the correct action is unknown. Use Create Requested Work when the client need and deliverable are already clear.</p></div>
-        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.46</span>
+        <span class="classification">Requested Work + WWPOWD Investigation · v1.9.47</span>
       </header>
       <section class="summary-grid">
         <article class="summary-card"><span class="summary-label">Open Investigations</span><strong id="open-investigations" class="summary-value">—</strong></article>
@@ -305,7 +307,7 @@
         </div>
       </section>
       <section id="open-work-panel" class="panel"><div class="panel-header"><h2>Open Work Items</h2><p>Specific work created from proven Investigation findings or known client requests.</p></div><div id="open-work-list" class="panel-body"></div></section>
-      <section id="external-validation-panel" class="panel"><div class="panel-header"><h2>Awaiting External Validation</h2><p>Work already performed and verified internally that is waiting on Google, a platform, a vendor, or another external result. These records remain visible but cannot be completed until final proof returns.</p></div><div id="external-validation-list" class="panel-body"></div></section>
+      <section id="external-validation-panel" class="panel"><div class="panel-header"><h2>Awaiting External Validation</h2><p>Unresolved Investigations and Work Items waiting on Google, a platform, a vendor, or another independent result. Monitoring does not imply a completed repair.</p></div><div id="external-validation-list" class="panel-body"></div></section>
       <section class="workspace-grid">
         <article class="panel"><div class="panel-header"><h2>Investigation Queue</h2><p>Select an unresolved Investigation.</p></div><div class="panel-body"><div class="toolbar"><select id="client-filter"><option value="">All clients</option></select><button id="refresh-button" class="button">Refresh</button></div><div id="runtime-status" class="status loading">Loading production D1…</div><div id="investigation-list" class="investigation-list"></div></div></article>
         <article id="guided-investigation-panel" class="panel"><div class="panel-header"><h2>Guided Investigation</h2><p>Evidence first. Final resolution remains secondary until the current step is complete.</p></div><div id="detail-panel" class="panel-body"><div class="detail-empty">Select an open Investigation.</div></div></article>
@@ -323,7 +325,7 @@
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.46"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.47"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),externalValidation:byId("external-validation-list"),target:byId("target-banner"),requestedForm:byId("requested-work-form"),requestedClient:byId("requested-client"),requestedMessage:byId("requested-work-message"),createRequested:byId("create-requested-work")};
   let activeClients=[],directoryClients=[],investigations=[],monitoringInvestigations=[],workItems=[],validationWorkItems=[],selectedKey="",processing=false,processingWorkItem=false,processingRequestedWork=false;
 
@@ -364,9 +366,12 @@
           client.website
         );
         const sourceInvestigations=Array.isArray(op.investigations)?op.investigations:[];
+        const sourceMonitoringInvestigations=Array.isArray(op.monitoringInvestigations)?op.monitoringInvestigations:[];
         const enrichInvestigation=i=>({...i,clientCode:op.client?.client_code||client.code,clientName:op.client?.name||client.name,clientWebsite,communication:communicationById.get(Number(i.communication_id))||null,progressUpdates:progressByInvestigation.get(Number(i.id))||[]});
         sourceInvestigations.filter(i=>activeInvestigation(i)).forEach(i=>investigations.push(enrichInvestigation(i)));
-        sourceInvestigations.filter(i=>monitoringInvestigation(i)).forEach(i=>monitoringInvestigations.push(enrichInvestigation(i)));
+        const monitorById=new Map();
+        [...sourceMonitoringInvestigations,...sourceInvestigations.filter(monitoringInvestigation)].filter(monitoringInvestigation).forEach(i=>monitorById.set(Number(i.id),enrichInvestigation(i)));
+        monitoringInvestigations.push(...monitorById.values());
 
         (Array.isArray(op.workItems)?op.workItems:[]).filter(i=>!completed(i)).forEach(i=>{
           const mapped={...i,clientCode:op.client?.client_code||client.code,clientName:op.client?.name||client.name,clientWebsite};
@@ -377,7 +382,7 @@
       investigations.sort(sortInvestigations);
       monitoringInvestigations.sort(sortInvestigations);
       renderSummary();renderExternalValidationItems();applyRequestedTarget();
-      setStatus("ready",`Loaded ${investigations.length} active Investigation${investigations.length===1?"":"s"}, ${workItems.length} active Work Item${workItems.length===1?"":"s"}, and ${validationWorkItems.length} awaiting external validation.`);
+      setStatus("ready",`Loaded ${investigations.length} active Investigation${investigations.length===1?"":"s"}, ${workItems.length} active Work Item${workItems.length===1?"":"s"}, and ${monitoringInvestigations.length+validationWorkItems.length} awaiting external validation (${monitoringInvestigations.length} Investigations).`);
     }catch(error){
       console.error(error);setStatus("error",error.message||"Work could not load.");el.list.innerHTML='<div class="empty">Work data unavailable.</div>';
     }finally{el.refresh.disabled=false;}
@@ -558,7 +563,8 @@
         renderList();
         renderWorkItems(null);
         renderExternalValidationItems();
-        el.detail.innerHTML='<div class="detail-empty">This Investigation is in monitoring. Its guided evidence workflow is intentionally paused until the external result changes the operational decision.</div>';
+        el.detail.innerHTML='<div class="detail-empty">This Investigation is awaiting external validation. Its evidence is preserved; review the follow-up card in the Awaiting External Validation section.</div>';
+        document.querySelector('[data-validation-investigation-id="'+Number(monitoringItem.id)+'"]')?.scrollIntoView({behavior:"smooth",block:"center"});
         return;
       }
 
@@ -1360,9 +1366,10 @@
       </div>
     </div>
     <section class="detail-section"><h3>Current Understanding</h3><p>${esc(guidance?.current_understanding||communication?.ai_summary||communication?.raw_content||item.description||"No summary stored.")}</p></section>
-    <section class="detail-section" id="investigation-decision"><h3>Investigation Decision</h3><div class="processing-box"><label>What We Know</label><textarea id="finding-summary">${esc(savedFinding)}</textarea><label>Next Question to Answer</label><textarea id="work-title">${esc(savedQuestion)}</textarea><label>Next Evidence Needed</label><textarea id="work-description">${esc(savedEvidence)}</textarea><div class="processing-actions" id="investigation-decision-actions"><button id="close-button" class="button">Close — No Work Required</button><button id="continue-button" class="button primary">Save &amp; Continue Investigation</button><button id="create-button" class="button">Root Cause Proven — Create Work</button></div><div id="process-message"></div>${buildInvestigationProgressHistory(item)}</div></section>`;
+    <section class="detail-section" id="investigation-decision"><h3>Investigation Decision</h3><div class="processing-box"><label>What We Know</label><textarea id="finding-summary">${esc(savedFinding)}</textarea><label>Next Question to Answer</label><textarea id="work-title">${esc(savedQuestion)}</textarea><label>Next Evidence Needed</label><textarea id="work-description">${esc(savedEvidence)}</textarea><div class="processing-actions" id="investigation-decision-actions"><button id="close-button" class="button">Close — No Work Required</button><button id="continue-button" class="button primary">Save &amp; Continue Investigation</button><button id="monitor-button" class="button" disabled title="Requires verified pending external validation evidence">Await External Validation — Evidence Required</button><button id="create-button" class="button">Root Cause Proven — Create Work</button></div><div id="process-message"></div>${buildInvestigationProgressHistory(item)}</div></section>`;
     byId("close-button").addEventListener("click",()=>processInvestigation(item,"no_work_required"));
     byId("continue-button").addEventListener("click",()=>processInvestigation(item,"continue_investigation"));
+    byId("monitor-button").addEventListener("click",()=>processInvestigation(item,"monitoring_external_validation"));
     byId("create-button").disabled=true;
     byId("create-button").title="Corrective work remains locked until the root cause is proven.";
     byId("create-button").textContent="Create Work Locked — Root Cause Not Proven";
@@ -1589,7 +1596,8 @@
     }
 
     updateDecisionControls({
-      rootCauseProven:Boolean(refreshedLatest.rootCauseProven)
+      rootCauseProven:Boolean(refreshedLatest.rootCauseProven),
+      evidenceType:refreshedLatest.evidenceType||""
     });
   }
 
@@ -2842,6 +2850,16 @@
   }
 
   function updateDecisionControls(decision){
+    const monitorButton=byId("monitor-button");
+    if(monitorButton){
+      const pending=["redirect_external_validation_pending","external_validation_pending","awaiting_external_validation"].includes(String(decision?.evidenceType||""));
+      monitorButton.disabled=!pending||Boolean(decision?.rootCauseProven);
+      monitorButton.title=monitorButton.disabled
+        ?"Verified evidence of an external validation in progress is required."
+        :"Keep the Investigation unresolved while the independent platform completes validation.";
+      monitorButton.textContent=monitorButton.disabled
+        ?"Await External Validation — Evidence Required":"Await External Validation";
+    }
     const createButton=byId("create-button");
     if(!createButton)return;
 
@@ -2922,15 +2940,16 @@
     if(processing)return;
     const finding=byId("finding-summary").value.trim(),title=byId("work-title").value.trim(),description=byId("work-description").value.trim(),message=byId("process-message");
     if(!finding){message.className="status error";message.textContent="Record the evidence-supported Investigation Finding.";return;}
-    if(outcome==="continue_investigation"&&(!title||!description)){message.className="status error";message.textContent="Next Question and Next Evidence are required before saving Investigation progress.";return;}
+    if(["continue_investigation","monitoring_external_validation"].includes(outcome)&&(!title||!description)){message.className="status error";message.textContent="Next Question and Next Evidence are required while the Investigation remains unresolved.";return;}
+    if(outcome==="monitoring_external_validation"&&byId("monitor-button")?.disabled){message.className="status error";message.textContent="External monitoring requires verified pending validation evidence.";return;}
     if(outcome==="specific_work_required"&&(!title||!description)){message.className="status error";message.textContent="The root cause and corrective action are required before creating work.";return;}
     processing=true;message.className="status loading";message.textContent=outcome==="continue_investigation"?"Saving Investigation progress to production D1…":"Saving production decision…";
     try{
       await post({action:"process-investigation",clientCode:item.clientCode,investigationId:Number(item.id),findingSummary:finding,outcome,workTitle:title,workDescription:description,nextQuestion:title,nextEvidence:description});
-      if(outcome!=="continue_investigation")completeEvidenceStep(item,"complete_investigation");
+      if(!["continue_investigation","monitoring_external_validation"].includes(outcome))completeEvidenceStep(item,"complete_investigation");
       if(outcome==="specific_work_required")completeEvidenceStep(item,"create_work");
       message.className="status ready";
-      message.textContent=outcome==="continue_investigation"?"Investigation progress saved. The Investigation remains open and no Work Item was created.":outcome==="no_work_required"?"Investigation closed.":"Specific Work Item created.";
+      message.textContent=outcome==="continue_investigation"?"Investigation progress saved. The Investigation remains open and no Work Item was created.":outcome==="monitoring_external_validation"?"Investigation moved to external monitoring; no Work Item created.":outcome==="no_work_required"?"Investigation closed.":"Specific Work Item created.";
       await load();
     }catch(error){message.className="status error";message.textContent=error.message;}finally{processing=false;}
   }
