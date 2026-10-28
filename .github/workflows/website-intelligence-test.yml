@@ -1,3 +1,7 @@
+# GCM OS | Website Intelligence Regression Gate
+# File: .github/workflows/website-intelligence-test.yml
+# Version: 1.0.1
+# v1.0.1: Verify Google Search Console Redirect-error issue scope and locked-evidence regression.
 name: Website Intelligence Engine Tests
 
 on:
@@ -30,6 +34,9 @@ jobs:
 
       - name: Run Website Intelligence Tests
         run: npm run test:website-intelligence
+
+      - name: Run GSC Redirect Investigation Regression
+        run: node tests/workGscRedirectDecision.test.js
 
       - name: Run Calendar Source Sync Lock
         run: node tests/calendarSourceSync.test.js
