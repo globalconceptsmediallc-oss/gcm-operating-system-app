@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.48
+   Version: 1.9.49
    Status: FBDT Production Candidate
    Source: Stable production work.html 1.9.18
    Sprint: Work Queue Full Recovery
@@ -23,6 +23,8 @@
    - communications-operational-decision-v3
 
    Audited changes:
+   - v1.9.49 recognizes fully labeled SEMrush source-link evidence before extraction-failure fallback and re-evaluates previously locked evidence without re-entry.
+   - The same rule continues requiring source page, initial 301 URL, and final destination; generated internal-link Work text no longer mislabels other clients as SES.
    - v1.9.47 adds evidence-gated monitoring decisions, reads the client workspace monitoringInvestigations collection, and displays monitored Investigations in the external follow-up queue.
    - Reusable external result evidence can resume review, but cannot automatically close or create Work. The Work Item external-validation panel remains intact.
    - v1.9.46 fixes the original GSC Redirect error guard for norm() values that replace whitespace with underscores; correctly re-evaluates preserved locked evidence on reload.
@@ -1410,6 +1412,27 @@
    * Investigation Decision, the next question, duplicate-image blocking, or
    * the context sent into a new evidence analysis.
    */
+  /*
+   * v1.9.49: Shared, strict SEMrush redirect-source proof.
+   * Only four explicit facts are sufficient: source page, initial URL,
+   * final destination, and HTTP 301 status. A list of redirects alone
+   * is not root-cause proof.
+   */
+  function verifiedInternalRedirectSample(facts){
+    const factText=(Array.isArray(facts)?facts:[]).join("\n");
+    const labeledUrl=(pattern)=>{
+      const match=factText.match(pattern);
+      return match?String(match[1]||"").trim().replace(/[),.;]+$/,""):"";
+    };
+    const sourcePage=labeledUrl(/(?:Source page|Page URL With Redirect Link)\s*(?:\||:|-)\s*(https?:\/\/[^\s|]+)/i);
+    const initialUrl=labeledUrl(/(?:Initial Redirect URL|Affected URL)\s*(?:\||:|-)\s*(https?:\/\/[^\s|]+)/i);
+    const finalUrl=labeledUrl(/(?:Final Destination URL|Redirects to)\s*(?:\||:|-)\s*(https?:\/\/[^\s|]+)/i);
+    const status301=/(?:HTTP status|status)\s*(?:\||:|-)\s*301\b/i.test(factText);
+    return sourcePage&&initialUrl&&finalUrl&&status301
+      ?{sourcePage,initialUrl,finalUrl}
+      :null;
+  }
+
   function isDecisionQualityEvidenceEntry(entry){
     if(!entry||typeof entry!=="object")return false;
 
@@ -1419,6 +1442,9 @@
     const nextAction=String(entry.nextAction||"").trim().toLowerCase();
     const combined=`${screen} ${finding} ${nextAction}`;
 
+    // Recover a previously locked, fully labeled SEMrush redirect sample.
+    // Its source facts remain unchanged; only the derived decision is refreshed.
+    if(evidenceType==="extraction_failed"&&verifiedInternalRedirectSample(entry.facts))return true;
     if(!evidenceType||evidenceType==="unknown"||evidenceType==="extraction_failed"||evidenceType==="wrong_source")return false;
     if(/ai processing|usage allocation|quota|timed out|timeout|insufficient recognizable|does not contain enough recognizable|screenshot evidence extraction was incomplete|workers ai/.test(combined))return false;
 
@@ -2155,12 +2181,13 @@
     const facts=captured.facts||[];
     const joined=facts.join(" ").toLowerCase();
     const history=item?getDecisionEvidenceHistory(item):[];
+    const verifiedRedirect=verifiedInternalRedirectSample(facts);
 
     if(isGoogleSearchConsole(item)){
       return buildGoogleSearchConsoleDecision({facts,joined,history,item});
     }
 
-    if(isSemrushSiteAudit(item)){
+    if(isSemrushSiteAudit(item)&&!verifiedRedirect){
       const specialist=buildSemrushSiteAuditDecision({
         facts,
         joined,
@@ -2209,33 +2236,18 @@
       }
     }
 
-    const factText=(facts||[]).join("\n");
-    const labeledUrl=(pattern)=>{
-      const match=factText.match(pattern);
-      return match?String(match[1]||"").trim().replace(/[),.;]+$/,""):"";
-    };
-    const redirectSourcePage=labeledUrl(/(?:Source page|Page URL With Redirect Link)\s*(?:\||:|-)\s*(https?:\/\/[^\s|]+)/i);
-    const redirectInitialUrl=labeledUrl(/(?:Initial Redirect URL|Affected URL)\s*(?:\||:|-)\s*(https?:\/\/[^\s|]+)/i);
-    const redirectFinalUrl=labeledUrl(/(?:Final Destination URL|Redirects to)\s*(?:\||:|-)\s*(https?:\/\/[^\s|]+)/i);
-    const redirectStatus301=/(?:HTTP status|status)\s*(?:\||:|-)\s*301\b/i.test(factText);
-
-    if(
-      redirectSourcePage &&
-      redirectInitialUrl &&
-      redirectFinalUrl &&
-      redirectStatus301
-    ){
+    if(verifiedRedirect){
       return {
         evidenceType:"internal_redirect_link_source",
         issueName:"Internal links point to permanent redirects",
         count:mostRecentIssueCount(history)||1,
         severity:"notice",
-        sampleUrl:redirectInitialUrl,
-        implementationSource:redirectSourcePage,
+        sampleUrl:verifiedRedirect.initialUrl,
+        implementationSource:verifiedRedirect.sourcePage,
         rootCauseProven:true,
-        reason:`SEMrush identifies ${redirectSourcePage} as a current source page linking to ${redirectInitialUrl}, which returns 301 and resolves to ${redirectFinalUrl}. This proves the actionable cause for a current redirect-link instance: an internal link still points to an obsolete URL instead of the final destination.`,
+        reason:`SEMrush identifies ${verifiedRedirect.sourcePage} as a current source page linking to ${verifiedRedirect.initialUrl}, which returns 301 and resolves to ${verifiedRedirect.finalUrl}. This proves the actionable cause for a current redirect-link instance: an internal link still points to an obsolete URL instead of the final destination.`,
         expectedImpact:"Updating affected internal links to their final destination URLs removes unnecessary redirect hops while preserving intentional 301 redirects for external and historical URLs.",
-        nextQuestion:"Which affected SES internal links should be changed to their final destination URLs?",
+        nextQuestion:"Which affected internal links should be changed to their final destination URLs?",
         nextEvidence:"Create corrective Work to inventory the SEMrush permanent-redirect rows, update each internal source link to the final destination where appropriate, then rerun the Site Audit and verify the redirect-link count is materially reduced without breaking intentional redirects."
       };
     }
@@ -2843,7 +2855,7 @@
       return decision.nextQuestion||"Correct the verified LCP image loading behavior.";
     }
     if(decision.rootCauseProven&&decision.evidenceType==="internal_redirect_link_source"){
-      return "Update SES internal links that point through permanent redirects";
+      return "Update internal links that point through permanent redirects";
     }
     return decision.nextQuestion||"What is the next fact required to advance this Investigation?";
   }
