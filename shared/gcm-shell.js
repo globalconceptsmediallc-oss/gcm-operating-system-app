@@ -40,7 +40,7 @@
 (() => {
   "use strict";
 
-  const SHELL_VERSION = "2.0.66";
+  const SHELL_VERSION = "2.0.67";
   const WORKER_ENDPOINT =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const MISSION_CONTROL_ACTION = "get-mission-control";
