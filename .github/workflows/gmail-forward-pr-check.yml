@@ -1,0 +1,31 @@
+# =========================================================
+# Global Concepts Media Operating System
+# File: .github/workflows/gmail-forward-pr-check.yml
+# Version: 1.0.0
+# Status: PR-only regression gate
+# Purpose: Validate Gmail forward drafts without deploying or touching Gmail/D1.
+# =========================================================
+name: Gmail Forward Draft Regression
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "routes/gmailIntegrationLegacy.js"
+      - "shared/today-email-intake.js"
+      - "shared/gcm-shell.js"
+      - "today.html"
+      - "tests/gmailForwardIntake.test.js"
+      - ".github/workflows/gmail-forward-pr-check.yml"
+permissions:
+  contents: read
+jobs:
+  forward-draft-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Forward draft attachment and safety checks
+        run: node tests/gmailForwardIntake.test.js
