@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
-   File: routes/gmailIntegration.js
-   Version: 1.7.4
+   File: routes/gmailIntegrationLegacy.js
+   Version: 1.7.6
    Status: Production Candidate â€” Human Operational Intelligence
    Source: routes/gmailIntegration.js 1.5.4
    Sprint: Media â€” Gmail Attached Draft Creation
@@ -47,6 +47,11 @@
    - Cloudflare promotional mail is classified as non-operational archive noise rather than Manual Review work.
    - Archive candidates can now be cleared through the existing Gmail approval action with zero D1 writes.
    - Archive removes UNREAD and INBOX labels only after the message is re-verified as an archive candidate.
+   Change Notes — 1.7.6
+   - Supports attachment-preserving Forward in Gmail drafts from exact D1-backed intake messages.
+   - Verifies the Gmail source, copies MIME attachments, and creates review-only drafts.
+   - Keeps Reply in Gmail and ordinary prospect draft behavior unchanged.
+
    Change Notes — 1.7.5
    - CREATE_GMAIL_DRAFT now accepts an optional Gmail threadId for exact-thread replies from Universal Email Intake.
    - Adds In-Reply-To and References headers when an original Internet Message-ID is supplied.
@@ -71,7 +76,7 @@ import { getDatabase } from "../shared/database.js";
 import { handleCommunicationAnalysis } from "./communicationAnalysis.js";
 import { handleCommitOperationalDecision } from "./operationalDecision.js";
 import { createOsSessionToken } from "../shared/osAuth.js";
-export const GMAIL_INTEGRATION_VERSION = "1.7.5";
+export const GMAIL_INTEGRATION_VERSION = "1.7.6";
 export const GMAIL_PATHS = Object.freeze({ CONNECT: "/auth/google", CALLBACK: "/auth/google/callback" });
 const AUTH_URL="https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL="https://oauth2.googleapis.com/token";
@@ -516,6 +521,7 @@ async function ensureProspectDraftTable(db){
 }
 
 async function createGmailDraft(body,env,requestId){
+  if(Number(body?.forwardIntakeId||0)>0)return createGmailForwardDraft(body,env,requestId);
   const to=clean(body?.to);
   const subject=clean(body?.subject);
   const messageBody=String(body?.body||"").trim();
@@ -595,6 +601,170 @@ async function createGmailDraft(body,env,requestId){
     return jsonResponse({ok:false,requestId,action:ACTIONS.CREATE_GMAIL_DRAFT,error:safeErrorMessage(error)},500);
   }
 }
+
+async function createGmailForwardDraft(body,env,requestId){
+  const intakeId=Number(body?.forwardIntakeId||0);
+  const recipientInput=String(body?.to||"").trim();
+  const recipientList=recipientInput.split(/[;,]/).map(value=>value.trim()).filter(Boolean);
+  const note=String(body?.body||"").trim();
+  const validEmail=/^[^\s@,<>"()]+@[^\s@,<>"()]+\.[^\s@,<>"()]+$/;
+
+  if(!Number.isSafeInteger(intakeId)||intakeId<=0||
+     !recipientList.length||recipientList.length>10||recipientList.some(value=>!validEmail.test(value))){
+    return jsonResponse({ok:false,requestId,error:"Select a source message and enter 1–10 valid recipient email addresses."},400);
+  }
+  if(note.length>5000){
+    return jsonResponse({ok:false,requestId,error:"Forwarding note is too long."},400);
+  }
+  const totalCap=12*1024*1024;
+  try{
+    const db=requireDb(env);
+    await ensureTable(db);
+    const source=await db.prepare(
+      "SELECT provider_message_id,provider_thread_id,subject,body_text,has_attachments "+
+      "FROM email_intake WHERE id=? AND workspace_key='gcm' AND provider='gmail_live_sync' LIMIT 1"
+    ).bind(intakeId).first();
+    if(!source?.provider_message_id){
+      return jsonResponse({ok:false,requestId,error:"The exact Gmail source could not be verified from intake."},404);
+    }
+    const connection=await db.prepare(
+      "SELECT encrypted_refresh_token FROM gmail_connections ORDER BY updated_at DESC LIMIT 1"
+    ).first();
+    if(!connection){
+      return jsonResponse({ok:false,requestId,error:"Gmail is not connected."},401);
+    }
+    const refreshToken=await decrypt(connection.encrypted_refresh_token,env.GOOGLE_CLIENT_SECRET);
+    const accessToken=await refreshAccessToken(refreshToken,env);
+    const messageId=String(source.provider_message_id);
+    const sourceResponse=await fetch(
+      API+"/users/me/messages/"+encodeURIComponent(messageId)+"?format=full",
+      {headers:{Authorization:"Bearer "+accessToken}}
+    );
+    const message=await sourceResponse.json();
+    if(!sourceResponse.ok||!message?.payload){
+      throw new Error(message?.error?.message||"The original Gmail message is no longer accessible.");
+    }
+    if(source.provider_thread_id && message.threadId !== source.provider_thread_id){
+      throw new Error("The original Gmail thread no longer matches the saved intake evidence.");
+    }
+    const sourceHeaders=Object.fromEntries(
+      (Array.isArray(message.payload.headers)?message.payload.headers:[])
+       .map(header=>[String(header.name||"").toLowerCase(),String(header.value||"").replace(/[\r\n]/g," ")])
+    );
+    const safeHeader=value=>String(value||"").replace(/[\r\n]/g," ").slice(0,600);
+    const subject=safeHeader(sourceHeaders.subject||source.subject||"(No subject)");
+    const forwardSubject=/^(?:fwd?|fw):/i.test(subject)?subject:"Fwd: "+subject;
+    const attachmentParts=[];
+    let plainPart=null;
+    function inspect(part){
+      if(!part||typeof part!=="object")return;
+      if(String(part.filename||"").trim())attachmentParts.push(part);
+      else if(!plainPart && String(part.mimeType||"").toLowerCase()==="text/plain" && part.body?.data)plainPart=part;
+      for(const child of Array.isArray(part.parts)?part.parts:[])inspect(child);
+    }
+    inspect(message.payload);
+    if(Number(source.has_attachments)>0 && attachmentParts.length===0){
+      throw new Error("Gmail did not expose the source attachments. Forward natively in Gmail instead.");
+    }
+    if(attachmentParts.length>20){
+      throw new Error("This email contains too many attachments for an automatic draft. Forward natively in Gmail.");
+    }
+    let originalBody=String(source.body_text||"").slice(0,300000);
+    if(plainPart?.body?.data){
+      originalBody=new TextDecoder().decode(decode(plainPart.body.data)).slice(0,300000);
+    }else if(!attachmentParts.length && message.payload?.body?.data){
+      originalBody=new TextDecoder().decode(decode(message.payload.body.data)).slice(0,300000);
+    }
+    const forwardedText=[
+      note,
+      note?"":"",
+      "---------- Forwarded message ---------",
+      "From: "+safeHeader(sourceHeaders.from),
+      "Date: "+safeHeader(sourceHeaders.date),
+      "Subject: "+subject,
+      "To: "+safeHeader(sourceHeaders.to),
+      "",
+      originalBody
+    ].join("\n");
+    const boundary="GCM_FORWARD_"+crypto.randomUUID().replace(/-/g,"");
+    const lines=[
+      "To: "+recipientList.join(", "),
+      "Subject: "+encodeMimeHeader(forwardSubject),
+      "MIME-Version: 1.0",
+      "Content-Type: multipart/mixed; boundary=\""+boundary+"\"",
+      "",
+      "--"+boundary,
+      "Content-Type: text/plain; charset=\"UTF-8\"",
+      "Content-Transfer-Encoding: base64",
+      "",
+      wrapMimeBase64(bytesToStandardBase64(new TextEncoder().encode(forwardedText))),
+      ""
+    ];
+    let totalBytes=0;
+    let attachmentCount=0;
+    for(const part of attachmentParts){
+      const name=String(part.filename||"attachment").replace(/[\r\n"\\]/g,"_").slice(0,180);
+      const contentType=String(part.mimeType||"application/octet-stream");
+      const safeType=/^[a-z0-9.+-]+\/[a-z0-9.+-]+$/i.test(contentType)?contentType:"application/octet-stream";
+      let contentData=String(part.body?.data||"");
+      if(!contentData && part.body?.attachmentId){
+        const attachmentResponse=await fetch(
+          API+"/users/me/messages/"+encodeURIComponent(messageId)+
+          "/attachments/"+encodeURIComponent(part.body.attachmentId),
+          {headers:{Authorization:"Bearer "+accessToken}}
+        );
+        const payload=await attachmentResponse.json();
+        if(!attachmentResponse.ok||!payload?.data){
+          throw new Error("Could not retrieve original attachment "+name+". No draft was created.");
+        }
+        contentData=String(payload.data);
+      }
+      if(!contentData){
+        throw new Error("Missing original attachment "+name+". No draft was created.");
+      }
+      const bytes=decode(contentData);
+      totalBytes+=bytes.length;
+      if(totalBytes>totalCap){
+        throw new Error("Original attachments exceed the safe 12 MB draft limit. Forward natively in Gmail.");
+      }
+      lines.push(
+        "--"+boundary,
+        "Content-Type: "+safeType+"; name=\""+name+"\"",
+        "Content-Disposition: attachment; filename=\""+name+"\"",
+        "Content-Transfer-Encoding: base64",
+        "",
+        wrapMimeBase64(bytesToStandardBase64(bytes)),
+        ""
+      );
+      attachmentCount++;
+    }
+    lines.push("--"+boundary+"--","");
+    const raw=lines.join("\r\n");
+    const response=await fetch(API+"/users/me/drafts",{
+      method:"POST",
+      headers:{Authorization:"Bearer "+accessToken,"Content-Type":"application/json"},
+      body:JSON.stringify({message:{raw:encode(new TextEncoder().encode(raw))}})
+    });
+    const saved=await response.json();
+    if(!response.ok||!saved?.id){
+      throw new Error(saved?.error?.message||"Gmail could not create the forward draft.");
+    }
+    const threadId=clean(saved?.message?.threadId);
+    return jsonResponse({
+      ok:true,requestId,action:ACTIONS.CREATE_GMAIL_DRAFT,
+      gmailIntegrationVersion:GMAIL_INTEGRATION_VERSION,
+      forward:true,draftId:saved.id,threadId:threadId||null,
+      gmailUrl:threadId?
+        "https://mail.google.com/mail/u/0/#drafts/"+encodeURIComponent(threadId):
+        "https://mail.google.com/mail/u/0/#drafts",
+      attachmentCount,sourceMessageId:messageId,sent:false,writesPerformed:0
+    });
+  }catch(error){
+    logWorkerError({requestId,route:ACTIONS.CREATE_GMAIL_DRAFT,stage:"forward_draft_creation",error});
+    return jsonResponse({ok:false,requestId,action:ACTIONS.CREATE_GMAIL_DRAFT,error:safeErrorMessage(error)},500);
+  }
+}
+
 async function confirmProspectGmailSend(body,env,requestId){
   const radarId=Number(body?.radarId||body?.radar_id||0);
   if(!Number.isInteger(radarId)||radarId<=0)return jsonResponse({ok:false,requestId,error:"radarId is required."},400);
