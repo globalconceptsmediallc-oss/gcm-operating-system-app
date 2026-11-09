@@ -1,6 +1,7 @@
 # GCM OS | Website Intelligence Regression Gate
 # File: .github/workflows/website-intelligence-test.yml
-# Version: 1.0.3
+# Version: 1.0.4
+# v1.0.4: Run production npm test suite before deploying Forward in Gmail.
 # v1.0.3: Gate Gmail forward-draft attachment preservation with the established test runner.
 # v1.0.2: Require monitored Investigation UI and external validation workflow regression.
 # v1.0.1: Verify Google Search Console Redirect-error issue scope and locked-evidence regression.
@@ -42,6 +43,9 @@ jobs:
 
       - name: Run Monitored Investigation Regression
         run: node tests/workInvestigationExternalValidation.test.js
+
+      - name: Run Production Regression Suite
+        run: npm test
 
       - name: Run Gmail Forward Draft Regression
         run: node tests/gmailForwardIntake.test.js
