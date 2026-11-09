@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: shared/today-email-intake.js
-   Version: 2.7.0
+   Version: 2.8.0
    Status: Production Road-Test Candidate
    Sprint: Google Review Quick Action
    Purpose:
@@ -9,6 +9,11 @@
    chooses Ready for Review. Client and reporting period are inferred from
    source metadata when the evidence supports them. The operator must explicitly
    choose the durable route before the reviewed finding can be saved to D1.
+
+   Changes — 2.8.0:
+   - Adds a separate Forward in Gmail button for verified Gmail intake messages.
+   - Creates a review-only forward draft with original Gmail attachments preserved.
+   - Leaves Reply in Gmail, intake routing, and source-message status unchanged.
 
    Changes — 2.7.0:
    - Adds Reply in Gmail to standard Universal Email Intake review cards when the source is a live Gmail message.
@@ -109,7 +114,7 @@
 (() => {
   "use strict";
 
-  const FILE_VERSION = "2.7.0";
+  const FILE_VERSION = "2.8.0";
   const WORKER_URL =
     "https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const QUEUE_ACTION = "get-email-intake-queue";
@@ -679,6 +684,7 @@
         <div class="gcm-review-actions">
           <button class="gcm-review-save" type="button" data-gcm-save-finding>Save &amp; Route</button>
           ${String(record?.provider || "").toLowerCase()==="gmail_live_sync" && record?.providerThreadId ? '<button class="gcm-review-secondary" type="button" data-gcm-reply-gmail>Reply in Gmail</button>' : ""}
+          ${String(record?.provider || "").toLowerCase()==="gmail_live_sync" && record?.providerMessageId ? '<button class="gcm-review-secondary" type="button" data-gcm-forward-gmail>Forward in Gmail</button>' : ""}
           <button class="gcm-review-secondary" type="button" data-gcm-close-review>Close Review</button>
           <button class="gcm-review-no-action" type="button" data-gcm-no-action>Delete — No Action Required</button>
           <span class="gcm-review-status" data-gcm-review-status>Nothing is saved until a route is chosen and the review is complete.</span>
@@ -692,6 +698,7 @@
     const save = article.querySelector("[data-gcm-save-finding]");
     const noAction = article.querySelector("[data-gcm-no-action]");
     const replyGmail = article.querySelector("[data-gcm-reply-gmail]");
+    const forwardGmail = article.querySelector("[data-gcm-forward-gmail]");
 
     ready?.addEventListener("click", () => {
       panel.hidden = false;
@@ -707,6 +714,7 @@
 
     save?.addEventListener("click", () => saveFinding(article, save));
     replyGmail?.addEventListener("click", () => prepareGmailReply(article, replyGmail, record));
+    forwardGmail?.addEventListener("click", () => prepareGmailForward(article, forwardGmail, record));
     noAction?.addEventListener("click", () => handleNoAction(article, noAction));
 
     return article;
@@ -756,6 +764,59 @@
       busy = false;
       button.disabled = false;
       button.textContent = "Reply in Gmail";
+    }
+  }
+
+
+  async function prepareGmailForward(card, button, record) {
+    if (busy || !card || !button) return;
+    const status = card.querySelector("[data-gcm-review-status]");
+    const intakeId = Number(record?.id || 0);
+    if (!Number.isSafeInteger(intakeId) || intakeId <= 0 || !record?.providerMessageId) {
+      if (status) status.textContent = "This record has no verified Gmail message for forwarding.";
+      return;
+    }
+
+    const recipients = window.prompt(
+      "Forward to: enter recipient email addresses separated by commas.",
+      ""
+    );
+    if (recipients === null) return;
+    if (!String(recipients).trim()) {
+      if (status) status.textContent = "Enter at least one forwarding recipient.";
+      return;
+    }
+
+    const note = window.prompt(
+      "Optional note for the forward. Original message and attachments will be included.",
+      ""
+    );
+    if (note === null) return;
+
+    busy = true;
+    button.disabled = true;
+    button.textContent = "Preparing Forward…";
+    if (status) status.textContent = "Creating a Gmail forward draft with the original attachments. Nothing is being sent.";
+    try {
+      const result = await post(CREATE_GMAIL_DRAFT_ACTION, {
+        forwardIntakeId:intakeId,
+        to:String(recipients).trim(),
+        body:String(note)
+      });
+      if (!result?.draftId || result?.forward !== true) {
+        throw new Error("Gmail did not confirm the forwarding draft.");
+      }
+      if (status) status.textContent =
+        "Forward draft created with " + Number(result.attachmentCount || 0) +
+        " original attachment(s). Review and send it in Gmail. This intake remains open.";
+      if (result.gmailUrl) window.open(result.gmailUrl, "_blank", "noopener,noreferrer");
+    } catch (error) {
+      if (status) status.textContent = "Forward draft failed: " + error.message +
+        " No email was sent. You can forward the original message directly in Gmail.";
+    } finally {
+      busy = false;
+      button.disabled = false;
+      button.textContent = "Forward in Gmail";
     }
   }
 
