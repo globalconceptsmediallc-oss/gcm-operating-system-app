@@ -1,7 +1,7 @@
 /* =========================================================
  * Global Concepts Media Operating System
  * File: tests/gmailForwardIntake.test.js
- * Version: 1.0.0
+ * Version: 1.0.1
  * Status: PR Regression Gate
  * Purpose: Verify attachment-preserving Gmail forward draft and unchanged reply behavior.
  * ========================================================= */
@@ -128,6 +128,8 @@ function makeContext({sourceAttachments=true,attachmentRequestWorks=true}={}){
   assert.equal(result.data.sent,false);
   assert.equal(result.data.attachmentCount,1);
   assert.equal(details().createdDrafts,1);
+  assert.equal(result.data.sourceMessageId,"source-msg-17");
+  assert.equal(result.data.writesPerformed,0);
   assert.match(details().outboundRaw,/To: adrianne@example.com, kristy@example.com/);
   assert.match(details().outboundRaw,/Subject: Fwd: October invoice/);
   assert.match(details().outboundRaw,/filename="invoice.pdf"/);
