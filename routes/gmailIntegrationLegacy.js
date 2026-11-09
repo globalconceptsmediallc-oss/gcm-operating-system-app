@@ -1,7 +1,7 @@
 /* =========================================================
    Global Concepts Media Operating System
-   File: routes/gmailIntegration.js
-   Version: 1.7.8
+   File: routes/gmailIntegrationLegacy.js
+   Version: 1.7.6
    Status: Production Candidate â€” Human Operational Intelligence
    Source: routes/gmailIntegration.js 1.5.4
    Sprint: Media â€” Gmail Attached Draft Creation
@@ -47,7 +47,7 @@
    - Cloudflare promotional mail is classified as non-operational archive noise rather than Manual Review work.
    - Archive candidates can now be cleared through the existing Gmail approval action with zero D1 writes.
    - Archive removes UNREAD and INBOX labels only after the message is re-verified as an archive candidate.
-   Change Notes — 1.7.8
+   Change Notes — 1.7.6
    - Supports attachment-preserving Forward in Gmail drafts from exact D1-backed intake messages.
    - Verifies the Gmail source, copies MIME attachments, and creates review-only drafts.
    - Keeps Reply in Gmail and ordinary prospect draft behavior unchanged.
@@ -76,7 +76,7 @@ import { getDatabase } from "../shared/database.js";
 import { handleCommunicationAnalysis } from "./communicationAnalysis.js";
 import { handleCommitOperationalDecision } from "./operationalDecision.js";
 import { createOsSessionToken } from "../shared/osAuth.js";
-export const GMAIL_INTEGRATION_VERSION = "1.7.5";
+export const GMAIL_INTEGRATION_VERSION = "1.7.6";
 export const GMAIL_PATHS = Object.freeze({ CONNECT: "/auth/google", CALLBACK: "/auth/google/callback" });
 const AUTH_URL="https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL="https://oauth2.googleapis.com/token";
