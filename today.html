@@ -1,12 +1,15 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.6.13
+   Version: 3.6.14
    Status: Production Candidate
    Source: Production today.html 3.6.8
    Sprint: Today — Operator Copy Cleanup
    Purpose: Preserve the locked Today workflow and production logic while removing
             non-operational explanatory copy from the operator interface.
+
+   Production changes in 3.6.14:
+   - Loads the updated shell for the Forward in Gmail action without altering Today data workflow.
 
    Production changes in 3.6.13:
    - Clears only a promotion-start Forward Look milestone when the exact launch-day social post
@@ -2195,7 +2198,7 @@
 <div aria-hidden="true" hidden="" id="mission-control-state-values"><span id="prospect-count">0</span><span id="attention-count">0</span><span id="open-task-count">0</span><span id="proof-count">0</span><span id="media-pulse-count">0</span></div></div>
 </main>
 </div>
-<script src="shared/gcm-shell.js?v=2.0.64"></script>
+<script src="shared/gcm-shell.js?v=2.0.67"></script>
 <script src="shared/promotion-launch-evidence.js?v=1.0.0"></script>
 <script>
     (() => {
