@@ -1,10 +1,14 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: routes/prospectConceptTracking.js
-   Version: 1.1.5
+   Version: 1.2.1
    Status: Production Road-Test Candidate
    Purpose: Record privacy-minimized engagement when a personalized
             GCM prospect concept page is viewed.
+
+   Change Notes — 1.2.1:
+   - Registers the existing 2000 Auto personalized mailer-to-repair-order concept
+     using the standard Radar tracking contract; no tracking behavior changes.
 
    Change Notes — 1.2.0:
    - Adds eight independently prepared Central Florida print-mailer prospect concepts.
@@ -96,9 +100,15 @@ import {
 } from "../shared/http.js";
 
 export const PROSPECT_CONCEPT_VIEW_ACTION = "prospect-concept-view";
-export const PROSPECT_CONCEPT_TRACKING_VERSION = "1.2.0";
+export const PROSPECT_CONCEPT_TRACKING_VERSION = "1.2.1";
 
 const CONCEPTS = new Map([
+  ["2000-auto-mailer-to-repair-order-v1", {
+    businessName: "2000 Auto",
+    sourceReference: "/prospect-previews/2000-auto/",
+    subject: "2000 Auto mailer-to-repair-order concept viewed",
+    summary: "The personalized 2000 Auto direct-mail-to-repair-order growth concept page was viewed."
+  }],
   ["john-curri-v1", {
     businessName: "Realty World Curri Properties",
     sourceReference: "/prospect-previews/john-curri/",
