@@ -1,10 +1,11 @@
 # =========================================================
 # Global Concepts Media Operating System
 # File: .github/workflows/gcm-worker-deploy.yml
-# Version: 1.5.87
+# Version: 1.5.88
 # Status: Production Deployment Candidate
 # Purpose: Test and deploy the GCM OS Worker with human-led Signal Finding capture.
 # Change Notes:
+# - v1.5.88 reruns production validation when a regression test changes.
 # - v1.5.87 verifies signed social publisher operations and Worker v7.44.3.
 # - v1.5.86 verifies Forward Look 1.2.0 correction history before production deployment.
 # - v1.5.85 aligns the live Forward Look route version gate with the released 1.1.0 social publishing dispositions.
@@ -80,6 +81,7 @@ on:
     paths:
       - "worker.js"
       - "routes/**"
+      - "tests/**"
       - "shared/**"
       - "wrangler.toml"
       - "package.json"
