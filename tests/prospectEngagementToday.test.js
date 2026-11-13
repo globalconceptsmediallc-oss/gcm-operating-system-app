@@ -1,9 +1,12 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/prospectEngagementToday.test.js
-   Version: 1.4.0
+   Version: 1.4.1
    Status: Regression Test
    Purpose: Lock Today visibility for privacy-minimized tracked prospect opens.
+   Change notes — 1.4.1:
+   - Require a persistent Prospect Engagement panel and honest zero/unavailable states.
+
    Change notes — 1.4.0:
    - Closed / Archived Radar engagement omitted from live Today count.
    - Promoted Radar excluded while active formal Prospect remains visible.
@@ -46,6 +49,11 @@ assert.match(today,/Version: 3\.\d+\.\d+/);
 assert.match(today,/id="prospect-open-panel"/);
 assert.match(today,/id="prospect-open-list"/);
 assert.match(today,/id="prospect-open-title"/);
+assert.match(today,/class="panel prospect-open-panel" id="prospect-open-panel"/);
+assert.doesNotMatch(today,/class="panel prospect-open-panel" hidden id="prospect-open-panel"/);
+assert.match(today,/No tracked presentation visits in the last 7 days/);
+assert.match(today,/Prospect engagement is currently unavailable/);
+assert.match(today,/Checking tracked presentation visits/);
 assert.match(today,/renderProspectEngagements/);
 assert.match(today,/America\/New_York/);
 assert.match(today,/const grouped = new Map\(\)/);
