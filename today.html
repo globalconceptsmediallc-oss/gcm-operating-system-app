@@ -1,12 +1,18 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: today.html
-   Version: 3.6.13
+   Version: 3.6.14
    Status: Production Candidate
    Source: Production today.html 3.6.8
    Sprint: Today — Operator Copy Cleanup
    Purpose: Preserve the locked Today workflow and production logic while removing
             non-operational explanatory copy from the operator interface.
+
+   Production changes in 3.6.14:
+   - Keeps Prospect Engagement visible beneath the greeting, including a clear
+     seven-day zero-visit state rather than hiding the panel.
+   - Distinguishes unavailable Mission Control data from zero recorded visits.
+   - Preserves all tracking, grouping, counts, refresh cadence and prospect links.
 
    Production changes in 3.6.13:
    - Clears only a promotion-start Forward Look milestone when the exact launch-day social post
@@ -2054,11 +2060,11 @@
 
 </div>
 </header>
-<article aria-live="polite" class="panel prospect-open-panel" hidden id="prospect-open-panel">
+<article aria-live="polite" class="panel prospect-open-panel" id="prospect-open-panel">
 <div class="prospect-open-body">
 <div class="prospect-open-copy">
 <p class="prospect-open-kicker">Prospect Engagement</p>
-<strong id="prospect-open-title">A tracked prospect proposal was opened.</strong>
+<strong id="prospect-open-title">Checking tracked presentation visits…</strong>
 <div class="prospect-open-list" id="prospect-open-list"></div>
 </div>
 <a class="button button-primary" href="prospects.html">Open Prospects</a>
@@ -3811,7 +3817,8 @@
         prospectEngagementState = engagements;
 
         if (!engagements.length) {
-          prospectOpenPanel.hidden = true;
+          prospectOpenPanel.hidden = false;
+          prospectOpenTitle.textContent = "No tracked presentation visits in the last 7 days.";
           prospectOpenList.innerHTML = "";
           return;
         }
@@ -3915,7 +3922,9 @@
           highestPriorityDecisionState = null;
           navAttentionState = null;
           renderForwardLook();
-          renderProspectEngagements([]);
+          prospectOpenPanel.hidden = false;
+          prospectOpenTitle.textContent = "Prospect engagement is currently unavailable.";
+          prospectOpenList.textContent = "Recent presentation activity could not be loaded.";
           renderAttentionError(error?.message);
         }
       }
