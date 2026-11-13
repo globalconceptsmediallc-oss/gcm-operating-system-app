@@ -1,7 +1,8 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/prospectConceptTracking.test.js
-   Version: 1.12.0
+   Version: 1.12.1
+   Change Notes — 1.12.1: Correct a literal-slash escaping error in the new 2000 Auto assertion.
    Change Notes — 1.12.0: Validate the 2000 Auto server registration and updated tracker release.
    Status: Regression Test
    Purpose: Lock privacy-minimized prospect engagement tracking, including Barkingham Palace.
@@ -27,7 +28,7 @@ const barkinghamPage = fs.readFileSync(new URL("../prospect-previews/barkingham-
 assert.match(route,/Version: 1\.2\.1/);
 assert.match(route,/2000-auto-mailer-to-repair-order-v1/);
 assert.match(route,/businessName: "2000 Auto"/);
-assert.match(route,/sourceReference: "\\/prospect-previews\\/2000-auto\\/"/);
+assert.match(route,/sourceReference: "\/prospect-previews\/2000-auto\/"/);
 assert.match(route,/agnor-aviation-90-day-v1/);
 assert.match(route,/businessName: "Agnor Aviation"/);
 assert.match(route,/sourceReference: "\/prospect-previews\/agnor-aviation\/"/);
