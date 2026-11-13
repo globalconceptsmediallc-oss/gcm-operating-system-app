@@ -1,7 +1,8 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/prospectConceptTracking.test.js
-   Version: 1.12.1
+   Version: 1.12.2
+   Change Notes — 1.12.2: Align Indian River Furniture regression assertions with its approved 4.1.0 owner-to-owner revision.
    Change Notes — 1.12.1: Correct a literal-slash escaping error in the new 2000 Auto assertion.
    Change Notes — 1.12.0: Validate the 2000 Auto server registration and updated tracker release.
    Status: Regression Test
@@ -141,7 +142,7 @@ assert.match(route,/indian-river-furniture-mailer-to-showroom-v1/);
 assert.match(route,/businessName: "Indian River Furniture"/);
 assert.match(route,/sourceReference: "\/prospect-previews\/indian-river-furniture\/"/);
 assert.match(route,/Indian River Furniture direct-mail growth concept viewed/);
-assert.match(indianRiverPage,/Version: 1\.0\.0/);
+assert.match(indianRiverPage,/Version: 4\.1\.0/);
 assert.match(indianRiverPage,/CONCEPT_KEY = "indian-river-furniture-mailer-to-showroom-v1"/);
 assert.match(indianRiverPage,/prospect-concept-view/);
 assert.match(indianRiverPage,/gcm_preview/);
@@ -150,7 +151,7 @@ assert.match(indianRiverPage,/sessionStorage\.getItem\(SESSION_KEY\)/);
 assert.match(indianRiverPage,/Bassett/);
 assert.match(indianRiverPage,/Stressless/);
 assert.match(indianRiverPage,/August 31, 2026/);
-assert.match(indianRiverPage,/90 days to make the next mailer more accountable/);
+assert.match(indianRiverPage,/First, I'd learn how the showroom works/);
 assert.doesNotMatch(indianRiverPage,/431 Vizcaya|32940-1833|Teresa S Belcher/);
 
 assert.match(route,/barkingham-palace-free-day-loyal-customer-v1/);
