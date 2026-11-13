@@ -1,4 +1,4 @@
-/* GCM OS • Eight advertiser print-source concepts • Version: 2.0.0 */
+/* GCM OS • Eight advertiser print-source concepts • Version: 2.0.1 • Align tracker version lock to v1.2.1 */
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
@@ -16,7 +16,7 @@ const route=fs.readFileSync(new URL("../routes/prospectConceptTracking.js",impor
 const css=fs.readFileSync(new URL("../shared/prospect-print-concept.css",import.meta.url),"utf8");
 const js=fs.readFileSync(new URL("../shared/prospect-print-concept.js",import.meta.url),"utf8");
 new vm.Script(js);assert.match(js,/gcm_preview/);assert.match(js,/prospect-concept-view/);
-assert.match(route,/VERSION = "1\.2\.0"/);
+assert.match(route,/VERSION = "1\.2\.1"/);
 for(const [slug,name,offer,boundary] of files){
  const html=fs.readFileSync(new URL("../prospect-previews/"+slug+"/index.html",import.meta.url),"utf8");
  assert.match(html,/noindex,nofollow,noarchive,noimageindex/);
