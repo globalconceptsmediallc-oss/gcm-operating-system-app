@@ -1,7 +1,8 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/prospectConceptTracking.test.js
-   Version: 1.11.0
+   Version: 1.12.0
+   Change Notes — 1.12.0: Validate the 2000 Auto server registration and updated tracker release.
    Status: Regression Test
    Purpose: Lock privacy-minimized prospect engagement tracking, including Barkingham Palace.
    ========================================================= */
@@ -23,7 +24,10 @@ const geoNestPage = fs.readFileSync(new URL("../prospect-previews/geonest-window
 const indianRiverPage = fs.readFileSync(new URL("../prospect-previews/indian-river-furniture/index.html", import.meta.url),"utf8");
 const barkinghamPage = fs.readFileSync(new URL("../prospect-previews/barkingham-palace/index.html", import.meta.url),"utf8");
 
-assert.match(route,/Version: 1\.1\.5/);
+assert.match(route,/Version: 1\.2\.1/);
+assert.match(route,/2000-auto-mailer-to-repair-order-v1/);
+assert.match(route,/businessName: "2000 Auto"/);
+assert.match(route,/sourceReference: "\\/prospect-previews\\/2000-auto\\/"/);
 assert.match(route,/agnor-aviation-90-day-v1/);
 assert.match(route,/businessName: "Agnor Aviation"/);
 assert.match(route,/sourceReference: "\/prospect-previews\/agnor-aviation\/"/);
