@@ -1,7 +1,8 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/prospectConceptTracking.test.js
-   Version: 1.12.2
+   Version: 1.12.3
+   Change Notes — 1.12.3: Align existing Corvex CTA fix and Barkingham redesign page-version assertions.
    Change Notes — 1.12.2: Align Indian River Furniture regression assertions with its approved 4.1.0 owner-to-owner revision.
    Change Notes — 1.12.1: Correct a literal-slash escaping error in the new 2000 Auto assertion.
    Change Notes — 1.12.0: Validate the 2000 Auto server registration and updated tracker release.
@@ -86,7 +87,7 @@ assert.match(wadadliPage,/Financial-services compliance stays in control/);
 assert.match(route,/corvex-roofing-321-living-v1/);
 assert.match(route,/businessName: "Corvex Roofing"/);
 assert.match(route,/Corvex Roofing 321 Living campaign concept viewed/);
-assert.match(corvexPage,/Version: 1\.0\.0/);
+assert.match(corvexPage,/Version: 1\.0\.1/);
 assert.match(corvexPage,/CONCEPT_KEY = "corvex-roofing-321-living-v1"/);
 assert.match(corvexPage,/prospect-concept-view/);
 assert.match(corvexPage,/gcm_preview/);
@@ -158,7 +159,7 @@ assert.match(route,/barkingham-palace-free-day-loyal-customer-v1/);
 assert.match(route,/businessName: "Barkingham Palace"/);
 assert.match(route,/sourceReference: "\/prospect-previews\/barkingham-palace\/"/);
 assert.match(route,/Barkingham Palace free-day growth concept viewed/);
-assert.match(barkinghamPage,/Version: 1\.0\.0/);
+assert.match(barkinghamPage,/Version: 1\.1\.0/);
 assert.match(barkinghamPage,/CONCEPT_KEY = "barkingham-palace-free-day-loyal-customer-v1"/);
 assert.match(barkinghamPage,/prospect-concept-view/);
 assert.match(barkinghamPage,/gcm_preview/);
