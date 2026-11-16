@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: prospects.html
-   Version: 3.9.3
+   Version: 3.9.4
    Status: Production Road-Test Candidate
    Source: Production prospects.html 2.0.0 + client-pre-research.html 1.1.0
    Backend: Prospect CRM 1.7.0
@@ -10,6 +10,11 @@
    One operating workspace for GCM prospecting from first evidence through
    Radar, outreach, appointment, CRM, services, signed scope, startup package,
    and the eventual Client handoff.
+
+   Change Notes — 3.9.4
+   - Preview-safe operator test-site links across Radar, Prospect record and pipeline list.
+   - Uses the existing gcm_preview=1 tracking bypass without changing stored public URLs.
+   - Preserves all outreach, evidence and relationship records.
 
    Change Notes — 3.9.3
    - Locks Radar Save while processing and handles existing-record duplicate responses.
@@ -576,7 +581,7 @@
 <script>
 (() => {
   "use strict";
-  const FILE_VERSION="3.9.3";
+  const FILE_VERSION="3.9.4";
   const WORKER="https://gcm-business-intelligence-worker.globalconceptsmediallc.workers.dev/";
   const state={prospects:[],radar:[],archivedRadar:[],services:[],selectedProspect:null,selectedRadar:null,view:"pipeline",attentionFilter:"due",
     researchTarget:{type:"new",id:null},researchResult:null,researchContext:null,images:[]};
@@ -595,6 +600,17 @@
   function dueText(a,unmanaged=false){if(unmanaged)return"No dated Next Action";if(!a?.dueDate)return"No due date";const d=fmtDate(a.dueDate,false);return a.dueState==="overdue"?`Overdue · ${d}`:a.dueState==="due_today"?`Due today · ${d}`:`Due ${d}`}
   function statusClass(p){if(p?.isUnmanaged)return"red";if(p?.status==="nurture")return"yellow";if(p?.status==="converted")return"green";return"blue"}
   function normalizeUrl(v){const x=clean(v);if(!x)return"";return /^https?:\/\//i.test(x)?x:`https://${x}`}
+  // Operator-only links bypass concept engagement; saved public URLs remain unchanged.
+  function internalTestSiteUrl(value){
+    const raw=normalizeUrl(value);
+    if(!raw)return"";
+    try{
+      const url=new URL(raw);
+      if(!["http:","https:"].includes(url.protocol))return raw;
+      url.searchParams.set("gcm_preview","1");
+      return url.toString();
+    }catch{return raw;}
+  }
   function hostname(v){try{return new URL(normalizeUrl(v)).hostname.replace(/^www\./,"").toLowerCase()}catch{return""}}
   function safeArray(v){if(Array.isArray(v))return v.map(x=>clean(x)).filter(Boolean);if(clean(v))return[clean(v)];return[]}
   function nested(o,path,f=""){return path.split(".").reduce((v,k)=>v&&typeof v==="object"&&Object.prototype.hasOwnProperty.call(v,k)?v[k]:undefined,o)??f}
@@ -722,7 +738,7 @@
     return `<article class="record"><div><h3>${esc(p.businessName)}</h3><p class="meta">${esc(p.primaryContact?.name||"Contact not recorded")} · ${esc(p.market||p.industry||"Market not recorded")}</p><p class="insight">${esc(p.opportunitySummary||"Opportunity summary not recorded.")}</p><div class="chips"><span class="badge ${statusClass(p)}">${esc(stageLabel(p.stage))}</span><span class="chip">${esc(valueSummary(p))}</span></div></div>
     <div><p class="next-label">Next Action</p><p class="next-title">${esc(p.isUnmanaged?"Active relationship has no dated Next Action":p.nextAction?.title||"No open action")}</p><p class="next-due">${esc(dueText(p.nextAction,p.isUnmanaged))}</p></div>
     <div class="quick-actions">
-      ${p.testSiteUrl?`<a class="btn btn-primary btn-small" href="${esc(normalizeUrl(p.testSiteUrl))}" target="_blank" rel="noopener noreferrer">Test Site</a>`:""}
+      ${p.testSiteUrl?`<a class="btn btn-primary btn-small" href="${esc(internalTestSiteUrl(p.testSiteUrl))}" target="_blank" rel="noopener noreferrer">Test Site</a>`:""}
       <button class="btn btn-secondary btn-small" data-open-prospect="${p.id}" type="button">Open</button>
     </div></article>`;
   }
@@ -826,7 +842,7 @@
     </div>
     <div class="section-title"><div><h3>Relationship Actions</h3><p>Do the work from the record instead of remembering it elsewhere.</p></div></div>
     <div class="quick-actions">
-      ${p.testSiteUrl?`<a class="btn btn-primary btn-small" href="${esc(normalizeUrl(p.testSiteUrl))}" target="_blank" rel="noopener noreferrer">Open Test Site</a>`:""}
+      ${p.testSiteUrl?`<a class="btn btn-primary btn-small" href="${esc(internalTestSiteUrl(p.testSiteUrl))}" target="_blank" rel="noopener noreferrer">Open Test Site</a>`:""}
       <button class="btn btn-secondary btn-small" data-prospect-action="test-site">${p.testSiteUrl?"Edit Test Site":"Add Test Site"}</button>
       ${(p.proposals||[]).length?'<button class="btn btn-gold btn-small" data-prospect-action="call-points">Call Talking Points</button>':""}
       <button class="btn btn-secondary btn-small" data-prospect-action="research">Research More</button>
@@ -1015,7 +1031,7 @@
     topTestSite.hidden=false;
     topTestSite.textContent=r.testSiteUrl?"Open Test Site":"Add Test Site";
     topTestSite.onclick=()=>r.testSiteUrl
-      ? window.open(normalizeUrl(r.testSiteUrl),"_blank","noopener,noreferrer")
+      ? window.open(internalTestSiteUrl(r.testSiteUrl),"_blank","noopener,noreferrer")
       : editRadarTestSite(r);
     $("radar-edit").addEventListener("click",()=>openRadarEdit(r));
     $("radar-test-site-edit").addEventListener("click",()=>editRadarTestSite(r));
