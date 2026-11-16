@@ -1,7 +1,8 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/prospectTestSiteUrl.test.js
-   Version: 1.0.2
+   Version: 1.0.3
+   Change Notes — 1.0.3: Operator preview bypass regression aligned with Prospects 3.9.4.
    Status: Production Regression Lock
    Purpose: Lock durable Prospect test-site URL storage and direct UI access.
    Change notes — 1.0.1:
@@ -22,6 +23,9 @@ assert.match(crm, /test_site_url = \?/);
 assert.match(crm, /testSiteUrl: normalizeOptionalHttpUrl/);
 assert.match(ui, /Test Site<\/a>/);
 assert.match(ui, /data-prospect-action="test-site"/);
+assert.equal((ui.match(/internalTestSiteUrl\\(p\\.testSiteUrl\\)/g)||[]).length,2);
+assert.match(ui,/url\\.searchParams\\.set\\("gcm_preview","1"\\)/);
+
 assert.match(ui, /update_prospect",\{prospectId:p\.id,testSiteUrl:/);
 
 console.log("PASS Prospect test-site URL is durable and directly accessible.");
