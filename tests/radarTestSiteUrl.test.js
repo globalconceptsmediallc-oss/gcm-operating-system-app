@@ -1,7 +1,8 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/radarTestSiteUrl.test.js
-   Version: 1.0.1
+   Version: 1.0.2
+   Change Notes — 1.0.2: Operator preview bypass regression aligned with Prospects 3.9.4.
    Status: Production Regression Lock
    Purpose: Lock fast test-site access into the Radar / pre-appointment workflow.
    ========================================================= */
@@ -19,6 +20,22 @@ assert.match(crm,/testSiteUrl: row\.test_site_url \|\| null/);
 assert.match(crm,/radar\.testSiteUrl/);
 assert.match(page,/id="radar-test-site-top"/);
 assert.match(page,/Open Test Site/);
+assert.match(page,/function internalTestSiteUrl\\(value\\)/);
+assert.match(page,/url\\.searchParams\\.set\\("gcm_preview","1"\\)/);
+assert.match(page,/window\\.open\\(internalTestSiteUrl\\(r\\.testSiteUrl\\)/);
+const start=page.indexOf("  function internalTestSiteUrl(value){");
+const end=page.indexOf("  function hostname(v)",start);
+assert.ok(start>0&&end>start,"Operator preview helper must be present");
+const helper=page.slice(start,end);
+const preview=new Function("normalizeUrl",helper+"return internalTestSiteUrl;")(v=>String(v||""));
+const publicUrl="https://globalconceptsmediallc-oss.github.io/gcm-operating-system-app/prospect-previews/corvex-roofing/?utm_source=chatgpt.com#hero";
+const result=new URL(preview(publicUrl));
+assert.equal(result.searchParams.get("gcm_preview"),"1");
+assert.equal(result.searchParams.get("utm_source"),"chatgpt.com");
+assert.equal(result.hash,"#hero");
+assert.equal(publicUrl.includes("gcm_preview"),false,"Public record URL unchanged");
+assert.equal(new URL(preview(preview(publicUrl))).searchParams.getAll("gcm_preview").length,1);
+
 assert.match(page,/function editRadarTestSite\(r\)/);
 assert.match(page,/update_radar",\{radarId:r\.id,testSiteUrl:/);
 
