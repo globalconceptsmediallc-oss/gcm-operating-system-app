@@ -1,7 +1,8 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/prospectTestSiteUrl.test.js
-   Version: 1.0.3
+   Version: 1.0.4
+   Change Notes — 1.0.4: Repair preview URL assertions with direct source-string checks.
    Change Notes — 1.0.3: Operator preview bypass regression aligned with Prospects 3.9.4.
    Status: Production Regression Lock
    Purpose: Lock durable Prospect test-site URL storage and direct UI access.
@@ -23,8 +24,8 @@ assert.match(crm, /test_site_url = \?/);
 assert.match(crm, /testSiteUrl: normalizeOptionalHttpUrl/);
 assert.match(ui, /Test Site<\/a>/);
 assert.match(ui, /data-prospect-action="test-site"/);
-assert.equal((ui.match(/internalTestSiteUrl\\(p\\.testSiteUrl\\)/g)||[]).length,2);
-assert.match(ui,/url\\.searchParams\\.set\\("gcm_preview","1"\\)/);
+assert.equal(ui.split("internalTestSiteUrl(p.testSiteUrl)").length-1,2);
+assert.ok(ui.includes('url.searchParams.set("gcm_preview","1")'));
 
 assert.match(ui, /update_prospect",\{prospectId:p\.id,testSiteUrl:/);
 
