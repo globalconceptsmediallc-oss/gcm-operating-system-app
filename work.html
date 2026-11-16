@@ -1,7 +1,7 @@
 <!-- =========================================================
    Global Concepts Media Operating System
    File: work.html
-   Version: 1.9.49
+   Version: 1.9.50
    Status: FBDT Production Candidate
    Source: Stable production work.html 1.9.18
    Sprint: Work Queue Full Recovery
@@ -23,6 +23,7 @@
    - communications-operational-decision-v3
 
    Audited changes:
+   - v1.9.50 uses originating Ahrefs/SEMrush report evidence before generic alert metadata, restores correct Ahrefs links, and corrects derived source labels without clearing locked facts or D1 records.
    - v1.9.49 recognizes fully labeled SEMrush source-link evidence before extraction-failure fallback and re-evaluates previously locked evidence without re-entry.
    - The same rule continues requiring source page, initial 301 URL, and final destination; generated internal-link Work text no longer mislabels other clients as SES.
    - v1.9.47 adds evidence-gated monitoring decisions, reads the client workspace monitoringInvestigations collection, and displays monitored Investigations in the external follow-up queue.
@@ -328,7 +329,7 @@
   const requestedWorkItemId=positiveInt(params.get("workItem"));
   const requestedClientCode=String(params.get("client")||"").trim().toUpperCase();
 
-  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.48"});}
+  if(window.GCMOShell){window.GCMOShell.mount({currentPage:"work",statusText:"Requested work + WWPOWD investigation · Work v1.9.50"});}
   const el={openInvestigations:byId("open-investigations"),clients:byId("clients-with-investigations"),workItems:byId("work-items"),filter:byId("client-filter"),refresh:byId("refresh-button"),status:byId("runtime-status"),list:byId("investigation-list"),detail:byId("detail-panel"),openWork:byId("open-work-list"),externalValidation:byId("external-validation-list"),target:byId("target-banner"),requestedForm:byId("requested-work-form"),requestedClient:byId("requested-client"),requestedMessage:byId("requested-work-message"),createRequested:byId("create-requested-work")};
   let activeClients=[],directoryClients=[],investigations=[],monitoringInvestigations=[],workItems=[],validationWorkItems=[],selectedKey="",processing=false,processingWorkItem=false,processingRequestedWork=false;
 
@@ -599,7 +600,45 @@
   }
   async function loadGuidance(item){try{const payload=await post({action:"get-guided-investigation",clientCode:item.clientCode,investigationId:Number(item.id)});if(selectedKey===key(item))renderDetail(item,payload.guidance||null);}catch(error){console.error(error);}}
 
+  /*
+   * v1.9.50: Evidence-provider provenance takes precedence over broad
+   * notification-type keywords. Some legacy Ahrefs Communications were
+   * classified as SEMrush Position Tracking. Prefer source-report links
+   * and sender details over generated classifications; preserve D1 and
+   * immutable operator-entered evidence facts.
+   */
+  function originatingAuditProvider(item){
+    const communication=item?.communication||{};
+    const raw=String(communication.raw_content||"");
+    const origin=[
+      raw,
+      communication.from_email,
+      communication.sender_email,
+      communication.sender,
+      communication.from,
+      communication.source,
+      communication.provider
+    ].filter(Boolean).join(" ").toLowerCase();
+    if(/app\.ahrefs\.com\/site-audit\/|sa@ahrefs\.com|ahrefs pte ltd/.test(origin))return "ahrefs";
+    if(/semrush\.com\/(?:siteaudit|position-tracking|backlink-audit)|semrush inc\.|noreply@semrush\.com/.test(origin))return "semrush";
+
+    // Verified original Ahrefs email, Nov 9, 2026 / Communication #263.
+    // This fallback is limited to one known misclassified Investigation.
+    if(Number(item?.id)===116&&String(item?.clientCode||"").toUpperCase()==="PW")return "ahrefs";
+
+    const metadata=[
+      communication.notification_type,
+      communication.communication_family,
+      communication.subject,
+      item?.title
+    ].filter(Boolean).join(" ").toLowerCase();
+    if(/\bahrefs\b|multiple h1 tags \[new\]/.test(metadata))return "ahrefs";
+    if(/\bsemrush\b/.test(metadata))return "semrush";
+    return "";
+  }
+
   function isSemrushSiteAudit(item){
+    if(originatingAuditProvider(item)==="ahrefs")return false;
     const combined=[
       item?.title,
       item?.description,
@@ -613,12 +652,14 @@
   }
 
   function isSemrushBacklinkAudit(item){
+    if(originatingAuditProvider(item)==="ahrefs")return false;
     const combined=[item?.title,item?.description,item?.communication?.subject,item?.communication?.notification_type,item?.communication?.communication_family,item?.communication?.raw_content]
       .map(value=>norm(value)).join(" ");
     return combined.includes("backlink_audit") || combined.includes("toxic_domain") || combined.includes("referring_domain");
   }
 
   function isSemrushPositionTracking(item){
+    if(originatingAuditProvider(item)==="ahrefs")return false;
     const combined=[item?.title,item?.description,item?.communication?.subject,item?.communication?.notification_type,item?.communication?.communication_family,item?.communication?.raw_content]
       .map(value=>norm(value)).join(" ");
     return combined.includes("position_tracking") || combined.includes("notification_of_rank_change") || combined.includes("pages_dropped_from_top") || combined.includes("pages_entered_top");
@@ -629,6 +670,9 @@
   }
 
   function isAhrefsSiteAudit(item){
+    const originating=originatingAuditProvider(item);
+    if(originating==="ahrefs")return true;
+    if(originating==="semrush")return false;
     const combined=[
       item?.title,
       item?.description,
@@ -647,6 +691,12 @@
     const raw=String(item?.communication?.raw_content||"");
     const orphanMatch=raw.match(/\[View\]\((https:\/\/app\.ahrefs\.com\/site-audit\/[^)]+issueId=[^)]+)\)/i);
     if(orphanMatch?.[1])return orphanMatch[1];
+
+    // Verified originating Ahrefs email (Nov 9, 2026), not a guessed link.
+    // Use only if the historical Communication lacks the issue-level URL.
+    if(Number(item?.id)===116&&String(item?.clientCode||"").toUpperCase()==="PW"){
+      return "https://app.ahrefs.com/site-audit/8627903/data-explorer?current=09-11-2026T131616&columns=pageRating%2Curl%2Ctraffic%2ChttpCode%2Cdepth%2Ch1%2Ch1Length%2CnrH1%2Ccompliant&filterId=377676a0df737bc09d40ffe8c8f9e699&issueId=c64d52ef-d0f4-11e7-8ed1-001e67ed4656&filterCollapsed=true";
+    }
 
     // Historical rehabilitation: Investigation #71 / Communication #147.
     // The originating Gmail message 1a0c426965cc7d62 preserved this exact
@@ -795,6 +845,7 @@
   }
 
   function evidenceSourceName(item){
+    if(originatingAuditProvider(item)==="ahrefs")return "Ahrefs Site Audit";
     if(isSemrushBacklinkAudit(item))return "SEMrush Backlink Audit";
     if(isSemrushPositionTracking(item))return "SEMrush Position Tracking";
     if(isSemrushSiteAudit(item))return "SEMrush Site Audit";
