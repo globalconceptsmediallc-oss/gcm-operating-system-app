@@ -1,7 +1,8 @@
 /* =========================================================
    Global Concepts Media Operating System
    File: tests/radarTestSiteUrl.test.js
-   Version: 1.0.2
+   Version: 1.0.3
+   Change Notes — 1.0.3: Repair preview URL assertions with direct source-string checks.
    Change Notes — 1.0.2: Operator preview bypass regression aligned with Prospects 3.9.4.
    Status: Production Regression Lock
    Purpose: Lock fast test-site access into the Radar / pre-appointment workflow.
@@ -20,9 +21,9 @@ assert.match(crm,/testSiteUrl: row\.test_site_url \|\| null/);
 assert.match(crm,/radar\.testSiteUrl/);
 assert.match(page,/id="radar-test-site-top"/);
 assert.match(page,/Open Test Site/);
-assert.match(page,/function internalTestSiteUrl\\(value\\)/);
-assert.match(page,/url\\.searchParams\\.set\\("gcm_preview","1"\\)/);
-assert.match(page,/window\\.open\\(internalTestSiteUrl\\(r\\.testSiteUrl\\)/);
+assert.ok(page.includes("function internalTestSiteUrl(value)"));
+assert.ok(page.includes('url.searchParams.set("gcm_preview","1")'));
+assert.ok(page.includes('window.open(internalTestSiteUrl(r.testSiteUrl)'));
 const start=page.indexOf("  function internalTestSiteUrl(value){");
 const end=page.indexOf("  function hostname(v)",start);
 assert.ok(start>0&&end>start,"Operator preview helper must be present");
